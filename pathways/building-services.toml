@@ -1,0 +1,12 @@
+name = "Building Services"
+description = "For developers writing services that handle client identity."
+pages = [
+  "impersonation/understanding-impersonation",
+  "impersonation/impersonation-levels",
+  "impersonation/identity-cascading",
+  "impersonation/setting-impersonation-level",
+  "impersonation/impersonating-a-client",
+  "impersonation/reverting-to-service-identity",
+  "impersonation/testing-with-anonymous",
+  "identity/inspecting-impersonation-state",
+]

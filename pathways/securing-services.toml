@@ -1,0 +1,16 @@
+name = "Securing Services"
+description = "Defense in depth — how to protect critical services from compromise."
+pages = [
+  "identity/service-identities",
+  "pip/understanding-pip",
+  "pip/pip-object-protection",
+  "pip/binary-signing-and-pip",
+  "pip/working-with-pip",
+  "process-security/understanding-process-security",
+  "process-security/process-mitigations",
+  "process-security/working-with-process-security",
+  "confinement/understanding-confinement",
+  "confinement/working-with-confinement",
+  "token-restriction/understanding-restricted-tokens",
+  "token-restriction/creating-restricted-tokens",
+]

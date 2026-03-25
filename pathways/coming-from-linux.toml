@@ -1,0 +1,7 @@
+name = "Coming from Linux"
+description = "How Peios relates to Linux identity and access control — UIDs, root, capabilities, and compatibility."
+pages = [
+  "linux-compat/understanding-linux-compatibility",
+  "linux-compat/working-with-linux-applications",
+  "linux-compat/how-peios-eliminates-root",
+]

@@ -1,0 +1,43 @@
+title = "Peios Learn"
+description = "Understand every layer of the Peios security model"
+base_url = "https://learn.peios.org"
+
+[[nav]]
+label = "Get Started"
+url = "/identity/understanding-identity/?pathway=getting-started"
+
+[[nav]]
+label = "Identity"
+url = "/identity/understanding-identity/"
+
+[[nav]]
+label = "Access Control"
+url = "/access-control/understanding-access-control/"
+
+[[nav]]
+label = "Integrity"
+url = "/integrity/understanding-mic/"
+
+[[nav]]
+label = "PIP"
+url = "/pip/understanding-pip/"
+
+[[nav]]
+label = "Privileges"
+url = "/privileges/understanding-privileges/"
+
+[[nav]]
+label = "Impersonation"
+url = "/impersonation/understanding-impersonation/"
+
+[[nav]]
+label = "Confinement"
+url = "/confinement/understanding-confinement/"
+
+[[nav]]
+label = "Auditing"
+url = "/auditing/understanding-auditing/"
+
+[[nav]]
+label = "Troubleshooting"
+url = "/troubleshooting/access-denied-errors/"

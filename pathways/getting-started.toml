@@ -1,0 +1,12 @@
+name = "Getting Started"
+description = "The core security model — start here. Understand how identity and access control work on Peios."
+pages = [
+  "identity/understanding-identity",
+  "identity/what-are-sids",
+  "identity/how-tokens-work",
+  "access-control/understanding-access-control",
+  "access-control/how-security-descriptors-work",
+  "access-control/access-control-lists",
+  "access-control/how-accesscheck-works",
+  "access-control/access-masks-and-rights",
+]

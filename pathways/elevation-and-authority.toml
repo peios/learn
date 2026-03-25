@@ -1,0 +1,13 @@
+name = "Elevation and Authority"
+description = "How privilege levels, integrity, and elevation control what processes can do."
+pages = [
+  "identity/primary-vs-impersonation-tokens",
+  "identity/linked-tokens-and-elevation",
+  "identity/working-with-elevation",
+  "integrity/understanding-mic",
+  "integrity/integrity-levels-explained",
+  "integrity/setting-mandatory-labels",
+  "privileges/understanding-privileges",
+  "privileges/managing-privileges",
+  "privileges/privilege-reference",
+]

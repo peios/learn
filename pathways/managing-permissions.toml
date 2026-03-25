@@ -1,0 +1,16 @@
+name = "Managing Permissions"
+description = "Practical day-to-day permission management — inspecting, setting, and troubleshooting access."
+pages = [
+  "identity/inspecting-process-identity",
+  "identity/querying-token-information",
+  "access-control/reading-security-descriptor",
+  "access-control/setting-a-dacl",
+  "access-control/adding-allow-and-deny-rules",
+  "access-control/ace-ordering",
+  "access-control/sd-inheritance",
+  "access-control/breaking-inheritance",
+  "access-control/ownership-and-owner-rights",
+  "access-control/transferring-ownership",
+  "access-control/using-owner-rights",
+  "access-control/null-vs-empty-dacl",
+]

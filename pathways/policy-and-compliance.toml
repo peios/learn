@@ -1,0 +1,12 @@
+name = "Policy and Compliance"
+description = "Attribute-based access control, central policy, and auditing at organizational scale."
+pages = [
+  "conditional-access/understanding-conditional-aces",
+  "conditional-access/claims-and-attributes",
+  "conditional-access/attribute-based-access-control",
+  "conditional-access/writing-conditional-aces",
+  "central-access-policy/understanding-central-access-policy",
+  "central-access-policy/working-with-central-access-policy",
+  "auditing/understanding-auditing",
+  "auditing/working-with-auditing",
+]
