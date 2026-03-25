@@ -6,7 +6,8 @@ order: 60
 
 AccessCheck walks the DACL from top to bottom. It does not reorder, sort, or prioritize ACEs — it evaluates them in exactly the order they appear. This means the order you place ACEs in the DACL directly determines the outcome of access decisions.
 
-Getting the order wrong is one of the most common access control mistakes. A deny rule placed after an allow rule may never take effect.
+> [!WARNING]
+> Getting the order wrong is one of the most common access control mistakes. A deny rule placed after an allow rule may never take effect.
 
 ## The canonical ordering
 

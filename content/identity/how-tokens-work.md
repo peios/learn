@@ -6,7 +6,8 @@ order: 30
 
 A **token** is the kernel object that represents a thread's identity. It is created when a principal authenticates and captures everything the kernel needs to make access decisions — the principal's SID, their group memberships, their privileges, and their trust level.
 
-A token is a **runtime snapshot**. It reflects the principal's identity and policy at the moment of authentication. If a user is later added to a new group or granted a new privilege in the directory, existing tokens are unaffected. The change takes effect the next time the user authenticates and a new token is built.
+> [!NOTE]
+> A token is a **runtime snapshot**. It reflects the principal's identity and policy at the moment of authentication. If a user is later added to a new group or granted a new privilege in the directory, existing tokens are unaffected. The change takes effect the next time the user authenticates and a new token is built.
 
 ## What a token contains
 

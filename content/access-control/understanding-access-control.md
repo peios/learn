@@ -2,6 +2,12 @@
 title: Understanding Access Control on Peios
 type: concept
 order: 10
+description: Every secured object carries a security descriptor evaluated by a single function — AccessCheck.
+related:
+  - access-control/how-security-descriptors-work
+  - access-control/access-control-lists
+  - access-control/how-accesscheck-works
+  - identity/understanding-identity
 ---
 
 Every secured object on Peios — every file, registry key, IPC endpoint, and process — carries a **security descriptor (SD)**. The security descriptor is the object's security policy: it defines who owns the object, who can access it, and what gets audited.

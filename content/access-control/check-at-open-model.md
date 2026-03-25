@@ -24,7 +24,10 @@ New opens after the SD change will be evaluated against the new SD. Only existin
 
 ## Handles survive permission changes
 
-This is an important consequence of the model. If a process opens a file for read and write, and then an administrator removes the process's write access:
+> [!NOTE]
+> Changing an object's security descriptor does not affect existing open handles. Only new opens are evaluated against the updated SD.
+
+If a process opens a file for read and write, and then an administrator removes the process's write access:
 
 - The **existing handle** still permits writes — it was granted write access at open time
 - A **new open** for write access will fail — the current SD no longer grants it

@@ -1,6 +1,8 @@
 title = "Peios Learn"
 description = "Understand every layer of the Peios security model"
 base_url = "https://learn.peios.org"
+category_order = ["identity", "access-control", "integrity", "pip", "privileges", "impersonation", "confinement", "token-restriction", "conditional-access", "central-access-policy", "auditing", "process-security", "linux-compat", "troubleshooting"]
+announcement = "These docs are under active development and cover the v0.20 Kobicha security model."
 
 [[nav]]
 label = "Get Started"

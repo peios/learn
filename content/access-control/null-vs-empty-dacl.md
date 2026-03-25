@@ -8,6 +8,9 @@ A DACL can be **null** (absent from the security descriptor) or **empty** (prese
 
 ## Null DACL — no access control
 
+> [!WARNING]
+> A null DACL grants **all access to everyone**. It is not "no permissions set" — it is "no access control at all." This is almost never what you want.
+
 A null DACL means the security descriptor has no discretionary access control list at all. When AccessCheck encounters a null DACL, it **grants all requested rights to everyone**. There are no rules to evaluate, so nothing is denied.
 
 This is not "default permissions." It is not "inherit from parent." It is no access control at all. Every principal — every user, every service, every process on the machine — gets full access to the object.

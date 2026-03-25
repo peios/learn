@@ -32,7 +32,8 @@ Confinement is an absolute boundary. Things that normally augment access are sup
 - **Owner implicit rights are skipped.** A confined application does not receive READ_CONTROL or WRITE_DAC even if it owns the object.
 - **SACL access is unreachable.** Since SACL access is entirely privilege-controlled and privileges do not bypass confinement, a confined application cannot access any object's SACL.
 
-The application's user identity — which might be SYSTEM, an administrator, or any other powerful principal — is irrelevant inside the confinement boundary.
+> [!WARNING]
+> The application's user identity — which might be SYSTEM, an administrator, or any other powerful principal — is irrelevant inside the confinement boundary. No privilege bypasses confinement.
 
 ## How objects opt in
 

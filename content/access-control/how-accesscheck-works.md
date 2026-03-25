@@ -2,6 +2,13 @@
 title: How AccessCheck Evaluates Every Access Decision
 type: concept
 order: 40
+description: The single function that evaluates every access decision — from file opens to signal delivery.
+related:
+  - access-control/access-masks-and-rights
+  - access-control/ace-ordering
+  - access-control/ownership-and-owner-rights
+  - integrity/understanding-mic
+  - privileges/understanding-privileges
 ---
 
 Every access decision on Peios passes through a single kernel function called **AccessCheck**. Whether a thread is opening a file, reading a registry key, connecting to a service, or sending a signal — the same evaluator runs, applying the same logic.
@@ -21,6 +28,31 @@ The answer is either a set of granted rights or a denial.
 ## The evaluation pipeline
 
 AccessCheck does not simply walk the DACL. It runs a series of checks in a defined order, each of which can grant rights, deny the request, or pass through to the next stage.
+
+```mermaid
+flowchart TD
+    A[Access Request] --> B{SACL access?}
+    B -->|Yes| C{SeSecurityPrivilege?}
+    C -->|No| DENY[Access Denied]
+    C -->|Yes| D[Grant ACCESS_SYSTEM_SECURITY]
+    B -->|No| E{Owner?}
+    E -->|Yes| F[Grant READ_CONTROL + WRITE_DAC]
+    E -->|No| G{MIC check}
+    F --> G
+    D --> G
+    G -->|Token below label| DENY
+    G -->|Pass| H[Walk DACL]
+    H --> I{Privilege overrides}
+    I --> J{Restricted token?}
+    J -->|Yes| K[Second DACL walk]
+    J -->|No| L{Confined?}
+    K --> L
+    L -->|Yes| M[Confinement check]
+    L -->|No| N{All rights granted?}
+    M --> N
+    N -->|Yes| GRANT[Access Granted]
+    N -->|No| DENY
+```
 
 ### 1. SACL access gate
 

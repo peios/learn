@@ -2,6 +2,11 @@
 title: Understanding Identity on Peios
 type: concept
 order: 10
+description: Every process runs with a token — a structured bundle of security information the kernel evaluates on every access decision.
+related:
+  - identity/what-are-sids
+  - identity/how-tokens-work
+  - access-control/understanding-access-control
 ---
 
 Every process on Peios runs with an **identity** — a complete picture of who the process is and what it is allowed to do. This identity is carried in a kernel object called a **token**.

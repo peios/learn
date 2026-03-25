@@ -39,4 +39,5 @@ With `sudo`, you authenticate as yourself and then run a process as root — a c
 
 With elevation on Peios, both the filtered and elevated tokens represent **you**. They carry your SID, your group memberships, your logon session. The elevated token is not a different identity — it is the unrestricted version of your own. Audit logs show the same user in both cases, and access rules that reference your SID apply to both tokens.
 
-This means elevation is an identity-preserving operation. You do not become someone else. You unlock the full authority that was already assigned to you.
+> [!TIP]
+> Elevation is an identity-preserving operation. You do not become someone else. You unlock the full authority that was already assigned to you.

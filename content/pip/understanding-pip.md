@@ -2,6 +2,12 @@
 title: Understanding Process Integrity Protection (PIP)
 type: concept
 order: 10
+description: A protection mechanism that shields critical processes and objects even from administrators.
+related:
+  - integrity/understanding-mic
+  - pip/pip-object-protection
+  - pip/binary-signing-and-pip
+  - process-security/process-mitigations
 ---
 
 **Process Integrity Protection (PIP)** protects critical processes and their objects from tampering — even by administrators with full privileges.
