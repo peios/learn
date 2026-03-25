@@ -2,6 +2,7 @@
 title: How Peios Eliminates Root
 type: concept
 order: 20
+description: Why UID 0 carries no security authority on Peios and how specific privileges replace root's monolithic powers.
 ---
 
 There is no root user on Peios. UID 0 exists in the Linux credential system — the kernel ABI requires it — but it carries no security authority. No access decision checks for UID 0. No special case grants UID 0 additional rights. The traditional "root can do anything" property does not exist.

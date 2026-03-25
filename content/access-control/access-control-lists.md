@@ -2,6 +2,7 @@
 title: What Are Access Control Lists (DACLs and SACLs)
 type: concept
 order: 30
+description: DACLs control who can access an object, SACLs control auditing and integrity policy.
 ---
 
 An **Access Control List (ACL)** is an ordered list of rules called **Access Control Entries (ACEs)**. Each ACE is a single statement about what a specific principal can do (or cannot do, or what gets audited) on the object the ACL protects.

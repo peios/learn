@@ -2,6 +2,7 @@
 title: Writing Conditional ACE Expressions
 type: how-to
 order: 110
+description: Creating conditional ACEs with the sd tool, including expression syntax, practical examples, and verification.
 ---
 
 Use `sd add` with an `if` clause to create conditional ACEs.

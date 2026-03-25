@@ -1,5 +1,7 @@
 name = "Troubleshooting"
 description = "Diagnosing access denials, broken inheritance, missing audit events, and other common issues."
+featured = true
+order = 3
 pages = [
   "troubleshooting/access-denied-errors",
   "troubleshooting/common-issues",

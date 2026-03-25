@@ -2,6 +2,7 @@
 title: Troubleshooting Access Denied Errors
 type: how-to
 order: 10
+description: Diagnosing access denied errors by walking each AccessCheck pipeline layer from PIP through CAP.
 ---
 
 When an operation fails with access denied, the denial could come from any layer in the AccessCheck pipeline. The fastest way to diagnose it is `sd explain` — but understanding the layers helps you interpret the result and know where to fix the problem.

@@ -2,6 +2,7 @@
 title: Testing Public Accessibility with Anonymous Impersonation
 type: how-to
 order: 140
+description: Using Anonymous impersonation to test whether a resource is publicly accessible without revealing caller identity.
 ---
 
 Anonymous impersonation lets you test whether a resource is accessible without any specific identity — answering the question "can everyone access this?"

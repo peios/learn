@@ -2,6 +2,7 @@
 title: How Binary Signing Determines PIP Level
 type: concept
 order: 30
+description: How a process's PIP level is determined by its binary's cryptographic signature, not its token or user identity.
 ---
 
 A process's PIP level is not determined by its token or its user. It is determined by the **cryptographic signature on the binary** that the process is running. PIP trust is about what code is executing, not who asked it to execute.

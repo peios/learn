@@ -2,6 +2,7 @@
 title: What Are Security Identifiers (SIDs)
 type: concept
 order: 20
+description: How Security Identifiers uniquely and permanently identify every user, group, service, and machine on Peios.
 ---
 
 Every security principal on Peios — every user, group, service, and machine — is identified by a **Security Identifier (SID)**. A SID is a unique value that is assigned once and never reused. If a user account is deleted and a new one is created with the same name, the new account gets a different SID.

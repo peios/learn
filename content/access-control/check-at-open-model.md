@@ -2,6 +2,7 @@
 title: The Check-at-Open Model
 type: concept
 order: 190
+description: Access is evaluated once at file open and the granted rights are cached on the handle for its lifetime.
 ---
 
 Peios evaluates file access at **open time**, not on every individual read or write. When a process opens a file, AccessCheck runs once, and the resulting granted rights are stored on the open file handle. Subsequent operations on that handle check the handle's granted mask — they do not re-evaluate the security descriptor.

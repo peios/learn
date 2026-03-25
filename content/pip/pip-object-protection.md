@@ -2,6 +2,7 @@
 title: How PIP Protects Objects
 type: concept
 order: 20
+description: How trust label ACEs in the SACL prevent access to critical files from processes without sufficient PIP trust.
 ---
 
 PIP protects more than running processes. Critical files — binaries, private keys, system configuration — can carry **trust label ACEs** that prevent access from processes without sufficient PIP trust.

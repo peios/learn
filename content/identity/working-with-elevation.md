@@ -2,6 +2,7 @@
 title: Working with Elevation
 type: how-to
 order: 150
+description: How to check elevation status and launch processes with the elevated token using idn and elevate.
 ---
 
 Use `idn` to check elevation status and request elevation when administrative access is needed.

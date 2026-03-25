@@ -2,6 +2,7 @@
 title: Transferring Ownership of an Object
 type: how-to
 order: 150
+description: How to view, transfer, or take ownership of an object, and the recovery path for locked-out objects.
 ---
 
 Use `sd owner` to view or change the owner of an object.

@@ -2,6 +2,7 @@
 title: Understanding Conditional ACEs
 type: concept
 order: 10
+description: How conditional ACEs add expression-based requirements to access rules, including three-valued logic behavior.
 ---
 
 A regular ACE applies whenever the SID matches — if the token contains the ACE's SID, the rule takes effect. A **conditional ACE** adds a second requirement: an expression that must evaluate to true for the ACE to apply.

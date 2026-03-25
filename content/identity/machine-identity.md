@@ -2,6 +2,7 @@
 title: Machine Identity in a Domain
 type: concept
 order: 70
+description: How machines are security principals with their own SIDs, domain accounts, and authentication credentials.
 ---
 
 In a domain environment, every machine is a **security principal** — just like users, groups, and services. Each machine has its own SID, authenticates to the domain independently, and can appear in access control rules.

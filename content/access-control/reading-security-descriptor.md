@@ -2,6 +2,7 @@
 title: Reading an Object's Security Descriptor
 type: how-to
 order: 110
+description: How to use sd show to inspect the owner, group, DACL, and SACL on files, registry keys, and processes.
 ---
 
 Use `sd show` to inspect the security descriptor on any object.

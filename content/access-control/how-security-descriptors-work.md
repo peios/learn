@@ -2,6 +2,7 @@
 title: How Security Descriptors Work
 type: concept
 order: 20
+description: The structure of a security descriptor — owner, group, DACL, and SACL — and how objects receive one.
 ---
 
 A **security descriptor (SD)** is the complete security policy for a protected object. Every secured object on Peios has one. The security descriptor is a self-contained structure — everything the kernel needs to evaluate access is in a single blob.

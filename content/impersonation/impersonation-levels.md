@@ -2,6 +2,7 @@
 title: Impersonation Levels Explained
 type: concept
 order: 20
+description: The four impersonation levels -- Anonymous, Identification, Impersonation, and Delegation -- and when to use each.
 ---
 
 When a client connects to a service, it chooses an **impersonation level** that controls how far the service can go with the client's identity. The level is set by the client — the service cannot escalate it.

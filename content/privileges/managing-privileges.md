@@ -2,6 +2,7 @@
 title: Managing Privileges
 type: how-to
 order: 110
+description: Enabling, disabling, and permanently removing privileges on a token using the idn tool.
 ---
 
 Use `idn` to enable, disable, and remove privileges on your token.

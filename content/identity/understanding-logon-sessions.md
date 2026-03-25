@@ -2,6 +2,7 @@
 title: Understanding Logon Sessions
 type: concept
 order: 50
+description: What logon sessions are, the different logon types, and how the logon SID scopes access to a single session.
 ---
 
 Every token on Peios is tied to a **logon session** — a kernel object that represents the authentication event that created it. A logon session answers the question: "how did this principal get here?"

@@ -2,6 +2,7 @@
 title: How Identity Cascades Across Local Services
 type: concept
 order: 30
+description: How a client's identity flows through chains of local services via impersonation without amplifying authority.
 ---
 
 When a service impersonates a client and then calls another local service, the client's identity **cascades** — the second service sees the client, not the first service.

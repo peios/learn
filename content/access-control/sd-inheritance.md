@@ -2,6 +2,7 @@
 title: How SD Inheritance Works
 type: concept
 order: 90
+description: How ACEs propagate from parent directories to children using CI, OI, NP, and IO inheritance flags.
 ---
 
 Setting access rules on every individual file in a directory tree would be impractical. **Inheritance** solves this — ACEs on a parent directory can automatically propagate to new objects created inside it. Set a policy once on a directory, and every file and subdirectory created within it receives that policy automatically.

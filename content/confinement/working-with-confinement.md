@@ -2,6 +2,7 @@
 title: Working with Confinement
 type: how-to
 order: 110
+description: Inspecting confinement state, granting confined applications access to resources, and diagnosing confinement denials.
 ---
 
 Confinement state is visible through `idn` and access decisions involving confinement are diagnosable with `sd explain`.

@@ -2,6 +2,7 @@
 title: Inspecting a Process's Identity
 type: how-to
 order: 110
+description: How to use idn show to inspect the token attached to the current process or another process by PID.
 ---
 
 Use `idn show` to inspect the token attached to a process.

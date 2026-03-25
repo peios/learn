@@ -2,6 +2,7 @@
 title: File SDs and Extended Attributes
 type: concept
 order: 180
+description: How file and directory security descriptors are stored as filesystem extended attributes.
 ---
 
 Every file and directory on Peios has a security descriptor. For files, that security descriptor is stored in a **filesystem extended attribute (xattr)** — a named blob of data attached to the file's inode alongside the file's contents.

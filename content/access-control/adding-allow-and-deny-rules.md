@@ -2,6 +2,7 @@
 title: Adding Allow and Deny Rules
 type: how-to
 order: 130
+description: How to add and remove individual allow and deny ACEs from an existing DACL using sd add and sd remove.
 ---
 
 Use `sd add` to add individual ACEs to an existing DACL without replacing the other rules.

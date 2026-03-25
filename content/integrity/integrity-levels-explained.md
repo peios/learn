@@ -2,6 +2,7 @@
 title: Integrity Levels Explained
 type: concept
 order: 20
+description: The five integrity levels from Untrusted to System, their trust semantics, and typical processes at each level.
 ---
 
 Every token on Peios carries one of five integrity levels. The level represents how much the system trusts the process — and determines the minimum trust boundary it can write across.

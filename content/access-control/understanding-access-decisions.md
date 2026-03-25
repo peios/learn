@@ -2,6 +2,7 @@
 title: Understanding Why an Access Decision Was Made
 type: how-to
 order: 170
+description: How to use sd explain to trace each stage of an AccessCheck evaluation and diagnose access problems.
 ---
 
 When access is denied unexpectedly — or granted when it shouldn't be — use `sd explain` to see exactly how AccessCheck evaluated the request.

@@ -2,6 +2,7 @@
 title: Working with PIP Protection
 type: how-to
 order: 110
+description: Inspecting PIP levels on processes and files, listing protected processes, and diagnosing PIP-related access denials.
 ---
 
 PIP information surfaces through the same tools used for identity and security descriptors.

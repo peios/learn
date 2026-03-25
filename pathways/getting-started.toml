@@ -1,5 +1,7 @@
 name = "Getting Started"
 description = "The core security model — start here. Understand how identity and access control work on Peios."
+featured = true
+order = 1
 pages = [
   "identity/understanding-identity",
   "identity/what-are-sids",

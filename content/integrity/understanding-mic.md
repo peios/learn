@@ -2,6 +2,7 @@
 title: Understanding Mandatory Integrity Control (MIC)
 type: concept
 order: 10
+description: How Mandatory Integrity Control enforces trust boundaries by blocking lower-integrity processes from modifying higher-integrity objects.
 ---
 
 **Mandatory Integrity Control (MIC)** is a trust boundary that sits above the DACL. Even if the DACL would grant access, MIC can deny it based on the relative trust levels of the process and the object.

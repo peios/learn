@@ -2,6 +2,7 @@
 title: Using OWNER RIGHTS to Restrict or Expand Owner Access
 type: how-to
 order: 160
+description: How to use the OWNER RIGHTS ACE (S-1-3-4) to override the default rights granted to an object's owner.
 ---
 
 By default, the owner of an object receives `READ_CONTROL` and `WRITE_DAC` implicitly. An **OWNER RIGHTS ACE** overrides these defaults — granting exactly the rights it specifies, no more.

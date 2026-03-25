@@ -2,6 +2,7 @@
 title: Troubleshooting Common Issues
 type: how-to
 order: 20
+description: Fixing broken ACL inheritance, missing audit events, and other frequently encountered security configuration problems.
 ---
 
 ## Missing or broken inheritance

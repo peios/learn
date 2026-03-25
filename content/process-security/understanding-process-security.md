@@ -2,6 +2,7 @@
 title: Understanding Process Security
 type: concept
 order: 10
+description: How every process carries a security descriptor that governs signals, memory access, debugging, and token inspection.
 ---
 
 Every process on Peios carries a **security descriptor** that controls who can interact with it. Sending signals, reading memory, attaching a debugger, inspecting tokens — all of these operations are governed by the process's SD, evaluated by the same AccessCheck used for files and every other object type.

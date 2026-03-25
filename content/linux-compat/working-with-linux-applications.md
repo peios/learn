@@ -2,6 +2,7 @@
 title: Working with Linux Applications
 type: how-to
 order: 110
+description: Running unmodified Linux applications on Peios, handling root-refusing software, and diagnosing UID-related differences.
 ---
 
 Most Linux applications run on Peios without modification. This page covers the common situations where Linux applications behave differently and how to handle them.

@@ -2,6 +2,7 @@
 title: Breaking Inheritance on an Object
 type: how-to
 order: 140
+description: How to disconnect an object from its parent's DACL by breaking, clearing, or re-enabling inheritance.
 ---
 
 By default, objects inherit ACEs from their parent. When an object needs different permissions from the rest of the tree, you can **break inheritance** — disconnecting the object from its parent's DACL.

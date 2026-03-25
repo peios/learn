@@ -2,6 +2,7 @@
 title: Understanding Ownership and Owner Rights
 type: concept
 order: 80
+description: What the owner SID grants by default, how OWNER RIGHTS overrides it, and how ownership is transferred.
 ---
 
 Every security descriptor has an **owner SID**. Ownership is not just a label — it confers real rights. The owner of an object can always read its security descriptor and modify its DACL, even if no ACE in the DACL explicitly grants them access.

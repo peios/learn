@@ -2,6 +2,7 @@
 title: Understanding Linux Compatibility
 type: concept
 order: 10
+description: How Peios projects Linux credentials from tokens and neutralizes DAC so the token-based security model governs all access.
 ---
 
 Peios uses the Linux kernel as its base. Many Linux applications run on Peios without modification. But Peios's security model is fundamentally different from Linux's — tokens and security descriptors replace UIDs and mode bits. This page explains how the two coexist.

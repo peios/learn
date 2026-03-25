@@ -2,6 +2,7 @@
 title: Inspecting a Thread's Impersonation State
 type: how-to
 order: 120
+description: How to check whether a thread is impersonating and inspect its impersonation token with idn show.
 ---
 
 Use `idn show` with a thread specifier to check whether a thread is impersonating and inspect the impersonation token it carries.

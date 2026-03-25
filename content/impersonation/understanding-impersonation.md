@@ -2,6 +2,7 @@
 title: Understanding Impersonation
 type: concept
 order: 10
+description: How services temporarily adopt a client's identity so access decisions use the client's token, not the service's.
 ---
 
 **Impersonation** is the mechanism by which a service thread temporarily adopts a client's identity. While impersonating, the kernel evaluates all access decisions using the client's token — not the service's own token.

@@ -2,6 +2,7 @@
 title: Setting a DACL on a File or Directory
 type: how-to
 order: 120
+description: How to use sd set to replace explicit ACEs on an object while preserving inherited ACEs.
 ---
 
 Use `sd set` to replace the DACL on an object. This sets the complete list of explicit ACEs — any existing explicit ACEs are replaced.

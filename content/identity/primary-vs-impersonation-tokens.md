@@ -2,6 +2,7 @@
 title: Primary Tokens vs Impersonation Tokens
 type: concept
 order: 40
+description: The difference between a process's primary token and per-thread impersonation tokens, and when the kernel uses each.
 ---
 
 There are two kinds of token on Peios: **primary tokens** and **impersonation tokens**. They serve different purposes and operate at different scopes.

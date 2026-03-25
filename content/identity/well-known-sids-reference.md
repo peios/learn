@@ -2,6 +2,7 @@
 title: Well-Known SIDs Reference
 type: how-to
 order: 160
+description: Reference table of well-known SIDs including universal, NT Authority, built-in, service, and confinement SIDs.
 ---
 
 Well-known SIDs have fixed, universal meaning across every Peios installation and every domain. This page is a reference for the most commonly encountered ones.

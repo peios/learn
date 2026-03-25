@@ -2,6 +2,7 @@
 title: Working with Auditing
 type: how-to
 order: 110
+description: Managing audit ACEs, enabling continuous auditing, and querying audit events with the sd and eventctl tools.
 ---
 
 Audit rules are managed through the `sd` tool. Modifying audit rules requires `SeSecurityPrivilege` because they live in the SACL.

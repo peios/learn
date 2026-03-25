@@ -2,6 +2,7 @@
 title: Understanding Central Access Policy
 type: concept
 order: 10
+description: How Central Access Policy applies organization-wide access rules that intersect with per-object DACLs.
 ---
 
 The DACL is per-object — the owner sets it. If an organization's access policy changes ("financial data is now restricted to the Finance and Compliance teams"), an administrator must find every affected object and update its DACL individually.

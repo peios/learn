@@ -2,6 +2,7 @@
 title: Privilege Reference
 type: how-to
 order: 120
+description: Complete catalog of Peios privileges, covering AccessCheck overrides, operation gates, and domain/delegation rights.
 ---
 
 A complete catalog of privileges on Peios. Each privilege is a system-wide right carried on a token. Privileges are assigned by policy at token creation time.

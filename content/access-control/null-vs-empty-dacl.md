@@ -2,6 +2,7 @@
 title: Null DACL vs Empty DACL
 type: concept
 order: 70
+description: A null DACL grants all access to everyone; an empty DACL denies all access — opposite meanings.
 ---
 
 A DACL can be **null** (absent from the security descriptor) or **empty** (present but containing zero ACEs). These sound similar but have opposite security implications.

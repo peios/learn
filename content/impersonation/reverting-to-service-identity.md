@@ -2,6 +2,7 @@
 title: Reverting to Service Identity
 type: how-to
 order: 130
+description: How and when to call revert_to_self to clear an impersonation token and return to the service's own identity.
 ---
 
 After handling a client's request, a service thread should **revert** to the service's primary token. This clears the impersonation state and returns the thread to the service's own identity.

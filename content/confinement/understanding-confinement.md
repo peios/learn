@@ -2,6 +2,7 @@
 title: Understanding Application Confinement
 type: concept
 order: 10
+description: How application confinement inverts default access so confined processes can only reach objects that explicitly opt in.
 ---
 
 **Application confinement** inverts the default access model. A normal process can access anything the DACL grants to its identity. A confined process starts from **nothing** — access is denied by default, regardless of the token's user SID, group memberships, or privileges. The only way a confined process can access an object is if the object explicitly opts in.

@@ -2,6 +2,7 @@
 title: Setting and Changing Mandatory Labels
 type: how-to
 order: 110
+description: Viewing, setting, changing, and removing mandatory integrity labels on objects using the sd label command.
 ---
 
 Use `sd label` to view, set, or change the mandatory integrity label on an object.

@@ -2,6 +2,7 @@
 title: Comparing Two Tokens
 type: how-to
 order: 140
+description: How to use idn compare to diff two tokens and find mismatched groups, privileges, or integrity levels.
 ---
 
 Use `idn compare` to see what two tokens have in common and where they differ. This is useful for troubleshooting — understanding why two processes have different access when you expect them to behave the same.

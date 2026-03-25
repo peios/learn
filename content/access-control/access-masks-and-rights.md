@@ -2,6 +2,7 @@
 title: Understanding Access Masks and Rights
 type: concept
 order: 50
+description: How the 32-bit access mask encodes specific, standard, and generic rights for every object type.
 ---
 
 Every access request and every access grant on Peios is expressed as an **access mask** — a 32-bit value where each bit represents a specific right. When a thread opens a file, it requests a mask of the rights it needs. When AccessCheck evaluates the request, it computes a mask of the rights granted. If the granted mask covers the requested mask, access succeeds.

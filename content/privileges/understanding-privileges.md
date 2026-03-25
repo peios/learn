@@ -2,6 +2,7 @@
 title: Understanding Privileges on Peios
 type: concept
 order: 10
+description: How token-carried privileges grant system-wide rights separate from object DACLs, including the enable/disable lifecycle.
 ---
 
 A **privilege** is a system-wide right carried on a token. Privileges are separate from access rights — access rights live on the object (in the security descriptor), while privileges live on the caller (in the token).

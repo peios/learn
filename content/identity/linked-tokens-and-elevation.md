@@ -2,6 +2,7 @@
 title: How Linked Tokens and Elevation Work
 type: concept
 order: 80
+description: How linked token pairs give administrators standard-user defaults with explicit elevation to full privileges.
 ---
 
 Administrators need full privileges sometimes, but running everything with full administrative power is dangerous. A compromised process with administrative privileges can do far more damage than one without. Peios solves this with **linked token pairs** — a mechanism that gives administrators standard-user permissions by default and full privileges only when they explicitly ask for them.

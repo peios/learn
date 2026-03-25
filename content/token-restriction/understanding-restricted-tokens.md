@@ -2,6 +2,7 @@
 title: Understanding Restricted Tokens
 type: concept
 order: 10
+description: How restricted tokens use dual DACL evaluation with restricting SIDs to narrow access to an intersection of two checks.
 ---
 
 A **restricted token** is a token with an additional set of **restricting SIDs**. When AccessCheck evaluates a restricted token, it walks the DACL **twice**: once using the token's normal SIDs, and once using only the restricting SIDs. Access is granted only if both evaluations agree.

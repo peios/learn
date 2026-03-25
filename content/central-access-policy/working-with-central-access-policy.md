@@ -2,6 +2,7 @@
 title: Working with Central Access Policy
 type: how-to
 order: 110
+description: Applying, removing, staging, and diagnosing Central Access Policies on objects using the sd tool.
 ---
 
 Central Access Policies are managed centrally and applied to objects via scoped policy ACEs.

@@ -2,6 +2,7 @@
 title: How Tokens Work
 type: concept
 order: 30
+description: What a token contains, how tokens are created and inherited, and why identity is immutable but policy is adjustable.
 ---
 
 A **token** is the kernel object that represents a thread's identity. It is created when a principal authenticates and captures everything the kernel needs to make access decisions — the principal's SID, their group memberships, their privileges, and their trust level.

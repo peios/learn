@@ -2,6 +2,7 @@
 title: Setting the Impersonation Level on a Connection
 type: how-to
 order: 110
+description: How clients set the impersonation level when connecting to a service and choosing the minimum level needed.
 ---
 
 The impersonation level is set by the **client** when establishing a connection to a service. It controls how far the service can go with the client's identity.

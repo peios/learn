@@ -2,6 +2,7 @@
 title: Understanding Auditing on Peios
 type: concept
 order: 10
+description: How SACL-based audit rules record access decisions, including conditional, continuous, and privilege-use auditing.
 ---
 
 Access control decides whether to grant or deny. **Auditing** records that the decision was made — who accessed what, when, and how.

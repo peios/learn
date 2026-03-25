@@ -2,6 +2,7 @@
 title: How Attribute-Based Access Control Works
 type: concept
 order: 30
+description: When and how to use attribute-based access control (ABAC) to express policies that groups alone cannot handle.
 ---
 
 Traditional access control answers the question "is this user in the right group?" Attribute-based access control (ABAC) answers a richer question: "given the properties of this user, this device, and this resource, should access be granted?"

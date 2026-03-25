@@ -2,6 +2,7 @@
 title: Working with Process Security
 type: how-to
 order: 110
+description: Viewing and tightening process security descriptors and diagnosing process access denials with sd explain.
 ---
 
 Process security descriptors are inspected and modified with the same `sd` tool used for files.

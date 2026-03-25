@@ -2,6 +2,7 @@
 title: Service Identities and Per-Service SIDs
 type: concept
 order: 60
+description: How services get purpose-built tokens with per-service SIDs to isolate authority between services sharing an account.
 ---
 
 Every service on Peios runs with its own **purpose-built token**. The init process creates each service's token at startup, tailored to the service's role — with the right identity, group memberships, and only the privileges the service needs.

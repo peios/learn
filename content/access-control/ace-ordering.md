@@ -2,6 +2,7 @@
 title: How ACE Ordering Affects Access Decisions
 type: concept
 order: 60
+description: Why the order of ACEs in a DACL determines the outcome, and the canonical ordering rules.
 ---
 
 AccessCheck walks the DACL from top to bottom. It does not reorder, sort, or prioritize ACEs — it evaluates them in exactly the order they appear. This means the order you place ACEs in the DACL directly determines the outcome of access decisions.

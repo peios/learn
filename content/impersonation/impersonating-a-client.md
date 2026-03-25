@@ -2,6 +2,7 @@
 title: Impersonating a Client's Identity
 type: how-to
 order: 120
+description: How service developers impersonate a client connection so the thread operates under the client's identity.
 ---
 
 This page is for **service developers**. When a client connects to your service, you can impersonate their identity so that all access decisions on your thread use the client's permissions instead of your service's.

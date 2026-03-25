@@ -2,6 +2,7 @@
 title: Creating Restricted Tokens
 type: how-to
 order: 110
+description: Using idn filter to create restricted tokens with deny-only groups, removed privileges, and restricting SIDs.
 ---
 
 Use `idn filter` to create a restricted copy of an existing token with fewer privileges, deny-only groups, or restricting SIDs.

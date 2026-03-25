@@ -2,6 +2,7 @@
 title: Process Mitigations
 type: concept
 order: 20
+description: The four immutable process mitigations -- WXP, LSV, TLP, and CFI -- that harden processes against exploitation.
 ---
 
 **Process mitigations** are security hardening flags that restrict what a process can do at the memory and code-loading level. They are set when the binary is executed — determined by the binary's metadata and signing properties — and **cannot be changed at runtime**.

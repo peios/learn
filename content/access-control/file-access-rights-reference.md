@@ -2,6 +2,7 @@
 title: File Access Rights Reference
 type: how-to
 order: 200
+description: Reference table of file and directory specific rights, standard rights, and generic-to-specific mappings.
 ---
 
 A reference for the specific access rights defined for files and directories on Peios.

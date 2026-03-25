@@ -2,6 +2,7 @@
 title: User Claims, Device Claims, and Resource Attributes
 type: concept
 order: 20
+description: How user claims, device claims, and resource attributes provide data for conditional ACE expressions.
 ---
 
 Conditional ACE expressions operate on three kinds of data: **user claims**, **device claims**, and **resource attributes**. These are the key-value pairs that make attribute-based access control possible.

@@ -2,6 +2,7 @@
 title: Querying Token Information (SIDs, Groups, Privileges)
 type: how-to
 order: 130
+description: How to query specific token fields — user SID, group memberships, and privileges — using idn subcommands.
 ---
 
 The `idn` tool provides focused subcommands for querying specific parts of a token. These are useful for quick checks and scripting where the full `idn show` output is more than you need.
