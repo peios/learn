@@ -11,7 +11,7 @@ Use `idn show` to inspect the token attached to a process.
 
 Running `idn show` with no arguments displays the token of the calling process:
 
-```
+```bash
 $ idn show
 User:         S-1-5-21-3623811015-3361044348-30300820-1013 (alice)
 Integrity:    Medium
@@ -41,7 +41,7 @@ Each section shows a key part of the token:
 
 Pass a PID to inspect a different process:
 
-```
+```bash
 $ idn show 1482
 User:         S-1-5-19 (Local Service)
 Integrity:    System

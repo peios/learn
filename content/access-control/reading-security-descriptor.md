@@ -9,7 +9,7 @@ Use `sd show` to inspect the security descriptor on any object.
 
 ## Show a file's security descriptor
 
-```
+```bash
 $ sd show /srv/data/reports
 Owner:  S-1-5-21-...-1013 (alice)
 Group:  S-1-5-21-...-513 (Domain Users)
@@ -35,7 +35,7 @@ Each section of the output corresponds to a component of the security descriptor
 
 The same command works on registry keys:
 
-```
+```bash
 $ sd show registry://HKLM/Software/Peios
 Owner:  S-1-5-18 (SYSTEM)
 Group:  S-1-5-18 (SYSTEM)
@@ -50,7 +50,7 @@ The rights are object-type-specific (`KEY_*` instead of `FILE_*`), but the struc
 
 ## Show a process's security descriptor
 
-```
+```bash
 $ sd show --process 1482
 Owner:  S-1-5-19 (Local Service)
 Group:  S-1-5-19 (Local Service)
@@ -65,7 +65,7 @@ DACL:
 
 For full detail including all flags and raw bit values, use `--raw`:
 
-```
+```bash
 $ sd show --raw /srv/data/reports
 ```
 
@@ -75,7 +75,7 @@ This shows inheritance flags on every ACE, the full access mask in hexadecimal a
 
 For scripting, use `--json`:
 
-```
+```bash
 $ sd show --json /srv/data/reports
 ```
 

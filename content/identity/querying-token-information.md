@@ -9,7 +9,7 @@ The `idn` tool provides focused subcommands for querying specific parts of a tok
 
 ## Query the user SID
 
-```
+```bash
 $ idn sid
 S-1-5-21-3623811015-3361044348-30300820-1013 (alice)
 
@@ -21,7 +21,7 @@ Returns the token's user SID and resolved name. With no arguments, queries the c
 
 ## Query group memberships
 
-```
+```bash
 $ idn groups
 SID                                      Name                 State
 S-1-5-21-...-513                         Domain Users         enabled
@@ -40,7 +40,7 @@ Each group shows its current state:
 
 Query another process's groups by passing a PID:
 
-```
+```bash
 $ idn groups 1482
 SID                                      Name                 State
 S-1-5-32-545                             Users                enabled
@@ -49,7 +49,7 @@ S-1-5-80-2739571183                      DNS Service          enabled
 
 ## Query privileges
 
-```
+```bash
 $ idn privileges
 Privilege                                State
 SeChangeNotifyPrivilege                  enabled
@@ -59,7 +59,7 @@ SeIncreaseBasePriorityPrivilege          disabled
 
 To see only the privileges that are currently enabled:
 
-```
+```bash
 $ idn privileges --enabled
 Privilege                                State
 SeChangeNotifyPrivilege                  enabled
@@ -67,7 +67,7 @@ SeChangeNotifyPrivilege                  enabled
 
 Query another process's privileges by passing a PID:
 
-```
+```bash
 $ idn privileges 1482
 Privilege                                State
 SeBindPrivilegedPortPrivilege            enabled
@@ -78,7 +78,7 @@ SeChangeNotifyPrivilege                  enabled
 
 All `idn` subcommands support `--json` for structured output:
 
-```
+```bash
 $ idn groups --json
 [
   {"sid": "S-1-5-21-...-513", "name": "Domain Users", "state": "enabled"},

@@ -9,7 +9,7 @@ Use `sd add` with an `if` clause to create conditional ACEs.
 
 ## Basic conditional ACE
 
-```
+```bash
 $ sd add /srv/data/plans allow Engineering FILE_READ_DATA \
     if '@User.department == "Engineering"'
 ```
@@ -54,7 +54,7 @@ Not_Exists @Resource.classification
 
 **Restrict confidential files to cleared users on managed devices:**
 
-```
+```bash
 $ sd add /srv/data/confidential deny "Authenticated Users" FILE_READ_DATA \
     if '@User.clearance < 3 || @Device.managed != true'
 $ sd add /srv/data/confidential allow "Authenticated Users" FILE_READ_DATA
@@ -64,7 +64,7 @@ The conditional deny blocks users without sufficient clearance or on unmanaged d
 
 **Grant write access only to project members:**
 
-```
+```bash
 $ sd add /srv/projects/atlas allow "Domain Users" FILE_WRITE_DATA \
     if '@User.projects Contains "atlas"'
 ```
@@ -73,7 +73,7 @@ Only users with "atlas" in their projects claim can write. Other Domain Users ca
 
 **Deny access to archived resources:**
 
-```
+```bash
 $ sd add /srv/data deny Everyone FILE_WRITE_DATA ci,oi \
     if '@Resource.status == "archived"'
 ```
@@ -84,14 +84,14 @@ Files tagged as archived become read-only for everyone. The inheritable flags en
 
 Conditional ACEs are most powerful when combined with resource attributes on the objects. Tag the objects:
 
-```
+```bash
 $ sd attr /srv/data/report.pdf set classification confidential
 $ sd attr /srv/data/report.pdf set project atlas
 ```
 
 Then write ACEs that reference those attributes:
 
-```
+```bash
 $ sd add /srv/data deny Everyone FILE_READ_DATA ci,oi \
     if '@Resource.classification == "confidential" && !(@User.projects Contains @Resource.project)'
 ```
@@ -102,7 +102,7 @@ This single rule denies access to any confidential file unless the user is assig
 
 Check that the expression evaluates as expected:
 
-```
+```bash
 $ sd explain /srv/data/report.pdf 2041 FILE_READ_DATA
 Token:   S-1-5-21-...-1013 (alice)
 Object:  /srv/data/report.pdf

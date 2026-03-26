@@ -11,7 +11,7 @@ The impersonation level is set by the **client** when establishing a connection 
 
 When connecting to a service, specify the impersonation level:
 
-```
+```bash
 $ pbus connect registry --impersonation-level impersonation
 ```
 

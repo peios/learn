@@ -89,7 +89,7 @@ This denies read access to confidential files unless the user is assigned to the
 
 Resource attributes are set using `sd`:
 
-```
+```bash
 $ sd attr /srv/data/report.pdf set classification confidential
 $ sd attr /srv/data/report.pdf set project atlas
 $ sd attr /srv/data/report.pdf set retentionYears 7
@@ -97,7 +97,7 @@ $ sd attr /srv/data/report.pdf set retentionYears 7
 
 View the attributes on an object:
 
-```
+```bash
 $ sd attr /srv/data/report.pdf
 classification:  confidential  (string)
 project:         atlas          (string)

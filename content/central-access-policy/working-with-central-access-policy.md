@@ -7,11 +7,14 @@ description: Applying, removing, staging, and diagnosing Central Access Policies
 
 Central Access Policies are managed centrally and applied to objects via scoped policy ACEs.
 
+> [!NOTE]
+> **Prerequisites:** `SeSecurityPrivilege` required to add or remove scoped policy ACEs (they live in the SACL).
+
 ## Apply a policy to an object
 
 Add a scoped policy ACE to the object's SACL. This requires `SeSecurityPrivilege`:
 
-```
+```bash
 $ sd cap apply /srv/data/finance "Finance Data Policy"
 ```
 
@@ -19,7 +22,7 @@ The object is now governed by the Finance Data Policy in addition to its own DAC
 
 ## Apply multiple policies
 
-```
+```bash
 $ sd cap apply /srv/data/finance "Finance Data Policy"
 $ sd cap apply /srv/data/finance "Compliance Retention Policy"
 ```
@@ -28,7 +31,7 @@ Both policies are evaluated. Each can only further restrict — the intersection
 
 ## View applied policies
 
-```
+```bash
 $ sd cap list /srv/data/finance
 Applied policies:
   Finance Data Policy          S-1-17-...-1001   (effective)
@@ -39,7 +42,7 @@ The output shows each policy by name and SID, and whether it has a staged DACL p
 
 ## Remove a policy from an object
 
-```
+```bash
 $ sd cap remove /srv/data/finance "Compliance Retention Policy"
 ```
 
@@ -53,7 +56,7 @@ Before enforcing a new policy, stage it to see the impact:
 
 **2. Review the impact.** AccessCheck evaluates both DACLs in parallel and logs differences. Check the audit logs:
 
-```
+```bash
 $ sd cap audit /srv/data/finance
 Staging differences for "Finance Data Policy":
   /srv/data/finance/q4-report.pdf
@@ -73,7 +76,7 @@ The output shows exactly which users would gain or lose access if the staged DAC
 
 If access is unexpectedly broad, a policy may be missing from the kernel cache:
 
-```
+```bash
 $ sd cap status
 Policy cache:
   Finance Data Policy          S-1-17-...-1001   loaded
@@ -92,7 +95,7 @@ Once the underlying issue is resolved, the policy is reloaded into the cache and
 
 `sd explain` shows CAP evaluation as part of the pipeline:
 
-```
+```bash
 $ sd explain /srv/data/finance/q4-report.pdf 2041 FILE_WRITE_DATA
 ...
 

@@ -11,7 +11,7 @@ Use `idn show` with a thread specifier to check whether a thread is impersonatin
 
 Specify a thread with `pid/tid`:
 
-```
+```bash
 $ idn show 1482/1509
 User:            S-1-5-21-3623811015-3361044348-30300820-1013 (alice)
 Integrity:       Medium
@@ -39,7 +39,7 @@ In this example, a service thread (in process 1482) is impersonating Alice at th
 
 If the thread is using the process's primary token, the output says so:
 
-```
+```bash
 $ idn show 1482/1485
 User:            S-1-5-19 (Local Service)
 Integrity:       System
@@ -61,7 +61,7 @@ This thread is running with the process's primary token — the service's own id
 
 To see all threads in a process and their impersonation state at a glance:
 
-```
+```bash
 $ idn threads 1482
 TID     Impersonating   User
 1482    no              S-1-5-19 (Local Service)

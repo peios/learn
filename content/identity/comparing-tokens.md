@@ -9,7 +9,7 @@ Use `idn compare` to see what two tokens have in common and where they differ. T
 
 ## Compare two processes
 
-```
+```bash
 $ idn compare 2041 2087
                          PID 2041                PID 2087
 User SID:                S-1-5-21-...-1013       S-1-5-21-...-1013
@@ -39,7 +39,7 @@ In this example, both processes belong to Alice and share the same logon session
 
 Use `pid/tid` syntax to compare a thread's impersonation token with the process's primary token:
 
-```
+```bash
 $ idn compare 1482 1482/1509
                          PID 1482                TID 1509
 User SID:                S-1-5-19                S-1-5-21-...-1013
@@ -64,7 +64,7 @@ This shows a service (Local Service) with one thread impersonating Alice. The to
 
 For scripting, `--json` outputs the comparison as structured data:
 
-```
+```bash
 $ idn compare --json 2041 2087
 ```
 

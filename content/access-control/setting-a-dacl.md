@@ -7,9 +7,12 @@ description: How to use sd set to replace explicit ACEs on an object while prese
 
 Use `sd set` to replace the DACL on an object. This sets the complete list of explicit ACEs — any existing explicit ACEs are replaced.
 
+> [!NOTE]
+> **Prerequisites:** WRITE_DAC on the target object, or ownership (which grants WRITE_DAC by default).
+
 ## Set a DACL
 
-```
+```bash
 $ sd set /srv/data/reports \
     deny bob FILE_WRITE_DATA \
     allow "Domain Users" FILE_READ_DATA \
@@ -24,7 +27,7 @@ The tool places ACEs in canonical order automatically — deny ACEs before allow
 
 Principals can be referenced by name or by SID:
 
-```
+```bash
 $ sd set /srv/data/reports \
     allow "Domain Users" FILE_READ_DATA \
     allow S-1-5-21-...-1013 FILE_ALL_ACCESS
@@ -36,7 +39,7 @@ Names are resolved to SIDs before being written. The stored ACE always contains 
 
 To make ACEs inheritable, add inheritance flags after the rights:
 
-```
+```bash
 $ sd set /srv/data/projects \
     allow "Domain Users" FILE_READ_DATA ci,oi \
     allow Developers "FILE_READ_DATA | FILE_WRITE_DATA" ci,oi \
@@ -57,7 +60,7 @@ Without inheritance flags, ACEs apply only to the object itself and are not inhe
 Setting a DACL replaces only the **explicit** ACEs — the ones set directly on the object. Inherited ACEs from the parent remain unless you explicitly break inheritance.
 
 Before:
-```
+```bash
 $ sd show /srv/data/reports
 DACL:
   Allow  alice          FILE_ALL_ACCESS                    (explicit)
@@ -65,7 +68,7 @@ DACL:
 ```
 
 After setting:
-```
+```bash
 $ sd set /srv/data/reports \
     allow alice FILE_ALL_ACCESS \
     allow bob FILE_READ_DATA
@@ -83,7 +86,7 @@ The explicit ACEs changed. The inherited ACE from the parent is still there.
 
 Always verify the result with `sd show` after modifying a DACL:
 
-```
+```bash
 $ sd show /srv/data/reports
 ```
 

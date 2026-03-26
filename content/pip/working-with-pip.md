@@ -11,7 +11,7 @@ PIP information surfaces through the same tools used for identity and security d
 
 PIP type and trust level are shown in `idn show`:
 
-```
+```bash
 $ idn show 1482
 User:         S-1-5-19 (Local Service)
 Integrity:    System
@@ -35,7 +35,7 @@ PIP:          None
 
 Use `idn list --pip` to see all PIP-protected processes on the system:
 
-```
+```bash
 $ idn list --pip
 PID     User                      PIP                         Binary
 1       S-1-5-18 (SYSTEM)         Isolated / Trust 4096       /sbin/peinit
@@ -48,7 +48,7 @@ PID     User                      PIP                         Binary
 
 Trust label ACEs appear in the SACL when you inspect an object's security descriptor:
 
-```
+```bash
 $ sd show /usr/lib/peios/authd
 Owner:  S-1-5-18 (SYSTEM)
 Group:  S-1-5-18 (SYSTEM)
@@ -67,7 +67,7 @@ The trust label shows the minimum PIP level required and which access categories
 
 When access is denied due to PIP, `sd explain` shows it:
 
-```
+```bash
 $ sd explain /usr/lib/peios/authd 3841 FILE_WRITE_DATA
 Token:   S-1-5-21-...-500 (Administrator)
 Object:  /usr/lib/peios/authd
@@ -86,7 +86,7 @@ The administrator has no PIP protection (running an unsigned binary), so they ca
 
 For process access denials, the error is reported directly:
 
-```
+```bash
 $ idn show 47
 Error: access denied — PIP dominance required (target: Isolated / Trust 4096)
 ```

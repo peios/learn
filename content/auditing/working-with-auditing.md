@@ -5,13 +5,16 @@ order: 110
 description: Managing audit ACEs, enabling continuous auditing, and querying audit events with the sd and eventctl tools.
 ---
 
-Audit rules are managed through the `sd` tool. Modifying audit rules requires `SeSecurityPrivilege` because they live in the SACL.
+Audit rules are managed through the `sd` tool.
+
+> [!NOTE]
+> **Prerequisites:** `SeSecurityPrivilege` required to modify audit rules (they live in the SACL).
 
 ## Set audit rules on an object
 
 Add an audit ACE to the SACL:
 
-```
+```bash
 $ sd audit add /srv/data/finance/accounts.db \
     audit Administrators FILE_WRITE_DATA success
 ```
@@ -20,7 +23,7 @@ This audits every successful write to the file by members of the Administrators 
 
 ## Audit both success and failure
 
-```
+```bash
 $ sd audit add /srv/data/finance/accounts.db \
     audit Everyone FILE_READ_DATA failure
 ```
@@ -29,7 +32,7 @@ Auditing failures only — this logs every denied read attempt, which is useful 
 
 To audit both:
 
-```
+```bash
 $ sd audit add /srv/data/sensitive.key \
     audit Everyone FILE_READ_DATA success,failure
 ```
@@ -38,7 +41,7 @@ Every read attempt — successful or denied — is logged.
 
 ## View audit rules on an object
 
-```
+```bash
 $ sd show /srv/data/finance/accounts.db
 ...
 SACL:
@@ -48,7 +51,7 @@ SACL:
 
 ## Remove an audit rule
 
-```
+```bash
 $ sd audit remove /srv/data/finance/accounts.db \
     audit Administrators FILE_WRITE_DATA success
 ```
@@ -57,7 +60,7 @@ $ sd audit remove /srv/data/finance/accounts.db \
 
 Continuous auditing logs every individual operation, not just the initial open:
 
-```
+```bash
 $ sd audit add /srv/data/classified/plans.pdf \
     continuous Everyone FILE_READ_DATA success
 ```
@@ -70,7 +73,7 @@ Per-token audit policy forces auditing for a specific principal regardless of wh
 
 To inspect a token's audit policy:
 
-```
+```bash
 $ idn show 2041
 ...
 Audit Policy:
@@ -83,7 +86,7 @@ This token generates audit events for every write attempt — successful or deni
 
 Query the audit log through eventd:
 
-```
+```bash
 $ eventctl query --type access-audit --last 1h
 ```
 
@@ -107,7 +110,7 @@ $ eventctl query --type access-audit --last 1h
 
 Filter by principal, object, time, or outcome:
 
-```
+```bash
 $ eventctl query --type access-audit --user alice --last 24h
 $ eventctl query --type access-audit --path "/srv/data/finance/*" --outcome denied
 $ eventctl query --type privilege-use --last 1h

@@ -38,7 +38,7 @@ update_internal_log(result)
 
 After reverting, the thread should be back to the primary token:
 
-```
+```bash
 $ idn show <pid>/<tid>
 User:            S-1-5-19 (Local Service)
 Impersonating:   no

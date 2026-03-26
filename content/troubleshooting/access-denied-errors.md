@@ -9,7 +9,7 @@ When an operation fails with access denied, the denial could come from any layer
 
 ## Start with sd explain
 
-```
+```bash
 $ sd explain /srv/data/reports 1482 FILE_WRITE_DATA
 ```
 
@@ -25,7 +25,7 @@ AccessCheck evaluates these layers in sequence. A denial at any layer stops eval
 
 **Check:** Does the object have a trust label in its SACL?
 
-```
+```bash
 $ sd show /srv/data/reports
 ...
 SACL:
@@ -40,7 +40,7 @@ SACL:
 
 **Check:** Compare the process's integrity level against the object's mandatory label:
 
-```
+```bash
 $ idn show 1482
 ...
 Integrity:    Medium
@@ -61,7 +61,7 @@ Medium < High — write access is denied before the DACL is consulted.
 
 **Check:** Look at which ACEs match (or don't):
 
-```
+```bash
 $ sd explain /srv/data/reports 1482 FILE_WRITE_DATA
 ...
 [3] DACL walk
@@ -85,14 +85,14 @@ Common DACL issues:
 
 **Check:**
 
-```
+```bash
 $ idn privileges 1482
 SeBackupPrivilege                        disabled
 ```
 
 **Fix:** Enable the privilege before the operation:
 
-```
+```bash
 $ idn privilege enable SeBackupPrivilege
 ```
 
@@ -104,7 +104,7 @@ Remember that backup and restore privileges are intent-gated — the operation m
 
 **Check:**
 
-```
+```bash
 $ idn show 1482
 ...
 Restricted:   yes
@@ -123,7 +123,7 @@ The DACL is walked twice — the second walk uses only restricting SIDs. Both mu
 
 **Check:**
 
-```
+```bash
 $ idn show 3201
 ...
 Confined:     yes
@@ -140,7 +140,7 @@ The object's DACL must contain an ACE targeting the confinement SID, a capabilit
 
 **Check:**
 
-```
+```bash
 $ sd cap list /srv/data/reports
 Applied policies:
   Finance Data Policy          S-1-17-...-1001   (effective)
@@ -152,7 +152,7 @@ Applied policies:
 
 If a service thread is getting unexpected access denials, check whether it is impersonating:
 
-```
+```bash
 $ idn show 1482/1509
 Impersonating:   yes
 Impersonation Level: Identification
@@ -162,7 +162,7 @@ At **Identification** level, the service can see the client's identity but canno
 
 Also check whether the thread is impersonating at all:
 
-```
+```bash
 $ idn show 1482/1509
 Impersonating:   no
 ```

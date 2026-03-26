@@ -11,7 +11,7 @@ Most Linux applications run on Peios without modification. This page covers the 
 
 Some applications (Chrome, Elasticsearch, PostgreSQL) refuse to run as UID 0. On Peios, no process runs as UID 0 unless it holds the SYSTEM token — which these applications never will. This means root-refusing software works without modification.
 
-```
+```bash
 $ idn sid
 S-1-5-21-...-1013 (alice)
 
@@ -31,7 +31,7 @@ Configure these in the service definition. The service starts with the required 
 
 For applications that hard-check `getuid() == 0` and refuse to start otherwise, use the `uid0` utility:
 
-```
+```bash
 $ uid0 legacy-daemon --config /etc/legacy.conf
 ```
 
@@ -63,7 +63,7 @@ Some applications check `stat()` to verify file ownership matches the running UI
 
 If the file was created by a different mechanism or the UID mapping is unexpected:
 
-```
+```bash
 $ sd show /srv/data/app-data
 Owner:  S-1-5-21-...-1013 (alice)
 

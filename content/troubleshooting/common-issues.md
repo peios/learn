@@ -11,7 +11,7 @@ description: Fixing broken ACL inheritance, missing audit events, and other freq
 
 **Check whether inheritance is broken:**
 
-```
+```bash
 $ sd show /srv/data/projects/secret.txt
 DACL:
   Allow  alice  FILE_ALL_ACCESS  (explicit)
@@ -21,7 +21,7 @@ No inherited ACEs — inheritance may have been broken on this object.
 
 **Check the parent's inheritable ACEs:**
 
-```
+```bash
 $ sd show /srv/data/projects
 DACL:
   Allow  Developers  FILE_READ_DATA | FILE_WRITE_DATA  (CI | OI)
@@ -32,7 +32,7 @@ The parent has inheritable ACEs, but the child doesn't have them. Inheritance wa
 
 **Fix — re-enable inheritance:**
 
-```
+```bash
 $ sd inherit /srv/data/projects/secret.txt
 ```
 
@@ -40,7 +40,7 @@ $ sd inherit /srv/data/projects/secret.txt
 
 If the parent's DACL was changed after children were created, existing children retain their old inherited ACEs. To push the parent's current inheritable ACEs to all children:
 
-```
+```bash
 $ sd propagate /srv/data/projects
 ```
 
@@ -52,7 +52,7 @@ This re-evaluates inheritance for every child in the tree, replacing their inher
 
 ### Check that audit ACEs exist
 
-```
+```bash
 $ sd show /srv/data/finance/accounts.db
 ...
 SACL:
@@ -65,7 +65,7 @@ If the SACL is empty or has no audit ACEs, no events will be generated.
 
 An audit ACE with only the `success` flag will not fire on denied access. If you expect to see failed access attempts, add the `failure` flag:
 
-```
+```bash
 $ sd audit add /srv/data/finance/accounts.db \
     audit Everyone FILE_WRITE_DATA success,failure
 ```
@@ -86,7 +86,7 @@ SACL:
 
 If the object has no `classification` resource attribute, the expression evaluates to UNKNOWN. Unlike DACL conditional ACEs, audit conditional ACEs **do** fire on UNKNOWN — so check whether the attribute exists and has the expected value:
 
-```
+```bash
 $ sd attr /srv/data/finance/accounts.db
 (no attributes)
 ```
@@ -95,7 +95,7 @@ $ sd attr /srv/data/finance/accounts.db
 
 If audit ACEs are correctly configured but events still do not appear, the issue may be in the event pipeline:
 
-```
+```bash
 $ peiosctl status eventd
 eventd: running (PID 61)
 ```
@@ -106,7 +106,7 @@ If eventd is not running, events are buffered in the kernel ring buffer but not 
 
 Per-token audit policy can generate events independently of object SACLs. If you see unexpected events (or expect events from a specific principal), check the token:
 
-```
+```bash
 $ idn show 2041
 ...
 Audit Policy:

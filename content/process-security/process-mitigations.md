@@ -61,7 +61,7 @@ This immutability is the point. A compromised process cannot weaken its own miti
 
 Mitigation flags appear in `idn show`:
 
-```
+```bash
 $ idn show 47
 User:         S-1-5-18 (SYSTEM)
 PIP:          Isolated / Trust 4096 (Peios)

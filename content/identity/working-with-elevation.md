@@ -9,7 +9,7 @@ Use `idn` to check elevation status and request elevation when administrative ac
 
 ## Check whether the current session is elevated
 
-```
+```bash
 $ idn elevation
 Status:    filtered
 Integrity: Medium
@@ -19,7 +19,7 @@ This tells you the session is running with the filtered token — standard-user 
 
 When elevated:
 
-```
+```bash
 $ idn elevation
 Status:    elevated
 Integrity: High
@@ -27,7 +27,7 @@ Integrity: High
 
 ## Check another process
 
-```
+```bash
 $ idn elevation --pid 2087
 Status:    elevated
 Integrity: High
@@ -37,7 +37,7 @@ Integrity: High
 
 To launch a process with the elevated token:
 
-```
+```bash
 $ elevate dbadmin --repair /srv/data/accounts.db
 ```
 
@@ -45,7 +45,7 @@ The system prompts through the trusted credential path — a secure channel that
 
 ## Run a shell with elevation
 
-```
+```bash
 $ elevate sh
 ```
 
@@ -55,7 +55,7 @@ This opens an elevated shell. All commands within it run with the elevated token
 
 A process can check its own elevation state:
 
-```
+```bash
 $ idn elevation
 Status:    elevated
 Integrity: High
@@ -63,7 +63,7 @@ Integrity: High
 
 Or check whether specific groups are active (not deny-only):
 
-```
+```bash
 $ idn groups
 SID                                      Name                 State
 S-1-5-32-544                             Administrators       enabled

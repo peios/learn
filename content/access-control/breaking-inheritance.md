@@ -7,16 +7,19 @@ description: How to disconnect an object from its parent's DACL by breaking, cle
 
 By default, objects inherit ACEs from their parent. When an object needs different permissions from the rest of the tree, you can **break inheritance** — disconnecting the object from its parent's DACL.
 
+> [!NOTE]
+> **Prerequisites:** WRITE_DAC on the target object.
+
 ## Break inheritance and keep existing rules
 
-```
+```bash
 $ sd break /srv/data/reports/sensitive.txt --copy
 ```
 
 This breaks inheritance and converts all inherited ACEs into explicit ACEs. The permissions are identical to what they were before — but they are now local to the object and can be individually edited without affecting or being affected by the parent.
 
 Before:
-```
+```bash
 $ sd show /srv/data/reports/sensitive.txt
 DACL:
   Allow  alice          FILE_ALL_ACCESS        (explicit)
@@ -24,7 +27,7 @@ DACL:
 ```
 
 After:
-```
+```bash
 $ sd show /srv/data/reports/sensitive.txt
 DACL:
   Allow  alice          FILE_ALL_ACCESS        (explicit)
@@ -35,13 +38,13 @@ Both ACEs are now explicit. Changes to the parent directory's DACL will no longe
 
 ## Break inheritance and start fresh
 
-```
+```bash
 $ sd break /srv/data/reports/sensitive.txt --clear
 ```
 
 This breaks inheritance and removes all inherited ACEs. Only the existing explicit ACEs remain.
 
-```
+```bash
 $ sd show /srv/data/reports/sensitive.txt
 DACL:
   Allow  alice          FILE_ALL_ACCESS        (explicit)
@@ -53,13 +56,13 @@ The inherited allow for Domain Users is gone. Use this when the object's permiss
 
 To reverse a broken inheritance and reconnect to the parent:
 
-```
+```bash
 $ sd inherit /srv/data/reports/sensitive.txt
 ```
 
 This re-enables inheritance, replacing the object's inherited ACEs with the current inheritable ACEs from the parent. Explicit ACEs on the object are preserved.
 
-```
+```bash
 $ sd show /srv/data/reports/sensitive.txt
 DACL:
   Allow  alice          FILE_ALL_ACCESS        (explicit)

@@ -11,7 +11,7 @@ When access is denied unexpectedly — or granted when it shouldn't be — use `
 
 Provide an object, a process (or thread), and the rights to check:
 
-```
+```bash
 $ sd explain /srv/data/reports 1482 FILE_READ_DATA
 Token:   S-1-5-19 (Local Service)
 Object:  /srv/data/reports
@@ -102,7 +102,7 @@ The DACL didn't grant the right, but a privilege did.
 
 Use `pid/tid` to check a thread's impersonation token instead of the primary:
 
-```
+```bash
 $ sd explain /srv/data/reports 1482/1509 FILE_READ_DATA
 Token:   S-1-5-21-...-1013 (alice)  [impersonation]
 ...
@@ -112,7 +112,7 @@ Token:   S-1-5-21-...-1013 (alice)  [impersonation]
 
 For scripting and automation:
 
-```
+```bash
 $ sd explain --json /srv/data/reports 1482 FILE_READ_DATA
 ```
 

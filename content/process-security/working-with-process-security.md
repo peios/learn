@@ -7,9 +7,12 @@ description: Viewing and tightening process security descriptors and diagnosing 
 
 Process security descriptors are inspected and modified with the same `sd` tool used for files.
 
+> [!NOTE]
+> **Prerequisites:** WRITE_DAC on the target process to modify its SD. READ_CONTROL to view it.
+
 ## View a process's security descriptor
 
-```
+```bash
 $ sd show --process 1482
 Owner:  S-1-5-19 (Local Service)
 Group:  S-1-5-19 (Local Service)
@@ -24,7 +27,7 @@ DACL:
 
 Look for `PROCESS_TERMINATE` and `PROCESS_SIGNAL` in the DACL:
 
-```
+```bash
 $ sd explain --process 1482 3841 PROCESS_TERMINATE
 Token:   S-1-5-21-...-500 (Administrator)
 Object:  process 1482
@@ -41,7 +44,7 @@ Result: GRANTED
 
 A service can reduce its own process DACL once it no longer needs broad management access:
 
-```
+```bash
 $ sd set --process $$ \
     allow S-1-5-80-2739571183 PROCESS_ALL_ACCESS \
     allow S-1-5-18 PROCESS_ALL_ACCESS
@@ -51,7 +54,7 @@ This removes the Administrators ACE. Only the service itself and SYSTEM can inte
 
 Verify the change:
 
-```
+```bash
 $ sd show --process $$
 Owner:  S-1-5-19 (Local Service)
 Group:  S-1-5-19 (Local Service)
@@ -65,7 +68,7 @@ DACL:
 
 When a signal or ptrace is denied, use `sd explain`:
 
-```
+```bash
 $ sd explain --process 47 3841 PROCESS_VM_READ
 Token:   S-1-5-21-...-500 (Administrator)
 Object:  process 47 (authd)

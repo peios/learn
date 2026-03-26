@@ -23,7 +23,7 @@ Other threads in your process are unaffected. They continue using the service's 
 
 After impersonating, you can confirm the thread's identity:
 
-```
+```bash
 $ idn show <pid>/<tid>
 User:            S-1-5-21-...-1013 (alice)
 Impersonating:   yes

@@ -11,7 +11,7 @@ Confinement state is visible through `idn` and access decisions involving confin
 
 Confinement information appears in `idn show`:
 
-```
+```bash
 $ idn show 3201
 User:         S-1-5-21-...-1013 (alice)
 Integrity:    Low
@@ -39,7 +39,7 @@ Objects must explicitly opt in for confined applications to access them. Add an 
 
 **Grant access to a specific application:**
 
-```
+```bash
 $ sd add /srv/media/library allow S-1-15-2-394857203 FILE_READ_DATA
 ```
 
@@ -47,7 +47,7 @@ Only the MediaPlayer application can use this grant. Other confined applications
 
 **Grant access to any application with a specific capability:**
 
-```
+```bash
 $ sd add /srv/media/library allow S-1-15-3-3 FILE_READ_DATA
 ```
 
@@ -55,7 +55,7 @@ Any confined application that declared the `musicLibrary` capability can read th
 
 **Grant access to all confined applications:**
 
-```
+```bash
 $ sd add /srv/public/shared allow ALL_APPLICATION_PACKAGES FILE_READ_DATA
 ```
 
@@ -65,7 +65,7 @@ All normal confined applications can read this resource. Strictly confined appli
 
 Use `sd explain` to trace the confinement evaluation:
 
-```
+```bash
 $ sd explain /home/alice/.ssh/id_ed25519 3201 FILE_READ_DATA
 Token:   S-1-5-21-...-1013 (alice) [confined: S-1-15-2-394857203]
 Object:  /home/alice/.ssh/id_ed25519

@@ -35,7 +35,7 @@ else:
 
 You can test public accessibility using `sd explain` with the Anonymous SID:
 
-```
+```bash
 $ sd explain /srv/public/readme.txt --as-anonymous FILE_READ_DATA
 Token:   S-1-1-7 (Anonymous)
 Object:  /srv/public/readme.txt
@@ -51,7 +51,7 @@ Result: GRANTED
 
 The Everyone SID (`S-1-1-0`) matches the Anonymous identity, so the file is publicly readable.
 
-```
+```bash
 $ sd explain /srv/data/reports/q4.pdf --as-anonymous FILE_READ_DATA
 Token:   S-1-1-7 (Anonymous)
 Object:  /srv/data/reports/q4.pdf

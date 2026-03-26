@@ -11,7 +11,7 @@ Use `idn filter` to create a restricted copy of an existing token with fewer pri
 
 Strip specific privileges from the new token:
 
-```
+```bash
 $ idn filter --remove-privilege SeShutdownPrivilege --remove-privilege SeDebugPrivilege
 ```
 
@@ -21,7 +21,7 @@ The removed privileges are gone permanently — they cannot be re-enabled on the
 
 Convert groups so they can match deny ACEs but not allow ACEs:
 
-```
+```bash
 $ idn filter --deny-only Administrators --deny-only "Domain Admins"
 ```
 
@@ -31,7 +31,7 @@ The groups remain visible on the token but cannot grant access. This is the mech
 
 Create a dual-evaluation constraint by adding restricting SIDs:
 
-```
+```bash
 $ idn filter --restrict "read-only-workers" --restrict "app-sandbox"
 ```
 
@@ -41,7 +41,7 @@ The resulting token requires both the normal and restricted DACL evaluations to 
 
 Block the process from spawning children:
 
-```
+```bash
 $ idn filter --no-child-process
 ```
 
@@ -51,7 +51,7 @@ This is useful for sandboxing — a confined or restricted process that cannot c
 
 Multiple restrictions can be applied in a single operation:
 
-```
+```bash
 $ idn filter \
     --deny-only Administrators \
     --remove-privilege SeDebugPrivilege \
@@ -66,7 +66,7 @@ This creates a token with administrative groups set to deny-only, two privileges
 
 By default, `idn filter` creates a filtered copy of the current process's token and installs it. To filter and install on a specific process:
 
-```
+```bash
 $ idn filter --pid 4012 --deny-only Administrators
 ```
 
@@ -76,7 +76,7 @@ This requires appropriate access to the target process.
 
 Inspect the filtered token to confirm the restrictions:
 
-```
+```bash
 $ idn show 4012
 User:         S-1-5-21-...-1013 (alice)
 Integrity:    Medium
