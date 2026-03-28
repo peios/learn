@@ -1,0 +1,91 @@
+---
+title: Frequently Asked Questions
+type: reference
+order: 20
+description: Common questions about Provium — requirements, debugging, performance, and limitations.
+---
+
+## General
+
+### What do I need to run Provium?
+
+QEMU (`qemu-system-x86_64`), a Linux kernel image (`bzImage`), and an initramfs or root filesystem. KVM acceleration (`/dev/kvm`) is strongly recommended but not required.
+
+### Does Provium work without KVM?
+
+Yes, but tests are significantly slower. Without KVM, QEMU uses software emulation (TCG). This is useful for CI environments that lack nested virtualization, but development should use KVM.
+
+### Is Provium specific to Peios?
+
+No. Provium is a general-purpose KVM test harness. It can test any Linux kernel module in any initramfs or disk image. The KACS and peinit tests are Peios-specific, but Provium itself has no Peios dependency.
+
+### Can I use Provium to test userspace code?
+
+You can run userspace programs inside the VM via `vm:exec()`. However, if your code does not need a real kernel — no custom syscalls, no kernel modules, no special mount configurations — a standard test framework will give you faster feedback.
+
+## Writing tests
+
+### How do I share setup code across tests?
+
+Write a helper library and load it with `dofile()`:
+
+```lua
+local h = dofile("tests/helpers.lua")
+```
+
+The helper file should return a table of functions and constants. See the KACS test suite's `helpers.lua` for a comprehensive example.
+
+### Can I use external Lua libraries?
+
+Provium uses an embedded Lua runtime ([gopher-lua](https://github.com/yuin/gopher-lua)) that supports standard Lua 5.1 features. You can load files with `dofile()` and `loadfile()`. Third-party Lua modules that require C extensions are not supported.
+
+### Why does my test hang?
+
+Common causes:
+
+- **The kernel does not boot.** Check the QEMU console log in `/tmp/provium-runs/run-*/`.
+- **The init binary does not exist.** Verify the `init` path in your profile matches a real binary in the initramfs.
+- **A syscall blocks.** Some syscalls block indefinitely if the kernel state is wrong. Use `vm:wait_until()` with a timeout instead of assuming synchronous completion.
+- **Missing initramfs.** If neither `initrd` nor `rootfs` is set in the profile, the VM has no userspace.
+
+### How do I debug a failing test?
+
+1. Check the console log: test failures print the log path (`/tmp/provium-runs/run-*/test_name.lua.log`)
+2. Run with `-p 1` for sequential execution (easier to read output)
+3. Add `vm:dmesg()` calls to inspect kernel state
+4. Add `vm:exec("cat /some/file")` calls to check guest state
+
+### What happens if my test script crashes?
+
+Provium catches Lua errors and reports them as test failures. Any VMs that were not explicitly shut down are killed automatically. Resources are returned to the pool.
+
+## Performance
+
+### How can I make tests faster?
+
+1. **Use fixtures.** Fixture-based resume is much faster than cold boot.
+2. **Run in parallel.** The default parallelism is half the CPU count. Increase with `-p N` if your machine has spare capacity.
+3. **Use KVM.** Without hardware acceleration, each boot takes 10-30x longer.
+4. **Minimize boot payload.** A smaller initramfs boots faster.
+
+### How much memory does each VM use?
+
+The default is 512 MB per VM. This is the guest memory allocation — QEMU itself adds overhead. The resource pool accounts for the configured memory size.
+
+### How many tests can run in parallel?
+
+It depends on your hardware. With 16 GB of RAM and the default 512 MB per VM, roughly 20-25 VMs can run concurrently (after reserving 1.5 GB for the host). The resource pool handles this automatically.
+
+## Architecture
+
+### Why vsock instead of network?
+
+Vsock provides direct host-guest communication without requiring an IP stack. No DHCP, no DNS, no routing, no firewall rules. The guest does not need any network interfaces or configuration. This simplifies the initramfs and eliminates an entire class of test flakiness.
+
+### Why Lua instead of Go or Python?
+
+Lua is lightweight, embeddable, and fast to start. Each test file gets its own Lua VM — startup is negligible compared to QEMU boot time. The syntax is simple enough for test scripts without requiring compilation or dependency management. The gopher-lua runtime is pure Go, so Provium remains a single binary.
+
+### Can I use Provium as a library?
+
+Provium is designed as a CLI tool, not a library. The internal Go packages are not published as a stable API. If you need programmatic VM control, consider using the `provium test` command from a wrapper script.

@@ -1,0 +1,12 @@
+name = "Getting Started with Cairn"
+description = "Set up Cairn, create your first tasks and milestones, and learn the project structure."
+featured = true
+order = 1
+pages = [
+  "getting-started/what-is-cairn",
+  "getting-started/quick-start",
+  "getting-started/project-structure",
+  "configuration/data-model",
+  "cli/commands",
+  "web-board/overview",
+]

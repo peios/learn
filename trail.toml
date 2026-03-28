@@ -1,13 +1,48 @@
 title = "Peios Learn"
 description = "Peios is an operating system designed for secure, manageable infrastructure. Learn how it works — from the security model and identity system to service management, federation, and beyond."
 base_url = "https://learn.peios.org"
-category_order = ["identity", "access-control", "integrity", "pip", "privileges", "impersonation", "confinement", "token-restriction", "conditional-access", "central-access-policy", "auditing", "process-security", "linux-compat", "troubleshooting"]
 announcement = "These docs are under active development and cover the v0.20 Kobicha security model."
 
 [[nav]]
-label = "Get Started"
-url = "/identity/understanding-identity/?pathway=getting-started"
+label = "Peios"
+url = "/peios/"
 
 [[nav]]
-label = "Troubleshooting"
-url = "/troubleshooting/access-denied-errors/"
+label = "Trail"
+url = "/trail/"
+
+[[nav]]
+label = "Provium"
+url = "/provium/"
+
+[[nav]]
+label = "Cairn"
+url = "/cairn/"
+
+[[products]]
+name = "Peios"
+slug = "peios"
+description = "The operating system — identity, access control, integrity, auditing, and everything in between."
+order = 1
+category_order = ["architecture", "identity", "access-control", "integrity", "pip", "privileges", "impersonation", "confinement", "token-restriction", "conditional-access", "central-access-policy", "auditing", "process-security", "linux-compat", "reference", "troubleshooting"]
+
+[[products]]
+name = "Trail"
+slug = "trail"
+description = "Static site generator for documentation with pathway support, fuzzy search, and dark mode."
+order = 2
+category_order = ["getting-started", "content-authoring", "configuration", "features", "reference"]
+
+[[products]]
+name = "Provium"
+slug = "provium"
+description = "General-purpose KVM test harness for kernel modules. Write tests in Lua, run them against real VMs."
+order = 3
+category_order = ["getting-started", "writing-tests", "kernel-testing", "configuration", "architecture", "reference"]
+
+[[products]]
+name = "Cairn"
+slug = "cairn"
+description = "File-based project tracker with a CLI and milestone-centric web board."
+order = 4
+category_order = ["getting-started", "cli", "web-board", "configuration", "reference"]

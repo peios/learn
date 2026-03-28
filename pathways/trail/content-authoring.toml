@@ -1,0 +1,12 @@
+name = "Content Authoring"
+description = "Everything you need to write great documentation — admonitions, tabs, diagrams, and more."
+featured = true
+order = 2
+pages = [
+  "content-authoring/pages-and-frontmatter",
+  "content-authoring/admonitions",
+  "content-authoring/tab-groups",
+  "content-authoring/diagrams",
+  "content-authoring/code-blocks",
+  "content-authoring/inter-page-links",
+]

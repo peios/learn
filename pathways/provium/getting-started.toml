@@ -1,0 +1,14 @@
+name = "Getting Started with Provium"
+description = "Set up your first Provium project, write a test, and understand how VMs, fixtures, and assertions work."
+featured = true
+order = 1
+pages = [
+  "getting-started/what-is-provium",
+  "getting-started/quick-start",
+  "getting-started/project-structure",
+  "writing-tests/vm-lifecycle",
+  "writing-tests/running-commands",
+  "writing-tests/assertions-and-subtests",
+  "writing-tests/fixtures",
+  "configuration/provium-toml",
+]

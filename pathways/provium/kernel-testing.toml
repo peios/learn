@@ -1,0 +1,14 @@
+name = "Testing Kernel Modules"
+description = "Learn to test custom syscalls, ioctls, and kernel interfaces — build binary structs, handle pointer patching, and use workers for multi-process scenarios."
+featured = true
+order = 2
+pages = [
+  "kernel-testing/raw-syscalls",
+  "kernel-testing/binary-packing",
+  "kernel-testing/ioctl",
+  "kernel-testing/pointer-patching",
+  "writing-tests/workers",
+  "writing-tests/background-jobs",
+  "configuration/resource-management",
+  "architecture/how-provium-works",
+]
