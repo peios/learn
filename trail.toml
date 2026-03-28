@@ -46,3 +46,16 @@ slug = "cairn"
 description = "File-based project tracker with a CLI and milestone-centric web board."
 order = 4
 category_order = ["getting-started", "cli", "web-board", "configuration", "reference"]
+
+[[products]]
+name = "KACS"
+slug = "kacs"
+kind = "spec"
+description = "Kernel Access Control Subsystem — tokens, security descriptors, access checks, and integrity controls."
+order = 10
+category_order = ["overview", "tokens", "access-control"]
+
+[[products.versions]]
+name = "v0.20"
+status = "draft"
+date = "2026-03-28"
