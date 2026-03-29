@@ -53,7 +53,7 @@ slug = "kacs"
 kind = "spec"
 description = "Kernel Access Control Subsystem — tokens, security descriptors, access checks, and integrity controls."
 order = 10
-category_order = ["overview", "tokens", "access-control"]
+category_order = ["introduction", "sids", "tokens", "psb", "security-descriptors", "privileges", "access-check", "impersonation", "pip", "facs", "linux-credential-model", "appendix-a", "appendix-b"]
 
 [[products.versions]]
 name = "v0.20"
