@@ -53,9 +53,35 @@ slug = "kacs"
 kind = "spec"
 description = "Kernel Access Control Subsystem — tokens, security descriptors, access checks, and integrity controls."
 order = 10
-category_order = ["introduction", "sids", "tokens", "psb", "security-descriptors", "privileges", "access-check", "impersonation", "pip", "facs", "linux-credential-model", "appendix-a", "appendix-b"]
+category_order = ["introduction", "sids", "security-descriptors", "tokens", "psb", "signing", "privileges", "pip", "impersonation", "access-check", "facs", "linux-credential-model", "appendix-a", "appendix-b"]
 
 [[products.versions]]
 name = "v0.20"
-status = "draft"
+status = "final"
 date = "2026-03-28"
+
+[[products]]
+name = "LCS"
+slug = "lcs"
+kind = "spec"
+description = "Layered Configuration Subsystem — kernel-mediated hierarchical configuration store with layers, watches, and transactions."
+order = 11
+category_order = ["introduction", "data-model", "security", "watches", "transactions", "syscall-api", "rsi", "bootstrap", "backup", "failure-modes", "appendix-a"]
+
+[[products.versions]]
+name = "v0.21"
+status = "draft"
+date = "2026-03-30"
+
+[[products]]
+name = "peinit"
+slug = "peinit"
+kind = "spec"
+description = "Peios init system — PID 1 service manager with KACS-integrated identity, dependency ordering, and supervised process execution."
+order = 12
+category_order = ["introduction", "boot", "service-model", "pre-exec", "state-machine", "dependencies", "jobs", "operations", "timers", "shutdown", "control-interface", "logging", "security"]
+
+[[products.versions]]
+name = "v0.22"
+status = "draft"
+date = "2026-03-30"
