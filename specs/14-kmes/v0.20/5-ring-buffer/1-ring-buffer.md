@@ -45,14 +45,21 @@ When a consumer calls `mmap()` on a per-CPU file descriptor returned by `kmes_at
 
 | Region | Size | Description |
 |---|---|---|
-| Metadata page | 4096 bytes | Control fields. |
-| Data region | 2 × capacity | The double-mapped ring buffer containing events. |
+| Producer metadata page | 4096 bytes | KMES-written control fields. Mapped read-only to consumers. |
+| Consumer metadata page | 4096 bytes | Consumer-written fields. Mapped read-write to consumers. |
+| Data region | 2 × capacity | The double-mapped ring buffer containing events. Mapped read-only to consumers. |
 
-The total mapping size is `4096 + (2 × capacity)` bytes. Every per-CPU buffer has the same layout and the same capacity.
+The total mapping size is `8192 + (2 × capacity)` bytes. Every per-CPU buffer has the same layout and the same capacity.
 
-## Metadata page
+The consumer maps the entire region with a single `mmap()` call on the per-CPU file descriptor: `mmap(NULL, 8192 + 2 * capacity, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)`. The kernel's mmap handler enforces per-page permissions internally: the producer metadata page and data region pages are mapped read-only regardless of the requested PROT flags, the consumer metadata page is mapped read-write. The consumer does not need to issue separate mmap calls for each region. The consumer discovers `capacity` from the `kmes_attach` syscall (see the Syscall Interface section).
 
-The metadata page is laid out to prevent false sharing. Fields that are updated at different frequencies are placed on separate 64-byte cache lines.
+The mapping is split into read-only and read-write regions to enforce a trust boundary. KMES writes to the producer metadata page and the data region; consumers can only read these. Consumers write to the consumer metadata page; KMES reads from it but treats all values as advisory -- a corrupted consumer page cannot affect KMES correctness or the producer metadata.
+
+The consumer metadata page is shared between all consumers attached to the same per-CPU buffer. A malicious consumer with SeSecurityPrivilege could overwrite `need_wake` to suppress notification to other consumers on the same buffer. This is accepted because SeSecurityPrivilege is a very high-trust privilege -- normal event consumers use eventd (which enforces per-event SD-based access control), not direct ring buffer access.
+
+## Producer metadata page (offset 0, read-only)
+
+The producer metadata page is laid out to prevent false sharing. Fields that are updated at different frequencies are placed on separate 64-byte cache lines.
 
 False sharing occurs when two independent fields share a cache line. Updating one field invalidates the cache line in every CPU core, forcing all cores to re-fetch the line even for the unchanged field. In the per-CPU design, false sharing between CPUs is eliminated by using separate buffers. Cache line separation within a buffer prevents false sharing between the producing CPU and consuming threads.
 
@@ -67,7 +74,7 @@ Written once when the ring buffer is created. Never modified after initialisatio
 | 12 | 2 | `u16` | `cpu_id` | The CPU this buffer belongs to. |
 | 14 | 2 | `u16` | `reserved0` | Reserved. Must be zero. |
 | 16 | 8 | `u64` | `capacity` | Data region capacity in bytes. Power of two. |
-| 24 | 8 | `u64` | `data_offset` | Byte offset from the start of the mapping to the data region. Equal to the metadata page size (4096). |
+| 24 | 8 | `u64` | `data_offset` | Byte offset from the start of the mapping to the data region. Equal to the combined metadata size (8192). |
 | 32 | 8 | `u64` | `generation` | Buffer generation counter. Starts at 1 for the first ring buffer created on each CPU. Monotonically increasing across buffer swaps -- the new buffer's generation is the old buffer's incremented value. |
 | 40 | 24 | -- | `reserved1` | Reserved. Must be zero. Pads to cache line boundary. |
 
@@ -77,19 +84,27 @@ Written by KMES on every event write to this CPU's buffer. This is the hottest c
 
 | Offset | Size | Type | Field | Description |
 |---|---|---|---|---|
-| 64 | 8 | `u64` | `write_pos` | Monotonically increasing byte offset of the next write position. Never wraps. The actual data region offset is `write_pos & (capacity - 1)`. |
-| 72 | 8 | `u64` | `tail_pos` | Byte offset of the oldest surviving event. Advanced by KMES when events are overwritten. Consumers whose read position is behind `tail_pos` have been lapped. |
+| 64 | 8 | `u64` | `write_pos` | Monotonically increasing byte offset of the next write position. Never wraps -- at 1 GB/s sustained throughput, a `u64` byte offset would take over 500 years to overflow. The actual data region offset is `write_pos & (capacity - 1)`. Initialized to 0 on a fresh buffer (advanced after boot buffer events are copied). |
+| 72 | 8 | `u64` | `tail_pos` | Byte offset of the oldest surviving event. Advanced by KMES when events are overwritten. Consumers whose read position is behind `tail_pos` have been lapped. Initialized to 0 on a fresh buffer. |
 | 80 | 48 | -- | `reserved2` | Reserved. Must be zero. Pads to cache line boundary. |
 
 ### Cache line 2 -- notification fields (bytes 128--191)
 
-Used for futex-based sleep/wake coordination between KMES and consumers.
+Written by KMES when waking consumers. Read by consumers for futex-based sleep.
 
 | Offset | Size | Type | Field | Description |
 |---|---|---|---|---|
 | 128 | 4 | `u32` | `futex_counter` | Counter incremented by KMES when waking sleeping consumers. Consumers use `futex_wait` on this address. `u32` because Linux `futex(2)` operates on 32-bit integers. Only incremented when `need_wake` is set. |
-| 132 | 1 | `u8` | `need_wake` | Consumer-managed flag. Set to 1 by the consumer before sleeping. Read by KMES after writing an event. If 0, KMES skips the futex_counter increment and futex_wake entirely. Cleared by the consumer after waking. |
-| 133 | 59 | -- | `reserved3` | Reserved. Must be zero. Pads to cache line boundary. |
+| 132 | 60 | -- | `reserved3` | Reserved. Must be zero. Pads to cache line boundary. |
+
+## Consumer metadata page (offset 4096, read-write)
+
+The consumer metadata page is mapped read-write to consumers. KMES reads from this page but treats all values as advisory. A malicious or buggy consumer that corrupts this page can only affect its own notification behavior -- it cannot affect KMES correctness, the producer metadata, the data region, or other consumers' view of producer metadata.
+
+| Offset | Size | Type | Field | Description |
+|---|---|---|---|---|
+| 4096 | 1 | `u8` | `need_wake` | Consumer-managed flag. Set to 1 by the consumer before sleeping. Read by KMES after writing an event -- KMES treats any nonzero value as 1. If 0, KMES skips the futex_counter increment and futex_wake entirely. Cleared by the consumer after waking. |
+| 4097 | 4095 | -- | `reserved4` | Reserved. Must be zero. Pads to page boundary. |
 
 Under sustained load, the consumer is always draining and `need_wake` remains 0. KMES reads `need_wake`, sees 0, and skips all notification overhead -- no futex_counter increment, no futex_wake syscall. The entire notification path costs a single memory read per event (~1ns). Under low load, the consumer sets `need_wake` before sleeping, and KMES performs the full wake sequence when the next event arrives.
 
@@ -117,7 +132,9 @@ The release barriers in steps 6 and 8 establish the ordering guarantee: a consum
 
 Consumers read events directly from the mapped data region. The read protocol uses no locks and no syscalls during the event drain loop.
 
-Each consumer maintains its own read position per buffer in process-local memory. KMES does not track consumer read positions and is not aware of how many consumers exist or how far behind they are.
+Each consumer maintains its own read position per buffer in process-local memory. KMES does not track consumer read positions and is not aware of how many consumers exist or how far behind they are. A consumer SHOULD initialize its `read_pos` to `tail_pos` on first attachment, starting from the oldest surviving event.
+
+Events are packed contiguously in the data region with no alignment padding between them. `event_size` is the exact byte count of the event (header + payload) with no trailing padding. The next event begins immediately at the byte following the previous event.
 
 A consumer typically dedicates one thread per CPU buffer. Each thread independently drains its buffer using the following protocol.
 
@@ -128,7 +145,8 @@ A consumer typically dedicates one thread per CPU buffer. Each thread independen
 3. Save the current `tail_pos` as `saved_tail`.
 4. Read the event at data region offset `read_pos & (capacity - 1)`. The double virtual mapping ensures this is a contiguous read.
 5. Re-read `tail_pos`. If `tail_pos > saved_tail` AND `read_pos < tail_pos`, the event was overwritten during the read (torn read). Discard the event and go to step 2.
-6. The event is valid. Process it. Advance `read_pos` by the event's `event_size`. Go to step 1.
+6. Validate `event_size > 0` and `event_size >= header_size`. If either check fails, the event data is corrupt -- the consumer SHOULD advance to `tail_pos` and continue from step 2. An `event_size` of 0 would cause an infinite loop; an `event_size` smaller than `header_size` indicates a malformed header.
+7. The event is valid. Process it. Advance `read_pos` by the event's `event_size`. Consumers MUST NOT read beyond the event's `event_size` boundary -- stale data from previously overwritten events may be present in the data region. Go to step 1.
 
 ### Notification wait
 
@@ -161,9 +179,11 @@ If `generation` has changed since the consumer last checked:
 6. Close the old file descriptor and unmap the old buffer.
 7. Continue draining from the new buffer.
 
-Events MUST NOT be lost during a generation change. KMES copies surviving events from the old buffer into the new buffer before incrementing `generation`, and sequence numbers are continuous across the swap.
+Events MUST NOT be lost during a generation change. KMES copies surviving events from the old buffer into the new buffer before incrementing `generation`, and sequence numbers are continuous across the swap. Events are re-compacted during the copy -- they are written contiguously starting from position 0 in the new buffer. The consumer's old `read_pos` is not valid in the new buffer; it MUST scan by sequence number to find its position.
 
-The old buffer's physical pages remain valid for as long as any consumer has them mapped. KMES's internal release of the old buffer does not affect existing consumer mappings -- standard kernel mmap reference counting ensures the pages persist until all consumers have unmapped them. The consumer safely finishes draining the old buffer before switching to the new one.
+The consumer MUST finish draining the old buffer up to its frozen `write_pos` before switching to the new buffer. After the swap, KMES stops writing to the old buffer; its `write_pos` is frozen.
+
+The old buffer's physical pages remain valid for as long as any consumer has them mapped. KMES's internal release of the old buffer does not affect existing consumer mappings -- standard kernel mmap reference counting ensures the pages persist until all consumers have unmapped them.
 
 ### Buffer swap serialization
 
@@ -172,10 +192,13 @@ The buffer swap MUST be atomic per CPU: no events may be lost or duplicated duri
 An implementation MAY achieve this with the following per-CPU algorithm:
 
 1. Disable preemption on the target CPU.
-2. Copy surviving events from this CPU's old buffer to the new buffer.
-3. Switch the per-CPU buffer pointer from the old buffer to the new buffer.
-4. Increment `generation` in the old buffer's metadata.
-5. Re-enable preemption.
+2. Copy surviving events from this CPU's old buffer to the new buffer, re-compacted contiguously starting from position 0. Events are copied in sequence order. Set the new buffer's `tail_pos = 0` and `write_pos` to the total byte size of the copied events.
+3. Set the new buffer's `generation` to the old buffer's `generation + 1`. The new buffer MUST be fully initialized before consumers can see it.
+4. Switch the per-CPU buffer pointer from the old buffer to the new buffer. New events are now written to the new buffer.
+5. Increment `generation` in the old buffer's metadata. This signals consumers still reading the old buffer that a swap has occurred and they should re-attach.
+6. Re-enable preemption.
+
+The new buffer's `generation` is set before it becomes visible (step 3 before step 4). The old buffer's `generation` is incremented after the switch (step 5 after step 4). This ensures consumers see a consistent generation value regardless of whether they read from the old or new buffer.
 
 With preemption disabled, no events can be emitted on this CPU between the copy and the switchover. Events emitted on other CPUs are unaffected -- each CPU's swap is independent.
 

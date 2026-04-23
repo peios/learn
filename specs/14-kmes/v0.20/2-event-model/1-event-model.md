@@ -23,14 +23,16 @@ The header fields are laid out sequentially with no padding or alignment gaps.
 
 The payload begins at offset `header_size` from the start of the event. The next event in the ring buffer begins at offset `event_size` from the start of the current event.
 
-`header_size` MAY be larger than the minimum size required by the defined fields. Bytes between the end of the `type` string and `header_size` are reserved for future stamp fields. Consumers MUST use `header_size` to locate the payload, not the end of the event type string.
+In v0.20, `header_size` is exactly `29 + type_len` -- the minimum size with no reserved space. Future versions MAY increase `header_size` to accommodate identity stamp fields. Consumers MUST use `header_size` to locate the payload, not the end of the event type string, to ensure forward compatibility.
+
+There is no separate limit on event type string length. The event type length is constrained only by the total event size limits (MaxEventSize for syscall emitters, 50% of ring buffer capacity for all emitters).
 
 ## Stamp fields
 
 KMES populates the following header fields at emission time. The emitter does not provide these -- they are set by KMES unconditionally.
 
 - `timestamp` -- captured from the wall clock (`CLOCK_REALTIME`) at the moment KMES accepts the event.
-- `sequence` -- the next value from the emitting CPU's per-boot monotonic counter, starting at zero when the PKM module loads.
+- `sequence` -- assigned by incrementing the emitting CPU's per-boot monotonic counter (initialized to zero) and taking the new value. The first event on each CPU receives sequence number 1; sequence 0 is never assigned.
 - `cpu_id` -- the CPU on which the event was emitted.
 - `origin_class` -- for syscall emission, set unconditionally to 0 (userspace) by KMES. For kernel emission, set to the value provided by the calling subsystem.
 
@@ -65,7 +67,9 @@ Values 4--255 are reserved for future kernel subsystems.
 
 The payload is a single msgpack-encoded value occupying the bytes from offset `header_size` to offset `event_size`. KMES does not interpret or modify the payload. The payload's structure is defined by the emitter and understood by consumers.
 
-The payload MUST be valid msgpack. KMES does not validate payloads from kernel emitters. For events emitted via the syscall interface, KMES MUST validate that the payload is well-formed msgpack before accepting the event. Validation is iterative with a bounded maximum nesting depth. Events with invalid payloads MUST be rejected and the syscall MUST return an error to the caller.
+The payload MUST be valid msgpack. A zero-length payload (`event_size == header_size`) is valid for kernel emitters -- the event consists of a header with no payload data. For syscall emitters, a zero-length payload fails msgpack validation (an empty byte sequence is not a valid msgpack value) and is rejected with EINVAL.
+
+KMES does not validate payloads from kernel emitters. For events emitted via the syscall interface, KMES MUST validate that the payload is well-formed msgpack before accepting the event. Validation is iterative with a bounded maximum nesting depth. Events with invalid payloads MUST be rejected and the syscall MUST return an error to the caller.
 
 ## Size limits
 

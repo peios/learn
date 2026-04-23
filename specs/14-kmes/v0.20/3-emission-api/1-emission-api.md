@@ -27,7 +27,7 @@ For kernel emitters, preemption is disabled for the full emission path (timestam
 KMES constructs the event by:
 
 1. Capturing the wall clock timestamp.
-2. Incrementing the current CPU's per-boot sequence counter and taking the new value. This is a CPU-local operation with no cross-CPU contention.
+2. Incrementing the current CPU's per-boot sequence counter and taking the new value. The counter starts at 0; the first event on each CPU receives sequence number 1. Sequence 0 is never assigned to an event. This is a CPU-local operation with no cross-CPU contention.
 3. Building the packed header from the stamp fields, cpu_id, origin class, and event type.
 4. Writing the header and payload contiguously into the current CPU's ring buffer.
 

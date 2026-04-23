@@ -16,13 +16,13 @@ The following terms are used throughout this specification with the precise mean
 
 **Stamp**: The set of metadata fields in the event header that KMES populates at emission time. v0.20 stamp fields are KMES-intrinsic: timestamp, sequence number, cpu_id, and origin class. Future versions will add process and identity fields in coordination with the KACS specification.
 
-**Sequence number**: A per-CPU, monotonically increasing 64-bit unsigned integer assigned by KMES to each event at emission time. Each CPU maintains its own independent counter, reset to zero when the PKM module loads. Gaps in the sequence on a given CPU indicate lost events (overwritten or dropped). The sequence number is not a global ordering primitive -- events are ordered primarily by timestamp.
+**Sequence number**: A per-CPU, monotonically increasing 64-bit unsigned integer assigned by KMES to each event at emission time. Each CPU maintains its own independent counter, reset to zero when the PKM module loads. The counter is incremented before the value is taken, so the first event on each CPU receives sequence number 1. Sequence 0 is never assigned to an event. Gaps in the sequence on a given CPU indicate lost events (overwritten or dropped). The sequence number is not a global ordering primitive -- events are ordered primarily by timestamp.
 
 **Origin class**: A header field identifying the subsystem or emission path that produced the event: a specific kernel subsystem (KMES, KACS, LCS) or userspace (via syscall).
 
 **Event type**: An arbitrary, length-prefixed UTF-8 string in the event header identifying the kind of event. KMES imposes no structure or naming convention on event types -- schema and naming are consumer concerns.
 
-**Ring buffer**: A per-CPU shared memory region created and managed by KMES, mapped read-only into the address space of authorized userspace consumers. KMES maintains one ring buffer per CPU. Each buffer is independent, with its own write position, sequence counter, and futex notification. Ring buffers are the sole delivery mechanism from KMES to userspace.
+**Ring buffer**: A per-CPU shared memory region created and managed by KMES, mapped into the address space of authorized userspace consumers. Each buffer consists of a producer metadata page (mapped read-only), a consumer metadata page (mapped read-write for consumer notification state), and a data region (mapped read-only, double virtual mapped). KMES maintains one ring buffer per CPU. Each buffer is independent, with its own write position, sequence counter, and futex notification. Ring buffers are the sole delivery mechanism from KMES to userspace.
 
 **Boot buffer**: Internal per-CPU kernel buffers used by KMES to capture events during early boot, before the registry is available and the consumer-facing ring buffers are created. One boot buffer exists per CPU. Boot buffers are not visible to consumers. When the ring buffers are created, surviving boot buffer events are copied into them.
 

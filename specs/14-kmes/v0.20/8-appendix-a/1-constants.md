@@ -40,9 +40,9 @@ Packed, no padding. All multi-byte integers little-endian.
 
 Minimum header size: 29 + `type_len` bytes. Actual `header_size` MAY be larger (reserved space for future identity stamp fields). Payload begins at `header_size` from event start.
 
-## Ring buffer metadata page layout
+## Producer metadata page layout (offset 0, read-only)
 
-One metadata page (4096 bytes) per CPU. Cache-line-aligned fields.
+One producer metadata page (4096 bytes) per CPU. Cache-line-aligned fields.
 
 ### Cache line 0 -- static fields (bytes 0--63)
 
@@ -70,8 +70,14 @@ One metadata page (4096 bytes) per CPU. Cache-line-aligned fields.
 | Offset | Size | Type | Field |
 |---|---|---|---|
 | 128 | 4 | `u32` | `futex_counter` |
-| 132 | 1 | `u8` | `need_wake` |
-| 133 | 59 | -- | `reserved3` |
+| 132 | 60 | -- | `reserved3` |
+
+## Consumer metadata page layout (offset 4096, read-write)
+
+| Offset | Size | Type | Field |
+|---|---|---|---|
+| 4096 | 1 | `u8` | `need_wake` |
+| 4097 | 4095 | -- | `reserved4` |
 
 ## Ring buffer magic
 
@@ -92,10 +98,11 @@ Per-CPU mapping returned by `mmap()` on a `kmes_attach` file descriptor:
 
 | Offset | Size | Description |
 |---|---|---|
-| 0 | 4096 | Metadata page |
-| 4096 | 2 × capacity | Double-mapped data region |
+| 0 | 4096 | Producer metadata page (read-only) |
+| 4096 | 4096 | Consumer metadata page (read-write) |
+| 8192 | 2 × capacity | Double-mapped data region (read-only) |
 
-Total mapping size: `4096 + (2 × capacity)` bytes.
+Total mapping size: `8192 + (2 × capacity)` bytes.
 
 ## Syscall error codes
 
@@ -104,7 +111,8 @@ Total mapping size: `4096 + (2 × capacity)` bytes.
 | Errno | Condition |
 |---|---|
 | EPERM | Caller does not hold SeAuditPrivilege. |
-| EINVAL | Event type length is zero, or payload is invalid msgpack, or payload nesting depth exceeds MaxNestingDepth. |
+| EAGAIN | Per-process rate limit exceeded. |
+| EINVAL | Event type length is zero, or event type is not valid UTF-8, or payload is invalid msgpack, or payload nesting depth exceeds MaxNestingDepth. |
 | EFAULT | Event type or payload pointer is inaccessible. |
 | ENOSPC | Event exceeds MaxEventSize or 50% of per-CPU ring buffer capacity. |
 | ENOMEM | Kernel memory allocation for staging buffer failed. |
@@ -114,7 +122,8 @@ Total mapping size: `4096 + (2 × capacity)` bytes.
 | Errno | Condition |
 |---|---|
 | EPERM | Caller does not hold SeAuditPrivilege. |
-| EINVAL | Count is 0 or exceeds 256, or failing entry has zero-length event type, or failing entry's payload is invalid msgpack or exceeds MaxNestingDepth. |
+| EAGAIN | Per-process rate limit exceeded. |
+| EINVAL | Count is 0 or exceeds 256, or failing entry has zero-length event type, or failing entry's event type is not valid UTF-8, or failing entry's payload is invalid msgpack or exceeds MaxNestingDepth. |
 | EFAULT | Entry array, event type, or payload pointer is inaccessible. |
 | ENOSPC | Failing entry exceeds MaxEventSize or 50% of per-CPU ring buffer capacity. |
 | ENOMEM | Kernel memory allocation failed. |
@@ -125,8 +134,21 @@ Total mapping size: `4096 + (2 × capacity)` bytes.
 |---|---|
 | EPERM | Caller does not hold SeSecurityPrivilege. |
 | ERANGE | Provided buffer is too small. `*count` set to required number. |
-| EFAULT | `fds` or `count` pointer is inaccessible. |
+| EFAULT | `fds`, `count`, or `capacity` pointer is inaccessible. |
 | ENOMEM | Kernel memory allocation failed. |
+
+## kmes_emit_entry struct layout (x86-64)
+
+C ABI natural alignment. Total size: 32 bytes.
+
+| Offset | Size | Type | Field |
+|---|---|---|---|
+| 0 | 8 | `pointer` | `event_type` |
+| 8 | 2 | `u16` | `event_type_len` |
+| 10 | 6 | -- | padding |
+| 16 | 8 | `pointer` | `payload` |
+| 24 | 4 | `u32` | `payload_len` |
+| 28 | 4 | -- | padding |
 
 ## Configuration keys
 
@@ -137,6 +159,7 @@ Registry path: `Machine\System\KMES\`
 | BufferCapacity | REG_QWORD | 4194304 (4 MB) | 65536--268435456 (64 KB--256 MB), power of two |
 | MaxEventSize | REG_DWORD | 65536 (64 KB) | 1024--4194304 (1 KB--4 MB) |
 | MaxNestingDepth | REG_DWORD | 32 | 4--256 |
+| MaxEmitRatePerProcess | REG_DWORD | 10000 | 100--1000000 |
 
 ## Privilege requirements
 
