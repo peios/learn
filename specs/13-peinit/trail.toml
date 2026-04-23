@@ -1,0 +1,2 @@
+name = "Peinit"
+description = "Peios init system — PID 1 service manager with KACS-integrated identity, dependency ordering, and supervised process execution."

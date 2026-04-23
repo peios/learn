@@ -1,0 +1,2 @@
+name = "Loregd"
+description = "Local Registry Daemon — SQLite-backed RSI source providing the Machine and Users hives."

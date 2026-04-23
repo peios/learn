@@ -1,0 +1,2 @@
+name = "KMES"
+description = "Kernel Mediated Event Subsystem — unified event emission, buffering, and delivery for the Peios kernel."

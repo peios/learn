@@ -1,0 +1,2 @@
+name = "KACS"
+description = "Kernel Access Control Subsystem — tokens, security descriptors, access checks, and integrity controls."
