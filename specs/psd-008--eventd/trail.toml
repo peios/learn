@@ -1,0 +1,2 @@
+name = "eventd"
+description = "Event daemon — unified observability sink and query engine for events, logs, and metrics."

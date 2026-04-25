@@ -18,3 +18,10 @@ url = "/provium/"
 [[nav]]
 label = "Cairn"
 url = "/cairn/"
+
+[[nav]]
+label = "Dictionary"
+url = "/dictionary/"
+
+[dictionary]
+auto_link = true

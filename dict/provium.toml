@@ -1,0 +1,34 @@
+# =============================================================================
+# Provium — KVM test harness
+# =============================================================================
+
+[[terms]]
+term = "Provium"
+definition = "A KVM test harness for Linux kernel modules and system-level code. Tests are written in Lua and run against real QEMU/KVM virtual machines. Written in Go (host) and C (guest agent)."
+category = "General"
+product = "provium"
+
+[[terms]]
+term = "Guest Agent"
+definition = "The C binary injected into QEMU VMs by Provium. Listens on vsock for commands from the host, executes syscalls, ioctls, and shell commands, and returns results."
+category = "Architecture"
+product = "provium"
+
+[[terms]]
+term = "Fixture"
+definition = "A cached VM snapshot taken after boot and setup. Tests resume from a fixture instead of cold-booting, dramatically reducing test execution time."
+category = "Testing"
+product = "provium"
+
+[[terms]]
+term = "Worker"
+definition = "A forked instance of the guest agent inside a VM, providing an independent process with its own credentials and command channel. Used for testing multi-process scenarios."
+category = "Testing"
+product = "provium"
+
+[[terms]]
+term = "vsock"
+aliases = ["virtio socket"]
+definition = "The host-guest communication channel used by Provium. No IP stack or network configuration required. Provides a direct socket connection between the host binary and the guest agent."
+category = "Architecture"
+product = "provium"

@@ -1,0 +1,59 @@
+# =============================================================================
+# KMES — Kernel Mediated Event Subsystem
+# =============================================================================
+
+[[terms]]
+term = "Event"
+definition = "An indivisible record consisting of a header (packed binary metadata) and a payload (msgpack-encoded structured data). Header and payload are always produced and consumed together."
+category = "Event Model"
+product = "kmes"
+
+[[terms]]
+term = "Event Header"
+aliases = ["Header"]
+definition = "The packed binary prefix of every event. Contains: event size, header size, wall clock timestamp, per-CPU sequence number, CPU identifier, origin class, three identity GUIDs (effective token, true token, process), and a length-prefixed event type string. All fields before the event type string are at fixed offsets."
+category = "Event Model"
+product = "kmes"
+
+[[terms]]
+term = "Event Payload"
+aliases = ["Payload"]
+definition = "The msgpack-encoded body of an event. Structure defined by the emitting subsystem or process. KMES treats payloads as opaque — it buffers and delivers without interpreting."
+category = "Event Model"
+product = "kmes"
+
+[[terms]]
+term = "Stamp"
+definition = "The set of metadata fields in the event header populated by KMES at emission time: timestamp, sequence number, cpu_id, origin class (KMES-intrinsic), and effective token GUID, true token GUID, process GUID (identity, captured from KACS). Trusted because only the kernel writes them."
+category = "Event Model"
+product = "kmes"
+
+[[terms]]
+term = "Origin Class"
+definition = "A header field identifying which subsystem or emission path produced the event: a specific kernel subsystem (KMES, KACS, LCS) or userspace (via syscall)."
+category = "Event Model"
+product = "kmes"
+
+[[terms]]
+term = "Event Type"
+definition = "An arbitrary, length-prefixed UTF-8 string in the event header identifying the kind of event. KMES imposes no structure or naming convention — schema and naming are consumer concerns."
+category = "Event Model"
+product = "kmes"
+
+[[terms]]
+term = "Ring Buffer"
+definition = "A per-CPU shared memory region managed by KMES and mapped into authorized consumers' address spaces. Each buffer has a producer metadata page, a consumer metadata page, and a double-virtual-mapped data region. The sole delivery mechanism from KMES to userspace."
+category = "Delivery"
+product = "kmes"
+
+[[terms]]
+term = "Boot Buffer"
+definition = "Internal per-CPU kernel buffers that capture events during early boot, before ring buffers are created. Not visible to consumers. Contents are copied into ring buffers when they become available."
+category = "Delivery"
+product = "kmes"
+
+[[terms]]
+term = "Consumer"
+definition = "A userspace process that maps KMES ring buffers and reads events. Typically dedicates one thread per CPU buffer. eventd is the primary consumer."
+category = "Delivery"
+product = "kmes"

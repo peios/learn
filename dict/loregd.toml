@@ -1,0 +1,33 @@
+# =============================================================================
+# loregd — Local Registry Daemon
+# =============================================================================
+
+[[terms]]
+term = "Hive Database"
+definition = "A SQLite database file backing one hive. Each hive registered by loregd has its own database file. The file path is provided on the command line."
+category = "Storage"
+product = "loregd"
+
+[[terms]]
+term = "Volatile Store"
+definition = "A SQLite in-memory database (:memory:) ATTACHed to a hive database connection. Volatile keys are stored here. Lost when loregd exits."
+category = "Storage"
+product = "loregd"
+
+[[terms]]
+term = "Folded Name"
+definition = "The Unicode Simple Case Folded form of a key name, value name, or child name. Stored alongside the canonical (case-preserving) name for case-insensitive lookups."
+category = "Storage"
+product = "loregd"
+
+[[terms]]
+term = "Read Connection"
+definition = "A SQLite connection used for read-only RSI operations. Multiple read connections may be open concurrently (WAL mode)."
+category = "Concurrency"
+product = "loregd"
+
+[[terms]]
+term = "Write Connection"
+definition = "A SQLite connection used for mutating RSI operations. Only one write connection exists per hive database. All writes are serialised through this connection."
+category = "Concurrency"
+product = "loregd"

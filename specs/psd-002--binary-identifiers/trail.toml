@@ -1,0 +1,2 @@
+name = "Binary Identifiers"
+description = "Binary identifier types — GUID and LUID formats, comparison, generation, and allocation."

@@ -14,7 +14,7 @@ description: Key terms and acronyms used throughout Peios security documentation
 
 ## C
 
-**CAP (Central Access Policy)** — An organization-wide policy that applies to objects based on resource attributes, evaluated as an additional intersection step in AccessCheck. See [Understanding Central Access Policy](~peios/central-access-policy/understanding-central-access-policy).
+**CAAP (Central Access and Auditing Policy)** — An organization-wide policy that applies to objects based on resource attributes, evaluated as an additional intersection step in AccessCheck. Each rule carries both access restrictions (DACL) and audit requirements (SACL). See [Understanding Central Access Policy](~peios/central-access-policy/understanding-central-access-policy).
 
 **Claim** — A name-value pair carried on a token (user claim) or derived from resource attributes, used in conditional ACE expressions for attribute-based access control. See [Claims and Attributes](~peios/conditional-access/claims-and-attributes).
 
@@ -30,7 +30,7 @@ description: Key terms and acronyms used throughout Peios security documentation
 
 ## F
 
-**FACS (File Access Control Subsystem)** — The kernel subsystem that applies security descriptors to files and directories, replacing traditional Linux mode bits with the full SD model.
+**FACS (File Access Control Shim)** — The KACS subsystem that replaces Linux DAC with SD-based evaluation on files. Enforces the handle model: AccessCheck at open time, granted mask cached on the file descriptor.
 
 ## G
 

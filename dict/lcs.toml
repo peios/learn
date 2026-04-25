@@ -1,0 +1,249 @@
+# =============================================================================
+# LCS — Layered Configuration Subsystem
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Core data model
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Registry"
+definition = "The user-facing configuration system provided by LCS and its sources working together. Use 'LCS' for the kernel subsystem and the source name (e.g. loregd) for the userspace component. 'The Registry' covers the whole thing."
+category = "Data Model"
+product = "lcs"
+
+[[terms]]
+term = "Hive"
+definition = "A top-level registry namespace — the first path component in every registry path. Each hive is an independent tree of keys and values, backed by exactly one source. Examples: Machine, Users."
+category = "Data Model"
+product = "lcs"
+
+[[terms]]
+term = "Key"
+definition = "A node in the registry hierarchy. Keys are containers holding subkeys (forming a tree) and values (holding data). Each key has a GUID (identity), a security descriptor, and metadata. Analogous to filesystem directories."
+category = "Data Model"
+product = "lcs"
+
+[[terms]]
+term = "Value"
+definition = "A named, typed datum stored within a key. Each value has a name (string), a type (REG_SZ, REG_DWORD, etc.), and data. A key can hold multiple values. One unnamed value per key is the default value."
+category = "Data Model"
+product = "lcs"
+
+[[terms]]
+term = "GUID"
+definition = "A 128-bit identifier assigned by the kernel at key creation time and persisted by the source. A key's GUID is its immutable identity — never reused. Paths are the user-facing interface; GUIDs are the internal identity."
+category = "Data Model"
+product = "lcs"
+
+[[terms]]
+term = "Path Entry"
+definition = "A layer-qualified naming record mapping (parent GUID, child name, layer) to a target GUID or HIDDEN. Separates naming (which is layered) from identity (which is not). Analogous to overlay filesystem directory entries."
+category = "Data Model"
+product = "lcs"
+
+[[terms]]
+term = "Default Value"
+definition = "The unnamed value on a key (empty string as its name). For symlink keys, the default value with type REG_LINK provides the symlink target."
+category = "Data Model"
+product = "lcs"
+
+[[terms]]
+term = "Securable Object"
+aliases = ["Securable object"]
+definition = "In LCS context, a registry key. Values inherit their key's access control — there is no per-value SD."
+category = "Data Model"
+product = "lcs"
+
+# ---------------------------------------------------------------------------
+# Keys — special types
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Volatile Key"
+definition = "A key stored in non-persistent storage only, lost on reboot or hive unload. Set at creation, immutable. Children of volatile keys must also be volatile."
+category = "Keys"
+product = "lcs"
+
+[[terms]]
+term = "Symlink Key"
+definition = "A key that redirects path resolution to another registry path. The symlink flag is set at creation (immutable). The target is the default value with type REG_LINK — which is itself layered, so higher-precedence layers can redirect a symlink."
+category = "Keys"
+product = "lcs"
+
+[[terms]]
+term = "Orphaned Key"
+definition = "A key GUID with no path entries in any layer. Existing fds continue to work (alive but unnamed). When the last fd closes, LCS tells the source to drop the GUID. Follows the Linux unlink model."
+category = "Keys"
+product = "lcs"
+
+# ---------------------------------------------------------------------------
+# Layers
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Layer"
+definition = "A named, precedence-ordered collection of registry writes. Every write is tagged with a layer. Reads resolve across layers: the highest-precedence entry wins. Removing a layer removes its entries and lower-precedence values surface automatically."
+category = "Layers"
+product = "lcs"
+
+[[terms]]
+term = "Base Layer"
+definition = "The kernel-reserved implicit layer (named 'base') at precedence 0. Cannot be deleted, disabled, or have its precedence changed. The default target for writes that do not specify a layer."
+category = "Layers"
+product = "lcs"
+
+[[terms]]
+term = "Precedence"
+definition = "A layer's override order. Higher precedence wins during layer resolution. Precedence 0 is the default (base and role layers). Precedence > 0 requires SeTcbPrivilege to create or elevate (prevents unprivileged Group Policy injection)."
+category = "Layers"
+product = "lcs"
+
+[[terms]]
+term = "Layer Resolution"
+definition = "The algorithm that determines the effective state of a path entry or value from multiple per-layer entries. Highest precedence wins; within the same precedence, highest sequence number wins."
+category = "Layers"
+product = "lcs"
+
+[[terms]]
+term = "Effective Value"
+definition = "The value visible to callers after layer resolution — the highest-precedence, highest-sequence entry for a (key GUID, value name) pair that is not a tombstone."
+category = "Layers"
+product = "lcs"
+
+[[terms]]
+term = "Sequence Number"
+definition = "A monotonic counter value assigned by LCS to every mutation. Provides deterministic tiebreaking within a precedence tier. The global sequence counter is never decremented or reset."
+category = "Layers"
+product = "lcs"
+
+[[terms]]
+term = "Private Layer"
+definition = "A disabled layer attached to a specific thread's credentials. Globally invisible during normal resolution but included when resolving on behalf of that thread. Enables per-session overrides, testing, and sandboxing."
+category = "Layers"
+product = "lcs"
+
+# ---------------------------------------------------------------------------
+# Tombstones and hiding
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Tombstone"
+aliases = ["Value Tombstone"]
+definition = "A layer entry with type REG_TOMBSTONE that masks a specific value from lower-precedence layers. Callers see 'value not found'. Required for registry.pol **Del.ValueName semantics."
+category = "Tombstones"
+product = "lcs"
+
+[[terms]]
+term = "Blanket Tombstone"
+definition = "A per-layer marker on a key that masks all values from lower-precedence layers for that key. Required for registry.pol **DelVals semantics. Values written in the same or higher-precedence layer override the blanket."
+category = "Tombstones"
+product = "lcs"
+
+[[terms]]
+term = "Key Hiding"
+aliases = ["HIDDEN"]
+definition = "A path entry with target HIDDEN that masks a key from lower-precedence layers, making it invisible. The path-level equivalent of a value tombstone. Removing the hiding layer causes the lower-precedence key to reappear."
+category = "Tombstones"
+product = "lcs"
+
+# ---------------------------------------------------------------------------
+# RSI
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Registry Source Interface"
+abbr = "RSI"
+definition = "The binary protocol and contract between LCS and its backing stores. Defines the operations LCS can request, the response format, and the error model. Any process implementing the RSI can back a hive — LCS is source-agnostic."
+category = "RSI"
+product = "lcs"
+
+[[terms]]
+term = "Source"
+definition = "A userspace process that implements the RSI for one or more hives. Sources handle storage (reads, writes, enumeration, transactions). They do not make access control decisions, see caller identity, or manage watches. loregd is the first source."
+category = "RSI"
+product = "lcs"
+
+# ---------------------------------------------------------------------------
+# Watches
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Watch"
+definition = "A persistent subscription for changes on a key fd. Armed via ioctl, pollable via epoll. Events are structured records read from the fd. Watches report effective state changes (post-layer-resolution), not layer mechanics."
+category = "Watches"
+product = "lcs"
+
+[[terms]]
+term = "Subtree Watch"
+definition = "A watch that observes changes not only on the watched key but on all its descendants. Events include path components identifying the depth and location of the change."
+category = "Watches"
+product = "lcs"
+
+[[terms]]
+term = "Self-Watch"
+definition = "LCS's internal watch on Machine\\System\\Registry\\ that drives self-configuration. Layer table updates, configuration hot-swap, and layer metadata changes are all triggered by self-watch events."
+category = "Watches"
+product = "lcs"
+
+[[terms]]
+term = "Watch Event"
+definition = "A structured record describing a specific change: VALUE_SET, VALUE_DELETED, SUBKEY_CREATED, SUBKEY_DELETED, SD_CHANGED, KEY_DELETED, or OVERFLOW. Events reflect effective state changes only."
+category = "Watches"
+product = "lcs"
+
+# ---------------------------------------------------------------------------
+# Transactions
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Transaction"
+definition = "A hive-scoped atomic multi-key write scope. Either all operations commit together or none do. Bound to a specific hive on first mutation. Lifetime is tied to the transaction fd."
+category = "Transactions"
+product = "lcs"
+
+# ---------------------------------------------------------------------------
+# Hive variants
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Private Hive"
+definition = "A hive registered with RSI_HIVE_PRIVATE and a scope GUID. Only accessible to threads whose credentials carry the matching scope GUID. Can shadow global hives for complete registry isolation."
+category = "Hives"
+product = "lcs"
+
+[[terms]]
+term = "CurrentUser"
+definition = "A kernel-level alias, not a real hive. Paths beginning with CurrentUser\\ are rewritten to Users\\<caller SID>\\<remainder> before routing. Not applied to symlink targets (prevents confused deputy attacks)."
+category = "Hives"
+product = "lcs"
+
+# ---------------------------------------------------------------------------
+# Key access rights
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Key Access Rights"
+definition = "The registry-specific access rights on key SDs: KEY_QUERY_VALUE, KEY_SET_VALUE, KEY_CREATE_SUB_KEY, KEY_ENUMERATE_SUB_KEYS, KEY_NOTIFY, KEY_CREATE_LINK, and KEY_ALL_ACCESS."
+category = "Access Control"
+product = "lcs"
+
+# ---------------------------------------------------------------------------
+# Bootstrap
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Self-Configuration"
+definition = "The mechanism by which LCS reads its own operational parameters from Machine\\System\\Registry\\, using compiled-in defaults at boot and hot-swapping to registry values when a source registers."
+category = "Bootstrap"
+product = "lcs"
+
+# ---------------------------------------------------------------------------
+# Value types
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Value Type"
+definition = "The type tag on a registry value. LCS supports the Windows registry type set: REG_SZ, REG_EXPAND_SZ, REG_BINARY, REG_DWORD, REG_QWORD, REG_MULTI_SZ, REG_LINK, REG_NONE, REG_DWORD_BIG_ENDIAN. REG_TOMBSTONE is internal only."
+category = "Data Model"
+product = "lcs"

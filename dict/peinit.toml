@@ -1,0 +1,174 @@
+# =============================================================================
+# peinit — Peios init (PID 1)
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Service model
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Service"
+definition = "A named, supervised unit of execution managed by peinit. Has a definition (registry schema), a runtime state (state machine), and a security policy (ServiceSecurity SD). Two types: Simple (long-running daemon) and Oneshot (run-to-completion task)."
+category = "Service Model"
+product = "peinit"
+
+[[terms]]
+term = "Simple Service"
+definition = "A long-running daemon. The process IS the service. Readiness is determined by sd_notify (Notify) or process existence (Alive). The default service type."
+category = "Service Model"
+product = "peinit"
+
+[[terms]]
+term = "Oneshot Service"
+definition = "A run-to-completion task. Readiness is 'successful exit' (exit code 0 or SuccessExitCodes match). With RemainAfterExit, stays in Completed state to satisfy dependents."
+category = "Service Model"
+product = "peinit"
+
+[[terms]]
+term = "Job"
+definition = "A single supervised process execution. Every time peinit forks a process — starting a service, running a hook, executing a health check — the execution is a job with a GUID, lifecycle tracking, and log correlation."
+category = "Service Model"
+product = "peinit"
+
+[[terms]]
+term = "Operation"
+definition = "A first-class object representing a requested state machine action on a service (start, stop, restart, reload, reset). Operations provide conflict resolution for concurrent commands and observable lifecycle tracking via GUIDs."
+category = "Service Model"
+product = "peinit"
+
+[[terms]]
+term = "ServiceSecurity"
+definition = "The security descriptor on a service controlling who may manage it via the control interface. Stored as REG_BINARY in the service's registry definition. Makes services securable objects."
+category = "Service Model"
+product = "peinit"
+
+# ---------------------------------------------------------------------------
+# Service state machine
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Service State"
+definition = "One of nine states every service is in at any given time: Inactive, Starting, Active, Reloading, Stopping, Completed, Failed, Abandoned, or Skipped."
+category = "State Machine"
+product = "peinit"
+
+[[terms]]
+term = "ErrorControl"
+definition = "A per-service policy for irrecoverable failure. Normal (default): service remains in Failed state. Critical: peinit syncs filesystems and reboots the system."
+category = "State Machine"
+product = "peinit"
+
+[[terms]]
+term = "RestartPolicy"
+definition = "Controls whether and when peinit restarts a failed service. Never (no restarts), OnFailure (restart on abnormal exit, the default), Always (restart on any exit)."
+category = "State Machine"
+product = "peinit"
+
+[[terms]]
+term = "Readiness"
+definition = "How peinit determines a Simple service is ready. Notify (default): service sends READY=1 via sd_notify. Alive: process existence is sufficient. Ignored for Oneshot services."
+category = "State Machine"
+product = "peinit"
+
+# ---------------------------------------------------------------------------
+# Dependencies
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Requires"
+definition = "A hard dependency. All required services must be satisfied before this service starts. If any required service fails, this service fails."
+category = "Dependencies"
+product = "peinit"
+
+[[terms]]
+term = "Wants"
+definition = "A soft dependency. Wanted services are started before this service if they exist. Failure of a wanted service does not prevent this service from starting."
+category = "Dependencies"
+product = "peinit"
+
+[[terms]]
+term = "BindsTo"
+definition = "Runtime coupling. If any bound service stops (for any reason), this service is stopped. Stronger than Requires — Requires only affects startup, BindsTo affects the entire lifetime."
+category = "Dependencies"
+product = "peinit"
+
+[[terms]]
+term = "Conflicts"
+definition = "Mutual exclusion between services. Starting a service stops any conflicting services. The conflict relationship is bidirectional."
+category = "Dependencies"
+product = "peinit"
+
+# ---------------------------------------------------------------------------
+# Boot
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Phase 1"
+definition = "The hardcoded bootstrap phase. peinit remounts root read-write, mounts virtual filesystems, starts registryd, and performs infrastructure setup. No registry access occurs during Phase 1."
+category = "Boot"
+product = "peinit"
+
+[[terms]]
+term = "Phase 2"
+definition = "The registry-driven boot phase. With registryd running, peinit reads service definitions from the registry and starts all boot-triggered services in dependency order."
+category = "Boot"
+product = "peinit"
+
+[[terms]]
+term = "Mount Pseudo-Service"
+definition = "A synthetic Oneshot service generated by peinit from mount entries in Machine\\System\\Boot\\Mounts\\. Named mount:<mountpoint>. Participates in the dependency graph like any real service."
+category = "Boot"
+product = "peinit"
+
+# ---------------------------------------------------------------------------
+# Runtime mechanisms
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "sd_notify"
+definition = "A datagram-based readiness and health signalling protocol. Services send structured messages (READY=1, WATCHDOG=1, etc.) to peinit via a Unix datagram socket. Sender authentication uses kernel-attested PID matching."
+category = "Runtime"
+product = "peinit"
+etymology = "From systemd's sd_notify protocol. Compatible wire format."
+
+[[terms]]
+term = "pidfd"
+definition = "A file descriptor referring to a specific process, obtained atomically at fork time via clone3(CLONE_PIDFD). Eliminates PID reuse races. peinit tracks every managed process via a pidfd."
+category = "Runtime"
+product = "peinit"
+
+[[terms]]
+term = "Conditions"
+definition = "Start-time checks (path exists, file exists, directory exists, registry key exists). If any condition fails, the service is skipped (not failed). A skipped service satisfies dependents."
+category = "Runtime"
+product = "peinit"
+
+[[terms]]
+term = "Asserts"
+definition = "Start-time checks with the same format as Conditions, but failure causes the service to enter Failed state rather than Skipped."
+category = "Runtime"
+product = "peinit"
+
+[[terms]]
+term = "Health Check"
+definition = "A command run periodically to verify a service is functioning. Exit 0 = healthy. Consecutive failures (HealthCheckRetries) trigger the service's restart or failure policy."
+category = "Runtime"
+product = "peinit"
+
+[[terms]]
+term = "Watchdog"
+definition = "A keepalive mechanism where a service must send WATCHDOG=1 via sd_notify within WatchdogTimeout seconds. Missing the deadline is treated as a service failure."
+category = "Runtime"
+product = "peinit"
+
+[[terms]]
+term = "Control Interface"
+definition = "The Unix socket through which administrators and tools send commands (start, stop, restart, reload, shutdown) to peinit. Every command is authorized via AccessCheck against the target service's ServiceSecurity SD."
+category = "Runtime"
+product = "peinit"
+
+[[terms]]
+term = "Fd Store"
+definition = "A per-service mechanism for storing file descriptors across service restarts. The service sends fds to peinit via sd_notify with FDSTORE=1. Restored to the service on the next start."
+category = "Runtime"
+product = "peinit"

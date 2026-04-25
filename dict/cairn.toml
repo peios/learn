@@ -1,0 +1,27 @@
+# =============================================================================
+# Cairn — File-based project tracker
+# =============================================================================
+
+[[terms]]
+term = "Cairn"
+definition = "A file-based project tracker for solo developers. Stores tasks as TOML files on disk, provides a CLI for automation, and serves a milestone-centric web board. Written in Go."
+category = "General"
+product = "cairn"
+
+[[terms]]
+term = "Task"
+definition = "A unit of work in Cairn, stored as a directory containing a meta.toml file. Has an integer ID, a status (todo, active, done), and optional metadata (product, priority, milestone, dependencies)."
+category = "Data Model"
+product = "cairn"
+
+[[terms]]
+term = "Subtask"
+definition = "A task scoped within a parent task. Addressed as parent_id/subtask_id (e.g. 12/1). Same schema as global tasks but exists as decomposition of the parent's work."
+category = "Data Model"
+product = "cairn"
+
+[[terms]]
+term = "Milestone"
+definition = "An ordered release target in Cairn. The web board organises tasks into columns by milestone. Tasks without a milestone appear in a Backlog column."
+category = "Data Model"
+product = "cairn"

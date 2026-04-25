@@ -1,0 +1,91 @@
+# =============================================================================
+# General Peios terminology
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Kernel
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "PKM"
+aliases = ["Peios Kernel Module"]
+definition = "The single loadable kernel module containing all Peios kernel extensions."
+category = "Kernel"
+
+[[terms]]
+term = "KACS"
+aliases = ["Kernel Access Control Subsystem"]
+definition = "The PKM subsystem that implements tokens, security descriptors, AccessCheck, privileges, impersonation, PIP, and file access control (FACS). The sole identity-based authorization engine for managed objects."
+category = "Kernel"
+
+[[terms]]
+term = "LCS"
+aliases = ["Layered Configuration Subsystem"]
+definition = "The PKM subsystem that implements the kernel-mediated hierarchical registry with layers, watches, and transactions."
+category = "Kernel"
+
+# ---------------------------------------------------------------------------
+# Userspace daemons
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "peinit"
+definition = "Peios init — the PID 1 process responsible for service lifecycle management, boot sequencing, and supervised process execution"
+category = "Daemons"
+
+[[terms]]
+term = "loregd"
+definition = "Local Registry Daemon — a specific SQLite-backed RSI implementation. Currently the only implementation used as registryd, but the two terms are not synonymous."
+category = "Daemons"
+
+[[terms]]
+term = "registryd"
+definition = "The primary registry source that peinit starts during Phase 1 boot. A named slot, not an implementation — registryd is whatever RSI source provides the Machine and Users hives. Currently loregd fills this slot."
+category = "Daemons"
+
+[[terms]]
+term = "authd"
+definition = "Authentication daemon — the principal router responsible for authentication (Kerberos/NTLM), token creation, credential management, and CAAP cache population. Design deliberately undecided until KACS + registry are real."
+category = "Daemons"
+
+[[terms]]
+term = "lpsd"
+definition = "Local Principal Store — the userspace daemon providing the local user/group directory backed by SQLite."
+category = "Daemons"
+
+[[terms]]
+term = "eventd"
+definition = "Event daemon — drains kernel audit events (from the PKM ring buffer) to SQLite for persistent storage and observability."
+category = "Daemons"
+
+# ---------------------------------------------------------------------------
+# Subsystems (not yet specified or out of scope)
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "JFS"
+aliases = ["Job Forwarding Subsystem"]
+definition = "The subsystem for submitting and managing supervised jobs. Out of scope for v0.20."
+category = "Subsystems"
+
+[[terms]]
+term = "KMES"
+aliases = ["Kernel Mediated Event Subsystem"]
+definition = "The PKM subsystem providing the sole event emission path in Peios. Buffers events, stamps them with trusted metadata, assigns per-CPU sequence numbers, and delivers via shared memory ring buffers."
+category = "Kernel"
+
+# ---------------------------------------------------------------------------
+# Domain and identity
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Domain"
+definition = "An Active Directory domain — a logical grouping of machines and users sharing a common security database and trust relationships."
+category = "Domain"
+etymology = "From Windows Active Directory. In Peios, always refers to an AD domain, never used generically."
+
+[[terms]]
+term = "Peios"
+definition = "The operating system. A Linux-based OS that implements Windows-derived security primitives (SIDs, tokens, SDs, AccessCheck) natively in the kernel to provide coherent, SD-everywhere identity and access control."
+category = "General"
+etymology = "Jack had an empty GitHub organisation called Peios. It ends in OS. That's it."

@@ -1,0 +1,572 @@
+# =============================================================================
+# KACS — Kernel Access Control Subsystem
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Identity
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Security Identifier"
+abbr = "SID"
+definition = "A variable-length binary value that uniquely identifies a principal. Format: S-1-{authority}-{sub1}-...-{subN}. Binary-compatible with Windows SIDs."
+category = "Identity"
+product = "kacs"
+etymology = "From Windows SIDs (MS-DTYP §2.4.2)"
+
+[[terms.refs]]
+label = "SID Format Specification"
+path = "spec/kacs/v0.22/sids/format"
+
+[[terms]]
+term = "Relative Identifier"
+abbr = "RID"
+definition = "The last sub-authority in a SID — the portion that distinguishes individual principals within a domain."
+category = "Identity"
+product = "kacs"
+
+[[terms]]
+term = "SID_AND_ATTRIBUTES"
+definition = "A SID paired with a 32-bit attributes field controlling how the SID participates in access evaluation (mandatory, enabled, deny-only, etc.)."
+category = "Identity"
+product = "kacs"
+
+[[terms]]
+term = "Well-Known SID"
+definition = "A SID with a fixed value and well-defined meaning that the implementation must recognise. Examples: Everyone (S-1-1-0), SYSTEM (S-1-5-18), Anonymous (S-1-5-7)."
+category = "Identity"
+product = "kacs"
+
+[[terms]]
+term = "Service SID"
+definition = "A per-service identity SID derived from the SHA-1 hash of the service name (S-1-5-80-{hash}). Enables per-service access control independent of the account the service runs under."
+category = "Identity"
+product = "kacs"
+
+[[terms]]
+term = "Logon SID"
+definition = "A per-authentication-event SID (S-1-5-5-X-Y) generated at session creation and injected into the token's groups. Ties the token to its logon session."
+category = "Identity"
+product = "kacs"
+
+[[terms]]
+term = "Capability SID"
+definition = "A SID (S-1-15-3-*) representing a declared access capability for confined applications. Used in the confinement pass of AccessCheck."
+category = "Identity"
+product = "kacs"
+
+[[terms]]
+term = "Confinement SID"
+definition = "A SID (S-1-15-2-*) identifying a confined application. When set on a token, enables the default-deny confinement sandbox."
+category = "Identity"
+product = "kacs"
+
+[[terms]]
+term = "Principal"
+definition = "Any entity — user, group, service, or machine — that can be identified by a SID. Principals exist in a directory; tokens are runtime snapshots of principal identity."
+category = "Identity"
+
+[[terms]]
+term = "Trustee"
+definition = "The SID that an ACE targets — the principal to whom the ACE's access rule applies."
+category = "Identity"
+product = "kacs"
+
+[[terms]]
+term = "LUID"
+aliases = ["Locally Unique Identifier"]
+definition = "A 64-bit value unique within a single boot session. Used to identify tokens (token_id), logon sessions (auth_id), and privilege positions."
+category = "Identity"
+product = "kacs"
+
+# ---------------------------------------------------------------------------
+# Tokens
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Token"
+definition = "A kernel object representing a thread's identity and security policy. Contains a user SID, group SIDs, privileges, integrity level, impersonation level, claims, and confinement settings. Every thread must have a token."
+category = "Tokens"
+product = "kacs"
+
+[[terms.refs]]
+label = "Token Specification"
+path = "spec/kacs/v0.22/tokens/token-structure"
+
+[[terms]]
+term = "Primary Token"
+definition = "The token that defines a process's baseline identity. Inherited by child processes on fork. Stored via real_cred. Unaffected by impersonation."
+category = "Tokens"
+product = "kacs"
+
+[[terms]]
+term = "Impersonation Token"
+definition = "A temporary, per-thread token that overrides the primary token for access control decisions. Only affects the thread that installed it."
+category = "Tokens"
+product = "kacs"
+
+[[terms]]
+term = "Effective Token"
+definition = "The token used for access control decisions on a thread — the impersonation token if one is installed, otherwise the primary token."
+category = "Tokens"
+product = "kacs"
+
+[[terms]]
+term = "Restricted Token"
+definition = "A token carrying a secondary SID list (restricting SIDs). AccessCheck evaluates the DACL twice — once with normal SIDs, once with restricting SIDs — and grants only the intersection."
+category = "Tokens"
+product = "kacs"
+
+[[terms]]
+term = "Write-Restricted Token"
+definition = "A restricted token variant where the restricting SID intersection applies only to write-category bits. Read and execute access comes from the normal pass alone."
+category = "Tokens"
+product = "kacs"
+
+[[terms]]
+term = "Linked Tokens"
+definition = "A pair of tokens for the same principal — one elevated (Full) and one filtered (Limited) — associated at the logon session level. The filtered token is the session default; the elevated token exists for elevation requests."
+category = "Tokens"
+product = "kacs"
+
+[[terms]]
+term = "Elevation"
+definition = "The mechanism for switching from a filtered (Limited) token to its linked elevated (Full) token. KACS stores the pair; authd decides when elevation is permitted."
+category = "Tokens"
+product = "kacs"
+
+[[terms]]
+term = "Deny-Only Group"
+definition = "A group on a token with SE_GROUP_USE_FOR_DENY_ONLY set. Matches deny ACEs but not allow ACEs. Set permanently by FilterToken; cannot be reverted."
+category = "Tokens"
+product = "kacs"
+
+[[terms]]
+term = "Claim"
+definition = "A name-value pair carried on a token (user claims or device claims) and used in conditional ACE evaluation. Set by authd at token creation time."
+category = "Tokens"
+product = "kacs"
+
+[[terms]]
+term = "LogonSession"
+aliases = ["Logon Session"]
+definition = "A kernel object identified by a LUID representing a single authentication event. Contains LogonSession ID, logon type, user SID, and authentication package. Tokens reference their LogonSession by auth_id. Created by kacs_create_logon_session, invalidated by kacs_invalidate_logon_session."
+category = "Tokens"
+product = "kacs"
+
+[[terms]]
+term = "Interactivity Scope"
+definition = "A number on the token identifying which interactive user environment a process belongs to. 0 for services (no interactive environment), 1+ for interactive/remote user environments. Metadata only — no kernel security mechanism evaluates it. Future use: multi-user isolation, desktop namespace routing."
+category = "Tokens"
+product = "kacs"
+
+[[terms]]
+term = "Credential Projection"
+definition = "The one-way mapping of token identity onto Linux credentials (UID/GID). Computed by authd at token creation, stored on the token. Enables unmodified Linux applications to function. Not a security mechanism."
+category = "Tokens"
+product = "kacs"
+
+# ---------------------------------------------------------------------------
+# Security Descriptors
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Security Descriptor"
+abbr = "SD"
+aliases = ["security descriptors"]
+definition = "The complete security policy for a protected object. Contains an owner SID, a group SID, a DACL, and optionally a SACL. Every protected object has exactly one SD."
+category = "Security Descriptors"
+product = "kacs"
+etymology = "From the Windows NT security model (MS-DTYP §2.4.6)"
+
+[[terms.refs]]
+label = "SD Structure Specification"
+path = "spec/kacs/v0.22/security-descriptors/structure"
+
+[[terms]]
+term = "Securable Object"
+definition = "Any object that has a security descriptor — files, registry keys, IPC endpoints, tokens, processes, and logon sessions."
+category = "Security Descriptors"
+product = "kacs"
+
+[[terms]]
+term = "Access Control List"
+abbr = "ACL"
+definition = "An ordered list of ACEs in a standard binary format. Two kinds: DACL (controls access) and SACL (controls audit, integrity labels, resource attributes, and policy references)."
+category = "Security Descriptors"
+product = "kacs"
+
+[[terms]]
+term = "Discretionary Access Control List"
+abbr = "DACL"
+definition = "The ACL within an SD that defines who is allowed or denied access. The owner controls the DACL via WRITE_DAC. A null DACL grants all access; an empty DACL denies all access."
+category = "Security Descriptors"
+product = "kacs"
+
+[[terms]]
+term = "System Access Control List"
+abbr = "SACL"
+definition = "The ACL within an SD that carries system-level policy: audit ACEs, mandatory integrity labels, resource attributes, scoped policy references, and process trust labels. Modification requires ACCESS_SYSTEM_SECURITY."
+category = "Security Descriptors"
+product = "kacs"
+
+[[terms]]
+term = "Access Control Entry"
+abbr = "ACE"
+plural = "Access Control Entries"
+definition = "A single rule within an ACL. Contains a type, flags, an access mask, and a trustee SID, with optional extensions for GUIDs (object ACEs) or conditional expressions (callback ACEs)."
+category = "Security Descriptors"
+product = "kacs"
+
+[[terms]]
+term = "Conditional ACE"
+aliases = ["Callback ACE"]
+definition = "An ACE with an appended boolean expression that must evaluate to TRUE for the rule to take effect. Enables attribute-based access control (ABAC). Uses three-valued logic: TRUE, FALSE, UNKNOWN."
+category = "Security Descriptors"
+product = "kacs"
+
+[[terms]]
+term = "Object ACE"
+definition = "An ACE scoped to a specific property or object class via one or two GUIDs (ObjectType and InheritedObjectType). Used for per-property access control on objects with internal structure."
+category = "Security Descriptors"
+product = "kacs"
+
+[[terms]]
+term = "Mandatory Label"
+definition = "A SYSTEM_MANDATORY_LABEL_ACE in the SACL that defines an object's integrity level for MIC. The SID encodes the level (S-1-16-X); the mask encodes which operations are blocked for non-dominant callers."
+category = "Security Descriptors"
+product = "kacs"
+
+[[terms]]
+term = "Process Trust Label"
+definition = "A SYSTEM_PROCESS_TRUST_LABEL_ACE in the SACL that defines an object's PIP trust level. The SID encodes both the PIP type axis and trust axis (S-1-19-{type}-{trust})."
+category = "Security Descriptors"
+product = "kacs"
+
+[[terms]]
+term = "Resource Attribute"
+definition = "A name-value pair stored as a SYSTEM_RESOURCE_ATTRIBUTE_ACE in the SACL. Provides per-object metadata for conditional ACE evaluation. Does not grant or deny access directly."
+category = "Security Descriptors"
+product = "kacs"
+
+[[terms]]
+term = "Access Mask"
+definition = "A 32-bit bitmask representing requested or granted access rights. Divided into four regions: object-specific (bits 0–15), standard (bits 16–20), special (bits 24–25), and generic (bits 28–31)."
+category = "Security Descriptors"
+product = "kacs"
+
+[[terms]]
+term = "Standard Rights"
+definition = "Access rights common to all object types: DELETE, READ_CONTROL, WRITE_DAC, WRITE_OWNER, and SYNCHRONIZE (bits 16–20 of the access mask)."
+category = "Security Descriptors"
+product = "kacs"
+
+[[terms]]
+term = "Generic Rights"
+definition = "Abstract access rights (GENERIC_READ, GENERIC_WRITE, GENERIC_EXECUTE, GENERIC_ALL) mapped to object-specific rights via the object type's GenericMapping before evaluation."
+category = "Security Descriptors"
+product = "kacs"
+
+[[terms]]
+term = "GenericMapping"
+aliases = ["Generic Mapping"]
+definition = "A per-object-type table that translates the four generic rights to specific combinations of object-specific and standard rights."
+category = "Security Descriptors"
+product = "kacs"
+
+[[terms]]
+term = "Object Type"
+definition = "The category of a protected resource (file, registry key, token, process, etc.). Each object type defines its own GenericMapping and object-specific access rights."
+category = "Security Descriptors"
+product = "kacs"
+
+[[terms]]
+term = "Owner Rights"
+aliases = ["OWNER RIGHTS"]
+definition = "The well-known SID S-1-3-4. When present in a DACL, suppresses the owner's implicit READ_CONTROL and WRITE_DAC grants, replacing them with whatever the ACE explicitly allows or denies."
+category = "Security Descriptors"
+product = "kacs"
+
+[[terms]]
+term = "Creator Owner"
+definition = "The well-known SID S-1-3-0. A placeholder in inheritable ACEs that is replaced with the creating principal's user SID during SD inheritance."
+category = "Security Descriptors"
+product = "kacs"
+
+[[terms]]
+term = "Creator Group"
+definition = "The well-known SID S-1-3-1. A placeholder in inheritable ACEs that is replaced with the creating principal's primary group SID during SD inheritance."
+category = "Security Descriptors"
+product = "kacs"
+
+[[terms]]
+term = "SD Inheritance"
+definition = "The eager, creation-time propagation of inheritable ACEs from a parent object's SD to a newly created child's SD. Controlled by ACE flags (OI, CI, NP, IO) and the SD's PROTECTED flags."
+category = "Security Descriptors"
+product = "kacs"
+
+[[terms]]
+term = "Self-Relative Format"
+definition = "The SD binary encoding where all data (owner, group, DACL, SACL) is packed into a contiguous byte buffer with offsets instead of pointers. The only format KACS uses for storage and wire transmission."
+category = "Security Descriptors"
+product = "kacs"
+
+# ---------------------------------------------------------------------------
+# AccessCheck Pipeline
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "AccessCheck"
+definition = "The complete authorization evaluation function. Takes a token, a security descriptor, and a desired access mask. Evaluates a pipeline of layers (privileges, MIC, PIP, DACL, restricted tokens, confinement, CAAP) and returns the granted rights or denial."
+category = "AccessCheck"
+product = "kacs"
+
+[[terms]]
+term = "Handle Model"
+definition = "The enforcement pattern where AccessCheck runs once at open time, the granted access mask is cached on the file descriptor, and subsequent operations check the cached mask. Authority is on the handle, not the holder."
+category = "AccessCheck"
+product = "kacs"
+
+[[terms]]
+term = "First-Writer-Wins"
+definition = "The principle governing the DACL walk: once a bit in the access mask has been decided (granted or denied), no later ACE can change that bit's outcome."
+category = "AccessCheck"
+product = "kacs"
+
+[[terms]]
+term = "Dominance"
+definition = "The comparison relationship used by MIC and PIP. A caller dominates an object when their level is greater than or equal to the object's label. Dominant callers face no mandatory restrictions from that mechanism."
+category = "AccessCheck"
+product = "kacs"
+
+[[terms]]
+term = "Privilege"
+definition = "A system-wide right carried on a token that gates specific operations. Standalone privileges gate system operations; AccessCheck-influencing privileges can cause AccessCheck to grant rights the DACL would not."
+category = "AccessCheck"
+product = "kacs"
+
+[[terms]]
+term = "Intent-Gated Privilege"
+definition = "A privilege (SeBackupPrivilege, SeRestorePrivilege) that is only evaluated when the caller explicitly passes the corresponding intent flag. Prevents broad-category privileges from applying to every AccessCheck."
+category = "AccessCheck"
+product = "kacs"
+
+# ---------------------------------------------------------------------------
+# Mandatory Access Control
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Integrity Level"
+definition = "A vertical trust classification on tokens and objects. Five standard levels forming a strict total order: Untrusted (0) < Low (4096) < Medium (8192) < High (12288) < System (16384). Arbitrary numeric values are also valid."
+category = "Mandatory Access Control"
+product = "kacs"
+
+[[terms]]
+term = "Mandatory Integrity Control"
+abbr = "MIC"
+definition = "A mandatory access constraint evaluated before the DACL. Blocks write access (and optionally read/execute) when the caller's integrity level is below the object's mandatory label. Does not constrain privilege-granted rights."
+category = "Mandatory Access Control"
+product = "kacs"
+
+[[terms]]
+term = "Process Integrity Protection"
+abbr = "PIP"
+definition = "A 2D trust model (type × trust level) that protects objects and processes from access by insufficiently trusted processes. Unlike MIC, PIP actively revokes privilege-granted rights. No privilege can bypass PIP."
+category = "Mandatory Access Control"
+product = "kacs"
+
+[[terms]]
+term = "PIP Type"
+definition = "The first axis of PIP's 2D trust model. Standard values: None (0), Protected (512), Isolated (1024). Encoded as the first sub-authority in a process trust label SID."
+category = "Mandatory Access Control"
+product = "kacs"
+
+[[terms]]
+term = "PIP Trust"
+definition = "The second axis of PIP's 2D trust model, representing trust tier within a PIP type. Higher values dominate lower. Examples: Authenticode (1024), AntiMalware (1536), App (2048), Peios (4096), PeiosTcb (8192)."
+category = "Mandatory Access Control"
+product = "kacs"
+
+# ---------------------------------------------------------------------------
+# Impersonation
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Impersonation"
+definition = "A mechanism allowing a server thread to temporarily assume a client's identity for access control decisions. The server's PSB is unaffected. Controlled by impersonation level and two gates (identity gate and integrity ceiling)."
+category = "Impersonation"
+product = "kacs"
+
+[[terms]]
+term = "Impersonation Level"
+definition = "Controls how far a token's identity can travel. Four levels from least to most permissive: Anonymous (no identity), Identification (inspect only), Impersonation (act locally), Delegation (act remotely via Kerberos)."
+category = "Impersonation"
+product = "kacs"
+
+[[terms]]
+term = "Identity Gate"
+definition = "The impersonation check that determines whether a server may impersonate a specific client's identity. Passes if same user + same restriction status, or if SeImpersonatePrivilege is held. Failure caps to Identification level."
+category = "Impersonation"
+product = "kacs"
+
+[[terms]]
+term = "Integrity Ceiling"
+definition = "The impersonation check that prevents a server from assuming a higher integrity level than its own. Always enforced — SeImpersonatePrivilege does not bypass it. Failure caps to Identification level."
+category = "Impersonation"
+product = "kacs"
+
+# ---------------------------------------------------------------------------
+# Confinement
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Confinement"
+definition = "A default-deny sandbox on a token. When a token has a confinement SID, AccessCheck independently evaluates the DACL against only the confinement SID and capability SIDs, then intersects with the normal result. Privileges do not bypass confinement."
+category = "Confinement"
+product = "kacs"
+
+[[terms]]
+term = "Strict Confinement"
+definition = "A confinement mode where ALL_APPLICATION_PACKAGES is omitted from capabilities, resulting in a much narrower access surface. Only objects explicitly granting to ALL_RESTRICTED_APPLICATION_PACKAGES or to specific capabilities are accessible."
+category = "Confinement"
+product = "kacs"
+
+# ---------------------------------------------------------------------------
+# Central Access and Auditing Policy
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Central Access and Auditing Policy"
+abbr = "CAAP"
+definition = "A centrally-defined collection of access and audit rules, referenced by objects via SYSTEM_SCOPED_POLICY_ID_ACE in the SACL. CAAP can only further restrict access (AND semantics), never expand it."
+category = "Central Access Policy"
+product = "kacs"
+etymology = "Extends Windows Central Access Policy (CAP) with an audit component"
+
+[[terms]]
+term = "Recovery Policy"
+definition = "The hardcoded fallback CAAP applied when a scoped policy ACE references a policy SID not in the kernel cache. Grants GENERIC_ALL to Administrators, SYSTEM, and OWNER_RIGHTS. Prevents missing CAAP from locking out administrators."
+category = "Central Access Policy"
+product = "kacs"
+
+[[terms]]
+term = "Staging"
+definition = "A CAAP testing mechanism where each rule may carry staged DACLs/SACLs alongside effective ones. Both are evaluated in parallel; differences are logged. Staged results do not affect access."
+category = "Central Access Policy"
+product = "kacs"
+
+# ---------------------------------------------------------------------------
+# Process Security Block
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Process Security Block"
+abbr = "PSB"
+definition = "A per-process security structure carrying PIP identity, process mitigations, and process restrictions. Determined by the loaded binary, not the running principal. Never affected by impersonation."
+category = "Process Security"
+product = "kacs"
+
+[[terms]]
+term = "Process Mitigations"
+definition = "One-way security flags on the PSB (LSV, WXP, TLP, CFIF, CFIB, PIE, SML) that restrict process behaviour. Set by the process launcher; once set, cannot be cleared. Distinct from PIP, which is determined by binary signature."
+category = "Process Security"
+product = "kacs"
+
+[[terms]]
+term = "Library Signature Verification"
+abbr = "LSV"
+definition = "A process mitigation requiring all shared libraries to be cryptographically signed before they can be loaded (mmap with PROT_EXEC). For PIP-protected processes, libraries must be signed at or above the process's trust level."
+category = "Process Security"
+product = "kacs"
+
+[[terms]]
+term = "Write-XOR-Execute Protection"
+abbr = "WXP"
+definition = "A process mitigation preventing memory pages from being simultaneously writable and executable. W+X mappings and transitions between writable and executable states are rejected."
+category = "Process Security"
+product = "kacs"
+
+[[terms]]
+term = "Trusted Library Paths"
+abbr = "TLP"
+definition = "A process mitigation restricting shared library loading to approved directory prefixes. Weaker than LSV (trusts the path, not the binary). Prefixes are stored in a machine-wide kernel cache."
+category = "Process Security"
+product = "kacs"
+
+[[terms]]
+term = "Forward-Edge Control Flow Integrity"
+abbr = "CFIF"
+definition = "A process mitigation locking hardware indirect-branch tracking (Intel IBT, ARM BTI) so the process cannot disable it. Blocks forward-edge code reuse attacks."
+category = "Process Security"
+product = "kacs"
+
+[[terms]]
+term = "Backward-Edge Control Flow Integrity"
+abbr = "CFIB"
+definition = "A process mitigation locking hardware shadow stack (Intel CET) so the process cannot disable it. Blocks return-oriented programming (ROP) attacks."
+category = "Process Security"
+product = "kacs"
+
+[[terms]]
+term = "Process SD"
+aliases = ["Process Security Descriptor"]
+definition = "The security descriptor on a process that controls who can signal it, inspect its memory, query its token, and perform other operations. Replaces Linux's UID-based process access control."
+category = "Process Security"
+product = "kacs"
+
+# ---------------------------------------------------------------------------
+# FACS
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "File Access Control Shim"
+abbr = "FACS"
+definition = "The KACS subsystem that replaces Linux DAC with SD-based evaluation on files. Enforces the handle model: AccessCheck at open time, granted mask cached on the file descriptor."
+category = "FACS"
+product = "kacs"
+
+[[terms]]
+term = "DAC Neutralization"
+definition = "The mechanism that gives every Peios process Linux capabilities (CAP_DAC_OVERRIDE, etc.) to bypass UID/GID/mode-bit checks, ensuring KACS LSM hooks always fire and are the sole access authority."
+category = "FACS"
+product = "kacs"
+
+# ---------------------------------------------------------------------------
+# Binary Signing
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Binary Signing"
+definition = "Cryptographic signing of executable files with Ed25519 to establish PIP trust level. Signatures are stored in an ELF .peios.sig section or a security.peios.sig xattr. The kernel verifies; it never signs."
+category = "Binary Signing"
+product = "kacs"
+
+# ---------------------------------------------------------------------------
+# Infrastructure
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Owner"
+definition = "The principal who owns a securable object, identified by the owner SID in the SD. The owner implicitly receives READ_CONTROL and WRITE_DAC unless an Owner Rights ACE suppresses this default."
+category = "Security Descriptors"
+product = "kacs"
+
+[[terms]]
+term = "Deny ACE"
+definition = "An ACE that explicitly denies specified rights to a trustee SID. In canonical ordering, explicit deny ACEs come before explicit allow ACEs, ensuring denials take precedence."
+category = "Security Descriptors"
+product = "kacs"
+
+[[terms]]
+term = "Trusted Computing Base"
+abbr = "TCB"
+definition = "The set of components whose correct behaviour is necessary for system security. In Peios: the Linux kernel, PKM, and core trusted userspace daemons (peinit, authd, loregd)."
+category = "Infrastructure"
+product = "kacs"
+
+[[terms]]
+term = "Linux Security Module"
+abbr = "LSM"
+definition = "The kernel framework that KACS builds on. Provides hook points throughout the kernel where security modules interpose access control decisions."
+category = "Infrastructure"
+product = "kacs"

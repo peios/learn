@@ -1,0 +1,33 @@
+# =============================================================================
+# Trail — Static documentation site generator
+# =============================================================================
+
+[[terms]]
+term = "Trail"
+definition = "A static site generator purpose-built for documentation. Single Go binary, zero dependencies. Produces fast, searchable sites with pathway navigation, dark mode, and multi-product support."
+category = "General"
+product = "trail"
+
+[[terms]]
+term = "Pathway"
+definition = "An ordered sequence of pages that guides readers through a topic. Pathways replace the sidebar with their own page list and add prev/next navigation. Defined in .toml files in the pathways/ directory."
+category = "Content"
+product = "trail"
+
+[[terms]]
+term = "Product"
+definition = "A top-level content scope in a multi-product Trail site. Each product has its own categories, pathways, and content hierarchy. A single site can host documentation for multiple products."
+category = "Configuration"
+product = "trail"
+
+[[terms]]
+term = "Admonition"
+definition = "A callout box in documentation content. GitHub-style blockquote syntax for NOTE, WARNING, IMPORTANT, TIP, and CAUTION types."
+category = "Content"
+product = "trail"
+
+[[terms]]
+term = "Dictionary"
+definition = "A built-in Trail feature that defines terms with definitions, abbreviations, aliases, and references. Terms are auto-linked in page content and browsable at /dictionary/."
+category = "Features"
+product = "trail"
