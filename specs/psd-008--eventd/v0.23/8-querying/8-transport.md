@@ -17,6 +17,12 @@ The query protocol is request-response over the Unix socket. Each message is a l
 | `length` | `u32` | 4 bytes | Total length of the msgpack payload in bytes. Little-endian. |
 | `payload` | msgpack | `length` bytes | The request or response body. |
 
+eventd MUST reject messages whose `length` exceeds `MaxQueryMessageBytes`. This prevents a malicious or buggy client from forcing a large memory allocation before the query is even parsed.
+
+| Key | Type | Default | Valid range | Description |
+|---|---|---|---|---|
+| MaxQueryMessageBytes | REG_DWORD | 65536 | 1024--16777216 | Maximum permitted query message size in bytes. Messages exceeding this limit are rejected without reading the payload. |
+
 ### Request format
 
 A query request is a msgpack map:

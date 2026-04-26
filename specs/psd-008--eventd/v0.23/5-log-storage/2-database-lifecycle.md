@@ -24,7 +24,7 @@ When the log store database exists at startup, eventd MUST:
 
 1. Open the database in WAL mode.
 2. Set synchronous mode to NORMAL.
-3. Verify the schema version. If unrecognised, eventd MUST log an error and MUST NOT write to the database.
+3. Verify the schema version. If unrecognised, eventd MUST log an error and MUST NOT write to the database. The database remains available for read-only queries.
 4. Verify structural integrity (required tables and indexes exist).
 
 ## Concurrency

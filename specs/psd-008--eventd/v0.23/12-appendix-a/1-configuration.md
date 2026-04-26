@@ -2,7 +2,7 @@
 title: Configuration Keys
 ---
 
-All configuration keys live under `Machine\System\eventd\`. eventd ignores unknown keys in this subtree. Invalid values are ignored and the compiled-in default is retained. eventd MUST emit a synthetic `eventd.config_change` event when a valid configuration change is applied.
+All configuration keys live under `Machine\System\eventd\`. eventd ignores unknown keys in this subtree. Invalid values are ignored and the compiled-in default is retained. eventd MUST emit a synthetic `synthetic.config_change` event when a valid configuration change is applied.
 
 ## Required keys
 
@@ -32,13 +32,29 @@ These keys MUST exist for eventd to start. There are no compiled-in defaults.
 | LogMaxBatchSize | REG_DWORD | 5000 | 100--100000 | Maximum log records per transaction. |
 | LogMaxBatchLatencyMs | REG_DWORD | 500 | 10--5000 | Maximum ms before a log batch is committed. |
 
+## Metric ingestion
+
+| Key | Type | Default | Valid range | Description |
+|---|---|---|---|---|
+| MetricMaxBatchSize | REG_DWORD | 5000 | 100--100000 | Maximum metric samples per transaction. |
+| MetricMaxBatchLatencyMs | REG_DWORD | 1000 | 10--5000 | Maximum ms before a metric batch is committed. |
+
 ## Adaptive indexing (events)
 
 | Key | Type | Default | Valid range | Description |
 |---|---|---|---|---|
 | AdaptiveIndexWindowHours | REG_DWORD | 24 | 1--168 | Rolling window for query frequency measurement. |
+| AdaptiveIndexPolicyIntervalMinutes | REG_DWORD | 60 | 60--1440 | How often the desired index set is recomputed. Minimum 60 minutes. |
 | AdaptiveIndexCreateThreshold | REG_DWORD | 100 | 10--10000 | Queries on a field required to trigger index creation. |
 | AdaptiveIndexDropThreshold | REG_DWORD | 10 | 1--1000 | Queries below which an index is removed from the desired set. MUST be less than create threshold. |
+
+## Index shedding
+
+| Key | Type | Default | Valid range | Description |
+|---|---|---|---|---|
+| SheddingWindowSeconds | REG_DWORD | 30 | 10--300 | Sliding window for graduated shedding evaluation. |
+| SheddingBatchPercent | REG_DWORD | 75 | 50--100 | Percentage of batches exceeding 75% of MaxBatchSize to trigger graduated shedding. |
+| EmergencySheddingBufferPercent | REG_DWORD | 75 | 50--95 | Ring buffer fill percentage that triggers emergency shedding. |
 
 ## Adaptive rollups (metrics)
 
@@ -47,6 +63,12 @@ These keys MUST exist for eventd to start. There are no compiled-in defaults.
 | AdaptiveRollupWindowHours | REG_DWORD | 48 | 1--168 | Rolling window for rollup query frequency measurement. |
 | AdaptiveRollupCreateThreshold | REG_DWORD | 50 | 10--10000 | Queries required to trigger rollup computation. |
 | AdaptiveRollupDropThreshold | REG_DWORD | 5 | 1--1000 | Queries below which a rollup pair is removed. MUST be less than create threshold. |
+
+## Metric series cache
+
+| Key | Type | Default | Valid range | Description |
+|---|---|---|---|---|
+| MetricSeriesCacheSize | REG_DWORD | 50000 | 1000--1000000 | Maximum entries in the in-memory series resolution cache (LRU). |
 
 ## Retention
 
@@ -65,12 +87,16 @@ These keys MUST exist for eventd to start. There are no compiled-in defaults.
 | Key | Type | Default | Valid range | Description |
 |---|---|---|---|---|
 | QueryTimeoutMs | REG_DWORD | 30000 | 1000--300000 | Maximum query execution time in ms. |
+| MaxConcurrentQueries | REG_DWORD | 128 | 1--4096 | Maximum concurrent queries (streaming and non-streaming) globally. |
+| MaxStreamingQueries | REG_DWORD | 64 | 1--1024 | Maximum concurrent streaming queries globally. |
+| MaxQueryMessageBytes | REG_DWORD | 65536 | 1024--16777216 | Maximum query message size in bytes. |
 
 ## Cross-type filtering
 
 | Key | Type | Default | Valid range | Description |
 |---|---|---|---|---|
 | CrossTypeWindowMs | REG_DWORD | 15000 | 1000--300000 | Time window for cross-type event/log existence checks. |
+| CrossTypeMaxLookbackSeconds | REG_DWORD | 604800 | 3600--2592000 | Maximum time range a cross-type filter may scan. Default 7 days. |
 
 ## Security subtree
 

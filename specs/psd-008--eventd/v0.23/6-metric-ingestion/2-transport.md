@@ -43,6 +43,17 @@ eventd does not enforce naming conventions. The following conventions are recomm
 - Units as the final component: `disk.read.bytes`, `request.duration.seconds`
 - Counter names should reflect the cumulative nature: `http.requests.total`, `errors.total`
 
+## Malformed input handling
+
+The same rules as log ingestion (§4.2) apply:
+
+- Invalid msgpack: drop the entire datagram silently.
+- Valid msgpack but not a map or array of maps: drop silently.
+- Map missing required fields or with wrong types: drop the record silently.
+- Histogram value with mismatched `boundaries` and `counts` array lengths, or non-monotonic boundaries: drop the record silently.
+- Batched datagrams: invalid records are dropped individually; valid records in the same batch are still processed.
+- eventd MUST NOT emit events or log errors in response to malformed metric input.
+
 ## Dropped records
 
 As with log ingestion, if the socket receive buffer is full, datagrams are dropped silently. Metric ingestion MUST NOT exert backpressure on senders.

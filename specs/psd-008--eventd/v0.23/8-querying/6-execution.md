@@ -42,9 +42,22 @@ The SQL translation is an implementation detail. Clients never see SQL.
 
 ## Cross-shard fan-out (events only)
 
-Event queries execute against all databases in the event store directory. Results from individual shards are merged using an N-way merge on the sort key (defaulting to timestamp). For TAKE N queries, each shard executes with LIMIT N and the merge selects the top N across all shards.
+Event queries execute against all databases in the event store directory. Results from individual shards are merged depending on the query type:
+
+- **Non-aggregation queries** (with SORT and TAKE): each shard returns up to `SKIP + TAKE` rows sorted by the sort key (or TAKE rows if no SKIP is present). The merge is an N-way merge of sorted streams. SKIP and TAKE are applied after the merge by the coordinator. Total rows read: at most `(SKIP + TAKE) × shard_count`.
+- **COUNT**: each shard returns its local count. The final result is the sum across all shards.
+- **COUNT BY / TOP N BY / GROUP with COUNT**: each shard returns per-group counts. The merge sums counts for the same group key across shards, then sorts by count descending and applies TAKE if present.
+- **GROUP with SUM**: each shard returns per-group sums. The merge sums per-group values across shards.
+- **GROUP with AVG**: each shard returns per-group sum and count. The merge computes the average from the combined sum and count across shards.
+- **GROUP with MIN / MAX**: each shard returns per-group min/max. The merge takes the min/max across shards.
+- **DISTINCT**: each shard returns its local distinct values. The merge computes the distinct union across all shards.
+
+Aggregation is pushed down to individual shards wherever possible. The merge operates on partial aggregates, not full row sets. This bounds memory usage to the cardinality of the group key × shard count, not the total row count.
 
 Log and metric queries operate on single databases (one log store, one metric store) and do not require fan-out.
+
+> [!INFORMATIVE]
+> Non-aggregation queries without TAKE have no implicit row limit. A broad query such as `EVENTS SINCE 7d ago` may return millions of rows, consuming significant memory during the cross-shard merge. The query timeout (`QueryTimeoutMs`) is the primary backstop against runaway queries. Implementations SHOULD stream merged results to the client incrementally rather than materialising the full result set in memory.
 
 ## Adaptive indexing integration
 
@@ -55,9 +68,24 @@ Every query MUST be recorded by the adaptive indexing system (§3.3). For each W
 
 This applies to event queries only. Log and metric stores have fixed indexes.
 
+## Payload extraction
+
+> [!INFORMATIVE]
+> Constructing flat-map results from event records requires decoding the msgpack payload for each returned row. At high result counts (thousands of events), this becomes the dominant query-path cost. Implementations SHOULD use partial/lazy extraction: when SELECT is present, only decode the named payload fields rather than the entire payload. When no SELECT is present, a streaming msgpack decoder that emits key-value pairs without building a full in-memory representation reduces allocation pressure.
+
 ## Read connections
 
 Query execution uses read-only SQLite connections. Read-only connections in WAL mode do not block writer threads. eventd SHOULD support multiple concurrent queries.
+
+## Concurrency limits
+
+eventd MUST enforce a maximum number of concurrent queries (streaming and non-streaming combined) to prevent resource exhaustion.
+
+| Key | Type | Default | Valid range | Description |
+|---|---|---|---|---|
+| MaxConcurrentQueries | REG_DWORD | 128 | 1--4096 | Maximum number of concurrent queries across all clients. Includes both streaming and non-streaming queries. |
+
+When the limit is reached, new queries MUST be rejected with an error. The per-query resource cost includes read-only SQLite connections (one per shard for event queries), memory for result merging, and CPU for query execution. The `MaxStreamingQueries` limit (§8.7) is enforced separately and is typically lower because streaming queries hold resources indefinitely.
 
 ## Timeouts
 

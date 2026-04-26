@@ -23,7 +23,7 @@ The following constructs work identically across all three modes:
 | Additional filter | `WHERE field == value` | Filter by any field. |
 | Cross-type filter | `WHERE METRIC name[labels] > N` | Filter by a condition on another data type. |
 | Limit | `TAKE N` | Limit result count. |
-| Offset | `SKIP N` | Skip first N results (pagination). |
+| Offset | `SKIP N` | Skip first N results after sorting (pagination). Applies to both raw and aggregated results. |
 | Streaming | `STREAM` | Live tail. May appear anywhere. |
 
 All keywords are case-insensitive. Documentation uses uppercase by convention.
@@ -83,11 +83,13 @@ WHERE granted_access == 0x1F01FF
 | `IS NULL` | Value is NULL | Any |
 | `IS NOT NULL` | Value is not NULL | Any |
 
+All string comparisons (`==`, `!=`, `STARTS_WITH`, `ENDS_WITH`, `CONTAINS`, `IN`, `NOT_IN`) are case-insensitive by default. This applies to event fields, payload fields, log messages, and metric labels. Integer, float, GUID, and timestamp comparisons are unaffected.
+
 ## Logical operators
 
 Predicates within a single WHERE clause may be combined with `AND` and `OR`. Parentheses control precedence. `AND` binds tighter than `OR`.
 
-Multiple WHERE clauses are logically ANDed.
+Multiple WHERE clauses are logically ANDed. Each WHERE clause is treated as a parenthesized group: `WHERE a == 1 OR b == 2` followed by `WHERE c == 3` is equivalent to `WHERE (a == 1 OR b == 2) AND c == 3`.
 
 ## Field resolution
 

@@ -26,6 +26,9 @@ At database creation, eventd MUST create the following indexes:
 
 The log store does not use adaptive indexing. The schema is narrow and the two write-time indexes cover the dominant query patterns. Additional indexes are not expected to provide meaningful benefit.
 
+> [!INFORMATIVE]
+> The `idx_logs_origin` index adds write amplification (each INSERT updates two B-trees instead of one). In practice the overhead is modest: the origin column has low cardinality (tens of distinct service names), so the index pages stay in SQLite's page cache and insertions are cheap. This is a deliberate trade-off: "show me logs from service X" is the most common log query pattern and must be fast without a full table scan.
+
 ## Schema versioning
 
 The log store database MUST contain a `metadata` table with the same structure as the event store (§3.1). The `schema_version` for the log store is `1`.

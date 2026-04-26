@@ -30,7 +30,8 @@ For each query:
    b. Construct the object type list with field GUIDs.
    c. Call `kacs_access_check_list` (PSD-004 syscall 1024) with the caller's token, the resolved SD, `EVENTD_READ`, the object type list, and an audit context identifying the pattern.
    d. Cache the per-field results for this (token, pattern) pair.
-5. For each record in the result set:
+5. If the query contains GROUP, COUNT BY, TOP N BY, SORT, or DISTINCT referencing a specific field, verify that the caller has EVENTD_READ on that field's GUID for all patterns that could appear in the result. If any pattern denies access to the referenced field, the query MUST be rejected with an error. Aggregating or sorting by a field the caller cannot see is not permitted -- returning a NULL bucket or silently excluding records would produce misleading results.
+6. For each record in the result set:
    a. Look up the cached per-field results for the record's pattern.
    b. If the root node was denied, exclude the entire record.
    c. If the root node was granted, include the record. For each field, include it only if the corresponding field node was granted.
@@ -76,4 +77,8 @@ Event emission is controlled by KMES (PSD-003). The `kmes_emit` and `kmes_emit_b
 The log and metric ingestion sockets use filesystem permissions. The socket files SHOULD be created with permissions that allow all services managed by peinit to write.
 
 > [!INFORMATIVE]
-> Socket-level file permissions are a v0.23 simplification for write-path access control on logs and metrics. Future versions may introduce SD-based write access control per origin or metric name.
+> **Origin spoofing is a known gap in v0.23.** The `origin` field in log records and the `name` field in metric records are self-reported by the sender. Any process with filesystem write access to the datagram sockets can claim any origin or metric name. A compromised service can inject logs or metrics under another service's identity, creating false operational narratives or masking real incidents.
+>
+> The correct fix is SD-based write access control that validates the sender's KACS token against an SD governing which origins/metric names the sender is authorized to write. This requires a KACS primitive for identifying the peer token on datagram socket messages (analogous to `kacs_open_peer_token` for stream sockets, which is not currently defined for datagrams). Until this primitive exists, write-path identity validation for logs and metrics is not possible. This is a priority item for KACS and eventd coordination in a future version.
+>
+> In the interim, filesystem permissions limit which processes can reach the sockets, and the read-path access control model (SDs on origins and metric names) prevents unauthorized users from querying spoofed data if the SDs are configured to restrict access to the legitimate origin.

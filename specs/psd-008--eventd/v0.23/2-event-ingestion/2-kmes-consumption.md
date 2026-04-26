@@ -4,7 +4,7 @@ title: KMES Consumption
 
 ## Attachment
 
-On startup, eventd MUST call `kmes_attach` (PSD-003 §4.1) to obtain one file descriptor per CPU. eventd MUST map each file descriptor to obtain the per-CPU ring buffer. The caller's effective token MUST hold SeSecurityPrivilege.
+On startup, eventd MUST discover the CPU count and attach to each per-CPU ring buffer by calling `kmes_attach(cpu_id)` (PSD-003 §4.1) with incrementing `cpu_id` values starting from 0 until EINVAL is returned. Each call returns a single file descriptor for that CPU's ring buffer. eventd MUST map each file descriptor to obtain the per-CPU ring buffer. The caller's effective token MUST hold SeSecurityPrivilege.
 
 eventd MUST read the `capacity` value returned by `kmes_attach` and use it to compute the mapping size (`8192 + 2 * capacity`).
 
@@ -30,10 +30,13 @@ The copy is bounded by the event's `event_size` field. The drain thread MUST NOT
 After completing a drain cycle, the drain thread MUST check the ring buffer's `generation` field as specified in PSD-003 §5.1. If the generation has changed (due to a ring buffer resize triggered by a BufferCapacity configuration change), the drain thread MUST:
 
 1. Record the sequence number of the last successfully processed event.
-2. Call `kmes_attach` to obtain new file descriptors.
-3. Map the new ring buffer for this CPU.
-4. Scan events in the new buffer to find the first event with a sequence number greater than the recorded sequence number.
-5. Resume draining from that position.
+2. Call `kmes_attach(cpu_id)` to obtain a new file descriptor for this CPU's resized ring buffer.
+3. Map the new ring buffer.
+4. Unmap the old ring buffer and close the old file descriptor.
+5. Scan events in the new buffer to find the first event with a sequence number greater than the recorded sequence number.
+6. Resume draining from that position.
+
+Each drain thread handles generation changes independently. There is no coordination between drain threads during reattach. Each drain thread attaches only to its own CPU's ring buffer.
 
 Events MUST NOT be lost or duplicated during a generation change.
 

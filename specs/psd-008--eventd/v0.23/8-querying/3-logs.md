@@ -39,17 +39,17 @@ LOGS FROM loregd SINCE 1h ago ERROR ONLY    -- same result regardless of positio
 
 ## CONTAINING
 
-Filters to log lines whose message contains the specified text. Substring match, case-sensitive.
+Filters to log lines whose message contains the specified text. Substring match, case-insensitive (consistent with all string comparisons in the query language).
 
 ```
 LOGS CONTAINING "connection refused"
 LOGS FROM loregd CONTAINING "failed to open"
 ```
 
-CONTAINING is a log-specific keyword because text search is the primary operation on log data. For case-insensitive search, use WHERE with explicit operators:
+CONTAINING is a log-specific keyword because text search is the primary operation on log data. It is syntactic sugar for `WHERE message CONTAINS "..."`:
 
 ```
-LOGS WHERE message CONTAINS "error"         -- equivalent to CONTAINING (case-sensitive)
+LOGS WHERE message CONTAINS "error"         -- equivalent to CONTAINING "error"
 ```
 
 > [!INFORMATIVE]

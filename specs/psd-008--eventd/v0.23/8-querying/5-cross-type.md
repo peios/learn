@@ -69,8 +69,22 @@ For event conditions, `EXISTS` means "at least one matching event occurred withi
 |---|---|---|---|---|
 | CrossTypeWindowMs | REG_DWORD | 15000 | 1000--300000 | Time window in milliseconds for cross-type event and log existence checks. |
 
+## Lookback limit
+
+Cross-type filter pre-computation scans the referenced store for the query's time range. Scanning large time ranges (weeks or months of metric samples) is expensive. eventd MUST enforce a maximum lookback period for cross-type conditions:
+
+| Key | Type | Default | Valid range | Description |
+|---|---|---|---|---|
+| CrossTypeMaxLookbackSeconds | REG_DWORD | 604800 | 3600--2592000 | Maximum time range in seconds that a cross-type filter may scan. Default is 7 days. |
+
+If the query's effective time range (from SINCE to UNTIL, or SINCE to now) exceeds `CrossTypeMaxLookbackSeconds`, the cross-type filter MUST be rejected with an error indicating the time range is too large. The error SHOULD suggest narrowing the range with SINCE/UNTIL.
+
+A query with no SINCE clause and a cross-type filter MUST be rejected -- unbounded cross-type scans are never permitted.
+
 ## Performance
 
 Cross-type filters require reading from multiple stores. The cross-type condition is evaluated first to produce time ranges, then the primary query is executed with additional timestamp filters. This is efficient when the cross-type condition is selective (narrow time ranges), and expensive when the condition is broadly true (e.g., CPU above 10% for the entire query window).
+
+For metric conditions, the pre-computation SHOULD use adaptive rollups (§7.4) when a matching rollup exists for the referenced metric. Reading rollup entries instead of raw samples reduces the scan from hundreds of thousands of rows to hundreds, making large lookback windows practical.
 
 Cross-type WHERE predicates are tracked by the adaptive indexing system, same as standard WHERE predicates.

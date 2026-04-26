@@ -13,7 +13,7 @@ When peinit signals eventd to stop, eventd MUST perform a graceful shutdown. The
 3. **Final event drain.** Each drain thread performs one final drain cycle from its KMES ring buffer, reading all available events.
 4. **Final batch commit.** Each writer thread commits its current batch immediately, regardless of batch size. The log and metric writers do the same.
 5. **Persist sequence state.** Write the last persisted sequence number per CPU to the event store metadata. This enables correct sequence resumption on restart.
-6. **Emit shutdown event.** Write a synthetic `eventd.shutdown` event recording the per-CPU last persisted sequence numbers. This event is written directly to shard 0's database.
+6. **Emit shutdown event.** Write a synthetic `synthetic.shutdown` event recording the per-CPU last persisted sequence numbers. This event is written directly to shard 0's database. If shard 0 is unavailable (corrupted or excluded during this session), the event is written to the lowest-numbered available shard. If no shard is available, the shutdown event is skipped.
 7. **Close databases.** Close all SQLite connections (writer and reader connections). SQLite WAL checkpointing occurs automatically on connection close.
 8. **Unmap ring buffers.** Unmap all KMES ring buffer mappings and close the per-CPU file descriptors.
 9. **Exit.**

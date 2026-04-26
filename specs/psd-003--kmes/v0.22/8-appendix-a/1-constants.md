@@ -9,7 +9,7 @@ All numeric constants used in the KMES interface. An independent implementer can
 | Syscall | Number | Description |
 |---|---|---|
 | kmes_emit | 1090 | Emit a single event from userspace. |
-| kmes_attach | 1091 | Attach as a consumer and obtain per-CPU ring buffer file descriptors. |
+| kmes_attach | 1091 | Attach as a consumer of a single per-CPU ring buffer. |
 | kmes_emit_batch | 1092 | Emit multiple events from userspace as a single operation. Maximum 256 events per call. |
 
 ## Origin class values
@@ -136,8 +136,8 @@ Total mapping size: `8192 + (2 × capacity)` bytes.
 | Errno | Condition |
 |---|---|
 | EPERM | Caller does not hold SeSecurityPrivilege. |
-| ERANGE | Provided buffer is too small. `*count` set to required number. |
-| EFAULT | `fds`, `count`, or `capacity` pointer is inaccessible. |
+| EINVAL | `cpu_id` is greater than or equal to the number of CPUs. |
+| EFAULT | `capacity` pointer is inaccessible. |
 | ENOMEM | Kernel memory allocation failed. |
 
 ## kmes_emit_entry struct layout (x86-64)

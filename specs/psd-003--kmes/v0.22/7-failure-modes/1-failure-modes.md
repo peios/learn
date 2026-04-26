@@ -34,7 +34,7 @@ If a consumer process (e.g., eventd) crashes:
 - The consumer's mmap'd ring buffer regions remain valid in kernel memory. The kernel cleans up the mappings when the process's file descriptors are closed (normal kernel fd cleanup on process exit).
 - KMES is unaffected. It continues writing events to the per-CPU ring buffers regardless of whether any consumers are attached.
 - Events emitted while no consumer is attached accumulate in the ring buffers. If the buffers fill, oldest events are overwritten.
-- When a consumer restarts and re-attaches (calls `kmes_attach` and mmaps the buffers), it sees all surviving events. Events overwritten during the outage are visible as a sequence gap starting from whatever sequence number the consumer last processed.
+- When a consumer restarts and re-attaches (calls `kmes_attach` for each CPU and mmaps the buffers), it sees all surviving events. Events overwritten during the outage are visible as a sequence gap starting from whatever sequence number the consumer last processed.
 
 KMES has no dependency on consumers. A system with no consumers attached operates identically to a system with consumers -- events are emitted, stamped, buffered, and eventually overwritten.
 
@@ -76,6 +76,6 @@ KMES kernel memory usage is bounded by:
 - **Per-CPU ring buffers:** `num_cpus × BufferCapacity`. At defaults (4 CPUs × 4 MB), 16 MB. Ceiling is `num_cpus × 256 MB`, configurable only by administrators.
 - **Per-CPU boot buffers:** `num_cpus × boot_buffer_size`. Compiled-in constant. Freed after ring buffers are created.
 - **Event construction:** Temporary allocations during event construction are bounded by the maximum event size and freed immediately after the event is written to the ring buffer.
-- **Consumer file descriptors:** Each `kmes_attach` call creates `num_cpus` file descriptors. Bounded by RLIMIT_NOFILE and the SeSecurityPrivilege requirement.
+- **Consumer file descriptors:** Each `kmes_attach` call creates one file descriptor. A consumer attaching to all CPUs creates `num_cpus` file descriptors. Bounded by RLIMIT_NOFILE and the SeSecurityPrivilege requirement.
 
 No KMES-specific global memory cap is required. The BufferCapacity configuration and standard Linux resource limits provide sufficient protection.

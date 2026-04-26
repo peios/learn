@@ -24,9 +24,11 @@ When the filesystem containing the event, log, or metric store reaches capacity,
 ### Event store
 
 - SQLite returns an error on INSERT or COMMIT. The writer thread MUST NOT crash.
-- The current batch is lost. The writer thread retries on the next batch.
-- Events continue accumulating in the KMES ring buffers. If the disk remains full long enough for the ring buffers to overrun, event loss occurs.
-- eventd MUST emit a synthetic `synthetic.storage_error` event. If the event store itself cannot accept the write, eventd MUST log the error through an alternative mechanism (stderr, which peinit captures).
+- The current batch is lost. Events in the failed batch were already consumed from the KMES ring buffer and cannot be recovered from KMES.
+- The writer thread MUST record the per-CPU sequence ranges of events in the failed batch in an in-memory lost-batch list. On the next successful commit, the writer MUST emit synthetic `synthetic.gap` records for all accumulated lost-batch ranges before writing new events. This ensures that disk-full data loss is recorded in the event store once disk recovers.
+- If eventd crashes before disk recovers, the in-memory lost-batch list is lost. On restart, the gap between the last persisted sequence and the current ring buffer position is detected as a normal restart gap (§3.5), so the loss is still recorded.
+- The writer thread MUST log the commit failure to stderr immediately (peinit captures this), including the CPU IDs and sequence ranges of the lost events. This provides immediate visibility even if the gap record cannot be written yet.
+- Events continue accumulating in the KMES ring buffers. If the disk remains full long enough for the ring buffers to overrun, additional event loss occurs (detected by the drain thread's normal sequence gap mechanism).
 - The retention process SHOULD be triggered immediately to attempt to free space by deleting old data.
 
 ### Log store
@@ -43,8 +45,8 @@ When the filesystem containing the event, log, or metric store reaches capacity,
 
 If a SQLite database becomes corrupt (hardware error, filesystem bug, incomplete write due to kernel crash):
 
-- SQLite's integrity check (`PRAGMA integrity_check`) detects corruption on open.
-- eventd MUST NOT write to a corrupt database.
+- Corruption is detected at startup by verifying that the required tables and indexes exist (structural check). eventd MUST NOT run `PRAGMA integrity_check` at startup -- it scans the entire database and is O(DB size), which is unacceptable for large event stores. Corruption that does not affect the schema structure (e.g., a single corrupt page) is detected at query or write time when SQLite encounters the corrupt page and returns an error.
+- eventd MUST NOT write to a database that fails the structural check.
 - A corrupt event shard database is excluded from the write path but remains available for read-only queries on the uncorrupted portions. SQLite can often read rows from uncorrupted pages.
 - eventd MUST log the corruption and emit a synthetic `synthetic.storage_error` event (to a healthy shard).
 - If all event shards are corrupt, eventd creates new shard databases and continues writing. Historical data is accessible only from the corrupt databases on a best-effort basis.

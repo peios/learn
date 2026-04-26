@@ -6,6 +6,9 @@ title: Log Writer
 
 eventd MUST run a dedicated log ingestion thread that reads datagrams from the log socket and writes log records to the log store. The log ingestion thread is independent of the event drain threads and event writer threads -- log ingestion does not contend with event ingestion.
 
+> [!INFORMATIVE]
+> The log ingestion thread performs both socket reads and SQLite writes on a single thread. During a batch commit, the socket is not being drained and datagrams may be dropped. Splitting into separate reader and writer threads (with a bounded handoff channel, as the event path uses) would decouple these operations. The single-thread model is a deliberate simplification for v0.23: log loss is tolerable, log volumes are typically lower than event volumes, and the single-thread model avoids handoff channel complexity. If log throughput becomes a bottleneck, log store sharding (analogous to event store sharding) is a more impactful improvement than thread splitting.
+
 ## Batched writes
 
 The log writer uses the same adaptive batch sizing approach as the event writer (§2.4). Log records are accumulated into a transaction and committed when either the batch size or latency threshold is reached.

@@ -45,9 +45,9 @@ An index MUST exist on `(series_id, function, window_seconds, window_start)` to 
 | 2 | MAX |
 | 3 | SUM |
 | 4 | RATE |
-| 5 | P50 |
-| 6 | P95 |
-| 7 | P99 |
+| 5 | DELTA |
+
+Percentile functions (P50, P95, P99) are excluded from rollups. Percentiles are not composable -- the P95 of twelve 5-minute P95 values is not the P95 of the full hour. Percentile queries always compute from raw histogram samples.
 
 ## Rollup registry
 
@@ -81,7 +81,7 @@ If the rollup partially covers the time range (e.g., rollups exist for all but t
 
 If no matching rollup exists, the query falls back to raw sample computation. The result is identical -- rollups are a transparent optimisation.
 
-Rollup window sizes do not need to exactly match the query window. A query for `AVG_OVER 1h` can be served from 5-minute rollups by averaging twelve 5-minute values. Smaller rollup windows can serve larger query windows, but not the reverse.
+Rollup window sizes do not need to exactly match the query window for composable functions. A query for `AVG_OVER 1h` can be served from 5-minute AVG rollups by computing a weighted average from twelve 5-minute values (weighted by `sample_count`). MIN and MAX compose directly (take the min/max across sub-windows). SUM composes by addition. RATE and DELTA compose by summing the per-window values and dividing by total time (RATE) or returning the sum (DELTA). Counter resets are handled during rollup computation — each stored RATE/DELTA value already reflects reset-adjusted deltas. Composition operates on these adjusted values and does not need to handle resets again. Smaller rollup windows can serve larger query windows, but not the reverse.
 
 ## Rollup retention
 

@@ -27,43 +27,42 @@ eventd startup proceeds in the following order:
 
 4. Open or create the event shard databases in the event store directory. For each shard: verify schema version, open in WAL mode with `synchronous=FULL`, create tables and indexes if new. Log errors for databases with unrecognised schema versions (open read-only for queries, do not write).
 5. Open or create the log store database. Verify schema, open in WAL mode with `synchronous=NORMAL`.
-6. Open or create the metric store database. Verify schema, open in WAL mode with `synchronous=NORMAL`. Load the series table into the in-memory series cache.
-7. Load adaptive indexing state: read query frequency counters from metadata, discover material indexes from each shard's schema, compute the current global desired index set.
-8. Load adaptive rollup state: read rollup query frequency counters, discover existing rollups.
+6. Open or create the metric store database. Verify schema, open in WAL mode with `synchronous=NORMAL`. The series cache starts empty and is populated on demand as metrics arrive.
+7. Open or create the `eventd-meta.db` metadata database in the event store directory. Load adaptive indexing state: read query frequency counters and desired index set. Load adaptive rollup state: read rollup counters and desired rollup set. Discover material indexes from each shard's schema.
 
 ### Phase 3: Boot boundary
 
-9. Read the current boot ID from peinit.
-10. Compare the boot ID against the most recently stored boot ID in the event shard databases.
-11. If the boot ID differs (new boot): reset all per-CPU sequence trackers to 0, record the new boot ID.
-12. If the boot ID matches (restart within same boot): read the last persisted sequence number per CPU from the event store, resume sequence tracking from those values.
+8. Read the current boot ID from peinit.
+9. Compare the boot ID against the most recently stored boot ID in the event shard databases.
+10. If the boot ID differs (new boot): reset all per-CPU sequence trackers to 0, record the new boot ID.
+11. If the boot ID matches (restart within same boot): read the last persisted sequence number per CPU from the event store, resume sequence tracking from those values.
 
 ### Phase 4: KMES attachment
 
-13. Call `kmes_attach` (PSD-003 syscall 1091) to obtain per-CPU ring buffer file descriptors. The caller's token MUST hold SeSecurityPrivilege.
-14. Map each per-CPU ring buffer.
-15. Compute shard-to-CPU assignments based on the configured `StorageShards` value and the CPU count.
+12. Discover the CPU count and attach to each per-CPU ring buffer by calling `kmes_attach(cpu_id)` (PSD-003 syscall 1091) with incrementing `cpu_id` values starting from 0 until EINVAL is returned. The caller's token MUST hold SeSecurityPrivilege.
+13. Map each per-CPU ring buffer.
+14. Compute shard-to-CPU assignments based on the configured `StorageShards` value and the CPU count.
 
 ### Phase 5: Socket creation
 
-16. Create the query socket at `QuerySocketPath`.
-17. Create the log ingestion socket at `LogSocketPath`.
-18. Create the metric ingestion socket at `MetricSocketPath`.
-19. Set filesystem permissions on the log and metric sockets to allow service writes.
+15. Create the query socket at `QuerySocketPath`. If a stale socket file exists from a previous crash, unlink it before creating the new socket.
+16. Create the log ingestion socket at `LogSocketPath`. Unlink stale socket files if present.
+17. Create the metric ingestion socket at `MetricSocketPath`. Unlink stale socket files if present.
+18. Set filesystem permissions on the log and metric sockets to allow service writes.
 
 ### Phase 6: Thread startup
 
-20. Start one drain thread per CPU. Each drain thread begins reading from its assigned ring buffer.
-21. Start one writer thread per event shard.
-22. Start the log ingestion thread.
-23. Start the metric ingestion thread.
-24. Start the retention background thread.
-25. Start the adaptive indexing/rollup background thread.
+19. Start one drain thread per CPU. Each drain thread begins reading from its assigned ring buffer.
+20. Start one writer thread per event shard.
+21. Start the log ingestion thread.
+22. Start the metric ingestion thread.
+23. Start the retention background thread.
+24. Start the adaptive indexing/rollup background thread.
 
 ### Phase 7: Ready
 
-26. Emit a synthetic `eventd.startup` event recording the boot ID, shard count, and per-CPU sequence resume points.
-27. Signal readiness to peinit.
+25. Emit a synthetic `synthetic.startup` event recording the boot ID, shard count, and per-CPU sequence resume points.
+26. Signal readiness to peinit.
 
 ## Failure during startup
 
@@ -76,11 +75,13 @@ Partial startup is not permitted. eventd either completes the full bootstrap seq
 
 ## Configuration changes at runtime
 
-eventd watches the configuration registry subtree for changes. When a change is detected:
+Configuration change notifications MUST be deferred until after the bootstrap sequence completes (phase 7). Changes that arrive during startup are queued and processed after readiness is signalled. This prevents configuration reloads from interacting with partially initialised state.
+
+When a change is detected:
 
 - **Tuning parameters** (batch sizes, latencies, retention periods, adaptive thresholds, query timeout): applied immediately to the running instance.
 - **Socket paths**: ignored until restart. Changing a socket path requires an eventd restart.
 - **Store paths**: ignored until restart. Changing a store path requires an eventd restart.
 - **StorageShards**: ignored until restart.
 
-eventd MUST emit a synthetic `eventd.config_change` event for each configuration change applied at runtime.
+eventd MUST emit a synthetic `synthetic.config_change` event for each configuration change applied at runtime.

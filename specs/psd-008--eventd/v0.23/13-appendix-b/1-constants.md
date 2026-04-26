@@ -16,7 +16,7 @@ title: Constants
 | GENERIC_READ | 0x00020001 (EVENTD_READ \| READ_CONTROL) |
 | GENERIC_WRITE | 0x00020002 (EVENTD_CLEAR \| READ_CONTROL) |
 | GENERIC_EXECUTE | 0x00020001 (EVENTD_READ \| READ_CONTROL) |
-| GENERIC_ALL | 0x000F0003 (EVENTD_READ \| EVENTD_CLEAR \| READ_CONTROL \| WRITE_DAC \| WRITE_OWNER) |
+| GENERIC_ALL | 0x000F0003 (EVENTD_READ \| EVENTD_CLEAR \| DELETE \| READ_CONTROL \| WRITE_DAC \| WRITE_OWNER) |
 
 ## Field GUID namespace
 
@@ -104,9 +104,9 @@ Metric label keys produce field GUIDs using the same algorithm. Label key `"core
 | 2 | MAX |
 | 3 | SUM |
 | 4 | RATE |
-| 5 | P50 |
-| 6 | P95 |
-| 7 | P99 |
+| 5 | DELTA |
+
+Percentile functions (P50, P95, P99) are not rollup-eligible. They are computed from raw samples only.
 
 ## Log severity
 
@@ -116,7 +116,7 @@ Metric label keys produce field GUIDs using the same algorithm. Label key `"core
 | 1 | Error (stderr). |
 
 > [!INFORMATIVE]
-> The `is_error` column stores this as an integer. The query language exposes it as a boolean.
+> The `is_error` column stores this as an integer. The query language exposes it as a boolean. The query engine MUST accept both boolean (`WHERE is_error == true`) and integer (`WHERE is_error == 1`) comparisons -- `true` is equivalent to `1` and `false` is equivalent to `0`. The `ERROR ONLY` clause is syntactic sugar for `WHERE is_error == true`.
 
 ## Schema versions
 

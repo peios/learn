@@ -51,7 +51,7 @@ When a consumer calls `mmap()` on a per-CPU file descriptor returned by `kmes_at
 
 The total mapping size is `8192 + (2 × capacity)` bytes. Every per-CPU buffer has the same layout and the same capacity.
 
-The consumer maps the entire region with a single `mmap()` call on the per-CPU file descriptor: `mmap(NULL, 8192 + 2 * capacity, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)`. The kernel's mmap handler enforces per-page permissions internally: the producer metadata page and data region pages are mapped read-only regardless of the requested PROT flags, the consumer metadata page is mapped read-write. The consumer does not need to issue separate mmap calls for each region. The consumer discovers `capacity` from the `kmes_attach` syscall (see §4.1.4).
+The consumer maps the entire region with a single `mmap()` call on the per-CPU file descriptor: `mmap(NULL, 8192 + 2 * capacity, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)`. The kernel's mmap handler enforces per-page permissions internally: the producer metadata page and data region pages are mapped read-only regardless of the requested PROT flags, the consumer metadata page is mapped read-write. The consumer does not need to issue separate mmap calls for each region. The consumer discovers `capacity` from the `kmes_attach` syscall (§4.1).
 
 The mapping is split into read-only and read-write regions to enforce a trust boundary. KMES writes to the producer metadata page and the data region; consumers can only read these. Consumers write to the consumer metadata page; KMES reads from it but treats all values as advisory -- a corrupted consumer page cannot affect KMES correctness or the producer metadata.
 
@@ -172,8 +172,8 @@ After completing a drain cycle (buffer fully drained or batch limit reached), th
 If `generation` has changed since the consumer last checked:
 
 1. Record the sequence number of the last successfully processed event from this buffer.
-2. Call `kmes_attach` to obtain new file descriptors for the resized ring buffers.
-3. `mmap` the new file descriptor for this CPU.
+2. Call `kmes_attach(cpu_id)` to obtain a new file descriptor for this CPU's resized ring buffer.
+3. `mmap` the new file descriptor.
 4. Read the new buffer's metadata (`capacity`, `write_pos`, `tail_pos`).
 5. Scan events in the new buffer to find the first event with a sequence number greater than the recorded sequence number. Set `read_pos` to that event's position.
 6. Close the old file descriptor and unmap the old buffer.

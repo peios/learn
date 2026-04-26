@@ -11,7 +11,7 @@ Each shard database MUST contain an `events` table with the following schema:
 | `id` | INTEGER PRIMARY KEY | SQLite rowid. Auto-assigned, monotonically increasing within the shard. |
 | `boot_id` | BLOB NOT NULL | 16-byte boot ID GUID identifying which boot this event belongs to. |
 | `timestamp` | INTEGER NOT NULL | Wall clock time. Nanoseconds since Unix epoch. For KMES events, copied from the event header `timestamp` field. For synthetic events, the wall clock time when eventd generated the record. |
-| `cpu_id` | INTEGER | CPU on which the event was emitted. Copied from the KMES event header. NULL for synthetic events. |
+| `cpu_id` | INTEGER | CPU on which the event was emitted. Copied from the KMES event header. NULL for daemon-wide synthetic events (startup, shutdown, config_change, storage_error). Populated for CPU-specific synthetic events (gap records). |
 | `sequence` | INTEGER | Per-CPU, per-boot monotonic sequence number. Copied from the KMES event header. NULL for synthetic events. |
 | `origin_class` | INTEGER | Origin of the event (0 = userspace, 1 = KMES, 2 = KACS, 3 = LCS). Copied from the KMES event header. NULL for synthetic events. |
 | `event_type` | TEXT NOT NULL | Event type string. For KMES events, copied from the event header. For synthetic events, a `synthetic.` prefixed type string (e.g., `synthetic.startup`, `synthetic.shutdown`, `synthetic.gap`, `synthetic.config_change`, `synthetic.storage_error`). |
@@ -32,7 +32,7 @@ The following synthetic event types are defined:
 | `synthetic.shutdown` | Per-CPU last persisted sequence numbers. |
 | `synthetic.gap` | CPU ID, first missing sequence number, last missing sequence number, count of missing events, timestamp of last event before the gap, timestamp of event that revealed the gap. |
 | `synthetic.config_change` | Key name, old value, new value. |
-| `synthetic.storage_error` | Shard index, error description. |
+| `synthetic.storage_error` | Store type (event, log, or metric), shard index (for event store errors, NULL for log/metric), error description. |
 
 The payload schema for each synthetic event type is defined by eventd. Additional synthetic event types MAY be defined in future versions.
 

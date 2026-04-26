@@ -19,7 +19,7 @@ METRIC cpu.usage                    -- the cpu.usage metric
 METRIC http.requests.total          -- the http.requests.total metric
 ```
 
-Glob patterns with `*` are supported:
+Glob patterns with `*` are supported. The `*` wildcard matches zero or more of any character, including dots. The same glob semantics as event type patterns (§8.2) apply:
 
 ```
 METRIC cpu.*                        -- all metrics starting with "cpu."
@@ -73,7 +73,7 @@ Value functions transform metric values. They appear after the metric selector. 
 
 ### RATE
 
-Computes the per-second rate of change. Handles counter resets (a decrease in value is treated as a reset, not a negative delta). MUST only be applied to counter-type metrics.
+Computes the per-second rate of change. Handles counter resets (a decrease in value is treated as a reset, not a negative delta). MUST only be applied to counter-type metrics. Applying RATE to a gauge or histogram series is an error -- the query MUST be rejected at execution time when the series type is resolved.
 
 ```
 METRIC http.requests.total SINCE 1h ago RATE
@@ -81,7 +81,7 @@ METRIC http.requests.total SINCE 1h ago RATE
 
 ### DELTA
 
-Computes the absolute change between consecutive samples. Handles counter resets. Useful for "how many in this interval" rather than "per second."
+Computes the absolute change between consecutive samples. For each pair of consecutive samples `(s1, s2)`, the delta is `s2.value - s1.value`. If the value decreases (counter reset), the delta is `s2.value` (the counter restarted from zero). MUST only be applied to counter-type metrics. Applying DELTA to a gauge or histogram series is an error -- the query MUST be rejected at execution time when the series type is resolved. DELTA is the unnormalized form of RATE -- RATE divides by elapsed time to produce a per-second value, DELTA returns the raw difference.
 
 ```
 METRIC http.requests.total SINCE 1h ago DELTA
@@ -89,7 +89,7 @@ METRIC http.requests.total SINCE 1h ago DELTA
 
 ### P50, P95, P99
 
-Computes percentiles from histogram-type metrics. Each histogram sample produces one percentile value. MUST only be applied to histogram-type metrics.
+Computes percentiles from histogram-type metrics. Each histogram sample produces one percentile value. MUST only be applied to histogram-type metrics. Applying a percentile function to a counter or gauge series is an error -- the query MUST be rejected at execution time when the series type is resolved.
 
 ```
 METRIC request.duration P95
@@ -108,7 +108,7 @@ METRIC cpu.usage[core="0"] SINCE 1h ago MIN     -- minimum value in the last hou
 
 ## Window functions
 
-Window functions aggregate values into fixed time windows. They appear after a value function (or alone) and take a duration argument.
+Window functions aggregate values into fixed time windows. They appear after a value function (or alone) and take a duration argument. A query may have at most one value function and at most one window function. Value functions (RATE, DELTA, P50, P95, P99, AVG, MIN, MAX, SUM) and window functions (AVG_OVER, MIN_OVER, MAX_OVER) are distinct categories — `AVG` and `AVG_OVER` are different keywords. When both are present, the value function is applied first, then the window function aggregates the results into time windows.
 
 ### AVG_OVER, MIN_OVER, MAX_OVER
 
@@ -121,6 +121,8 @@ METRIC request.duration P95 SINCE 1h ago AVG_OVER 5m  -- 5-min averaged P95
 ```
 
 Window functions produce one data point per window, reducing data density for trend visualisation.
+
+Window functions require a SINCE clause to define the time range. A query with a window function but no SINCE MUST be rejected with a parse error.
 
 If adaptive rollups (§7.4) exist for the requested function and window size, the query engine serves results from the pre-computed rollup table instead of scanning raw samples. This is transparent -- the result is identical, only the performance differs.
 
@@ -135,6 +137,8 @@ METRIC cpu.usage[core="0"]          -- latest value for core 0
 ```
 
 "Latest" means the most recent sample in the metric store.
+
+For value functions that require multiple samples (RATE, DELTA), a query without SINCE uses the two most recent samples to compute a single instantaneous value. For example, `METRIC http.requests.total RATE` computes the per-second rate between the last two samples. If fewer than two samples exist for a series, the query returns no result for that series.
 
 ## Result format
 

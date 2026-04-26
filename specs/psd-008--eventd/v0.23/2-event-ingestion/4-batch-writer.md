@@ -29,6 +29,7 @@ The specific heuristics for step 6 are implementation-defined. The normative req
 - Under low load, the writer MUST commit within `MaxBatchLatencyMs` of the first event in the batch.
 - Under high load, the writer MUST NOT produce batches larger than `MaxBatchSize`.
 - The writer MUST NOT hold an open transaction indefinitely.
+- The adaptive algorithm SHOULD NOT oscillate between extreme batch sizes under bursty workloads. Rapid alternation between very small commits (high fsync overhead) and very large commits (high latency) degrades both throughput and power-loss resilience. The implementation SHOULD apply smoothing or hysteresis to the arrival rate estimate.
 
 ## Configuration
 
@@ -46,6 +47,9 @@ WAL mode accumulates write-ahead log data until a checkpoint copies it back to t
 Each writer thread MUST trigger a WAL checkpoint when the WAL exceeds a size threshold. The checkpoint SHOULD use `SQLITE_CHECKPOINT_PASSIVE` mode, which checkpoints as much as possible without blocking readers. If a passive checkpoint cannot make progress (active readers hold pages), the writer MUST NOT block -- it continues writing and retries the checkpoint later.
 
 The checkpoint threshold is implementation-defined. A reasonable default is 1000 pages (4 MB with the default 4 KB page size).
+
+> [!INFORMATIVE]
+> PASSIVE checkpointing runs on the writer thread and briefly serialises with INSERT work. This is inherent to SQLite's architecture -- checkpointing and writing cannot run concurrently on the same database. PASSIVE mode is the lightest option (it yields immediately if readers hold pages) and the per-checkpoint cost is bounded by the threshold size. No alternative design avoids this cost within SQLite's concurrency model.
 
 ## Prepared statements
 

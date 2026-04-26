@@ -2,9 +2,6 @@
 title: Scope
 ---
 
-> [!INFORMATIVE]
-> This is an early draft specification. The overall architecture, data model, and design direction are established, but individual sections may change substantially as the specification matures. Areas explicitly marked for future revision include the retention engine (§3.4, §5.3, §7.3), the query language syntax (§8), and the boot ID mechanism (§3.5). Cross-references to other PSDs (particularly PSD-004 KACS and PSD-007 peinit) reflect draft-state interfaces that may evolve.
-
 This specification defines eventd, the observability daemon for the Peios operating system. eventd is one of the five Peios system daemons managed by peinit. It is the sole persistent sink for observability data in Peios -- all events, logs, and metrics flow through eventd for storage, indexing, and querying.
 
 eventd handles three distinct data types, each with its own ingestion path, storage engine, and query semantics:

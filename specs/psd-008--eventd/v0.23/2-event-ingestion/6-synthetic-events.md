@@ -15,7 +15,7 @@ eventd MUST generate synthetic events for the following conditions:
 - **Sequence gaps** -- when lost events are detected on any CPU (see §2.5).
 - **eventd startup** -- when eventd starts and successfully attaches to KMES ring buffers.
 - **eventd shutdown** -- when eventd begins a graceful shutdown, recording the last persisted sequence number per CPU.
-- **Storage errors** -- when a write to the event store fails (disk full, SQLite error).
+- **Storage errors** -- when a write to any store (event, log, or metric) fails (disk full, SQLite error).
 - **Configuration changes** -- when eventd reads a changed configuration value from the registry.
 
 Additional synthetic event types MAY be defined in future versions.
@@ -24,7 +24,7 @@ Additional synthetic event types MAY be defined in future versions.
 
 CPU-specific synthetic events (gap records) MUST be written to the shard assigned to the CPU that generated them. They are handed off to the writer thread alongside regular events from that CPU.
 
-Daemon-wide synthetic events (startup, shutdown, configuration changes) MUST be written to shard 0. These events are infrequent and the minor write imbalance is negligible.
+Daemon-wide synthetic events (startup, shutdown, configuration changes, storage errors) MUST be written to shard 0. A storage error describes a failure on a specific shard but is itself a daemon-wide notification — it MUST NOT be written to the failing shard. These events are infrequent and the minor write imbalance is negligible.
 
 ## Storage
 

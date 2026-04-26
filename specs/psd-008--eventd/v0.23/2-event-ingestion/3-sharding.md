@@ -27,7 +27,17 @@ The shard-to-CPU assignment is not persistent across restarts. A shard database 
 
 eventd MUST create one writer thread per shard. The writer thread is the sole writer to its shard's database. No other thread or connection writes to that database.
 
-When multiple drain threads are assigned to the same shard (shard count < CPU count), they hand off event batches to the shard's writer thread. When a drain thread is assigned multiple shards (shard count > CPU count), it hands off events to the appropriate writer thread based on the round-robin assignment. The handoff mechanism is implementation-defined but MUST NOT introduce unbounded buffering. The drain threads MUST NOT write to SQLite directly.
+When multiple drain threads are assigned to the same shard (shard count < CPU count), they hand off events to the shard's writer thread concurrently. The handoff channel MUST support multiple concurrent producers (drain threads) and a single consumer (the writer thread). When a drain thread is assigned multiple shards (shard count > CPU count), it hands off events to the appropriate writer thread based on the round-robin assignment. The drain threads MUST NOT write to SQLite directly.
+
+## Handoff mechanism
+
+Each writer thread has a bounded handoff channel through which drain threads submit events. The channel capacity MUST NOT exceed `MaxBatchSize` events. The channel is the only buffer between the drain thread and the writer thread.
+
+When the channel is full, the drain thread MUST stop reading from the KMES ring buffer and wait for the writer thread to drain the channel. The drain thread MUST NOT drop events to relieve backpressure. While the drain thread is paused, new events accumulate in the KMES ring buffer -- this is the designed backpressure path. If the ring buffer fills during the pause, KMES overwrites the oldest events, and the drain thread detects this as a sequence gap when it resumes reading.
+
+This preserves the invariant that KMES ring buffers are the only event buffer. The handoff channel is a staging area for the current batch, not a secondary buffer. Backpressure propagates: writer thread slow → channel fills → drain thread pauses → ring buffer absorbs → KMES overwrites oldest if full → gap detected on resume.
+
+When the writer thread commits a batch and the channel has capacity again, the drain thread resumes reading from the ring buffer immediately.
 
 ## Shard lifecycle
 

@@ -18,7 +18,7 @@ Access control is defined on named patterns. Each pattern represents a category 
 - **Log patterns** control access to logs by origin (service name).
 - **Metric patterns** control access to metrics by metric name.
 
-A pattern matches using prefix semantics. The pattern `kacs` matches all event types starting with `kacs.` (and the bare type `kacs` if it exists). The pattern `*` is the wildcard default that matches everything.
+A pattern matches using dot-delimited prefix semantics. The pattern `kacs` matches the exact string `kacs` and any string with the prefix `kacs.` (note the dot). It does NOT match `kacs_extended` or `kacsfoo` -- the dot is the hierarchy separator. The pattern `*` is the wildcard default that matches everything.
 
 ## Access rights
 
@@ -36,7 +36,7 @@ Generic mapping for eventd objects:
 | GENERIC_READ | EVENTD_READ \| READ_CONTROL |
 | GENERIC_WRITE | EVENTD_CLEAR \| READ_CONTROL |
 | GENERIC_EXECUTE | EVENTD_READ \| READ_CONTROL |
-| GENERIC_ALL | EVENTD_READ \| EVENTD_CLEAR \| READ_CONTROL \| WRITE_DAC \| WRITE_OWNER |
+| GENERIC_ALL | EVENTD_READ \| EVENTD_CLEAR \| DELETE \| READ_CONTROL \| WRITE_DAC \| WRITE_OWNER |
 
 The generic mapping is passed to `kacs_access_check` via the `generic_read`, `generic_write`, `generic_execute`, and `generic_all` fields.
 
@@ -83,7 +83,7 @@ MonitoringTeam members querying KACS events see records with only `timestamp`, `
 Field GUIDs are generated deterministically using UUID v5 (RFC 4122). A fixed namespace UUID is defined for eventd field GUIDs:
 
 ```
-EVENTD_FIELD_NAMESPACE = {to be assigned}
+EVENTD_FIELD_NAMESPACE = {e7d3a1b0-5c2f-4e8a-9b1d-0a6f3c8e2d4b}
 ```
 
 A field's GUID is computed as:

@@ -31,4 +31,4 @@ If the drain thread's `read_pos` falls behind the ring buffer's `tail_pos` (the 
 
 ## Gap records in the event table
 
-Gap records are stored in the `events` table with `event_type = 'synthetic.gap'`. KMES header columns (`cpu_id`, `sequence`, `origin_class`, identity GUIDs) are NULL. The gap details (missing sequence range, surrounding timestamps) are stored as a msgpack map in the `payload` column. Gap records are queryable through the same interface as all other events.
+Gap records are stored in the `events` table with `event_type = 'synthetic.gap'`. The `cpu_id` column MUST be populated with the CPU ID on which the gap was detected. Other KMES header columns (`sequence`, `origin_class`, identity GUIDs) are NULL. The gap details (missing sequence range, surrounding timestamps) are stored as a msgpack map in the `payload` column. Gap records are queryable through the same interface as all other events. Populating `cpu_id` ensures that `EVENTS WHERE cpu_id == N` correctly returns gap records for CPU N.

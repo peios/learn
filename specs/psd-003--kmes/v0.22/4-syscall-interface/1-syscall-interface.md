@@ -7,7 +7,7 @@ title: Syscall Interface
 KMES exposes three syscalls in the PKM range (1090--1099):
 
 - `kmes_emit` (1090) -- emit a single event from userspace.
-- `kmes_attach` (1091) -- attach as a consumer and obtain per-CPU ring buffer file descriptors.
+- `kmes_attach` (1091) -- attach as a consumer of a single per-CPU ring buffer.
 - `kmes_emit_batch` (1092) -- emit multiple events from userspace as a single operation.
 
 All three syscalls use standard Linux error conventions: return -1 and set errno on failure.
@@ -137,7 +137,7 @@ Per-entry validation failures (EINVAL, EFAULT on a per-entry pointer, ENOSPC) re
 
 ## kmes_attach (1091)
 
-Attaches the caller as a consumer of the KMES ring buffers. Returns one file descriptor per CPU, each independently mappable.
+Attaches the caller as a consumer of a single per-CPU KMES ring buffer. Returns one file descriptor for the specified CPU.
 
 ### Privilege requirement
 
@@ -147,26 +147,27 @@ The caller's effective token MUST hold SeSecurityPrivilege. If the privilege is 
 
 | Parameter | Type | Description |
 |---|---|---|
-| `fds` | `int __user *` | Pointer to a caller-provided buffer for the returned file descriptors. |
-| `count` | `int __user *` | Pointer to an integer. On entry, the size of the `fds` buffer (number of int-sized slots). On return, the number of CPUs (and thus the number of file descriptors written). |
+| `cpu_id` | `u32` | The CPU index to attach to. |
 | `capacity` | `u64 __user *` | Pointer to a u64. On return, the per-CPU ring buffer capacity in bytes. The consumer uses this to compute the mmap size: `8192 + 2 * capacity`. |
 
 ### Behavior
 
-KMES writes one file descriptor per CPU into the `fds` buffer, in CPU order (index 0 = CPU 0, index 1 = CPU 1, etc.). The number of CPUs is written to `*count`. The current per-CPU ring buffer capacity is written to `*capacity`.
+`cpu_id` is a logical CPU index in the range `[0, num_cpus)`, where `num_cpus` is the number of CPUs that were online when KMES initialised (at PKM load time). This is the same numbering used in the ring buffer's `cpu_id` metadata field and in event headers.
 
-If the buffer is too small (`*count` on entry is less than the number of CPUs), no file descriptors are created. `*count` is set to the required number and the syscall fails with ERANGE. The caller SHOULD retry with a sufficiently large buffer.
+KMES creates a single file descriptor for the ring buffer of CPU `cpu_id` and returns it. The current per-CPU ring buffer capacity is written to `*capacity`. The returned file descriptor maps exactly one CPU's ring buffer.
 
-File descriptor creation is all-or-nothing. If allocation of any file descriptor fails (e.g., ENOMEM), all previously created file descriptors from this call are closed internally before the error is returned. The caller receives either all N file descriptors or none.
+If `cpu_id` is greater than or equal to `num_cpus`, the syscall fails with EINVAL. This includes CPUs brought online after KMES initialisation -- CPU hotplug is not supported in v0.22 (see §7.1). Consumers discover the CPU count by calling `kmes_attach` with incrementing `cpu_id` values starting from 0 until EINVAL is returned.
 
-Each file descriptor independently supports:
+Repeated calls with the same `cpu_id` are permitted and return a new, independent file descriptor each time. Each file descriptor has its own mapping and its own consumer metadata page. This allows multiple consumers to attach to the same CPU's ring buffer independently.
 
-- `mmap()` -- maps that CPU's ring buffer into the caller's address space. The mapped region layout is defined in §5.1.5.
+The returned file descriptor supports:
+
+- `mmap()` -- maps that CPU's ring buffer into the caller's address space. The mapping size is `8192 + 2 * capacity` bytes. The mapped region layout is defined in §5.1.5.
 - `close()` -- releases the file descriptor. The mapping becomes invalid.
 
 The mapped region is split into read-only and read-write sections. The producer metadata page and the data region are mapped read-only -- no privilege, capability, or token grants write access to these regions from userspace. Only KMES writes event data and producer metadata. The consumer metadata page is mapped read-write for consumer notification state (`need_wake`). KMES treats consumer metadata as advisory and validates all values read from it.
 
-Multiple consumers MAY attach simultaneously. Each consumer maintains its own read position per buffer independently.
+Multiple consumers MAY attach to the same CPU's ring buffer simultaneously. Each consumer maintains its own read position independently.
 
 ### Notification
 
@@ -176,13 +177,13 @@ This allows consumers to dedicate one thread per CPU buffer, each sleeping indep
 
 ### Return
 
-Returns 0 on success. Returns -1 and sets errno on failure.
+Returns the file descriptor (non-negative) on success. Returns -1 and sets errno on failure.
 
 ### Errors
 
 | Errno | Meaning |
 |---|---|
 | EPERM | Caller does not hold SeSecurityPrivilege. |
-| ERANGE | The `fds` buffer is too small. `*count` is set to the required number of slots. |
-| EFAULT | `fds`, `count`, or `capacity` points to inaccessible memory. |
+| EINVAL | `cpu_id` is greater than or equal to the number of CPUs. |
+| EFAULT | `capacity` points to inaccessible memory. |
 | ENOMEM | Kernel memory allocation failed. |

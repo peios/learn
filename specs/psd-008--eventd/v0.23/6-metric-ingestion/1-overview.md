@@ -11,12 +11,15 @@ eventd is a metric sink, not a metric collector. Services and collection agents 
 A metric data point consists of:
 
 - **Name** -- a dot-separated string identifying the measurement (e.g., `cpu.usage`, `http.requests.total`, `disk.read.bytes`).
-- **Labels** -- a set of key-value string pairs providing dimensions (e.g., `core="0"`, `service="loregd"`, `method="GET"`). Labels distinguish different instances of the same measurement.
+- **Labels** -- a set of key-value string pairs providing dimensions (e.g., `core="0"`, `service="loregd"`, `method="GET"`). Labels distinguish different instances of the same measurement. Label keys and values MUST be non-empty UTF-8 strings. Label keys and values MUST NOT contain the characters `=` (0x3D) or `,` (0x2C), as these are used as delimiters in the canonical label representation (§7.1). Records with invalid label keys or values MUST be dropped silently.
 - **Type** -- one of counter, gauge, or histogram. The type determines how the metric is interpreted by the query engine.
 - **Timestamp** -- wall clock time of the measurement.
 - **Value** -- the numeric measurement. The encoding depends on the type.
 
 The combination of name and labels uniquely identifies a time series. `cpu.usage{core="0"}` and `cpu.usage{core="1"}` are distinct time series.
+
+> [!INFORMATIVE]
+> Labels with unbounded cardinality (per-request IDs, user-provided strings, timestamps as label values) cause series table growth proportional to the number of unique label combinations. Each unique combination creates a new series row and a new entry in the bounded series cache. When the number of active series exceeds the cache size, every collection cycle evicts and reloads the overflow, causing sustained SQLite lookups on the single metric ingestion thread. This is a well-known anti-pattern in metrics systems. Emitters SHOULD use labels with bounded, low-cardinality values (e.g., CPU core ID, service name, HTTP method). High-cardinality dimensions belong in event payloads, not metric labels.
 
 ## Metric types
 

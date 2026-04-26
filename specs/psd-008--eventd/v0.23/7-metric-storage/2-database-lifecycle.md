@@ -23,8 +23,9 @@ When the metric store database does not exist at startup, eventd MUST create it 
 When the metric store database exists at startup, eventd MUST:
 
 1. Open the database in WAL mode with synchronous NORMAL.
-2. Verify the schema version.
-3. Load the `series` table into the in-memory series cache for fast resolution.
+2. Verify the schema version. If unrecognised, eventd MUST log an error and MUST NOT write to the database. The database remains available for read-only queries.
+3. Verify structural integrity (required tables and indexes exist).
+4. The series cache starts empty. It is populated on demand as metric samples arrive -- each cache miss triggers a SQLite SELECT and inserts the result into the cache. Within one collection cycle (typically 15 seconds), all active series are cached. No pre-warming is required.
 
 ## Concurrency
 
