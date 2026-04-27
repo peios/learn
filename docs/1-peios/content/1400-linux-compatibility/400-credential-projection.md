@@ -3,7 +3,7 @@ title: Credential Projection
 type: concept
 description: How Peios projects token identity onto Linux UID/GID surfaces, why getuid and current_fsuid can return different numbers during impersonation, and why fsuid is the trustworthy view of effective identity.
 related:
-  - peios/linux-compat/understanding-linux-compatibility
+  - peios/linux-compatibility/understanding-linux-compatibility
   - peios/identity/how-tokens-work
   - peios/identity/primary-vs-impersonation-tokens
 ---

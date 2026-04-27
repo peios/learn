@@ -5,7 +5,7 @@ description: How threads share and isolate state on Peios — the security model
 related:
   - peios/process-management/understanding-process-creation
   - peios/identity/primary-vs-impersonation-tokens
-  - peios/linux-compat/credential-projection
+  - peios/linux-compatibility/credential-projection
 ---
 
 A **thread** on Peios is a kernel task that shares its address space, file descriptors, and primary token with other threads in the same process. Threads are created by `clone()` with the `CLONE_THREAD` flag — the same primitive that creates processes, branched on a single bit.
@@ -39,6 +39,8 @@ Each thread has its own:
 
 There is no "thread security descriptor" and no "thread identity" beyond impersonation state. Threads are not security principals. The principal is the process, identified by its primary token; threads are units of execution within that principal that can temporarily act on someone else's behalf via impersonation.
 
+Threading libraries also use `set_tid_address()` to register a memory location the kernel will clear and futex-wake when the thread exits, paired with `CLONE_CHILD_CLEARTID` at clone time. This is the substrate mechanism behind robust pthread join — the joining thread can wait on the futex to know precisely when the child has fully unwound. Like other thread-setup state, the TID-clear address is per-thread and behaves identically to Linux on Peios.
+
 ## Thread identification
 
 Three numbers identify a thread:
@@ -53,7 +55,7 @@ The `pid` / `tgid` distinction is a Linux substrate property. Peios neither hide
 
 ## Filesystem credentials
 
-Linux threads can hold per-thread filesystem credentials (`fsuid`, `fsgid`) — historically used by NFS servers to per-thread-impersonate clients. On Peios, this is automatic and unconditional: filesystem credentials always reflect the effective token, which is the impersonation token if active and the primary token otherwise. The values change with `kacs_impersonate_*`, not with `setfsuid` / `setfsgid`, and they cannot be made to lie. See [Credential projection](../linux-compat/credential-projection) for the full rule.
+Linux threads can hold per-thread filesystem credentials (`fsuid`, `fsgid`) — historically used by NFS servers to per-thread-impersonate clients. On Peios, this is automatic and unconditional: filesystem credentials always reflect the effective token, which is the impersonation token if active and the primary token otherwise. The values change with `kacs_impersonate_*`, not with `setfsuid` / `setfsgid`, and they cannot be made to lie. See [Credential projection](../linux-compatibility/credential-projection) for the full rule.
 
 ## Special threads
 
