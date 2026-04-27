@@ -4,7 +4,7 @@ type: concept
 description: Shared-memory primitives on Peios — POSIX shm, memfd, file sealing, and how the security model applies to memory shared between processes.
 related:
   - peios/memory-management/memory-mapping
-  - peios/ipc/ipc-object-security-descriptors
+  - peios/IPC/ipc-object-security-descriptors
   - peios/process-security/process-security-descriptors
 ---
 
