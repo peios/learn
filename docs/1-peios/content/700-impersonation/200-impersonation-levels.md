@@ -41,6 +41,8 @@ The service can forward the client's identity to **remote services** on other ma
 
 Delegation is the most powerful level. It allows the client's identity to travel across machine boundaries via Kerberos delegation. Because of this power, Delegation is typically restricted — only specific service accounts trusted for delegation can exercise it, and the domain policy controls which services can delegate to which targets.
 
+See [Networked IPC](../IPC/networked-ipc) for the mechanism Peios uses to forward identity across the domain — how a Delegation-level token actually reaches a remote service and produces a meaningful local identity there.
+
 ## Choosing the right level
 
 The client should set the minimum level the service needs:
