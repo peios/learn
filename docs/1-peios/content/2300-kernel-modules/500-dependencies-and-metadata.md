@@ -17,6 +17,7 @@ A kernel function or variable becomes loadable-into by other code through one of
 |---|---|
 | `EXPORT_SYMBOL(name)` | Any loaded module, regardless of declared license. |
 | `EXPORT_SYMBOL_GPL(name)` | Only modules whose `MODULE_LICENSE` declaration is on the GPL-compatible list (`"GPL"`, `"GPL v2"`, `"Dual BSD/GPL"`, `"Dual MIT/GPL"`, etc.). |
+| `EXPORT_SYMBOL_FOR_MODULES(name, "modA,modB")` | Only the explicitly named modules. Resolution from any other module fails with an unresolved-symbol error even if the symbol would otherwise be public. Used by subsystems that publish helpers strictly intended for a small known set of consumers, where opening the symbol up to every loadable module would invite ABI drift. |
 
 The kernel maintains the exported-symbol table at runtime. When a module loads, the kernel walks the module's import list and looks up each symbol — if it's exported via `EXPORT_SYMBOL_GPL` and the loading module's license is not GPL-compatible, the resolution fails and the load is rejected with an unresolved-symbol error.
 

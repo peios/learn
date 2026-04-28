@@ -99,6 +99,19 @@ Writing requires admin authority — the file's SD on Peios grants `KEY_SET_VALU
 
 `drop_caches` does not write dirty pages back. To get a known-quiescent cache state, write to `/proc/sys/vm/drop_caches` after running `sync(1)`.
 
+## Uncached buffered I/O — `RWF_UNCACHED` / `RWF_DONTCACHE`
+
+For workloads that want the ergonomic advantages of buffered I/O — automatic alignment, partial-block writes, normal page-cache semantics for in-flight data — but don't want the data to *persist* in the cache after the operation completes, the kernel exposes two related hint flags via `preadv2()` / `pwritev2()`:
+
+| Flag | Effect |
+|---|---|
+| `RWF_UNCACHED` | Buffered I/O that drops the affected pages from the cache as soon as the operation finishes. The data is fully in user memory; the page-cache copy is not retained. |
+| `RWF_DONTCACHE` | A weaker hint — the I/O still goes through the cache, but the affected pages are marked for early eviction. The kernel may still serve a subsequent read from the cache if pressure is low. |
+
+These are useful for streaming-style workloads (video transcode, log replay, large-file copying) that touch data once and don't benefit from caching it. Compared with `O_DIRECT`, the uncached buffered path keeps standard alignment and partial-write behaviour while still avoiding cache pollution. Compared with `POSIX_FADV_DONTNEED`, the hint applies to a single read or write rather than requiring a separate syscall.
+
+Per-filesystem cache pressure is also tunable via `vfs_cache_pressure` (and the finer-grained `vfs_cache_pressure_denom` for systems that need pressure values below the standard integer-percentage granularity). A higher value reclaims dentry and inode caches more aggressively; a lower value retains them through more memory pressure. The page-allocator-level `defrag_mode` sysctl independently controls how aggressively the kernel compacts pages to satisfy higher-order allocations — useful for hosts that want predictable allocation latency at the cost of slightly more compaction CPU.
+
 ## Direct I/O — `O_DIRECT`
 
 A process opening a file with `O_DIRECT` opts out of the page cache entirely. Reads go straight from disk to user buffers; writes go straight from user buffers to disk. There is no caching, no readahead, no writeback delay.

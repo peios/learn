@@ -153,18 +153,31 @@ Core scheduling is the recommended mitigation when running mutually-untrusting w
 
 ## Preemption model
 
-The kernel's **preemption model** is the rule that decides when a running task can be involuntarily switched off the CPU. Linux exposes four named models, selected at kernel-build time:
+The kernel's **preemption model** is the rule that decides when a running task can be involuntarily switched off the CPU. The model is selected at kernel-build time:
 
 | Model | Behaviour |
 |---|---|
-| `PREEMPT_NONE` | Voluntary preemption only at explicit `schedule()` points. Highest throughput; worst latency. Server-style. |
-| `PREEMPT_VOLUNTARY` | Same as `PREEMPT_NONE` plus added preemption checkpoints. Better latency at modest throughput cost. |
+| `PREEMPT_NONE` | Voluntary preemption only at explicit `schedule()` points. Highest throughput; worst latency. Server-style. Retained on architectures that have not migrated to the lazy model. |
+| `PREEMPT_VOLUNTARY` | Same as `PREEMPT_NONE` plus added preemption checkpoints. Better latency at modest throughput cost. Retained on architectures that have not migrated to the lazy model. |
+| `PREEMPT_LAZY` | Sits between voluntary and full. The scheduler defers preemption of `SCHED_OTHER` tasks until the next return-to-userspace point, giving them more uninterrupted runtime than `PREEMPT_FULL` while still preempting real-time tasks immediately. On modern architectures this replaces `PREEMPT_NONE` and `PREEMPT_VOLUNTARY` as the throughput-preferring option. |
 | `PREEMPT_FULL` | Preempt anywhere not in a critical section. Desktop / interactive default. |
 | `PREEMPT_RT` | Full real-time preemption. Almost everything is preemptible, including most kernel critical sections (replaced by mutexes). Required for hard real-time workloads. Mainline since 6.12. |
 
-Like CPU isolation, the preemption model is **image-time configuration** — chosen when the kernel is compiled, not at runtime. The trade-off is throughput-vs-latency: an image targeting real-time work (audio, control loops, networking gateways) builds with `PREEMPT_RT`; an image targeting maximum compute throughput builds with `PREEMPT_NONE`. There is no runtime switch.
+On modern architectures (x86, arm64, riscv) the practical choice is between `PREEMPT_LAZY`, `PREEMPT_FULL`, and `PREEMPT_RT` — `PREEMPT_NONE` and `PREEMPT_VOLUNTARY` have been removed there as separate options because lazy preemption supersedes both. Other architectures continue to expose all five.
+
+Like CPU isolation, the preemption model is **image-time configuration** — chosen when the kernel is compiled, not at runtime. The trade-off is throughput-vs-latency: an image targeting real-time work (audio, control loops, networking gateways) builds with `PREEMPT_RT`; an image targeting maximum compute throughput builds with `PREEMPT_LAZY` (or `PREEMPT_NONE` on architectures that retain it). There is no runtime switch.
 
 Peios provides reference images at multiple preemption levels; downstream image builders pick whichever matches their workload's requirements.
+
+## SMP-only
+
+Peios kernels are built unconditionally with SMP support. Uniprocessor (UP-only) kernel code paths are not retained; single-CPU machines run the SMP scheduler with one CPU. This matches the upstream direction — modern Linux has removed the UP-only scheduler — and reflects the reality that Peios does not target hardware where the SMP overhead matters. The practical consequence is that any kernel-config knob conditional on `CONFIG_SMP` is unconditional on Peios.
+
+## `rseq` time slice extension
+
+Restartable sequences (`rseq`) provide a per-thread shared region the kernel updates with information the thread can read without a syscall. Beyond their original use (lock-free per-CPU data structures), `rseq` carries an opportunistic **time-slice extension** hint: a thread can write to its `rseq` area to indicate "I am inside a critical section, please don't preempt me right now." The scheduler honours this best-effort — preemption is briefly deferred so the critical section can complete, after which normal preemption resumes.
+
+The mechanism is bounded — the kernel will not defer preemption indefinitely, and high-priority tasks override the hint — so it acts as a low-overhead priority ceiling for short critical sections without requiring real-time scheduling or PI mutexes. Userspace runtimes (language runtimes, lock-free data structure libraries) use it transparently; nothing in user code changes.
 
 ## Pressure stall information
 
@@ -190,6 +203,30 @@ A handful of additional substrate features appear in the inventory of completene
 - **`/proc/[pid]/sched`.** Per-task scheduler debug information — virtual runtime, runqueue placement, and other internal counters. Read access is gated by the process SD (`PROCESS_QUERY_INFORMATION`) and by the PIP `/proc` default-deny rule for protected processes.
 
 For day-to-day capacity decisions on Peios the recommended surface is PSI plus per-cgroup `cpu.stat`. The legacy `/proc/schedstat` and per-task `/proc/[pid]/sched` interfaces are retained for compatibility with existing Linux tooling.
+
+## sched_ext — pluggable schedulers
+
+For workloads with very specific scheduling requirements that the standard classes don't address well — large datacenter fleets tuning for a single workload type, latency-critical systems with unusual placement constraints, gaming-style runtimes wanting custom interactivity heuristics — the kernel provides **`sched_ext`**, a framework that lets BPF programs implement complete scheduler classes.
+
+A BPF scheduler is a userspace project (typically written in C with libbpf or in Rust) that compiles to BPF and is loaded into the kernel at runtime. Once loaded, it owns scheduling decisions for tasks placed in its class: enqueue, dequeue, pick-next-task, runqueue migration, and idle-CPU selection are all callbacks into the BPF program. If the BPF program crashes, errors out, or fails to make progress within a timeout, the kernel automatically reverts to the default scheduler — sched_ext cannot brick the system.
+
+The framework includes substrate niceties beyond the basic dispatch: LLC and NUMA-aware idle-CPU selection so BPF schedulers get sensible cache behaviour by default, and a deadline-server backstop that bounds how much CPU bandwidth a misbehaving BPF scheduler can monopolise before kernel intervention.
+
+### Privilege model
+
+Loading a BPF scheduler is one of the most consequential operations on a system. The scheduler runs at every dispatch decision on every CPU; it sees timing information about every task; a poorly-written or malicious scheduler can degrade the entire host's performance even with the kernel's safety nets in place.
+
+Peios gates BPF scheduler loading on a dedicated **`SeLoadSchedulerPrivilege`**. The privilege is not held by default by any standard service or user role — it must be granted explicitly to the operator or daemon responsible for managing custom schedulers. Holding `CAP_BPF` or `CAP_SYS_ADMIN` is not sufficient on Peios; the dedicated privilege is the gate.
+
+Loading, swapping, or unloading a BPF scheduler is unconditionally audit-loud regardless of the success/failure quartet. The audit record includes the scheduler's BPF program identity, the loading principal's token, and the previous scheduler (if any).
+
+### Operational notes
+
+- BPF schedulers compose with the standard real-time classes (`SCHED_FIFO`, `SCHED_RR`, `SCHED_DEADLINE`) — those continue to take precedence. sched_ext effectively replaces the Normal class for tasks that opt into it.
+- A BPF scheduler is process-state in the same sense the standard scheduler is: it survives across `fork` and `exec`, but is unloaded when the loading principal explicitly detaches or when the kernel revokes it under a fault.
+- Native Peios applications do not interact with sched_ext directly — they continue to use the standard `sched_setattr()` API. sched_ext is an operator-tier facility for site-wide scheduler customisation, not an application-level API.
+
+For most Peios deployments the default scheduler (EEVDF + the standard real-time classes) is the right answer. sched_ext is available for advanced operators with a specific workload-tuning case, gated behind a privilege that makes accidental enabling impossible.
 
 ## Where scheduling does not go
 

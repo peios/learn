@@ -53,7 +53,7 @@ These are infrastructure for higher-level primitives (condition variables, read/
 
 `FUTEX_LOCK_PI`, `FUTEX_UNLOCK_PI`, `FUTEX_TRYLOCK_PI`, `FUTEX_WAIT_REQUEUE_PI`, `FUTEX_CMP_REQUEUE_PI` implement **priority-inheritance** mutexes. The priority-inversion problem: a low-priority thread holds a mutex, a high-priority thread blocks on it, a medium-priority thread runs and prevents the low-priority one from releasing. The high-priority thread is effectively blocked by the medium-priority one — priority inversion.
 
-PI mutexes solve this by temporarily boosting the holding thread's priority to that of the highest-priority waiter, ensuring the holder can run and release the lock. Used by real-time code and by some kernel sync primitives that must guarantee bounded wait times.
+PI mutexes solve this by giving the holding thread the scheduling context of the highest-priority waiter for as long as it holds the lock — the holder runs as if it were the waiter, so it can complete and release. The mechanism is **proxy execution**: the scheduler arranges for the lock owner to be picked up under the waiter's scheduling parameters, which generalises cleanly to deadline scheduling (`SCHED_DEADLINE`) where the older "boost the holder's priority" approach did not work well. From the application's perspective the contract is unchanged — PI futexes still solve priority inversion — but the kernel's implementation propagates the waiter's full scheduling context (priority, deadline, weight) rather than only its priority number. Used by real-time code and by some kernel sync primitives that must guarantee bounded wait times.
 
 PI futexes have stricter requirements than regular futexes — the futex word format is more constrained, and only one waiter may be tracked at a time. The complexity is worth it for real-time correctness; for ordinary applications, regular futexes are simpler and faster.
 
@@ -85,6 +85,16 @@ The mechanism:
 `set_robust_list` is unprivileged — it's a per-thread registration with no cross-process effects.
 
 The `CLONE_CHILD_CLEARTID` flag at clone time pairs with this: it lets a thread's exit zero out a memory location and wake futex-waiters on it, providing the "thread has fully exited" notification mechanism that pthread_join uses.
+
+## NUMA-aware futexes (`FUTEX2`)
+
+The kernel maintains an internal hash table mapping futex identities (memory location plus mm context) to wait queues. On large NUMA systems, that hash table can become a contention point: many threads on different NUMA nodes hashing into the same bucket, or wait queues physically allocated on a remote node.
+
+The `FUTEX2_NUMA` flag (`futex2_*` syscall family) routes futex operations through a NUMA-aware allocator: the kernel co-locates wait queues with the futex's memory, reducing cross-node traffic on contended futexes. `FUTEX2_MPOL` extends this with explicit memory-policy support, letting userspace influence where the kernel allocates futex bookkeeping.
+
+Beyond the system-wide hash table, the kernel also supports **task-local futex hash maps** — per-task hash tables sized to the task's working set. A workload with many private futexes (e.g. a runtime managing thousands of intra-process locks) gets a private hash space sized to it, avoiding contention with unrelated threads on the system-wide table. The mechanism is opt-in via `prctl(PR_FUTEX_HASH)`; runtimes that benefit from it (modern language runtimes, lock-rich servers) opt in once at startup.
+
+These features are transparent to existing futex-using code — the legacy `futex(2)` API continues to work unchanged. They are accessible to runtimes that want the NUMA / task-local optimisation explicitly.
 
 ## Access semantics
 

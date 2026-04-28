@@ -59,6 +59,8 @@ The pattern across all of these: a CPU microarchitectural feature speculatively 
 
 The default Peios kernel enables every production-recommended mitigation. Some specialised images (for example, sealed appliances on dedicated hardware where no untrusted code ever runs) may disable specific mitigations to reclaim performance, but this is a deliberate image-policy choice with a documented security trade-off.
 
+The kernel also accepts an **attack-vector-based** selection model: rather than enabling or disabling individual mitigations one by one, the operator can specify the categories of attack the system needs to defend against (e.g. cross-process leak, guest-to-host leak, user-to-kernel leak), and the kernel enables exactly the mitigations needed for those vectors. This makes large mitigation-set decisions tractable — a workload that does not run untrusted code in the same kernel does not need the user-to-kernel mitigations and can disable that whole category at boot. Peios surfaces this control through the standard kernel command line; image builders set it according to the deployment's threat model.
+
 ## Observing mitigation state
 
 `/sys/devices/system/cpu/vulnerabilities/` exposes one file per known vulnerability, listing the kernel's view of whether the CPU is vulnerable and what mitigation is active. Sample contents on a hardened system:

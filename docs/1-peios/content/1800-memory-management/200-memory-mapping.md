@@ -131,7 +131,16 @@ The advice values fall into a few groups:
 | `MADV_NOHUGEPAGE` | Don't use THP here. |
 | `MADV_COLLAPSE` | Force-collapse this region into a huge page synchronously. |
 
-The kernel is free to disregard any of these. Reclaim hints in particular are advisory; the kernel may keep pages resident if there's no pressure, or evict pages without being asked when there is.
+### Guard regions
+
+| Advice | Meaning |
+|---|---|
+| `MADV_GUARD_INSTALL` | Install guard pages on this range without changing its protection bits. Any access to a guarded page raises `SIGSEGV`, but the guarded pages do not consume physical memory and do not appear as `PROT_NONE` mappings. Cheaper than mapping a `PROT_NONE` region between two real mappings. |
+| `MADV_GUARD_REMOVE` | Remove guard installation from this range. The underlying mapping resumes its normal protection. |
+
+`MADV_GUARD_INSTALL` works on anonymous, file-backed, and shmem mappings. The intended use is sandbox runtimes and language runtimes that want lightweight inserted guards (e.g. between thread stacks, between heap arenas) without the address-space and accounting cost of separate `PROT_NONE` mappings.
+
+The kernel is free to disregard any of these advisory hints. Reclaim hints in particular are advisory; the kernel may keep pages resident if there's no pressure, or evict pages without being asked when there is. Guard installation is enforced — once installed, accesses to guarded pages always fault until removal.
 
 ## Cross-process operations
 

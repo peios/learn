@@ -60,6 +60,10 @@ When the kernel determines a dump should be generated, it pipes the dump data to
 
 The kernel runs coredumpd in the crashing process's own context for the dump-generation pass — the dump data flows from kernel memory through the pipe to coredumpd without crossing into a less-protected process. coredumpd writes the dump and a metadata sidecar to its managed storage.
 
+The substrate also supports an alternative delivery mechanism: rather than spawning a per-crash handler process, `core_pattern` can name an `AF_UNIX` socket that a long-lived dump-handler service listens on. The kernel writes the dump to the socket and the service receives it without the overhead of a `clone`/`exec` per crash. Peios does not use this mode by default — coredumpd's per-crash isolation matches the trust boundary needed for PIP-protected sources — but the mechanism is available for downstream operators who want to route dumps through a custom pre-existing service. The trust-label and DACL invariants must be reproduced by any such service.
+
+`PIDFD_GET_INFO` on a pidfd whose target was core-dumped exposes the signal that caused the dump along with the exit status, so debugging tools holding a pidfd can correlate without scraping `/proc`.
+
 ## Storage and access control
 
 Dumps live under `/var/lib/peios/coredumps/`, owned by coredumpd. Each crash produces two files:

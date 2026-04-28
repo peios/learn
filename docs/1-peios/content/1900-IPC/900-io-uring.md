@@ -124,6 +124,24 @@ For sustained high-throughput workloads, two registration mechanisms amortise pe
 
 These are performance optimisations only. As noted above, AccessCheck still runs at submission time for every operation regardless of fixed-file/buffer registration. The optimisations save *lookup* work, not *authorisation* work.
 
+## Recent feature areas
+
+io_uring continues to grow. Beyond the core operations and registration mechanics above, recent kernels have added several thematic feature areas. They are listed here for completeness; refer to the kernel's io_uring documentation for the wire-level detail of each.
+
+| Area | What it adds |
+|---|---|
+| **Ring lifecycle** | Resize a live ring (`IORING_REGISTER_RESIZE_RINGS`) without setup/teardown. Query the runtime SQ/CQ layout. Register fixed wait regions for low-overhead completion polling. Hybrid IOPOLL with bounded sleep before busy-spin. Non-circular SQ architecture for better cache behaviour. |
+| **Mixed SQE/CQE sizes** | `IORING_SETUP_SQE_MIXED` lets a single ring carry both 64-byte and 128-byte SQEs, and the equivalent for CQEs. Avoids the "all-or-nothing 128-byte" overhead when only some operations need the larger entry. |
+| **Cross-ring sync** | A dedicated message-passing path between rings — useful for multi-thread runtimes that want to forward work between worker rings without going through userspace. |
+| **Zero-copy networking (`zcrx`)** | Receive networking traffic with no kernel-to-userspace copy. Supports per-instance multiple ifqs, dmabuf integration for GPU/accelerator paths, and large RX buffers (>4 KB). Combined with `SEND_ZC` and `RECV_ZC` operations the full RX/TX path can avoid copies. |
+| **New operations** | `IORING_OP_GETSOCKNAME` / `IORING_OP_GETPEERNAME` (socket name queries). Vectorised send. Multishot recv with length/size caps. Pipe creation. TX timestamping. Multishot `uring_cmd`. |
+| **Restrictions and filtering** | The existing `IORING_REGISTER_RESTRICTIONS` model is extended with cBPF and task-inherited filters, allowing per-task io_uring restrictions that propagate across `fork`. Combined with the access-check pipeline this gives sandbox tooling fine-grained control over what a worker may submit. |
+| **Polling improvements** | Mixed polling modes — non-iopoll commands on a ring set up with `IORING_SETUP_IOPOLL`. Non-blocking timestamp updates for write completions. Request poisoning for reliable cancellation under contention. |
+| **Capability discovery** | A query interface lets userspace ask the running kernel "which io_uring features and operations do you support?" without trial-and-error syscalls. Important for runtimes that want to portably target multiple kernel generations. |
+| **Subsystem integration** | FUSE servers can speak io_uring directly. ublk (userspace block driver) supports io_uring zero-copy. `IORING_OP_EPOLL_CTL` and reading epoll events through io_uring. PI/integrity metadata (`io_uring` integrity interface) for storage stacks that need end-to-end checksums. |
+
+These are all upstream Linux features that Peios inherits unchanged — the access-check and registry-knob model documented above continues to apply uniformly. None of them changes the threat model: every io_uring operation, no matter how new, still routes through the same AccessCheck the equivalent direct syscall would.
+
 ## When to use io_uring
 
 io_uring is the right choice when:

@@ -25,6 +25,7 @@ These files exist in every cgroup, regardless of which controllers are enabled.
 | `cgroup.subtree_control` | RW | Space-separated list of controllers enabled for children. Writes use `+name` / `-name` syntax. |
 | `cgroup.events` | RO | Key-value file with event flags. `populated 0/1` indicates whether the cgroup or any descendant contains processes. `frozen 0/1` indicates the cgroup's freeze state. Userspace tools `inotify`-watch this file for state changes. |
 | `cgroup.stat` | RO | `nr_descendants` and `nr_dying_descendants` — counts of child cgroups. |
+| `cgroup.stat.local` | RO | Per-cgroup local time accounting that excludes descendants — useful for distinguishing time spent directly in this cgroup's processes from time spent in children. |
 | `cgroup.freeze` | RW | Write `1` to freeze all processes in this cgroup; `0` to thaw. The frozen state is reflected in `cgroup.events`. |
 | `cgroup.kill` | WO | Write `1` to send `SIGKILL` to every process in this cgroup atomically. |
 | `cgroup.max.depth` | RW | Per-subtree override of maximum tree depth from this cgroup downward. Default inherited from `\System\Cgroups\DefaultMaxDepth`. Writing `max` removes the per-subtree override. |
@@ -71,7 +72,8 @@ Manages memory limits, soft targets, swap, and accounting. See also [Memory mana
 | `memory.swap.high` | Swap soft target — throttle when exceeded. |
 | `memory.zswap.max` | Maximum zswap (compressed swap) usage. |
 | `memory.oom.group` | Write `1` to make this cgroup an OOM-kill unit — the kernel kills every process in the cgroup together when OOM-killing, rather than picking individual victims. Useful for workloads where killing one member of a group makes the rest useless. |
-| `memory.reclaim` | Trigger immediate reclaim. Write a number of bytes to attempt to reclaim. |
+| `memory.reclaim` | Trigger immediate reclaim. Write a number of bytes to attempt to reclaim. Accepts a `swappiness=` argument to override the cgroup's swappiness for this reclaim pass, and supports the multi-generational LRU (`lru_gen`) when enabled. |
+| `memory.max` (non-blocking) | The `nowait` option to a `memory.max` write makes the limit change return immediately rather than waiting for reclaim to bring usage below the new limit. Useful for orchestrators that want to apply a tighter limit to many cgroups in sequence without each write blocking on reclaim. |
 
 ### Counter and event files
 
@@ -197,6 +199,22 @@ Bounds RDMA resources (verbs objects, queue pairs) per cgroup. Applies only to I
 
 The list of devices is determined by which RDMA hardware is present; tooling can query supported device names from the kernel.
 
+## dmem controller
+
+Bounds **device memory** — the memory on a GPU or accelerator itself (VRAM, HBM), not host RAM mapped into the device. Applies only to systems with GPU or accelerator drivers that opt into dmem reporting.
+
+| File | Description |
+|---|---|
+| `dmem.max` | Per-device hard limit. Format: one line per device, `<device_name> <bytes>`. Allocations beyond the limit fail with `ENOMEM` returned to the driver. |
+| `dmem.min` | Per-device hard minimum reserved for this cgroup. Counts against parent's budget. |
+| `dmem.low` | Per-device soft protection — best-effort, reclaimable under sibling pressure. |
+| `dmem.current` | Current usage per device. |
+| `dmem.events` | Per-device event counters: `max` increments when a device allocation was denied due to the limit. |
+
+The set of named devices depends on which drivers have registered them. An empty set is normal on systems without GPU or accelerator hardware exposing dmem.
+
+The controller is mostly relevant in multi-tenant GPU scenarios — containers or services sharing a GPU need device-memory bounds the same way they need host-RAM bounds. Without `dmem`, one cgroup's device-memory exhaustion takes down every other cgroup's GPU work.
+
 ## misc controller
 
 Generic scalar resource limiter — drivers register named scalar resources, and the controller bounds per-cgroup consumption of each. Used by drivers that need per-cgroup quotas for resources outside the standard controller set (e.g., NVIDIA's confidential-computing ASID controller).
@@ -223,6 +241,7 @@ The set of controllers available in any cgroup is in `cgroup.controllers`. The s
 | `cpuset` | CPU and NUMA pinning |
 | `hugetlb` | Hugetlb-backed memory limits |
 | `rdma` | RDMA resource limits |
+| `dmem` | Device memory (GPU/accelerator VRAM) limits |
 | `misc` | Generic scalar resources (driver-registered) |
 
 The freezer and PSI mechanisms are not controllers in this sense — they apply to all cgroups regardless of `subtree_control`.

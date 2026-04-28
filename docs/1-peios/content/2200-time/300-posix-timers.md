@@ -84,6 +84,10 @@ void timer_handler(int sig, siginfo_t *info, void *ucontext) {
 }
 ```
 
+## Timer ID assignment and checkpoint/restore
+
+Each timer receives an integer ID at creation time, returned to the caller and used by all subsequent `timer_settime` / `timer_gettime` / `timer_delete` calls. The kernel's allocator for these IDs is checkpoint/restore aware: when a process is restored from a checkpoint, the kernel attempts to reassign the same timer IDs the process held at checkpoint time so the process's existing references remain valid. Without that property, restoring a checkpointed process meant any code holding a `timer_t` from before checkpoint had a stale handle — useless in practice. Restored processes get back the timer IDs they had before, transparently.
+
 ## Resource limits
 
 Each timer consumes a small amount of kernel memory. The number of timers a process can have outstanding is bounded by `RLIMIT_SIGPENDING` (which also bounds queued real-time signals). A process that hits the limit gets `EAGAIN` from `timer_create` and must delete an existing timer before creating a new one.

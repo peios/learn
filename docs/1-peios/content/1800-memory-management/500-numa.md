@@ -105,6 +105,10 @@ A few patterns are worth knowing:
 
 **Disable autobalancing for tuned workloads.** A process that has manually placed its memory wants to stop the kernel from second-guessing it. Either set policies on every region (which suppresses balancing), or admin-disable autobalancing globally if the whole system is tuned.
 
+## Per-node proactive reclaim
+
+Beyond per-cgroup memory reclaim (covered in the resource-control area), the kernel exposes **per-NUMA-node proactive reclaim**. A node-level write to the appropriate sysfs control under `/sys/devices/system/node/node<N>/` triggers reclaim for that node's pages independently of cgroup membership. This is useful for hosts running heterogeneous workloads where memory pressure is concentrated on one node and the operator wants to push pages out of that node's cache without forcing reclaim everywhere. Gated by the same privilege model as system-wide proactive reclaim — generally `SeIncreaseQuotaPrivilege` or equivalent administrative authority.
+
 ## Hugepages and NUMA
 
 Hugepage pools are per-node — `/sys/devices/system/node/node<N>/hugepages/` controls each node's reservation. A workload using `MAP_HUGETLB` allocates from the local node's pool by default; `mbind`-ing the mapping with `MPOL_BIND` to a specific node draws from that node's pool. Imbalanced pools (lots of huge pages on one node, none on another) can cause hugepage allocations to fail even when total system free memory is plentiful.

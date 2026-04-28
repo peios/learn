@@ -57,6 +57,10 @@ The interesting question is what survives at the *security* level:
 
 There is no `setuid` bit on Peios. Exec cannot change which user a process is running as. The only paths to a different identity are explicit token assignment by a privileged supervisor (the way peinit assigns service tokens) and explicit impersonation by code that already holds an impersonation token.
 
+### `AT_EXECVE_CHECK`
+
+`execveat()` accepts an `AT_EXECVE_CHECK` flag that performs every authorisation step of an exec — file-resolution, mitigation policy, integrity-label evaluation, PIP re-computation, executable-policy securebits — without actually loading the new image. The kernel returns success if the exec *would* have succeeded and an errno otherwise. Use cases are policy-checking interpreters and supervisors that want to validate "could this binary be exec'd here?" before committing to side effects (writing audit, dropping caches, releasing locks). On Peios the same access checks run for an `AT_EXECVE_CHECK` call as for a real exec, so a successful check is a faithful predicate for a subsequent exec under the same token.
+
 ## How services receive their identity
 
 Because exec preserves identity, the only way for a service to start under a different token than its parent is for the parent to install one before calling exec. The pattern peinit follows is:

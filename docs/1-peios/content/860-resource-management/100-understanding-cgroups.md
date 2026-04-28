@@ -162,6 +162,16 @@ The default is **failure-only**. Successful cgroup creations and limit changes d
 
 Resource limit changes that succeed are visible in the **configuration audit** stream (changes to `cpu.max`, `memory.max`, etc. are config writes), not in the access-decision stream. This is the same separation as registry value changes vs registry access denials.
 
+## Substrate scalability
+
+The cgroup machinery has had several scalability improvements upstream that Peios inherits transparently. They are not user-facing — application or admin behaviour is unchanged — but they affect performance characteristics on hosts running thousands of cgroups:
+
+- **Separate rstat trees per controller.** Statistics aggregation (`cgroup.stat`, `memory.stat`, `cpu.stat`, etc.) used to walk a single shared tree. Each controller now maintains its own rstat tree, so stats reads on one controller no longer contend with another's updates. Operators with monitoring loops that scrape per-cgroup stats see lower overhead at scale.
+- **Per-threadgroup rwsem.** The cgroup subsystem previously held a system-wide `percpu_rwsem` for many operations, which became a contention point on hosts with many concurrent cgroup creations or process migrations. The lock is now per-threadgroup, so unrelated workloads no longer block each other on cgroup operations.
+- **`fanotify` user-namespace awareness for cgroup events.** Container runtimes that watch cgroup events via `fanotify` get correct per-namespace event delivery, with events scoped to the user namespace the watcher belongs to. Peios does not support user namespaces, so this is dormant on Peios hosts; the substrate behaviour is preserved for any tooling that probes for it.
+
+These are kernel-implementation details — Peios documents them only to set the expectation that cgroup operations scale to large fleets without operator-side workarounds.
+
 ## What cgroups are not
 
 - **cgroups are not identity.** They have SDs (because they're securable nodes in a pseudo-filesystem), but no SIDs. A process is not "tagged" with its cgroup membership in any way that participates in AccessCheck for other objects.

@@ -62,6 +62,10 @@ In practice, applications that use `mseal()` always pass `MAP_SEALABLE` at mmap 
 
 **Sealing the stack.** Some hardened runtimes seal the stack mapping itself (not its contents — the stack is necessarily writable) to prevent stack-pivoting exploits that try to `mprotect` the stack to executable.
 
+## Sealing system mappings
+
+The seal mechanism extends to **kernel-mapped regions** within a process's address space — the vDSO, the vvar page, the special mappings the kernel installs for vsyscall and similar — via an opt-in path that lets the loader request system mappings be sealed at process startup. A process whose system mappings are sealed cannot have them remapped, reprotected, or unmapped by any subsequent code in the process, closing a class of exploit techniques that rely on relocating or rewriting these special mappings. The protection is opt-in because some debuggers and emulators legitimately need to manipulate system mappings; production binaries on Peios opt in by default through the loader.
+
 ## Compatibility
 
 `mseal()` is a kernel 6.10+ feature on Linux. Older kernels return `ENOSYS`; applications that want to be portable check the syscall return and fall back to leaving the region un-sealed. This is acceptable defence-in-depth — sealing is additive; nothing breaks if it's not present.

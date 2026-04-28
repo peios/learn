@@ -127,7 +127,7 @@ Standard Peios server builds **do not honour these flags**. The kernel rejects i
 | Field | Notes |
 |---|---|
 | Signature blob | PKCS#7 (CMS), appended after module image |
-| Hash algorithm | SHA-256, SHA-384, or SHA-512 (declared in PKCS#7 header) |
+| Hash algorithm | SHA-256, SHA-384, or SHA-512 (declared in PKCS#7 header). SHA-1 is **not** accepted — the legacy algorithm has been removed from the kernel's supported set, and signatures using SHA-1 are rejected as if unsigned. |
 | Trailer marker | `~Module signature appended~\n` literal string |
 | Signature length | 4-byte little-endian, immediately before trailer marker |
 

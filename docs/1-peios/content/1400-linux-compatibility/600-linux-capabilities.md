@@ -122,16 +122,20 @@ Linux **securebits** are a small set of per-process flags that modify capability
 | `SECBIT_NO_SETUID_FIXUP` | Disable the kernel-level setuid → cap-set adjustment logic. |
 | `SECBIT_KEEP_CAPS` | Preserve the permitted cap set across `setuid()` to a non-zero UID. |
 | `SECBIT_NO_CAP_AMBIENT_RAISE` | Lock out the ambient-capability raise operation for this process. |
+| `SECBIT_EXEC_RESTRICT_FILE` | Refuse `execve()` of files whose mount or filesystem context does not opt into execution. Script interpreters can set this to ensure they only run scripts from filesystems explicitly marked executable. |
+| `SECBIT_EXEC_DENY_INTERACTIVE` | Refuse `execve()` of files marked as interactive — used by automation contexts to prevent inadvertently launching shells or REPLs. |
 
 Each securebit also has a `_LOCKED` companion that, once set, prevents the bit from being cleared.
 
-On Peios, all four bits are retained as state at the credential level — programs can read them and, where Linux would allow, set them — but their substantive effects are largely moot because the underlying behaviours they modify are themselves moot:
+On Peios, the four legacy bits are retained as state at the credential level — programs can read them and, where Linux would allow, set them — but their substantive effects are largely moot because the underlying behaviours they modify are themselves moot:
 
 - `setuid()` is a silent no-op without `SeAssignPrimaryTokenPrivilege`, so the setuid → cap-set fixup logic that `SECBIT_NO_SETUID_FIXUP` and `SECBIT_KEEP_CAPS` modify is itself dormant.
 - "Root grants all caps" doesn't apply on Peios — caps come from the switchboard, not from `cred->uid == 0` — so `SECBIT_NOROOT` has nothing to disable.
 - `SECBIT_NO_CAP_AMBIENT_RAISE` continues to lock ambient raises (subject to the DAC-bypass denial), but ambient cap state is itself observational.
 
-Defensive code that sets securebits continues to work and is harmless. Code that depends on securebits to enforce a security boundary should be ported to use Privilege adjustments on the token instead.
+The two execution-policy bits (`SECBIT_EXEC_RESTRICT_FILE`, `SECBIT_EXEC_DENY_INTERACTIVE`) are honoured substantively. They constrain `execve` independently of the capability fixups above, so a process that sets them gets the policy they describe even on Peios where the legacy securebits do nothing.
+
+Defensive code that sets the legacy securebits continues to work and is harmless. Code that depends on the legacy securebits to enforce a security boundary should be ported to use Privilege adjustments on the token instead.
 
 ## `capset()` / `capget()`
 

@@ -77,8 +77,15 @@ Once a parent has a pidfd, it can:
 - `waitid(P_PIDFD, pidfd, ...)` — wait for the process to exit, race-free.
 - `pidfd_send_signal(pidfd, sig, ...)` — signal it without risking PID reuse confusion.
 - Poll the pidfd with `epoll`/`poll` and be woken when the process exits.
+- `ioctl(pidfd, PIDFD_GET_INFO, ...)` — query structured info about the process: PID, TGID, ns-relative PIDs, executable path, credentials. With the `PIDFD_INFO_EXIT` extension the result also includes the exit status and the signal that caused termination (including the coredump signal if applicable), readable after the process has been reaped.
 
 Pidfds are the recommended interface for any code that observes another process. Operations through a pidfd carry their normal access checks against the target's SD; the pidfd itself just removes the PID-reuse race.
+
+A few additional pidfd features are exposed by the substrate and pass through unchanged on Peios:
+
+- **`PIDFD_SELF`** — a sentinel value usable in place of a pidfd to mean "the calling process." Saves the syscall cost of opening a pidfd to oneself for operations that accept either a pidfd or `PIDFD_SELF`.
+- **Persistent pidfd info.** A pidfd retains the process's identity and exit information after the process is reaped. Code that holds a pidfd can still query `PIDFD_GET_INFO` and read pidfs xattrs to learn what the process was, when it exited, and how — useful for diagnostic tools that may not reach the pidfd until after the process is gone.
+- **Pidfs file handles.** Pidfds are first-class objects in the kernel's pidfs filesystem. They support `name_to_handle_at()` / `open_by_handle_at()` so code can convert a pidfd to a portable handle (e.g. for passing across a checkpoint/restore boundary) and re-open it later. They can also be bind-mounted to give them a stable path in the namespace, useful for tooling that wants a long-lived reference to a particular process beyond the lifetime of the originating fd.
 
 ## Task states
 

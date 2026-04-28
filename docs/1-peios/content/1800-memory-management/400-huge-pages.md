@@ -65,6 +65,14 @@ A process can express preferences per-region:
 
 The hints survive `fork` and `exec`. A process that has set `MADV_HUGEPAGE` on its main heap can be confident it'll persist into children and through `prctl(PR_SET_MEMORY_MERGE)`-style transitions.
 
+`prctl(PR_SET_THP_DISABLE)` lets a process opt out of THP entirely, with two modes: the original "no THP at all" and a newer mode where THP is provided only for regions explicitly marked `MADV_HUGEPAGE`. The latter mode is useful for runtimes that want huge pages for their large arenas but not for incidental allocations the runtime did not control.
+
+## Multi-size THP (mTHP)
+
+Beyond the original 2 MB-only THP path, the kernel supports **multi-size transparent huge pages** — using PMD-sized 2 MB pages and smaller order huge pages (e.g. 64 KB) on architectures where they are available. Each order is independently controllable via `/sys/kernel/mm/transparent_hugepage/hugepages-<size>/enabled`, and per-order swap counters are exposed for observability. A workload that benefits from coalescing small allocations but for which 2 MB is too coarse can opt into a mid-size order without paying the 2 MB internal-fragmentation cost.
+
+A persistent **huge zero folio** is also available — a single shared physical zero page at huge-page granularity that satisfies COW reads without allocating real pages. This reduces memory pressure for sparse-mapped workloads.
+
 ## hugetlbfs — explicit hugepage memory
 
 Some workloads need guarantees, not opportunistic promotion. **hugetlbfs** is a special filesystem that exists solely to back huge-page-mapped memory. Files in hugetlbfs are always hugepage-backed; mapping them gives the application explicit huge-page memory.
@@ -115,7 +123,8 @@ Pool size is registry-driven, applied at boot via ksyncd:
 |---|---|
 | `nr_hugepages` | Number of standard-size huge pages to reserve. |
 | `nr_hugepages_<size>` | Number of huge pages of a specific size (e.g. `nr_hugepages_1048576kB` for 1 GB pages). |
-| `nr_overcommit_hugepages` | Soft cap allowing additional huge pages to be allocated dynamically beyond the reserved pool. Best-effort. |
+| `nr_overcommit_hugepages` | Soft cap allowing additional huge pages to be allocated dynamically beyond the reserved pool. Best-effort. Gigantic (1 GB) pages also support overcommit, allowing flexible runtime allocation when the reserved pool is exhausted. |
+| `hugetlb_movable_gigantic_pages` | Allow gigantic huge pages to be allocated from movable memory zones, trading some allocation strictness for the ability to reclaim and migrate them under memory pressure. |
 
 NUMA-aware allocation: each NUMA node can have its own pool, controlled per-node via `/sys/devices/system/node/node<N>/hugepages/`. Workloads with strong NUMA affinity (databases pinned to a single socket) want their pool sized per-node accordingly.
 
@@ -132,6 +141,10 @@ This means a workload using hugetlb cannot accidentally over-promise huge pages 
 The `hugetlb` cgroup controller bounds how much hugetlb memory a cgroup may reserve, per page size. This is part of the cgroup memory model and is documented fully in the **Resource Control** category alongside the rest of cgroup management. From this page's perspective, the cgroup limit is one of several things that can cause an `mmap(MAP_HUGETLB)` to fail.
 
 THP is *not* gated by cgroup hugetlb limits — THP draws from the general allocator and is bounded by overall memory limits, not the hugetlb pool.
+
+## Device memory
+
+THP also applies to device-private memory (GPU and accelerator memory mapped into a process's address space). The kernel can transparently promote device-private mappings to huge pages where the underlying device exposes a compatible large-page format. Applications typically don't see this — driver allocators hide the detail — but it shows up in observability under the same THP statistics paths.
 
 ## Choosing between THP and hugetlbfs
 

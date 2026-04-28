@@ -111,6 +111,14 @@ When the last reference is released, the namespace is destroyed and its SID beco
 
 Initial namespaces (the boot-time host namespaces) are always referenced by at least one host process during normal operation, so they persist for the boot's lifetime.
 
+## Namespace handles and file handles
+
+A namespace handle is a file descriptor obtained from the namespace's reference file at `/proc/<pid>/ns/<type>` (or, where mounted, an entry in the unified namespace tree). Holding the fd keeps the namespace alive and lets the holder pass it to `setns()`, query it with `ioctl_ns()`, or bind-mount it for a stable path.
+
+The substrate's filesystem-handle API works on namespaces too: `name_to_handle_at()` can convert a namespace fd to an opaque, portable handle, and `open_by_handle_at()` re-opens the namespace from that handle later. The intended use is checkpoint/restore tooling that needs to record a namespace identity and re-attach to it after the recording process is gone, without keeping the original fd open. The handle remains valid only as long as the namespace itself is alive (a handle to a destroyed namespace is unresolvable). Standard AccessCheck on the namespace SID gates re-opening — a handle does not bypass the access decision, only the path-resolution step.
+
+Listing the namespaces present on the system is available via `listns()`, which enumerates kernel namespace objects subject to the caller's view. A caller sees a namespace if it is a member of the namespace or if it holds a handle that references it; namespaces wholly outside the caller's view are not enumerated.
+
 ## Initial namespaces
 
 At boot, the kernel creates one namespace of each type — the **initial namespaces** (commonly called the host namespaces). All processes start as members of these unless explicitly placed elsewhere.

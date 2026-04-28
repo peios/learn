@@ -59,6 +59,8 @@ The kernel maps a small read-only page into every process at a known address —
 
 The vDSO honours the **timer-precision policy** described below — when an unprivileged process is configured for coarsened timers, the vDSO returns coarsened values. There is no escape route around the policy through the vDSO.
 
+The vDSO also accelerates **auxiliary timekeeping frameworks** — secondary clock domains the kernel maintains beyond the standard `CLOCK_REALTIME` / `CLOCK_MONOTONIC` family. Examples include kernels that expose a synthesised "PTP-disciplined" clock or workload-specific synthetic clocks for emulation environments. Where such a framework exists, its corresponding clock IDs are reachable through `clock_gettime` and the vDSO at the same low overhead as the standard clocks. Applications that don't use auxiliary clocks see no change.
+
 ## Timer precision policy
 
 Fine-grained timer precision (sub-microsecond) is useful for legitimate code: profilers, latency measurement, packet timestamping, real-time signal processing. It is also the foundational requirement for an entire class of attacks — Spectre, Meltdown, and the broader transient-execution family all depend on the attacker being able to time cache hits versus misses, which differ by tens to hundreds of nanoseconds. Without nanosecond timer precision, the practical attack collapses.

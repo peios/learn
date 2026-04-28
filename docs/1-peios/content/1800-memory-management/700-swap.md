@@ -49,7 +49,7 @@ Peios recognises both forms of swap target:
 | **Swap partition** | A whole block device or partition formatted with `mkswap`, then activated with `swapon`. Faster than swap files (no filesystem layer), at the cost of pre-allocated capacity. |
 | **Swap file** | A regular file on a filesystem, formatted with `mkswap`, then activated. Slightly slower (extra filesystem indirection), but resizable and easier to add post-install. |
 
-Multiple swap targets can be active simultaneously, each with a configurable **priority** (higher numbers preferred). A common pattern is a high-priority small swap file on fast storage (NVMe) backed up by a lower-priority large swap partition on slower storage; the kernel prefers the fast target until it fills, then falls back.
+Multiple swap targets can be active simultaneously, each with a configurable **priority** (higher numbers preferred). A common pattern is a high-priority small swap file on fast storage (NVMe) backed up by a lower-priority large swap partition on slower storage; the kernel prefers the fast target until it fills, then falls back. Targets at the same priority are selected round-robin by default — the kernel cycles between equal-priority devices instead of saturating one before touching the next, which spreads write wear across multiple devices when several are configured at the same tier.
 
 Per-target configuration lives in the registry and is read by peinit at boot:
 
@@ -109,6 +109,10 @@ A workload running in a cgroup with `memory.swap.max = 0` cannot swap at all —
 The kernel supports swapping to NFS-mounted files, but only with significant operational caveats: the remote filesystem must be available at all times, network latency directly affects swap latency, and connection failures cause severe stalls. Peios honours the capability for compatibility but the default-image policy is to refuse `swapon` on network-backed paths unless the calling process holds `SeTcbPrivilege` in addition to `SeCreatePagefilePrivilege`. This is a compatibility deference; the recommendation is to never swap over NFS.
 
 Other remote-swap configurations (iSCSI, SMB) follow the same logic: privileged-only by default policy because the failure modes are too consequential for routine setup.
+
+## Swap table
+
+The kernel's internal representation of swap was historically a "swap cache" — a parallel structure that tracked which pages had been swapped out and where. Modern kernels replace this with a unified **swap table**, a single data structure that supersedes the swap cache backend. The change is transparent to applications but improves cache and lookup behaviour: per-page swap operations are faster, NUMA-aware swap placement is cheaper, and the per-page bookkeeping cost on systems with large swap is materially lower (typical workloads see single-digit percent improvement; swap-heavy workloads see more). Peios runs whatever swap-table generation the underlying kernel ships; no admin or application action is needed to opt in.
 
 ## Swap and OOM
 
