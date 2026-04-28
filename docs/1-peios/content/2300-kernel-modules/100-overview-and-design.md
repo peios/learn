@@ -74,8 +74,13 @@ Each of these is configurable for environments with different needs (development
 | Auto-loading policy, blacklist, post-boot lockdown | [Auto-loading and lockdown](auto-loading-and-lockdown) |
 | Taint bits, observability, audit | [Tainting and observability](tainting-and-observability) |
 
+## The other extension mechanism
+
+Modules are how new native code enters the kernel. Peios's other kernel extension mechanism is **eBPF** — verified bytecode injected at specific hook points throughout the kernel, JIT-compiled and gated by the verifier rather than by signing. eBPF is the right surface for programmable observability, policy hooks, networking dataplanes, and pluggable scheduling; modules are the right surface for new device support, new filesystems, and new protocols. See [eBPF — Overview and Design](../ebpf/overview-and-design).
+
 ## See also
 
-- [SeLoadDriverPrivilege](../privileges/load-driver) — the privilege that gates module loading and unloading.
+- [SeLoadDriverPrivilege](../privileges/load-driver) — the privilege that gates module loading and unloading. Also gates eBPF program loading and attachment for most attach points.
 - [SeTcbPrivilege](../privileges/tcb) — required to flip the post-boot lockdown ratchet.
 - [Linux compatibility](../linux-compatibility) — how Linux module ABI is preserved.
+- [eBPF](../ebpf/overview-and-design) — the programmable extension mechanism.
