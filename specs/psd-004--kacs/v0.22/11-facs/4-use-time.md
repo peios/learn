@@ -26,12 +26,30 @@ Every operation on an open fd is a mask check against the granted mask, with one
 
 | Operation | Required right |
 |---|---|
-| fstat | FILE_READ_ATTRIBUTES |
+| stat / lstat / path statx | FILE_READ_ATTRIBUTES |
+| fstat / fd statx | FILE_READ_ATTRIBUTES |
+| fstatfs / fstatfs64 | FILE_READ_ATTRIBUTES |
+| path file_getattr | FILE_READ_ATTRIBUTES |
+| fd file_getattr | FILE_READ_ATTRIBUTES |
+| path file_setattr | FILE_WRITE_ATTRIBUTES |
+| fd file_setattr | FILE_WRITE_ATTRIBUTES |
+| truncate (pathname) | FILE_WRITE_DATA |
+| chmod / fchmodat | WRITE_DAC |
 | fchmod | WRITE_DAC |
+| chown / lchown / fchownat | WRITE_OWNER |
 | fchown | WRITE_OWNER |
+| utimensat / utimes | FILE_WRITE_ATTRIBUTES |
 | futimens | FILE_WRITE_ATTRIBUTES |
+| getxattr / lgetxattr | FILE_READ_EA |
 | fgetxattr | FILE_READ_EA |
+| setxattr / lsetxattr / removexattr | FILE_WRITE_EA |
 | fsetxattr / fremovexattr | FILE_WRITE_EA |
+| listxattr / llistxattr | none |
+| flistxattr | none |
+| access / faccessat F_OK | FILE_READ_ATTRIBUTES |
+| access / faccessat R_OK | FILE_READ_DATA |
+| access / faccessat W_OK | FILE_WRITE_DATA |
+| access / faccessat X_OK | FILE_EXECUTE |
 
 SD xattr reads and writes (`security.peios.sd`, `system.ntfs_security`) MUST be denied unconditionally via the xattr hooks. All SD access MUST go through `kacs_get_sd` / `kacs_set_sd`. POSIX ACL xattr writes (`system.posix_acl_access`, `system.posix_acl_default`) MUST also be denied unconditionally.
 

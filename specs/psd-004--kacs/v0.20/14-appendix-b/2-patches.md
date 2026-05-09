@@ -32,11 +32,11 @@ KACS requires kernel patches beyond the LSM module itself. All patches are condi
 
 ## Hook coordination
 
-Patches 7, 9, 10, and 11 add file-based hooks that fire while `struct file *` is available. The subsequent dentry-based hook detects that the file hook already decided and becomes a no-op. Coordination uses a per-task marker:
+Patches 7, 9, 10, and 11 add file-based hooks that fire while `struct file *` is available. The fd `file_getattr` / `file_setattr` patch points behave the same way. The subsequent dentry-based hook detects that the file hook already decided and becomes a no-op. Coordination uses a per-task marker:
 
 | Field | Description |
 |---|---|
 | `inode` | Which object was decided. |
-| `op_class` | SETATTR, GETATTR, SETXATTR, or GETXATTR. |
+| `op_class` | SETATTR, GETATTR, FILEATTR_SET, FILEATTR_GET, SETXATTR, or GETXATTR. |
 
 The marker is scoped to exactly one syscall invocation, one inode, one operation class. It is cleared unconditionally at the end of each dentry-based hook.

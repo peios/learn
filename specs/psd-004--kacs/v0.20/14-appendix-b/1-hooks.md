@@ -54,7 +54,10 @@ This is the definitive reference mapping file operations to LSM hooks and requir
 
 | Operation | Hook | Right(s) |
 |---|---|---|
-| `fstat()` | Patch: `security_file_getattr` | FILE_READ_ATTRIBUTES |
+| `fstat()` / fd `statx()` | Patch: fd metadata helper before `vfs_getattr` | FILE_READ_ATTRIBUTES |
+| `fstatfs()` / `fstatfs64()` | Patch: fd metadata helper before `vfs_statfs` | FILE_READ_ATTRIBUTES |
+| fd `file_getattr` | Patch: fd metadata helper before `vfs_fileattr_get` | FILE_READ_ATTRIBUTES |
+| fd `file_setattr` | Patch: fd metadata helper before `vfs_fileattr_set` | FILE_WRITE_ATTRIBUTES |
 | `fchmod()` | Patch: `security_file_setattr` | WRITE_DAC |
 | `fchown()` | Patch: `security_file_setattr` | WRITE_OWNER |
 | `futimens()` | Patch: `security_file_setattr` | FILE_WRITE_ATTRIBUTES |
@@ -67,12 +70,15 @@ This is the definitive reference mapping file operations to LSM hooks and requir
 | Operation | Hook | Right(s) |
 |---|---|---|
 | `stat()` / `lstat()` | `security_inode_getattr` | FILE_READ_ATTRIBUTES |
+| path `file_getattr` | `security_inode_file_getattr` | FILE_READ_ATTRIBUTES |
+| path `file_setattr` | `security_inode_file_setattr` | FILE_WRITE_ATTRIBUTES |
 | `chmod()` / `fchmodat()` | `security_inode_setattr` | WRITE_DAC |
 | `chown()` / `lchown()` | `security_inode_setattr` | WRITE_OWNER |
 | `utimensat()` / `utimes()` | `security_inode_setattr` | FILE_WRITE_ATTRIBUTES |
 | `getxattr()` / `lgetxattr()` | `security_inode_getxattr` | FILE_READ_EA (SD xattr: deny) |
 | `setxattr()` / `lsetxattr()` | `security_inode_setxattr` | FILE_WRITE_EA (SD/POSIX ACL: deny) |
 | `removexattr()` | `security_inode_removexattr` | FILE_WRITE_EA (SD: deny) |
+| `listxattr()` / `llistxattr()` | `security_inode_listxattr` | Unconditional |
 | `access()` / `faccessat()` | Patch + `security_inode_permission` | Live AccessCheck: R_OK → FILE_READ_DATA, W_OK → FILE_WRITE_DATA, X_OK → FILE_EXECUTE. F_OK (existence) → FILE_READ_ATTRIBUTES. Uses the effective token (not real credential). |
 
 ## Link operations (live)
