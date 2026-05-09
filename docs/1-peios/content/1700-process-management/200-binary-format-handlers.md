@@ -32,7 +32,12 @@ Each handler is a single key under `\System\BinaryFormats\`. The key name identi
 | `Priority` | `REG_DWORD` | Lower values match first. Used to resolve overlap between handlers. |
 | `Description` | `REG_SZ` | Human-readable description for tooling. Has no behavioural effect. |
 
-There is intentionally no `C` (calculate-credentials-from-interpreter) flag. Peios has no `setuid` bit, and exec never changes a process's identity, so there is nothing for the flag to do.
+There is intentionally no `C` (calculate-credentials-from-interpreter) flag.
+Peios has no interpreter-driven authority change at exec: token identity does
+not change unless a privileged TCB path performs a real swap. Exec-time
+setuid/setgid compatibility may rewrite Linux-visible UID/GID slots, but that
+does not create a second interpreter-credential calculation path for this flag
+to model.
 
 ## Conflict resolution
 

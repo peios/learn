@@ -55,7 +55,12 @@ The interesting question is what survives at the *security* level:
 - **Mitigation flags persist.** Every mitigation set on the parent — including ones added between fork and exec — survives unchanged. There is no way for a binary to opt out of mitigations its caller has already applied.
 - **Integrity may be lowered, never raised.** If the token carries the `NEW_PROCESS_MIN` policy and the executable file's integrity label is lower than the token's integrity level, the kernel replaces the token with a fresh copy at the file's integrity level. This is the mechanism behind running medium-integrity browsers from a high-integrity desktop session.
 
-There is no `setuid` bit on Peios. Exec cannot change which user a process is running as. The only paths to a different identity are explicit token assignment by a privileged supervisor (the way peinit assigns service tokens) and explicit impersonation by code that already holds an impersonation token.
+The `setuid` and `setgid` bits are not authority-bearing on Peios. Exec cannot
+change which token a process is running under unless a TCB path with
+`SeAssignPrimaryTokenPrivilege` performs a real identity swap. Without that
+privilege, exec-time setuid/setgid handling is compatibility-only: Linux
+credential slots may change cosmetically, but the token and actual authority
+do not.
 
 ### `AT_EXECVE_CHECK`
 

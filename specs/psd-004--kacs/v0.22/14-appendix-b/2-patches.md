@@ -8,10 +8,10 @@ KACS requires kernel patches beyond the LSM module itself. All patches are condi
 
 | # | Site | Purpose |
 |---|---|---|
-| 1 | `ksys_pwrite64()` | Deny positioned write on append-only fd. |
-| 2 | `ksys_pwritev()` / `pwritev2()` | Deny positioned/vectored write + RWF_NOAPPEND on append-only fd. |
-| 3 | `io_write()` in io_uring | Deny positioned write via io_uring on append-only fd. |
-| 4 | `aio_write()` in fs/aio.c | Deny positioned write via AIO on append-only fd. |
+| 1 | `ksys_pwrite64()` | Classify effective append intent; deny positioned writes on append-only fd. |
+| 2 | `ksys_pwritev()` / `pwritev2()` | Classify explicit offsets, `RWF_APPEND`, and `RWF_NOAPPEND`; deny positioned or no-append writes on append-only fd. |
+| 3 | `io_write()` in io_uring | Classify SQE offsets, `RWF_APPEND`, and `RWF_NOAPPEND`; deny positioned or no-append writes on append-only fd. |
+| 4 | `aio_write()` in fs/aio.c | Classify AIO offsets, `RWF_APPEND`, and `RWF_NOAPPEND`; deny positioned or no-append writes on append-only fd. |
 | 5 | `do_faccessat()` | Skip credential swap to real_cred; use effective token. |
 | 6 | `do_handle_open()` | Gate `open_by_handle_at()` behind SeChangeNotifyPrivilege. |
 | 7 | `fchmod()` / `fchown()` / `futimens()` | New `security_file_setattr` hook with `struct file *`. |

@@ -89,7 +89,13 @@ The uid0 utility is documented in detail on its own page.
 
 State flows from the token into the Linux credential fields, never the reverse:
 
-- `setuid()`, `setgid()`, `setresuid()` and similar calls **succeed cosmetically** — they modify the Linux credential fields the calling process sees — but they do not modify the token. AccessCheck continues to evaluate the original token.
+- `setuid()`, `setgid()`, `setresuid()` and similar syscall-family calls do
+  not flow back into the token. In the common case they are silent no-ops; in
+  the privileged TCB case they route through a real token swap. The
+  token-authority rule is unchanged either way.
+- exec-time `setuid` / `setgid`-bit handling may cosmetically rewrite the
+  Linux-visible UID/GID slots without changing the token. That compatibility
+  write still does not flow into projected `fsuid` / `fsgid`.
 - `AdjustGroups` and other token mutations do not trigger Linux credential recalculation. Projection reflects all groups regardless of enabled/disabled state, computed once at token install time.
 - The Linux DAC layer is neutralised (covered in [Understanding Linux Compatibility](understanding-linux-compatibility)) so that DAC's UID-based decisions cannot interfere with the LSM layer where Peios actually enforces.
 

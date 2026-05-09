@@ -27,11 +27,11 @@ Values are never clamped or silently corrected. The write to the registry succee
 
 ## Bootstrap sequence
 
-1. PKM loads. KMES initialises with compiled-in defaults. Per-CPU boot buffers are created at a compiled-in size (not configurable via the registry). Events begin flowing immediately.
+1. PKM loads. KMES initialises with compiled-in defaults and creates per-CPU ring buffers at the compiled-in default BufferCapacity. These are ordinary consumer-facing KMES ring buffers and receive events immediately.
 
 2. LCS becomes available (first source registers). KMES reads all keys under `Machine\System\KMES\`.
 
-3. If keys exist and are valid, KMES applies them. If BufferCapacity differs from the compiled-in default, KMES creates the consumer-facing ring buffers at the configured size and copies boot buffer events into them. If BufferCapacity matches the default (or the key does not exist), KMES creates the ring buffers at the default size.
+3. If keys exist and are valid, KMES applies them. If BufferCapacity differs from the compiled-in default, KMES performs a normal ring-buffer swap: it creates new per-CPU ring buffers at the configured size, copies surviving events from the existing buffers into them, increments generation, and switches writers to the new buffers. If BufferCapacity matches the default (or the key does not exist), no capacity change is needed and the existing buffers remain in place.
 
 4. KMES arms a persistent subtree watch on `Machine\System\KMES\` via LCS's internal watch mechanism. This is a kernel-internal registration, not a userspace fd-based watch.
 
@@ -49,6 +49,6 @@ Domain policy enforcement via Group Policy at a higher-precedence layer provides
 
 KMES configuration keys are candidates for Superlock protection (a future registry feature that prevents modification outside of Safe or Recovery mode). Event system configuration is critical enough that runtime modification by even a privileged administrator warrants additional gating.
 
-## Boot buffer size
+## Boot-time initial capacity
 
-The boot buffer size is a compiled-in constant, not configurable via the registry. The boot buffer exists only during the window between PKM load and ring buffer creation. Making it configurable would require a mechanism to deliver the value to the kernel before LCS is available, which adds complexity for negligible benefit. The compiled-in size is chosen to be large enough to hold all events generated during a typical boot sequence without loss.
+The capacity of the initial boot-time ring buffers is the compiled-in default BufferCapacity. It is not independently configurable before LCS is available. Making the pre-LCS capacity separately configurable would require a mechanism to deliver the value to the kernel before the registry exists, which adds complexity for negligible benefit. Once LCS is available, BufferCapacity changes are applied through the normal generation-bumping ring-buffer swap protocol.

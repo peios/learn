@@ -127,7 +127,7 @@ Total mapping size: `8192 + (2 × capacity)` bytes.
 | EPERM | Caller does not hold SeAuditPrivilege. |
 | EAGAIN | Per-process rate limit exceeded. |
 | EINVAL | Count is 0 or exceeds 256, or failing entry has zero-length event type, or failing entry's event type is not valid UTF-8, or failing entry's payload is invalid msgpack or exceeds MaxNestingDepth. |
-| EFAULT | Entry array, event type, or payload pointer is inaccessible. |
+| EFAULT | `emitted_out`, entry array, event type, or payload pointer is inaccessible. |
 | ENOSPC | Failing entry exceeds MaxEventSize or 50% of per-CPU ring buffer capacity. |
 | ENOMEM | Kernel memory allocation failed. |
 

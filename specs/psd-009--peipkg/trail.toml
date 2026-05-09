@@ -1,0 +1,2 @@
+name = "Peipkg"
+description = "Peios package format and repository protocol — binary distribution primitive, signing, and repo conventions."

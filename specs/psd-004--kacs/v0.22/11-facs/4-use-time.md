@@ -9,9 +9,9 @@ Every operation on an open fd is a mask check against the granted mask, with one
 | Operation | Required right |
 |---|---|
 | Read | FILE_READ_DATA |
-| Sequential write (non-append) | FILE_WRITE_DATA |
-| Sequential write (O_APPEND fd) | FILE_APPEND_DATA or FILE_WRITE_DATA |
-| Positioned write (pwrite family) | FILE_WRITE_DATA (denied on append-only fds) |
+| Sequential write (non-append intent) | FILE_WRITE_DATA |
+| Append-intent write (`O_APPEND` fd or `RWF_APPEND`) | FILE_APPEND_DATA or FILE_WRITE_DATA |
+| Positioned write or no-append override | FILE_WRITE_DATA (denied on append-only fds) |
 | Directory listing (readdir/getdents) | FILE_LIST_DIRECTORY |
 | Truncate (ftruncate) | FILE_WRITE_DATA |
 | mmap PROT_READ | FILE_READ_DATA |
@@ -37,40 +37,94 @@ SD xattr reads and writes (`security.peios.sd`, `system.ntfs_security`) MUST be 
 
 ## Append-only enforcement
 
-A handle with FILE_APPEND_DATA but not FILE_WRITE_DATA allows appends but MUST deny:
+A handle with FILE_APPEND_DATA but not FILE_WRITE_DATA allows only true
+append-intent writes. Append intent means the effective write position is
+forced to EOF by `O_APPEND` or per-I/O `RWF_APPEND`, unless the same operation
+uses `RWF_NOAPPEND` to negate append semantics. It MUST deny:
 
-- Positioned writes (pwrite, pwritev, pwritev2 with RWF_NOAPPEND, io_uring writes with offset, AIO writes with offset).
+- Positioned writes without effective append intent (`pwrite64`, `pwritev`,
+  `pwritev2` with an explicit offset, io_uring writes with an explicit offset,
+  and AIO writes with an offset).
+- Any write using `RWF_NOAPPEND`, including `pwritev2`, io_uring, or AIO,
+  because it can negate append semantics inherited from `O_APPEND`.
 - Shared writable mmap / mprotect upgrades to PROT_WRITE.
 - fallocate mutation modes (PUNCH_HOLE, ZERO_RANGE, COLLAPSE_RANGE, INSERT_RANGE).
 
 ## fcntl enforcement
 
+For `F_SETFL`, KACS evaluates the mutable status flags accepted by Linux:
+`O_APPEND`, `O_NONBLOCK` / `O_NDELAY`, `O_DIRECT`, and `O_NOATIME`.
+
 - F_SETFL clearing O_APPEND: denied if fd has FILE_APPEND_DATA but not FILE_WRITE_DATA.
 - F_SETFL setting O_APPEND: always allowed (privilege reduction).
 - F_SETFL adding O_NOATIME: requires FILE_WRITE_ATTRIBUTES.
+- F_SETFL clearing O_NOATIME: always allowed.
+- F_SETFL changing only O_NONBLOCK, O_NDELAY, or O_DIRECT: no additional KACS right; ordinary Linux validation still applies.
+
+Unmanaged fds are outside the ordinary FACS handle check. Other `fcntl`
+commands that mutate file state are not covered by this subsection and must be
+specified separately before KACS can claim command-specific coverage for them.
 
 ## ioctl enforcement
 
-**Regular files and directories:** known ioctls are classified by required right. Unclassified ioctls fall back to: allowed if the fd has at least one data right (FILE_READ_DATA, FILE_WRITE_DATA, or FILE_APPEND_DATA).
+Known ioctls are classified by required right. Unclassified ioctls fall back
+to: allowed if the fd has at least one data right (FILE_READ_DATA,
+FILE_WRITE_DATA, or FILE_APPEND_DATA).
 
-### Classified file ioctls
+The 32-bit compat aliases for the listed commands use the same required right
+as their native command. This includes `FS_IOC32_GETFLAGS`,
+`FS_IOC32_SETFLAGS`, `FS_IOC32_GETVERSION`, `FS_IOC32_SETVERSION`, and the
+compat `FS_IOC_*_32` preallocation commands.
+
+### FD-local ioctl commands
 
 | ioctl | Required right | Rationale |
 |-------|---------------|-----------|
-| `FIEMAP` | FILE_READ_DATA | Reads extent layout |
+| `FIOCLEX` / `FIONCLEX` | none | Changes close-on-exec state on this fd. |
+| `FIONBIO` | none | Changes nonblocking state; no KACS file right is widened. |
+| `FIOASYNC` | none | Changes async notification state; Linux/fops validation still applies. |
+
+### Common VFS ioctls
+
+| ioctl | Required right | Rationale |
+|-------|---------------|-----------|
+| `FIBMAP` | FILE_READ_DATA | Reads block mapping. |
+| `FIGETBSZ` | FILE_READ_ATTRIBUTES | Reads filesystem block size. |
+| `FIFREEZE` / `FITHAW` | FILE_WRITE_ATTRIBUTES | Mutates filesystem operational state; Linux CAP_SYS_ADMIN checks still apply. |
+| `FITRIM` | FILE_WRITE_ATTRIBUTES | Trims/discards free filesystem ranges; Linux CAP_SYS_ADMIN checks still apply. |
+| `FS_IOC_GETFSUUID` | FILE_READ_ATTRIBUTES | Reads filesystem UUID. |
+| `FS_IOC_GETFSSYSFSPATH` | FILE_READ_ATTRIBUTES | Reads filesystem sysfs/debugfs path metadata. |
+| `FS_IOC_GETLBMD_CAP` | FILE_READ_ATTRIBUTES | Reads logical-block metadata capability details. |
+
+### Classified file/object ioctls
+
+| ioctl | Required right | Rationale |
+|-------|---------------|-----------|
+| `FS_IOC_FIEMAP` | FILE_READ_DATA | Reads extent layout |
 | `FIONREAD` | FILE_READ_DATA | Reads available byte count |
 | `FS_IOC_GETFLAGS` | FILE_READ_ATTRIBUTES | Reads inode flags (immutable, append, etc.) |
 | `FS_IOC_SETFLAGS` | FILE_WRITE_ATTRIBUTES | Modifies inode flags |
 | `FS_IOC_GETVERSION` | FILE_READ_ATTRIBUTES | Reads inode generation number |
 | `FS_IOC_SETVERSION` | FILE_WRITE_ATTRIBUTES | Modifies inode generation number |
+| `FS_IOC_RESVSP` / `FS_IOC_RESVSP64` | FILE_APPEND_DATA or FILE_WRITE_DATA | Reserves/preallocates file space without arbitrary data overwrite. |
+| `FS_IOC_UNRESVSP` / `FS_IOC_UNRESVSP64` | FILE_WRITE_DATA | Deallocates file space / punches holes. |
+| `FS_IOC_ZERO_RANGE` | FILE_WRITE_DATA | Zeroes file range. |
 | `FICLONE` | FILE_WRITE_DATA | Copy-on-write clone into target file |
 | `FICLONERANGE` | FILE_WRITE_DATA | Partial clone into target file |
 | `FIDEDUPERANGE` | FILE_WRITE_DATA | Deduplicate shared extents |
 | `FIOQSIZE` | FILE_READ_ATTRIBUTES | Query object size |
 | `FS_IOC_FSGETXATTR` | FILE_READ_ATTRIBUTES | Read extended file attributes (project ID, etc.) |
 | `FS_IOC_FSSETXATTR` | FILE_WRITE_ATTRIBUTES | Write extended file attributes |
+| `FS_IOC_GETFSLABEL` | FILE_READ_ATTRIBUTES | Read filesystem label. |
+| `FS_IOC_SETFSLABEL` | FILE_WRITE_ATTRIBUTES | Set filesystem label. |
+| `FS_IOC_GET_ENCRYPTION_PWSALT` | FILE_READ_ATTRIBUTES | Reads encryption policy salt. |
 | `FS_IOC_GET_ENCRYPTION_POLICY` | FILE_READ_ATTRIBUTES | Read encryption policy |
+| `FS_IOC_GET_ENCRYPTION_POLICY_EX` | FILE_READ_ATTRIBUTES | Read extended encryption policy. |
 | `FS_IOC_SET_ENCRYPTION_POLICY` | FILE_WRITE_ATTRIBUTES | Set encryption policy |
+| `FS_IOC_ADD_ENCRYPTION_KEY` | FILE_WRITE_ATTRIBUTES | Mutates filesystem encryption key state. |
+| `FS_IOC_REMOVE_ENCRYPTION_KEY` | FILE_WRITE_ATTRIBUTES | Mutates filesystem encryption key state. |
+| `FS_IOC_REMOVE_ENCRYPTION_KEY_ALL_USERS` | FILE_WRITE_ATTRIBUTES | Mutates filesystem encryption key state. |
+| `FS_IOC_GET_ENCRYPTION_KEY_STATUS` | FILE_READ_ATTRIBUTES | Reads filesystem encryption key state. |
 | `BLKGETSIZE64` | FILE_READ_ATTRIBUTES | Block device size query |
 | `BLKFLSBUF` | FILE_WRITE_DATA | Flush block device buffers |
 
@@ -85,7 +139,9 @@ A handle with FILE_APPEND_DATA but not FILE_WRITE_DATA allows appends but MUST d
 
 Any ioctl not in the tables above is allowed if the fd carries at least one data right (FILE_READ_DATA, FILE_WRITE_DATA, or FILE_APPEND_DATA). Future versions will expand the classified list and may deny unclassified ioctls.
 
-**Device nodes, pipes, sockets:** ioctls are allowed if the fd has at least one data right. Device-specific ioctl semantics are outside FACS scope — the device node's SD is the authorization boundary.
+**Device nodes, pipes, sockets:** unclassified/device-specific ioctls are
+allowed if the fd has at least one data right. Device-specific ioctl semantics
+are outside FACS scope — the device node's SD is the authorization boundary.
 
 ## Execution
 

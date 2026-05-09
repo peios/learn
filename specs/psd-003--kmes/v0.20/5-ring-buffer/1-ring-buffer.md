@@ -12,13 +12,15 @@ Consumers read from per-CPU buffers independently. Each buffer is a complete, se
 
 ## Boot buffer
 
-KMES begins buffering events the instant PKM loads, before the registry is available. During this early boot window, events are stored in internal kernel boot buffers (one per CPU). Boot buffers are not visible to consumers and cannot be mapped.
+KMES begins buffering events the instant PKM loads, before the registry is available. During this early boot window, events are stored in per-CPU ring buffers created at the compiled-in default BufferCapacity.
 
-When LCS becomes available, KMES reads the configured ring buffer size from the registry, creates the consumer-facing per-CPU ring buffers at that size, and copies all surviving boot buffer events into them. The boot buffers are then discarded.
+These boot-time buffers are ordinary KMES ring buffers. They use the same mapped layout, overwrite semantics, metadata contract, and generation model as later buffers. They MAY be attached and mapped by consumers immediately; there is no separate private boot-only buffer class.
 
-If LCS is not available (module loaded without registry), KMES creates the ring buffers at a compiled-in default size.
+When LCS becomes available, KMES reads the configured ring buffer size from the registry. If the configured BufferCapacity differs from the compiled-in default, KMES creates new per-CPU ring buffers at that size, copies all surviving events from the boot-time buffers into them, increments generation, and switches writers to the new buffers. If the configured BufferCapacity matches the default (or the key does not exist), the existing boot-time buffers remain the live buffers and no swap occurs.
 
-Boot buffers use the same circular overwrite semantics as ring buffers. If a boot buffer fills before the ring buffer is created, the oldest events are overwritten. The boot buffer size is a compiled-in constant.
+If LCS is not available, KMES continues using the existing boot-time buffers indefinitely at the compiled-in default size.
+
+Boot-time buffers use the same circular overwrite semantics as all other ring buffers. If a boot-time buffer fills before LCS appears, the oldest events are overwritten.
 
 ## Capacity
 
@@ -179,7 +181,11 @@ If `generation` has changed since the consumer last checked:
 6. Close the old file descriptor and unmap the old buffer.
 7. Continue draining from the new buffer.
 
-Events MUST NOT be lost during a generation change. KMES copies surviving events from the old buffer into the new buffer before incrementing `generation`, and sequence numbers are continuous across the swap. Events are re-compacted during the copy -- they are written contiguously starting from position 0 in the new buffer. The consumer's old `read_pos` is not valid in the new buffer; it MUST scan by sequence number to find its position.
+If the new capacity is large enough to hold the old buffer's full surviving byte range (`write_pos - tail_pos`), no events are lost during the generation change. KMES copies those surviving events from the old buffer into the new buffer before incrementing `generation`, and sequence numbers are continuous across the swap.
+
+If the new capacity is smaller than the old surviving byte range, KMES discards the oldest surviving events from the old buffer until the remaining suffix fits in the new capacity, then copies that suffix into the new buffer. This is equivalent to applying the ordinary overwrite semantics against the smaller capacity during the swap. Any loss is therefore bounded to the oldest surviving prefix; newer events are preserved.
+
+Events copied into the new buffer are re-compacted contiguously starting from position 0. The consumer's old `read_pos` is not valid in the new buffer; it MUST scan by sequence number to find its position.
 
 The consumer MUST finish draining the old buffer up to its frozen `write_pos` before switching to the new buffer. After the swap, KMES stops writing to the old buffer; its `write_pos` is frozen.
 
@@ -192,13 +198,16 @@ The buffer swap MUST be atomic per CPU: no events may be lost or duplicated duri
 An implementation MAY achieve this with the following per-CPU algorithm:
 
 1. Disable preemption on the target CPU.
-2. Copy surviving events from this CPU's old buffer to the new buffer, re-compacted contiguously starting from position 0. Events are copied in sequence order. Set the new buffer's `tail_pos = 0` and `write_pos` to the total byte size of the copied events.
+2. Determine the suffix of surviving events that fits in the new capacity. If the old surviving byte range is larger than the new capacity, advance through the oldest surviving events until the remaining suffix fits. Copy that suffix from this CPU's old buffer to the new buffer, re-compacted contiguously starting from position 0. Events are copied in sequence order. Set the new buffer's `tail_pos = 0` and `write_pos` to the total byte size of the copied events.
 3. Set the new buffer's `generation` to the old buffer's `generation + 1`. The new buffer MUST be fully initialized before consumers can see it.
 4. Switch the per-CPU buffer pointer from the old buffer to the new buffer. New events are now written to the new buffer.
 5. Increment `generation` in the old buffer's metadata. This signals consumers still reading the old buffer that a swap has occurred and they should re-attach.
-6. Re-enable preemption.
+6. If the old buffer's `need_wake` flag is set, increment the old buffer's `futex_counter` and issue `futex_wake` using the old buffer's futex address. This wakes consumers sleeping on the old generation so they can observe the generation change.
+7. Re-enable preemption.
 
 The new buffer's `generation` is set before it becomes visible (step 3 before step 4). The old buffer's `generation` is incremented after the switch (step 5 after step 4). This ensures consumers see a consistent generation value regardless of whether they read from the old or new buffer.
+
+The wake in step 6 is conditional on the old buffer's `need_wake` flag for the same reason as ordinary event emission: under sustained load, consumers are already draining and no wake is needed. When consumers are asleep on the old generation, the wake ensures they do not remain blocked indefinitely after writers have moved to the new buffer.
 
 With preemption disabled, no events can be emitted on this CPU between the copy and the switchover. Events emitted on other CPUs are unaffected -- each CPU's swap is independent.
 

@@ -20,16 +20,16 @@ This is the definitive reference mapping file operations to LSM hooks and requir
 | Operation | Hook | Right(s) |
 |---|---|---|
 | `read()` / `pread64()` / `readv()` | `security_file_permission` | FILE_READ_DATA |
-| `write()` / `writev()` | `security_file_permission` | FILE_WRITE_DATA or FILE_APPEND_DATA |
-| `pwrite64()` | Patch + `security_file_permission` | FILE_WRITE_DATA |
-| `pwritev()` / `pwritev2()` | Patch + `security_file_permission` | FILE_WRITE_DATA |
+| `write()` / `writev()` | `security_file_permission` | FILE_WRITE_DATA for non-append intent; FILE_WRITE_DATA or FILE_APPEND_DATA for `O_APPEND` |
+| `pwrite64()` | Patch + `security_file_permission` | FILE_WRITE_DATA unless `O_APPEND` makes the effective write append-only |
+| `pwritev()` / `pwritev2()` | Patch + `security_file_permission` | FILE_WRITE_DATA for explicit offsets or `RWF_NOAPPEND`; FILE_WRITE_DATA or FILE_APPEND_DATA for `O_APPEND` / `RWF_APPEND` |
 | `readdir` / `getdents` | `security_file_permission` | FILE_LIST_DIRECTORY |
 | `sendfile()` | `security_file_permission` (both fds) | FILE_READ_DATA / FILE_WRITE_DATA |
 | `copy_file_range()` | `security_file_permission` (both fds) | FILE_READ_DATA / FILE_WRITE_DATA |
 | `splice()` | `security_file_permission` | FILE_READ_DATA or FILE_WRITE_DATA |
 | io_uring read | `security_file_permission` | FILE_READ_DATA |
-| io_uring write | Patch + `security_file_permission` | FILE_WRITE_DATA |
-| AIO write | Patch + `security_file_permission` | FILE_WRITE_DATA |
+| io_uring write | Patch + `security_file_permission` | FILE_WRITE_DATA for explicit offsets or `RWF_NOAPPEND`; FILE_WRITE_DATA or FILE_APPEND_DATA for `O_APPEND` / `RWF_APPEND` |
+| AIO write | Patch + `security_file_permission` | FILE_WRITE_DATA for offsets or `RWF_NOAPPEND`; FILE_WRITE_DATA or FILE_APPEND_DATA for `O_APPEND` / `RWF_APPEND` |
 
 ## Truncate and allocate (snapshot)
 
@@ -136,8 +136,8 @@ Pathname sockets are protected via the socket file's inode SD (handled by FACS t
 
 | Operation | Hook | Right(s) |
 |---|---|---|
-| `ioctl()` | `security_file_ioctl` | Fd must be FACS-managed (enforces ioctl-only flag). |
-| `fcntl()` | `security_file_fcntl` | Fd must be FACS-managed. |
+| `ioctl()` / compat `ioctl()` | `security_file_ioctl` / `security_file_ioctl_compat` | Enforce classified ioctl rights and unclassified data-right fallback on FACS-managed fds; unmanaged fds stay outside FACS. |
+| `fcntl(F_SETFL)` | `security_file_fcntl` | Enforce `O_APPEND` and `O_NOATIME` changes against cached grants on FACS-managed fds; non-right-bearing status flag changes remain Linux-validated. |
 | fd transfer via `SCM_RIGHTS` | `security_file_receive` | Unconditional allow (possession is authorization). |
 
 ## SysV IPC objects (live)

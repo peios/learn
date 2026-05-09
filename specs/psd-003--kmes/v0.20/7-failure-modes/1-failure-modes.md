@@ -40,7 +40,7 @@ KMES has no dependency on consumers. A system with no consumers attached operate
 
 ## Buffer swap failure
 
-When KMES attempts to create new ring buffers (due to a BufferCapacity configuration change or the boot-to-registry transition), memory allocation may fail.
+When KMES attempts to create new ring buffers (due to a BufferCapacity configuration change, including the first LCS-driven resize away from the boot-time default), memory allocation may fail.
 
 - If allocation fails, KMES retains the existing ring buffers at their current size. The configuration change is not applied.
 - An event is emitted via KMES itself recording the allocation failure and the retained buffer size.
@@ -49,7 +49,7 @@ When KMES attempts to create new ring buffers (due to a BufferCapacity configura
 
 ## LCS unavailable
 
-If LCS never becomes available (no source registers), KMES operates indefinitely with compiled-in defaults. The ring buffers are created at the default BufferCapacity. The self-configuration watch is never armed because there is no registry to watch.
+If LCS never becomes available (no source registers), KMES operates indefinitely with compiled-in defaults. The initial boot-time ring buffers remain the live buffers at the default BufferCapacity. The self-configuration watch is never armed because there is no registry to watch.
 
 This is not a failure -- it is a valid operating mode. KMES has no hard dependency on LCS. The only consequence is that operational parameters cannot be tuned.
 
@@ -73,8 +73,7 @@ A future version MAY support dynamic per-CPU buffer creation for hotplugged CPUs
 
 KMES kernel memory usage is bounded by:
 
-- **Per-CPU ring buffers:** `num_cpus × BufferCapacity`. At defaults (4 CPUs × 4 MB), 16 MB. Ceiling is `num_cpus × 256 MB`, configurable only by administrators.
-- **Per-CPU boot buffers:** `num_cpus × boot_buffer_size`. Compiled-in constant. Freed after ring buffers are created.
+- **Per-CPU ring buffers:** In steady state, `num_cpus × BufferCapacity`. At boot, these begin at the compiled-in default size. During a live BufferCapacity swap, old and new per-CPU ring buffers MAY temporarily coexist until existing mappings to the old generation are released. Capacity values remain bounded by the configured limits.
 - **Event construction:** Temporary allocations during event construction are bounded by the maximum event size and freed immediately after the event is written to the ring buffer.
 - **Consumer file descriptors:** Each `kmes_attach` call creates `num_cpus` file descriptors. Bounded by RLIMIT_NOFILE and the SeSecurityPrivilege requirement.
 
