@@ -92,9 +92,46 @@ For `F_SETFL`, KACS evaluates the mutable status flags accepted by Linux:
 - F_SETFL clearing O_NOATIME: always allowed.
 - F_SETFL changing only O_NONBLOCK, O_NDELAY, or O_DIRECT: no additional KACS right; ordinary Linux validation still applies.
 
-Unmanaged fds are outside the ordinary FACS handle check. Other `fcntl`
-commands that mutate file state are not covered by this subsection and must be
-specified separately before KACS can claim command-specific coverage for them.
+The following non-`F_SETFL` commands are fd-local or handle-local and require
+no additional KACS file right. They MUST NOT widen the cached granted mask:
+
+| fcntl command | Required right | Rationale |
+|---|---|---|
+| `F_CREATED_QUERY` | none | Reports whether this fd came from a create path. |
+| `F_DUPFD` / `F_DUPFD_CLOEXEC` / `F_DUPFD_QUERY` | none | Duplication and duplicate queries preserve the same open file description and granted mask. |
+| `F_GETFD` / `F_SETFD` | none | Reads or changes close-on-exec state on this fd. |
+| `F_GETFL` | none | Reads fd status flags. |
+| `F_GETOWN` / `F_GETOWN_EX` / `F_GETOWNER_UIDS` / `F_GETSIG` | none | Reads async-notification owner state attached to this fd. |
+| `F_SETOWN` / `F_SETOWN_EX` / `F_SETSIG` | none | Changes async-notification delivery state attached to this fd; Linux pid/signal validation still applies. |
+
+The following commands are object-state queries or mutations and are checked
+against the cached granted mask before Linux-specific validation:
+
+| fcntl command | Required right |
+|---|---|
+| `F_GETLK` / `F_GETLK64` / `F_OFD_GETLK` | Any data right (`FILE_READ_DATA`, `FILE_WRITE_DATA`, or `FILE_APPEND_DATA`) |
+| `F_GETLEASE` / `F_GETDELEG` | FILE_READ_ATTRIBUTES |
+| `F_GETPIPE_SZ` | FILE_READ_ATTRIBUTES |
+| `F_SETPIPE_SZ` | FILE_WRITE_ATTRIBUTES |
+| `F_GET_SEALS` | FILE_READ_ATTRIBUTES |
+| `F_ADD_SEALS` | FILE_WRITE_ATTRIBUTES |
+| `F_GET_RW_HINT` / `F_GET_FILE_RW_HINT` | FILE_READ_ATTRIBUTES |
+| `F_SET_RW_HINT` / `F_SET_FILE_RW_HINT` | FILE_WRITE_ATTRIBUTES |
+
+Lock, lease, and delegation acquisition or release commands
+(`F_SETLK`, `F_SETLKW`, `F_SETLK64`, `F_SETLKW64`, `F_OFD_SETLK`,
+`F_OFD_SETLKW`, `F_SETLEASE`, `F_SETDELEG`) are allowed through the
+`security_file_fcntl` hook so they can be enforced by the later
+`security_file_lock` hook, which receives normalized `F_RDLCK`, `F_WRLCK`, or
+`F_UNLCK` values. Unknown lock types still fail closed at that hook.
+
+For `F_NOTIFY`, removing a watch (zero event mask, ignoring `DN_MULTISHOT`)
+requires no KACS file right. Installing a watch with any known `DN_*` event
+requires `FILE_LIST_DIRECTORY`. Unknown `DN_*` bits on a managed fd MUST fail
+closed.
+
+Unmanaged fds are outside the ordinary FACS handle check. Unknown managed
+`fcntl` commands MUST fail closed.
 
 ## ioctl enforcement
 

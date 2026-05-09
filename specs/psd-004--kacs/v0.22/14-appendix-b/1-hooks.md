@@ -155,7 +155,7 @@ Pathname sockets are protected via the socket file's inode SD (handled by FACS t
 | Operation | Hook | Right(s) |
 |---|---|---|
 | `ioctl()` / compat `ioctl()` | `security_file_ioctl` / `security_file_ioctl_compat` | Enforce classified ioctl rights and unclassified data-right fallback on FACS-managed fds; unmanaged fds stay outside FACS. |
-| `fcntl(F_SETFL)` | `security_file_fcntl` | Enforce `O_APPEND` and `O_NOATIME` changes against cached grants on FACS-managed fds; non-right-bearing status flag changes remain Linux-validated. |
+| `fcntl()` | `security_file_fcntl` | Enforce classified fcntl command rights against cached grants on FACS-managed fds; fd-local commands require no extra right; lock/lease/delegation acquisition reaches `security_file_lock`; unknown managed commands fail closed. |
 | fd transfer via `SCM_RIGHTS` | `security_file_receive` | Unconditional allow (possession is authorization). |
 
 ## SysV IPC objects (live)
