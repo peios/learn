@@ -11,7 +11,19 @@ related:
 
 A server accepting a Unix-socket connection usually wants to know *who* connected. Linux has a small family of socket options and ancillary message types for this; Peios extends it with KACS-native primitives. This page covers the full surface and the recommended patterns.
 
-The fundamental property: **all peer-credential primitives are kernel-attested.** The peer cannot lie about the values returned, because the kernel reads its own credentials of the peer and writes them in. This is what makes peer authentication via Unix sockets meaningful — the server gets ground-truth identity, not whatever the peer claims.
+The fundamental property for connection-scoped peer credentials is kernel
+attestation: the peer cannot choose the values returned because the kernel
+reads its own state. Per-message Linux credential ancillary data has weaker
+compatibility semantics under KACS and must not be treated as KACS token
+authority.
+
+Current v0.20 KACS scope: authoritative peer-token operations are
+`kacs_open_peer_token` and `kacs_impersonate_peer` on connected Unix
+stream/seqpacket sockets that carry a KACS connect-time peer-token snapshot.
+Datagram sockets, socketpair-created sockets, `SCM_CREDENTIALS`, and
+`SCM_SECURITY` do not create KACS peer tokens. Protocols on those transports
+should pass an explicit token fd with `SCM_RIGHTS` and then use
+`KACS_IOC_IMPERSONATE`.
 
 ## The Linux primitives
 
@@ -35,7 +47,11 @@ Peios honours the Linux ABI for these primitives but adapts the values returned 
 
 ### SO_PEERCRED and SCM_CREDENTIALS
 
-These primitives return projected UID/GID values **truth-projected from the peer's effective token at capture time** — the same projection mechanism that drives `current_fsuid()`. A thread connecting to a server while impersonating produces an SO_PEERCRED on the server side reflecting the impersonated identity.
+These primitives return projected UID/GID values from the peer's effective
+token at capture time — the same projection mechanism that drives
+`current_fsuid()`. A thread connecting to a server while impersonating
+produces an SO_PEERCRED on the server side reflecting the impersonated
+identity.
 
 | Field | Source on Peios |
 |---|---|
@@ -47,7 +63,10 @@ Linux software that does `if (peer.uid == 0) allow_admin()` produces a meaningfu
 
 **Important caveat:** even with truth-projection, UIDs are lossy. Multiple distinct KACS principals can project to the same UID; the projection mapping can change. UID-based checks are usable as a quick gate, but **authentication-bearing decisions should use Peios-native primitives** (below). UID checks are the analogue of comparing fingerprints by colour — fast, mostly right, but the fundamental identity surface is the SID, not the projected number.
 
-The Peios extension does not require `SO_PASSCRED` to be set explicitly on every socket — the kernel always populates the values truthfully. The Linux flag exists for ABI compatibility but is effectively a no-op on Peios (the values are always available regardless).
+`SCM_CREDENTIALS` remains Linux compatibility metadata in the v0.20 KACS
+scope. Because UID/GID values are compatibility projections and CAP_SETUID is
+available for cosmetic UID shaping, receivers must not use `SCM_CREDENTIALS`
+as an authoritative KACS identity or impersonation source.
 
 ### SO_PEERSEC and SCM_SECURITY
 
@@ -88,9 +107,10 @@ The kernel handler:
 3. Allocates a fresh fd in the caller's fd table referencing that token.
 4. Writes the fd number into `optval`.
 
-`SO_PEERTOKEN` is the "authenticate by impersonation" primitive that matches the Windows model. A server accepts a connection, retrieves an impersonation token for the peer, runs the requested operation under that token via `kacs_impersonate_token`, and the kernel's normal AccessCheck path decides whether the operation is permitted. The server doesn't have to think about authorisation logic; the kernel does it under the right identity.
-
-`SO_PEERTOKEN` replaces the previously-separate `kacs_get_peer_token` syscall — peer-token retrieval is consolidated into the standard `getsockopt` discovery surface.
+`SO_PEERTOKEN` is the intended "authenticate by impersonation" primitive for a
+future consolidated getsockopt surface. In the current v0.20 KACS slow-track
+kernel ABI, the implemented native surface is the separate
+`kacs_open_peer_token` syscall plus `kacs_impersonate_peer`.
 
 ### SO_PEERGUID
 
@@ -158,9 +178,13 @@ This pattern is the same as Windows' `ImpersonateNamedPipeClient` flow and is th
 
 `SO_PEERCRED`, `SO_PEERSEC`, and `SO_PEERPIDFD` all snapshot at connect time and produce stable values for the connection's lifetime. `SO_PEERTOKEN` snapshots at the moment of the `getsockopt` call.
 
-`SCM_CREDENTIALS` and `SCM_SECURITY` are per-message — the values reflect the sender's effective token at the moment of `sendmsg`. A peer that impersonates between messages produces `SCM_CREDENTIALS` reflecting the current impersonation; a peer that reverts produces values reflecting the primary identity again.
+`SCM_CREDENTIALS` and `SCM_SECURITY` are per-message Linux compatibility
+metadata. In the current v0.20 KACS scope they do not carry a KACS token fd,
+do not install a socket peer token, and do not authorize impersonation.
 
-For most use cases, the connection-scoped primitives are sufficient. `SCM_CREDENTIALS` is needed for protocols where the same socket carries messages from different effective identities (rare).
+For protocols where a datagram or message stream must carry different KACS
+identities per message, pass explicit token fds with `SCM_RIGHTS` and use
+`KACS_IOC_IMPERSONATE` on the received token fd.
 
 ## See also
 

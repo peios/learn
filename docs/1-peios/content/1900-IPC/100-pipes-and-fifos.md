@@ -75,7 +75,11 @@ Pipes do not carry credentials. There is no "peer authentication" on a pipe — 
 
 Pipes do not provide message boundaries by default. Two writes of 100 bytes each may be coalesced into one read of 200 bytes; one write of 200 bytes may be split into two reads of 100. Use `O_DIRECT` packet mode if message preservation is required, or use a higher-level framing protocol.
 
-Pipes are unidirectional. Bidirectional communication requires a pair of pipes. `socketpair(AF_UNIX, SOCK_STREAM)` is usually a better choice for that purpose — it's bidirectional in a single primitive and adds peer-credential attestation.
+Pipes are unidirectional. Bidirectional communication requires a pair of pipes.
+`socketpair(AF_UNIX, SOCK_STREAM)` is usually a better choice for that purpose
+because it is bidirectional in a single primitive and supports fd passing.
+Current v0.20 KACS does not install a peer-token snapshot for socketpair; use
+explicit token fd passing when the channel needs KACS identity.
 
 ## See also
 

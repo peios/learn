@@ -31,7 +31,11 @@ The choice between stream and seqpacket is mostly a style choice — both produc
 
 `socketpair(AF_UNIX, type, 0, fds)` creates a pre-connected pair of sockets and returns their file descriptors. The pair is anonymous (no address), so it's the same use case as anonymous pipes: parent-child composition, where you set up the pair, fork, and use it as the channel between the two processes.
 
-The advantage over pipes: socketpair is bidirectional in a single primitive, supports peer-credential attestation, and supports fd-passing. The cost is slightly more setup overhead. For parent-child IPC, prefer `socketpair` over `pipe`.
+The advantage over pipes: socketpair is bidirectional in a single primitive
+and supports fd-passing. The cost is slightly more setup overhead. For
+parent-child IPC, prefer `socketpair` over `pipe`. In current v0.20 KACS
+scope, `socketpair()` does not install a KACS peer-token snapshot;
+authentication is by fd possession or by explicitly passing a token fd.
 
 ## The three address forms
 
@@ -47,7 +51,7 @@ This is the **safe choice for security-sensitive services**. The path's SD gover
 
 ### Unnamed
 
-`socketpair()` produces unnamed sockets — no address, no namespace presence, just a connected pair of fds. Authentication is by fd-passing: whoever holds an fd to the pair can use it. Unnamed sockets are the right choice for ephemeral, parent-child, or fd-handoff IPC.
+`socketpair()` produces unnamed sockets — no address, no namespace presence, just a connected pair of fds. Authentication is by fd-passing: whoever holds an fd to the pair can use it. Unnamed sockets are the right choice for ephemeral, parent-child, or fd-handoff IPC. They do not receive a socket SD or KACS peer-token capture in current v0.20 scope.
 
 ### Abstract namespace
 
@@ -96,7 +100,7 @@ The standard server pattern works as on TCP:
 
 `SOCK_DGRAM` doesn't use `listen`/`accept`; it's connectionless, and a single bound socket receives datagrams from any sender via `recvfrom`/`recvmsg`.
 
-`SO_PEERCRED` and friends, documented in [Peer Credentials](peer-credentials), provide the kernel-attested peer identity for connection-oriented Unix sockets. `SCM_CREDENTIALS` provides per-message peer identity for `SOCK_DGRAM` and `SOCK_SEQPACKET`.
+`SO_PEERCRED` and friends, documented in [Peer Credentials](peer-credentials), provide Linux peer-credential metadata for connection-oriented Unix sockets. Current v0.20 KACS peer-token capture is narrower: it applies to connected stream/seqpacket sockets with a KACS connect-time peer-token snapshot. `SCM_CREDENTIALS` is compatibility metadata, not a KACS token authority.
 
 ## See also
 
