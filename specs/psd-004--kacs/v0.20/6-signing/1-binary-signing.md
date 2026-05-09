@@ -53,6 +53,27 @@ For ELF files that fall through to the xattr path (no `.peios.sig` section heade
 
 Files shorter than 4 bytes are not ELF — proceed directly to xattr check.
 
+### Stable verification snapshot
+
+Signature lookup and hashing operate over a stable file-size snapshot. At the
+start of a verification attempt, the kernel records the target file's current
+size and verifies exactly the byte range `[0, size)`.
+
+The following conditions make the signature material invalid:
+
+- a required file read fails or returns fewer bytes than requested before the
+  recorded size;
+- ELF section-header arithmetic overflows;
+- the `.peios.sig` section offset or size points outside the recorded size;
+- the section-header string table needed to find `.peios.sig` points outside
+  the recorded size;
+- the file size differs when the verification attempt is about to return.
+
+For exec-time PIP determination, invalid or unstable material is treated the
+same as an unsigned binary: PIP becomes None/0 and exec proceeds. For LSV,
+invalid or unstable material is a verification failure and the executable
+mapping is denied.
+
 ### Signing algorithm
 
 The Ed25519 signature is computed over the content hash (32 bytes) treated as the message: `Ed25519_Sign(private_key, content_hash)`. The kernel verifies as `Ed25519_Verify(public_key, content_hash, signature)`.
