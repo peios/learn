@@ -53,6 +53,17 @@ Every operation on an open fd is a mask check against the granted mask, with one
 
 SD xattr reads and writes (`security.peios.sd`, `system.ntfs_security`) MUST be denied unconditionally via the xattr hooks. All SD access MUST go through `kacs_get_sd` / `kacs_set_sd`. POSIX ACL xattr writes (`system.posix_acl_access`, `system.posix_acl_default`) MUST also be denied unconditionally.
 
+## Directory traversal
+
+Path resolution checks `FILE_TRAVERSE` on FACS-managed directory components.
+If the current effective token has `SeChangeNotifyPrivilege`, intermediate
+path-resolution traverse checks are bypassed, including on directories whose
+SD is missing. Explicit current-directory/root-directory changes are not
+intermediate path resolution: `chdir()` and `chroot()` require a live
+`FILE_TRAVERSE` check on the final directory. Normal-fd `fchdir()` checks the
+fd's cached granted mask for `FILE_TRAVERSE`; O_PATH `fchdir()` performs a
+live `FILE_TRAVERSE` check.
+
 ## Append-only enforcement
 
 A handle with FILE_APPEND_DATA but not FILE_WRITE_DATA allows only true

@@ -32,7 +32,7 @@ FACS handles files without a `security.peios.sd` xattr with a per-mount policy:
 
 No SD means deny all FACS-managed access. This is the default for Peios system mounts (root, `/home`, `/var`). A missing SD on a system mount is a corruption indicator.
 
-**Directory traversal exception:** SeChangeNotifyPrivilege (granted to all by default) bypasses traverse checks, including on directories with missing SDs. This ensures path resolution works for the repair path.
+**Directory traversal exception:** SeChangeNotifyPrivilege (granted to all by default) bypasses intermediate path-resolution traverse checks, including on directories with missing SDs. This ensures path resolution works for the repair path. It does not bypass explicit `chdir()` / `chroot()` or `fchdir()` use-time checks.
 
 **O_PATH exception:** O_PATH opens bypass `security_file_open` entirely. A file with a missing SD can still be acquired as an O_PATH reference, enabling the repair path: `open(path, O_PATH)` → `kacs_set_sd(fd, ..., AT_EMPTY_PATH)` with SeRestorePrivilege.
 

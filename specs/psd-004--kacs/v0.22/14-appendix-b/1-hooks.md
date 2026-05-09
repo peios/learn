@@ -117,7 +117,8 @@ This is the definitive reference mapping file operations to LSM hooks and requir
 
 | Operation | Hook | Right(s) |
 |---|---|---|
-| Path resolution | `security_inode_permission` | FILE_TRAVERSE (skipped if SeChangeNotifyPrivilege held) |
+| Path resolution | `security_inode_permission` | FILE_TRAVERSE on intermediate directory components (skipped if SeChangeNotifyPrivilege held) |
+| `chdir()` / `chroot()` final directory | `security_inode_permission` | Live: FILE_TRAVERSE |
 | `fchdir()` normal fd | `security_file_permission` | Snapshot: FILE_TRAVERSE |
 | `fchdir()` O_PATH fd | `security_inode_permission` | Live: FILE_TRAVERSE |
 
