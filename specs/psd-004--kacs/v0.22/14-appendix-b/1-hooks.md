@@ -15,6 +15,15 @@ This is the definitive reference mapping file operations to LSM hooks and requir
 | `symlink()` | `security_inode_symlink` | Live | FILE_ADD_FILE on parent + SeCreateSymbolicLinkPrivilege |
 | `open_by_handle_at()` | Patch + `security_file_open` | Live | SeChangeNotifyPrivilege + open rights |
 
+For legacy namespace creation (`open(O_CREAT)`, `mkdir`, `mknod`, and
+`symlink`), the create hook authorizes the parent-directory mutation and
+`security_inode_init_security` MUST stamp the new object with an inherited
+file SD. Legacy Linux creation APIs carry no caller-supplied KACS SD, so the
+creator-SD input is absent and the inheritance algorithm uses the current
+effective token plus the parent directory SD. On a FACS-managed mount, failure
+to compute or install the new SD fails the creation closed. On unmanaged
+mounts, FACS does not stamp an SD.
+
 ## Data operations (snapshot)
 
 | Operation | Hook | Right(s) |
@@ -90,7 +99,9 @@ This is the definitive reference mapping file operations to LSM hooks and requir
 | `rmdir()` | `security_inode_rmdir` | DELETE on dir OR FILE_DELETE_CHILD on parent |
 | `rename()` plain | `security_inode_rename` | (DELETE on source OR FILE_DELETE_CHILD on source parent) + (FILE_ADD_FILE or FILE_ADD_SUBDIRECTORY) on dest parent |
 | `rename()` overwrite | `security_inode_rename` | Same as plain + (DELETE on existing dest OR FILE_DELETE_CHILD on dest parent) |
+| `renameat2(NOREPLACE)` | `security_inode_rename` | Same as plain when the target is absent. If the target exists, Linux rejects the operation before KACS needs to authorize destination deletion. |
 | `renameat2(EXCHANGE)` | `security_inode_rename` | (DELETE on each file OR FILE_DELETE_CHILD on its parent) + (FILE_ADD_FILE or FILE_ADD_SUBDIRECTORY) on each parent |
+| `renameat2(WHITEOUT)` | Patch before `security_inode_rename` | Unsupported for FACS-managed namespaces in v0.22; fail closed with `-EOPNOTSUPP`. Unmanaged mounts remain outside FACS. |
 | `readlink()` | `security_inode_readlink` | FILE_READ_DATA on symlink |
 
 ### Link operation semantics

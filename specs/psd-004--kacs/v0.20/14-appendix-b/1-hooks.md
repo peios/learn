@@ -15,6 +15,15 @@ This is the definitive reference mapping file operations to LSM hooks and requir
 | `symlink()` | `security_inode_symlink` | Live | FILE_ADD_FILE on parent + SeCreateSymbolicLinkPrivilege |
 | `open_by_handle_at()` | Patch + `security_file_open` | Live | SeChangeNotifyPrivilege + open rights |
 
+For legacy namespace creation (`open(O_CREAT)`, `mkdir`, `mknod`, and
+`symlink`), the create hook authorizes the parent-directory mutation and
+`security_inode_init_security` MUST stamp the new object with an inherited
+file SD. Legacy Linux creation APIs carry no caller-supplied KACS SD, so the
+creator-SD input is absent and the inheritance algorithm uses the current
+effective token plus the parent directory SD. On a FACS-managed mount, failure
+to compute or install the new SD fails the creation closed. On unmanaged
+mounts, FACS does not stamp an SD.
+
 ## Data operations (snapshot)
 
 | Operation | Hook | Right(s) |
@@ -85,13 +94,27 @@ This is the definitive reference mapping file operations to LSM hooks and requir
 
 | Operation | Hook | Right(s) |
 |---|---|---|
-| `link()` / `linkat()` | `security_inode_link` | FILE_ADD_FILE on dest + FILE_WRITE_ATTRIBUTES on source |
+| `link()` / `linkat()` | `security_inode_link` | FILE_ADD_FILE on dest parent + FILE_WRITE_ATTRIBUTES on source file |
 | `unlink()` | `security_inode_unlink` | DELETE on file OR FILE_DELETE_CHILD on parent |
 | `rmdir()` | `security_inode_rmdir` | DELETE on dir OR FILE_DELETE_CHILD on parent |
-| `rename()` plain | `security_inode_rename` | DELETE/FILE_DELETE_CHILD on source parent + FILE_ADD_FILE (file) or FILE_ADD_SUBDIRECTORY (directory) on dest parent |
-| `rename()` overwrite | `security_inode_rename` | Same + DELETE/FILE_DELETE_CHILD on existing dest |
-| `renameat2(EXCHANGE)` | `security_inode_rename` | DELETE/FILE_DELETE_CHILD on both sides |
+| `rename()` plain | `security_inode_rename` | (DELETE on source OR FILE_DELETE_CHILD on source parent) + (FILE_ADD_FILE or FILE_ADD_SUBDIRECTORY) on dest parent |
+| `rename()` overwrite | `security_inode_rename` | Same as plain + (DELETE on existing dest OR FILE_DELETE_CHILD on dest parent) |
+| `renameat2(NOREPLACE)` | `security_inode_rename` | Same as plain when the target is absent. If the target exists, Linux rejects the operation before KACS needs to authorize destination deletion. |
+| `renameat2(EXCHANGE)` | `security_inode_rename` | (DELETE on each file OR FILE_DELETE_CHILD on its parent) + (FILE_ADD_FILE or FILE_ADD_SUBDIRECTORY) on each parent |
+| `renameat2(WHITEOUT)` | Patch before `security_inode_rename` | Unsupported for FACS-managed namespaces in v0.20; fail closed with `-EOPNOTSUPP`. Unmanaged mounts remain outside FACS. |
 | `readlink()` | `security_inode_readlink` | FILE_READ_DATA on symlink |
+
+### Link operation semantics
+
+**DELETE / FILE_DELETE_CHILD duality.** For `unlink()`, `rmdir()`, and the source side of `rename()`, the required right can be satisfied two ways: DELETE on the target's own SD, or FILE_DELETE_CHILD on the parent directory's SD. These are alternative gates checked against different SDs. The implementation checks the target file's SD for DELETE first; if denied, it checks the parent directory's SD for FILE_DELETE_CHILD. If neither grants the right, the operation is denied.
+
+**SD preservation on rename.** A renamed file retains its existing SD. The inheritance algorithm does not re-execute when a file moves to a new directory. This matches Windows: moving a file does not change its DACL unless an administrator explicitly re-propagates inheritance.
+
+**Sticky bit.** The Linux sticky bit (restricted deletion flag) is a DAC concept. Under KACS, DAC is neutralized. FILE_DELETE_CHILD on the parent directory's SD is the sole gate for child deletion. The sticky bit has no effect under FACS.
+
+**link() FILE_WRITE_ATTRIBUTES.** Creating a hardlink modifies the source inode's metadata (link count increments, ctime updates). FILE_WRITE_ATTRIBUTES on the source file's SD authorizes this mutation. This also prevents unauthorized hardlink creation to files the caller cannot modify -- a defense against hardlink-based attacks where an attacker creates a link to a privileged file in a directory they control.
+
+**Cross-mount rename.** Linux returns `-EXDEV` for rename across mount boundaries. The VFS rejects the operation before the LSM hook fires. Not a KACS concern.
 
 ## Execution
 
