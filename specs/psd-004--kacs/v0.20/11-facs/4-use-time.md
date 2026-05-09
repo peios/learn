@@ -14,6 +14,8 @@ Every operation on an open fd is a mask check against the granted mask, with one
 | Positioned write or no-append override | FILE_WRITE_DATA (denied on append-only fds) |
 | Directory listing (readdir/getdents) | FILE_LIST_DIRECTORY |
 | Truncate (ftruncate) | FILE_WRITE_DATA |
+| fallocate allocation / extension (`ALLOCATE_RANGE`, `ALLOCATE_RANGE | KEEP_SIZE`) | FILE_APPEND_DATA or FILE_WRITE_DATA |
+| fallocate mutation modes (`PUNCH_HOLE`, `ZERO_RANGE`, `COLLAPSE_RANGE`, `INSERT_RANGE`, `UNSHARE_RANGE`, `WRITE_ZEROES`) | FILE_WRITE_DATA |
 | mmap PROT_READ | FILE_READ_DATA |
 | mmap PROT_WRITE + MAP_SHARED | FILE_WRITE_DATA (FILE_APPEND_DATA alone is not sufficient) |
 | mmap PROT_WRITE + MAP_PRIVATE | FILE_READ_DATA (copy-on-write; no write to file) |
@@ -77,7 +79,7 @@ uses `RWF_NOAPPEND` to negate append semantics. It MUST deny:
 - Any write using `RWF_NOAPPEND`, including `pwritev2`, io_uring, or AIO,
   because it can negate append semantics inherited from `O_APPEND`.
 - Shared writable mmap / mprotect upgrades to PROT_WRITE.
-- fallocate mutation modes (PUNCH_HOLE, ZERO_RANGE, COLLAPSE_RANGE, INSERT_RANGE).
+- fallocate mutation modes (PUNCH_HOLE, ZERO_RANGE, COLLAPSE_RANGE, INSERT_RANGE, UNSHARE_RANGE, WRITE_ZEROES).
 
 ## fcntl enforcement
 

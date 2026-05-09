@@ -47,7 +47,7 @@ mounts, FACS does not stamp an SD.
 | `ftruncate()` | `security_file_truncate` | FILE_WRITE_DATA |
 | `truncate()` | `security_inode_setattr` | Live: FILE_WRITE_DATA |
 | `fallocate()` extend | `security_file_permission` | FILE_WRITE_DATA or FILE_APPEND_DATA |
-| `fallocate()` PUNCH_HOLE etc. | Patch | FILE_WRITE_DATA |
+| `fallocate()` mutation modes (`PUNCH_HOLE`, `ZERO_RANGE`, `COLLAPSE_RANGE`, `INSERT_RANGE`, `UNSHARE_RANGE`, `WRITE_ZEROES`) | Patch | FILE_WRITE_DATA |
 
 ## Memory mapping (snapshot)
 
