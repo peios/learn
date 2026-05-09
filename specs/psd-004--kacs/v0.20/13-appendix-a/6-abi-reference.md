@@ -500,9 +500,15 @@ Object-specific access rights for process objects (bits 0-15). Used in process S
 
 ## 9. File/Directory Access Rights
 
-Object-specific access rights for file and directory objects (bits 0-8). Used in file/directory SD DACLs and the `desired_access` field of `kacs_open_how`.
+Object-specific access rights for filesystem file, special-node, and
+directory objects (bits 0-8). Used in filesystem SD DACLs and the
+`desired_access` field of `kacs_open_how`.
 
 ### File rights
+
+Regular files, FIFOs, pathname socket nodes, character device nodes, block
+device nodes, and symlink metadata use the file-right meanings below unless a
+more specific operation says otherwise.
 
 | Constant | Value | Bit | Description |
 |----------|-------|-----|-------------|

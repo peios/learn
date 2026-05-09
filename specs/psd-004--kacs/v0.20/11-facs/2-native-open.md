@@ -18,6 +18,26 @@ FMODE_EXEC enables `execveat(fd, "", ..., AT_EMPTY_PATH)` — an execute-only ha
 
 Directory rights share bit positions with file data rights: FILE_LIST_DIRECTORY = FILE_READ_DATA (0x0001), FILE_ADD_FILE = FILE_WRITE_DATA (0x0002), FILE_ADD_SUBDIRECTORY = FILE_APPEND_DATA (0x0004). A native directory open with FILE_LIST_DIRECTORY satisfies the data-right requirement and maps to FMODE_READ.
 
+## Special filesystem nodes
+
+Existing FIFOs, pathname socket nodes, character device nodes, and block
+device nodes on FACS-managed mounts are filesystem file objects for KACS
+authorization. They use the file object type and the file-right mapping:
+`FILE_READ_DATA` maps to `FMODE_READ`; `FILE_WRITE_DATA` or
+`FILE_APPEND_DATA` maps to `FMODE_WRITE`; metadata, standard, and generic file
+rights are evaluated with the file GenericMapping.
+
+`FILE_EXECUTE` is not a valid native-open data substitute for these special
+nodes. A `kacs_open` request that would open a FIFO, pathname socket node,
+character device node, or block device node with `FILE_EXECUTE` fails closed.
+The Linux object implementation may still impose additional device-specific
+or filesystem-specific denial after KACS authorizes the file object.
+
+Symlink objects are filesystem file objects for `kacs_get_sd`, `kacs_set_sd`,
+and `readlink` authorization. They are not opened as terminal objects by
+`kacs_open`: following is the default path-resolution behavior, and
+`AT_SYMLINK_NOFOLLOW` fails with `-ELOOP`.
+
 ## Metadata-only operations
 
 Operations that need no data or execute access (e.g., changing a file's DACL without reading its contents) use path-based interfaces or O_PATH fds as object anchors. The KACS get/set-security syscalls accept O_PATH fds via AT_EMPTY_PATH.
@@ -49,6 +69,12 @@ All other bits are reserved and MUST be zero. The kernel rejects non-zero reserv
 ## Caller-supplied SD for creation
 
 When a create disposition results in a new file, the caller MAY supply an SD via the `kacs_open_how` struct. If the SD pointer is null (and sd_len is 0), the new file's SD is inherited from the parent directory per the inheritance algorithm.
+
+KACS-native creation creates only regular files and directories. It does not
+create FIFOs, pathname socket nodes, character device nodes, block device
+nodes, or symlinks. Special-node creation remains on the Linux namespace APIs
+such as `mknod()` / `mkfifo()` / Unix `bind()`-to-path, which are governed by
+the namespace hooks.
 
 ## Creation status
 

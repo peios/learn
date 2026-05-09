@@ -11,7 +11,7 @@ This is the definitive reference mapping file operations to LSM hooks and requir
 | `open()` / `openat()` | `security_file_open` | Live | Core + compat |
 | `open()` with O_CREAT | `security_inode_create` + `security_inode_init_security` | Live | FILE_ADD_FILE on parent |
 | `mkdir()` | `security_inode_mkdir` | Live | FILE_ADD_SUBDIRECTORY on parent |
-| `mknod()` | `security_inode_mknod` | Live | FILE_ADD_FILE on parent |
+| `mknod()` special nodes | `security_inode_mknod` | Live | FILE_ADD_FILE on parent |
 | `symlink()` | `security_inode_symlink` | Live | FILE_ADD_FILE on parent + SeCreateSymbolicLinkPrivilege |
 | `open_by_handle_at()` | Patch + `security_file_open` | Live | SeChangeNotifyPrivilege + open rights |
 
@@ -23,6 +23,14 @@ creator-SD input is absent and the inheritance algorithm uses the current
 effective token plus the parent directory SD. On a FACS-managed mount, failure
 to compute or install the new SD fails the creation closed. On unmanaged
 mounts, FACS does not stamp an SD.
+
+The `security_inode_mknod` hook is in scope only for explicit special node
+types: character device nodes, block device nodes, FIFOs, and pathname
+socket nodes. These new objects use file SD inheritance, not directory
+inheritance. Regular-file `mknod` is treated as ordinary file creation by the
+Linux VFS and reaches `security_inode_create`; directory creation reaches
+`security_inode_mkdir`; unsupported or unknown mknod mode types fail closed
+on FACS-managed mounts.
 
 ## Data operations (snapshot)
 

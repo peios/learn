@@ -209,7 +209,8 @@ Any ioctl not in the tables above is allowed if the fd carries at least one data
 
 **Device nodes, pipes, sockets:** unclassified/device-specific ioctls are
 allowed if the fd has at least one data right. Device-specific ioctl semantics
-are outside FACS scope — the device node's SD is the authorization boundary.
+are outside FACS scope — the device node's SD is the FACS authorization
+boundary, and Linux device-specific validation may still deny the operation.
 
 ## Execution
 
