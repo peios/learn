@@ -4,7 +4,7 @@ type: concept
 description: The four immutable process mitigations -- WXP, LSV, TLP, and CFI -- that harden processes against exploitation.
 ---
 
-**Process mitigations** are security hardening flags that restrict what a process can do at the memory and code-loading level. They are set when the binary is executed — determined by the binary's metadata and signing properties — and **cannot be changed at runtime**.
+**Process mitigations** are security hardening flags that restrict what a process can do at the memory and code-loading level. They are one-way flags set by a trusted launcher or by the process itself, usually before `exec`; once set, they cannot be cleared.
 
 Mitigations target exploitation. Even if an attacker finds a vulnerability in a service, mitigations make it dramatically harder to turn that vulnerability into code execution.
 
@@ -32,6 +32,10 @@ Shared libraries can only be loaded from **approved directories** (for example, 
 
 TLP is weaker than LSV — it trusts the path, not the binary itself. But it is applicable to processes that load third-party unsigned libraries from known locations. An attacker who can write to `/tmp` but not to `/usr/lib` cannot inject a library.
 
+The kernel evaluates the current backing-file path at executable `mmap` or executable `mprotect` time. If the trusted-path cache is empty, the path cannot be resolved, or no prefix matches, the executable mapping is rejected.
+
+Trusted path entries are slash-terminated directory prefixes such as `/usr/lib/`. This prevents `/usr/lib/` from matching paths like `/usr/libevil`.
+
 ### CFI — Control Flow Integrity
 
 Hardware control-flow enforcement (Intel CET shadow stack, ARM BTI) is **locked on** and cannot be disabled by the process.
@@ -50,9 +54,9 @@ The four mitigations address different attack techniques and are most effective 
 
 Together, WXP + CFI + LSV means: the attacker cannot inject new code, cannot reuse existing code out of order, and cannot load malicious libraries. Exploitation becomes dramatically harder.
 
-## Set at exec time, immutable
+## One-way and persistent
 
-Like PIP, mitigations are determined by the binary's properties at `exec` time. The kernel sets them; the process cannot change them. A process cannot disable WXP to make its memory writable and executable, and it cannot disable CFI to turn off the shadow stack.
+Unlike PIP, mitigation flags are policy set on the process and persist across `exec`. A process cannot disable WXP to make its memory writable and executable, and it cannot disable CFI to turn off the shadow stack.
 
 This immutability is the point. A compromised process cannot weaken its own mitigations to make further exploitation easier.
 

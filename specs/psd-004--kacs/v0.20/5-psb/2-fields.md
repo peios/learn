@@ -57,9 +57,9 @@ Unlike the exec-time fields, `no_child_process` MAY be set at two points:
 
 The approved directory prefixes for TLP enforcement are stored in a global kernel cache, not on individual PSBs. The PSB `tlp` flag controls whether a process is subject to TLP enforcement; the paths themselves are shared.
 
-Cache structure: an array of UTF-8 directory prefix strings. Maximum 64 entries, maximum 4096 bytes per path. The mechanism for populating and updating the cache is defined by the registry subsystem (loregd) and is outside the scope of this section.
+Cache structure: an array of UTF-8 absolute directory prefix strings. Maximum 64 entries, maximum 4096 bytes per path. Each prefix MUST begin with `/` and end with `/` so `/usr/lib/` does not match `/usr/libevil`. Empty, relative, or non-slash-terminated prefixes are invalid and MUST be rejected without mutating the existing cache. The mechanism for populating and updating the cache is defined by the registry subsystem (loregd) and is outside the scope of this section.
 
-At mmap(PROT_EXEC) time, when the process has TLP enabled, the kernel checks whether the mapped file's path starts with any approved prefix. If no prefix matches, the mmap is rejected. If the cache is empty, all PROT_EXEC mappings are denied for TLP-enabled processes.
+At mmap(PROT_EXEC) time, when the process has TLP enabled, the kernel checks whether the mapped file's current kernel-resolved backing `file->f_path` path starts with any approved prefix. If the backing path cannot be resolved, no prefix matches, or the cache is empty, the mmap is rejected. TLP applies only to file-backed executable mappings; anonymous executable mappings have no path and are governed by WXP only.
 
 ## Identity virtualization (reserved)
 

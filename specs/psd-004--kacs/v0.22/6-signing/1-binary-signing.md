@@ -108,7 +108,7 @@ This means a Protected/PeiosTcb process with LSV can only load libraries signed 
 When a process calls `mprotect()` to add `PROT_EXEC` to a mapping that was not originally executable, the following checks apply in order:
 
 1. **WXP** (if enabled): reject if the mapping was ever writable (W→X transition). Applies to all mappings including anonymous.
-2. **TLP** (if enabled): reject if the backing file is outside the approved directory prefixes. Applies to file-backed mappings only.
+2. **TLP** (if enabled): reject if the backing file's current kernel-resolved `file->f_path` path is outside the approved directory prefixes, or if that path cannot be resolved. Applies to file-backed mappings only.
 3. **LSV** (if enabled): verify the backing file's signature. Reject if unsigned or insufficiently trusted. Applies to file-backed mappings only.
 
 Anonymous mappings (no backing file) are gated only by WXP. TLP and LSV do not apply to anonymous mappings (they have no path or signature to check).
