@@ -61,10 +61,10 @@ Continuous auditing logs every individual operation, not just the initial open:
 
 ```bash
 $ sd audit add /srv/data/classified/plans.pdf \
-    continuous Everyone FILE_READ_DATA success
+    continuous Everyone FILE_READ_DATA
 ```
 
-Every read operation on this file — not just the open — generates an audit event.
+Every read operation on this file — not just the open — generates a `continuous-audit` event.
 
 ## Set per-token audit overrides
 

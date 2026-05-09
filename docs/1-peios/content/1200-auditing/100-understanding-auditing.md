@@ -42,7 +42,7 @@ One important difference from conditional DACL ACEs: when a conditional audit ex
 
 Access auditing fires once — at the point where the object is opened. It records "user X opened file Y with read access." It does not record what happens afterward: how many bytes were read, how many times, or whether specific operations occurred.
 
-**Continuous auditing** fills this gap. Special ACEs in the SACL configure per-operation audit masks. When a file is opened and a continuous audit ACE matches, the kernel records an audit mask on the open handle. On each subsequent operation (read, write, execute), if the operation matches the handle's audit mask, an event is emitted.
+**Continuous auditing** fills this gap. Special ACEs in the SACL configure per-operation audit masks. When a file is opened and a continuous audit ACE matches, the kernel records an audit mask on the open handle. On each subsequent operation (read, write, execute), if the operation's required access overlaps the handle's audit mask, a `continuous-audit` event is emitted with the operation-time process and effective token.
 
 This enables "audit every write to this file" rather than just "audit when this file is opened for write." Use cases include:
 

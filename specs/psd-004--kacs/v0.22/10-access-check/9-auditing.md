@@ -29,9 +29,15 @@ Conditional audit ACEs carry expressions that gate whether the event fires. An e
 
 Access auditing fires once, at the point where AccessCheck runs. Continuous auditing fills the gap for per-operation monitoring.
 
-SYSTEM_ALARM ACEs configure per-operation audit masks. When AccessCheck evaluates an alarm ACE and the caller's SID matches, the ACE's access mask is recorded as a **continuous audit mask** on the open handle. On each subsequent operation, the enforcement point checks the handle's continuous audit mask and emits an event if the operation matches.
+SYSTEM_ALARM ACEs configure per-operation audit masks. When AccessCheck evaluates an alarm ACE and the caller's SID matches, the ACE's access mask is recorded as a **continuous audit mask** on the open handle. On each subsequent operation, the enforcement point checks the handle's continuous audit mask and emits a `continuous-audit` event when the operation's normalized required-access mask overlaps the stored continuous audit mask.
 
 The continuous audit mask is returned by AccessCheck to the caller (FACS, registryd), which stores it on the handle and enforces it per-operation.
+
+For FACS file handles, the normalized required-access mask is the same mask used by the use-time handle check. For operations whose authorization accepts one of several rights, such as append-or-write data, the required-access mask contains the accepted right set and the event records the subset that overlapped the continuous audit mask.
+
+Continuous-audit events are emitted after the per-operation decision is known. Successful and denied attempts are both emitted when the attempted required-access mask overlaps the handle's continuous audit mask. The event subject and process are the operation-time current effective token and current task, not necessarily the token or process that originally opened the handle.
+
+If an enforcement point cannot construct a required continuous-audit event, it MUST fail closed. KMES transport buffering and drop accounting remain KMES behavior.
 
 ## Privilege-use auditing
 

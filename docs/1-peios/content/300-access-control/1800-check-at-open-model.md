@@ -44,4 +44,4 @@ This is also why `MAXIMUM_ALLOWED` exists — a process that does not know in ad
 
 The per-operation check is lightweight. The kernel compares the requested operation (read, write, etc.) against the handle's granted mask — a simple bitmask comparison. There is no SD lookup, no DACL walk, no privilege evaluation. The expensive work happened once at open time.
 
-Continuous auditing (if configured) is the one per-operation addition. If the handle carries a continuous audit mask, each matching operation generates an audit event. But even continuous auditing does not re-evaluate AccessCheck — it reads the pre-computed audit mask stored on the handle.
+Continuous auditing (if configured) is the one per-operation addition. If the handle carries a continuous audit mask, each operation whose required access overlaps that mask generates a `continuous-audit` event. But even continuous auditing does not re-evaluate AccessCheck — it reads the pre-computed audit mask stored on the handle.
