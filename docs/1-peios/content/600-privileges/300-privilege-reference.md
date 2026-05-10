@@ -41,6 +41,9 @@ These privileges control access to system-wide operations that are not tied to a
 | `SeSystemEnvironmentPrivilege` | Grants the ability to modify firmware environment variables. | Disabled |
 | `SeCreateJobPrivilege` | Grants the ability to submit jobs through the Job Forwarding Subsystem. | Disabled |
 | `SeBindPrivilegedPortPrivilege` | Grants the ability to bind to ports below 1024. Custom Peios privilege — not present in Windows. | Disabled |
+| `SeLoadSchedulerPrivilege` | Grants the ability to load and attach `sched_ext` BPF scheduler programs. Replacing the CPU scheduler is qualitatively different from loading a driver — bugs can deadlock the system. Custom Peios privilege. | Disabled |
+| `SeFilterFileSystemPrivilege` | Grants the ability to register fanotify permission events, system-wide fanotify marks (`FAN_MARK_MOUNT` / `FAN_MARK_FILESYSTEM`), `FS_PRE_ACCESS` listeners, and the `FAN_UNLIMITED_*` flags. Fills the niche Windows handles via filesystem filter drivers. Custom Peios privilege. | Disabled |
+| `SeManageFileLeasePrivilege` | Grants the ability to acquire file leases (`F_SETLEASE`) on files where the calling principal is not the SD owner. Self-owned leases work without this privilege. Held by the Samba service principal. Custom Peios privilege. | Disabled |
 
 ## Privileges typically enabled by default
 
