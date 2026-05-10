@@ -29,14 +29,15 @@ These privileges control access to system-wide operations that are not tied to a
 | `SeAssignPrimaryTokenPrivilege` | Grants the ability to install a primary token on a process. Typically held by init and the authentication service. | Disabled |
 | `SeImpersonatePrivilege` | Grants the ability to impersonate a client's token. Required for services that act on behalf of users. | Disabled |
 | `SeDebugPrivilege` | Grants the ability to debug any process regardless of its security descriptor. Still subject to PIP — cannot debug a PIP-protected process without dominance. | Disabled |
-| `SeLoadDriverPrivilege` | Grants the ability to load and unload kernel modules. Extremely dangerous — a loaded module has full kernel access. | Disabled |
+| `SeLoadDriverPrivilege` | Grants the ability to load kernel-resident code: kernel modules, kprobes, kretprobes, uprobes, uretprobes, and BPF programs on tracing/LSM/networking attach points. **The most powerful privilege in the system.** Code installed under this privilege runs *as* the kernel, below the access-check layer, and therefore bypasses PIP — no other privilege can do this. Trust accordingly. | Disabled |
 | `SeShutdownPrivilege` | Grants the ability to shut down or restart the machine. | Disabled |
 | `SeSystemtimePrivilege` | Grants the ability to change the system clock. | Disabled |
 | `SeTimeZonePrivilege` | Grants the ability to change the system time zone. | Enabled |
 | `SeIncreaseBasePriorityPrivilege` | Grants the ability to raise process scheduling priority and set CPU affinity. | Disabled |
 | `SeIncreaseQuotaPrivilege` | Grants the ability to override resource limits. | Disabled |
 | `SeLockMemoryPrivilege` | Grants the ability to lock pages in physical memory (mlock). Used by databases and real-time applications. | Disabled |
-| `SeProfileSingleProcessPrivilege` | Grants the ability to use performance monitoring tools (perf_event_open). | Disabled |
+| `SeProfileSingleProcessPrivilege` | Grants the ability to attach `perf_event_open()` to a *specific other process* (cross-task profiling). PIP-respecting — cannot profile a PIP-protected target without dominance. Own-task profiling does not require this privilege. | Disabled |
+| `SeSystemProfilePrivilege` | Grants the ability to use system-wide performance profiling: per-CPU events, all-task sampling, kernel-mode events, and the cross-paranoid-level capabilities of `perf_event_open()`. Does not respect PIP at the per-sample level — system-wide samples include PIP-protected tasks. Operator-class privilege, granted to monitoring services rather than interactive users. | Disabled |
 | `SeAuditPrivilege` | Grants the ability to write events to the audit log. | Disabled |
 | `SeSystemEnvironmentPrivilege` | Grants the ability to modify firmware environment variables. | Disabled |
 | `SeCreateJobPrivilege` | Grants the ability to submit jobs through the Job Forwarding Subsystem. | Disabled |
