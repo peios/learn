@@ -107,6 +107,33 @@ Kernel 6.18 added a **watchdog** that detects unresponsive permission-event list
 
 Peios honours the watchdog and exposes its timeout as a registry knob — see [Resource limits](resource-limits).
 
+### Audit posture
+
+Permission-event responses are security-relevant decisions — a userspace daemon allowing or denying a file operation is determining whether sensitive data is accessed, whether a process executes, whether a write succeeds. Forensic reconstruction of these decisions matters.
+
+Peios's posture is **kernel-mediated audit, not listener-mediated**. The Linux flags `FAN_ENABLE_AUDIT` (instance-level audit opt-in) and `FAN_AUDIT` (per-decision audit flag) on Linux let the listener control what gets audited. On Peios, the kernel decides via registry policy:
+
+| Mode | Behaviour |
+|---|---|
+| `audit-all` | Every permission-event response is audited (allow and deny), regardless of listener flags. |
+| `audit-on-fan-audit` | A response is audited only if the listener sets `FAN_AUDIT` in the response payload. Matches Linux's effective behaviour when `FAN_ENABLE_AUDIT` was set on the instance. |
+| `never` | No audit on permission events. Lab/test only. |
+
+Configured via `\System\Audit\FanotifyPermEventMode`. Default is set as part of the broader audit-policy configuration — see the audit subsystem documentation.
+
+`FAN_ENABLE_AUDIT` (the instance-level flag) is a **no-op** on Peios. The syscall accepts it for ABI compatibility but the kernel does not consult it; audit policy is determined by the registry mode above. The `FAN_AUDIT` response flag is honoured *only* in `audit-on-fan-audit` mode.
+
+The KMES audit event for a permission-event response carries:
+
+- The listener's effective token GUID
+- The decision (allow / deny)
+- The target file (path or FID)
+- The principal whose operation was gated
+- The operation type (`FAN_OPEN_PERM`, `FAN_ACCESS_PERM`, `FAN_OPEN_EXEC_PERM`)
+- The fanotify instance identifier
+
+Permission-event audit is **audit-class** in KMES origin terms — it bypasses declarative event filters. See [auditing](../auditing) for the broader KMES audit pipeline.
+
 ### File identification (FIDs)
 
 Recent fanotify additions carry file-identification information that survives renames and works across containers:
