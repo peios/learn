@@ -8,6 +8,10 @@ Tokens are securable objects. Every token has its own Security Descriptor, and a
 
 **Open directly.** A syscall takes a process identifier (PID or pidfd) and a desired access mask. The kernel finds the target process's primary token, evaluates the caller's token against the target token's SD, and returns a token fd with the granted access mask cached on it. A separate variant opens a thread's impersonation token. Opening another process's token also requires `PROCESS_QUERY_INFORMATION` on the target process's SD.
 
+`kacs_open_peer_token` is the exception: it does not take a desired-access
+mask. The returned token fd always carries the fixed cached rights
+`TOKEN_QUERY | TOKEN_IMPERSONATE`.
+
 **Receive via IPC.** A token fd MAY be passed over a Unix socket via SCM_RIGHTS. The recipient's operations are constrained by the access mask cached on the fd at the time it was originally opened.
 
 **Implicit access.** A thread always has implicit access to its own effective token for query operations. This is not a kernel bypass — it is guaranteed by the default token SD, which grants TOKEN_QUERY (plus adjustment rights) to the token's own user SID. The AccessCheck still runs; it simply always succeeds for self-query under the default SD.
@@ -56,6 +60,14 @@ When a token is created, it receives a default SD:
   - ALLOW the token's own user SID: TOKEN_QUERY | TOKEN_ADJUST_PRIVILEGES | TOKEN_ADJUST_GROUPS | TOKEN_ADJUST_DEFAULT.
   - ALLOW the creator: TOKEN_ALL_ACCESS.
   - ALLOW SYSTEM (`S-1-5-18`): TOKEN_ALL_ACCESS.
+
+If the creator SID is identical to the token's own user SID, the creator ACE
+MUST be omitted so the self-access limit remains effective. In this case, the
+default token SD MUST also include a non-inherit-only OWNER RIGHTS ACE that
+suppresses the owner's implicit `READ_CONTROL | WRITE_DAC` grant under §3.7 and
+§10.2 while preserving `READ_CONTROL`. This prevents owner-implicit
+`WRITE_DAC` from reintroducing the same-SID creator escalation that the omitted
+creator ACE is intended to close.
 
 Self-access is limited to adjustment operations that cannot escalate. TOKEN_DUPLICATE, TOKEN_IMPERSONATE, and WRITE_DAC are not granted to the token's subject by default.
 
