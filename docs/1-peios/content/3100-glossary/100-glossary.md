@@ -21,9 +21,13 @@ For the structural reference (numbers, struct layouts, constants), see [Constant
 
 **ACL (Access Control List).** An ordered list of ACEs. The DACL contains access-grant/deny ACEs; the SACL contains audit and system-policy ACEs.
 
+**Active index.** A repository's catalogue of the current version of each package — names, versions, dependencies, hashes, download locations. peipkg resolves installs and upgrades against it. See [Repositories and trust](~peios/package-management/repositories-and-trust).
+
 **Anonymous (impersonation level).** The lowest impersonation level. The server gets a token whose user SID is the well-known Anonymous SID (`S-1-5-7`), with no privileges and Untrusted integrity. See [Impersonation levels](~peios/impersonation/impersonation-levels).
 
 **Anonymous token.** A kernel-direct singleton token used as the identity for Anonymous-level impersonation. Session ID 998. See [Bootstrap tokens](~peios/boot-and-trust-establishment/bootstrap-tokens).
+
+**Archive index.** A repository's catalogue of superseded package versions, kept so a downgrade can reach them. Fetched on demand, never in a routine refresh. See [Repositories and trust](~peios/package-management/repositories-and-trust).
 
 **authd.** The userspace authentication daemon. Authenticates users, mints tokens, manages logon sessions, distributes CAAP to the kernel. See [authd handoff](~peios/boot-and-trust-establishment/authd-handoff).
 
@@ -69,6 +73,8 @@ For the structural reference (numbers, struct layouts, constants), see [Constant
 
 **Delegation (impersonation level).** The highest impersonation level. Acts as Impersonation locally and additionally forwards client credentials to remote machines via Kerberos. See [Impersonation levels](~peios/impersonation/impersonation-levels).
 
+**Dependency resolution.** The calculation peipkg performs before any change — turning a request, the installed set, and the available packages into a concrete, ordered plan, or a rejection. Pure and deterministic. See [Dependency resolution](~peios/package-management/dependency-resolution).
+
 **Derived capability.** A capability SID computed from a string name via SHA-256 split into 8 sub-authorities. Lets vendors define their own capabilities without coordination. See [Capabilities and modes](~peios/confinement/capabilities-and-modes).
 
 ## E
@@ -76,6 +82,8 @@ For the structural reference (numbers, struct layouts, constants), see [Constant
 **Effective token.** The token AccessCheck reads on a thread — the impersonation token if the thread is impersonating, the primary token otherwise. See [Tokens overview](~peios/tokens/overview).
 
 **Eager inheritance.** The Peios inheritance model: a child object's SD is fully computed at creation time. Parent changes do not propagate to existing children. See [Inheritance](~peios/security-descriptors/inheritance).
+
+**Elevated authorisation.** A second, deliberate confirmation peipkg requires for the few package operations a routine yes should not cover — a downgrade, a foreign `replaces`, a low-trust `provides`. Not satisfied by `--yes`; fails closed when unattended. See [Dependency resolution](~peios/package-management/dependency-resolution).
 
 **Elevation type.** A token field marking it as `Default` (no pair), `Full` (elevated half), or `Limited` (non-elevated half) of a linked pair. See [Elevation and linked tokens](~peios/tokens/elevation).
 
@@ -173,7 +181,11 @@ For the structural reference (numbers, struct layouts, constants), see [Constant
 
 ## P
 
+**Package.** The unit of software peipkg installs and tracks, distributed as a signed, self-contained `.peipkg` file carrying a manifest and a payload. A low-level primitive; roles and applications are layered above it. See [Package management](~peios/package-management/overview).
+
 **peinit.** The Peios PID-1 process — signed at TCB, running with the SYSTEM token, responsible for the rest of userspace boot and as the TCB lifecycle manager. See [peinit at PID 1](~peios/boot-and-trust-establishment/peinit-pid-1).
+
+**peipkg.** The consumer-side package manager — the command that installs, upgrades, removes, and queries packages on a running Peios system. Holds no authority of its own; it runs as the calling user. See [Package management](~peios/package-management/overview).
 
 **PIE (Position-Independent Executable).** A mitigation that refuses to exec non-PIE binaries. Combined with ASLR, randomises the binary's load address. See [Process mitigations catalog](~peios/process-mitigations/catalog).
 
@@ -202,6 +214,8 @@ For the structural reference (numbers, struct layouts, constants), see [Constant
 ## R
 
 **Recovery policy.** The hardcoded CAAP fallback applied when a referenced policy SID is missing from the kernel cache. Grants `GENERIC_ALL` to `BUILTIN\Administrators`, SYSTEM, and `OWNER_RIGHTS` only. See [Distribution and recovery](~peios/central-access-policies/distribution-and-recovery).
+
+**Repository.** An HTTP or HTTPS location serving `.peipkg` files alongside a signed descriptor and indexes. Each is anchored by the operator to a signing key it is configured to trust. See [Repositories and trust](~peios/package-management/repositories-and-trust).
 
 **Resource attribute.** A typed key-value attribute on an object, stored in a `SYSTEM_RESOURCE_ATTRIBUTE_ACE` in the SACL. Available to conditional ACE expressions as `@Resource.<name>`. See [Resource attributes](~peios/security-descriptors/resource-attributes).
 
@@ -240,6 +254,10 @@ For the structural reference (numbers, struct layouts, constants), see [Constant
 **Token.** The per-thread runtime identity object holding the user SID, groups, privileges, integrity level, etc. The input to AccessCheck. See [Tokens overview](~peios/tokens/overview).
 
 **Token fd.** A file descriptor referring to a token. Carries an access mask (TOKEN_*) gating operations on the fd. See [Inspecting tokens](~peios/inspecting/tokens).
+
+**Transaction (package).** A single peipkg operation — install, upgrade, downgrade, or removal — applied atomically: it completes fully or not at all, and is reversible. Distinct from the access-control sense of the word. See [Transactions and recovery](~peios/package-management/transactions-and-recovery).
+
+**Trust ceremony.** The first-contact procedure when a repository is added: peipkg fetches its descriptor and the operator confirms the signing-key fingerprint against one obtained out of band. See [Repositories and trust](~peios/package-management/repositories-and-trust).
 
 **Two-check rule.** The PIP rule: every cross-process operation runs both an SD check (against the target's process SD) and a PIP dominance check. Both must pass. See [The two-check rule](~peios/process-integrity-protection/the-two-check-rule).
 
