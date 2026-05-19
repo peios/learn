@@ -9,7 +9,7 @@ title: PSB Fields
 | `pip_type` | enum | Process Integrity Protection type: Isolated, Protected, or None. Determined by the binary's cryptographic signature at exec time. |
 | `pip_trust` | uint | Trust tier within a PIP type. Higher values can access lower. Determined by the binary's signer identity. |
 
-PIP fields are signing-based. At exec, the kernel MUST verify the binary's cryptographic signature and determine `pip_type` and `pip_trust` from the signer's identity. The verification algorithm and key model are specified in the Binary Signing section. The parent process MUST NOT be able to influence PIP determination — even a compromised peinit running as SYSTEM MUST NOT be able to forge PIP protection for an unsigned binary.
+PIP fields are signing-based. At exec, the kernel MUST verify the binary's cryptographic signature and determine `pip_type` and `pip_trust` from the signer's identity. The verification algorithm and key model are specified in §6.1. The parent process MUST NOT be able to influence PIP determination — even a compromised peinit running as SYSTEM MUST NOT be able to forge PIP protection for an unsigned binary.
 
 The public verification key is compiled into the kernel image. The kernel only verifies signatures; it MUST NOT sign.
 
@@ -21,7 +21,7 @@ The public verification key is compiled into the kernel image. The kernel only v
 
 | Field | Type | Description |
 |---|---|---|
-| `lsv` | bool | **Library Signature Verification.** Only signed shared libraries MAY be loaded. When the process has `pip_type != None`, the library's trust level must be at or above the process's PIP trust level. When the process has `pip_type = None`, any valid signature suffices (trust level is not compared). See the Binary Signing section. |
+| `lsv` | bool | **Library Signature Verification.** Only signed shared libraries MAY be loaded. When the process has `pip_type != None`, the library's trust level must be at or above the process's PIP trust level. When the process has `pip_type = None`, any valid signature suffices (trust level is not compared). See §6.1. |
 | `wxp` | bool | **Write-XOR-Execute Protection.** Memory pages MUST NOT be simultaneously writable and executable. W+X mappings and transitions between writable and executable MUST be rejected. |
 | `tlp` | bool | **Trusted Library Paths.** Shared libraries MAY only be loaded from approved directory prefixes. Weaker than LSV (trusts the path, not the binary). The approved prefixes are a machine-wide kernel cache, populated at boot by peinit from the registry. See the TLP cache below. |
 | `cfif` | bool | **Forward-Edge Control Flow Integrity.** Hardware indirect-branch tracking (Intel IBT, ARM BTI) is locked on and MUST NOT be disabled by the process. |
@@ -30,6 +30,16 @@ The public verification key is compiled into the kernel image. The kernel only v
 | `sml` | bool | **Speculation Mitigation Lock.** Speculation mitigations are locked on and MUST NOT be disabled by the process. |
 
 Mitigations are inherited from the parent at fork and MAY be set via syscall (typically by peinit between fork and exec). They are one-way: once set, they MUST NOT be cleared. Exec MUST NOT reset mitigations — a mitigation set by the process launcher persists regardless of what binary is loaded.
+
+Setting a mitigation bit is activation-backed. Before changing a mitigation bit from clear to set, KACS MUST either activate the underlying protection for the target process or verify that the target process already satisfies the mitigation's invariant. If any requested mitigation cannot be activated or verified, the operation MUST fail closed and MUST NOT mutate any PSB mitigation bits from that request.
+
+After a mitigation bit is committed, KACS MUST reject later operations that would disable the underlying protection or make the process violate the mitigation. Re-requesting an already-set mitigation MUST NOT clear or weaken the committed invariant.
+
+For runtime memory mitigations, set-time activation MUST cover existing executable state as well as future transitions. Enabling `wxp` MUST fail if the target process already has any mapping that is simultaneously writable and executable or otherwise already violates the WXP invariant KACS can observe. Enabling `tlp` MUST fail if the target process already has a file-backed executable mapping whose current kernel-resolved path is missing, unresolvable, outside the approved prefix cache, or would otherwise be denied by TLP. Enabling `lsv` MUST fail if the target process already has a file-backed executable mapping whose signing material is missing, invalid, or below the target process's required PIP trust. Anonymous executable mappings are governed by `wxp`; `tlp` and `lsv` apply only to file-backed executable mappings.
+
+For architecture-backed mitigations, set-time activation MUST use the architecture's kernel interface to place the process in the protected state and lock or otherwise prevent later process-controlled disablement. Enabling `cfif`, `cfib`, or `sml` MUST fail closed if the platform cannot make the requested protection true for the target process. If a platform proves that a protection is unconditionally active and not process-disableable, that condition satisfies activation for the corresponding bit.
+
+The `pie` and `no_child_process` mitigations are event-gated rather than retroactive over existing state: `pie` is enforced at subsequent exec, and `no_child_process` is enforced at subsequent process creation. They still follow the same one-way commit rule and MUST be set before the event they are intended to constrain.
 
 This is distinct from PIP, which is determined at exec from the binary's signature. Mitigations are set by the process launcher as policy; PIP is determined by the kernel as a property of the binary.
 
@@ -57,7 +67,7 @@ Unlike the exec-time fields, `no_child_process` MAY be set at two points:
 
 The approved directory prefixes for TLP enforcement are stored in a global kernel cache, not on individual PSBs. The PSB `tlp` flag controls whether a process is subject to TLP enforcement; the paths themselves are shared.
 
-Cache structure: an array of UTF-8 absolute directory prefix strings. Maximum 64 entries, maximum 4096 bytes per path. Each prefix MUST begin with `/` and end with `/` so `/usr/lib/` does not match `/usr/libevil`. Empty, relative, or non-slash-terminated prefixes are invalid and MUST be rejected without mutating the existing cache. The mechanism for populating and updating the cache is defined by the registry subsystem (loregd) and is outside the scope of this section.
+Cache structure: an array of absolute directory prefix byte strings evaluated against the kernel-resolved Linux path bytes. Maximum 64 entries, maximum 4096 bytes per path. Each prefix MUST begin with `/`, MUST end with `/` so `/usr/lib/` does not match `/usr/libevil`, and MUST NOT contain an embedded NUL byte. Empty, relative, NUL-containing, or non-slash-terminated prefixes are invalid and MUST be rejected without mutating the existing cache. The mechanism for populating and updating the cache is defined by the registry subsystem (loregd) and is outside the scope of this section.
 
 At mmap(PROT_EXEC) time, when the process has TLP enabled, the kernel checks whether the mapped file's current kernel-resolved backing `file->f_path` path starts with any approved prefix. If the backing path cannot be resolved, no prefix matches, or the cache is empty, the mmap is rejected. TLP applies only to file-backed executable mappings; anonymous executable mappings have no path and are governed by WXP only.
 

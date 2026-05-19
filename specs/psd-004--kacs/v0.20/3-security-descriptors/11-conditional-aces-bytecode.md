@@ -2,7 +2,7 @@
 title: Conditional ACE Bytecode Reference
 ---
 
-This section specifies the binary encoding for conditional ACE expressions. The format is byte-compatible with MS-DTYP section 2.4.4.17.4. Conditional expressions are stored in the ApplicationData member of CALLBACK ACE types, encoded in postfix (reverse Polish) notation.
+This section specifies the binary encoding for conditional ACE expressions. The format is byte-compatible with MS-DTYP §2.4.4.17.4. Conditional expressions are stored in the ApplicationData member of CALLBACK ACE types, encoded in postfix (reverse Polish) notation.
 
 ## Magic signature
 
@@ -36,6 +36,8 @@ Integer literals include a sign byte after the QWORD value:
 | - | 0x02 | Negative. |
 | None | 0x03 | No sign. Relational operators treat as positive. |
 
+During relational evaluation, the sign byte determines the literal sign. Positive (`0x01`) and no-sign (`0x03`) literals MUST be evaluated as the positive magnitude of the QWORD value. Negative (`0x02`) literals MUST be evaluated as the negative magnitude of the QWORD value. If the resulting signed value does not fit the declared signed-width token, evaluation MUST return UNKNOWN.
+
 ### Base codes
 
 Integer literals include a base byte after the sign byte. The base is for display purposes only — the value is always stored as binary 2's complement regardless of base:
@@ -61,7 +63,7 @@ The decimal value -1 encoded as a signed int64:
 
 ### Binary relational operators
 
-LHS is the second element on the stack, RHS is the top. If LHS and RHS are different types, the entire conditional expression evaluates to UNKNOWN — with the exception of INT64 and UINT64 which are promoted for comparison (see the Conditional ACEs section for promotion rules). If either operand is UNKNOWN, the operation returns UNKNOWN.
+LHS is the second element on the stack, RHS is the top. If LHS and RHS are different types, the entire conditional expression evaluates to UNKNOWN — with the exception of INT64 and UINT64 which are promoted for comparison (see §3.8 for promotion rules). If either operand is UNKNOWN, the operation returns UNKNOWN.
 
 | Token type | Byte-code | Processing |
 |---|---|---|
@@ -182,5 +184,7 @@ For quick reference, all byte-codes in numeric order:
 | 0xfa | @Resource. attribute |
 | 0xfb | @Device. attribute |
 
+KACS implementations MUST be byte-compatible with these encodings.
+
 > [!INFORMATIVE]
-> This byte-code table is reproduced from MS-DTYP sections 2.4.4.17.4 through 2.4.4.17.8 for specification self-containment. KACS implementations MUST be byte-compatible with these encodings. KACS-specific evaluation semantics (three-valued logic tables, INT64/UINT64 promotion, virtual group visibility in Member_of, polarity-aware SID matching) are defined in the Conditional ACEs section.
+> This byte-code table is reproduced from MS-DTYP §2.4.4.17.4 through §2.4.4.17.8 for specification self-containment. KACS-specific evaluation semantics (three-valued logic tables, INT64/UINT64 promotion, virtual group visibility in Member_of, polarity-aware SID matching) are defined in §3.8.

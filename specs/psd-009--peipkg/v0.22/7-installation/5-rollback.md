@@ -8,24 +8,24 @@ version. This section covers two distinct rollback
 scenarios:
 
 - **Transaction rollback** (§7.5.1): undoing an in-flight
-  or recently-committed transaction in response to a
-  failure or user request.
+  (uncommitted) transaction in response to a failure or
+  cancellation.
 - **Version rollback** (§7.5.2): user-initiated reversion
   of an installed package to a previously-installed or
   archived version, performed via the upgrade procedure.
 
 ## Transaction rollback
 
-A transaction MUST be rollable back at any point before
-its commit record is persisted (§7.4.5 step 2). Once the
-commit record is persisted, the transaction is logically
-committed and rollback is no longer permitted; the system
-recovers forward (§7.4.7).
+A transaction can be rolled back at any point before the
+database commit (§7.4.5 step 3). Once that commit
+succeeds the transaction is committed and rollback no
+longer applies; recovery from that point is clean-up only
+(§7.4.7).
 
 ### When transaction rollback occurs
 
 A transaction is rolled back when any of the following
-happens before commit-intent persistence:
+happens before the database commit:
 
 1. Any step in any operation within the transaction
    fails (e.g., a file's hash does not verify, disk
@@ -39,58 +39,42 @@ happens before commit-intent persistence:
 
 To roll back an uncommitted transaction:
 
-1. **Discard staged content**: remove all staged files
-   from the transaction-scoped staging area.
-2. **Discard pending database changes**: do not apply
-   the transaction journal's pending updates to the
-   package database.
-3. **Restore originals**: any files that were modified or
-   removed during the transaction are restored from
-   transaction-scoped backups.
-4. **Clear the transaction journal**: delete or mark
-   abandoned the journal so subsequent operations
-   proceed normally.
-5. **Release the transaction lock**.
+1. **Discard staged content**: remove the transaction's
+   staged files.
+2. **Discard pending database changes**: the journal's
+   pending transaction is left uncommitted (the database
+   commit, §7.4.5 step 3, never ran) and is cleared from
+   the journal.
+3. **Restore originals**: for every file the transaction
+   displaced, rename its backup back into place
+   (§7.5.1.3).
+4. **Release the transaction lock**.
 
-Side effects are NOT explicitly rolled back. Side effects
-are idempotent (§4.3.2); if any were partially invoked
-during a failed transaction, re-invoking them after the
-rolled-back state is reached produces the correct final
-state. The package manager MAY re-invoke the affected side
-effects on rollback completion as a safety measure.
+Side effects are not involved in rollback. Side effects
+run only after the database commit (§7.4.5 step 4); a
+rolled-back transaction never reached that commit, so no
+side effect of it ever ran and there is nothing to undo.
 
-> [!INFORMATIVE]
-> The transaction is designed so that side effects are
-> invoked only at commit (§7.1.3). A failed transaction
-> rolled back before commit will never have invoked side
-> effects in the first place. The "MAY re-invoke"
-> provision exists for cases where a failure occurs
-> mid-commit, after some side effects have run.
+### Backups
 
-### Backup retention
+A backup is made by **renaming the displaced original
+aside within its own directory** (§7.2 step 4, §7.3 step
+3) — not by copying it. The old file's content is
+retained in place under a different name, so a backup
+costs no additional disk space and is produced by a
+single atomic rename. The journal's backup map records,
+for each displaced file, the path its backup was renamed
+to.
 
-The transaction-scoped backup area holds copies of files
-that the transaction modifies or removes. Backups are
-retained until either the transaction commits (at which
-point they are eligible for deletion) or the transaction
-rolls back (at which point they are restored and then
-deleted).
+A backup is restored — on rollback — by renaming it back
+into place, and discarded — on successful commit — by
+deleting it.
 
-A package manager MAY retain transaction backups beyond
-commit for a configured retention period to support
-post-commit user-initiated rollback (§7.5.2). The
-retention is operationally configured and not specified
-normatively.
-
-> [!INFORMATIVE]
-> An implementation on a copy-on-write filesystem (btrfs,
-> xfs with reflink support, ZFS) MAY satisfy the backup
-> requirement using reflinks rather than full file copies.
-> The requirement is logical preservation of the prior
-> bytes; reflinks satisfy this with near-zero physical
-> disk overhead. Disk-space verification (§7.1.2.2 step 2)
-> MAY take advantage of this when the install target
-> volume supports it.
+A package manager MAY retain backups *beyond* commit, for
+a configured retention window, to support post-commit
+operator-initiated rollback (§7.5.2). The window — for
+example a number of recent transactions, or an age — is
+operationally configured and not specified normatively.
 
 ### Rollback completeness
 
@@ -127,57 +111,66 @@ following properties:
    their output.
 3. The package manager MUST produce a forensic report on
    demand, identifying:
-   - The transaction journal contents (which operations
-     were in flight, what the commit-record state was)
+   - The journal's pending transaction (which operations
+     were in flight)
    - Files whose on-disk content does not match the
      hash recorded in the package database
    - Package database records inconsistent with the
-     transaction journal
-   - Any orphaned staged files or backup copies
+     journal
+   - Any orphaned staged files or backups
 4. The package manager MUST provide an explicit
-   resolution command (e.g., `peipkg recover`) that
-   accepts an operator decision: roll back the journal,
-   roll forward the journal, or accept the current
-   on-disk state and discard journal+backups.
-5. Resolution MUST require operator authorisation per
-   §7.6.6. The authorising principal MUST hold a KACS
-   right that is NOT normally granted to the package
-   manager principal; the specific KACS right is
-   defined operationally (likely a new privilege
-   coordinated with a future PSD-004 update). Recovery
-   cannot be self-authorised by the package manager.
-   Automatic resolution of indeterminate state is
-   forbidden.
+   resolution command (e.g. `peipkg recover`) that
+   accepts an operator decision: roll the pending
+   transaction back, or accept the current on-disk state
+   and discard the journal and backups.
+5. Resolution MUST be a deliberate operator action and
+   MUST NOT be performed automatically — automatic
+   resolution of an indeterminate state is forbidden.
+
+> [!INFORMATIVE]
+> The intended end state is for recovery resolution to
+> require an authorisation distinct from ordinary install
+> authority — a dedicated KACS right held by a
+> recovery-class operator, validated by KACS. That
+> mechanism depends on KACS primitives not yet specified;
+> until they exist, "deliberate operator action" means
+> the operator explicitly invoking the resolution command
+> and confirming the chosen outcome. The package manager
+> holds no principal of its own (§7.6) and cannot
+> self-authorise in any case.
 
 After resolution, the package manager exits recovery
 mode and resumes normal operation. The forensic report
 SHOULD be retained for operator audit.
 
-### Recovery during package manager self-upgrade
+### Recovery and package-manager self-upgrade
 
-When the package manager itself is being upgraded and
-a transaction failure triggers recovery mode mid-
-self-upgrade, the recovery binary that runs MUST be
-the *previously-verified* package manager binary
-(the version recorded as committed in the package
-database before the in-flight upgrade began), NOT
-the staged-but-uncommitted new version.
+Upgrading the package manager is not a special case for
+recovery. The package-manager binary is one file among a
+transaction's payload, backed up by rename like any other
+(§7.5.1.3); "recovery" reconciles a transaction that
+crashed between its atomic steps, not a half-written
+binary — the binary swap is itself a single atomic
+rename.
 
-A package manager implementation MUST maintain an
-immutable copy of its previously-verified binary
-under a security descriptor that prevents the
-package manager principal from modifying it during
-self-upgrade. This recovery copy is invoked by the
-system on detection of indeterminate state during
-self-upgrade.
+The only wrinkle is that, after a self-upgrade, the
+binary running the next recovery may be a different
+version from the one that started the transaction. This
+is handled by **versioning the journal format**: any
+package-manager version that can read a pending
+transaction's journal schema recovers it directly; a
+version that cannot defers to manual recovery mode
+(§7.5.1.5). No dedicated "immutable previous-binary copy"
+is required — if recovery needs the prior binary, it is
+already present as that binary's ordinary backup
+(§7.5.1.3).
 
 > [!INFORMATIVE]
-> Without this rule, recovery during self-upgrade is
-> ambiguous: the staged new binary may be the source
-> of the failure being recovered from, and running
-> it to perform recovery is self-defeating. Pinning
-> recovery to the previously-verified binary closes
-> the self-referential gap.
+> A package-manager upgrade that commits *successfully*
+> but installs a defective binary is not a recovery case
+> — there is no incomplete transaction. It is handled by
+> running the prior binary, retained as the transaction's
+> backup, by its path to perform an ordinary downgrade.
 
 > [!INFORMATIVE]
 > The recovery mode exists because indeterminate state

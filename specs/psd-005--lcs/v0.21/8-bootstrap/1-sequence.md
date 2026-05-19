@@ -60,7 +60,7 @@ Kernel boots
 Source registers (e.g., loregd started by peinit)
   → Opens /dev/pkm_registry
   → Registers hives with root GUIDs and max sequence number
-  → LCS initialises global sequence counter to max + 1
+  → LCS initialises or advances global next_sequence to max + 1
 
 LCS becomes operational for those hives
   → Reads Machine\System\Registry\* (operational parameters)

@@ -43,6 +43,7 @@ the active index (§6.2.1).
   "schema_version": 1,
   "repo": "<string>",
   "kind": "archive",
+  "index_version": <integer>,
   "generated_at": "<RFC 3339 timestamp>",
   "packages": [<package_entry>...]
 }

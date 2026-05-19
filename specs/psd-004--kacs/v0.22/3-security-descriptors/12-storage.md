@@ -8,7 +8,7 @@ Security Descriptors MUST be stored alongside the objects they protect. The stor
 
 SDs are stored as filesystem extended attributes (xattrs) in the self-relative binary format. The canonical xattr name is `security.peios.sd`. On NTFS volumes, KACS uses `system.ntfs_security` (the ntfs3 driver's native SD xattr) so that SDs round-trip between Peios and other operating systems.
 
-The underlying filesystem MUST support extended attributes of at least 64 KB per value. The architectural maximum SD size is 64 KB (the ACL header's AclSize field is a 16-bit integer).
+The underlying filesystem MUST support extended attributes of at least 65,535 bytes per value. The architectural maximum SD size is 65,535 bytes.
 
 | Filesystem | Large xattr mechanism | Notes |
 |---|---|---|
@@ -28,6 +28,37 @@ SDs are stored by loregd alongside the key data. The format is the same self-rel
 
 Tokens, processes, and LogonSessions store SDs inline on the kernel object. These SDs are typically small (a few ACEs) and are set at object creation time.
 
+LogonSessions receive a default kernel-object SD at creation time:
+
+```
+Owner: <LogonSession user SID>
+Group: <creator's effective token primary group SID>
+DACL:
+  ALLOW  <LogonSession user SID>  GENERIC_ALL
+  ALLOW  BUILTIN\Administrators   GENERIC_ALL
+  ALLOW  SYSTEM                   GENERIC_ALL
+```
+
+For kernel-created LogonSessions that have no creator token, the group is the
+LogonSession user SID. The LogonSession SD is stored for object-shape parity
+and future management APIs only. In `v0.22`, no access-control decision depends
+on `auth_id`, AccessCheck MUST NOT consult LogonSession SDs, and no separate
+mutation or query path exists for LogonSession SDs.
+
 ## IPC endpoints
 
 SDs are stored by the service that owns the endpoint. Pathname sockets use the socket file's inode SD. Abstract sockets store the SD on the socket's LSM security blob, set at `bind()` time from the binding thread's effective token.
+
+For abstract sockets, the stamped SD is a volatile default kernel-object SD:
+
+```
+Owner: <creator's effective token user SID>
+Group: <creator's effective token primary group SID>
+DACL:
+  ALLOW  <creator's user SID>      GENERIC_ALL
+  ALLOW  BUILTIN\Administrators     GENERIC_ALL
+  ALLOW  SYSTEM                      GENERIC_ALL
+```
+
+No separate mutation path exists in `v0.22` for abstract-socket blob SDs. The
+bind-time default SD is the only SD the abstract socket receives.

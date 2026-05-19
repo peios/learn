@@ -151,9 +151,10 @@ follows:
 4. A transition between a digit and a letter ends the
    current segment and begins a new one.
 
-The tilde character (`~`) is a special separator: any segment
-that immediately follows a tilde is marked as a pre-release
-segment regardless of its content.
+The tilde character (`~`) is a special separator: the segment
+immediately following a tilde, and every segment after it,
+are pre-release segments regardless of their content (the
+precise rule is §2.2.7.3).
 
 > [!INFORMATIVE]
 > Example tokenisations:
@@ -165,9 +166,9 @@ segment regardless of its content.
 > | `1.0~rc1` | `1`, `0`, `rc` (pre), `1` (pre) |
 > | `16beta1` | `16`, `beta` (pre), `1` (pre) |
 >
-> Segments after a `~` and segments after a `-` followed by
-> an alphabetic segment are both treated as pre-release
-> segments. See §2.2.7.3 for the precise rule.
+> A segment is a pre-release segment if it falls at or
+> after the first `~` or the first recognised pre-release
+> token. See §2.2.7.3 for the precise rule.
 
 ### Segment comparison
 
@@ -229,23 +230,32 @@ Comparison is case-insensitive for pre-release rank lookup
 > canonical form (typically the long token: `alpha`, `beta`)
 > and stick with it to avoid confusing operators.
 
-### Implicit pre-release detection
+### Pre-release segments
 
-A `-` separator preceding a non-pre-release alphabetic segment
-within the upstream version is treated as if it were a `~`
-separator: the alphabetic segment and all subsequent segments
-in the same hyphen-delimited group are marked as pre-release.
+A segment of the upstream version is a **pre-release
+segment** if it falls at or after the earlier of:
+
+- the first `~` separator — the tilde and every segment
+  following it; or
+- the first **recognised pre-release token**: a segment
+  whose token has a rank of 0–4 (§2.2.7.2) — that segment
+  and every segment following it.
+
+Once the pre-release tail begins it extends to the end of
+the upstream version: every later segment is a pre-release
+segment, whatever the separators between them. A `-`
+separator is an ordinary separator (§2.2.7.1); it is not
+itself a pre-release marker.
 
 > [!INFORMATIVE]
-> Example: in upstream version `1.0.0-rc.1`, the segment
-> `rc` after `-` is alphabetic and matches a pre-release
-> token (rank 4), so the `-` is treated as a pre-release
-> marker. The `rc` and `1` segments are pre-release.
+> In `1.0.0-rc.1`, `rc` is a recognised pre-release token
+> (rank 4), so `rc` and the following `1` are pre-release
+> segments. In `16beta1`, `beta` is recognised (rank 2), so
+> `beta` and `1` are pre-release — no separator is needed.
 >
-> In upstream version `1.0-foo`, `foo` is alphabetic but is
-> not a recognised pre-release token. The `-` is therefore
-> not treated as a pre-release marker, and `foo` is a
-> regular alphabetic segment with rank 5 (lexical).
+> In `1.0-foo`, `foo` is alphabetic but is not a recognised
+> pre-release token: it is an ordinary rank-5 segment, and
+> the `-` before it does not begin a pre-release tail.
 > Architecture suffixes do not appear in upstream version
 > strings; architecture is a separate identifier (§2.3).
 
@@ -299,6 +309,15 @@ nginx = 1.26.2-3
 
 A constraint without an operator (a bare version) is
 equivalent to `=`.
+
+A constraint's version operand MAY omit the `-revision`
+that a complete version string otherwise requires
+(§2.2.5). An operand written without a revision — such as
+`>= 3.0` — constrains the epoch and upstream version
+only: a candidate satisfies it whenever its epoch and
+upstream version satisfy the operator, whatever the
+candidate's revision. An operand written in full
+constrains the revision as well.
 
 ## Stability across versions
 

@@ -156,9 +156,11 @@ Two bounds apply:
      exceed `size_compressed` by more than the lesser
      of 1% or 16 MiB;
    - the cumulative decompressed bytes produced do not
-     exceed `size_installed` by more than the lesser of
-     1% or 16 MiB. The allowance accommodates tar
-     header overhead and metadata files.
+     exceed `size_installed` plus a fixed overhead
+     allowance of 320 MiB. The allowance accommodates tar
+     header and block-padding overhead and the metadata
+     files; it is sized so that no package conforming to
+     the §3.2.7 resource limits is ever rejected.
 2. Independent of index-declared sizes, a consumer MUST
    abort decompression if the cumulative decompressed
    output exceeds an absolute cap. The default absolute
@@ -174,10 +176,17 @@ committed to disk.
 > exceeding 10000:1, which would let a 10 MB malicious
 > package decompress to terabytes. The cumulative-size
 > check is therefore on every chunk of decompressed
-> output, not just at end-of-stream. The 1% allowance for
-> index-declared sizes accounts for tar block padding and
-> the small metadata files (manifest, files.json,
-> signature) whose total size is a few KB.
+> output, not just at end-of-stream.
+>
+> The 320 MiB decompressed allowance bounds the structural
+> overhead a conformant package may legitimately carry
+> above its installed payload: tar headers and block
+> padding for up to the §3.2.7 limit of 100,000 entries,
+> plus the metadata files (`manifest.json` up to 16 MiB,
+> `files.json` up to 64 MiB). A typical package's overhead
+> is a tiny fraction of this; the fixed allowance is sized
+> so that a consumer never rejects a package that conforms
+> to the §3.2.7 limits.
 
 ## Hash algorithm agility
 

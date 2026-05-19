@@ -21,10 +21,11 @@ keys in this subtree.
 | SymlinkDepthLimit | REG_DWORD | 16 | 1--64 | Maximum symlink resolution recursion depth. |
 | MaxValueSize | REG_DWORD | 1048576 | 4096--67108864 | Maximum size in bytes for a single value (1 MB default, 64 MB ceiling). |
 | MaxKeyDepth | REG_DWORD | 512 | 32--4096 | Maximum nesting depth for key hierarchy. |
-| MaxPathComponentLength | REG_DWORD | 255 | 64--1024 | Maximum length in characters of a single key or value name. |
-| MaxTotalPathLength | REG_DWORD | 16383 | 1024--65535 | Maximum total length in characters of a full registry path (all components including separators). |
+| MaxPathComponentLength | REG_DWORD | 255 | 64--1024 | Maximum length in UTF-8 bytes of a single key or value name. |
+| MaxTotalPathLength | REG_DWORD | 16383 | 1024--65535 | Maximum total length in UTF-8 bytes of a full registry path (all components including separators). |
 | MaxLayersPerValue | REG_DWORD | 128 | 1--1024 | Maximum number of layers that can write to the same (key GUID, value name) pair. |
 | MaxBoundTransactionsPerSource | REG_DWORD | 16 | 1--256 | Maximum number of concurrently bound transactions per source. Prevents write lock starvation via transaction chaining. |
+| MaxReadOnlyTransactionsPerSource | REG_DWORD | 16 | 1--256 | Maximum number of concurrently active read-only snapshot transactions per source, used by REG_IOC_BACKUP. Prevents backup snapshot DoS without treating backups as write-lock-holding transactions. |
 | MaxTotalLayers | REG_DWORD | 1024 | 16--65536 | Maximum number of distinct layers in the in-memory layer table. Prevents unbounded kernel memory consumption from layer creation. |
 | MaxRegisteredSources | REG_DWORD | 32 | 1--256 | Maximum number of concurrently registered sources. Bounds routing table size and per-source kernel state. |
 | MaxHivesPerSource | REG_DWORD | 64 | 1--1024 | Maximum number of hives a single source can register. |
@@ -46,7 +47,8 @@ it validates against the defined range:
 - **Invalid value** (out of range, wrong type, missing): Ignored.
   LCS retains the previously active value (compiled-in default or
   last known-good). An audit event is emitted identifying the key,
-  the invalid value, and the value being retained.
+  the invalid value, and the value being retained. Audit event
+  transport and failure policy are defined in §3.1.
 
 Values are never clamped or silently corrected. The write to the
 registry succeeds (the source does not enforce kernel semantics),
@@ -98,6 +100,12 @@ the specific GUIDs, and re-arms targeted watches on both subtrees. These watches
 The internal watch mechanism is not exposed to userspace and is
 not subject to the NotificationQueueSize limit (LCS processes
 events synchronously in the kernel notification path).
+
+For layer metadata, internal watch delivery identifies which layer
+names are dirty. Publication of layer table entries follows the
+post-commit refresh and atomic publication rules in §2.6. The
+internal watch callback is not permitted to publish a partially
+populated layer entry.
 
 ## Bootstrap interaction
 

@@ -11,7 +11,7 @@ Policy, and configuration revert.
 
 | Field | Type | Mutable | Description |
 |---|---|---|---|
-| Name | string | No | Unique layer identifier (e.g., "role-jellyfin", "gpo-security-baseline"). Human-readable and meaningful by construction. The identity -- not a GUID, not an integer. Layer names are **case-sensitive** (binary comparison). They are code-generated identifiers, not user-facing paths. Maximum length is MaxPathComponentLength (default 255 characters). |
+| Name | string | No | Unique layer identifier (e.g., "role-jellyfin", "gpo-security-baseline"). Human-readable and meaningful by construction. The identity -- not a GUID, not an integer. Layer names are case-preserving and case-insensitive, using the same Unicode Simple Case Folding algorithm as registry key and value names. They are code-generated identifiers, not user-facing paths. Maximum length is MaxPathComponentLength (default 255 UTF-8 bytes). |
 | Precedence | uint32 | Yes | Determines override order. Higher precedence wins. Default is 0 (role-level). Changes are picked up by LCS via the self-watch mechanism. |
 | Enabled | boolean | Yes | Disabled layers are globally invisible during resolution unless attached to a thread's credentials (see Private Layers). Default: enabled. |
 | Owner | SID | No | The principal that created the layer. Informational -- access control is on the layer's registry keys, not on this field. |
@@ -58,6 +58,20 @@ metadata is a set of values under its key:
 
 LCS watches this subtree and maintains an in-memory cache of the
 layer table.
+
+Registry backup LAYER records are not authoritative layer metadata.
+They are stream manifest records used to validate layer-tagged backup
+entries and enforce restore-time privilege checks. A backup restores
+layer metadata only when the backup includes the
+`Machine\System\Registry\Layers\<LayerName>\` metadata subtree as
+ordinary registry KEY, VALUE, and SD records.
+
+Layer identity is the case-folded UTF-8 layer name. The original
+spelling is preserved for display and for the metadata key name, but
+lookups, collision checks, RSI layer-name comparisons, and layer
+table membership checks use the folded identity. Creating `RoleA`
+and `rolea` therefore refers to the same layer and must be treated as
+a duplicate rather than two distinct layers.
 
 ### Circularity
 
@@ -108,17 +122,48 @@ elevate a layer's precedence above 0. This is a defense-in-depth
 measure: compromise of the Layers\ key SD alone cannot create
 high-precedence layers without also holding SeTcbPrivilege.
 
-**Enforcement.** LCS maintains a set of layer metadata key GUIDs,
-populated by the internal self-watch on
-`Machine\System\Registry\Layers\`. This set is updated when layer
-metadata keys are created or deleted. The GUID set and the
-corresponding SD cache entry MUST be populated atomically within
-the self-watch callback, before the creating syscall returns to
-userspace. This eliminates any window where a layer exists in the
-table but has no cached SD or is absent from the GUID set. If the
-SD for a newly created layer metadata key cannot be read (source
-error), the layer MUST NOT be added to the table and the creation
-syscall MUST fail with EIO.
+**Enforcement.** LCS maintains a set of layer metadata key GUIDs
+and a cached SD for each layer metadata key. The layer table entry,
+metadata key GUID, and cached SD are published together. A layer is
+not visible in the in-memory layer table unless its metadata key GUID
+and authorization SD are also available.
+
+Layer metadata key creation is ordinary registry key creation: LCS
+computes the key's initial SD from parent inheritance via KACS before
+asking the source to persist the key. On the normal creation path,
+the metadata key therefore already has an SD before the layer can be
+published.
+
+Changes under `Machine\System\Registry\Layers\` mark the affected
+layer names dirty. After the mutating operation commits, but before
+the syscall returns to userspace, LCS runs a bounded layer metadata
+refresh for the affected names. For a transaction, this refresh runs
+once after the source commit succeeds and before REG_IOC_COMMIT
+returns. The refresh reads the committed metadata key, layer values,
+and SD, then atomically publishes the new table entry plus cached SD.
+
+The internal self-watch mechanism detects the affected subtree
+changes, but the watch callback is not the atomicity boundary. It
+must not publish a partially populated layer entry. LCS must not
+perform source round trips while holding watch-map locks or
+layer-table publication locks.
+
+If `Precedence` is missing, LCS uses 0. If `Enabled` is missing, LCS
+uses true. If `Owner` is missing for a newly created layer, LCS uses
+the creator SID from the creating effective token. `Owner` is
+informational and is not used for access checks.
+
+If a later refresh sees a missing Owner value, LCS retains the
+previous known-good owner if one exists. If none exists, LCS may use
+the metadata key SD owner SID as an informational fallback. This does
+not grant access.
+
+If the metadata key SD cannot be read or parsed during refresh, the
+source has returned malformed data. LCS emits an audit event, does
+not publish or update the affected layer entry, and retains any
+previous known-good entry. If the refresh is required for the
+operation being completed (for example creating or exposing a layer),
+the syscall fails with EIO.
 
 SeTcbPrivilege for precedence > 0 is enforced inline at
 REG_IOC_SET_VALUE time:
@@ -213,6 +258,18 @@ layers. If adding a new layer entry would exceed
 MaxLayersPerValue, the write is rejected with ENOSPC. This check
 is not performed for writes that replace an existing entry in the
 same layer (which do not increase the layer count).
+
+This cap is best-effort admission control, not a strict storage
+invariant. Concurrent writers can race: multiple operations may
+observe room below the cap and then create new layer entries before
+the source state reflects the other writes. LCS does not require
+sources to enforce this cap atomically in v0.21. Once LCS observes
+the distinct layer count at or above MaxLayersPerValue, new writes
+that would add another layer entry are rejected with ENOSPC.
+
+MaxLayersPerValue is a performance and memory-amplification guard,
+not an access-control boundary. Future versions may add source-side
+atomic enforcement if strict caps are required.
 
 The cap is configurable via the self-configuration mechanism. See
 §11.4 for the full parameter table.

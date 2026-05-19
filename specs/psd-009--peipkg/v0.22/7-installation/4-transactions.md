@@ -124,128 +124,83 @@ current process's start time).
 ## Commit procedure
 
 The commit procedure transitions a transaction from
-uncommitted to committed. It is the operation that
-determines all-or-nothing atomicity.
+uncommitted to committed. Atomicity rests on a single
+fact: the package database is a transactional store
+(SQLite in WAL mode, or equivalent — §7.4.8), and **the
+package database's own commit is the transaction's
+durability boundary.** No separate commit protocol is
+layered on top of it.
 
-1. **Verify integrity of staged state**: every staged
-   file is in place and verified; the new database state
-   has been written to a transaction journal.
-2. **Persist commit intent**: write a commit record to
-   the transaction journal indicating "this transaction
-   is being committed". This record is the durable
-   atomicity boundary; before it is persisted, the
-   transaction is rolled back on recovery (§7.5);
-   after it is persisted, the transaction is replayed
-   forward on recovery.
-3. **Apply staged file replacements**: for each REPLACED
-   or ADDED file in the transaction, atomically rename
-   the staged version into place.
-4. **Remove deleted files**: for each REMOVED file in the
-   transaction, delete the path.
-5. **Update the package database**: write the new
-   package state.
-6. **Invoke deduplicated side effects**: for each
-   distinct side-effect identifier (§4.3) declared by any
-   operation in the transaction, invoke it once.
-7. **Mark the transaction journal complete**: clear the
-   commit record. The transaction is fully committed.
+1. **Record intent.** Before any file is moved, write the
+   transaction's intent to the journal — the set of file
+   operations, and for each the staged-file path and the
+   path its displaced original will be backed up to (the
+   *backup map*). The journal is part of the package
+   database (§7.4.5.1); recording intent is an ordinary
+   database write.
+2. **Apply file operations.** For each operation, rename
+   any displaced original aside as a backup (§7.5.1.3)
+   and rename the staged file into place (§7.2 step 4,
+   §7.3 step 3). Throughout this phase every change is
+   individually reversible from the backup map.
+3. **Commit.** In a single package-database transaction,
+   write the new installed-package state and mark the
+   journal's pending transaction `committed`. This
+   database commit is the durability boundary: it is
+   atomic, so the transaction is either fully committed
+   or not committed at all.
+4. **Invoke deduplicated side effects** (§7.4.6). Side
+   effects run *after* the durability boundary; a
+   side-effect failure therefore does not roll the
+   transaction back — side effects are idempotent (§4.3),
+   the transaction is already committed, and a failed
+   side effect is reported and corrected by re-invocation.
+5. **Clean up.** Discard staged files; backups become
+   eligible for the retention window (§7.5.1.3).
 
-If any step from 3 onward fails, the recovery procedure
-(§7.5) replays the journal to either complete or roll
-back the transaction depending on whether the commit
-record was persisted in step 2.
+A crash *before* step 3's database commit leaves the
+journal's transaction `pending`; recovery rolls it back
+(§7.4.7). A crash *after* it leaves the transaction
+`committed`; recovery has only clean-up to finish. The
+transaction is never found partly committed, so recovery
+never completes a half-finished commit.
 
-### Journal integrity
+### The journal
 
-The transaction journal MUST be stored under a security
-descriptor that grants write access only to the package
-manager principal. No other principal MAY write to the
-journal under normal operation.
+The transaction journal is **part of the package
+database**: the pending transaction is recorded as rows
+in the package-database store, not as a separate file
+with a separate format. Recording intent (§7.4.5 step 1)
+and committing (step 3) are therefore ordinary database
+writes, and the journal inherits the database's
+transactional guarantees (§7.4.8).
 
-Each commit record persisted in step 2 MUST include an
-HMAC or signature over the record's contents using a
-key bound to the package manager principal's KACS
-state. The HMAC MUST cover, at minimum:
+The package database — and therefore the journal — is
+stored under a security descriptor that grants write
+access only to the install-authority tier (the
+principals permitted to install packages on the system).
+That security descriptor is the journal's integrity
+protection: a principal outside the tier cannot forge a
+journal entry, and a principal inside the tier already
+holds installation authority, so a within-tier write is
+not an escalation.
 
-- The set of staged file paths the transaction will
-  rename into place
-- The content hash (per §3.5) of each staged file as
-  observed in the staging area at the moment the
-  HMAC is computed
-- The transaction identifier
-- The commit timestamp
-
-This binds the commit record both to the principal
-that produced it AND to the exact staged bytes the
-transaction will install. An attacker who can write to
-the staging area (bypassing the staging-area SD)
-cannot swap a staged file between commit-intent
-persistence and the rename loop without invalidating
-the HMAC.
-
-In §7.4.5 step 3 (apply staged file replacements), the
-package manager MUST re-verify each staged file's
-content hash against the value bound by the HMAC
-immediately before invoking `renameat2`. If the
-re-verification fails, the transaction MUST be
-considered failed and recovery (§7.5) MUST run.
-
-The staging area MUST be stored under a security
-descriptor that grants write access only to the
-package manager principal.
-
-The exact key-binding mechanism (key provisioning at
-package manager install, storage) is implementation-
-defined in v0.22. A future version of this specification
-is expected to mandate a specific binding via PSD-004's
-secret-binding facilities.
-
-In v0.22, the binding key MUST satisfy the following:
-
-- Each HMAC computed over a commit record MUST include
-  a per-transaction nonce of at least 128 bits drawn
-  from a cryptographically secure random source. The
-  nonce MUST be persisted in the commit record itself.
-- Each commit record MUST include a transaction-start
-  timestamp captured once at the start of the
-  transaction. Subsequent operations within the same
-  transaction MUST reference this captured timestamp
-  rather than reading the current clock, so audit
-  forensics remain consistent if the system clock
-  jumps mid-transaction (e.g., NTP step). The
-  pre-commit audit event (§7.6.3) MUST also use the
-  captured transaction-start timestamp.
-- The binding key MUST be rotated when the package
-  manager itself is upgraded. After rotation, journal
-  entries (transaction journal and audit-retention
-  journal) signed under the prior key remain valid
-  for the duration needed to drain pending entries,
-  after which the prior key MUST be destroyed.
-- On rotation, any pending audit-retention journal
-  entries (§7.6.3) MUST be re-HMAC'd under the new
-  key before the prior key is destroyed; failure to
-  re-HMAC the backlog before rotation MUST cause the
-  rotation to abort and the package manager to
-  surface the failure to the operator.
-- v0.22 conformance requires that the mechanism,
-  whatever it is, makes journal-entry forgery
-  impossible without holding the package manager
-  principal's protected key material at the time of
-  forgery (i.e., historical key compromise that has
-  been remediated by rotation cannot retroactively
-  forge commit records, because the per-transaction
-  nonce was not predictable at the time of the
-  historical compromise).
+The staging area is stored under the same security
+descriptor.
 
 > [!INFORMATIVE]
-> Journal integrity protection prevents a class of
-> recovery attack where an attacker writes a forged
-> commit record alongside attacker-controlled staging
-> content, then triggers a "crash recovery" that rolls
-> the staging content forward as if it were a
-> legitimate commit. The KACS-restricted SD on the
-> journal directory is the primary defence; the HMAC
-> on individual commit records is defence-in-depth.
+> Earlier drafts specified an HMAC over each commit
+> record, keyed to a dedicated package-manager principal.
+> Peios's package manager runs as the calling operator
+> and holds no principal of its own (§7.6), so there is
+> no principal-bound key to HMAC with; the security
+> descriptor on the package database is the protection
+> instead. A future hardening — once Peios's
+> elevated-executable mechanism exists — can narrow that
+> security descriptor so the journal is writable only
+> *through* the package-manager executable rather than
+> by the install-authority tier at large. That is an
+> optional tightening, not a v0.22 requirement.
 
 ## Side-effect deduplication
 
@@ -270,29 +225,38 @@ relative to all other recognised side effects.
 
 ## Crash recovery
 
-On startup, the package manager MUST check for an
-incomplete transaction journal:
+On startup, before permitting any new transaction, the
+package manager MUST check the journal for a pending
+transaction:
 
-1. If no journal exists or the journal is marked
-   complete: no recovery needed.
-2. If a journal exists with a persisted commit record
-   but no completion mark: roll forward (re-apply the
-   transaction's changes from the staged state).
-3. If a journal exists without a persisted commit
-   record: roll back (discard staged changes, restore
-   the pre-transaction state).
+1. **No pending transaction** — the package database
+   shows no transaction in the `pending` state: no
+   recovery is needed.
+2. **A pending transaction exists**: **roll it back**.
+   Restore every displaced original from the backup map,
+   discard the transaction's staged files, and clear the
+   pending transaction from the journal.
 
-Recovery MUST run before any new transaction is permitted.
+There is no roll-*forward*. Because the database commit
+(§7.4.5 step 3) is the single durability boundary and is
+itself atomic, a recovered transaction is only ever in
+one of two states: committed (the database records it
+committed — nothing to recover) or pending (roll back). A
+transaction is never found partly committed, so recovery
+never has to complete a half-finished commit.
+
+Recovery is itself crash-safe: every action it takes is a
+rename from the backup map, and re-running it after an
+interruption produces the same result.
 
 > [!INFORMATIVE]
-> Step 2 (roll forward) handles the case where the system
-> crashed after committing intent but before completing
-> file moves and database updates. The intent is durable;
-> the system completes what was promised.
->
-> Step 3 (roll back) handles the case where the system
-> crashed before committing intent. From the consumer's
-> perspective, the transaction simply did not happen.
+> Roll-back-only recovery is possible because the package
+> database is a transactional store. A design that
+> applies file changes *after* a separate commit-intent
+> record needs roll-forward to finish what that record
+> promised; here the database commit and the "transaction
+> is done" fact are the same atomic event, so there is
+> nothing left to finish.
 
 ## Visibility
 

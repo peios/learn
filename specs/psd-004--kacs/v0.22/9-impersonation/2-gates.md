@@ -27,9 +27,11 @@ The identity gate is checked against the server's **primary token** (`real_cred`
 
 The integrity ceiling answers: is the client's token at an integrity level the server is allowed to assume?
 
-The impersonation token's integrity level MUST be less than or equal to the server's primary token's integrity level. A Medium-integrity server can impersonate Low or Medium clients. It MUST NOT impersonate High-integrity clients at Impersonation level — the result is capped to Identification.
+To act at Impersonation or Delegation level, the client's token integrity level MUST be less than or equal to the server's primary token's integrity level. A Medium-integrity server can impersonate Low or Medium clients. It MUST NOT act as a High-integrity client at Impersonation or Delegation level; the effective impersonation level is capped to Identification.
 
-This constraint exists because MIC in AccessCheck uses the effective token's integrity level. Without the ceiling, a server could impersonate a higher-integrity token and gain write access to higher-integrity objects — integrity escalation through impersonation.
+The installed token MAY preserve the client's literal integrity label as identity metadata after this cap. That preserved label MUST NOT authorize resource access while the token is Identification-level, because Identification-level tokens are barred from AccessCheck by §9.1.
+
+This constraint exists because MIC in AccessCheck uses the effective token's integrity level for tokens that can act. Without the acting-level ceiling, a server could impersonate a higher-integrity token and gain write access to higher-integrity objects — integrity escalation through impersonation.
 
 The integrity ceiling is checked against the server's **primary token**. It is always enforced, regardless of privileges — SeImpersonatePrivilege bypasses the identity gate but MUST NOT bypass the integrity ceiling.
 

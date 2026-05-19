@@ -11,6 +11,13 @@ When a process deletes a key via syscall, LCS removes the path
 entry for the specified layer. The key's data (GUID, SD, values)
 is not affected -- only the naming is removed.
 
+Hive root keys cannot be explicitly deleted or hidden. A hive root
+has no parent GUID or child name, so there is no path-entry tuple to
+remove or mask with RSI_DELETE_ENTRY or RSI_HIDE_ENTRY. LCS MUST
+reject delete and hide operations on hive root fds with EINVAL before
+source dispatch, transaction enlistment, sequence allocation, or watch
+generation.
+
 If the key still has path entries in other layers, those remain.
 The key is still visible through those layers.
 
@@ -50,9 +57,48 @@ follows the Linux unlink model:
 - When the last fd closes, LCS tells the source to drop the GUID
   via RSI_DROP_KEY.
 
+Existing fds to an orphaned key may perform GUID-local operations:
+
+- query, set, and delete values
+- set or remove blanket tombstones
+- query and set the key Security Descriptor
+- query key metadata
+- flush the key's hive
+- close the fd
+
+Namespace operations are rejected once the fd's key is orphaned:
+
+- creating a child key under the orphaned key returns ENOENT
+- relative open or create through the orphaned key returns ENOENT
+- deleting the orphaned key's path entry returns ENOENT
+- hiding the orphaned key returns ENOENT
+- backup of the orphaned key returns ENOENT
+
+An orphaned key is no longer a reachable subtree root. Allowing new
+path entries beneath an unnamed key would create unreachable
+subgraphs, so namespace mutation is not permitted.
+
+Existing watches on a key remain armed when the key becomes
+orphaned. The transition to orphaned state delivers KEY_DELETED.
+After that, the watch may observe GUID-local changes made through
+existing fds until the fd closes, but subtree expansion through the
+orphaned key is not performed. Arming a new watch on an already
+orphaned key returns ENOENT.
+
 RSI_DROP_KEY removes all data associated with the GUID: the key
 record, all value entries across all layers, and any remaining path
 entries that might reference it.
+
+If the last fd to an orphaned key closes while the backing source is
+Active, LCS sends RSI_DROP_KEY before releasing its in-kernel key
+state. If the source is Down, LCS releases its in-kernel key state
+and does not queue a deferred drop. The source's required startup and
+re-registration orphan cleanup is responsible for purging key records
+that have no path entries before the source becomes Active.
+
+close() does not report orphan cleanup failure to userspace. If a
+source cannot complete orphan cleanup, registration fails or the
+source remains unavailable.
 
 ## RSI deletion operations
 
@@ -80,10 +126,10 @@ is a key record with no corresponding path entries in any layer.
 These arise from keys that were orphaned but not yet dropped before
 the previous shutdown.
 
-On startup, a source queries its storage for GUIDs that exist in
-the key table but have no path entries. It purges them. This is
-standard referential integrity cleanup and MUST be performed before
-completing registration with LCS.
+On startup or re-registration, a source queries its storage for GUIDs
+that exist in the key table but have no path entries. It purges them.
+This is standard referential integrity cleanup and MUST be performed
+before completing registration with LCS.
 
 ## New key at same path
 

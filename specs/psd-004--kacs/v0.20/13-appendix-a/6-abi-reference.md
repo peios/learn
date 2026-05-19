@@ -6,7 +6,9 @@ Normative byte-level ABI reference for the KACS v0.20 kernel/userspace boundary.
 
 ## 1. Syscall Table
 
-KACS syscalls occupy the 1000-1099 range in the x86_64 syscall table. The event subsystem uses 1050.
+KACS-specific syscalls occupy the 1000-1027 range in the x86_64 syscall table.
+KMES uses its own separate syscall numbers and is specified separately in the
+KMES specification.
 
 | Number | Name | Parameters | Return |
 |--------|------|-----------|--------|
@@ -16,6 +18,7 @@ KACS syscalls occupy the 1000-1099 range in the x86_64 syscall table. The event 
 | 1003 | `kacs_create_token` | `const void __user *spec`, `size_t len` | Token fd (>= 0) or `-errno` |
 | 1004 | `kacs_create_session` | `const void __user *spec`, `size_t len` | Session ID (u64, >= 0) or `-errno` |
 | 1005 | `kacs_set_psb` | `int pidfd`, `u32 mitigations` | 0 or `-errno` |
+| 1006 | `kacs_destroy_empty_session` | `u64 session_id` | 0 or `-errno` |
 | 1010 | `kacs_open_peer_token` | `int conn_fd` | Token fd (>= 0) or `-errno` |
 | 1011 | `kacs_impersonate_peer` | `int conn_fd` | 0 or `-errno` |
 | 1012 | `kacs_revert` | (none) | 0 |
@@ -26,7 +29,8 @@ KACS syscalls occupy the 1000-1099 range in the x86_64 syscall table. The event 
 | 1023 | `kacs_access_check` | `struct kacs_access_check_args __user *uargs` | Granted mask (>= 0) or `-errno` |
 | 1024 | `kacs_access_check_list` | `struct kacs_access_check_args __user *uargs`, `struct kacs_node_result __user *results`, `u32 results_count` | 0 or `-errno` |
 | 1025 | `kacs_set_caap` | `const void __user *policy_sid`, `u32 policy_sid_len`, `const void __user *spec`, `u32 spec_len` | 0 or `-errno` |
-| 1050 | `event_emit` | `const void __user *body`, `u32 body_len` | 0 or `-errno` |
+| 1026 | `kacs_get_mount_policy` | `int fd`, `struct kacs_mount_policy_args __user *uargs`, `size_t argsize` | 0 or `-errno` |
+| 1027 | `kacs_set_mount_policy` | `int fd`, `struct kacs_mount_policy_args __user *uargs`, `size_t argsize` | 0 or `-errno` |
 
 ### Syscall 1000: kacs_open_self_token flags
 
@@ -95,6 +99,18 @@ KACS syscalls occupy the 1000-1099 range in the x86_64 syscall table. The event 
 | `SACL_SECURITY_INFORMATION` | `0x08` |
 | `LABEL_SECURITY_INFORMATION` | `0x10` |
 
+### Syscall 1026/1027: mount policy constants
+
+| Constant | Value |
+|----------|-------|
+| `KACS_MOUNT_POLICY_UNMANAGED` | `1` |
+| `KACS_MOUNT_POLICY_DENY_MISSING` | `2` |
+| `KACS_MOUNT_POLICY_SYNTHESIZE_EPHEMERAL` | `3` |
+| `KACS_MOUNT_POLICY_SYNTHESIZE_PERSISTENT` | `4` |
+
+`kacs_set_mount_policy` MUST reject `KACS_MOUNT_POLICY_UNMANAGED`; that class
+is kernel-classifier-only.
+
 ## 2. Ioctl Commands
 
 All ioctls are issued on a KACS token fd (an anon_inode with `kacs-token` name and `O_CLOEXEC`).
@@ -117,7 +133,11 @@ All ioctls are issued on a KACS token fd (an anon_inode with `kacs-token` name a
 
 ## 3. Token Query Classes
 
-Passed as the `token_class` field in `struct kacs_query_args`. The query populates a caller-supplied buffer via the `buf_ptr`/`buf_len` fields. When `buf_ptr` is 0 or `buf_len` is 0, the kernel returns the required buffer size in `buf_len` (size query).
+Passed as the `token_class` field in `struct kacs_query_args`. The query populates a caller-supplied buffer via the `buf_ptr`/`buf_len` fields. Invalid token classes fail with `-EINVAL`.
+
+When `buf_ptr` is 0 or `buf_len` is 0, the kernel performs a size query: it writes the required payload size to `buf_len`, writes no payload bytes, and returns 0. When `buf_ptr` is non-zero and `buf_len` is non-zero but smaller than the required payload size, the kernel writes the required payload size to `buf_len`, writes no payload bytes, and returns `-ERANGE`. When `buf_ptr` is non-zero and `buf_len` is large enough, the kernel writes the payload bytes, writes the actual payload size to `buf_len`, and returns 0.
+
+The non-empty output payload range `[buf_ptr, buf_ptr + required_payload_size)` MUST NOT overlap the userspace `struct kacs_query_args` range passed to `KACS_IOC_QUERY`. Overlap fails with `-EINVAL`. Implementations MUST perform this check using overflow-safe address arithmetic.
 
 | Class | Value | Name | Payload layout |
 |-------|-------|------|----------------|
@@ -140,8 +160,11 @@ Passed as the `token_class` field in `struct kacs_query_args`. The query populat
 | 17 | `0x11` | `TOKEN_CLASS_MANDATORY_POLICY` | `[policy:u32le]` — NO_WRITE_UP=0x0001, NEW_PROCESS_MIN=0x0002 (4 bytes) |
 | 18 | `0x12` | `TOKEN_CLASS_LOGON_TYPE` | `[logon_type:u32le]` — Interactive=2, Network=3, Batch=4, Service=5, NetworkCleartext=8, NewCredentials=9 (4 bytes) |
 | 19 | `0x13` | `TOKEN_CLASS_LOGON_SID` | Binary SID: `S-1-5-5-{high}-{low}` in SID binary format |
-| 20 | `0x14` | `TOKEN_CLASS_DEFAULT_DACL` | Binary ACL in self-relative format. Empty if no default DACL. |
+| 20 | `0x14` | `TOKEN_CLASS_DEFAULT_DACL` | Binary ACL using the ACL format defined by `security-descriptors/acl-format.md`. Empty if no default DACL. |
 | 21 | `0x15` | `TOKEN_CLASS_IMPERSONATION_LEVEL` | `[level:u32le]` — Anonymous=0, Identification=1, Impersonation=2, Delegation=3 (4 bytes). Primary tokens always return Anonymous (0). |
+| 22 | `0x16` | `TOKEN_CLASS_USER_CLAIMS` | KACS claim-array wrapper as defined by `security-descriptors/claim-attribute-format.md`: repeated `[entry_len:u32le][entry_bytes]` until the buffer is exhausted. Empty if no user claims. |
+| 23 | `0x17` | `TOKEN_CLASS_DEVICE_CLAIMS` | KACS claim-array wrapper as defined by `security-descriptors/claim-attribute-format.md`: repeated `[entry_len:u32le][entry_bytes]` until the buffer is exhausted. Empty if no device claims. |
+| 24 | `0x18` | `TOKEN_CLASS_PROJECTED_SUPPLEMENTARY_GIDS` | `[count:u32le]` then `count` little-endian `u32` gids. Count=0 if there are no projected supplementary gids. |
 
 ## 4. Struct Layouts
 
@@ -189,8 +212,8 @@ Total size: **16 bytes**.
 | Offset | Size | Field | Type | Description |
 |--------|------|-------|------|-------------|
 | 0 | 4 | `token_class` | `u32` | `TOKEN_CLASS_*` constant |
-| 4 | 4 | `buf_len` | `u32` | In: buffer size. Out: required/actual size |
-| 8 | 8 | `buf_ptr` | `u64` | Userspace pointer to output buffer |
+| 4 | 4 | `buf_len` | `u32` | In: buffer size. Out: required size for size queries and `-ERANGE`; actual payload size on success. |
+| 8 | 8 | `buf_ptr` | `u64` | Userspace pointer to output buffer. 0 requests a size query. Non-zero payload ranges must not overlap this struct. |
 
 ### struct kacs_adjust_privs_args
 
@@ -198,9 +221,9 @@ Total size: **24 bytes**.
 
 | Offset | Size | Field | Type | Description |
 |--------|------|-------|------|-------------|
-| 0 | 4 | `count` | `u32` | Number of `kacs_priv_entry` elements (max 64) |
+| 0 | 4 | `count` | `u32` | Number of `kacs_priv_entry` elements (max 64). `count = 0` is invalid. The reset-to-defaults sentinel requires `count = 1`. |
 | 4 | 4 | `_pad` | `u32` | Reserved, must be 0 (alignment padding) |
-| 8 | 8 | `data_ptr` | `u64` | Userspace pointer to `kacs_priv_entry[]` array |
+| 8 | 8 | `data_ptr` | `u64` | Userspace pointer to `kacs_priv_entry[]` array. Duplicate `luid` values within one request are invalid. All entries are validated before any state change is applied. |
 | 16 | 8 | `previous_enabled` | `u64` | Output: enabled bitmask before adjustment |
 
 ### struct kacs_priv_entry
@@ -209,8 +232,8 @@ Total size: **8 bytes**. Array element pointed to by `kacs_adjust_privs_args.dat
 
 | Offset | Size | Field | Type | Description |
 |--------|------|-------|------|-------------|
-| 0 | 4 | `luid` | `u32` | Privilege bit position (0-63) |
-| 4 | 4 | `attributes` | `u32` | `SE_PRIVILEGE_ENABLED` (0x02) / `SE_PRIVILEGE_REMOVED` (0x04) / 0 (disable) |
+| 0 | 4 | `luid` | `u32` | Privilege bit position (0-63). For the reset-to-defaults sentinel, MUST be 0. All other values outside 0-63 are invalid. |
+| 4 | 4 | `attributes` | `u32` | `0` = disable, `SE_PRIVILEGE_ENABLED` (0x02) = enable, `SE_PRIVILEGE_REMOVED` (0x04) = remove, `KACS_PRIV_RESET_ALL_DEFAULTS` (0x80000000) = reset `privileges_enabled` to `privileges_enabled_by_default`. `KACS_PRIV_RESET_ALL_DEFAULTS` is valid only when `count = 1` and `luid = 0`. `SE_PRIVILEGE_ENABLED \| SE_PRIVILEGE_REMOVED`, unknown bits, and all other uses of `KACS_PRIV_RESET_ALL_DEFAULTS` are invalid. Enabling a privilege whose bit is absent from `privileges_present` is invalid. Disabling or removing an already-absent privilege is a no-op. |
 
 ### struct kacs_duplicate_args
 
@@ -230,11 +253,11 @@ Total size: **40 bytes**.
 | Offset | Size | Field | Type | Description |
 |--------|------|-------|------|-------------|
 | 0 | 8 | `privs_to_delete` | `u64` | Bitmask of privileges to permanently remove |
-| 8 | 4 | `num_deny_indices` | `u32` | Count of group indices to flip to deny-only |
+| 8 | 4 | `num_deny_indices` | `u32` | Count of zero-based group indices to flip to deny-only |
 | 12 | 4 | `num_restrict_sids` | `u32` | Count of restricting SIDs to add |
 | 16 | 4 | `data_len` | `u32` | Total length of variable data at `data_ptr` |
 | 20 | 4 | `flags` | `u32` | Bit 0: `KACS_RESTRICT_WRITE_RESTRICTED` (0x01) — enable write-restricted mode + user_deny_only. All other bits reserved, must be 0. |
-| 24 | 8 | `data_ptr` | `u64` | Userspace pointer: `u32[]` deny indices, then binary SIDs |
+| 24 | 8 | `data_ptr` | `u64` | Userspace pointer: `u32[]` deny indices, then `num_restrict_sids` packed binary SIDs with no padding; `data_len` must match exactly |
 | 32 | 4 | `result_fd` | `s32` | Output: new restricted token fd |
 | 36 | 4 | (implicit padding) | | Struct padding to 40 bytes |
 
@@ -262,10 +285,10 @@ Total size: **24 bytes**.
 
 | Offset | Size | Field | Type | Description |
 |--------|------|-------|------|-------------|
-| 0 | 4 | `count` | `u32` | Number of `kacs_group_entry` elements (max 256) |
+| 0 | 4 | `count` | `u32` | Number of `kacs_group_entry` elements (max 64). `count = 0` is invalid. The reset sentinel requires `count = 1`. |
 | 4 | 4 | `_pad` | `u32` | Reserved, must be 0 (alignment padding) |
 | 8 | 8 | `data_ptr` | `u64` | Userspace pointer to `kacs_group_entry[]` array |
-| 16 | 8 | `previous_state` | `u64` | Output: bitmask of previous enabled state (up to 64 groups) |
+| 16 | 8 | `previous_state` | `u64` | Output: bitmask of previous enabled state for all token groups |
 
 ### struct kacs_group_entry
 
@@ -273,8 +296,11 @@ Total size: **8 bytes**. Array element pointed to by `kacs_adjust_groups_args.da
 
 | Offset | Size | Field | Type | Description |
 |--------|------|-------|------|-------------|
-| 0 | 4 | `index` | `u32` | Group index (`0xFFFFFFFF` in first entry = reset all groups) |
-| 4 | 4 | `enable` | `u32` | 1 = enable, 0 = disable |
+| 0 | 4 | `index` | `u32` | Zero-based group-array index. `0xFFFFFFFF` in the first and only entry is the reset-all-groups sentinel. Any other out-of-range value is invalid. |
+| 4 | 4 | `enable` | `u32` | 1 = enable, 0 = disable. For the reset sentinel, MUST be 0. |
+
+Duplicate group indices in a single `KACS_IOC_ADJUST_GROUPS` request are
+invalid.
 
 ### struct kacs_adjust_default_args
 
@@ -301,6 +327,32 @@ Total size: **32 bytes**. Passed by pointer to syscall 1020 (`kacs_open`).
 | 24 | 4 | `sd_len` | `__u32` | Length of creator SD |
 | 28 | 4 | `__pad` | `__u32` | Reserved, must be 0 |
 
+### kacs_open_how flags
+
+The `flags` field accepts standard Linux `AT_*` pathname flags relevant to
+open:
+
+| Flag | Value | Description |
+|------|-------|-------------|
+| `AT_SYMLINK_NOFOLLOW` | `0x100` | Do not follow the terminal symlink. `kacs_open` then fails with `-ELOOP` if the final path component is a symlink. |
+
+### struct kacs_mount_policy_args
+
+Total size: **32 bytes**. Passed by pointer to syscalls 1026 and 1027.
+
+| Offset | Size | Field | Type | Description |
+|--------|------|-------|------|-------------|
+| 0 | 4 | `policy` | `__u32` | One `KACS_MOUNT_POLICY_*` constant. For `kacs_set_mount_policy`, `UNMANAGED` is invalid. |
+| 4 | 4 | `flags` | `__u32` | Reserved, must be 0. |
+| 8 | 4 | `generation` | `__u32` | Output from `kacs_get_mount_policy`; reserved and must be 0 on set. |
+| 12 | 4 | `__pad0` | `__u32` | Reserved, must be 0. |
+| 16 | 8 | `template_sd_ptr` | `__aligned_u64` | Userspace pointer to mount template SD buffer, or 0. |
+| 24 | 4 | `template_sd_len` | `__u32` | Input buffer size on get; input template length on set; required template length on get output. |
+| 28 | 4 | `__pad1` | `__u32` | Reserved, must be 0. |
+
+`kacs_set_mount_policy` treats `template_sd_ptr=0, template_sd_len=0` as clear
+the mount template. `template_sd_ptr!=0` requires `template_sd_len>0`.
+
 ### struct kacs_node_result
 
 Total size: **8 bytes**. Output array element for syscall 1024 (`kacs_access_check_list`).
@@ -323,7 +375,7 @@ Total size: **20 bytes**. Input array element referenced by
 
 `object_tree_ptr` points to a flat preorder array of `struct kacs_object_type_entry`
 values, `object_tree_count` entries long. The semantic validation rules are the
-same as the Object ACEs section:
+same as §10.5:
 
 - the array MUST NOT be empty when provided
 - the first entry MUST have `level = 0`
@@ -451,9 +503,11 @@ Binary layout passed to syscall 1004 (`kacs_create_session`). Minimum size: 15 b
 |--------|------|-------|------|-------------|
 | 0 | 1 | `logon_type` | `u8` | Logon type value (see table below) |
 | 1 | 2 | `auth_pkg_len` | `u16` | Length of auth package name |
-| 3 | var | `auth_pkg` | `u8[auth_pkg_len]` | Authentication package name (e.g. `"Negotiate"`, `"Kerberos"`) |
+| 3 | var | `auth_pkg` | `u8[auth_pkg_len]` | Authentication package name as valid UTF-8 bytes (e.g. `"Negotiate"`, `"Kerberos"`) |
 | 3+auth_pkg_len | 4 | `user_sid_len` | `u32` | Length of user SID |
 | 7+auth_pkg_len | var | `user_sid` | `u8[user_sid_len]` | Binary SID of the authenticated user |
+
+The `auth_pkg` byte range MUST be empty or valid UTF-8. Malformed UTF-8 MUST fail with `-EINVAL`.
 
 ### Logon types
 
@@ -481,6 +535,14 @@ New fields are appended to the end of the struct. Older userspace that passes a 
 ### kacs_open howsize versioning
 
 Syscall 1020 (`kacs_open`) takes a `howsize` parameter specifying the size of the caller's `struct kacs_open_how`. The kernel uses the same copy-min pattern as `kacs_access_check_args`: it copies `min(howsize, sizeof(struct kacs_open_how))` bytes from userspace, zero-initializing any fields the caller did not provide. The minimum accepted `howsize` is 16 bytes (through `flags`). If the caller provides a larger struct than the kernel knows about, trailing bytes beyond the kernel's struct size MUST all be zero — otherwise `-EINVAL` is returned (preventing old kernels from silently ignoring new flags).
+
+### kacs_mount_policy_args argsize versioning
+
+Syscalls 1026 and 1027 take an `argsize` parameter specifying the size of the
+caller's `struct kacs_mount_policy_args`. The kernel uses the same copy-min
+pattern as `kacs_open`: fields beyond the caller's struct size are
+zero-initialized, and trailing bytes beyond the kernel-known struct size MUST be
+zero. The minimum accepted `argsize` is 16 bytes, through `__pad0`.
 
 ## 8. Process Access Rights
 
@@ -554,6 +616,17 @@ These constants occupy the same bit positions but carry directory-specific seman
 | `GENERIC_WRITE` | `0x40000000` | 30 |
 | `GENERIC_READ` | `0x80000000` | 31 |
 
+### File GenericMapping
+
+Used when AccessCheck evaluates a file or directory SD:
+
+| Generic right | Maps to |
+|---|---|
+| `GENERIC_READ` | `FILE_READ_DATA \| FILE_READ_ATTRIBUTES \| FILE_READ_EA \| READ_CONTROL \| SYNCHRONIZE` |
+| `GENERIC_WRITE` | `FILE_WRITE_DATA \| FILE_APPEND_DATA \| FILE_WRITE_ATTRIBUTES \| FILE_WRITE_EA \| READ_CONTROL \| SYNCHRONIZE` |
+| `GENERIC_EXECUTE` | `FILE_EXECUTE \| FILE_READ_ATTRIBUTES \| READ_CONTROL \| SYNCHRONIZE` |
+| `GENERIC_ALL` | `FILE_READ_DATA \| FILE_WRITE_DATA \| FILE_APPEND_DATA \| FILE_READ_EA \| FILE_WRITE_EA \| FILE_EXECUTE \| FILE_DELETE_CHILD \| FILE_READ_ATTRIBUTES \| FILE_WRITE_ATTRIBUTES \| DELETE \| READ_CONTROL \| WRITE_DAC \| WRITE_OWNER \| SYNCHRONIZE` |
+
 ## 10. Token Access Rights
 
 Per-handle access rights on a KACS token fd. Specified as the `access_mask` parameter to `kacs_open_self_token`, `kacs_open_process_token`, etc. and checked on each ioctl.
@@ -576,6 +649,7 @@ Per-handle access rights on a KACS token fd. Specified as the `access_mask` para
 |----------|-------|
 | `SE_PRIVILEGE_ENABLED` | `0x00000002` |
 | `SE_PRIVILEGE_REMOVED` | `0x00000004` |
+| `KACS_PRIV_RESET_ALL_DEFAULTS` | `0x80000000` |
 
 ### Group attribute constants (for SID_AND_ATTRIBUTES in query results)
 
@@ -632,6 +706,31 @@ The `flags` parameter accepts standard Linux `AT_*` flags:
 | `AT_EMPTY_PATH` | `0x1000` | Operate on the fd itself (not a path relative to it) |
 | `AT_SYMLINK_NOFOLLOW` | `0x100` | Do not follow symlinks |
 
+`kacs_get_sd` returns one self-relative SD subset. Revision MUST be 1 and
+`SE_SELF_RELATIVE` MUST be set. Only the requested components are serialized
+into the returned descriptor; requested components that are absent on the
+object are omitted from the subset descriptor (offset 0, corresponding PRESENT
+bit clear). The subset-descriptor header is still returned even when every
+requested component is absent.
+
+`kacs_set_sd` consumes one self-relative SD subset. Only the components named
+by `security_info` are read from the input descriptor; unindicated components
+are ignored and the target object's existing values are preserved.
+
+`SACL_SECURITY_INFORMATION` and `LABEL_SECURITY_INFORMATION` MUST NOT be used
+together in either syscall. The combination is invalid and fails with
+`-EINVAL`.
+
+For `LABEL_SECURITY_INFORMATION`, the descriptor's SACL field carries the label
+subset only:
+
+- on `kacs_get_sd`, the returned SACL contains exactly the first
+  non-inherit-only `SYSTEM_MANDATORY_LABEL_ACE`, or no SACL component if the
+  object has no explicit mandatory-label ACE;
+- on `kacs_set_sd`, no SACL component clears the object's explicit mandatory
+  label, while a present SACL MUST contain exactly one non-inherit-only
+  `SYSTEM_MANDATORY_LABEL_ACE` and no other ACEs.
+
 ### kacs_open status_out values
 
 Written to the `status_out` pointer (if non-NULL) after `kacs_open` completes:
@@ -642,6 +741,10 @@ Written to the `status_out` pointer (if non-NULL) after `kacs_open` completes:
 | `KACS_STATUS_CREATED` | `2` | New file was created |
 | `KACS_STATUS_OVERWRITTEN` | `3` | Existing file was truncated to zero |
 | `KACS_STATUS_SUPERSEDED` | `4` | Existing file was deleted and recreated |
+
+`KACS_STATUS_SUPERSEDED` is reported only when an existing file was actually
+replaced. A `KACS_FILE_SUPERSEDE` call that resolves to a missing target and
+creates a new file reports `KACS_STATUS_CREATED`.
 
 ### Empty query results
 

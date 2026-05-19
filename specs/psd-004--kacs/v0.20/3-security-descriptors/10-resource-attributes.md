@@ -9,7 +9,7 @@ Resource attributes do not grant or deny access. They exist so that conditional 
 Each resource attribute ACE encodes a single named, typed, multi-valued
 attribute. The name is a string. Values MAY be integers, strings, booleans,
 SIDs, or byte arrays. The attribute data uses the claim entry format defined in
-the Claim Attribute Format section.
+§3.9.
 
 Multiple resource attribute ACEs MAY appear in the same SACL, each carrying a different attribute. If two ACEs carry the same attribute name, the first one wins -- duplicates are silently ignored.
 
@@ -17,6 +17,10 @@ An inherit-only `SYSTEM_RESOURCE_ATTRIBUTE_ACE` does not apply to the object it
 is attached to and MUST be ignored during resource-attribute extraction.
 
 Resource attributes are extracted from the SACL before the DACL walk begins, so they are available when conditional expressions need them.
+
+A resource attribute marked `CLAIM_SECURITY_ATTRIBUTE_MANDATORY` is protected
+metadata. Set-security operations MUST preserve each mandatory resource
+attribute unless the caller has SeTcbPrivilege, as defined in §11.6.
 
 ## Claim types
 

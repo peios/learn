@@ -6,6 +6,15 @@ Auditing is purely observational. No audit rule affects the access decision. Aud
 
 KACS defines three auditing mechanisms within the AccessCheck pipeline.
 
+For AccessCheck-emitted KMES records, KACS uses two event families:
+
+- `access-audit` for object-access audit events emitted from the SACL walk and
+  token audit-policy forcing
+- `privilege-use` for privilege-use audit events
+
+The exact event type strings and msgpack payload schemas are defined in
+Appendix A: Audit Event Schemas.
+
 ## Access auditing
 
 SYSTEM_AUDIT ACEs in the SACL define which access attempts to log. Each audit ACE specifies:
@@ -23,19 +32,19 @@ The overlap check uses the mapped requested mask after generic mapping
 failed requests are still auditable for the rights that were actually
 requested.
 
-Conditional audit ACEs carry expressions that gate whether the event fires. An expression that evaluates to UNKNOWN results in the event being emitted (when in doubt, audit).
+Conditional audit ACEs carry expressions that gate whether the event fires. Conditional audit ACE expressions use deny-side membership polarity for `Member_of` and related operators, matching the SID-match rule above. An expression that evaluates to UNKNOWN results in the event being emitted (when in doubt, audit).
 
 ## Continuous auditing
 
 Access auditing fires once, at the point where AccessCheck runs. Continuous auditing fills the gap for per-operation monitoring.
 
-SYSTEM_ALARM ACEs configure per-operation audit masks. When AccessCheck evaluates an alarm ACE and the caller's SID matches, the ACE's access mask is recorded as a **continuous audit mask** on the open handle. On each subsequent operation, the enforcement point checks the handle's continuous audit mask and emits a `continuous-audit` event when the operation's normalized required-access mask overlaps the stored continuous audit mask.
+SYSTEM_ALARM ACEs configure per-operation audit masks. When AccessCheck evaluates an alarm ACE and the caller's SID matches, the ACE's access mask is recorded as a **continuous audit mask** on the open handle. Conditional alarm ACE expressions use the same deny-side membership polarity as conditional audit ACE expressions. On each subsequent operation, the enforcement point checks the handle's continuous audit mask and emits a `continuous-audit` event when the operation's normalized required-access mask overlaps the stored continuous audit mask.
 
 The continuous audit mask is returned by AccessCheck to the caller (FACS, registryd), which stores it on the handle and enforces it per-operation.
 
-For FACS file handles, the normalized required-access mask is the same mask used by the use-time handle check. For operations whose authorization accepts one of several rights, such as append-or-write data, the required-access mask contains the accepted right set and the event records the subset that overlapped the continuous audit mask.
+For FACS file handles, the normalized required-access mask is the same mask used by the use-time handle check in `facs/use-time.md`. For operations whose authorization accepts one of several rights, such as append-or-write data, the required-access mask contains the accepted right set and the event records the subset that overlapped the continuous audit mask.
 
-Continuous-audit events are emitted after the per-operation decision is known. Successful and denied attempts are both emitted when the attempted required-access mask overlaps the handle's continuous audit mask. The event subject and process are the operation-time current effective token and current task, not necessarily the token or process that originally opened the handle.
+Continuous-audit events are emitted after the per-operation decision is known. Successful and denied attempts are both emitted when the attempted required-access mask overlaps the handle's continuous audit mask. The event subject and process are the operation-time current effective token and current task, not necessarily the token or process that originally opened the handle. This preserves correct attribution after handle transfer while still using the opener-computed handle mask to decide whether the handle is continuously audited.
 
 If an enforcement point cannot construct a required continuous-audit event, it MUST fail closed. KMES transport buffering and drop accounting remain KMES behavior.
 

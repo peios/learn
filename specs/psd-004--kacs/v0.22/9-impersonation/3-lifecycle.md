@@ -7,7 +7,7 @@ title: Impersonation Lifecycle
 1. **Client connects.** The client optionally sets the maximum impersonation level via syscall (default: Impersonation). The client calls `connect()` on a Unix stream (SOCK_STREAM) or seqpacket (SOCK_SEQPACKET) socket. The kernel's LSM hook (`security_unix_stream_connect`, which fires for both stream and seqpacket) captures the client's identity.
 
 2. **Identity capture.** The hook examines the client thread's effective credential and the socket's max impersonation level:
-   - **Anonymous:** a token containing only `S-1-5-7` is stored on the socket's LSM blob. The client's real identity is not recorded.
+   - **Anonymous:** a token whose user SID is `S-1-5-7`, whose enabled groups include Everyone, and which does not carry Authenticated Users is stored on the socket's LSM blob. The client's real identity is not recorded.
    - **Impersonation or Delegation:** the thread's effective token is stored. If the connecting thread is itself impersonating, the impersonated identity flows through — this is how identity cascades across local services.
    - **Identification:** the thread's effective token is stored but tagged at Identification level.
 
@@ -46,7 +46,18 @@ If a thread is already impersonating and calls `kacs_impersonate_peer` again, th
 
 ## Interaction with MIC and PIP
 
-**MIC uses the effective token** because the integrity ceiling makes it safe. A thread can never hold an impersonation token with a higher integrity level than its primary token. MIC can trust the effective token because impersonation can only lower integrity, never raise it.
+**MIC uses the effective token** for tokens that are permitted to act because
+the integrity ceiling in §9.2 makes acting impersonation safe. A thread MUST
+NOT act at Impersonation or Delegation level with a client token whose integrity
+level exceeds the server primary token's integrity level.
+
+If the integrity ceiling fails, KACS caps the effective impersonation level to
+Identification. The installed token MAY preserve the client's literal integrity
+label as identity metadata, but that preserved label MUST NOT authorize resource
+AccessCheck because Identification-level tokens are barred from AccessCheck by
+§9.1. Therefore an acting impersonation token can only preserve or lower the
+server primary token's integrity; a higher literal integrity label can exist
+only on a non-acting Identification-level token.
 
 **PIP uses the PSB** because there is no equivalent ceiling. PIP operates on `pip_type` and `pip_trust`, which are orthogonal to integrity level. If PIP read from the effective token, a process could impersonate a token carrying higher PIP values and gain protection it does not deserve.
 
@@ -70,6 +81,9 @@ Both use the same identity lifecycle: capture at `connect()`, impersonate via `k
 **Not supported for socket-based impersonation:**
 
 - **SOCK_DGRAM** — connectionless. Identity would come via per-message `SCM_CREDENTIALS`, which is a fundamentally different model (no persistent peer, per-message identity). Under KACS, `CAP_SETUID` is ALLOW, so any process can forge `SCM_CREDENTIALS` — the identity assertion is not trustworthy. Services using datagram sockets that need client identity SHOULD use explicit token fd passing (`SCM_RIGHTS` + `KACS_IOC_IMPERSONATE`) instead.
+- **socketpair-created sockets** — pre-connected and unnamed. Possession of
+  the fd authorizes use of the channel, but `socketpair()` installs no KACS
+  peer-token snapshot in `v0.22`.
 - **Pipes / FIFOs** — no peer credential mechanism.
 
 **Explicit token fd impersonation** (`KACS_IOC_IMPERSONATE`) works regardless of how the token fd was obtained — socket-based, `SCM_RIGHTS` transfer, `kacs_open_peer_token`, or any other path. This is the universal fallback for transports that don't support socket-based impersonation.

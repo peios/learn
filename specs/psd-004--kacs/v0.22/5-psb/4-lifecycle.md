@@ -4,19 +4,21 @@ title: PSB Lifecycle
 
 ## Fork (clone without CLONE_THREAD)
 
-The child receives a copy of the parent's PSB. PIP fields, mitigations, and any active restrictions are inherited. A Protected process's children start as Protected -- PIP protection propagates across fork.
+The child receives a copy of the parent's PSB with one exception: `process_guid` is NOT copied — the child receives a new kernel-generated UUIDv4. All other PSB fields (PIP fields, mitigations, and any active restrictions) are inherited. A Protected process's children start as Protected — PIP protection propagates across fork.
 
 The child receives a new default process SD. The owner is the forking thread's primary token's user SID (not the impersonation token, even if the thread is impersonating). The DACL follows the default template.
 
 ## Exec
 
-PIP fields (`pip_type`, `pip_trust`) are reset at exec based on the new binary's cryptographic signature (see the Binary Signing section). A Protected parent that execs an unsigned binary loses PIP protection — protection follows the binary, not the lineage.
+PIP fields (`pip_type`, `pip_trust`) are reset at exec based on the new binary's cryptographic signature (see §6.1). A Protected parent that execs an unsigned binary loses PIP protection — protection follows the binary, not the lineage.
 
 Mitigation flags (`lsv`, `wxp`, `tlp`, `cfif`, `cfib`, `pie`, `sml`, `ui_access`) are NOT reset by exec. They persist across exec unchanged. A mitigation set between fork and exec survives regardless of what binary is loaded.
 
 The `no_child_process` flag persists across exec. A process that has been restricted from creating children remains restricted regardless of what binary it loads.
 
-The process SD is NOT reset by exec. The SD was set at fork time and persists. The SD reflects the process's creation context, not the binary it is running.
+The `process_guid` is NOT reset by exec. The GUID identifies the process (the scheduling entity), not the binary.
+
+The process SD is NOT reset by exec. Exec MUST preserve the current process SD unchanged. The process SD is initialized at fork from the forking thread's primary token and reflects the process creation context or later explicit KACS process-SD management context, not the binary being executed. Primary-token installation and other explicit process-SD mutation paths replace or modify the process SD only as specified by their own rules (see §4.3 and §13.2).
 
 ## Clone with CLONE_THREAD
 

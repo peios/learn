@@ -12,6 +12,17 @@ ETIMEDOUT for waiting threads. The source is not disconnected on
 timeout -- it remains active and late responses are processed
 normally.
 
+RequestTimeoutMs is measured from the point where the kernel
+operation first attempts to reserve an in-flight RSI slot, after
+local validation and access checks. The timeout includes waiting for
+a MaxConcurrentRSIRequests slot, waiting for the source to read the
+queued request, and waiting for the response.
+
+Timed-out dispatched requests remain in the source's in-flight table
+until the source responds or disconnects. The source MUST still send
+exactly one response for every request it has read, even if the
+original kernel caller timed out.
+
 ## Complete layer data
 
 When asked for values or path entries, a source MUST return ALL
@@ -32,16 +43,23 @@ requests in any order.
 
 ## Transaction support
 
-Sources MUST support the transaction operations
+Sources MUST understand the transaction operations
 (RSI_BEGIN_TRANSACTION, RSI_COMMIT_TRANSACTION,
-RSI_ABORT_TRANSACTION). Commits MUST be atomic (all-or-nothing).
-Concurrent commits MUST be serialised.
+RSI_ABORT_TRANSACTION). Commits for supported read-write
+transactions MUST be atomic (all-or-nothing). Concurrent read-write
+commits MUST be serialised.
 
 Sources whose backing store does not support transactions MAY treat
 each operation as auto-committed and return RSI_TXN_NOT_SUPPORTED
-on RSI_BEGIN_TRANSACTION. LCS maps this to ENOTSUP on
-reg_begin_transaction and the caller never receives a transaction
-fd.
+on RSI_BEGIN_TRANSACTION with mode RSI_TXN_READ_WRITE. LCS maps this
+to ENOTSUP on the first operation that attempts to bind a transaction
+to that source; source-agnostic reg_begin_transaction still succeeds.
+
+Sources whose backing store does not support stable read-only
+snapshots MAY return RSI_TXN_NOT_SUPPORTED on RSI_BEGIN_TRANSACTION
+with mode RSI_TXN_READ_ONLY. LCS maps this to ENOTSUP for
+REG_IOC_BACKUP. A source MAY support read-only snapshot transactions
+even if it does not support read-write transactions.
 
 ## Conditional write support
 
@@ -63,10 +81,13 @@ root GUIDs.
 
 ## Crash recovery
 
-On startup, sources MUST clean up orphaned GUIDs before completing
-registration with LCS. An orphaned GUID is a key record with no
-path entries in any layer. Sources MUST query for and purge these
-records as part of their initialisation sequence.
+On startup or re-registration, sources MUST clean up orphaned GUIDs
+before completing registration with LCS. An orphaned GUID is a key
+record with no path entries in any layer. Sources MUST query for and
+purge these records as part of their initialisation sequence. If
+orphan cleanup cannot be completed, the source MUST fail
+registration rather than becoming Active with known orphaned key
+records.
 
 ## Immutable field protection
 
@@ -101,14 +122,22 @@ content -- SD that doesn't parse, impossible field values):
 
 - Request returns EIO to the caller.
 - LCS emits an audit event identifying the source, key GUID, and
-  nature of the validation failure.
+  nature of the validation failure. Audit event transport and
+  failure policy are defined in §3.1.
 - Source stays alive. Corruption may be localised.
 
-**Sequence number validation.** LCS MUST reject any entry in an
-RSI response whose sequence number exceeds the current global
-sequence counter. Such entries are treated as malformed data (EIO
-+ audit event). This prevents a compromised source from
-fabricating sequence numbers to win layer resolution tiebreaks.
+**Sequence number validation.** LCS maintains the global counter as
+`next_sequence`, the next sequence number it will allocate. LCS MUST
+reject any layer-qualified entry in an RSI response whose sequence
+number is greater than or equal to `next_sequence`. Such entries are
+treated as malformed data (EIO + audit event). This prevents a
+compromised source from fabricating sequence numbers to win layer
+resolution tiebreaks.
+
+Within a single resolution candidate set, duplicate sequence numbers
+at the same precedence are malformed if they would otherwise be
+compared to select a winner. LCS rejects the response as malformed
+data rather than making an arbitrary choice.
 
 The same structural SD validation applies to layer metadata SDs
 loaded during layer table cache refresh. A malformed SD on a layer
@@ -137,7 +166,8 @@ Mitigations:
 
 - Sources MUST run with tightly scoped privileges and be protected
   by SDs on their service definitions.
-- LCS MUST emit audit events for source data validation failures.
+- LCS MUST emit audit events for source data validation failures
+  using the audit event policy defined in §3.1.
 - Source processes are critical-path components managed by peinit
   with PIP (Process Integrity Protection) where available.
 - A future hardening path could involve LCS checksumming SDs it

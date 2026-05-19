@@ -1,0 +1,15 @@
+name = "Writing VM-Backed Tests"
+description = "A tour of the test-author surface — VMs, commands, files, networks, streams, and labs."
+featured = true
+order = 2
+
+pages = [
+  "writing-tests/the-test-function",
+  "writing-tests/vms-and-profiles",
+  "writing-tests/running-commands",
+  "writing-tests/files-and-handles",
+  "writing-tests/disks-and-fault-injection",
+  "writing-tests/bridges-and-impairments",
+  "writing-tests/streams-and-tails",
+  "writing-tests/labs-and-scope",
+]

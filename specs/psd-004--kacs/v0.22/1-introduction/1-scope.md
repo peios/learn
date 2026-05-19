@@ -23,9 +23,9 @@ This specification does not cover:
 
 - Authentication (authd)
 - The principal store or directory services
-- The registry subsystem (loregd)
-- Service management (peinit)
+- The registry subsystem (LCS — PSD-005, loregd — PSD-006)
+- Service management (peinit — PSD-007)
 - The Job Forwarding Subsystem (JFS)
-- The event and audit subsystem (KMES -- specified separately)
+- The event and audit subsystem (KMES — PSD-003)
 - Network-level delegation and Kerberos integration
 - Container integration

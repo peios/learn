@@ -69,18 +69,18 @@ next begins.
 1. Compute the install plan: which files will be created,
    which directories will be created, which side effects
    will be invoked.
-2. Verify disk space: the filesystem MUST have sufficient
-   free space for the transaction's full duration. The
-   reservation accounts for staged copies of files being
-   installed (§7.2.3), backup copies of files being
-   modified or removed (§7.5.1.3), and the final installed
-   payload. A conservative bound is
-   `size(ADDED) + 2 × size(REPLACED) + size(REMOVED)`,
-   aggregated across all operations in the transaction.
-   For a pure install (no replacements), this reduces to
-   `size_installed` (§3.3.3). Staging and backup space is
-   released at commit; steady-state disk usage matches
-   `size_installed`.
+2. Verify disk space. A transaction's additional space
+   requirement is the staged new and changed content —
+   `size(ADDED) + size(REPLACED)`, aggregated across all
+   operations in the transaction. Backups of replaced or
+   removed files cost no additional space: a backup is
+   made by renaming the old file aside within its own
+   directory (§7.5.1.3), retaining the old content in
+   place rather than copying it. Because a transaction
+   may span multiple filesystems, the check MUST be
+   performed per target filesystem, not against a single
+   global figure. For a pure install (no replacements)
+   the requirement reduces to `size_installed` (§3.3.3).
 3. Verify no payload path collides with a path already
    owned by another installed package (§3.4.10).
 
@@ -91,18 +91,25 @@ For each payload entry in tar order:
 1. Determine the install path on disk by joining the
    payload-relative path with the filesystem root. Path
    resolution MUST use TOCTOU-safe interfaces: the
-   package manager MUST NOT traverse a symlink it did
-   not itself create earlier in this same install
-   operation when resolving the install path. On Linux,
-   this is achieved with `openat2(...,
-   RESOLVE_NO_SYMLINKS | RESOLVE_BENEATH | RESOLVE_NO_XDEV
-   | RESOLVE_NO_MAGICLINKS)` anchored at the relevant
-   `/usr/`, `/etc/`, or `/var/` subtree, or equivalent
-   semantics with `O_NOFOLLOW` on every component.
-   `RESOLVE_NO_MAGICLINKS` is included to prevent
-   accidental redirection through `/proc/self/fd/`
-   magic links should the package manager hold an
-   unrelated file descriptor open during extraction.
+   package manager MUST resolve each path component
+   relative to a verified parent-directory file
+   descriptor, and MUST NOT traverse any symbolic link
+   while doing so — including a symlink the package
+   manager itself created earlier in the same operation.
+   On Linux this is achieved with
+   `openat2(..., RESOLVE_NO_SYMLINKS)` anchored at the
+   relevant permitted top-level destination (§3.4.1), or
+   equivalent semantics with `O_NOFOLLOW` on every
+   component. A conformant consumer SHOULD additionally
+   apply `RESOLVE_BENEATH`, `RESOLVE_NO_XDEV`, and
+   `RESOLVE_NO_MAGICLINKS` as defence in depth.
+
+   A well-formed package never contains a payload entry
+   whose ancestor path component is a symlink, so this
+   resolution never fails for a conformant package; a
+   resolution failure indicates a malformed or hostile
+   package, or hostile filesystem state, and MUST abort
+   the install.
 2. If a non-directory entry already exists at the install
    path (whether owned by another package or unowned),
    handle per the file-ownership rule (§7.1.5). Pre-
@@ -210,10 +217,20 @@ created it. Ownership is recorded in the package database
 (step 5 above).
 
 A path that already exists on the filesystem and is not
-owned by any installed package SHOULD NOT be overwritten
-by an install. The package manager MUST fail with an
-explicit error rather than overwriting unowned files,
-unless the user explicitly authorises overwrite.
+owned by any installed package is handled as follows:
+
+- If the existing file's content is byte-identical to
+  the payload entry that would be installed at that
+  path, the package manager MAY *adopt* it: record the
+  path as owned by the installing package without
+  rewriting it. Adoption is safe because the on-disk
+  content is already exactly what would be installed.
+- Otherwise, the package manager MUST fail with an
+  explicit error rather than overwriting the unowned
+  file, unless the operator explicitly authorises the
+  overwrite. When authorised, the existing file MUST be
+  displaced (renamed aside as a backup) rather than
+  destroyed, so that it remains recoverable.
 
 > [!INFORMATIVE]
 > Unowned existing files indicate either a previous

@@ -2,6 +2,8 @@
 title: Conventions
 ---
 
+This specification conforms to PSD-001.
+
 This specification uses the key words MUST, MUST NOT, SHALL, SHALL NOT, SHOULD, SHOULD NOT, MAY, REQUIRED, and OPTIONAL as described in RFC 2119.
 
 > [!INFORMATIVE]
@@ -19,7 +21,7 @@ Pseudocode in this specification uses the following conventions:
 - All access masks are 32-bit unsigned integers unless otherwise stated.
 - SID comparison is byte-for-byte equality of the binary encoding.
 
-Section references within this specification use page titles (e.g., "see the Token Access Rights section").
+Section references use the `§` notation (e.g., §4.8 for the Token Access Rights section).
 
 > [!INFORMATIVE]
-> KACS data structures (SDs, SIDs, ACEs, access masks) use binary formats compatible with Active Directory and Samba, ensuring interoperability in domain environments. Where the KACS evaluation model departs from the behaviour described in MS-DTYP, the divergence is intentional and documented in the Compatibility section.
+> KACS data structures (SDs, SIDs, ACEs, access masks) use binary formats compatible with Active Directory and Samba, ensuring interoperability in domain environments. Where the KACS evaluation model departs from the behaviour described in MS-DTYP, the divergence is intentional and documented in §1.4.

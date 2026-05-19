@@ -16,6 +16,12 @@ After fork, mutations to either token (parent or child) are invisible to the oth
 
 New thread. Threads share the parent's `real_cred` (reference-counted), and therefore share the same primary token object. Privilege adjustments on the primary token are visible to all threads. Each thread maintains independent impersonation state via its own `cred`.
 
+If the cloning thread is impersonating at the time of `clone(CLONE_THREAD)`,
+the impersonation token MUST NOT become the new thread's primary or effective
+identity. The new thread starts with the shared primary token as both objective
+and effective identity. It may later impersonate independently through the
+normal impersonation APIs.
+
 ### Exec
 
 The primary token survives `execve()` unchanged, with one exception: the NEW_PROCESS_MIN mechanism (below).
@@ -23,6 +29,29 @@ The primary token survives `execve()` unchanged, with one exception: the NEW_PRO
 If the calling thread is impersonating, impersonation MUST be reverted before the new program runs. The new program always starts with the primary token as its effective identity.
 
 Token assignment for services happens between fork and exec: peinit forks, installs the service's token on the child, then the child execs the service binary.
+
+## Self-install of a primary token
+
+`KACS_IOC_INSTALL` commits a new primary token on the calling process. The
+operation is process-wide: the kernel replaces the primary token for the entire
+current thread group, not only for the calling thread.
+
+If a thread is not impersonating, both `real_cred` and `cred` switch to the
+new primary token. If a thread is currently impersonating, the replacement
+affects `real_cred` only; the active impersonation remains in `cred` until
+revert or exec. Reverting after install restores the thread to the new primary
+token, not the old one.
+
+The calling thread performs its install immediately. Sibling threads in the
+same thread group converge in their own context via queued in-kernel credential
+work; there is no atomic all-threads-at-once swap requirement. During this
+brief transition window, some sibling threads MAY still observe the old primary
+token until they execute their queued install work. No completion barrier is
+exposed to the caller.
+
+If the installed token's user SID differs from the old primary token's user
+SID, the process SD is regenerated from the default template for the new
+primary token. Otherwise the existing process SD is preserved.
 
 ### NEW_PROCESS_MIN
 
@@ -48,6 +77,23 @@ The SYSTEM token (`S-1-5-18`) is created by PKM during kernel initialization, be
 - Projected UID: 0
 
 The SYSTEM token is assigned to the kernel's init task and inherited by PID 1 on exec. No syscall is involved — the kernel allocates the token object directly during initialization.
+
+The Anonymous token (`S-1-5-7`) is also created by PKM during kernel
+initialization as the canonical socket-impersonation Anonymous shape:
+
+- User SID: `S-1-5-7` (Anonymous)
+- Groups: Everyone (`S-1-1-0`) only
+- Privileges: none
+- Integrity level: Untrusted
+- Logon type: Network
+- Token type: Impersonation
+- Impersonation level: Anonymous
+- Elevation type: Default
+- Token source: `PeiosKrn`
+- auth_id: `ANONYMOUS_LOGON_LUID` (998 / `0x3E6`)
+
+Socket-based Anonymous capture MUST produce this minimal identity shape rather
+than preserving any part of the caller's real token.
 
 > [!INFORMATIVE]
 > The SYSTEM token carries SeBackupPrivilege and SeRestorePrivilege (present and enabled at boot). FACS passes backup/restore intent flags to AccessCheck, which grants read and write access regardless of file DACLs — subject to PIP enforcement. Once peinit has launched TCB services and early boot is complete, peinit disables these privileges on child service tokens via FilterToken.

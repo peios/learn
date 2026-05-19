@@ -9,6 +9,7 @@ This is the definitive reference mapping file operations to LSM hooks and requir
 | Operation | Hook | Mode | Right(s) |
 |---|---|---|---|
 | `open()` / `openat()` | `security_file_open` | Live | Core + compat |
+| `kacs_open()` with `KACS_CREATE_OPT_DELETE_ON_CLOSE` | `security_file_open` + `security_file_release` | Live at open, final-close lifecycle at release | `DELETE` on file OR `FILE_DELETE_CHILD` on parent; unlink on final close of the same handle lineage |
 | `open()` with O_CREAT | `security_inode_create` + `security_inode_init_security` | Live | FILE_ADD_FILE on parent |
 | `mkdir()` | `security_inode_mkdir` | Live | FILE_ADD_SUBDIRECTORY on parent |
 | `mknod()` special nodes | `security_inode_mknod` | Live | FILE_ADD_FILE on parent |
@@ -158,6 +159,18 @@ Pathname sockets are protected via the socket file's inode SD (handled by FACS t
 | `connect()` Unix stream | `security_unix_stream_connect` | AccessCheck: FILE_WRITE_DATA on socket SD. |
 | `sendto()` / `sendmsg()` Unix dgram | `security_unix_may_send` | AccessCheck: FILE_WRITE_DATA on socket SD. |
 
+The datagram hook authorizes sends to abstract sockets only; it does not
+capture a persistent KACS peer token. Datagram sockets, socketpair-created
+sockets, and ancillary credential messages (`SCM_CREDENTIALS` /
+`SCM_SECURITY`) are not KACS peer-token authorities in `v0.22`.
+`kacs_open_peer_token` and `kacs_impersonate_peer` fail closed unless the
+socket already carries a KACS peer token from the stream/seqpacket connect
+path.
+
+`socketpair()` creates unnamed connected sockets. Access to those sockets is
+fd possession, and no socket SD or KACS peer token is installed by
+`socketpair()` in `v0.22`.
+
 ## IPC (live)
 
 | Operation | Hook | Right(s) |
@@ -165,6 +178,10 @@ Pathname sockets are protected via the socket file's inode SD (handled by FACS t
 | `ioctl()` / compat `ioctl()` | `security_file_ioctl` / `security_file_ioctl_compat` | Enforce classified ioctl rights and unclassified data-right fallback on FACS-managed fds; unmanaged fds stay outside FACS. |
 | `fcntl()` | `security_file_fcntl` | Enforce classified fcntl command rights against cached grants on FACS-managed fds; fd-local commands require no extra right; lock/lease/delegation acquisition reaches `security_file_lock`; unknown managed commands fail closed. |
 | fd transfer via `SCM_RIGHTS` | `security_file_receive` | Unconditional allow (possession is authorization). |
+
+`SCM_CREDENTIALS` and `SCM_SECURITY` remain Linux compatibility metadata in
+`v0.22`; they do not carry a KACS token handle, do not install a socket
+`peer_token`, and do not authorize impersonation.
 
 ## SysV IPC objects (live)
 
@@ -251,35 +268,39 @@ DACL:
 |---|---|
 | `security_inode_follow_link` | Unconditional allow. Registered for auditability. |
 | `security_inode_set_acl` | Deny POSIX ACL creation. KACS replaces POSIX ACLs. |
-| `security_inode_xattr_skipcap` | Skip capability checks for xattr ops; KACS handles access control. |
+| `security_inode_remove_acl` | Deny POSIX ACL removal. KACS replaces POSIX ACLs. |
+| `security_inode_xattr_skipcap` | Skip native security-xattr capability prechecks so KACS/FACS metadata hooks are authoritative. Non-empty `security.capability` installation remains denied by the dead `CAP_SETFCAP` policy. |
 | `security_inode_getsecurity` | Return SD bytes via the inode security interface. |
 
 ## Process mitigation enforcement
 
+Mitigation setting is also an enforcement point. `kacs_set_psb` MUST perform the activation-backed transaction defined by §5.2 before committing newly requested mitigation bits.
+
 | Mitigation | Hook | Enforcement |
 |---|---|---|
-| WXP | `security_mmap_file`, `security_file_mprotect` | Reject W+X mappings and W↔X transitions. Applies to ALL mappings including anonymous (not just file-backed). `security_file_mprotect` fires for anonymous mprotect with `file=NULL`. |
-| TLP | `security_mmap_file`, `security_file_mprotect` | Reject PROT_EXEC on files outside approved directory prefixes. Enforced at both mmap and mprotect (prevents mmap-without-exec then mprotect-to-exec bypass). Checked before LSV. |
-| LSV | `security_mmap_file`, `security_file_mprotect` | Verify binary signature. Reject if unsigned or insufficiently trusted. Checked after TLP (TLP is a fast path rejection). |
+| WXP | `kacs_set_psb`, `security_mmap_file`, `security_file_mprotect` | At set time, verify existing mappings do not violate WXP. After commitment, reject W+X mappings and W↔X transitions. Applies to ALL mappings including anonymous (not just file-backed). `security_file_mprotect` fires for anonymous mprotect with `file=NULL`. |
+| TLP | `kacs_set_psb`, `security_mmap_file`, `security_file_mprotect` | At set time, verify existing file-backed executable mappings are inside approved directory prefixes. After commitment, reject PROT_EXEC on files outside approved directory prefixes. Enforced at both mmap and mprotect (prevents mmap-without-exec then mprotect-to-exec bypass). Checked before LSV. |
+| LSV | `kacs_set_psb`, `security_mmap_file`, `security_file_mprotect` | At set time, verify existing file-backed executable mappings have acceptable signatures. After commitment, verify binary signature and reject if unsigned or insufficiently trusted. Checked after TLP (TLP is a fast path rejection). |
 | PIE | `security_bprm_check` | Reject ET_EXEC (non-PIE) ELF binaries at exec time. |
-| CFIF | `security_task_prctl` | Block disabling of hardware indirect-branch tracking (Intel IBT). |
-| CFIB | `security_task_prctl` | Block disabling of hardware shadow stack (Intel CET). |
-| SML | `security_task_prctl` | Block `PR_SPEC_ENABLE` (speculation mitigation disable). |
+| CFIF | `kacs_set_psb`, `security_task_prctl` | At set time, enable and lock hardware indirect-branch tracking where supported. After commitment, block disabling of hardware indirect-branch tracking (Intel IBT). |
+| CFIB | `kacs_set_psb`, `security_task_prctl` | At set time, enable and lock hardware shadow stack where supported. After commitment, block disabling of hardware shadow stack (Intel CET). |
+| SML | `kacs_set_psb`, `security_task_prctl` | At set time, enable the strictest supported speculation mitigations. After commitment, block process requests that would disable those mitigations. |
 | `no_child_process` | `security_task_alloc` | Reject fork (but not CLONE_THREAD) when flag is set. |
 
 ## Credential management
 
 | Hook | Purpose |
 |---|---|
-| `security_prepare_creds` | Assert DAC bypass capabilities on new credentials. |
+| `security_prepare_creds` | Assert mandatory ALLOW/DAC-bypass capabilities on new credentials, including prepared exec credentials created before binary-specific hooks run. |
 | `security_transfer_creds` | Transfer token reference on credential transfer. |
 | `security_cred_alloc_blank` | Allocate blank credential blob. |
 | `security_cred_free` | Free token reference on credential destruction. |
-| `security_bprm_creds_for_exec` | Assert DAC bypass capabilities. Map privileges to capabilities. |
-| `security_bprm_creds_from_file` | Suppress file capabilities, setuid, and setgid grants. |
-| `security_capset` | Deny clearing DAC bypass capabilities. |
-| `security_capable` | Map Linux capabilities to KACS privileges or DAC bypass. |
-| `security_task_prctl` | Deny ambient capability raises and bounding set drops affecting DAC bypass capabilities. |
+| `security_bprm_creds_for_exec` | No distinct KACS transition is required when `security_prepare_creds` has already asserted the mandatory capability substrate on `bprm->cred`; implementations MAY register this hook only to defensively reassert that invariant. |
+| `security_bprm_creds_from_file` | Suppress file capabilities and reinterpret setuid/setgid-bit handling under the KACS compatibility rules: cosmetic Linux-credential mutation without `SeAssignPrimaryTokenPrivilege`, full identity swap with it. |
+| `security_capget` | Report mandatory ALLOW capability substrate and enforce `PROCESS_QUERY_INFORMATION` plus PIP dominance for cross-process `capget(pid)`. This MAY be implemented by a KACS hook or by patching the active capability LSM provider's `capget` implementation, provided every `security_capget` call reaches the KACS capget decision before results are returned. |
+| `security_capset` | Deny any credential-set mutation that would clear DAC-bypass capabilities. Non-ALLOW mutations remain compatibility-only state. |
+| `security_capable` | Authoritative capability answer: map Linux capabilities to KACS privileges or DAC bypass. |
+| `security_task_prctl` | Deny ambient-capability or bounding-set mutations that would clear DAC-bypass capabilities. |
 | `security_task_fix_setuid` | Suppress or intercept setuid-family calls. |
 | `security_task_fix_setgid` | Suppress or intercept setgid-family calls. |
 
@@ -290,12 +311,22 @@ DACL:
 | `security_task_alloc` | Allocate PSB, inherit PIP/mitigations, create process SD. |
 | `security_task_free` | Free PSB and process SD. |
 | `security_task_kill` | Enforce process SD + PIP dominance on signal delivery. |
-| `security_ptrace_access_check` | Enforce process SD + PIP dominance on ptrace. |
-| `security_task_setnice` | Enforce process SD (PROCESS_SET_INFORMATION) + PIP. |
-| `security_task_setscheduler` | Same as setnice. |
-| `security_task_setioprio` | Same as setnice. |
-| `security_task_prlimit` | Enforce process SD + PIP on resource limit changes. |
-| `security_perf_event_open` | Enforce PIP dominance when targeting a specific process. Prevents side-channel extraction from PIP-protected processes. |
+| `security_ptrace_access_check` | Enforce process SD + PIP dominance on ptrace, and on patched `pidfd_getfd()` / `pidfd_open()` mode distinctions. |
+| `security_ptrace_traceme` | Enforce process SD `PROCESS_VM_WRITE` + PIP dominance when another process is nominated as tracer by `PTRACE_TRACEME`. |
+| `security_task_setnice` | Enforce process SD (`PROCESS_SET_INFORMATION`) + PIP for changes targeting another process. Self-targeted changes are not process-boundary operations and bypass this gate. |
+| `security_task_setscheduler` | Same as `task_setnice`. |
+| `security_task_setioprio` | Same as `task_setnice`. |
+| `security_task_setpgid` | Enforce process SD (`PROCESS_SET_INFORMATION`) + PIP for process-group changes targeting another process security state. |
+| `security_task_getpgid` | Enforce process SD (`PROCESS_QUERY_LIMITED`) + PIP for process-group queries targeting another process security state. |
+| `security_task_getsid` | Enforce process SD (`PROCESS_QUERY_LIMITED`) + PIP for session queries targeting another process security state. |
+| `security_task_getscheduler` | Enforce process SD (`PROCESS_QUERY_INFORMATION`) + PIP for scheduler, affinity, and timer-slack queries targeting another process security state. |
+| `security_task_getioprio` | Enforce process SD (`PROCESS_QUERY_INFORMATION`) + PIP for I/O-priority queries targeting another process security state. |
+| `security_task_movememory` | Enforce process SD (`PROCESS_SET_INFORMATION`) + PIP for target memory-placement mutations. |
+| patched `sched_setaffinity()` path | Enforce `SeIncreaseBasePriorityPrivilege` plus process SD (`PROCESS_SET_INFORMATION`) + PIP for affinity changes targeting another process. Same-process thread changes bypass the process-boundary gate; kernel affinity-validity rules remain in force. |
+| `security_task_prlimit` | Enforce process SD + PIP on `prlimit` targeting another process: read-only operations require `PROCESS_QUERY_INFORMATION`; limit-changing operations require `PROCESS_SET_INFORMATION`. Self-targeted operations are not process-boundary operations and bypass this gate. |
+| patched target-resolved `perf_event_open()` path | Enforce `SeProfileSingleProcessPrivilege` for target-specific perf. For perf events targeting another process, also enforce process SD (`PROCESS_QUERY_INFORMATION`) + PIP. Same-process thread targets bypass only the process-boundary gate; CPU-wide and cgroup perf modes remain governed by Linux's native perf permission model in `v0.22`. |
+| patched `/proc/<pid>` metadata read paths | Enforce process SD + PIP on non-ptrace-gated procfs metadata reads. Basic metadata uses `PROCESS_QUERY_LIMITED`; detailed scheduler, namespace, timer, OOM, fault-injection, dumpability, and mitigation metadata uses `PROCESS_QUERY_INFORMATION`. |
+| patched `/proc/<pid>` mutation paths | Enforce process SD (`PROCESS_SET_INFORMATION`) + PIP on procfs writes that mutate target process state, and enforce both read/write intent on coupled procfs seq-file opens. |
 
 ## Socket lifecycle
 

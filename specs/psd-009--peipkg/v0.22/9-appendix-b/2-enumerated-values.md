@@ -169,6 +169,7 @@ Defined normatively in §3.4.1.
 | `/etc/` | Default (seed) configuration files |
 | `/var/` | Runtime variable state directories |
 | `/opt/` | Self-contained third-party software trees |
+| `/boot/` | Bootloader-discoverable artifacts (typically symlinks) |
 
 Payload entries MUST NOT install under any other top-level
-path.
+path. Entries under `/boot/` SHOULD be symlinks (§3.4.1).

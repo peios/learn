@@ -38,14 +38,14 @@ all RSI operations use the GUID directly.
 
 ## Naming rules
 
-The following characters are forbidden in key name components:
+The following bytes/characters are forbidden in key name components:
 
 - `\` (backslash) -- path separator
 - `/` (forward slash) -- normalised to backslash on input, therefore
   also a separator
 - null (`\0`) -- string terminator
 
-All other characters are permitted, including spaces and Unicode.
+All other valid UTF-8 characters are permitted, including spaces and Unicode.
 The kernel normalises forward slashes to backslashes on input; the
 stored canonical form always uses backslashes.
 
@@ -76,6 +76,25 @@ the default value), path resolution fails with EINVAL. LCS does not
 validate the default value's type at write time -- the error occurs
 at resolution time. Removing the offending layer restores the
 original REG_LINK target.
+
+The REG_LINK payload interpreted by LCS is a length-delimited UTF-8
+absolute registry path. No trailing null byte is required or
+permitted. Forward slashes are normalised to backslashes before path
+processing. The target is validated using the same UTF-8, null-byte,
+component-length, total-length, empty-component, trailing-separator,
+and maximum-depth rules as syscall paths. Relative symlink targets
+are invalid.
+
+`CurrentUser\` rewriting is not applied to symlink targets. A target
+beginning with `CurrentUser\` is followed literally and therefore
+routes as a hive named `CurrentUser`, which cannot be registered.
+Symlink targets are otherwise subject to normal hive routing,
+including private hive routing for the resolving thread.
+
+Invalid REG_LINK encoding or invalid target path structure causes
+path resolution to fail with EINVAL. The invalid value remains in the
+registry; removing or overriding the layer that supplied it can
+restore a valid target.
 
 **Recursion limit.** Symlink resolution is limited to a configurable
 depth (default 16). Exceeding the limit produces ELOOP.

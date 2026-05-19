@@ -1,0 +1,13 @@
+name = "Running Provium in Anger"
+description = "Operating the test harness — CLI flags, the event stream, fixtures, the pool, and using it all in CI."
+featured = true
+order = 3
+
+pages = [
+  "running-tests/the-cli",
+  "running-tests/events-and-coverage",
+  "running-tests/fixtures-and-dependencies",
+  "running-tests/pools-and-parallelism",
+  "configuration/provium-toml",
+  "configuration/profiles",
+]

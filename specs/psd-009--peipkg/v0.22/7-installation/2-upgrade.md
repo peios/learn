@@ -56,20 +56,32 @@ file set and the new version's file set:
 - **Files in new but not in old**: ADDED at upgrade
   commit.
 
-Files in `/etc/` follow the same diff rule as other files,
-with one note. Per §3.4.4, `/etc/` files installed by
-packages are seed configuration; runtime configuration is
-materialised by reconcillers from registry state. An
-upgrade replaces seed configuration unconditionally; user
-customisations are stored in the registry, not in
-`/etc/`, and are unaffected by the upgrade.
+Files in `/etc/` are handled by modified-detection. For a
+REPLACED `/etc/` file, the package manager compares the
+file's current on-disk content hash against the hash
+recorded for that file at install:
+
+- **Unmodified** — the on-disk content matches the
+  recorded hash: the file is replaced with the new
+  version's content, like any other REPLACED file.
+- **Modified** — the on-disk content differs: the
+  operator's file MUST be left in place; the new
+  version's default is written alongside it as
+  `<name>.peipkg-new`, and the divergence MUST be
+  surfaced in the operation report.
 
 > [!INFORMATIVE]
-> This is a deliberate divergence from traditional Linux
-> distributions, which prompt or merge for changed config
-> files (`dpkg --conffile`, `pacman .pacnew/.pacsave`).
-> Peios's reconciller-based configuration model removes
-> the user-modified-config-on-disk problem by design.
+> The intended end state is the one §3.4.4 describes:
+> runtime configuration is materialised by reconciller
+> daemons from registry state, operators do not edit
+> `/etc/` by hand, and an upgrade replaces seed
+> configuration unconditionally. Until the reconciller
+> framework exists, modified-detection prevents an
+> upgrade from destroying a hand-edited `/etc/` file.
+> The models converge: once reconcillers claim a set of
+> `/etc/` paths, the package manager applies
+> modified-detection only to the unclaimed remainder and
+> replaces reconciller-managed seed files unconditionally.
 
 ## Procedure
 
@@ -88,12 +100,10 @@ version's package.
 2. Read the new version's file list from the new
    `.peipkg`'s `files.json`.
 3. Compute the diff (§7.2.2).
-4. Verify disk space per the rule in §7.1.2.2 step 2.
-   The reservation accounts for staged copies of ADDED
-   and REPLACED files plus backup copies of REPLACED and
-   REMOVED files held until commit. REMOVED files do not
-   count toward steady-state usage but their backup
-   copies count toward transaction-time usage.
+4. Verify disk space per §7.1.2.2 step 2 — the staged
+   ADDED and REPLACED content. Backups of REPLACED and
+   REMOVED files are made by renaming the old files
+   aside (§7.5.1.3) and cost no additional space.
 5. Verify no ADDED path collides with a path owned by a
    different package than the one being upgraded.
 
@@ -101,24 +111,29 @@ version's package.
 
 For each REPLACED or ADDED file:
 
-1. Extract from the new `.peipkg` to a transaction-scoped
-   staging area.
+1. Extract from the new `.peipkg` to a temporary file
+   **within the destination's own directory**, so the
+   commit-time rename is intra-directory and cannot fail
+   with `EXDEV` (§7.1.2.3).
 2. Verify content hash against `files.json`.
 
-Staging is performed in a location that does not interfere
-with the running system. Atomic rename moves staged files
-into place at commit.
+Staged files are named so as not to collide with payload
+entries, and are not visible as installed content until
+commit, when an atomic rename moves each into place.
 
 ### Step 4: apply diff
 
 At transaction commit (§7.4):
 
-1. For each ADDED file: create at install path with mode,
-   content, and SD per §7.1.2.3.
-2. For each REPLACED file: atomically replace the
-   existing file with the staged version (typically via
-   `rename(2)`). Update SD per §3.4.7.
-3. For each REMOVED file: delete from disk.
+1. For each ADDED file: rename the staged file into place
+   at the install path (§7.1.2.3) and apply its SD per
+   §3.4.7.
+2. For each REPLACED file: rename the existing file aside
+   as a backup (§7.5.1.3), then rename the staged file
+   into place; apply the new file's SD per §3.4.7.
+3. For each REMOVED file: rename the file aside as a
+   backup (§7.5.1.3). The backup is discarded once the
+   transaction commits and any retention window expires.
 4. Remove empty directories that are no longer owned by
    any installed package.
 

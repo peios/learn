@@ -31,7 +31,7 @@ The `current_fsuid()` patch reads the projected UID from `current->cred` (the ef
 `getuid()` reads `current->real_cred->uid` (the primary credential's UID), which is always the primary token's projected UID regardless of impersonation. This means during impersonation: `getuid()` returns the service's UID, `current_fsuid()` returns the client's UID. This is the correct and intended behavior.
 
 > [!INFORMATIVE]
-> The `uid0` utility (see the setuid section) explicitly overrides `cred->uid` to 0 for legacy compatibility. In that case, `getuid()` returns 0 rather than the projected UID. `current_fsuid()` still returns the projected UID from the effective token — uid0 affects the Linux credential fields but not the KACS projection path.
+> The `uid0` utility (see §12.3) explicitly overrides `cred->uid` to 0 for legacy compatibility. In that case, `getuid()` returns 0 rather than the projected UID. `current_fsuid()` still returns the projected UID from the effective token — uid0 affects the Linux credential fields but not the KACS projection path.
 
 ## Projected UIDs
 

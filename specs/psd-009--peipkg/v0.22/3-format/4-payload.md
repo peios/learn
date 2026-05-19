@@ -26,9 +26,23 @@ Permitted top-level install destinations:
 | `/etc/` | Default configuration files |
 | `/var/` | Runtime variable state directories (typically empty at install time) |
 | `/opt/` | Self-contained third-party software trees |
+| `/boot/` | Bootloader-discoverable artifacts (typically symlinks into `/usr/lib/<triplet>/`) |
 
 Payload entries MUST NOT install under any other top-level
 path.
+
+Entries installed under `/boot/` SHOULD be symlinks whose
+targets resolve to a regular file under one of the other
+permitted top-level destinations — typically
+`/usr/lib/<triplet>/` for the canonical arch-specific
+kernel image, initramfs, or device tree. The intent is that
+`/boot/` is a *discovery* directory the bootloader reads,
+not a *storage* directory where real package content lives.
+This is a SHOULD rather than a MUST because edge cases
+exist (recovery images, embedded bootloader integrations
+that cannot follow symlinks) where shipping a real file
+under `/boot/` is the right call; the format-level
+validator does not enforce the symlink rule.
 
 > [!INFORMATIVE]
 > Notably absent from this list: `/bin`, `/sbin`, `/lib`,

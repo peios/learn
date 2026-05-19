@@ -18,6 +18,14 @@ A privilege has a simple lifecycle on a token:
 
 4. **Exercised.** The privilege is checked by the kernel and, if enabled, the operation is permitted. The privilege is recorded as used and an audit event MAY be emitted.
 
+   For standalone operation gates, "exercised" means the privilege-specific
+   gate accepted the token's present-and-enabled privilege bit. If a later,
+   independent gate denies the overall operation, such as a process SD, PIP, or
+   malformed-input check after the standalone privilege gate, the privilege was
+   still exercised and its used bit SHOULD be recorded. This rule applies only
+   to standalone privilege gates. AccessCheck-influencing privilege used-state is
+   governed by the AccessCheck provenance rules in §10.
+
 5. **Disabled or removed.** After the operation, the privilege MAY be disabled via AdjustPrivileges (returning to the resting state) or permanently removed via AdjustPrivileges (irreversible — the privilege is cleared from present, enabled, and enabled-by-default, but the `used` bit is preserved for audit).
 
 ## Two categories
@@ -34,7 +42,7 @@ Privileges divide into two categories based on where they are enforced:
 - **SeRestorePrivilege** — grants all write access plus WRITE_DAC, WRITE_OWNER, DELETE, and ACCESS_SYSTEM_SECURITY (intent-gated).
 - **SeRelabelPrivilege** — loosens MIC's constraint on WRITE_OWNER for non-dominant callers.
 
-The precise mechanics of how these interact with the AccessCheck pipeline are specified in the AccessCheck section.
+The precise mechanics of how these interact with the AccessCheck pipeline are specified in §10.
 
 ## Intent-gated privileges
 

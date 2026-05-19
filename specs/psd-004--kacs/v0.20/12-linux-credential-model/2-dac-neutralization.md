@@ -80,6 +80,72 @@ Linux's 41 capabilities are classified into three categories:
 | 31 | CAP_SETFCAP | Capabilities are dead under KACS. |
 | 32 | CAP_MAC_OVERRIDE | KACS is the active LSM — MUST NOT be bypassable. |
 
+## Credential-set state
+
+The Linux capability sets on `struct cred` remain compatibility-visible state.
+Programs MAY inspect them with `capget()` or `/proc/<pid>/status` and MAY
+attempt to mutate the non-ALLOW subset with `capset()` or `prctl()`. This
+state is not authoritative for privilege-bearing operations:
+`security_capable()` is authoritative and MUST answer from the capability
+switchboard above.
+
+`capget()` MUST report the mandatory ALLOW capability substrate as present in
+the effective, permitted, and inheritable result sets. Non-ALLOW bits remain
+compatibility-visible state: if a non-ALLOW bit is present in the Linux
+credential state, `capget()` MAY report it, but that bit does not grant
+authority.
+
+`/proc/<pid>/status` MUST report the mandatory ALLOW capability substrate as
+present in `CapInh`, `CapPrm`, `CapEff`, and `CapBnd`. Non-ALLOW bits remain
+compatibility-visible state: if a non-ALLOW bit is present in the Linux
+credential state, `/proc/<pid>/status` MAY report it, but that bit does not
+grant authority. `CapAmb` reports raw Linux ambient compatibility state; KACS
+does not require ambient capability state for the ALLOW substrate.
+
+The strict invariant is that the ALLOW capabilities are mandatory substrate.
+They MUST remain present wherever Linux capability mechanics would otherwise
+drop them out from under KACS:
+
+- `capset()` MUST reject any request that clears an ALLOW capability from the
+  effective, permitted, or inheritable sets.
+- bounding-set drops and ambient-capability manipulation MUST reject attempts
+  that would clear or exclude an ALLOW capability from the compatibility state
+  KACS relies on.
+
+`capset()` follows Linux ambient-capability compatibility behavior after the
+ALLOW-clear validation above: ambient bits that are no longer present in both
+the requested permitted and inheritable sets MAY be cleared from raw ambient
+compatibility state. Because `capset()` requests that clear ALLOW bits from
+permitted or inheritable are denied, this intersection rule cannot indirectly
+clear an existing ALLOW ambient bit.
+
+Direct mutation of non-ALLOW capability state is therefore compatibility-only.
+It MAY change what `capget()` or `/proc/self/status` report, but it MUST NOT
+change the actual authority answer for a capability-gated operation.
+
+Native commoncap helper paths that make raw Linux capability-subset decisions
+before a KACS hook MUST be neutralized when KACS has a corresponding
+authoritative hook. This includes the raw subset gates in ptrace access,
+`PTRACE_TRACEME`, and `task_setnice` / `task_setscheduler` /
+`task_setioprio`. The KACS process-SD and PIP hooks are authoritative for
+those operations. Capability checks that reach `security_capable()` directly
+remain governed by the KACS capability switchboard.
+
+For raw xattr operations, KACS/FACS metadata hooks are authoritative.
+Native security-xattr capability prechecks that would run before the KACS hook
+MUST be skipped so the FACS xattr rules decide access. This does not revive
+Linux file capabilities: installing or replacing non-empty
+`security.capability` file-capability data remains denied by the dead
+`CAP_SETFCAP` policy, and exec-time file-capability grants remain suppressed.
+Removing stale Linux file-capability metadata is allowed only through the
+normal FACS `FILE_WRITE_EA` path.
+
+`capget()` targeting the current process, or another thread sharing the same
+process security state, is not a process-boundary operation. `capget(pid)`
+targeting another process is a detailed process information query: it requires
+`PROCESS_QUERY_INFORMATION` on the target process SD plus PIP dominance.
+`SeDebugPrivilege` bypasses only the process-SD check and MUST NOT bypass PIP.
+
 ## LSM stack invariant
 
 MAC LSMs (SELinux, AppArmor, SMACK, TOMOYO) and BPF LSM MUST be disabled in the kernel config. Non-MAC security LSMs (landlock, lockdown, yama, integrity) are permitted — they provide complementary hardening without conflicting with KACS's identity-based authorization model. PKM MUST verify the stack at initialization and refuse to activate if any MAC or BPF LSM is present.

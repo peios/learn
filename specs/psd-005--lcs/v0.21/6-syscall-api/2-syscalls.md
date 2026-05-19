@@ -21,7 +21,7 @@ int reg_open_key(int parent_fd, const char *path,
 |---|---|
 | parent_fd | An open key fd to use as the root for relative path resolution, or -1 for absolute path resolution. If provided, path is resolved relative to this key. No AccessCheck is performed on the parent -- the caller already proved access when they obtained the parent fd. |
 | path | Null-terminated registry path. If parent_fd is -1, this is an absolute path with hive prefix. If parent_fd is a valid key fd, this is a relative path from that key. Backslash or forward-slash separated -- forward slashes normalised to backslashes. `CurrentUser\` is rewritten to `Users\<caller SID>\` only when it appears as the first component of an absolute path (parent_fd is -1). |
-| desired_access | Bitmask of requested access rights (§3.1), or MAXIMUM_ALLOWED. All requested rights MUST be granted or the open fails. |
+| desired_access | Bitmask of requested access rights (§3.1), raw KACS generic bits, MAXIMUM_ALLOWED, or a combination of those. Zero and unknown/reserved bits are invalid. All requested concrete rights MUST be granted or the open fails. |
 | flags | Bitfield. REG_OPEN_LINK (0x01): open the symlink key itself rather than following it. All other bits reserved, MUST be zero. |
 
 ### Returns
@@ -68,7 +68,7 @@ To operate on the symlink key itself, open with REG_OPEN_LINK.
 |---|---|
 | ENOENT | Key does not exist after layer resolution. |
 | EACCES | AccessCheck did not grant all requested access rights. |
-| EINVAL | Invalid path (empty components, null, malformed). Symlink target is not REG_LINK type. Maximum key depth exceeded. |
+| EINVAL | Invalid path (empty components, null, malformed). desired_access is zero or contains unknown/reserved bits. Symlink target is not REG_LINK type. Maximum key depth exceeded. |
 | ELOOP | Symlink depth limit exceeded during path walk. |
 | ETIMEDOUT | Source did not respond within RequestTimeoutMs. |
 | EIO | Source returned an internal error or is unavailable. |
@@ -95,7 +95,7 @@ int reg_create_key(int parent_fd, const char *path,
 | path | As reg_open_key. |
 | desired_access | As reg_open_key. |
 | layer | Null-terminated layer name for key creation. If null, the base layer is used. Ignored if the key already exists. |
-| flags | Bitfield. REG_OPTION_VOLATILE (0x01): create a volatile key. REG_OPTION_CREATE_LINK (0x02): create a symlink key. All other bits reserved. |
+| flags | Bitfield. REG_OPTION_VOLATILE (0x01): create a volatile key. REG_OPTION_CREATE_LINK (0x02): create a symlink key. All other bits reserved, MUST be zero. |
 | disposition | Output pointer. Set to REG_CREATED_NEW (1) if created, or REG_OPENED_EXISTING (2) if the key already existed. MAY be null. |
 
 ### Returns
@@ -144,7 +144,7 @@ never returned to userspace from reg_create_key.
 | ENOENT | Parent key does not exist. Target layer does not exist in layer table. |
 | EACCES | Parent denied KEY_CREATE_SUB_KEY, new key's inherited SD denied requested access, or layer write authorization failed. |
 | ENOSPC | Layer cap exceeded for this path. |
-| EINVAL | Non-volatile key under volatile parent. Maximum key depth exceeded. |
+| EINVAL | desired_access is zero or contains unknown/reserved bits. Non-volatile key under volatile parent. Maximum key depth exceeded. |
 | EPERM | REG_OPTION_CREATE_LINK without SeTcbPrivilege or Administrator membership. |
 | ENAMETOOLONG | Key name component exceeds MaxPathComponentLength, or total path length exceeds MaxTotalPathLength. |
 | ETIMEDOUT | Source did not respond within RequestTimeoutMs. |
@@ -189,4 +189,7 @@ Transaction fd on success. -1 with errno on failure.
 | Errno | Condition |
 |---|---|
 | ENOMEM | Kernel memory allocation failed. |
-| ENOTSUP | Source does not support explicit transactions. |
+
+reg_begin_transaction is source-agnostic. Source transaction support
+is checked by the first operation that would bind the transaction to
+a source.

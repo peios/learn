@@ -19,9 +19,18 @@ The `setuid()` family (`setuid`, `setgid`, `setresuid`, `setresgid`, `setgroups`
 
 The filesystem setuid bit tells the kernel to change the process's effective UID to the file owner's UID on exec. Under KACS:
 
-**With SeAssignPrimaryTokenPrivilege:** the euid/suid change to the file owner's UID AND the KACS token swaps to the corresponding identity. Genuine privilege escalation.
+**With SeAssignPrimaryTokenPrivilege:** the Linux-visible UID/GID slots change to the file owner's identity AND the KACS token swaps to the corresponding identity. Genuine privilege escalation.
 
-**Without SeAssignPrimaryTokenPrivilege:** the euid/suid change to the file owner's UID but the KACS token is unchanged. Cosmetic escalation — the process sees `geteuid() == 0` but KACS continues to enforce the original token.
+**Without SeAssignPrimaryTokenPrivilege:** the Linux-visible UID/GID slots change to the file owner's identity but the KACS token is unchanged. Cosmetic escalation — the process sees `geteuid() == 0` but KACS continues to enforce the original token.
+
+For clarity:
+
+- the compatibility write affects the Linux credential slots that userspace
+  observes (`uid`, `euid`, `suid`, and the GID counterparts as applicable to
+  the executable mode bits);
+- it does not change the token;
+- it does not change projected `fsuid` / `fsgid`;
+- it does not change any security decision.
 
 This differs from the `setuid()` syscall (which is a no-op without the privilege). The difference is intentional:
 
@@ -60,7 +69,9 @@ The following cases are not fully handled by the compatibility mechanisms:
 
 - **Privilege-drop pattern.** Daemons that call `setuid(target)` then check `getuid() != target` to verify the drop succeeded will see success returned but the UID unchanged. This is intentional — UIDs carry no security meaning under KACS. Software ported to Peios SHOULD use KACS-native token operations for privilege management rather than the setuid-based pattern.
 - Software that directly manipulates capabilities (`capset()`/`capget()`), writes seccomp filters, or inspects its own capability set MAY behave unexpectedly.
-- `setfsuid()` becomes a no-op for filesystem purposes — `current_fsuid()` ignores `cred->fsuid`.
+- `setfsuid()` becomes a no-op for filesystem purposes — `current_fsuid()`
+  ignores `cred->fsuid`, and cosmetic setuid/setgid-bit exec transitions do
+  not flow into projected `fsuid` / `fsgid`.
 - `access()` / `faccessat()` uses the effective token (not the real credential). The concept of "real identity" does not exist in KACS.
-- `SO_PEERCRED` returns projected UIDs, not token information. The capability switchboard allows CAP_SETUID, permitting cosmetic UID forgery in `SCM_CREDENTIALS`.
+- `SO_PEERCRED` returns projected UIDs, not token information. The capability switchboard allows CAP_SETUID, permitting cosmetic UID forgery in `SCM_CREDENTIALS`. `SCM_CREDENTIALS` and `SCM_SECURITY` are Linux compatibility metadata, not KACS peer-token authorities; services that need authoritative KACS identity must use stream/seqpacket peer-token capture or explicit token fd passing.
 - Legacy `auditd` records projected UIDs. KACS audit (via KMES) MUST replace Linux audit for security-relevant logging.

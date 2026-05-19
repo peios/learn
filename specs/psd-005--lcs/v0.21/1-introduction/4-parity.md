@@ -19,12 +19,17 @@ everything registry.pol can express.
 
 registry.pol drives the following format decisions:
 
-- **Value types.** The full Windows registry value type set (REG_SZ,
-  REG_EXPAND_SZ, REG_BINARY, REG_DWORD, REG_DWORD_BIG_ENDIAN,
-  REG_LINK, REG_MULTI_SZ, REG_QWORD, REG_NONE) MUST be supported.
-  LCS treats values as opaque typed blobs -- it stores the type tag
-  but does not interpret the data, except REG_LINK which triggers
-  symlink resolution.
+- **Value types.** The full Windows registry value type set (REG_NONE,
+  REG_SZ, REG_EXPAND_SZ, REG_BINARY, REG_DWORD, REG_DWORD_BIG_ENDIAN,
+  REG_LINK, REG_MULTI_SZ, REG_RESOURCE_LIST,
+  REG_FULL_RESOURCE_DESCRIPTOR, REG_RESOURCE_REQUIREMENTS_LIST,
+  REG_QWORD) MUST be supported. LCS treats values as opaque typed
+  blobs -- it stores the type tag but does not interpret the data,
+  except REG_LINK which triggers symlink resolution. The three
+  hardware-resource types (REG_RESOURCE_LIST,
+  REG_FULL_RESOURCE_DESCRIPTOR, REG_RESOURCE_REQUIREMENTS_LIST) carry
+  no Peios semantics and behave as REG_BINARY; they are accepted for
+  type-tag fidelity only (see §2.5).
 
 - **Path format.** Registry paths use backslash separators and are
   case-preserving, case-insensitive. registry.pol paths follow this

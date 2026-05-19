@@ -10,7 +10,7 @@ The client controls how far their identity can travel by setting an impersonatio
 
 Four levels, from least to most permissive:
 
-**Anonymous.** The server MUST NOT identify the caller. The connection carries no identity information — both token inspection and impersonation return a token containing only the Anonymous SID (`S-1-5-7`). There is no API that bypasses the client's choice.
+**Anonymous.** The server MUST NOT identify the caller. The connection carries no identity information — both token inspection and impersonation return a token whose user SID is Anonymous (`S-1-5-7`), which carries Everyone as an enabled group, and which does not carry Authenticated Users. There is no API that bypasses the client's choice.
 
 **Identification.** The server can identify the caller (read SIDs, query groups, inspect privileges) but MUST NOT act as them. An Identification-level token MUST NOT be used for AccessCheck against resources. If a server thread impersonates an Identification-level token and attempts to open a file, the access check fails.
 

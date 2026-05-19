@@ -12,11 +12,22 @@ the operation is enlisted in the transaction. If the transaction is
 bound to a different hive than the key's hive, the ioctl
 returns EXDEV.
 
+If a mutating ioctl would bind an unbound transaction to a source
+that does not support explicit transactions, the ioctl returns
+ENOTSUP and the transaction remains unbound.
+
 Read ioctls (REG_IOC_QUERY_VALUE, REG_IOC_QUERY_VALUES_BATCH,
 REG_IOC_ENUM_VALUES, REG_IOC_ENUM_SUBKEYS) also accept an
 optional transaction fd. If provided, the read is performed within
 the transaction's context, providing read-your-own-writes
 isolation: the caller sees the transaction's uncommitted writes.
+If the transaction is unbound, the read is performed as a normal
+non-transactional read and does not bind the transaction. If the
+transaction is bound to a different hive/source, the read returns
+EXDEV. If the transaction object is committed, aborted, or otherwise
+closed, the read returns EINVAL. If the transaction object is timed
+out, the read returns ETIMEDOUT. If the transaction object's bound
+source went Down, the read returns EIO.
 
 All mutating ioctls that accept a layer name parameter perform
 **layer write authorization** before proceeding. LCS verifies that
@@ -43,14 +54,44 @@ otherwise:
 | Errno | Condition |
 |---|---|
 | EACCES | The fd's granted mask does not include the required access right, or layer write authorization failed. |
-| EIO | Source is unavailable or returned an internal error. |
-| ETIMEDOUT | Source did not respond within RequestTimeoutMs. |
+| EFAULT | Userspace input pointer is invalid, or a non-zero-length output buffer pointer is null or not writable. |
+| EIO | Source is unavailable, returned an internal error, or the operation used a transaction fd whose bound source went Down. |
+| ETIMEDOUT | Source did not respond within RequestTimeoutMs, or the operation used a timed-out transaction fd. |
 | ENOMEM | Kernel memory allocation failed. |
-| EXDEV | Transaction fd is bound to a different hive (mutating ioctls only). |
+| EXDEV | Transaction fd is bound to a different hive/source. |
 | ENOENT | Target layer does not exist in the layer table (layer-targeting ioctls only). |
 
 Individual ioctls document additional errors specific to their
 operation.
+
+## Variable-size output buffers
+
+Read ioctls that return variable-size data use a uniform two-pass
+buffer ABI. This applies to REG_IOC_QUERY_VALUE,
+REG_IOC_QUERY_VALUES_BATCH, REG_IOC_ENUM_VALUES,
+REG_IOC_ENUM_SUBKEYS, REG_IOC_QUERY_KEY_INFO, and
+REG_IOC_GET_SECURITY.
+
+For each output buffer described by `(buffer_length, buffer_ptr)`:
+
+- `buffer_length = 0` and `buffer_ptr = NULL` is a valid size probe.
+- `buffer_length = 0` and `buffer_ptr != NULL` is also treated as a
+  size probe; LCS ignores the pointer.
+- `buffer_length > 0` requires `buffer_ptr != NULL` and writable for
+  `buffer_length` bytes. Otherwise the ioctl returns EFAULT.
+
+If any output buffer is too small, the ioctl returns ERANGE. On
+ERANGE, LCS writes all required size fields that it can determine
+for that operation. If multiple output buffers are too small, all
+known required sizes are reported in the same returned argument
+structure. Output buffers MUST NOT be partially filled on ERANGE;
+their contents are unspecified. Output scalar metadata is valid only
+on successful return unless the ioctl explicitly documents that a
+field carries a required size or count on ERANGE.
+
+Input pointer faults return EFAULT. LCS validates user input
+pointers before source dispatch where possible. Output pointer faults
+return EFAULT.
 
 ## Key fd ioctls
 
@@ -104,7 +145,9 @@ counter and sends a write to the source: store
 (key GUID, value name, layer) → (type, data, sequence).
 
 If type is REG_TOMBSTONE, the source stores a tombstone entry.
-REG_TOMBSTONE is never exposed to callers reading values.
+REG_TOMBSTONE is the explicit per-value tombstone write operation.
+REG_TOMBSTONE writes MUST have data_len = 0. REG_TOMBSTONE is never
+exposed to callers reading values.
 
 Updates the key's last write time.
 
@@ -127,6 +170,7 @@ system working as designed.
 
 | Errno | Condition |
 |---|---|
+| EINVAL | Value type is unknown, or type is REG_TOMBSTONE with non-zero data_len. |
 | EAGAIN | Conditional write failed -- layer entry sequence mismatch. |
 | ENOSPC | Layer cap exceeded for this (key GUID, value name). Value data exceeds MaxValueSize. |
 | ENAMETOOLONG | Value name exceeds MaxPathComponentLength. |
@@ -289,17 +333,18 @@ Query metadata about the key.
 max subkey name length, max value name length, max value data size,
 SD size, volatile flag, symlink flag, hive generation number.
 
-**Hive generation number.** A monotonic counter representing the
-highest write sequence number committed to this key's hive. Exposed
-on every key for convenience. Watchers that receive OVERFLOW can
-compare their last-seen generation with the current value to detect
-missed changes without speculatively re-reading the entire subtree.
+**Hive generation number.** A monotonic per-hive change epoch owned
+by LCS. It is not a persisted entry sequence number and MUST NOT be
+interpreted as one. Exposed on every key for convenience. Watchers
+that receive OVERFLOW can compare their last-seen generation with
+the current value to detect missed committed changes without
+speculatively re-reading the entire subtree.
 
 The hive generation number is incremented once per committed
 mutation or once per committed transaction (not per operation
 within the transaction). Specifically: a non-transactional write
 increments by 1; a committed transaction increments by 1
-regardless of how many operations it contains.
+for each affected hive regardless of how many operations it contains.
 
 **Layer operations and atomicity.** When a layer metadata key is
 deleted, LCS processes the metadata key deletion and the resulting
@@ -317,8 +362,13 @@ maximum name/data lengths, and SD size via RSI operations. The key
 name, flags, last write time, and hive generation number are
 available from kernel-side state (the fd's metadata and the
 per-hive generation counter). The hive generation number is purely
-kernel-side state, not persisted by the source, and resets to the
-source's max_sequence on LCS restart.
+kernel-side state and is not persisted or reported by the source.
+Sources persist only layer-entry sequence numbers. On source
+registration or LCS restart, LCS MAY initialise the volatile hive
+generation baseline from the source's reported max_sequence so
+newly observed generations are monotonic relative to persisted
+entries, but subsequent generation increments are independent of
+sequence allocation.
 
 **Additional errors:**
 
@@ -353,6 +403,7 @@ visible children.
 
 | Errno | Condition |
 |---|---|
+| EINVAL | The fd refers to a hive root key. |
 | ENOTEMPTY | Key has visible children. |
 
 ### REG_IOC_HIDE_KEY
@@ -382,6 +433,12 @@ in the specified layer.
 When the hiding layer is removed, the lower-precedence key
 reappears.
 
+**Additional errors:**
+
+| Errno | Condition |
+|---|---|
+| EINVAL | The fd refers to a hive root key. |
+
 ### REG_IOC_GET_SECURITY
 
 Read the key's Security Descriptor.
@@ -396,10 +453,22 @@ return: owner, group, DACL, SACL).
 
 **Output:** SD in binary KACS format.
 
+**Security information validation:** Valid flags are
+OWNER_SECURITY_INFORMATION, GROUP_SECURITY_INFORMATION,
+DACL_SECURITY_INFORMATION, and SACL_SECURITY_INFORMATION.
+security_info MUST be non-zero and MUST NOT contain unknown flags.
+Invalid security_info fails with EINVAL before source contact.
+
+Required rights are computed from all requested components. Owner,
+group, and DACL queries require READ_CONTROL. SACL queries require
+ACCESS_SYSTEM_SECURITY. If both categories are requested, both rights
+must be present on the key fd before source contact.
+
 **Additional errors:**
 
 | Errno | Condition |
 |---|---|
+| EINVAL | security_info is zero or contains unknown flags. |
 | ERANGE | SD buffer too small. sd_len is set to the required size. |
 
 ### REG_IOC_SET_SECURITY
@@ -419,6 +488,25 @@ key's existing SD and tells the source to persist the update. SD
 changes are NOT layer-qualified -- they modify the key directly.
 Updates the key's last write time.
 
+**Security information validation:** Valid flags are
+OWNER_SECURITY_INFORMATION, GROUP_SECURITY_INFORMATION,
+DACL_SECURITY_INFORMATION, and SACL_SECURITY_INFORMATION.
+security_info MUST be non-zero and MUST NOT contain unknown flags.
+Invalid security_info fails with EINVAL before source contact,
+transaction enlistment, or mutation.
+
+Required rights are computed from all requested components. Setting
+owner or group requires WRITE_OWNER. Setting DACL requires WRITE_DAC.
+Setting SACL requires ACCESS_SYSTEM_SECURITY. If combined flags
+require multiple rights, all required rights must be present on the
+key fd before source contact or mutation.
+
+The input SD is one self-relative KACS SD subset. LCS reads only the
+components indicated by security_info; unindicated components are
+ignored and the existing key SD components are preserved. The merged
+resulting SD MUST still have an owner. A null group SID remains
+valid.
+
 **Transaction interaction.** If a transaction fd is provided, the
 SD change is enlisted in the transaction. It commits or aborts
 with the rest of the transaction's operations. The SD change is
@@ -426,6 +514,12 @@ still a direct mutation on the key (not tagged with a layer, not
 reverted on layer deletion) -- the transaction provides atomicity,
 not layer qualification. An SD change in an aborted transaction
 is not applied.
+
+**Additional errors:**
+
+| Errno | Condition |
+|---|---|
+| EINVAL | security_info is zero, contains unknown flags, the input SD is malformed, or the merge would produce an SD without an owner. |
 
 ### REG_IOC_NOTIFY
 
@@ -449,6 +543,10 @@ events are queued until re-armed.
 
 KEY_DELETED and OVERFLOW events are always delivered regardless of
 filter setting.
+
+Arming a new watch on an already orphaned key returns ENOENT.
+Watches that were armed before the key became orphaned remain armed
+as described in §2.8.
 
 ### REG_IOC_FLUSH
 
@@ -476,16 +574,17 @@ Export this key and its entire subtree to an fd.
 
 **Input:** Output fd (any writable fd).
 
-**Behaviour:** LCS opens a read-only transaction on the source
-(via RSI_BEGIN_TRANSACTION) to guarantee a point-in-time snapshot,
-then reads the entire subtree and writes it to the output fd in
-the standard backup format (§9.1). The
-transaction is closed when the backup completes. Concurrent
-mutations do not affect the backup stream. Privilege check only
--- no per-key AccessCheck. LCS MUST emit an audit event for every
-backup operation regardless of SACL state on the target key. The
-audit event includes the caller's token, the target key GUID, and
-the output fd.
+**Behaviour:** LCS opens a read-only source transaction by sending
+RSI_BEGIN_TRANSACTION with mode RSI_TXN_READ_ONLY to guarantee a
+point-in-time snapshot, then reads the entire subtree and writes it
+to the output fd in the standard backup format (§9.1). The read-only
+transaction is aborted/released when the backup completes; it is
+never committed. Concurrent mutations do not affect the backup
+stream. Privilege check only -- no per-key AccessCheck. LCS MUST
+emit an audit event for every backup operation regardless of SACL
+state on the target key. The audit event includes the caller's
+token, the target key GUID, and the output fd. Audit event transport
+and failure policy are defined in §3.1.
 
 **Additional errors:**
 
@@ -493,6 +592,9 @@ the output fd.
 |---|---|
 | EPERM | Caller does not hold SeBackupPrivilege. |
 | EBADF | Output fd is not writable. |
+| ENOENT | The key is orphaned and no longer a reachable subtree root. |
+| ENOTSUP | Source does not support read-only snapshot transactions. |
+| EBUSY | Source already has MaxReadOnlyTransactionsPerSource active read-only transactions. |
 
 ### REG_IOC_RESTORE
 
@@ -507,31 +609,38 @@ Replace this key and its entire subtree from an fd.
 
 **Behaviour:** See §9.1. Privilege check only
 -- no per-key AccessCheck. The restore operation MUST be wrapped
-in a single source transaction. Sources that return
-RSI_TXN_NOT_SUPPORTED for REG_IOC_RESTORE MUST be rejected —
-restore requires transactional atomicity. If a GUID collision,
-checksum failure, or precedence validation failure occurs, the
-entire restore MUST be rolled back. LCS MUST emit an audit event
-for every restore operation regardless of SACL state.
+in a single read-write source transaction. Sources that return
+RSI_TXN_NOT_SUPPORTED for RSI_BEGIN_TRANSACTION with mode
+RSI_TXN_READ_WRITE MUST be rejected -- restore requires
+transactional atomicity. If a GUID collision, checksum failure, or
+precedence validation failure occurs, the entire restore MUST be
+rolled back. LCS MUST emit an audit event for every restore
+operation regardless of SACL state. Audit event transport and
+failure policy are defined in §3.1.
 
-**Precedence validation.** After LAYER records are read from the
-backup stream but before any KEY records are written, LCS MUST
-check whether any layer in the backup has Precedence > 0. If so
-and the caller's token does not hold SeTcbPrivilege, the restore
-MUST be aborted with EPERM before any data is written to the
-source. This is cheap (LAYER records precede KEY records in the
-stream) and prevents SeRestorePrivilege from bypassing the
-SeTcbPrivilege defense-in-depth for high-precedence layer
-creation.
+**Precedence validation.** After LAYER manifest records are read
+from the backup stream but before any KEY records are written, LCS
+MUST check whether any declared layer has Precedence > 0. LCS MUST
+also check any existing cached layer table entry for the same folded
+layer identity. If either value is > 0 and the caller's token does
+not hold SeTcbPrivilege, the restore MUST be aborted with EPERM
+before any data is written to the source. If the backup stream
+contains ordinary key/value records for
+`Machine\System\Registry\Layers\<LayerName>\`, writes that create or
+elevate persisted layer metadata to Precedence > 0 are subject to
+the normal inline SeTcbPrivilege check as well. This prevents
+SeRestorePrivilege from bypassing the defense-in-depth for
+high-precedence layers.
 
 **Additional errors:**
 
 | Errno | Condition |
 |---|---|
-| EPERM | Caller does not hold SeRestorePrivilege, or restored data contains Precedence > 0 layers and caller does not hold SeTcbPrivilege. |
+| EPERM | Caller does not hold SeRestorePrivilege, or restored data declares, targets, creates, or elevates a Precedence > 0 layer and caller does not hold SeTcbPrivilege. |
 | EBADF | Input fd is not readable. |
-| EINVAL | Backup stream has invalid magic, minimum reader version exceeds this LCS version, or checksum verification failed. |
-| EEXIST | GUID collision -- a GUID in the backup already exists elsewhere in the source. |
+| EINVAL | Backup stream has invalid magic, minimum reader version exceeds this LCS version, malformed record framing, records after TRAILER, checksum verification failed, missing/duplicate backup root KEY record, or backup root immutable flags conflict with the restore target. |
+| EEXIST | GUID collision -- a non-root GUID in the backup already exists outside the replaced subtree. |
+| EOVERFLOW | Restore sequence remapping would overflow the global sequence counter. |
 
 ## Transaction fd ioctls
 
@@ -545,9 +654,19 @@ Commit all operations in this transaction.
 | Fd type | Transaction fd |
 
 **Behaviour:** LCS tells the bound source to atomically commit all
-operations. On success, the transaction is complete -- subsequent
-operations return EINVAL. Watch events for all changes are
-delivered after commit.
+operations. On success, the transaction object enters the COMMITTED
+terminal state, poll waiters are woken with POLLERR | POLLHUP, and
+subsequent mutating or read operations using the transaction fd
+return EINVAL. Watch events for all changes are delivered after
+commit.
+
+If the source returns the retryable write-lock condition, LCS returns
+EBUSY and leaves the transaction ACTIVE_BOUND. If the source returns
+a synchronous commit failure, LCS returns EIO and leaves the
+transaction ACTIVE_BOUND. In both cases, LCS retains the mutation log,
+emits no normal watch events, and does not wake poll waiters as if the
+transaction had become terminal. The caller may retry REG_IOC_COMMIT
+or close the transaction fd to abort.
 
 **Errors** (the common key fd error table does not apply to
 transaction fd ioctls):
@@ -555,5 +674,43 @@ transaction fd ioctls):
 | Errno | Condition |
 |---|---|
 | EINVAL | Transaction already committed or not bound to any source. |
+| ETIMEDOUT | Transaction timed out before commit completed. |
 | EBUSY | Source could not acquire write lock. Retry. |
 | EIO | Source failed to commit. Transaction remains open. |
+
+### REG_IOC_TXN_STATUS
+
+Query the state of a transaction fd.
+
+| Field | Value |
+|---|---|
+| Direction | _IOR |
+| Fd type | Transaction fd |
+
+**Input:** Pointer to reg_txn_status_args.
+
+**Output:** Transaction state and terminal errno.
+
+**Behaviour:** LCS writes the transaction object's current state.
+If the transaction is terminal, terminal_errno is the errno future
+mutating or read operations using this transaction fd would return:
+0 for COMMITTED, EINVAL for ABORTED, ETIMEDOUT for TIMED_OUT, and
+EIO for SOURCE_DOWN. For active transactions, terminal_errno is 0.
+
+**States:**
+
+| State | Meaning |
+|---|---|
+| REG_TXN_ACTIVE_UNBOUND | Transaction is active and has not yet bound to a source. |
+| REG_TXN_ACTIVE_BOUND | Transaction is active and bound to a source. |
+| REG_TXN_COMMITTED | Commit completed successfully. |
+| REG_TXN_ABORTED | Transaction was explicitly or implicitly aborted. |
+| REG_TXN_TIMED_OUT | Transaction lifetime timer fired. |
+| REG_TXN_SOURCE_DOWN | Bound source went Down before the transaction completed. |
+
+**Errors** (the common key fd error table does not apply to
+transaction fd ioctls):
+
+| Errno | Condition |
+|---|---|
+| EFAULT | Output pointer is not writable. |

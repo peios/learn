@@ -53,7 +53,7 @@ Every operation on an open fd is a mask check against the granted mask, with one
 | access / faccessat W_OK | FILE_WRITE_DATA |
 | access / faccessat X_OK | FILE_EXECUTE |
 
-SD xattr reads and writes (`security.peios.sd`, `system.ntfs_security`) MUST be denied unconditionally via the xattr hooks. All SD access MUST go through `kacs_get_sd` / `kacs_set_sd`. POSIX ACL xattr writes (`system.posix_acl_access`, `system.posix_acl_default`) MUST also be denied unconditionally.
+Canonical SD xattr reads and writes MUST be denied unconditionally via the xattr hooks. The canonical SD xattr is `security.peios.sd`, or `system.ntfs_security` on NTFS as defined by §11.5. All SD access MUST go through `kacs_get_sd` / `kacs_set_sd`. POSIX ACL xattr writes (`system.posix_acl_access`, `system.posix_acl_default`) MUST also be denied unconditionally.
 
 ## Directory traversal
 

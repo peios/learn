@@ -21,6 +21,10 @@ A token carries identity, policy, and metadata fields. Fields are organized by c
 
 The set of group SIDs on a token is fixed at creation — AdjustGroups MUST NOT add or remove SIDs. However, individual groups MAY be enabled or disabled by modifying SE_GROUP_ENABLED, subject to constraints: mandatory groups (SE_GROUP_MANDATORY) MUST NOT be disabled, and deny-only groups (SE_GROUP_USE_FOR_DENY_ONLY) MUST NOT be re-enabled.
 
+A token MUST contain at most 64 entries in its `groups` array, including the
+kernel-injected logon SID. CreateToken therefore accepts at most 63
+caller-supplied groups.
+
 ## Token type (fixed)
 
 | Field | Type | Description |
@@ -58,9 +62,9 @@ A privilege's lifecycle on a token: present and disabled → enabled → used �
 
 | Field | Type | Description |
 |---|---|---|
-| `elevation_type` | enum | Default (non-elevated), Full (elevated), or Limited (filtered). Created as Default. Set to Full or Limited exclusively by KACS_IOC_LINK_TOKENS when a linked pair is established. Once set to Full or Limited, MUST NOT be changed back to Default. Reset to Default by DuplicateToken and FilterToken (the duplicate is not part of any linked pair). |
+| `elevation_type` | enum | Default (non-elevated), Full (elevated), or Limited (filtered). Created as Default. Set to Full or Limited exclusively by KACS_IOC_LINK_TOKENS when a linked pair is established. Once set to Full or Limited, MUST NOT be changed back to Default on that token object. Role is sticky: relinking MAY replace the partner, but MUST NOT change a token from Full to Limited or from Limited to Full. DuplicateToken and FilterToken produce new token objects whose `elevation_type` starts again at Default because they are not part of any linked pair. |
 
-Linked token pairs are associated at the session level, not stored on individual tokens. See the Linked Tokens and Elevation section for the pairing mechanism.
+Linked token pairs are associated at the session level, not stored on individual tokens. See §4.6 for the pairing mechanism.
 
 ## Default object security (adjustable)
 
@@ -90,6 +94,10 @@ Linked token pairs are associated at the session level, not stored on individual
 |---|---|
 | `modified_id` | Counter incremented on any token adjustment. Serves as a cache invalidation key — if `modified_id` has changed since the last AccessCheck, cached decisions are stale. |
 
+Privilege-used accounting is audit/accounting state, not an access-decision
+input. Marking a privilege used MUST remain monotonic, but it MUST NOT bump
+`modified_id`.
+
 ## Session (adjustable)
 
 | Field | Description |
@@ -114,16 +122,16 @@ Linked token pairs are associated at the session level, not stored on individual
 
 | Field | Type | Description |
 |---|---|---|
-| `confinement_sid` | SID? | Puts the token in a default-deny sandbox. Null = not confined. When set, AccessCheck switches to default-deny: access requires explicit grant to this SID, a capability SID, or ALL_APPLICATION_PACKAGES. |
+| `confinement_sid` | SID? | Puts the token in a default-deny sandbox. Null = not confined. When set, AccessCheck switches to default-deny: access requires an explicit grant to this SID or to a SID present in `confinement_capabilities`. `ALL_APPLICATION_PACKAGES` participates only when it is present in `confinement_capabilities`; KACS MUST NOT synthesize it. |
 | `confinement_capabilities` | SID_AND_ATTRIBUTES[] | Declared access capabilities for confined processes. Empty if none. The `attributes` field is carried for wire-format uniformity only; AccessCheck treats capability membership as presence-based and does not consult `SE_GROUP_ENABLED` or `SE_GROUP_USE_FOR_DENY_ONLY` for confinement SID matching. |
 | `isolation_boundary` | bool | Enables namespace filtering on top of confinement. Objects outside the boundary are invisible, not just denied. Requires `confinement_sid`. Settable at creation; not enforced in v0.20. |
 | `confinement_exempt` | bool | Escape hatch. Confinement restrictions are not evaluated. |
 
-## Audit (adjustable)
+## Audit (fixed at creation)
 
 | Field | Type | Description |
 |---|---|---|
-| `audit_policy` | u32 | Per-token audit overrides, encoded as a bitmask. Additive — forces audit events that system-wide policy would not generate, but MUST NOT suppress events that system-wide policy requires. |
+| `audit_policy` | u32 | Per-token audit overrides, encoded as a bitmask. Fixed at creation time — no adjustment ioctl exists. Additive — forces audit events that system-wide policy would not generate, but MUST NOT suppress events that system-wide policy requires. |
 
 Audit policy flags:
 

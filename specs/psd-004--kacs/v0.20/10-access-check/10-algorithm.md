@@ -9,7 +9,7 @@ This section specifies the complete AccessCheck evaluation algorithm. The featur
 The complete evaluation runs in this order:
 
 0. **Impersonation level gate.** If the token is an impersonation token at Identification level, deny immediately. Anonymous tokens proceed through the full pipeline.
-1. **Input validation.** Reject null SDs, SDs without owner or group, and malformed object type lists.
+1. **Input validation.** Reject null SDs, SDs without owner, and malformed object type lists. A null group SID is valid and has no direct access-decision effect.
 2. **Generic mapping.** Map generic bits in the desired mask to object-specific bits. Strip MAXIMUM_ALLOWED.
 3. **Effective privileges.** Clear backup/restore bits when the corresponding intent flag is absent.
 4. **Privilege grants.** Resolve ACCESS_SYSTEM_SECURITY, backup, and restore. Seed `decided`, `granted`, and `privilege_granted`.
@@ -18,7 +18,7 @@ The complete evaluation runs in this order:
 7. **Tree initialization.** Copy scalar `decided`/`granted` to each tree node.
 8. **Normal DACL evaluation.** Owner implicit rights, then the DACL walk with token-based SID matching.
 9. **Post-DACL privilege override.** SeTakeOwnershipPrivilege grants WRITE_OWNER if the DACL did not and mandatory policy (MIC/PIP) did not block it.
-10. **Restricted token pass.** If the token has restricting SIDs, evaluate the DACL again with the restricted SID list and intersect. Privilege-granted bits are restored after intersection.
+10. **Restricted token pass.** If the token has restricting SIDs or restricted device groups, evaluate the DACL again with the restricted identity view and intersect. Privilege-granted bits are restored after intersection.
 11. **Confinement pass.** If the token is confined, evaluate the DACL with confinement SIDs and intersect. No privilege bypass.
 12. **CAAP (Central Access and Auditing Policy).** For each scoped policy, evaluate each applicable rule's DACL using the full per-SD pipeline and intersect. Collect applicable rules' SACLs for the audit walk.
 13. **Privilege-use auditing.** Emit audit events for privileges that contributed to the final result.
@@ -45,7 +45,7 @@ EvaluateSecurityDescriptor(
     // Step 1: Input validation.
     if sd is null:
         return ERROR_INVALID_PARAMETER
-    if sd.owner is null or sd.group is null:
+    if sd.owner is null:
         return ERROR_INVALID_SECURITY_DESCR
     if object_tree is not null:
         validate: non-empty, first node at level 0,
@@ -139,7 +139,8 @@ EvaluateSecurityDescriptor(
                             node.granted |= WRITE_OWNER
 
     // Step 10: Restricted token pass.
-    if token.restricted_sids is not empty:
+    if token.restricted_sids is not empty
+       or token.restricted_device_groups is not empty:
         r_decided = 0; r_granted = 0
         // Build restricted enriched token: inject virtual groups
         // (S-1-3-4 if owner in restricting SIDs, S-1-5-10 if
@@ -624,17 +625,17 @@ The following functions are called in the pseudocode above but defined in other 
 
 | Function | Defined in | Purpose |
 |----------|-----------|---------|
-| `EvaluateDACL` | DACL Walk + Object ACEs sections | Owner implicit rights, DACL walk (first-writer-wins), SID matching, object ACE propagation |
-| `EvaluateConditionalExpression` | Conditional ACEs + Bytecode Reference sections | Stack-based bytecode evaluator for callback ACE conditions |
-| `PreSACLWalk` | Integrity + PIP sections | Extracts mandatory label, trust label, resource attributes, scoped policy SIDs from SACL. Runs MIC (EnforceMIC) and PIP (EnforcePIP). Outputs: modified decided/granted/privilege_granted, mandatory_decided, resource_attributes, policy_sids |
-| `EnrichTokenForRestricted` | Restricted Tokens section | Builds enriched token view for restricted pass: inject S-1-3-4 if owner in restricting SIDs, S-1-5-10 if self_sid in restricting SIDs, swap device groups for restricted device groups |
-| `LookupCAAP` | Central Access and Auditing Policy section | Looks up policy by SID in kernel cache. Returns null if not found. |
-| `RECOVERY_POLICY` | Central Access and Auditing Policy section | Hardcoded fallback: ALLOW GENERIC_ALL to Administrators, SYSTEM, OWNER_RIGHTS |
-| `synthetic_sd` | (inline concept) | Creates an SD using the original SD's owner/group but substituting the rule's DACL. The SACL is copied from the original SD with all SYSTEM_SCOPED_POLICY_ID_ACEs stripped (prevents CAAP recursion). MIC and PIP label ACEs are preserved. |
-| `copy_tree_structure` | (inline concept) | Deep-copies object tree node structure (levels, GUIDs, parent/child) with decided=0, granted=0 on each node |
-| `SidInRestrictingSids` | Restricted Tokens section | SID matcher callback: returns true if SID is in the token's restricted_sids list (pure SID equality, ignores attributes) |
-| `SidInConfinementSids` | Confinement section | SID matcher callback: returns true if SID is in the confinement SID set (confinement_sid + confinement_capabilities). Capability entries are presence-based; attributes are ignored. |
-| `enriched_sid_matches` | DACL Walk section | Like SidMatchesToken but also checks virtual groups (S-1-3-4 for owner, S-1-5-10 for PRINCIPAL_SELF). Used for both DACL and SACL SID matching. |
+| `EvaluateDACL` | PSD-004 §10.2; PSD-004 §10.5 | Owner implicit rights, DACL walk (first-writer-wins), SID matching, object ACE propagation |
+| `EvaluateConditionalExpression` | PSD-004 §3.8; PSD-004 §3.11 | Stack-based bytecode evaluator for callback ACE conditions |
+| `PreSACLWalk` | PSD-004 §10.3; PSD-004 §10.7; PSD-004 §3.10; PSD-004 §10.8 | Extracts mandatory label, trust label, resource attributes, scoped policy SIDs from SACL. Runs MIC (EnforceMIC) and PIP (EnforcePIP). Outputs: modified decided/granted/privilege_granted, mandatory_decided, resource_attributes, policy_sids |
+| `EnrichTokenForRestricted` | PSD-004 §10.4 | Builds enriched token view for restricted pass: inject S-1-3-4 if owner in restricting SIDs, S-1-5-10 if self_sid in restricting SIDs, swap device groups for restricted device groups |
+| `LookupCAAP` | PSD-004 §10.8 | Looks up policy by SID in kernel cache. Returns null if not found. |
+| `RECOVERY_POLICY` | PSD-004 §10.8 | Hardcoded fallback: ALLOW GENERIC_ALL to Administrators, SYSTEM, OWNER_RIGHTS |
+| `synthetic_sd` | PSD-004 §10.10 | Creates an SD using the original SD's owner and optional group but substituting the rule's DACL. The SACL is copied from the original SD with all SYSTEM_SCOPED_POLICY_ID_ACEs stripped (prevents CAAP recursion). MIC and PIP label ACEs are preserved. |
+| `copy_tree_structure` | PSD-004 §10.10 | Deep-copies object tree node structure (levels, GUIDs, parent/child) with decided=0, granted=0 on each node |
+| `SidInRestrictingSids` | PSD-004 §10.4 | SID matcher callback: returns true if SID is in the token's restricted_sids list (pure SID equality, ignores attributes) |
+| `SidInConfinementSids` | PSD-004 §10.6 | SID matcher callback: returns true if SID is in the confinement SID set (confinement_sid + confinement_capabilities). Capability entries are presence-based; attributes are ignored. |
+| `enriched_sid_matches` | PSD-004 §10.2 | Like SidMatchesToken but also checks virtual groups (S-1-3-4 for owner, S-1-5-10 for PRINCIPAL_SELF). Used for both DACL and SACL SID matching. |
 
 ### Privilege provenance tracking
 

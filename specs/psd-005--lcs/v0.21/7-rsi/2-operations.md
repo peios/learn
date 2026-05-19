@@ -197,10 +197,30 @@ source removes the blanket tombstone.
 
 Signal the start of a transaction.
 
-**Request:** transaction ID (uint64).
+**Request:** transaction ID (uint64), transaction mode (uint32).
 
-The source allocates transaction state. Subsequent operations
-tagged with this transaction ID are part of the transaction.
+Transaction mode is one of:
+
+| Mode | Value | Semantics |
+|---|---|---|
+| RSI_TXN_READ_WRITE | 0 | Normal read-write transaction used by reg_begin_transaction after it binds to a source. |
+| RSI_TXN_READ_ONLY | 1 | Point-in-time read-only snapshot used by REG_IOC_BACKUP. |
+
+The source allocates transaction state. Subsequent operations tagged
+with this transaction ID are part of the transaction.
+
+For RSI_TXN_READ_WRITE, reads tagged with the transaction ID observe
+the transaction's own uncommitted writes, and writes tagged with the
+transaction ID are committed atomically by RSI_COMMIT_TRANSACTION.
+
+For RSI_TXN_READ_ONLY, read operations tagged with the transaction ID
+MUST observe a stable point-in-time snapshot. Mutating operations
+MUST NOT be sent by LCS with a read-only transaction ID. If a source
+receives a mutating operation tagged with a read-only transaction ID,
+it MUST reject the operation with RSI_INVALID and MUST NOT mutate
+state. Read-only transactions are released with
+RSI_ABORT_TRANSACTION; LCS MUST NOT send RSI_COMMIT_TRANSACTION for a
+read-only transaction.
 
 ### RSI_COMMIT_TRANSACTION (op_code: 0x31)
 
@@ -218,7 +238,8 @@ Roll back all operations in the transaction.
 **Request:** transaction ID.
 
 Called when the transaction fd is closed without committing, or on
-timeout.
+timeout. Also used by LCS to release an internal read-only snapshot
+transaction after REG_IOC_BACKUP completes or fails.
 
 ## Layer operations
 

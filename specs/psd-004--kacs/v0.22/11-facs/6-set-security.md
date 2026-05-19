@@ -14,7 +14,30 @@ All SD modification flows through a single KACS syscall. The caller provides a f
 | SACL_SECURITY_INFORMATION | System ACL | ACCESS_SYSTEM_SECURITY |
 | LABEL_SECURITY_INFORMATION | Mandatory integrity label | WRITE_OWNER + integrity constraints |
 
-The kernel validates the SD blob structurally (parseable, well-formed ACEs, valid SIDs, size within 64 KB) then merges only the indicated components into the existing SD. Unindicated components are preserved unchanged. After merging, the resulting SD MUST have a non-null owner and non-null group. If the merge would produce an SD without an owner or group (e.g., setting OWNER_SECURITY_INFORMATION with a null owner on an object that has no existing owner), the operation fails.
+The kernel validates the SD blob structurally (parseable, well-formed ACEs,
+valid SIDs, size at most 65,535 bytes) then merges only the indicated components into
+the existing SD. Unindicated components are preserved unchanged.
+
+The input blob is always one self-relative SD subset, not a raw SID or ACL
+fragment. `SACL_SECURITY_INFORMATION` and `LABEL_SECURITY_INFORMATION` MUST NOT
+be combined in one call because they both target the descriptor's SACL field
+with incompatible meanings.
+
+When `SACL_SECURITY_INFORMATION` is set, the input SACL replaces the object's
+entire SACL.
+
+When `LABEL_SECURITY_INFORMATION` is set, the input SACL is interpreted as the
+label subset only:
+
+- no SACL component removes the object's explicit mandatory label and returns it
+  to the default unlabeled MIC state;
+- a present SACL MUST contain exactly one non-inherit-only
+  `SYSTEM_MANDATORY_LABEL_ACE` and no other ACEs;
+- non-label SACL ACEs on the object are preserved unchanged.
+
+After merging, the resulting SD MUST have a non-null owner. The group SID MAY
+be null. If the merge would produce an SD without an owner, the operation
+fails.
 
 MIC and PIP apply to these checks. A low-integrity caller MUST NOT modify a high-integrity file's SD even if the DACL grants WRITE_OWNER.
 
@@ -35,7 +58,7 @@ Without SeRelabelPrivilege, callers MAY only set a label at or below their own i
 
 ## SeRestorePrivilege bypass
 
-SeRestorePrivilege bypasses the access check when `kacs_set_sd` runs a live AccessCheck — i.e., when called via O_PATH fd + AT_EMPTY_PATH, via pidfd, or via path. The privilege fires in the AccessCheck pipeline and grants all requested rights including WRITE_OWNER, WRITE_DAC, and ACCESS_SYSTEM_SECURITY.
+SeRestorePrivilege bypasses the access check when `kacs_set_sd` runs a live AccessCheck — i.e., when called via O_PATH fd + AT_EMPTY_PATH, via pidfd, via token fd + AT_EMPTY_PATH, or via path. The privilege fires in the AccessCheck pipeline and grants all requested rights including WRITE_OWNER, WRITE_DAC, and ACCESS_SYSTEM_SECURITY.
 
 When `kacs_set_sd` is called on a normal (non-O_PATH) file fd, the required rights are checked against the fd's cached granted mask — no AccessCheck runs, so SeRestorePrivilege has no effect. A caller who needs the privilege bypass MUST use the O_PATH + AT_EMPTY_PATH path. This is the mechanism for backup restoration, administrative SD repair, and the missing-SD repair path.
 

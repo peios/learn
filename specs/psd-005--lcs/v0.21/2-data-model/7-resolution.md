@@ -14,15 +14,58 @@ value write, key hiding, blanket tombstone) is assigned the next
 sequence number from this counter. The counter is never decremented
 or reset.
 
+The counter is represented internally as `next_sequence`: the next
+sequence number LCS will allocate. Allocating a sequence number
+increments `next_sequence`. Allocated sequence numbers are never
+reused, even if the operation later fails, times out, or is aborted
+as part of a transaction.
+
+Transactional mutating operations are assigned sequence numbers when
+the operation is accepted into the transaction, not at commit time.
+This preserves the transaction's operation order for deterministic
+layer tiebreaking and watch dispatch if the transaction commits.
+If the transaction aborts, the allocated sequence numbers remain
+unused gaps.
+
 On startup, each source reports its highest persisted sequence
 number in the registration handshake. LCS initialises the counter
 to `max(all reported values) + 1`. This ensures new writes always
 have higher sequence numbers than any persisted entry, even after
 a restart.
 
+When a source registers after `next_sequence` has already been
+initialised, LCS advances `next_sequence` to
+`max(next_sequence, source_max_sequence + 1)`. If adding one would
+overflow uint64, registration fails with EOVERFLOW and the source is
+not made active.
+
+LCS rejects any source-returned layer-qualified entry whose sequence
+number is greater than or equal to `next_sequence`. Such an entry is
+malformed source data: sources store sequence numbers assigned by
+LCS and cannot legitimately contain future sequence numbers.
+
+Within a single resolution candidate set, duplicate sequence numbers
+at the same precedence are malformed if they would otherwise be
+compared to select a winner. LCS rejects the response as malformed
+source data rather than making an arbitrary choice. Duplicate
+sequence numbers in unrelated candidate sets are not compared and do
+not by themselves affect resolution.
+
 The sequence counter provides deterministic tiebreaking within a
 precedence tier. Wall-clock time is tracked separately via the
 key's last write time for human-facing metadata.
+
+Sequence numbers are not hive generation numbers. A sequence number
+orders layer-qualified entries for resolution and is persisted by
+sources. The hive generation number exposed by REG_IOC_QUERY_KEY_INFO
+is a volatile LCS-owned per-hive change epoch used for cache and watch
+overflow recovery. Sources do not persist hive generation numbers.
+
+Registry restore does not persist backup sequence numbers directly.
+Restore reserves a fresh global sequence range and remaps backup
+sequence numbers into that range so restored entries are newer than
+pre-restore state while preserving the backup's internal relative
+ordering. See §9.1.
 
 ## Pseudocode conventions
 
@@ -137,6 +180,30 @@ enumerate_values(key_guid, thread_credentials):
 Callers see only effective values. Tombstoned values and values
 masked by blanket tombstones are omitted. The caller never sees
 per-layer raw data through normal operations.
+
+## Unknown layer entries
+
+Source entries tagged with a well-formed layer name that is not
+present in the current layer table are valid latent entries. LCS
+ignores them during resolution while the layer is absent. If a layer
+with the same folded layer identity is later created, those entries
+become eligible for normal resolution using the new layer metadata.
+
+This supports restore, import, and boot ordering where source
+storage may contain entries before their metadata has been loaded.
+It also follows the core rule that sources persist entries while LCS
+decides their meaning.
+
+Normal LCS mutating operations do not create entries for missing
+layers: layer-targeting ioctls still return ENOENT when the target
+layer is absent from the layer table. Latent unknown-layer entries
+therefore arise from existing source storage, restore/import ordering,
+previous boots, or source behaviour. Since sources are trusted
+components, well-formed latent entries are not malformed solely
+because their layer is currently absent.
+
+Entries with malformed layer names remain malformed source data and
+are rejected according to the source validation rules.
 
 ## Subkey enumeration
 

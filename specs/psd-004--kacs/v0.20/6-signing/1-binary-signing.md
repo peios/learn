@@ -74,6 +74,34 @@ same as an unsigned binary: PIP becomes None/0 and exec proceeds. For LSV,
 invalid or unstable material is a verification failure and the executable
 mapping is denied.
 
+### Post-verification content pinning
+
+When exec-time PIP determination successfully verifies a binary and assigns a
+nonzero PIP trust tier, the kernel MUST pin the backing inode as
+KACS-verified executable content before committing the exec-time result.
+
+When LSV successfully verifies a file-backed executable mapping, the kernel
+MUST pin the backing inode as KACS-verified executable content before allowing
+the mapping or executable transition to proceed.
+
+A pinned inode MUST reject in-place content mutation, even when the mutation
+would preserve the file size. This includes ordinary writes, positioned writes,
+append writes, `ftruncate()`, pathname `truncate()`, and fallocate mutation
+operations, including allocation-only modes that can extend or otherwise alter
+the verified inode state. File ioctls that mutate file content, ranges, or
+allocation state MUST be rejected for pinned inodes. A pinned inode MUST also
+reject mutation or removal of the `security.peios.sig` xattr. This prevents an
+attacker from verifying one byte image and then modifying the same inode after
+verification.
+
+Pinned state is conservative: KACS does not require early unpinning while the
+inode remains live. Package updates and image updates MUST use replacement by a
+new inode, followed by normal namespace replacement such as `rename()`, rather
+than modifying verified executable content in place.
+
+Unsigned, invalid, unstable, bad-signature, and no-match verification attempts
+MUST NOT pin the inode.
+
 ### Signing algorithm
 
 The Ed25519 signature is computed over the content hash (32 bytes) treated as the message: `Ed25519_Sign(private_key, content_hash)`. The kernel verifies as `Ed25519_Verify(public_key, content_hash, signature)`.

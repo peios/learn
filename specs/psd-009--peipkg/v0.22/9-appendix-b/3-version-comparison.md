@@ -35,8 +35,8 @@ emits a sequence of segments:
 4. A transition between digit and letter ends the
    current segment and begins a new one.
 
-The tilde `~` marks any following segment as a
-pre-release segment.
+The tilde `~` begins a pre-release tail: it and every
+later segment are pre-release segments.
 
 ### Segment-pair comparison
 
@@ -51,13 +51,13 @@ pre-release segment.
 
 Pre-release ranks are defined in appendix B.2 (§9.2).
 
-### Implicit pre-release detection
+### Pre-release segments
 
-A `-` separator preceding a non-pre-release alphabetic
-segment within the upstream version is treated as if it
-were a `~` separator: that alphabetic segment and all
-subsequent segments in the same hyphen-delimited group
-are marked as pre-release.
+A segment is a pre-release segment if it falls at or
+after the first `~` or the first recognised pre-release
+token (rank 0–4); the pre-release tail then runs to the
+end of the upstream version. A `-` separator is not
+itself a pre-release marker. See §2.2.7.3.
 
 ### End-of-string handling
 
@@ -107,6 +107,10 @@ the constraint, where:
 Multiple expressions in a single constraint are
 AND-combined: V matches the constraint iff V matches
 every expression.
+
+When a constraint operand omits its revision (§2.2.8),
+the operand is compared on epoch and upstream version
+only; V's revision does not affect the match.
 
 ## Implementation notes
 

@@ -114,11 +114,33 @@ registry.pol compatibility:
 | REG_DWORD_BIG_ENDIAN | 5 | 32-bit integer, big-endian. |
 | REG_LINK | 6 | Symbolic link target (Unicode string). Triggers symlink resolution when read as a key's default value on a symlink key. |
 | REG_MULTI_SZ | 7 | Array of null-terminated strings, terminated by an additional null. |
+| REG_RESOURCE_LIST | 8 | Hardware resource list. Opaque to LCS; see note below. |
+| REG_FULL_RESOURCE_DESCRIPTOR | 9 | Full hardware resource descriptor. Opaque to LCS; see note below. |
+| REG_RESOURCE_REQUIREMENTS_LIST | 10 | Hardware resource requirements list. Opaque to LCS; see note below. |
 | REG_QWORD | 11 | 64-bit integer, little-endian. |
 
 LCS treats values as opaque typed blobs. It stores the type tag and
 returns it on read, but does not validate or interpret the data
-payload except for REG_LINK on symlink keys.
+payload except for REG_LINK on symlink keys. REG_LINK interpretation
+is defined in §2.3.
+
+REG_RESOURCE_LIST, REG_FULL_RESOURCE_DESCRIPTOR, and
+REG_RESOURCE_REQUIREMENTS_LIST (types 8-10) describe hardware resource
+assignments in the Windows `HKLM\HARDWARE` hive, which the Windows
+kernel rebuilds at every boot. Peios has no equivalent -- hardware
+enumeration is owned by the Linux device model (sysfs, `/proc/iomem`),
+not the registry. LCS accepts these type tags solely so that values
+round-trip without loss; it assigns them no semantics, never
+interprets them, and never produces them itself. For every LCS
+operation they behave identically to REG_BINARY. They are included
+because a registry.pol file or a Windows hive import can carry an
+arbitrary type tag, and rejecting a faithfully-copied value would
+break the format fidelity guarantee in §1.4.
+
+LCS validates value type tags at write boundaries. User-visible
+value writes MUST use one of the value types listed above. Unknown
+type codes are invalid and fail with EINVAL before sequence
+allocation, transaction enlistment, or source dispatch.
 
 The following type is internal to LCS and MUST NOT be exposed to
 userspace callers:
@@ -126,6 +148,11 @@ userspace callers:
 | Type | Code | Description |
 |---|---|---|
 | REG_TOMBSTONE | 0xFFFF | Tombstone marker. Masks lower-precedence entries during layer resolution. Callers reading a value whose effective entry is a tombstone receive ENOENT. |
+
+REG_TOMBSTONE is accepted only as the explicit per-value tombstone
+write operation on REG_IOC_SET_VALUE. A tombstone write MUST have
+zero-length data. Non-empty tombstone data fails with EINVAL before
+sequence allocation, transaction enlistment, or source dispatch.
 
 ## Naming rules
 
@@ -136,11 +163,13 @@ Value names differ from key names in one respect: backslash and
 forward slash ARE permitted in value names. Value names are not
 hierarchical, so separators have no special meaning.
 
-Only null (`\0`) is forbidden. Empty string is reserved for the
-default value.
+Only null (`\0`) is forbidden. Invalid UTF-8 is rejected. Empty
+string is reserved for the default value.
 
 ## Maximum value size
 
 The maximum data size for a single value is configurable via the
 self-configuration mechanism (default 1 MB). See §11.4 for the
-full parameter table.
+full parameter table. Value data is an opaque byte array and is not
+subject to UTF-8 string validation unless a specific value type is
+explicitly interpreted by LCS.

@@ -4,7 +4,7 @@ title: Conditional ACEs
 
 Standard ACEs match on SID alone. Conditional ACEs add a boolean expression that MUST also evaluate to TRUE for the rule to take effect. This enables attribute-based access control (ABAC).
 
-A conditional ACE is structurally identical to its non-conditional counterpart with a conditional expression appended after the SID. The expression is stored in a binary format defined by MS-DTYP section 2.4.4.17.
+A conditional ACE is structurally identical to its non-conditional counterpart with a conditional expression appended after the SID. The expression is stored in a binary format defined by MS-DTYP §2.4.4.17.
 
 ## Three-valued evaluation
 
@@ -62,7 +62,7 @@ Four attribute namespaces exist, resolved via bytecode opcodes:
 | 0xf9 | @User. | `token.user_claims` | Token-level claims set by authd at creation. |
 | 0xfb | @Device. | `token.device_claims` | Device-level claims from the device token. |
 | 0xfa | @Resource. | SD's SACL resource attribute ACEs | Per-object attributes, extracted in Pre-SACL walk. |
-| 0xf8 | @Local. | `local_claims` parameter to AccessCheck | Per-call contextual attributes passed by the caller. Structured as a KACS claim array of length-prefixed claim entries, using the Claim Attribute Format section. |
+| 0xf8 | @Local. | `local_claims` parameter to AccessCheck | Per-call contextual attributes passed by the caller. Structured as a KACS claim array of length-prefixed claim entries, using §3.9. |
 
 Attribute names are matched case-insensitively. `@User.Clearance`, `@User.clearance`, and `@User.CLEARANCE` all resolve the same attribute.
 
@@ -71,7 +71,7 @@ Attribute names are matched case-insensitively. `@User.Clearance`, `@User.cleara
 Claim flags apply to token claims (@User., @Device.) and resource attributes (@Resource.). @Local. claims also carry flags.
 
 - **DISABLED (0x0010)** — the attribute is invisible to all conditions. Resolves as absent.
-- **USE_FOR_DENY_ONLY (0x0004)** — the attribute participates only in deny ACE conditions. For allow ACE conditions, it resolves as absent.
+- **USE_FOR_DENY_ONLY (0x0004)** — the attribute participates only in deny-side conditional evaluation. Deny-side conditional evaluation includes deny ACE conditions and audit/alarm ACE conditions. For allow ACE conditions, it resolves as absent.
 
 Empty attributes (zero values) are normalized to absent (NULL) at resolution time (when the expression evaluator reads the attribute value during AccessCheck).
 
@@ -81,7 +81,7 @@ comparing two absent attributes with `==` or `!=`:
 
 ## SID matching in expressions
 
-The `Member_of` family evaluates group membership on the token. These operators are polarity-aware: deny-only groups do not satisfy allow-ACE conditions.
+The `Member_of` family evaluates group membership on the token. These operators are polarity-aware: deny-only groups do not satisfy allow-ACE conditions. Deny ACE conditions and audit/alarm ACE conditions use deny-side membership polarity, so enabled groups and deny-only groups both participate.
 
 An empty SID operand set uses normal set semantics: `Member_of({})` and
 `Device_Member_of({})` return TRUE, while `Member_of_Any({})` and
@@ -96,13 +96,13 @@ inverse of those results.
 
 ## Binary format
 
-Conditional expressions are encoded as a stack-based bytecode program in reverse Polish notation. The binary format is defined by MS-DTYP section 2.4.4.17.4 and MUST be byte-compatible.
+Conditional expressions are encoded as a stack-based bytecode program in reverse Polish notation. The binary format is defined by MS-DTYP §2.4.4.17.4 and MUST be byte-compatible.
 
 The expression bytecode begins with a 4-byte magic: `0x61 0x72 0x74 0x78` ("artx"). If the magic is absent or the expression is shorter than 4 bytes, evaluation MUST return UNKNOWN.
 
 Evaluation succeeds only if the final stack contains exactly one tri-state result. If evaluation ends with zero entries, more than one entry, or a raw non-boolean value still on the stack, the expression MUST evaluate to UNKNOWN.
 
-The full operator bytecodes and literal encodings are specified in the Conditional ACE Bytecode Reference section. KACS implementations MUST be byte-compatible with MS-DTYP section 2.4.4.17.4.
+The full operator bytecodes and literal encodings are specified in §3.11. KACS implementations MUST be byte-compatible with MS-DTYP §2.4.4.17.4.
 
 ## Limits
 

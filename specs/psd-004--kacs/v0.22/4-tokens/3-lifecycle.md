@@ -16,6 +16,12 @@ After fork, mutations to either token (parent or child) are invisible to the oth
 
 New thread. Threads share the parent's `real_cred` (reference-counted), and therefore share the same primary token object. Privilege adjustments on the primary token are visible to all threads. Each thread maintains independent impersonation state via its own `cred`.
 
+If the cloning thread is impersonating at the time of `clone(CLONE_THREAD)`,
+the impersonation token MUST NOT become the new thread's primary or effective
+identity. The new thread starts with the shared primary token as both objective
+and effective identity. It may later impersonate independently through the
+normal impersonation APIs.
+
 ### Exec
 
 The primary token survives `execve()` unchanged, with one exception: the NEW_PROCESS_MIN mechanism (below).
@@ -24,12 +30,35 @@ If the calling thread is impersonating, impersonation MUST be reverted before th
 
 Token assignment for services happens between fork and exec: peinit forks, installs the service's token on the child, then the child execs the service binary.
 
+## Self-install of a primary token
+
+`KACS_IOC_INSTALL` commits a new primary token on the calling process. The
+operation is process-wide: the kernel replaces the primary token for the entire
+current thread group, not only for the calling thread.
+
+If a thread is not impersonating, both `real_cred` and `cred` switch to the
+new primary token. If a thread is currently impersonating, the replacement
+affects `real_cred` only; the active impersonation remains in `cred` until
+revert or exec. Reverting after install restores the thread to the new primary
+token, not the old one.
+
+The calling thread performs its install immediately. Sibling threads in the
+same thread group converge in their own context via queued in-kernel credential
+work; there is no atomic all-threads-at-once swap requirement. During this
+brief transition window, some sibling threads MAY still observe the old primary
+token until they execute their queued install work. No completion barrier is
+exposed to the caller.
+
+If the installed token's user SID differs from the old primary token's user
+SID, the process SD is regenerated from the default template for the new
+primary token. Otherwise the existing process SD is preserved.
+
 ### NEW_PROCESS_MIN
 
 If the token's `mandatory_policy` includes NEW_PROCESS_MIN, the kernel MUST replace the child's primary token at exec time when the executable has a lower integrity label:
 
 1. Read the executable file's integrity label from its SD (the mandatory label ACE in the SACL). If the file has no label, use the default (Medium).
-2. If the file's integrity level is lower than the token's integrity level, create a new token following DuplicateToken semantics (new `token_id`, `modified_id` initialized to the new `token_id`, `elevation_type` reset to Default) with `integrity_level` set to the file's label. All other fields are copied from the source. The original token is dropped.
+2. If the file's integrity level is lower than the token's integrity level, create a new token following DuplicateToken semantics (new `token_guid`, `modified_id` initialized to 0, `elevation_type` reset to Default) with `integrity_level` set to the file's label. All other fields are copied from the source. The original token is dropped.
 3. If the file's integrity level is greater than or equal to the token's integrity level, no action — the token survives exec unchanged.
 
 NEW_PROCESS_MIN can only lower integrity, never raise it. The child's integrity level is always less than or equal to the parent's. The flag is immutable on the token.
@@ -56,6 +85,7 @@ The Anonymous token (`S-1-5-7`) is also created by PKM during kernel initializat
 - Groups: none (Everyone included only if the system-wide Anonymous-in-Everyone policy is set — see Impersonation Lifecycle)
 - Privileges: none
 - Integrity level: Untrusted
+- Logon type: Network
 - Token type: Impersonation
 - Impersonation level: Anonymous
 - Elevation type: Default

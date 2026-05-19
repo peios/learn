@@ -14,11 +14,22 @@ descriptor's `indexes.active.url` field (§6.1.5). The
 detached signature URL is declared by
 `indexes.active.signature_url`.
 
-The active index MUST be signed. The signing key MUST be
-one of the keys listed in the descriptor with status
-`active` or `transitioning`. Verification follows the same
-procedure as for packages (§5.3.2), substituting the
-index's bytes for the package's signed payload.
+The active index MUST be accompanied by a detached
+signature published at the `indexes.active.signature_url`
+declared in the descriptor. The signature is over the
+index file's exact bytes, encoded as Ed25519 base64
+(RFC 4648 §4) without padding — the same detached-
+signature convention as the repository descriptor
+(§6.1.6). The signing key MUST be one of the keys listed
+in the descriptor with status `active` or `transitioning`.
+
+> [!INFORMATIVE]
+> The index, like the descriptor, is a small JSON document
+> verified in full before use, so its signature is over
+> the raw file bytes. A package signature (§5.3) instead
+> signs a SHA-256 of the payload, so that a multi-gigabyte
+> package can be verified in a single streaming pass; that
+> reason does not apply to an index.
 
 A repository configured to permit unsigned content (§6.5.3)
 MAY publish the active index unsigned.

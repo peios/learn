@@ -6,7 +6,7 @@ A Security Identifier (SID) is a variable-length binary value that uniquely iden
 
 ## Binary format
 
-A SID is encoded as a contiguous binary structure (MS-DTYP section 2.4.2):
+A SID is encoded as a contiguous binary structure (MS-DTYP §2.4.2):
 
 | Offset | Size | Field | Description |
 |---|---|---|---|
@@ -31,7 +31,7 @@ Where:
 
 - `S` is a literal prefix.
 - `1` is the revision number.
-- `{authority}` is the IdentifierAuthority. If the upper 2 bytes are zero, this is the decimal representation of the lower 4 bytes. Otherwise, it is a hexadecimal representation prefixed with `0x`.
+- `{authority}` is the IdentifierAuthority. If the upper 2 bytes are zero, this is the decimal representation of the lower 4 bytes. Otherwise, it is the lowercase hexadecimal representation of all 6 bytes, zero-padded to 12 hex digits and prefixed with `0x`.
 - Each `{subN}` is the decimal representation of the corresponding 32-bit sub-authority.
 
 > [!INFORMATIVE]
@@ -65,3 +65,7 @@ The following attribute flags are defined:
 | SE_GROUP_RESOURCE | 0x20000000 | The group is a domain-local group from the resource domain. |
 
 A group participates in allow-ACE matching only if SE_GROUP_ENABLED is set and SE_GROUP_USE_FOR_DENY_ONLY is not set. A group participates in deny-ACE matching if SE_GROUP_ENABLED is set OR SE_GROUP_USE_FOR_DENY_ONLY is set.
+
+`SE_GROUP_INTEGRITY` and `SE_GROUP_INTEGRITY_ENABLED` are defined for SID_AND_ATTRIBUTES ABI/catalog parity. KACS MIC does not derive token integrity from normal group entries carrying those flags. Token integrity is the token's `integrity_level` field, and TokenIntegrityLevel queries return the corresponding binary `S-1-16-*` integrity SID directly.
+
+`SE_GROUP_RESOURCE` is metadata on a supplied group SID identifying it as a domain-local group from the resource domain. KACS v0.20 does not synthesize, expand, or resolve resource-domain groups. AccessCheck treats a resource group as an ordinary group SID; allow and deny participation is still controlled by `SE_GROUP_ENABLED` and `SE_GROUP_USE_FOR_DENY_ONLY`.

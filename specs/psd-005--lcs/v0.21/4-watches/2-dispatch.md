@@ -18,6 +18,20 @@ parent subtree watch or a KEY_DELETED event on the old object),
 re-open the path, and arm a new watch. This is consistent with the
 fd model: the fd is a capability bound to a specific key identity.
 
+Subtree dispatch is also object-semantic. LCS uses the ancestor
+chain captured on the mutating key fd at open time. It does not
+re-resolve the current path at event time. If an ancestor in that
+captured chain is later hidden, deleted, orphaned, or replaced at
+the same path by a different GUID, watches attached to the original
+ancestor GUID still receive matching subtree events from descendants
+mutated through fds opened through that chain. Watches attached to a
+new key that later appears at the same path do not receive events
+from the old key.
+
+This is intentional fd/capability semantics. A watch observes key
+objects and captured object ancestry, not whatever path string
+currently resolves to at event time.
+
 **One watch per fd.** Each key fd has at most one active watch.
 Calling REG_IOC_NOTIFY on an already-armed fd replaces the previous
 filter and subtree settings. To watch the same key with different
@@ -134,6 +148,10 @@ sequence in which operations were performed within the transaction.
 The watcher sees the full set of changes atomically -- no
 interleaving with events from other operations between the batch
 members.
+
+LCS derives the batch from the transaction mutation log defined in
+§5.1. The source commits storage atomically; LCS remains responsible
+for computing effective-state changes and dispatching watch events.
 
 If the number of events generated for a single watcher from one
 transaction commit exceeds MaxTransactionWatchEventBurst (default

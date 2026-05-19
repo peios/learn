@@ -33,6 +33,6 @@ During the DACL walk, S-1-3-4 is treated as a normal SID. If the caller is the o
 
 ## Ownership transfer
 
-Changing an object's owner requires WRITE_OWNER on the object. Without SeTakeOwnershipPrivilege, the new owner MUST be the caller's own SID or a group on the caller's token with SE_GROUP_OWNER (defined in the SID format section, flag value 0x00000008). SE_GROUP_ENABLED is NOT required — a deny-only group with SE_GROUP_OWNER can be set as the owner.
+Changing an object's owner requires WRITE_OWNER on the object. Without SeTakeOwnershipPrivilege, the new owner MUST be the caller's own SID or a group on the caller's token with SE_GROUP_OWNER (defined in §2.1, flag value 0x00000008). SE_GROUP_ENABLED is NOT required — a deny-only group with SE_GROUP_OWNER can be set as the owner.
 
 SeTakeOwnershipPrivilege grants WRITE_OWNER on any object regardless of the DACL (deny-proof, but subject to MIC/PIP). SeRestorePrivilege bypasses the ownership SID constraint entirely — the `kacs_set_sd` syscall checks for SeRestorePrivilege and, when present, skips the "own SID or SE_GROUP_OWNER group" validation, allowing the caller to set ownership to any arbitrary SID.

@@ -37,7 +37,7 @@ This is the complete set of Peios privileges. Each privilege is listed with a de
 |---|---|---|
 | SeTcbPrivilege | Act as part of the trusted computing base. Catch-all for system operations that do not map to a more specific privilege. Only TCB services need this. | Kernel standalone |
 | SeShutdownPrivilege | Shut down or reboot the local system. | Kernel standalone |
-| SeRemoteShutdownPrivilege | Shut down the system from a remote connection. When a shutdown request comes from a remote logon type, both SeShutdownPrivilege and SeRemoteShutdownPrivilege are required. | Kernel standalone |
+| SeRemoteShutdownPrivilege | Shut down the system from a remote connection. When a shutdown request comes from a Network, NetworkCleartext, or NewCredentials logon type, both SeShutdownPrivilege and SeRemoteShutdownPrivilege are required. | Kernel standalone |
 | SeLoadDriverPrivilege | Load or unload kernel modules. MUST be stripped from all non-peinit tokens via FilterToken. | Kernel standalone |
 | SeDebugPrivilege | Attach to and inspect any process regardless of its SD. Does not bypass PIP. | Kernel standalone |
 | SeSystemtimePrivilege | Change the system clock. | Kernel standalone |

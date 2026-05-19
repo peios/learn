@@ -31,6 +31,13 @@ Two strategies:
 
 **Disable dumps.** Clear the dumpable flag for PIP-protected processes at exec time. No core dump is generated. Simple and secure.
 
+While a process has `pip_type != None`, attempts to make the process dumpable
+again MUST be denied. In Linux terms, `prctl(PR_SET_DUMPABLE, 1)` and any
+equivalent request that would set the task to a dumpable state MUST fail closed
+for PIP-protected processes. Requests that keep or make the process
+non-dumpable are allowed. If a later exec assigns PIP None/0, normal Linux
+exec-time dumpability rules apply to the new process image.
+
 **PIP-protected crash handler.** A signed, high-trust crash handler receives dump data from the kernel and writes it with a restrictive SD that only PIP-dominant processes can read. The kernel generates dump data internally (in the crashing process's own context), so PIP process isolation is never bypassed.
 
 > [!INFORMATIVE]

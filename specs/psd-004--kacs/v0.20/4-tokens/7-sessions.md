@@ -8,7 +8,8 @@ A logon session is a lightweight kernel object identified by a LUID (`auth_id`).
 
 - **Creation** — authd creates a logon session (via KACS syscall) at authentication time, before creating the token. The session object contains: session ID (LUID), logon type (Interactive, Network, Service, etc.), user SID, authentication package name (e.g., "Kerberos", "Negotiate"), and creation timestamp. A logon SID (`S-1-5-5-X-Y`) is derived from the session ID.
 - **Association** — each token's `auth_id` references its logon session. Multiple tokens MAY share a session (linked pairs, tokens derived via duplication).
-- **Cleanup** — when the last token referencing a logon session is freed (refcount drops to zero), the kernel destroys the session object and emits a session-destroyed event via the event subsystem (`event_emit`). authd subscribes to these events and uses them to clean up associated credentials (cached Kerberos tickets, etc.).
+- **Cleanup** — when the last token referencing a logon session is freed (refcount drops to zero), the kernel destroys the session object and emits a `logon-session-destroyed` event through KMES. authd subscribes to these events and uses them to clean up associated credentials (cached Kerberos tickets, etc.).
+- **Empty-session rollback** — if authd creates a logon session but no token ever becomes live for that session, authd MAY call `kacs_destroy_empty_session`. The kernel MUST require SeTcbPrivilege. The call MUST succeed only if the session exists, has zero live tokens, has no linked-token state, and has no other in-flight kernel references. On success, the kernel destroys the session object and emits the same `logon-session-destroyed` event used for normal last-token cleanup. A nonexistent session MUST fail with `-ENOENT`. A session with any live token, linked-token state, or other in-flight kernel reference MUST fail with `-EBUSY`.
 
 Logon sessions are bookkeeping. No access control decision depends on the logon session — AccessCheck MUST NOT consult `auth_id`. The `interactive_session_id` field is similarly metadata; the kernel stores it and returns it on query but no kernel security mechanism evaluates it.
 
@@ -20,12 +21,12 @@ Token lifetime is governed by reference counting, not by the expiration timestam
 
 ## Revocation
 
-KACS does not provide a token revocation primitive. There is no "invalidate token X" or "kill session Y" syscall.
+KACS does not provide a token revocation primitive. There is no "invalidate token X" syscall, and there is no syscall that destroys a session while tokens still reference it. `kacs_destroy_empty_session` is only an authd rollback primitive for a session that has not acquired live tokens.
 
 Session termination is userspace coordination:
 
 1. authd decides a session must end (admin request, security incident, account deletion, or user-initiated logoff).
-2. authd enumerates processes whose tokens carry the target `auth_id` or `interactive_session_id` by walking `/proc/*/token` and inspecting TokenStatistics (which includes `auth_id`). No dedicated enumeration syscall is needed.
+2. authd enumerates processes whose tokens carry the target `auth_id` or `interactive_session_id` by walking `/proc/*/token`, opening each node's query-only inspection handle, and inspecting `TokenStatistics` (which includes `auth_id`). No dedicated enumeration syscall is needed.
 3. authd requests process termination — via peinit for supervised services, via signals for user processes.
 4. Processes terminate, dropping their token references.
 5. When the last reference drops, the logon session object is cleaned up.

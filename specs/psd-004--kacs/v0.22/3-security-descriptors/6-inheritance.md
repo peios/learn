@@ -82,9 +82,9 @@ The DACL is computed by merging explicit ACEs from the creator SD with inheritab
 
 - If no creator SD is supplied and the parent has inheritable ACEs: the new object's DACL consists entirely of inherited ACEs from the parent.
 
-- If no creator SD is supplied and the parent has no inheritable ACEs: the new object's DACL is the token's default DACL.
+- If no creator SD is supplied and the parent has no inheritable ACEs: the new object's DACL is the token's default DACL. If the token has no default DACL, the new object's DACL is null: SE_DACL_PRESENT is clear and the DACL offset is zero.
 
-- If a creator SD is supplied but has no DACL (SE_DACL_PRESENT not set): the new object's DACL is computed as if no creator SD was supplied (inherit from parent, or fall back to the token's default DACL).
+- If a creator SD is supplied but has no DACL (SE_DACL_PRESENT not set): the new object's DACL is computed as if no creator SD was supplied (inherit from parent, or fall back to the token's default DACL, or null DACL if the token has no default DACL).
 
 - If a creator SD is supplied with a DACL (SE_DACL_PRESENT set):
   - Explicit ACEs from the creator SD are preserved.
@@ -121,7 +121,7 @@ Computed identically to the DACL, substituting SACL for DACL throughout. The tok
 
 ## Size limit
 
-If the computed SD (after merging explicit, inherited, and server ACEs) exceeds 64 KB when serialized to self-relative format, the creation MUST fail. The 64 KB limit is the maximum SD size — inheritance does not get an exception. A deeply nested directory tree with many inheritable ACEs can approach this limit.
+If the computed SD (after merging explicit, inherited, and server ACEs) exceeds 65,535 bytes when serialized to self-relative format, the creation MUST fail. The 65,535-byte limit is the maximum SD size — inheritance does not get an exception. A deeply nested directory tree with many inheritable ACEs can approach this limit.
 
 ## Eager evaluation
 

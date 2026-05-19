@@ -14,7 +14,7 @@ mask. The returned token fd always carries the fixed cached rights
 
 **Receive via IPC.** A token fd MAY be passed over a Unix socket via SCM_RIGHTS. The recipient's operations are constrained by the access mask cached on the fd at the time it was originally opened.
 
-**Implicit access.** A thread always has implicit access to its own effective token for query operations. This is not a kernel bypass — it is guaranteed by the default token SD, which grants TOKEN_QUERY (plus adjustment rights) to the token's own user SID. The AccessCheck still runs; it simply always succeeds for self-query under the default SD.
+**Implicit access.** A thread has implicit access to its own effective token for query operations under the default token SD. This is not a kernel bypass — it is guaranteed by the default token SD, which grants TOKEN_QUERY (plus adjustment rights) to the token's own user SID. The AccessCheck still runs; it simply succeeds for self-query while the effective token's own SD continues to grant the required right. An explicit later mutation of the token's own SD MAY revoke self-query by removing that grant.
 
 ## Token-specific access rights
 

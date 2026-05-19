@@ -80,7 +80,11 @@ policy.
 
 For each path to remove:
 
-1. Delete the path from disk.
+1. Rename the path aside as a backup (§7.5.1.3) rather
+   than deleting it outright, so the uninstall can be
+   rolled back and remains undoable (§7.5.2). The backup
+   is discarded once the transaction commits and any
+   retention window expires.
 2. If the path's parent directory is now empty AND the
    parent directory is not owned by another installed
    package, schedule the parent for removal.
@@ -112,17 +116,22 @@ surface the overlap as a database-integrity warning.
 
 ## Removal of system-critical packages
 
-Removing a package whose files are required for the
-package manager itself to function (the package manager
-binary, its libraries, its trust anchors) MUST be
-prevented. Such packages are *system-critical*; their
-list is operationally defined and not specified normatively
-here.
+Some packages are *system-critical*: their files are
+required for the package manager itself, or for core
+system function, to work (the package manager binary and
+its trust anchors, core system packages). The set is
+operationally defined and not specified normatively here.
 
-A package manager MUST refuse to uninstall a system-
-critical package, even with cascading authorisation,
-unless the operation is performed from a recovery context
-(boot media, alternate environment).
+A package manager MUST refuse to uninstall a
+system-critical package unless the operator supplies an
+explicit, operation-specific override (for example an
+`--allow-critical` flag). This is a foot-gun guard, not a
+security boundary: under Peios's access model the operator
+already holds whatever authority the underlying file
+deletions require (§7.6), so the guard exists to prevent
+an accidental `uninstall` from disabling the system — not
+to deny an authorised operator who genuinely intends the
+removal.
 
 ## Side-effect timing on uninstall
 

@@ -37,7 +37,7 @@ This is the complete set of Peios privileges. Each privilege is listed with a de
 |---|---|---|
 | SeTcbPrivilege | Act as part of the trusted computing base. Catch-all for system operations that do not map to a more specific privilege. Only TCB services need this. | Kernel standalone |
 | SeShutdownPrivilege | Shut down or reboot the local system. | Kernel standalone |
-| SeRemoteShutdownPrivilege | Shut down the system from a remote connection. When a shutdown request comes from a remote logon type, both SeShutdownPrivilege and SeRemoteShutdownPrivilege are required. | Kernel standalone |
+| SeRemoteShutdownPrivilege | Shut down the system from a remote connection. When a shutdown request comes from a Network, NetworkCleartext, or NewCredentials logon type, both SeShutdownPrivilege and SeRemoteShutdownPrivilege are required. | Kernel standalone |
 | SeLoadDriverPrivilege | Load or unload kernel modules. MUST be stripped from all non-peinit tokens via FilterToken. | Kernel standalone |
 | SeDebugPrivilege | Attach to and inspect any process regardless of its SD. Does not bypass PIP. | Kernel standalone |
 | SeSystemtimePrivilege | Change the system clock. | Kernel standalone |
@@ -45,7 +45,8 @@ This is the complete set of Peios privileges. Each privilege is listed with a de
 | SeIncreaseQuotaPrivilege | Override resource limits (ulimits) for a process. | Kernel standalone |
 | SeLockMemoryPrivilege | Lock pages in physical memory (mlock/mlockall). | Kernel standalone |
 | SeAuditPrivilege | Write events to the audit log. | Kernel standalone |
-| SeProfileSingleProcessPrivilege | Use performance monitoring tools (perf_event_open). | Kernel standalone |
+| SeProfileSingleProcessPrivilege | Attach `perf_event_open()` to a specific other process (cross-task profiling). PIP-respecting — does not bypass dominance. Own-task profiling does not require this privilege. | Kernel standalone |
+| SeSystemProfilePrivilege | Use system-wide performance profiling: per-CPU events, all-task sampling, kernel-mode events, and the cross-paranoid-level capabilities of `perf_event_open()`. Does not respect PIP at the per-sample level — system-wide samples include PIP-protected tasks. Operator-class privilege. | Kernel standalone |
 | SeCreateJobPrivilege | Submit supervised jobs via JFS. Custom Peios privilege. Not enforced in v0.20 (JFS is out of scope). Defined for ABI stability. | Kernel standalone (future) |
 
 ## Network
@@ -75,7 +76,6 @@ The following privileges are allocated for format compatibility. The positions e
 | SeManageVolumePrivilege | Absorbed in SeTcbPrivilege. |
 | SeTrustedCredManAccessPrivilege | Reserved for future secrets infrastructure. |
 | SeSystemEnvironmentPrivilege | Gated by SDs on efivar files under FACS. |
-| SeSystemProfilePrivilege | Absorbed in SeProfileSingleProcessPrivilege. |
 | SeTimeZonePrivilege | Linux does not gate timezone changes. |
 | SeUndockPrivilege | Server operating system. |
 

@@ -76,7 +76,7 @@ Parsing rules:
 - `AceSize` MUST be large enough to contain the header, mask, flags, all GUIDs selected by `Flags`, and a complete SID.
 - Unknown bits in `Flags` MUST be ignored.
 - If neither GUID-presence bit is set, the ACE has no GUID fields and behaves like the corresponding basic ACE.
-- GUID fields are opaque 16-byte values at this layer. Their interpretation is defined by the Object ACEs section.
+- GUID fields are opaque 16-byte values at this layer. Their interpretation is defined by §10.5.
 
 ### Callback ACE family
 
@@ -129,12 +129,12 @@ trailing application data:
 | 0 | 4 | AceHeader | Standard ACE header. |
 | 4 | 4 | Mask | Reserved for compatibility. Not used for access decisions. |
 | 8 | variable | Sid | MUST be Everyone (`S-1-1-0`). |
-| variable | variable | ApplicationData | One claim entry using the Claim Attribute Format section. Consumes the remainder of the ACE. |
+| variable | variable | ApplicationData | One claim entry using §3.9. Consumes the remainder of the ACE. |
 
 Parsing rules:
 
 - The SID MUST be Everyone.
-- `ApplicationData` MUST contain exactly one claim entry using the Claim Attribute Format section.
+- `ApplicationData` MUST contain exactly one claim entry using §3.9.
 
 ## DACL ACE types
 
@@ -197,7 +197,13 @@ Trigger audit log entries when matching access attempts occur. The AceFlags fiel
 
 ### Mandatory label ACE
 
-Defines the object's integrity level for MIC. At most one per SACL. The SID encodes the integrity level. The access mask encodes the MIC policy (which operations are blocked for non-dominant callers).
+Defines the object's integrity level for MIC. Conforming producers SHOULD emit
+at most one non-inherit-only mandatory-label ACE per SACL. Imported or existing
+SACLs MAY contain multiple mandatory-label ACEs; MIC uses the first
+non-inherit-only mandatory-label ACE as defined in §10.3. Inherit-only
+mandatory-label ACEs do not apply to the current object. The SID encodes the
+integrity level. The access mask encodes the MIC policy (which operations are
+blocked for non-dominant callers).
 
 | Type | Value | Effect |
 |---|---|---|
@@ -240,7 +246,13 @@ ACLs carry a revision number that constrains which ACE types MAY appear:
 - **ACL_REVISION (0x02)** — basic ACE types (0x00, 0x01, 0x02, 0x03), mandatory label (0x11), resource attribute (0x12), scoped policy (0x13), and process trust label (0x14).
 - **ACL_REVISION_DS (0x04)** — additionally permits object-type ACEs (0x05--0x08), callback ACEs (0x09--0x0C, 0x0D--0x10). Required for Active Directory access control.
 
-When creating new ACLs, the revision MUST be set to the minimum required by the ACE types present. When parsing ACLs, KACS MUST NOT reject an ACL based on revision-vs-ACE-type mismatch — accept permissively, write correctly.
+When creating new ACLs containing only recognized ACE types, the revision MUST
+be set to the minimum required by the ACE types present. When rewriting an
+existing ACL while preserving one or more unrecognized ACE types, KACS MUST set
+the revision to the greater of the minimum required by recognized ACE types
+present and the source ACL revision. When parsing ACLs, KACS MUST NOT reject an
+ACL based on revision-vs-ACE-type mismatch — accept permissively, write
+correctly.
 
 > [!INFORMATIVE]
 > This diverges from strict MS-DTYP interpretation, where ACL_REVISION (0x02) does not permit SACL types 0x11-0x14. KACS accepts them under either revision to handle SDs that may have been constructed with a less strict tool. The evaluator handles all ACE types correctly regardless of ACL revision.

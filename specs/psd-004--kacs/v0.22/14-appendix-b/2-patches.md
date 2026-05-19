@@ -24,11 +24,12 @@ KACS requires kernel patches beyond the LSM module itself. All patches are condi
 
 | # | Site | Purpose |
 |---|---|---|
-| 12 | `do_dentry_open()` | Accept KACS desired_access, set f_mode from granted mask. |
+| 12 | KACS-native open handoff (`do_dentry_open()` or equivalent `security_file_open` handoff) | Carry KACS `desired_access` into the opened file, cache the granted mask, and set `f_mode` from the granted/requested data and execute rights before the fd is returned. |
 | 13 | `pidfd_getfd()` | Add PTRACE_MODE_GETFD to distinguish fd extraction from ptrace attach. |
 | 14 | `current_fsuid()` / `current_fsgid()` | Return projected UID/GID from KACS token instead of `cred->fsuid` / `cred->fsgid`. |
 | 15 | `execveat` / `do_open_execat` | Not applied in v0.20. `execveat(AT_EMPTY_PATH)` uses live AccessCheck via re-opened file rather than checking the fd's granted mask. The granted-mask (snapshot) approach is the target for future versions. |
 | 16 | `fchdir()` / `vfs_fchdir()` | Enforce FILE_TRAVERSE on directory fds. **Implementation note:** in v0.20, this is enforced via `security_file_permission` rather than a dedicated `security_file_fchdir` hook. Functionally equivalent. |
+| 17 | `pidfd_open()` | Add `PTRACE_MODE_PIDFD_OPEN` so the LSM can distinguish process-handle acquisition from ptrace memory-read mode. |
 
 ## Hook coordination
 
@@ -39,4 +40,6 @@ Patches 7, 9, 10, and 11 add file-based hooks that fire while `struct file *` is
 | `inode` | Which object was decided. |
 | `op_class` | SETATTR, GETATTR, FILEATTR_SET, FILEATTR_GET, SETXATTR, or GETXATTR. |
 
-The marker is scoped to exactly one syscall invocation, one inode, one operation class. It is cleared unconditionally at the end of each dentry-based hook.
+The marker is scoped to exactly one syscall invocation, one inode, one operation class. A matching dentry-based hook consumes and clears the marker. A mismatched dentry-based hook MUST clear the marker before continuing with normal authorization.
+
+`FILEATTR_SET` has one VFS-specific exception: the same marker MAY authorize the immediate `inode_file_getattr` preflight for the same inode before it is consumed by `inode_file_setattr`. Any other inode or operation-class mismatch MUST clear the marker.

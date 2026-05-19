@@ -16,7 +16,7 @@ The following terms are used throughout this specification with the precise mean
 
 **SID** (Security Identifier): A unique, hierarchical principal identifier. Format: `S-1-{authority}-{sub1}-{sub2}-...`. SIDs identify users, groups, services, machines, and well-known principals. SIDs are binary-compatible with Windows SIDs.
 
-**Security Descriptor (SD)**: A binary structure defining the security policy for a protected object. Contains: an owner SID, a primary group SID, a DACL, and optionally a SACL. SDs use the self-relative binary format defined in MS-DTYP section 2.4.6, ensuring compatibility with Active Directory and Samba environments.
+**Security Descriptor (SD)**: A binary structure defining the security policy for a protected object. Contains: an owner SID, a primary group SID, a DACL, and optionally a SACL. SDs use the self-relative binary format defined in MS-DTYP §2.4.6, ensuring compatibility with Active Directory and Samba environments.
 
 **ACL** (Access Control List): An ordered list of ACEs. Two kinds exist: the DACL (controls access) and the SACL (controls audit, mandatory integrity, resource attributes, and central access policy references).
 
@@ -52,4 +52,4 @@ The following terms are used throughout this specification with the precise mean
 
 **LSM** (Linux Security Module): The kernel framework that KACS builds on. LSM provides hook points throughout the kernel where security modules interpose access control decisions.
 
-**LogonSession**: A kernel object representing a single authentication event. Contains: LogonSession ID (LUID), logon type, user SID, authentication package, logon time, and a logon SID. Tokens reference their LogonSession by ID.
+**LogonSession**: A kernel object representing a single authentication event. Contains: LogonSession ID, logon type, user SID, authentication package, logon time, and a logon SID. Tokens reference their LogonSession by ID.

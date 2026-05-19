@@ -339,6 +339,7 @@ Per blanket:
 | Size | Field |
 |---|---|
 | 8 | txn_id |
+| 4 | mode (RSI_TXN_READ_WRITE = 0, RSI_TXN_READ_ONLY = 1) |
 
 **Response:** status only.
 

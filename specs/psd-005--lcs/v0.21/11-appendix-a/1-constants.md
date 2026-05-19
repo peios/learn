@@ -54,6 +54,18 @@ on the fd's file_operations, not globally.
 | Ioctl | Number | Direction | Description |
 |---|---|---|---|
 | REG_IOC_COMMIT | 16 | _IO | Commit transaction. |
+| REG_IOC_TXN_STATUS | 17 | _IOR | Query transaction state. |
+
+### Transaction states
+
+| State | Code |
+|---|---|
+| REG_TXN_ACTIVE_UNBOUND | 0 |
+| REG_TXN_ACTIVE_BOUND | 1 |
+| REG_TXN_COMMITTED | 2 |
+| REG_TXN_ABORTED | 3 |
+| REG_TXN_TIMED_OUT | 4 |
+| REG_TXN_SOURCE_DOWN | 5 |
 
 ## Syscall flags
 
@@ -106,6 +118,15 @@ on the fd's file_operations, not globally.
 | ACCESS_SYSTEM_SECURITY | 0x01000000 |
 | MAXIMUM_ALLOWED | 0x02000000 |
 
+### Raw generic access bits
+
+| Right | Value |
+|---|---|
+| GENERIC_ALL | 0x10000000 |
+| GENERIC_EXECUTE | 0x20000000 |
+| GENERIC_WRITE | 0x40000000 |
+| GENERIC_READ | 0x80000000 |
+
 ### Generic mappings
 
 | Generic | Value | Maps to |
@@ -113,6 +134,21 @@ on the fd's file_operations, not globally.
 | KEY_READ | 0x00020019 | KEY_QUERY_VALUE \| KEY_ENUMERATE_SUB_KEYS \| KEY_NOTIFY \| READ_CONTROL |
 | KEY_WRITE | 0x00020006 | KEY_SET_VALUE \| KEY_CREATE_SUB_KEY \| READ_CONTROL |
 | KEY_ALL_ACCESS | 0x000F003F | All specific \| all standard |
+
+KEY_READ, KEY_WRITE, and KEY_ALL_ACCESS are concrete registry
+convenience masks. The raw generic access bits above are accepted
+in desired_access and ACE masks before mapping. GENERIC_EXECUTE maps
+to 0 for registry keys.
+
+### Access mask validation constants
+
+| Mask | Value | Description |
+|---|---|---|
+| REG_VALID_DESIRED_ACCESS_MASK | 0xF30F003F | Caller-supplied desired_access bits accepted before generic mapping. |
+| REG_VALID_MAPPED_ACCESS_MASK | 0x010F003F | Concrete registry rights valid after generic mapping. |
+| REG_VALID_ACE_ACCESS_MASK | 0xF10F003F | ACE mask bits accepted before generic mapping. MAXIMUM_ALLOWED is not valid in ACE masks. |
+
+SYNCHRONIZE (0x00100000) is not a registry key right in v0.21.
 
 ## Value types
 
@@ -126,8 +162,15 @@ on the fd's file_operations, not globally.
 | REG_DWORD_BIG_ENDIAN | 5 |
 | REG_LINK | 6 |
 | REG_MULTI_SZ | 7 |
+| REG_RESOURCE_LIST | 8 |
+| REG_FULL_RESOURCE_DESCRIPTOR | 9 |
+| REG_RESOURCE_REQUIREMENTS_LIST | 10 |
 | REG_QWORD | 11 |
 | REG_TOMBSTONE | 0xFFFF |
+
+REG_IOC_SET_VALUE rejects unknown value type codes with EINVAL.
+REG_TOMBSTONE is accepted only for explicit per-value tombstone
+writes and requires zero-length data.
 
 ## Watch event types
 
@@ -187,6 +230,13 @@ on the fd's file_operations, not globally.
 | RSI_INVALID | 7 |
 | RSI_CAS_FAILED | 8 |
 | RSI_TXN_NOT_SUPPORTED | 9 |
+
+## RSI transaction modes
+
+| Mode | Code |
+|---|---|
+| RSI_TXN_READ_WRITE | 0 |
+| RSI_TXN_READ_ONLY | 1 |
 
 ## RSI registration flags
 

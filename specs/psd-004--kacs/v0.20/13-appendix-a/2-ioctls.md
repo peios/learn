@@ -33,6 +33,9 @@ Requires TOKEN_QUERY (0x0008).
 | TokenDeviceGroups | Device group SIDs. |
 | TokenAppContainerSid | Confinement SID (empty if not confined). |
 | TokenCapabilities | Confinement capability SIDs. |
+| TokenUserClaims | The token's user-claim array using the standard KACS claim-array wrapper. |
+| TokenDeviceClaims | The token's device-claim array using the standard KACS claim-array wrapper. |
+| TokenProjectedSupplementaryGids | The token's projected Linux supplementary GID array. |
 
 ## KACS_IOC_IMPERSONATE
 
@@ -47,13 +50,33 @@ Requires TOKEN_IMPERSONATE (0x0004).
 
 ## KACS_IOC_INSTALL
 
-Commits this token as the calling process's primary token. The token MUST be a primary token. When the new token's user SID differs from the current primary token's, the process SD is automatically regenerated using the default template with the new token's user SID as owner.
+Commits this token as the calling process's primary token. The token MUST be a
+primary token.
+
+The install is process-wide, not thread-local: the kernel replaces the primary
+token for the entire calling thread group.
+
+- Threads that are not impersonating switch immediately to the new primary
+  token as both `real_cred` and `cred`.
+- Threads that are currently impersonating keep their active impersonation in
+  `cred`; only `real_cred` changes underneath them. A later `kacs_revert()`
+  lands on the new primary token, not the old one.
+- The calling thread performs its install immediately. Sibling threads in the
+  same thread group converge in their own context via queued in-kernel
+  credential work. A brief transition window where some sibling threads still
+  observe the old primary token is permitted. No completion barrier is exposed
+  to the caller.
+
+When the new token's user SID differs from the current primary token's, the
+process SD is automatically regenerated using the default template with the new
+token's user SID as owner. If the user SID does not change, the existing
+process SD is preserved.
 
 Requires TOKEN_ASSIGN_PRIMARY (0x0001) on the handle and SeAssignPrimaryTokenPrivilege on the caller's real token.
 
 ## KACS_IOC_DUPLICATE
 
-Deep-clones the token into a new token fd. Takes: target token type, target impersonation level, and desired access mask for the new handle. Impersonation level escalation is forbidden (new level MUST be <= source level for impersonation tokens). When duplicating to Primary, impersonation_level is set to Anonymous. The duplicate's `elevation_type` is reset to Default. The `modified_id` is initialized to the new `token_id`.
+Deep-clones the token into a new token fd. Takes: target token type, target impersonation level, and desired access mask for the new handle. Impersonation level escalation is forbidden only when the source token is already an impersonation token (new level MUST be <= source level in that case). A primary token duplicated to Impersonation MAY use any caller-selected impersonation level. When duplicating to Primary, impersonation_level is set to Anonymous. The duplicate's `elevation_type` is reset to Default. The `modified_id` is initialized to the new `token_id`.
 
 The desired access mask for the new handle is checked against the new token's SD (which is a freshly generated default SD). The caller's effective token is the subject for this AccessCheck.
 
@@ -61,13 +84,40 @@ Requires TOKEN_DUPLICATE (0x0002) on the source handle.
 
 ## KACS_IOC_ADJUST_PRIVS
 
-Enables, disables, or removes privileges atomically. Takes an array of (privilege, action) pairs. Removal is irreversible. Bumps `modified_id`.
+Enables, disables, removes, or resets privileges atomically. Takes an array of
+(privilege, action) pairs. Removal is irreversible.
+
+Special sentinel: if the first and only entry is
+`{ luid = 0, attributes = KACS_PRIV_RESET_ALL_DEFAULTS }`,
+`privileges_enabled` is reset to `privileges_enabled_by_default`.
+Reset-to-defaults does NOT restore removed privileges: privileges absent from
+`privileges_present` remain absent. Any other use of
+`KACS_PRIV_RESET_ALL_DEFAULTS` is invalid. Unknown `attributes` bits are
+invalid. Duplicate privilege indices in the same request are invalid. All
+entries are validated before any are applied. Enabling a privilege that is
+absent from `privileges_present` is invalid; disabling or removing an already
+absent privilege is a no-op.
+
+Bumps `modified_id`.
 
 Requires TOKEN_ADJUST_PRIVILEGES (0x0020).
 
 ## KACS_IOC_ADJUST_GROUPS
 
-Enables or disables group entries atomically. Takes an array of (group index, enable/disable) pairs. All entries are validated before any are applied — if any entry targets a mandatory, deny-only, or logon SID group, the entire operation fails with no changes. Special sentinel: if the first entry has `index = 0xFFFFFFFF`, all groups are reset to their creation-time enabled/disabled state. The sentinel MUST be the only entry (`count = 1`). Reset does NOT undo deny-only status set by FilterToken — SE_GROUP_USE_FOR_DENY_ONLY groups remain deny-only. Bumps `modified_id`.
+Enables or disables group entries atomically. Takes an array of
+(group index, enable/disable) pairs. Group indices are zero-based into the
+token's groups array. `count = 0` is invalid. All entries are validated before
+any are applied — if any entry targets a mandatory, deny-only, or logon SID
+group, or if any group index appears more than once in the same request, the
+entire operation fails with no changes.
+
+Special sentinel: if the first entry has `index = 0xFFFFFFFF` and `enable = 0`,
+all groups are reset to their creation-time enabled/disabled state. The
+sentinel MUST be the only entry (`count = 1`). Any other use of
+`index = 0xFFFFFFFF` is invalid.
+
+Reset does NOT undo deny-only status set by FilterToken —
+`SE_GROUP_USE_FOR_DENY_ONLY` groups remain deny-only. Bumps `modified_id`.
 
 Requires TOKEN_ADJUST_GROUPS (0x0040).
 
@@ -85,21 +135,21 @@ Requires TOKEN_ADJUST_DEFAULT (0x0080).
 
 ## KACS_IOC_RESTRICT
 
-Creates a restricted token. Takes: SIDs to mark deny-only, privileges to remove, restricting SIDs to add, and a `write_restricted` flag. When `write_restricted` is set, the restricted SID check applies only to write operations and `user_deny_only` is set to true. Returns a new token fd. The restricted token's `elevation_type` is reset to Default.
+Creates a restricted token. Takes: SIDs to mark deny-only, privileges to remove, restricting SIDs to add, and a `write_restricted` flag. The variable payload at `data_ptr` is `u32[num_deny_indices]` immediately followed by `num_restrict_sids` packed binary SIDs. Deny indices are zero-based into the token's group array. Duplicate deny indices are invalid. `data_len` MUST match this layout exactly: truncated, malformed, or trailing payload bytes are invalid. All inputs are validated before any token is created; if any index or SID entry is invalid, the operation fails with no result token. When `write_restricted` is set, the restricted SID check applies only to write operations and `user_deny_only` is set to true. Returns a new token fd with the same per-handle access mask as the source token fd used for this ioctl. The restricted token's `elevation_type` is reset to Default.
 
 Requires TOKEN_DUPLICATE (0x0002).
 
 ## KACS_IOC_LINK_TOKENS
 
-Associates an elevated/filtered token pair on a logon session. Takes a struct with two token fds: `elevated_fd` (first) and `filtered_fd` (second), plus a `session_id`. Both tokens MUST belong to the specified logon session. The pair is registered at the session level. Upon successful linking, the elevated token's `elevation_type` is set to Full and the filtered token's `elevation_type` is set to Limited. This is the only mechanism that sets elevation_type to a non-Default value.
+Associates an elevated/filtered token pair on a logon session. Takes a struct with two token fds: `elevated_fd` (first) and `filtered_fd` (second), plus a `session_id`. Both tokens MUST belong to the specified logon session, MUST be primary tokens, and MUST carry the same user SID. The pair is registered at the session level. Upon successful linking, the elevated token's `elevation_type` is set to Full and the filtered token's `elevation_type` is set to Limited. This is the only mechanism that sets elevation_type to a non-Default value.
 
-Requires SeTcbPrivilege. Both token fds require TOKEN_DUPLICATE access. "Belongs to" means the token's `auth_id` equals the specified `session_id` (LUID comparison). The `session_id` parameter is a `u64` LUID. Linking tokens that are already part of a pair replaces the existing pair. Linking a token to itself returns `-EINVAL`.
+Requires SeTcbPrivilege. Both token fds require TOKEN_DUPLICATE access. "Belongs to" means the token's `auth_id` equals the specified `session_id` (LUID comparison). The `session_id` parameter is a `u64` LUID. Linking tokens that are already part of a pair replaces the existing pair on that session. Linking a token to itself returns `-EINVAL`. If a token already has `elevation_type = Full`, it MAY be relinked only in the `elevated_fd` role. If a token already has `elevation_type = Limited`, it MAY be relinked only in the `filtered_fd` role. Role changes fail with `-EINVAL`.
 
 ## KACS_IOC_GET_LINKED_TOKEN
 
 Retrieves the partner token from a linked pair. Behavior depends on privilege:
 
-- **Without SeTcbPrivilege:** returns a deep clone at Identification impersonation level with TOKEN_QUERY access only. The caller can inspect the partner's identity but MUST NOT impersonate it or use it for access decisions.
+- **Without SeTcbPrivilege:** returns a deep clone at Identification impersonation level with TOKEN_QUERY access only. The clone follows DuplicateToken semantics for independent object creation (new token object, new `token_id`, `modified_id` initialized to the new `token_id`, fresh default token SD), except that it preserves the partner token's `elevation_type`. The caller can inspect the partner's identity but MUST NOT impersonate it or use it for access decisions.
 - **With SeTcbPrivilege:** returns a full primary token handle to the actual linked token. The caller receives full usability — this is required for system daemons (authd) that manage linked pairs.
 
 Requires TOKEN_QUERY (0x0008). If the token is not part of a linked pair (elevation_type is Default, or the pair was destroyed by session termination), returns `-ENOENT`.

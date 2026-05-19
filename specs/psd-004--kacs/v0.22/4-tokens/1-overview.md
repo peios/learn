@@ -2,7 +2,15 @@
 title: Token Overview
 ---
 
-A token is a kernel object representing a thread's identity and security policy. Every thread in Peios MUST have an associated token. There are no NULL tokens.
+A token is a kernel object representing a thread's identity and security
+policy. Every live userspace thread in Peios MUST have an associated token for
+KACS-mediated authorization. KACS-mediated userspace authorization MUST NOT
+evaluate a NULL token.
+
+Credentials that are blank, not yet committed, kernel-only, asynchronous, or
+otherwise outside a meaningful userspace evaluation context MAY carry no token.
+If such credentials reach an LSM hook that would otherwise evaluate KACS policy,
+the hook MUST fail closed rather than evaluate a meaningless identity.
 
 A token carries: the user's identity (SID), group memberships, privileges, integrity level, impersonation state, claims, confinement settings, and metadata. All KACS-mediated access control decisions evaluate the thread's effective token.
 
@@ -26,10 +34,10 @@ In the common case (no impersonation), `real_cred` and `cred` point to the same 
 
 ## Evaluation context
 
-Token evaluation — AccessCheck, privilege checks — MUST only occur when a userspace thread is executing synchronously in the kernel on its own behalf. The token is accessed via `current->cred`, which is only valid in this context.
+Token evaluation — AccessCheck, privilege checks — MUST only occur when a meaningful subject authority is available. In task context, the subject authority is the effective token reached through the task's subjective credential, `current_cred()` / `current->cred`.
 
-Kernel threads, workqueues, writeback daemons, io_uring workers, and other asynchronous contexts MUST NOT evaluate tokens from `current->cred` directly. Authorization is evaluated once at the synchronous boundary (e.g., file open), and the result is cached on the object handle (e.g., the granted mask on a file descriptor). Subsequent operations check the cached result.
+Linux credential substitution is authoritative for deferred work. If a kernel path runs under credentials installed by `override_creds()` or another Linux subjective-credential mechanism, the token pointer in that credential's LSM blob travels with it and MAY be evaluated. KACS MUST NOT strip authority merely because the current task has a kernel-thread, workqueue, io_uring-worker, or similar worker flag.
 
-If a kernel context runs under credentials captured via `override_creds()` (e.g., io_uring, which captures the submitter's credential at submission time), the token pointer in the credential's LSM blob travels with it and MAY be evaluated.
+Authorization already cached on an object handle (for example, the granted mask on a file description) continues to use that cached authority for post-open operations. User-originated asynchronous work that lacks both captured credentials and cached handle authority MUST fail closed by reaching KACS without a meaningful token-bearing credential.
 
-LSM hooks that detect they are running without a meaningful user context (PF_KTHREAD without override, interrupt context) MUST deny rather than evaluate a meaningless identity.
+If no token-bearing subjective credential is available for a KACS-mediated authorization decision, the hook MUST fail closed rather than evaluate a meaningless or NULL identity. Kernel-originated infrastructure work running under the boot SYSTEM credential is evaluated as SYSTEM; KACS does not define a separate worker-flag-based kernel-authority identity.

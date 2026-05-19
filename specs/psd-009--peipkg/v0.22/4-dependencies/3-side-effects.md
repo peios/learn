@@ -37,9 +37,9 @@ The array MUST NOT contain duplicate values.
 ## Semantics
 
 The package manager invokes each declared side effect once
-per install or remove transaction, during the commit
-procedure (§7.4.5 step 6), after staged file replacements
-are applied and before the journal is marked complete.
+per transaction, after the transaction's database commit
+(§7.4.5 step 4) — that is, after all of the transaction's
+file operations are in place.
 
 Side effects are deduplicated across packages within a
 single transaction: if multiple packages in the same
@@ -57,60 +57,52 @@ prompting.
 
 The package manager MUST invoke side-effect tools with:
 
-- An absolute path to a known-good binary, drawn from a
-  configured allowlist of trusted tool locations. The
-  package manager MUST NOT search PATH to locate
-  side-effect tools.
+- A **fixed absolute path** to the tool. The recognised
+  side effects are a closed set (§4.3.4); the package
+  manager invokes each from its known absolute location
+  and MUST NOT search `PATH`.
 - A cleared environment containing only well-defined
-  variables (e.g., `LANG=C`, `LC_ALL=C`, `PATH=/usr/bin`).
+  variables (e.g. `LANG=C`, `LC_ALL=C`, `PATH=/usr/bin`).
   Inherited environment from the invoking shell MUST NOT
   be passed through.
 - Standard input closed.
 
-The side-effect-tool allowlist MUST be stored under a
-security descriptor that grants write access only to a
-principal more restricted than the package manager
-principal — typically a system-administration principal
-held only by a recovery-class operator (§7.6.6). The
-allowlist MUST NOT be writable by the package manager
-principal itself, because compromise of the allowlist
-is equivalent to remote-code-execution at every package
-install.
-
-The package manager MAY accept *signed allowlist
-deltas* as an alternative update path. A signed delta
-is an additive change to the allowlist (e.g.,
-"add `update-mime-database`") signed by the recovery-
-class operator's KACS-bound key. The package manager
-verifies the signature against a published trust
-anchor for the recovery-class operator and applies
-the delta without requiring the operator to be
-interactively present. This permits maintenance-time
-allowlist updates in headless or fleet-managed
-environments without weakening the SD constraint on
-the allowlist file itself.
-
 > [!INFORMATIVE]
 > If the package manager located `ldconfig` via `PATH`, a
-> package that has earlier installed a hostile
+> package that had earlier installed a hostile
 > `/usr/local/bin/ldconfig` could shadow the legitimate
-> tool. Absolute paths plus an allowlist eliminate this
-> path of attack. Cleared environment prevents
+> tool. Because the side-effect set is closed, the package
+> manager needs no configurable allowlist — a fixed
+> absolute path per tool both eliminates the shadowing
+> path and guarantees the *real* tool runs, so the cache
+> is genuinely rebuilt. Cleared environment prevents
 > environment-variable injection from affecting tool
 > behaviour.
 
 ## Failure handling
 
-If a side effect fails (the underlying tool exits non-zero
-or is unavailable), the package manager MUST treat the
-transaction as failed and roll back per §7.4.
+Side effects run *after* the transaction's database commit
+(§7.4.5 step 4), so a side-effect failure does not — and
+cannot — roll the transaction back: the transaction is
+already committed. If a side effect fails (the underlying
+tool exits non-zero or is unavailable), the package manager
+MUST report the failure to the operator, but the
+transaction stands.
+
+Because side effects are idempotent, a failed side effect
+is self-correcting: re-invoking it — explicitly, or as part
+of the next transaction that declares it — reaches the
+correct state. The package manager SHOULD make a failed
+side effect straightforward to re-invoke.
 
 > [!INFORMATIVE]
-> Side effect failures are rare in practice — the underlying
-> tools (`ldconfig`, `depmod`, `mandb`) are stable and have
-> few failure modes outside of system-level corruption. When
-> they do fail, the system is in a state where rolling back
-> the install is the only safe response.
+> Side-effect failures are rare in practice — `ldconfig`,
+> `depmod`, and `mandb` are stable tools with few failure
+> modes outside system-level corruption. Rolling a
+> committed transaction back because, say, `mandb` exited
+> non-zero would be a disproportionate response: the
+> packages installed correctly, only a cache rebuild
+> lagged, and that rebuild is idempotently recoverable.
 
 ## Recognised side effects
 

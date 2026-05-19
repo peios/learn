@@ -26,4 +26,4 @@ The ACE array begins immediately at offset 8. Each ACE is self-delimiting via it
 - Truncated ACEs, ACE overruns, or leftover bytes within `AclSize` are malformed.
 - The architectural maximum ACL size is 64 KB because `AclSize` is a 16-bit field.
 
-ACE structure, ACE-type definitions, and revision-versus-ACE-family rules are specified in the ACE Types section.
+ACE structure, ACE-type definitions, and revision-versus-ACE-family rules are specified in §3.4.

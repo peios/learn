@@ -51,7 +51,7 @@ Claim flags use the same meanings everywhere this format appears:
 |---|---|---|
 | `CLAIM_SECURITY_ATTRIBUTE_NON_INHERITABLE` | `0x0001` | The attribute MUST NOT be inherited by child objects during SD inheritance. Resource attribute ACEs carrying this flag are skipped when propagating inheritable ACEs to children. |
 | `CLAIM_SECURITY_ATTRIBUTE_VALUE_CASE_SENSITIVE` | `0x0002` | String/octet comparisons using this attribute are case-sensitive. |
-| `CLAIM_SECURITY_ATTRIBUTE_USE_FOR_DENY_ONLY` | `0x0004` | The attribute is visible only to deny-side conditional evaluation. |
+| `CLAIM_SECURITY_ATTRIBUTE_USE_FOR_DENY_ONLY` | `0x0004` | The attribute is visible only to deny-side conditional evaluation: deny ACE conditions and audit/alarm ACE conditions. |
 | `CLAIM_SECURITY_ATTRIBUTE_DISABLED` | `0x0010` | The attribute is invisible to conditional evaluation. |
 | `CLAIM_SECURITY_ATTRIBUTE_MANDATORY` | `0x0020` | The attribute MUST NOT be removed or modified by unprivileged callers. `kacs_set_sd` rejects attempts to remove or modify a MANDATORY attribute unless the caller has SeTcbPrivilege. |
 
@@ -130,4 +130,4 @@ Rules:
   - malformed `local_claims` buffer -> invalid AccessCheck input
 
 `ValueCount = 0` is valid. Empty attributes normalize to absent at resolution
-time, as defined in the Conditional ACEs section.
+time, as defined in §3.8.

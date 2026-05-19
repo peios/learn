@@ -1,87 +1,177 @@
 ---
 title: Project Structure
 type: concept
-description: A Provium project is organized into a configuration file, test scripts, fixtures, and optional helper libraries.
+description: A Provium project is a directory with provium.toml, one or more test roots holding *.test.lua and *.fixture.lua files, and a per-user fixture cache. Nothing else is needed.
 ---
 
-A Provium project follows a simple directory layout. There is no scaffolding command — you create the directories yourself.
+Provium has no scaffolding command. A project is whatever directory `provium.toml` lives in. This page documents what each piece does.
 
 ## Directory layout
 
 ```
-my-tests/
-  provium.toml             # Profile definitions (required)
-  tests/                   # Test scripts (required)
-    boot.lua               # Test file
-    syscalls.lua           # Test file
-    helpers.lua            # Shared helper library (not a test)
-    fixtures/              # Fixture scripts (not run as tests)
-      ready.lua            # Fixture definition
-  testdata/                # Test assets (optional)
-    rootfs.cpio.gz         # Initramfs image
-    disk.img               # Disk image
+my-project/
+  provium.toml                  # Required. Profiles + scan roots.
+  tests/                        # One of the directories listed in `roots`.
+    smoke.test.lua              # Run by `provium`.
+    networking/
+      partition.test.lua
+      uplink.test.lua
+    helpers/
+      assert_pingable.lua       # `require("helpers.assert_pingable")`
+    fixtures/
+      booted-pair.fixture.lua   # Built once, restored per test.
+  ~/.cache/provium/
+    fixtures/                   # Per-user fixture cache.
+      <hash>.snap               # Single-VM fixture snapshots.
+      <hash>.lab/               # Multi-VM lab-fixture directories.
+    rerun.json                  # `--rerun-failed` state.
 ```
 
-## provium.toml
+The only required file is `provium.toml`. Tests, helpers, and fixtures all live under whatever directory you list in `[provium].roots`.
 
-The configuration file defines **profiles** — named combinations of kernel, initramfs, and init binary. Profiles describe what to boot, not how much hardware to allocate.
+## `provium.toml`
+
+The configuration file at the project root. Two sections:
 
 ```toml
-[profile.minimal]
-kernel = "../kernel/out/bzImage"
-initrd = "testdata/rootfs.cpio.gz"
-init = "/sbin/init"
+[provium]
+roots = ["tests", "vendor/upstream-tests"]
+cache_dir       = "/var/cache/provium/fixtures"   # optional
+cache_max_size  = "20G"                            # optional
 
-[profile.peinit]
-kernel = "../kernel/out/bzImage"
-initrd = "testdata/rootfs.cpio.gz"
-init = "/provium/peinit"
-append = "loglevel=7"
+[profiles.peios]
+kernel   = "/build/peios/bzImage"
+initrd   = "/build/peios/initrd.cpio.gz"
+cmdline  = "console=hvc0 quiet"
+guest_os = "peios"
+
+[profiles.peios-debug]
+kernel   = "/build/peios-debug/bzImage"
+initrd   = "/build/peios-debug/initrd.cpio.gz"
+cmdline  = "console=hvc0 debug loglevel=7"
 ```
 
-Relative paths are resolved against the directory containing `provium.toml`. Provium also searches parent directories for the config file, so tests in subdirectories inherit the nearest `provium.toml`.
+`[profiles.<name>]` blocks declare named (kernel, initrd, cmdline) tuples. Test code looks them up by name: `provium:vm("a", "peios")` boots the VM using `[profiles.peios]`. You can have any number of profiles; tests pick whichever they need.
 
-See the [provium.toml reference](~provium/configuration/provium-toml) for all profile fields.
+`[provium].roots` is the list of directories scanned for `*.test.lua` files. It also controls where `require("helper.module")` resolves; `helpers/foo.lua` under any root is reachable as `require("helpers.foo")`.
 
-## tests/
+`cache_dir` and `cache_max_size` configure where fixture snapshots are stored and how big the cache is allowed to grow. Defaults: `~/.cache/provium/fixtures/`, `20 GiB`. See [provium.toml reference](~provium/configuration/provium-toml) for full detail.
 
-All `.lua` files in this directory (and subdirectories) are discovered as tests. Provium walks the directory recursively, collecting every file ending in `.lua` — except files inside `fixtures/` subdirectories.
+## Test files
 
-Files are sorted alphabetically for deterministic ordering in sequential mode. In parallel mode, the order depends on completion time.
+Files matching `*.test.lua` under any `roots` directory are picked up by `provium`. Each file is run in a fresh Lua state with a fresh root `Lab`.
 
-### Helper libraries
-
-Not every `.lua` file needs to be a test. Shared utilities can be loaded with Lua's `dofile()`:
+A test file consists of `test(name, [meta,] fn)` calls. Tests run in declaration order, and each test runs sequentially (one at a time within a file). The harness builds a fresh `t` context for each test and passes it as the function's first argument.
 
 ```lua
-local h = dofile("tests/helpers.lua")
-local sid = h.build_sid(5, {18})
+test("simple", function(t)
+    t:assert_eq(1 + 1, 2)
+end)
+
+test("with metadata", {tags = {"smoke"}, timeout = "30s"}, function(t)
+    t:assert(true)
+end)
+
+test("declaratively skipped", {skip = "still figuring out the spec"}, function(t)
+    -- never runs
+end)
 ```
 
-Helper files are still discovered by the test runner, but if they don't call any `provium.*` functions or `test()` blocks, they pass silently. By convention, helper files are named `helpers.lua` and return a table of functions.
+See [the test-framework reference](~provium/reference/test-framework) for `test()`, the `t` context, `todo()`, and `wait_until()`.
 
-## fixtures/
+## Fixture files
 
-Fixture scripts live in `tests/fixtures/`. They are **not** run as tests — the runner skips the `fixtures/` directory during discovery.
+Files matching `*.fixture.lua` are not picked up by the test runner directly. Instead, test files reference them by name:
 
-A fixture script creates and configures a VM. Provium snapshots the VM's state after the script completes. Tests that call `provium.fixture("name")` resume from that snapshot instead of cold-booting.
-
-```
-tests/fixtures/
-  minimal_vfs.lua          # Boots minimal profile, mounts VFS
-  kacs.lua                 # Boots with KACS kernel module loaded
-```
-
-See [Fixtures](~provium/writing-tests/fixtures) for how to write and use fixture scripts.
-
-## Test output
-
-Provium writes console logs to `/tmp/provium-runs/run-*/`. Each test gets its own log file. Logs are deleted on success and retained on failure, so you can inspect QEMU console output when a test fails.
-
-```
-/tmp/provium-runs/
-  run-abc123/
-    boot.lua.log           # Retained (test failed)
+```lua
+test("uses a pre-booted VM", function(t)
+    local vm = provium:vm_fixture("booted-base")
+    -- vm is restored from a cached snapshot
+end)
 ```
 
-The `--rerun-failed` flag uses these retained logs to identify which tests to re-run.
+When the test runs, Provium:
+
+1. Locates `<root>/booted-base.fixture.lua` (under any `roots` directory).
+2. Hashes the file's source bytes plus every transitive dependency (other fixtures it references via `vm_fixture`/`lab_fixture`, plus every helper it `require`s) plus every profile's kernel and initrd identifier into a cache key.
+3. Looks up `<cache_dir>/<key>.snap`. If present, restores it and hands the test a fresh VM.
+4. If absent, builds the fixture by running its chunk under a build-time Lua state, takes the resulting snapshot, sparse-zstd-compresses it, and installs it into the cache.
+
+A fixture file's chunk must end in a `return` statement that hands back either a `vm:snapshot()` (single VM) or a `provium:snapshot()` (whole lab). Example:
+
+```lua
+-- booted-base.fixture.lua
+local vm = provium:vm("base", "peios"):boot()
+vm:run("apk add curl"):assert_ok()
+return vm:snapshot()
+```
+
+See [fixtures and dependencies](~provium/running-tests/fixtures-and-dependencies) for the cache lifecycle, eviction policy, and what triggers a rebuild.
+
+## Helper files
+
+Plain Lua files anywhere under a `roots` directory are reachable through `require`. The `roots` directories are prepended to `package.path` at file-runner setup, so `tests/helpers/assert_pingable.lua` can be loaded as:
+
+```lua
+local pingable = require("helpers.assert_pingable")
+```
+
+Helpers are not detected as tests (they don't end in `.test.lua`) and not detected as fixtures. Editing a helper invalidates the cache key of every fixture that transitively requires it.
+
+## The fixture cache
+
+```
+~/.cache/provium/fixtures/
+  c5e6f8….snap           # Single-VM fixture snapshot (sparse, zstd).
+  c5e6f8….snap.lock      # Per-key build lock.
+  abc123….lab/           # Lab-fixture directory.
+    lab.json             # Per-VM snapshot index.
+    base.snap            # Per-VM snapshot.
+    extra.snap
+  abc123….lab.lock
+```
+
+The cache is per-user by default (`~/.cache/provium/fixtures/`). Override it system-wide with `[provium].cache_dir` in `provium.toml`. The cache is shared across runs and across files within a run — concurrent file runners building the same fixture coordinate via the per-key lock file.
+
+LRU eviction runs at `provium` startup before tests dispatch: the harness sums file sizes under `cache_dir`, sorts entries by access time, and deletes the oldest until the total is under `cache_max_size`.
+
+Inspect or manage the cache from the CLI:
+
+```
+provium fixture list      # Show every cached entry, with sizes.
+provium fixture build P   # Force-build the named fixture.
+provium fixture rebuild P # Evict and rebuild.
+provium fixture clean     # Wipe the cache.
+provium fixture stale     # List fixtures whose source hashes don't match any cache entry.
+```
+
+## The rerun state file
+
+After every run that produced at least one failure, Provium writes the canonical paths of the failing files to `~/.cache/provium/rerun.json` (override with `$PROVIUM_RERUN_STATE`). The `--rerun-failed` flag intersects discovered files against this list, so:
+
+```
+provium tests/ --rerun-failed
+```
+
+re-runs only files that failed last time. A clean run leaves the file alone, so the failed set persists until you fix the failures.
+
+## Required external binaries
+
+| Binary | Used for | Provided by |
+|---|---|---|
+| `qemu-system-x86_64` | VMM backend | `qemu-system-x86` package |
+| `ip` | Bridge / TAP / link operations | `iproute2` |
+| `tc` | Latency / drop-rate / bandwidth qdiscs | `iproute2` |
+| `nft` | Per-bridge partition rules, NAT for uplink | `nftables` |
+| `tcpdump` | `bridge:capture()` and `nic:capture()` | `tcpdump` |
+
+Provium's startup pre-flight checks for `/dev/kvm`, `/dev/vhost-vsock`, `ip`, `tc`, `nft`, `qemu-system-x86_64`, and effective `CAP_NET_ADMIN`. Missing pieces fail with an actionable message; nothing is checked lazily at first-use.
+
+## What lives outside the project tree
+
+- The fixture cache (default: `~/.cache/provium/fixtures/`).
+- The rerun-state file (default: `~/.cache/provium/rerun.json`).
+- Optional `--save-events` / `--events-socket` paths (your choice).
+- The kernel and initrd files referenced by `[profiles.<name>]`.
+
+Everything else — tests, fixtures, helpers, configuration — lives inside the project directory and is the project author's responsibility to keep version-controlled.

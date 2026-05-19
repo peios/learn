@@ -120,6 +120,11 @@ change occurred:
   down to the changed key. No delimiter between components --
   length-prefixed encoding is unambiguous.
 
+Watch event string lengths are byte lengths. If an event name or
+path component cannot be represented in the uint16 length fields,
+LCS must not emit a malformed event. It inserts or preserves an
+OVERFLOW event for the watcher instead.
+
 Length-prefixed components avoid delimiter ambiguity. Registry key
 and value names can contain backslashes (value names) or any
 Unicode character, so a single concatenated path string would be

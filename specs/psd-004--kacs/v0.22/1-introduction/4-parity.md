@@ -11,10 +11,10 @@ These same primitives are used by Active Directory environments. Peios is design
 The following data structures MUST use the binary formats specified by MS-DTYP, ensuring byte-level compatibility with Active Directory and Samba:
 
 - **Security Identifiers (SIDs)** -- same binary encoding, same comparison rules, same well-known values.
-- **Security Descriptors** -- self-relative binary format (MS-DTYP section 2.4.6). An SD from a Windows domain controller, replicated through Samba 4, is evaluated by KACS without translation.
+- **Security Descriptors** -- self-relative binary format (MS-DTYP §2.4.6). An SD from a Windows domain controller, replicated through Samba 4, is evaluated by KACS without translation.
 - **Access Control Entries** -- same ACE types, same header format, same access mask layout.
 - **Access masks** -- same 32-bit layout: object-specific bits 0--15, standard bits 16--20, special bits 24--25, generic bits 28--31.
-- **Conditional ACE expressions** -- same binary bytecode format (MS-DTYP section 2.4.4.17).
+- **Conditional ACE expressions** -- same binary bytecode format (MS-DTYP §2.4.4.17).
 
 ## Evaluator compatibility
 

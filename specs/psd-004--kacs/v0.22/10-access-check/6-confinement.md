@@ -43,7 +43,12 @@ This is an absolute boundary:
 
 A normal confined token carries both ALL_APPLICATION_PACKAGES and ALL_RESTRICTED_APPLICATION_PACKAGES in its capabilities. For additional security, ALL_APPLICATION_PACKAGES MAY be omitted. This is strict confinement -- far fewer system objects grant to ALL_RESTRICTED_APPLICATION_PACKAGES, resulting in a much narrower access surface.
 
-A strictly confined token MUST NOT carry ALL_APPLICATION_PACKAGES in its confinement_capabilities.
+Strict confinement is not a separate kernel mode bit. KACS derives it solely
+from the SID set supplied during token creation: if ALL_APPLICATION_PACKAGES is
+absent, AccessCheck evaluates only the remaining supplied confinement SIDs. The
+kernel MUST NOT synthesize ALL_APPLICATION_PACKAGES. Authd and policy tooling
+are responsible for deciding whether a package token receives
+ALL_APPLICATION_PACKAGES.
 
 ## Known consequences
 

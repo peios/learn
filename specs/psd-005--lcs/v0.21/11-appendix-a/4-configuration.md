@@ -17,7 +17,7 @@ configuration.
 
 | Full path | Default | Min | Max | Unit | Description | Errno on violation |
 |---|---|---|---|---|---|---|
-| `Machine\System\Registry\RequestTimeoutMs` | 30000 | 1000 | 600000 | milliseconds | Per-request timeout for RSI round trips to a source. When exceeded, the calling thread receives ETIMEDOUT. The source stays alive. | ETIMEDOUT |
+| `Machine\System\Registry\RequestTimeoutMs` | 30000 | 1000 | 600000 | milliseconds | Per-request timeout for RSI operations, measured from first attempt to reserve an in-flight slot through response receipt. When exceeded, the calling thread receives ETIMEDOUT. The source stays alive. | ETIMEDOUT |
 | `Machine\System\Registry\TransactionTimeoutMs` | 30000 | 1000 | 600000 | milliseconds | Maximum lifetime of an open transaction from reg_begin_transaction to auto-abort. Prevents stalled or malicious processes from holding the source's write lock indefinitely. | Transaction auto-aborted; caller's next operation returns EINVAL. |
 
 ## Path and naming limits
@@ -25,8 +25,8 @@ configuration.
 | Full path | Default | Min | Max | Unit | Description | Errno on violation |
 |---|---|---|---|---|---|---|
 | `Machine\System\Registry\MaxKeyDepth` | 512 | 32 | 4096 | levels | Maximum nesting depth for the key hierarchy. Bounds ancestor chain memory per fd and path resolution walk length. | EINVAL on reg_open_key / reg_create_key |
-| `Machine\System\Registry\MaxPathComponentLength` | 255 | 64 | 1024 | characters | Maximum length of a single key name component, value name, or layer name. | ENAMETOOLONG |
-| `Machine\System\Registry\MaxTotalPathLength` | 16383 | 1024 | 65535 | characters | Maximum total length of a full registry path including all components and separators. Matches or exceeds the Windows limit. | ENAMETOOLONG |
+| `Machine\System\Registry\MaxPathComponentLength` | 255 | 64 | 1024 | UTF-8 bytes | Maximum length of a single key name component, value name, or layer name. | ENAMETOOLONG |
+| `Machine\System\Registry\MaxTotalPathLength` | 16383 | 1024 | 65535 | UTF-8 bytes | Maximum total length of a full registry path including all components and separators. Matches or exceeds the Windows limit. | ENAMETOOLONG |
 | `Machine\System\Registry\SymlinkDepthLimit` | 16 | 1 | 64 | hops | Maximum symlink resolution recursion depth during path resolution. | ELOOP |
 
 ## Value limits
@@ -47,6 +47,7 @@ configuration.
 | Full path | Default | Min | Max | Unit | Description | Errno on violation |
 |---|---|---|---|---|---|---|
 | `Machine\System\Registry\MaxBoundTransactionsPerSource` | 16 | 1 | 256 | transactions | Maximum number of concurrently bound (write-lock-holding) transactions per source. Prevents transaction chaining DoS. | EBUSY on the operation that would bind the transaction |
+| `Machine\System\Registry\MaxReadOnlyTransactionsPerSource` | 16 | 1 | 256 | transactions | Maximum number of concurrently active read-only snapshot transactions per source, used by REG_IOC_BACKUP. Prevents backup snapshot DoS without treating backups as write-lock-holding transactions. | EBUSY on REG_IOC_BACKUP |
 
 ## Source limits
 
@@ -54,7 +55,7 @@ configuration.
 |---|---|---|---|---|---|---|
 | `Machine\System\Registry\MaxRegisteredSources` | 32 | 1 | 256 | sources | Maximum number of concurrently registered sources. | ENOSPC on REG_SRC_REGISTER |
 | `Machine\System\Registry\MaxHivesPerSource` | 64 | 1 | 1024 | hives | Maximum number of hives a single source can register. | ENOSPC on REG_SRC_REGISTER |
-| `Machine\System\Registry\MaxConcurrentRSIRequests` | 256 | 8 | 4096 | requests | Maximum simultaneously in-flight RSI requests per source. When reached, new operations block until an in-flight request completes or times out. | Caller blocks; ETIMEDOUT if blocked too long. |
+| `Machine\System\Registry\MaxConcurrentRSIRequests` | 256 | 8 | 4096 | requests | Maximum simultaneously dispatched RSI requests awaiting response per source. When reached, new operations wait for a slot under the same RequestTimeoutMs deadline. | Caller waits; ETIMEDOUT if no slot becomes available before the deadline. |
 
 ## Watch limits
 

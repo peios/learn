@@ -14,14 +14,42 @@ Every open file description on a local FACS-managed filesystem carries a single 
 
 The granted mask is immutable for the fd's entire lifetime, regardless of subsequent SD changes. Open handles survive SD modifications — if a file's DACL is modified after a process has it open, the existing fd retains its cached grants.
 
+## Mount policy
+
+For kernel purposes, every mounted filesystem exposes exactly one FACS mount-policy class:
+
+- `unmanaged` — the mount is outside the ordinary FACS handle model. KACS MUST NOT stamp granted access masks onto ordinary file descriptions from this mount. `/proc` and `/sys` use this class in `v0.22`.
+- `facs_deny_missing` — the mount is FACS-managed. Missing SDs deny access per [sd-storage](./sd-storage). Peios system mounts (root, `/home`, `/var`, tmpfs, devtmpfs) use this class by default.
+- `facs_synthesize_ephemeral` — the mount is FACS-managed. Missing SDs are synthesized per [sd-storage](./sd-storage) and cached only in memory. Removable foreign media and NFS client mounts use this class in `v0.22`.
+- `facs_synthesize_persistent` — the mount is FACS-managed. Missing SDs are synthesized per [sd-storage](./sd-storage) and written back immediately. Adopted foreign media uses this class.
+
+The three `facs_*` classes are the only FACS-managed mount classes. `unmanaged` mounts stay outside open-time granted-mask stamping.
+
+Mount policy is scoped to the kernel superblock policy object, not to an
+individual pathname or bind mount. If several paths or bind mounts refer to the
+same superblock, they observe the same FACS mount-policy class.
+
+The kernel default classifier is conservative:
+
+- hardcoded pseudo filesystems such as `/proc` and `/sys` are `unmanaged`;
+- known foreign or non-persistent client filesystems that cannot reliably store
+  the canonical KACS SD xattr, such as FAT, exFAT, and NFS client mounts, are
+  `facs_synthesize_ephemeral`;
+- every other filesystem defaults to `facs_deny_missing` unless a trusted
+  policy agent adopts it through `kacs_set_mount_policy`.
+
+Userspace MUST NOT be able to set a superblock to `unmanaged` through the public
+KACS ABI. `unmanaged` is reserved for the kernel classifier and hardcoded
+pseudo-filesystem rules.
+
 ## Scope
 
 The sole-authority claim applies to local FACS-managed filesystems (root, `/home`, `/var`, tmpfs, devtmpfs, and adopted foreign media). It does not apply to:
 
 - `O_PATH` fds (not FACS-managed)
-- NFS client mounts (dual authority with server)
-- `/proc` (PIP-protected)
-- `/sys` (hardcoded rule: writes require Administrators or SYSTEM)
+- NFS client mounts (`facs_synthesize_ephemeral`, but dual authority with server)
+- `/proc` (`unmanaged`, PIP-protected)
+- `/sys` (`unmanaged`, hardcoded rule: writes require Administrators or SYSTEM)
 
 ## Handle acquisition
 

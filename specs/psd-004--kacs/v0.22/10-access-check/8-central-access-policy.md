@@ -10,7 +10,14 @@ CAAP extends the Windows Central Access Policy (CAP) model by adding an audit co
 
 A CAAP is a named collection of rules, identified by a policy SID. Each rule has:
 
-- **An applies-to condition** (optional) — a conditional expression that determines which objects this rule governs, based on the object's resource attributes. If absent, the rule applies to all objects that reference the policy.
+- **An applies-to condition** (optional) — a conditional expression that
+  determines whether this rule governs the current access decision, based on
+  claim namespaces available to the access authority. It MAY reference
+  `@Resource`, `@User`, `@Device`, and `@Local` claim attributes. It MUST NOT
+  inspect token SID membership or device-group membership; `Member_of`,
+  `Member_of_Any`, `Device_Member_of`, `Device_Member_of_Any`, and their
+  negated forms evaluate to UNKNOWN in `applies_to`. If absent, the rule
+  applies to all objects that reference the policy.
 
 - **An effective DACL** — mandatory access rules enforced by this rule. A real DACL evaluated using the full pipeline.
 
@@ -80,7 +87,7 @@ per rule:
 Limits:
 - Maximum `spec_len`: 256 KB.
 - Maximum `rule_count`: 256.
-- Maximum individual ACL length: 64 KB (consistent with SD size limit).
+- Maximum individual ACL length: 65,535 bytes (consistent with SD size limit).
 - Maximum `applies_to_len`: 64 KB.
 - Version byte: MUST be 0x01 for v0.20. Unknown versions are rejected.
 
@@ -111,7 +118,10 @@ When a scoped policy ACE references a policy SID not in the kernel cache (authd 
 
 The ACE masks MUST use the literal `GENERIC_ALL` bit (0x10000000), not pre-mapped object-specific bits. `EvaluateSecurityDescriptor` step 3 expands `GENERIC_ALL` via the caller's GenericMapping at evaluation time, ensuring the recovery policy works correctly for all object types.
 
-Because CAAP is applied as an intersection, the recovery policy does not widen access beyond the object's own DACL. It prevents missing CAAP from further restricting access — the object's DACL remains the baseline.
+Because CAAP is applied as an intersection, the recovery policy does not widen
+access beyond the object's own DACL. It limits missing-policy access to callers
+that also satisfy the recovery DACL. This is a fail-closed recovery mode with
+administrator, SYSTEM, and owner escape hatches, not a no-effect fallback.
 
 ## Error handling
 

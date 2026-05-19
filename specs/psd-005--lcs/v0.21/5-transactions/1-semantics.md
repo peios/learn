@@ -20,32 +20,77 @@ hive fails with EXDEV. LCS enforces hive-scoping before
 forwarding operations to the source -- sources never receive
 cross-hive operations within a transaction.
 
+Transaction creation is source-agnostic. reg_begin_transaction()
+does not choose a source and therefore cannot fail because a
+particular source lacks transaction support. If the first operation
+that would bind the transaction targets a source that does not
+support explicit transactions, that operation fails with ENOTSUP and
+the transaction remains unbound.
+
+If a source is Down before first bind, the attempted binding
+operation fails according to normal source-unavailable rules and the
+transaction remains unbound. If a source goes Down after a
+transaction is bound, the transaction object enters SOURCE_DOWN as
+described in §10.1.
+
+Reads with an unbound transaction fd behave as ordinary
+non-transactional reads. They do not bind the transaction and LCS
+sends them to the source with txn_id = 0. After a transaction is
+bound by a mutating operation, reads against the same hive/source use
+the transaction context and are sent with the transaction ID,
+providing read-your-own-writes. Reads against a different hive/source
+than the bound transaction fail with EXDEV. Reads using a committed,
+aborted, or otherwise closed transaction object fail with EINVAL.
+Reads using a timed-out transaction object fail with ETIMEDOUT.
+Reads using a transaction object whose bound source went Down fail
+with EIO.
+
 Cross-source atomicity would require two-phase commit and is not
 supported.
 
 ## Lifetime
 
-A transaction exists for the lifetime of its fd (returned by
-reg_begin_transaction). Three ways a transaction ends:
+A transaction object is represented by the fd returned by
+reg_begin_transaction(). It remains addressable until the fd is
+closed, even after it reaches a terminal state. Four ways a
+transaction reaches a terminal state:
 
 - **Commit.** REG_IOC_COMMIT on the transaction fd. The source
-  atomically applies all operations. Watch events fire. The fd
-  SHOULD be closed after commit. Further operations on a committed
-  transaction fd return EINVAL.
+  atomically applies all operations. Watch events fire. The
+  transaction object enters the COMMITTED terminal state. The fd
+  SHOULD be closed after commit. Further mutating or read operations
+  using the committed transaction fd return EINVAL.
 
 - **Explicit abort.** close() on the transaction fd without
-  committing. The source discards all pending operations. No watch
-  events are generated.
+  committing. The source discards all pending operations. The
+  transaction object enters the ABORTED terminal state during fd
+  release. No watch events are generated.
 
 - **Implicit abort.** Process death closes the fd, which aborts.
-  No orphaned transactions.
+  The transaction object enters the ABORTED terminal state during fd
+  release. No orphaned transactions.
+
+- **Timeout abort.** The transaction lifetime timer fires. LCS marks
+  the transaction object TIMED_OUT and aborts it as described below.
+  The fd remains present in the caller's fd table until normal fd
+  close. Further mutating or read operations using the timed-out
+  transaction fd return ETIMEDOUT.
+
+Transaction fds are pollable. When a transaction reaches any terminal
+state, LCS wakes poll waiters and reports POLLERR | POLLHUP. Callers
+that need a race-free reason for wakeup query REG_IOC_TXN_STATUS on
+the transaction fd.
 
 ## Timeout
 
 LCS starts a timer when the transaction fd is created. If the
 transaction is not committed or aborted within the timeout, LCS
-auto-aborts it (sends RSI_ABORT_TRANSACTION to the source and
-closes the transaction fd).
+auto-aborts it. The transaction object is marked TIMED_OUT, poll
+waiters are woken, and future operations using the transaction fd
+return ETIMEDOUT. If the transaction was bound and no commit is
+already in flight, LCS sends RSI_ABORT_TRANSACTION to the source.
+The fd is not forcibly removed from the caller's fd table; normal
+close still releases it.
 
 This prevents a stalled or malicious process from holding the
 source's write lock indefinitely. Because sources like loregd
@@ -61,7 +106,41 @@ The timeout is configurable via the self-configuration mechanism
 transaction's own uncommitted writes. This is handled by the
 source: when LCS sends a read with a txn_id, the source reads
 from within its open transaction, which naturally includes pending
-writes. LCS does not cache transaction state in the kernel.
+writes. LCS does not cache uncommitted registry data in the kernel
+for read resolution.
+
+LCS does maintain a bounded transaction mutation log for
+kernel-owned semantics. Each mutating operation accepted into a
+transaction records enough metadata for LCS to compute affected
+keys, values, layer names, sequence numbers, hive generation
+updates, and watch events after a successful commit. This log is not
+the source of truth for reads or rollback; source transaction state
+remains authoritative for uncommitted data.
+
+If LCS cannot allocate the mutation-log entry for a transactional
+operation, the operation fails before it is sent to the source. On
+explicit abort, transaction lifetime timeout before commit dispatch,
+source-down cancellation, a late commit error after a retained
+post-dispatch timeout, or source connection teardown while a
+post-dispatch commit response is retained, LCS discards or releases
+the mutation log and emits no normal watch events for the
+transaction. On successful commit, LCS uses the mutation log and
+source queries as needed to compute effective-state changes and emit
+watch events.
+
+If REG_IOC_COMMIT returns EBUSY or a synchronous EIO before the
+transaction reaches a terminal state, the transaction remains
+ACTIVE_BOUND. LCS MUST retain the mutation log, MUST NOT emit normal
+watch events, and MUST NOT report terminal poll wakeups for that
+failed commit attempt. The caller may retry REG_IOC_COMMIT or close
+the transaction fd to abort.
+
+If a transaction commit request times out after dispatch at the RSI
+request layer, LCS MUST retain the transaction mutation log until the
+late commit response is processed or the source connection is torn
+down. A late successful commit uses the retained log to produce the
+same generation updates and watch events as an on-time commit. A late
+commit error releases the log without normal watch events.
 
 **External isolation.** Other threads and processes see committed
 state only. A transaction's writes are invisible to external

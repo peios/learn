@@ -15,14 +15,18 @@ When a source process dies (connection closed unexpectedly):
    access mask, neither of which depends on the source. Operations
    requiring source round-trips (reads, writes, enumeration) return
    EIO while the source is unavailable.
-4. **Transactions cancelled.** All open transactions scoped to that
-   source are implicitly aborted.
+4. **Transactions cancelled.** All open transactions bound to that
+   source enter the SOURCE_DOWN terminal state. Poll waiters are
+   woken with POLLERR | POLLHUP. Future operations using those
+   transaction fds return EIO.
 5. **Watches remain armed.** Watch state is kernel-side and
    unaffected by source availability.
 
 When the source restarts and re-registers:
 
 - Hives marked Active.
+- The registration must exactly resume the Down source slot's hive
+  identities, including root GUIDs.
 - OVERFLOW delivered to every watch on keys in those hives.
 - Existing fds resume working without re-opening.
 - If a key's GUID no longer exists in the restarted source (e.g.,
@@ -35,10 +39,36 @@ If a source does not respond within RequestTimeoutMs (default
 30 seconds):
 
 - LCS returns ETIMEDOUT to the caller.
+- If the timeout expires before an in-flight RSI slot is reserved,
+  no request is sent to the source.
 - **The source stays alive.** A slow response is not a crash.
-- When the source eventually responds, LCS processes the response
-  normally (watch events dispatched for any mutations). The
-  original caller is gone, so the response has no recipient.
+- If the timeout expires after dispatch, LCS keeps the request
+  record in the source's in-flight table. The original caller is
+  gone, so the response has no recipient, but the request metadata is
+  retained for late-response processing.
+- When the source eventually responds, LCS validates the response
+  normally. Error responses release the request record and produce no
+  normal watch or generation effects. Successful read-only responses
+  are validated and discarded. Successful mutating responses apply
+  all kernel-side effects that correspond to the mutation, including
+  hive generation updates, watch dispatch, layer-cache refresh,
+  orphan tracking, and transaction commit batch effects when
+  applicable.
+- Late successful source-state responses that are neither registry
+  reads nor registry mutations have operation-specific cleanup
+  semantics. A late successful `RSI_BEGIN_TRANSACTION` creates source
+  transaction state without a waiting caller, so LCS MUST enqueue
+  `RSI_ABORT_TRANSACTION` cleanup for that transaction ID. A late
+  successful `RSI_ABORT_TRANSACTION` or `RSI_FLUSH` releases the
+  request record and produces no normal watch or generation effects.
+  A late successful `RSI_COMMIT_TRANSACTION` is a mutating response
+  and applies the retained transaction commit kernel effects.
+- A malformed late response follows normal malformed-data or
+  malformed-protocol rules. If LCS cannot safely process the
+  kernel-side effects of a possibly-applied mutation because required
+  request metadata is missing or invalid, it tears down the source
+  and marks the source Down rather than silently ignoring the
+  response.
 - **Caller responsibility:** ETIMEDOUT means "may or may not have
   completed." Callers that need certainty MUST check state before
   retrying.
@@ -47,14 +77,19 @@ If a source does not respond within RequestTimeoutMs (default
 
 If a transaction's lifetime timer fires:
 
-- The transaction fd is closed (implicit abort).
-- RSI_ABORT_TRANSACTION sent to the source.
+- The transaction object is marked TIMED_OUT.
+- Poll waiters on the transaction fd are woken with
+  POLLERR | POLLHUP.
+- Future operations using the transaction fd return ETIMEDOUT.
+- If the transaction was bound and no commit is already in flight,
+  RSI_ABORT_TRANSACTION is sent to the source.
+- The fd is not forcibly removed from the caller's fd table. Normal
+  close still releases the fd object.
 - If a commit was in-flight and succeeds at the source before the
-  abort takes effect, the writes are durable. The kernel has no
-  transaction fd to deliver the response to. The late commit
-  response is processed through the normal pipeline: watch events
-  are dispatched for any mutations the source applied. Watchers
-  may observe the effects of a timed-out transaction.
+  timeout state takes effect at the source, the writes are durable.
+  The late commit response is processed through the normal pipeline:
+  watch events are dispatched for any mutations the source applied.
+  Watchers may observe the effects of a timed-out transaction.
 - **Caller responsibility:** transaction timeout means "may or may
   not have committed." Callers MUST check state before retrying.
 

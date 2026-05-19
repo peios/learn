@@ -14,9 +14,9 @@ Every process carries a security descriptor that controls who can perform operat
 | PROCESS_VM_READ | 0x0010 | Read process memory (ptrace peek, `/proc/<pid>/mem`, `process_vm_readv`). |
 | PROCESS_VM_WRITE | 0x0020 | Write process memory (ptrace poke, `/proc/<pid>/mem`, `process_vm_writev`). Includes debugger attach. |
 | PROCESS_DUP_HANDLE | 0x0040 | Extract file descriptors from the process (`pidfd_getfd`). |
-| PROCESS_QUERY_INFORMATION | 0x0400 | Inspect the process's token, read detailed `/proc/<pid>/*` files (maps, status, fd, environ). |
-| PROCESS_QUERY_LIMITED | 0x1000 | Read basic process information: PID, image name, state, CPU/memory usage. This is the level visible in `ps` and `top`. |
-| PROCESS_SET_INFORMATION | 0x0200 | Change process priority, CPU affinity, I/O priority, resource limits. |
+| PROCESS_QUERY_INFORMATION | 0x0400 | Inspect the process's token, read detailed `/proc/<pid>/*` files (maps, status, fd, environ, cmdline, io, cgroup, detailed scheduler/namespace/timer/OOM/fault-injection/dumpability views, and read intent on coupled id-map/setgroups seq files), query another process's Linux compatibility capability state via `capget(pid)`, and query detailed scheduler, CPU-affinity, and I/O-priority state. |
+| PROCESS_QUERY_LIMITED | 0x1000 | Read basic process information: PID, process group ID, session ID, image name, state, CPU/memory usage. This is the level visible in `ps` and `top`, includes `/proc/<pid>/stat`, and is the right required for `pidfd_open()` and `kill(pid, 0)` process-existence probes. |
+| PROCESS_SET_INFORMATION | 0x0200 | Change process priority, CPU affinity, I/O priority, resource limits, process group membership where Linux permits it, timer slack, target memory-placement policy/pages, or mutable `/proc/<pid>` task state such as scheduler/autogroup, time namespace offsets, OOM adjustment, fault-injection, latency, coredump filter, `clear_refs`, and write intent on coupled id-map/setgroups seq files. |
 | READ_CONTROL | 0x20000 | Read the process's own SD. |
 | WRITE_DAC | 0x40000 | Modify the process's DACL. |
 | WRITE_OWNER | 0x80000 | Change the process's SD owner. |
@@ -24,6 +24,11 @@ Every process carries a security descriptor that controls who can perform operat
 ## Signal classification
 
 Each Linux signal maps to a process access right based on its default action:
+
+Signal number `0` is not delivered. Userspace `kill()`, `tkill()`, and
+`tgkill()` calls with signal `0` are process-existence and permission probes;
+they MUST require `PROCESS_QUERY_LIMITED` on the target process SD plus PIP
+dominance.
 
 ### PROCESS_TERMINATE — default action: terminate (or terminate + core)
 
@@ -104,7 +109,7 @@ This means:
 
 - The process can do anything to itself.
 - Administrators and SYSTEM have full control over all processes.
-- Everyone can see basic process info (PID, name, status) -- this is what makes `ps` and `top` work for all users.
+- Everyone can see basic process info (PID, image name, state, CPU/memory usage) -- this is what makes `ps` and `top` work for all users.
 - Detailed inspection (token, memory, environment) is restricted to self, administrators, and SYSTEM.
 
 Services MAY request a custom SD at launch (via the service definition), or modify their own SD at runtime (via `kacs_set_sd` on their own process, which requires WRITE_DAC -- granted by the default SD to the process itself).

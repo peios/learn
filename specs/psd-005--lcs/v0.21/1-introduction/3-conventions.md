@@ -50,6 +50,22 @@ case-insensitive comparison is applied at the Unicode codepoint
 level after decoding from UTF-8, not on raw bytes. The case folding
 algorithm is defined in §2.3.
 
+Invalid UTF-8 is rejected with EINVAL before parsing, routing, case
+folding, layer resolution, or source dispatch. Null bytes (`\0`)
+are rejected in all LCS strings unless a specific field explicitly
+permits them.
+
+All configured string length limits are measured in UTF-8 bytes,
+not Unicode scalar values or display characters. A string's byte
+length excludes any syscall-path terminating null byte.
+
+Syscall paths are copied from userspace as null-terminated C
+strings, then validated as UTF-8 bytes excluding the terminator.
+Ioctl strings and RSI strings are length-delimited byte sequences;
+they do not require a terminator, and a terminator byte included in
+the length is a null byte and therefore invalid unless the specific
+field explicitly permits it.
+
 ## Registry paths
 
 Registry paths use the backslash (`\`) as the canonical separator.
