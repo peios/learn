@@ -281,14 +281,14 @@ Total size: **4 bytes**.
 
 ### struct kacs_adjust_groups_args
 
-Total size: **24 bytes**.
+Total size: **144 bytes**.
 
 | Offset | Size | Field | Type | Description |
 |--------|------|-------|------|-------------|
-| 0 | 4 | `count` | `u32` | Number of `kacs_group_entry` elements (max 64). `count = 0` is invalid. The reset sentinel requires `count = 1`. |
+| 0 | 4 | `count` | `u32` | Number of `kacs_group_entry` elements (max 1024). `count = 0` is invalid. The reset sentinel requires `count = 1`. |
 | 4 | 4 | `_pad` | `u32` | Reserved, must be 0 (alignment padding) |
 | 8 | 8 | `data_ptr` | `u64` | Userspace pointer to `kacs_group_entry[]` array |
-| 16 | 8 | `previous_state` | `u64` | Output: bitmask of previous enabled state for all token groups |
+| 16 | 128 | `previous_state` | `u64[16]` | Output: 1024-bit bitmask of previous enabled state for all token groups, in ascending word order (word 0 = indices 0–63, bit `i % 64` of word `i / 64` = group index `i`) |
 
 ### struct kacs_group_entry
 

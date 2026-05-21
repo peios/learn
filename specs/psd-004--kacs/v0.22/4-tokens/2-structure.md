@@ -21,8 +21,8 @@ A token carries identity, policy, and metadata fields. Fields are organized by c
 
 The set of group SIDs on a token is fixed at creation — AdjustGroups MUST NOT add or remove SIDs. However, individual groups MAY be enabled or disabled by modifying SE_GROUP_ENABLED, subject to constraints: mandatory groups (SE_GROUP_MANDATORY) MUST NOT be disabled, and deny-only groups (SE_GROUP_USE_FOR_DENY_ONLY) MUST NOT be re-enabled.
 
-A token MUST contain at most 64 entries in its `groups` array, including the
-kernel-injected logon SID. CreateToken therefore accepts at most 63
+A token MUST contain at most 1024 entries in its `groups` array, including the
+kernel-injected logon SID. CreateToken therefore accepts at most 1023
 caller-supplied groups.
 
 ## Token type (fixed)

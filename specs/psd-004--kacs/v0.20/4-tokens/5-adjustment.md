@@ -39,15 +39,17 @@ Two modes:
 - **Reset to defaults** — restore all groups to their creation-time enabled/disabled state.
 
 Appendix A encodes groups by zero-based index into the token's groups array.
-`count = 0` is invalid. `count > 64` is invalid. Reset-to-defaults is encoded as a single
+`count = 0` is invalid. `count > 1024` is invalid. Reset-to-defaults is encoded as a single
 `kacs_group_entry` with `{ index = 0xFFFFFFFF, enable = 0 }`. Duplicate group
 indices in one request are invalid. Reset restores only the enabled/disabled
 state; it does NOT clear `SE_GROUP_USE_FOR_DENY_ONLY` if that bit was added
 later by FilterToken.
 
 The caller receives a report of the previous enabled state of every group as a
-64-bit bitmask. Because token group arrays are capped at 64 entries, this
-bitmask is complete for every valid token.
+1024-bit bitmask, encoded as sixteen 64-bit words in ascending word order: word
+0 holds group indices 0–63, word 1 holds 64–127, and so on, with bit `i % 64`
+of word `i / 64` corresponding to group index `i`. Because token group arrays
+are capped at 1024 entries, this bitmask is complete for every valid token.
 
 ## AdjustSessionID
 

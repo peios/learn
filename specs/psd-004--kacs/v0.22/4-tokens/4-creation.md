@@ -30,7 +30,7 @@ The kernel validates:
 8. If `isolation_boundary` is true, `confinement_sid` MUST be present.
 9. `elevation_type` field in the wire format MUST be 0 (reserved). The kernel always sets Default.
 10. The caller-supplied group count plus the kernel-injected logon SID MUST
-    fit the 64-entry token group limit.
+    fit the 1024-entry token group limit.
 
 The kernel MUST NOT authenticate the user, look up SIDs in the directory, resolve SID-to-UID mappings, or validate that the principal exists. The caller is trusted as TCB by virtue of holding `SeCreateTokenPrivilege`.
 
