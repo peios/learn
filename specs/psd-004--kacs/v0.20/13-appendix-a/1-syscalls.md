@@ -59,7 +59,7 @@ Requires SeCreateTokenPrivilege. The kernel validates: all SIDs well-formed, own
 
 The kernel MUST NOT authenticate the user, look up SIDs, or resolve mappings.
 
-The kernel generates: `token_id`, `modified_id` (= token_id), `created_at` (current time), `elevation_type` (always Default), and the token's own SD (default template). The kernel derives the logon SID from `session_id` (`S-1-5-5-{high}-{low}`) and appends it to the groups array with SE_GROUP_LOGON_ID. Callers MUST NOT include the logon SID in the supplied groups. `owner_sid_index` and `primary_group_index` are relative to the caller-supplied groups (0 = user SID, 1..N = caller's groups), not including the injected logon SID. See §13.6 for the wire format.
+The kernel generates: `token_id`, `token_guid`, `modified_id` (= token_id), `created_at` (current time), `elevation_type` (always Default), and the token's own SD (default template). The kernel derives the logon SID from `session_id` (`S-1-5-5-{high}-{low}`) and appends it to the groups array with SE_GROUP_LOGON_ID. Callers MUST NOT include the logon SID in the supplied groups. `owner_sid_index` and `primary_group_index` are relative to the caller-supplied groups (0 = user SID, 1..N = caller's groups), not including the injected logon SID. See §13.6 for the wire format.
 
 Because this syscall does not take a desired-access parameter, the returned
 token fd always carries the fixed cached access mask `TOKEN_ALL_ACCESS`.

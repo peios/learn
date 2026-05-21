@@ -166,6 +166,11 @@ The non-empty output payload range `[buf_ptr, buf_ptr + required_payload_size)` 
 | 23 | `0x17` | `TOKEN_CLASS_DEVICE_CLAIMS` | KACS claim-array wrapper as defined by `security-descriptors/claim-attribute-format.md`: repeated `[entry_len:u32le][entry_bytes]` until the buffer is exhausted. Empty if no device claims. |
 | 24 | `0x18` | `TOKEN_CLASS_PROJECTED_SUPPLEMENTARY_GIDS` | `[count:u32le]` then `count` little-endian `u32` gids. Count=0 if there are no projected supplementary gids. |
 
+The `TOKEN_CLASS_STATISTICS` payload remains LUID-based in v0.20 for ABI
+compatibility. Kernel-internal consumers that require immutable UUID identity
+MUST use the accessors defined in §13.8 rather than deriving a GUID from
+`token_id`.
+
 ## 4. Struct Layouts
 
 All structs use natural alignment. Sizes assume LP64 (x86_64).

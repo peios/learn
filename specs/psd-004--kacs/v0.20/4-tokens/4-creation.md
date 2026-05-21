@@ -12,7 +12,7 @@ Mint a new token from scratch. The caller provides the security-meaningful conte
 
 **Caller-supplied fields:** `user_sid`, `groups` (with attributes), privileges (`privs_present` + `privs_enabled`), `owner_sid_index`, `primary_group_index`, `default_dacl`, `integrity_level`, `mandatory_policy`, `token_type`, `impersonation_level`, `auth_id` (MUST reference an existing logon session), `expiration` (0 = no expiry), `audit_policy`, `source` (name + LUID), `user_claims`, `device_claims`, `device_groups`, `restricted_sids`, `restricted_device_groups`, `confinement_sid`, `confinement_capabilities`, `confinement_exempt`, `isolation_boundary`, `write_restricted`, `user_deny_only`, `projected_uid`, `projected_gid`, `projected_supplementary_gids`, `origin`, `interactive_session_id`. See §13.6 for the complete wire format.
 
-**Kernel-generated fields:** `token_id` (LUID), `modified_id` (initialized to `token_id`), `created_at` (current time), `elevation_type` (always Default), `logon_sid` (derived from `session_id` as `S-1-5-5-{session_id >> 32}-{session_id & 0xFFFFFFFF}`), token SD (default SD per §4.8).
+**Kernel-generated fields:** `token_id` (LUID), `token_guid` (UUIDv4), `modified_id` (initialized to `token_id`), `created_at` (current time), `elevation_type` (always Default), `logon_sid` (derived from `session_id` as `S-1-5-5-{session_id >> 32}-{session_id & 0xFFFFFFFF}`), token SD (default SD per §4.8).
 
 The kernel injects the logon SID into the groups array with `SE_GROUP_MANDATORY | SE_GROUP_ENABLED_BY_DEFAULT | SE_GROUP_ENABLED | SE_GROUP_LOGON_ID`. Callers MUST NOT include the logon SID in their supplied groups array — it is always kernel-generated. The injected entry is appended after the caller's groups. `owner_sid_index` and `primary_group_index` are interpreted relative to the caller-supplied groups (0 = user SID, 1..N = caller's groups), not including the kernel-injected logon SID entry.
 
@@ -52,6 +52,7 @@ The caller MAY change during duplication:
 Fields on the new token:
 
 - `token_id` — new LUID.
+- `token_guid` — new UUIDv4.
 - `modified_id` — initialized to the new `token_id`.
 - `token_type` — caller-specified (Primary or Impersonation).
 - `impersonation_level` — caller-specified for Impersonation. If the source token is an impersonation token, the new level must be <= the source level. If the source token is Primary, any impersonation level is valid. Primary duplicates always use Anonymous.
@@ -97,6 +98,7 @@ request is invalid and no token is created.
 FilterToken creates a new token object. The original is untouched. Fields on the new token:
 
 - `token_id` — new LUID.
+- `token_guid` — new UUIDv4.
 - `modified_id` — initialized to the new `token_id`.
 - `elevation_type` — reset to Default (not part of any linked pair).
 - `user_sid`, `logon_sid`, `integrity_level`, `mandatory_policy`, `token_type`, `impersonation_level` — copied from source.

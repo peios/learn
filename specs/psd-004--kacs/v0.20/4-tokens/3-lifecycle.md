@@ -58,7 +58,7 @@ primary token. Otherwise the existing process SD is preserved.
 If the token's `mandatory_policy` includes NEW_PROCESS_MIN, the kernel MUST replace the child's primary token at exec time when the executable has a lower integrity label:
 
 1. Read the executable file's integrity label from its SD (the mandatory label ACE in the SACL). If the file has no label, use the default (Medium).
-2. If the file's integrity level is lower than the token's integrity level, create a new token following DuplicateToken semantics (new `token_id`, `modified_id` initialized to the new `token_id`, `elevation_type` reset to Default) with `integrity_level` set to the file's label. All other fields are copied from the source. The original token is dropped.
+2. If the file's integrity level is lower than the token's integrity level, create a new token following DuplicateToken semantics (new `token_id`, new `token_guid`, `modified_id` initialized to the new `token_id`, `elevation_type` reset to Default) with `integrity_level` set to the file's label. All other fields are copied from the source. The original token is dropped.
 3. If the file's integrity level is greater than or equal to the token's integrity level, no action — the token survives exec unchanged.
 
 NEW_PROCESS_MIN can only lower integrity, never raise it. The child's integrity level is always less than or equal to the parent's. The flag is immutable on the token.
