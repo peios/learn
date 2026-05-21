@@ -178,7 +178,7 @@ ioctl(token_fd, _IOWR('K', 7, struct kacs_adjust_groups_args))
 |---|---|
 | `count` | Number of entries. |
 | `data_ptr` | Array of `kacs_group_entry` (index + enable). |
-| `previous_state` | Output: previous enabled state. |
+| `previous_state` | Output: previous enabled state as a 1024-bit bitmask (`u64[16]`). |
 
 Reset-all sentinel: a single entry with `index = 0xFFFFFFFF` and `enable = 0` resets all groups to their `enabled_by_default` state.
 

@@ -146,9 +146,9 @@ Used by `KACS_IOC_ADJUST_GROUPS`.
 | 0 | 4 | `count` | Number of `kacs_group_entry` records. |
 | 4 | 4 | _pad | Reserved. |
 | 8 | 8 | `data_ptr` | Pointer to array. |
-| 16 | 8 | `previous_state` | Output: previous enabled state bitmask. |
+| 16 | 128 | `previous_state` | Output: previous enabled state as a 1024-bit bitmask (`u64[16]`, ascending word order — bit `i % 64` of word `i / 64` is group `i`). |
 
-Total: **24 bytes**.
+Total: **144 bytes**.
 
 ### kacs_group_entry
 
