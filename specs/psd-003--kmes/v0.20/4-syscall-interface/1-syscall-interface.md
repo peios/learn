@@ -7,7 +7,7 @@ title: Syscall Interface
 KMES exposes three syscalls in the PKM range (1090--1099):
 
 - `kmes_emit` (1090) -- emit a single event from userspace.
-- `kmes_attach` (1091) -- attach as a consumer and obtain per-CPU ring buffer file descriptors.
+- `kmes_attach` (1091) -- attach as a consumer of a single per-CPU ring buffer.
 - `kmes_emit_batch` (1092) -- emit multiple events from userspace as a single operation.
 
 All three syscalls use standard Linux error conventions: return -1 and set errno on failure.
@@ -36,7 +36,7 @@ KMES performs the following validation on every `kmes_emit` call, in order:
 1. The caller MUST hold SeAuditPrivilege. Fails with EPERM.
 2. If the caller does not hold SeTcbPrivilege, the per-process rate limit is checked using a token bucket algorithm. The bucket refills at `MaxEmitRatePerProcess` tokens per second and has a burst capacity equal to `MaxEmitRatePerProcess`. The bucket is created on the process's first emit call, initialized to full capacity. The bucket is destroyed when the process exits. If `MaxEmitRatePerProcess` changes at runtime, the bucket capacity and refill rate are updated immediately; the current token count is clamped to the new capacity if it exceeds it. If the bucket is empty, the syscall fails with EAGAIN. One token is consumed after the event is successfully written to the ring buffer. Validation failures do not consume a token. Callers holding SeTcbPrivilege are exempt from rate limiting. If KACS is not yet initialized and privilege checks cannot be performed, the syscall fails with EPERM (fail-closed).
 3. `event_type_len` MUST be nonzero. Fails with EINVAL.
-4. The declared total event size (`header_size + payload_len`, where `header_size = 29 + event_type_len`) is calculated from the userspace length fields without dereferencing the userspace pointers. If the arithmetic overflows, the syscall fails with EINVAL.
+4. The declared total event size (`header_size + payload_len`, where `header_size = 77 + type_len`) is calculated from the userspace length fields without dereferencing the userspace pointers. If the arithmetic overflows, the syscall fails with EINVAL.
 5. The declared total event size (header + payload) MUST NOT exceed the configured maximum event size. Fails with ENOSPC.
 6. The declared total event size MUST NOT exceed 50% of the per-CPU ring buffer capacity. Fails with ENOSPC.
 7. The event type and payload are copied from userspace into a kernel buffer. The event type MUST be valid UTF-8. Fails with EINVAL if the event type contains invalid UTF-8 byte sequences. If either pointer is inaccessible, fails with EFAULT. All subsequent validation and the ring buffer write operate on the kernel copy, not the original userspace memory. This prevents TOCTOU (time-of-check-time-of-use) attacks where userspace modifies the payload between validation and the ring buffer write.
@@ -48,7 +48,7 @@ Validation stops at the first failure. The error reflects the first check that f
 
 Validation (steps 1--8) runs with preemption enabled. The userspace copy at step 7 may trigger page faults, and msgpack validation at step 8 may take microseconds for large payloads. Neither requires CPU affinity.
 
-Preemption is disabled only for the ring buffer write: determining the current CPU, constructing the header (stamping timestamp, sequence number, cpu_id), writing the event, advancing `write_pos`, and checking `need_wake`. This keeps the non-preemptible window to a few hundred nanoseconds regardless of payload size. The `cpu_id` in the event header reflects the CPU at write time, not at syscall entry time.
+Preemption is disabled only for the ring buffer write: determining the current CPU, constructing the header (stamping timestamp, sequence number, cpu_id, and capturing identity GUIDs from KACS), writing the event, advancing `write_pos`, and checking `need_wake`. The three KACS GUID accessor calls add negligible overhead (each reads a field from an in-memory kernel structure with no allocation or sleeping). This keeps the non-preemptible window to a few hundred nanoseconds regardless of payload size. The `cpu_id` and identity GUIDs in the event header reflect the state at write time, not at syscall entry time.
 
 ### Behavior
 
@@ -107,7 +107,7 @@ Total struct size: 32 bytes.
 3. If the caller does not hold SeTcbPrivilege, the per-process rate limit is checked using the same token bucket as `kmes_emit`. The bucket MUST have at least `count` tokens available. If not, the syscall fails with EAGAIN and no events are emitted. Step 3 MUST atomically reserve `count` tokens from the bucket to prevent concurrent threads from passing the rate check simultaneously. After all processing is complete, unused tokens for events that were not emitted (due to validation failure) are returned to the bucket. Only events actually emitted consume tokens (see Return). Callers holding SeTcbPrivilege are exempt from rate limiting. If KACS is not yet initialized, the syscall fails with EPERM.
 4. `emitted_out` MUST be writable. If the pointer is inaccessible, the syscall fails with EFAULT and no events are emitted. If the pointer is writable, KMES stores 0 before any per-entry processing begins.
 5. The entry descriptor array is copied from userspace. Fails with EFAULT if inaccessible.
-6. For each entry in order, starting from index 0: the declared total event size (`29 + event_type_len + payload_len`) is calculated from the copied length fields without dereferencing the per-entry userspace pointers. If the arithmetic overflows, processing stops and the failing entry is rejected with EINVAL.
+6. For each entry in order, starting from index 0: the declared total event size (`77 + type_len + payload_len`) is calculated from the copied length fields without dereferencing the per-entry userspace pointers. If the arithmetic overflows, processing stops and the failing entry is rejected with EINVAL.
 7. The declared total event size for the entry MUST be within MaxEventSize and within 50% of the ring buffer capacity. If either limit is exceeded, processing stops and the failing entry is rejected with ENOSPC.
 8. The event type and payload are copied from userspace into kernel memory. The event type and payload pointers for the failing entry are checked only after steps 6 and 7 pass. If a per-entry pointer is inaccessible, processing stops and the failing entry is rejected with EFAULT.
 9. The staged entry is validated using the same remaining rules as `kmes_emit` (nonzero event type length, valid UTF-8 event type, valid msgpack within MaxNestingDepth). If any entry fails validation, processing stops. Events before the failing entry that passed validation are emitted. The failing entry and all subsequent entries are not processed.
@@ -118,7 +118,7 @@ The userspace copies and msgpack validation run with preemption enabled. Preempt
 
 ### Behavior
 
-All successfully validated events share a single wall clock timestamp, captured once at the start of the ring buffer write phase. Each event receives its own sequence number. The origin class is set to 0 (userspace) for all events.
+All successfully validated events share a single wall clock timestamp and a single set of identity GUIDs, captured once at the start of the ring buffer write phase. Each event receives its own sequence number. The origin class is set to 0 (userspace) for all events.
 
 If the ring buffer is full, KMES overwrites the oldest events. The syscall never blocks due to buffer pressure.
 
@@ -147,7 +147,7 @@ Events that fail validation (entry N and all subsequent entries) do not consume 
 
 ## kmes_attach (1091)
 
-Attaches the caller as a consumer of the KMES ring buffers. Returns one file descriptor per CPU, each independently mappable.
+Attaches the caller as a consumer of a single per-CPU KMES ring buffer. Returns one file descriptor for the specified CPU.
 
 ### Privilege requirement
 
@@ -157,26 +157,27 @@ The caller's effective token MUST hold SeSecurityPrivilege. If the privilege is 
 
 | Parameter | Type | Description |
 |---|---|---|
-| `fds` | `int __user *` | Pointer to a caller-provided buffer for the returned file descriptors. |
-| `count` | `int __user *` | Pointer to an integer. On entry, the size of the `fds` buffer (number of int-sized slots). On return, the number of CPUs (and thus the number of file descriptors written). |
+| `cpu_id` | `u32` | The CPU index to attach to. |
 | `capacity` | `u64 __user *` | Pointer to a u64. On return, the per-CPU ring buffer capacity in bytes. The consumer uses this to compute the mmap size: `8192 + 2 * capacity`. |
 
 ### Behavior
 
-KMES writes one file descriptor per CPU into the `fds` buffer, in CPU order (index 0 = CPU 0, index 1 = CPU 1, etc.). The number of CPUs is written to `*count`. The current per-CPU ring buffer capacity is written to `*capacity`.
+`cpu_id` is a logical CPU index in the range `[0, num_cpus)`, where `num_cpus` is the number of CPUs that were online when KMES initialised (at PKM load time). This is the same numbering used in the ring buffer's `cpu_id` metadata field and in event headers.
 
-If the buffer is too small (`*count` on entry is less than the number of CPUs), no file descriptors are created. `*count` is set to the required number and the syscall fails with ERANGE. The caller SHOULD retry with a sufficiently large buffer.
+KMES creates a single file descriptor for the ring buffer of CPU `cpu_id` and returns it. The current per-CPU ring buffer capacity is written to `*capacity`. The returned file descriptor maps exactly one CPU's ring buffer.
 
-File descriptor creation is all-or-nothing. If allocation of any file descriptor fails (e.g., ENOMEM), all previously created file descriptors from this call are closed internally before the error is returned. The caller receives either all N file descriptors or none.
+If `cpu_id` is greater than or equal to `num_cpus`, the syscall fails with EINVAL. This includes CPUs brought online after KMES initialisation -- CPU hotplug is not supported in v0.20 (see §7.1). Consumers discover the CPU count by calling `kmes_attach` with incrementing `cpu_id` values starting from 0 until EINVAL is returned.
 
-Each file descriptor independently supports:
+Repeated calls with the same `cpu_id` are permitted and return a new, independent file descriptor each time. Each file descriptor has its own mapping and its own consumer metadata page. This allows multiple consumers to attach to the same CPU's ring buffer independently.
 
-- `mmap()` -- maps that CPU's ring buffer into the caller's address space. The mapped region layout is defined in §5.1.5.
+The returned file descriptor supports:
+
+- `mmap()` -- maps that CPU's ring buffer into the caller's address space. The mapping size is `8192 + 2 * capacity` bytes. The mapped region layout is defined in §5.1.5.
 - `close()` -- releases the file descriptor. The mapping becomes invalid.
 
 The mapped region is split into read-only and read-write sections. The producer metadata page and the data region are mapped read-only -- no privilege, capability, or token grants write access to these regions from userspace. Only KMES writes event data and producer metadata. The consumer metadata page is mapped read-write for consumer notification state (`need_wake`). KMES treats consumer metadata as advisory and validates all values read from it.
 
-Multiple consumers MAY attach simultaneously. Each consumer maintains its own read position per buffer independently.
+Multiple consumers MAY attach to the same CPU's ring buffer simultaneously. Each consumer maintains its own read position independently.
 
 ### Notification
 
@@ -186,13 +187,13 @@ This allows consumers to dedicate one thread per CPU buffer, each sleeping indep
 
 ### Return
 
-Returns 0 on success. Returns -1 and sets errno on failure.
+Returns the file descriptor (non-negative) on success. Returns -1 and sets errno on failure.
 
 ### Errors
 
 | Errno | Meaning |
 |---|---|
 | EPERM | Caller does not hold SeSecurityPrivilege. |
-| ERANGE | The `fds` buffer is too small. `*count` is set to the required number of slots. |
-| EFAULT | `fds`, `count`, or `capacity` points to inaccessible memory. |
+| EINVAL | `cpu_id` is greater than or equal to the number of CPUs. |
+| EFAULT | `capacity` points to inaccessible memory. |
 | ENOMEM | Kernel memory allocation failed. |

@@ -2,11 +2,11 @@
 title: Known Omissions
 ---
 
-This appendix lists capabilities that are intentionally omitted from v0.22 but are expected to be addressed in future versions. All items listed here are additive -- they can be implemented without restructuring the core ring buffer design, the syscall interface, or the event format.
+This appendix lists capabilities that are intentionally omitted from v0.20 but are expected to be addressed in future versions. All items listed here are additive -- they can be implemented without restructuring the core ring buffer design, the syscall interface, or the event format.
 
 ## CPU topology changes
 
-v0.22 fixes the set of per-CPU ring buffers at KMES initialisation time. The following topology changes are not handled:
+v0.20 fixes the set of per-CPU ring buffers at KMES initialisation time. The following topology changes are not handled:
 
 **CPU hot-add.** A CPU brought online after KMES initialisation has no ring buffer. Events emitted on that CPU are dropped silently. The `kmes_attach(cpu_id)` API returns EINVAL for the new CPU.
 
@@ -20,13 +20,13 @@ CPU hot-add is the most likely real-world scenario (hypervisors adding vCPUs to 
 
 ## NUMA-aware buffer allocation
 
-v0.22 does not specify which NUMA node ring buffer pages are allocated on. If a ring buffer's physical pages are allocated on a remote NUMA node, every event write on that CPU crosses the interconnect. At KMES throughput targets (millions of events per second), remote NUMA writes add measurable latency.
+v0.20 does not specify which NUMA node ring buffer pages are allocated on. If a ring buffer's physical pages are allocated on a remote NUMA node, every event write on that CPU crosses the interconnect. At KMES throughput targets (millions of events per second), remote NUMA writes add measurable latency.
 
 The fix is to allocate each per-CPU ring buffer's physical pages on the NUMA node local to that CPU. This is a kernel allocation policy change (`alloc_pages_node` or equivalent) with no consumer-visible effect. The ring buffer format, mapping layout, and syscall interface are unchanged.
 
 ## Suspend/resume
 
-v0.22 does not explicitly address system suspend (S3 sleep) or hibernate (S4). Ring buffer contents survive S3 (memory is preserved). On resume, `CLOCK_REALTIME` jumps forward by the suspend duration. This is a special case of the clock discontinuity described in §7.1 -- consumers see a wall clock gap in timestamps but no sequence number gap.
+v0.20 does not explicitly address system suspend (S3 sleep) or hibernate (S4). Ring buffer contents survive S3 (memory is preserved). On resume, `CLOCK_REALTIME` jumps forward by the suspend duration. This is a special case of the clock discontinuity described in §7.1 -- consumers see a wall clock gap in timestamps but no sequence number gap.
 
 S4 (hibernate) writes memory to disk. On resume, ring buffers are restored from the hibernate image. The same clock discontinuity applies. If the kernel re-initialises KMES on resume (implementation-dependent), the generation counter signals consumers to re-attach.
 

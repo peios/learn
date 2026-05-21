@@ -13,7 +13,7 @@ This specification covers:
 - The syscall interface -- the mechanism for userspace event emission and consumer attachment
 - Event buffering and ordering -- per-CPU ring buffers, per-CPU sequence numbering, and wall clock timestamps
 - The delivery mechanism -- per-CPU shared memory ring buffers, double virtual mapping, lock-free read/write protocols, and futex-based consumer notification
-- Stamping -- KMES-intrinsic stamp fields (timestamp, sequence number, cpu_id, origin class); process and identity stamp fields are reserved for a future version pending KACS coordination
+- Stamping -- KMES-intrinsic stamp fields (timestamp, sequence number, cpu_id, origin class) and identity stamp fields (effective token GUID, true token GUID, process GUID) captured from KACS at emission time
 
 This specification does not cover:
 

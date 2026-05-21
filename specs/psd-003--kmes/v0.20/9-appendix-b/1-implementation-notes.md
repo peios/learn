@@ -24,9 +24,9 @@ Since each ring buffer is written by exactly one CPU, NUMA-local allocation ensu
 
 ## Precomputed header templates
 
-Several event header fields are constant for a given CPU: `cpu_id` and the header structure bytes (`header_size`, field offsets). A per-CPU header template can be precomputed at initialisation time. At emit time, KMES copies the template and fills in only the variable fields (`event_size`, `timestamp`, `sequence`, `origin_class`, `type_len`, `type`). This reduces per-event header construction to a small memcpy plus a few stores.
+Several event header fields are constant for a given CPU: `cpu_id` and the header structure bytes (`header_size`, field offsets). A per-CPU header template can be precomputed at initialisation time. At emit time, KMES copies the template and fills in only the variable fields (`event_size`, `timestamp`, `sequence`, `origin_class`, `type_len`, `type`, and the three identity GUIDs). This reduces per-event header construction to a small memcpy plus a few stores.
 
-For kernel emitters with a fixed origin class, the template can include the origin class as well, reducing the per-event work further.
+For kernel emitters with a fixed origin class, the template can include the origin class as well, reducing the per-event work further. The identity GUIDs are per-thread and must be captured at emit time -- they cannot be templated.
 
 ## Software prefetch
 

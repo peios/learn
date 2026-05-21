@@ -10,11 +10,19 @@ The following terms are used throughout this specification with the precise mean
 
 **Event**: An indivisible record consisting of a header and a payload. The header is a packed binary structure containing KMES-intrinsic metadata. The payload is a msgpack-encoded blob of arbitrary structured data defined by the emitter. Header and payload are always produced and consumed together -- neither is meaningful alone.
 
-**Header**: The packed binary prefix of every event. Contains: event size, header size, wall clock timestamp, per-CPU sequence number, CPU identifier, origin class, and a length-prefixed event type string. The header also reserves space for future process and identity stamp fields.
+**Header**: The packed binary prefix of every event. Contains: event size, header size, wall clock timestamp, per-CPU sequence number, CPU identifier, origin class, three identity GUIDs (effective token, true token, process), and a length-prefixed event type string. All fields before the event type string are at fixed offsets.
 
 **Payload**: The msgpack-encoded body of an event. Its structure is defined by the emitting subsystem or process. KMES treats the payload as opaque -- it buffers and delivers payloads without interpreting them.
 
-**Stamp**: The set of metadata fields in the event header that KMES populates at emission time. v0.20 stamp fields are KMES-intrinsic: timestamp, sequence number, cpu_id, and origin class. Future versions will add process and identity fields in coordination with PSD-004.
+**Stamp**: The set of metadata fields in the event header that KMES populates at emission time. Stamp fields are: timestamp, sequence number, cpu_id, origin class (KMES-intrinsic), and effective token GUID, true token GUID, process GUID (identity, captured from KACS).
+
+**Effective token GUID**: The GUID of the token governing the current thread's access rights at emission time. If the thread is impersonating, this is the impersonation token GUID. If the thread is not impersonating, this equals the true token GUID. For kernel emission without a process context or before KACS initialisation, this is the null GUID (all zero bytes).
+
+**True token GUID**: The GUID of the process's primary token at emission time. For kernel emission without a process context or before KACS initialisation, this is the null GUID.
+
+**Process GUID**: The GUID of the emitting process, assigned by KACS at process creation (fork). Immutable for the lifetime of the process -- exec does not change it. For kernel emission without a process context or before KACS initialisation, this is the null GUID.
+
+**Null GUID**: A GUID consisting of 16 zero bytes. Indicates that the identity field is not applicable or not available. KMES stamps the null GUID when KACS is not initialised or when emission occurs in a context with no associated process (kernel worker threads, interrupt-deferred work).
 
 **Sequence number**: A per-CPU, monotonically increasing 64-bit unsigned integer assigned by KMES to each event at emission time. Each CPU maintains its own independent counter, reset to zero when the PKM module loads. The counter is incremented before the value is taken, so the first event on each CPU receives sequence number 1. Sequence 0 is never assigned to an event. Gaps in the sequence on a given CPU indicate lost events (overwritten or dropped). The sequence number is not a global ordering primitive -- events are ordered primarily by timestamp.
 

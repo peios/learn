@@ -9,7 +9,7 @@ All numeric constants used in the KMES interface. An independent implementer can
 | Syscall | Number | Description |
 |---|---|---|
 | kmes_emit | 1090 | Emit a single event from userspace. |
-| kmes_attach | 1091 | Attach as a consumer and obtain per-CPU ring buffer file descriptors. |
+| kmes_attach | 1091 | Attach as a consumer of a single per-CPU ring buffer. |
 | kmes_emit_batch | 1092 | Emit multiple events from userspace as a single operation. Maximum 256 events per call. |
 
 ## Origin class values
@@ -25,7 +25,7 @@ Values 4--255 are reserved for future kernel subsystems.
 
 ## Event header layout
 
-Packed, no padding. All multi-byte integers little-endian.
+Packed, no padding. All multi-byte integers little-endian. GUIDs in Microsoft GUID binary format.
 
 | Offset | Size | Type | Field |
 |---|---|---|---|
@@ -35,10 +35,13 @@ Packed, no padding. All multi-byte integers little-endian.
 | 16 | 8 | `u64` | `sequence` |
 | 24 | 2 | `u16` | `cpu_id` |
 | 26 | 1 | `u8` | `origin_class` |
-| 27 | 2 | `u16` | `type_len` |
-| 29 | var | `[u8]` | `type` |
+| 27 | 16 | `GUID` | `effective_token_guid` |
+| 43 | 16 | `GUID` | `true_token_guid` |
+| 59 | 16 | `GUID` | `process_guid` |
+| 75 | 2 | `u16` | `type_len` |
+| 77 | var | `[u8]` | `type` |
 
-Minimum header size: 29 + `type_len` bytes. Actual `header_size` MAY be larger (reserved space for future identity stamp fields). Payload begins at `header_size` from event start.
+Header size: `77 + type_len` bytes. All fields before `type_len` are at fixed offsets. Payload begins at `header_size` from event start.
 
 ## Producer metadata page layout (offset 0, read-only)
 
@@ -90,7 +93,7 @@ Compared byte-by-byte, not as an integer. Endianness-independent.
 
 ## Ring buffer version
 
-v0.20 uses ring buffer format version 1.
+v0.20 uses ring buffer format version 1. Events are self-describing: the payload begins at `header_size` bytes from the event start, so consumers that use `header_size` to locate the payload remain compatible with any future header growth.
 
 ## Mapped region layout
 
@@ -133,8 +136,8 @@ Total mapping size: `8192 + (2 × capacity)` bytes.
 | Errno | Condition |
 |---|---|
 | EPERM | Caller does not hold SeSecurityPrivilege. |
-| ERANGE | Provided buffer is too small. `*count` set to required number. |
-| EFAULT | `fds`, `count`, or `capacity` pointer is inaccessible. |
+| EINVAL | `cpu_id` is greater than or equal to the number of CPUs. |
+| EFAULT | `capacity` pointer is inaccessible. |
 | ENOMEM | Kernel memory allocation failed. |
 
 ## kmes_emit_entry struct layout (x86-64)

@@ -28,10 +28,11 @@ KMES constructs the event by:
 
 1. Capturing the wall clock timestamp.
 2. Incrementing the current CPU's per-boot sequence counter and taking the new value. The counter starts at 0; the first event on each CPU receives sequence number 1. Sequence 0 is never assigned to an event. This is a CPU-local operation with no cross-CPU contention.
-3. Building the packed header from the stamp fields, cpu_id, origin class, and event type.
-4. Writing the header and payload contiguously into the current CPU's ring buffer.
+3. Capturing the three identity GUIDs by calling `kacs_effective_token_guid()`, `kacs_primary_token_guid()`, and `kacs_process_guid()`. These calls return the null GUID if KACS is not initialised or no process context exists.
+4. Building the packed header from the KMES-intrinsic stamp fields, identity GUIDs, cpu_id, origin class, and event type.
+5. Writing the header and payload contiguously into the current CPU's ring buffer.
 
-The timestamp is captured before the sequence number is assigned. Two events with the same timestamp on the same CPU are ordered by sequence number.
+The timestamp is captured before the sequence number is assigned. Two events with the same timestamp on the same CPU are ordered by sequence number. Identity GUIDs are captured after the sequence number but before the header is built -- the exact ordering between steps 2 and 3 is not observable to consumers.
 
 ## Caller contract
 
@@ -75,12 +76,13 @@ KMES processes the batch as follows:
 
 1. Disable preemption.
 2. Capture a single wall clock timestamp. All events in the batch share this timestamp.
-3. For each event in order: perform structural checks, assign a sequence number, build the header, and write the event to the ring buffer. If a structural check fails on any event, the failing event is dropped (sequence number consumed, gap visible) but subsequent events in the batch continue to be processed.
-4. Store `write_pos` with a single release barrier after all events are written.
-5. Check `need_wake` once. If `need_wake` is 1, increment `futex_counter` with a release store and issue `futex_wake` to wake all waiting consumer threads.
-6. Re-enable preemption.
+3. Capture the three identity GUIDs once. All events in the batch share these identity stamps.
+4. For each event in order: perform structural checks, assign a sequence number, build the header, and write the event to the ring buffer. If a structural check fails on any event, the failing event is dropped (sequence number consumed, gap visible) but subsequent events in the batch continue to be processed.
+5. Store `write_pos` with a single release barrier after all events are written.
+6. Check `need_wake` once. If `need_wake` is 1, increment `futex_counter` with a release store and issue `futex_wake` to wake all waiting consumer threads.
+7. Re-enable preemption.
 
-The shared timestamp reflects the logical instant of the batch. Events within a batch are ordered by their sequence numbers. The single `write_pos` update and single `need_wake` check are the primary performance benefits over individual emission.
+The shared timestamp and identity GUIDs reflect the logical instant of the batch. Events within a batch are ordered by their sequence numbers. The single `write_pos` update and single `need_wake` check are the primary performance benefits over individual emission.
 
 ### Failure semantics
 
