@@ -212,16 +212,23 @@ ACCESS_SYSTEM_SECURITY, which is gated by SeSecurityPrivilege (see
 PSD-004 §7).
 
 For v0.21, the LCS kernel audit pipeline is KMES (PSD-003). KMES is
-an in-kernel PKM facility and must be initialised before LCS can
-emit audit events. LCS audit emission is synchronous at the audit
-point.
+an in-kernel PKM facility. LCS audit emission is synchronous at the
+audit point in the sense that LCS constructs the audit payload and
+attempts to enqueue it before continuing past that audit point. LCS
+MUST NOT wait for a userspace KMES consumer to observe or retain the
+event.
 
 For a key-open SACL audit, LCS evaluates AccessCheck, determines the
-access decision and granted mask, emits the KMES audit event, and
-only then publishes the resulting key fd to userspace. If KMES event
-emission fails, LCS fails the open with EIO and does not return a key
-fd. The AccessCheck decision itself is not changed, but the audited
-operation is not completed without the required audit record.
+access decision and granted mask, constructs a valid KMES audit
+payload, attempts to enqueue the KMES audit event, and only then
+publishes the resulting key fd to userspace. If LCS cannot construct a
+valid audit payload because of malformed internal state, corruption,
+allocation failure, or any other LCS-side payload-construction
+failure, LCS fails the open with EIO and does not return a key fd. If
+KMES cannot retain the event after LCS has constructed a valid payload
+(including KMES unavailability, ring drops, capacity pressure, or
+consumer absence), LCS does not alter the AccessCheck decision or key
+fd publication result. KMES loss accounting is handled by KMES.
 
 **SD changes and existing fds.** SD modifications take effect for
 future opens. Existing fds retain their granted access mask from
@@ -332,8 +339,10 @@ Backup and restore start/complete payloads:
 
 Audit emission failure policy:
 
-- For LCS_KEY_OPEN_AUDIT, failure to emit returns EIO and the key fd
-  is not published.
+- For LCS_KEY_OPEN_AUDIT, payload-construction failure returns EIO
+  and the key fd is not published. KMES enqueue, retention, or
+  consumer failure after valid payload construction does not alter the
+  key-open result.
 - For LCS_BACKUP_START and LCS_RESTORE_START, failure to emit returns
   EIO and the backup or restore does not start.
 - For LCS_BACKUP_COMPLETE and LCS_RESTORE_COMPLETE, the operation has
