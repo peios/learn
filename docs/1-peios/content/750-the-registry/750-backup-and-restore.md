@@ -3,14 +3,14 @@ title: Backup and restore
 type: concept
 description: The registry can export an entire subtree to a stream and restore one back, wholesale. It is how the system is seeded at first boot, recovered after disaster, and migrated between machines. Restore is a replace, not a merge — and the privilege to perform it is, in effect, the power to rewrite security on everything it touches.
 related:
-  - peios/registry/bootstrap-and-self-configuration
-  - peios/registry/lcs-and-sources
-  - peios/registry/access-control
-  - peios/registry/layers
-  - peios/registry/overview
+  - peios/the-registry/bootstrap-and-self-configuration
+  - peios/the-registry/lcs-and-sources
+  - peios/the-registry/access-control
+  - peios/the-registry/layers
+  - peios/the-registry/overview
 ---
 
-Beyond reading and writing individual values, the registry can move whole subtrees at once: **export** a key and everything beneath it to a stream, and **restore** such a stream back into the tree. This is the bulk-data path, and it is the mechanism behind things you have already met — [first-boot seeding](~peios/registry/bootstrap-and-self-configuration) — as well as the disaster-recovery and migration any real deployment needs.
+Beyond reading and writing individual values, the registry can move whole subtrees at once: **export** a key and everything beneath it to a stream, and **restore** such a stream back into the tree. This is the bulk-data path, and it is the mechanism behind things you have already met — [first-boot seeding](~peios/the-registry/bootstrap-and-self-configuration) — as well as the disaster-recovery and migration any real deployment needs.
 
 ## Backup and restore, in one sentence
 
@@ -20,7 +20,7 @@ Beyond reading and writing individual values, the registry can move whole subtre
 
 A backup captures a key and its entire subtree as it stands at one instant — a consistent snapshot, unaffected by writes happening concurrently. The result is a self-contained stream you can send to a file, a pipe, or across a network.
 
-It is **full-fidelity with respect to [layers](~peios/registry/layers)**: a backup records every layer's writes, not merely the effective values. Restore it and the layered structure comes back intact — the base values, the role layers, the policy overlays, all of them, resolving the way they did before. A backup is not a flattened picture of "what the values currently are"; it is the whole stack.
+It is **full-fidelity with respect to [layers](~peios/the-registry/layers)**: a backup records every layer's writes, not merely the effective values. Restore it and the layered structure comes back intact — the base values, the role layers, the policy overlays, all of them, resolving the way they did before. A backup is not a flattened picture of "what the values currently are"; it is the whole stack.
 
 The stream is also self-verifying: it carries an integrity check, so a truncated or corrupted backup is caught when you try to restore it, rather than restored as garbage.
 
@@ -40,14 +40,14 @@ For restore, the consequence is sharp and worth stating plainly. **The privilege
 
 ## What it is for
 
-- **First-boot seeding.** A fresh machine's registry is empty; its initial configuration is delivered by *restoring* a seed. Same mechanism, described in [bootstrap](~peios/registry/bootstrap-and-self-configuration).
+- **First-boot seeding.** A fresh machine's registry is empty; its initial configuration is delivered by *restoring* a seed. Same mechanism, described in [bootstrap](~peios/the-registry/bootstrap-and-self-configuration).
 - **Disaster recovery.** Snapshot a subtree — or a whole hive — and restore it after a failure or a bad change.
 - **Migration.** Move configuration between machines by backing up on one and restoring on another; the stream is portable.
 
 ## Where to start
 
-For where restore comes from at first boot, read [How the registry boots and configures itself](~peios/registry/bootstrap-and-self-configuration).
+For where restore comes from at first boot, read [How the registry boots and configures itself](~peios/the-registry/bootstrap-and-self-configuration).
 
-For who actually performs these operations — the kernel coordinating the store — read [LCS and sources](~peios/registry/lcs-and-sources).
+For who actually performs these operations — the kernel coordinating the store — read [LCS and sources](~peios/the-registry/lcs-and-sources).
 
-For the privilege model they lean on, read [Access control on keys](~peios/registry/access-control).
+For the privilege model they lean on, read [Access control on keys](~peios/the-registry/access-control).

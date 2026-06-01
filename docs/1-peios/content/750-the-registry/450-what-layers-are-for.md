@@ -3,15 +3,15 @@ title: What layers are for
 type: concept
 description: Layering earns its complexity by making configuration removable. Because every write carries a layer tag and nothing is overwritten in place, deleting a layer makes its writes vanish and the next-best write resurface automatically — so installing and removing a bundle of configuration is just adding and deleting a layer. This page covers the base layer, tombstones, automatic revert, and the roles and Group Policy built on them.
 related:
-  - peios/registry/layers
-  - peios/registry/access-control
-  - peios/registry/deleting-keys-and-values
-  - peios/registry/configuration-and-meaning
-  - peios/registry/watches
-  - peios/registry/overview
+  - peios/the-registry/layers
+  - peios/the-registry/access-control
+  - peios/the-registry/deleting-keys-and-values
+  - peios/the-registry/configuration-and-meaning
+  - peios/the-registry/watches
+  - peios/the-registry/overview
 ---
 
-[Layers](~peios/registry/layers) explained how the registry resolves competing writes. This page is the reason it bothers. The layered model buys one thing above all: **configuration you can add and remove as a unit, with revert that is automatic and leaves nothing behind.**
+[Layers](~peios/the-registry/layers) explained how the registry resolves competing writes. This page is the reason it bothers. The layered model buys one thing above all: **configuration you can add and remove as a unit, with revert that is automatic and leaves nothing behind.**
 
 ## The payoff, in one sentence
 
@@ -29,7 +29,7 @@ When this topic earlier showed you "write a value, read it back", that was the b
 
 A plain write competes to *be* the value. But configuration sometimes needs to say something a plain write cannot: *this value must not be set at all.* Overriding `MaxEventSize` with a different number is easy; asserting that `MaxEventSize` should be absent is a different statement.
 
-A layer makes it with a **tombstone** — a write whose meaning is "no value here". It enters the same per-value contest as any other write ([Layers](~peios/registry/layers)); if it wins, a read of that value returns "not found" rather than falling through to some other layer's write. Like any write, it belongs to a layer — so when that layer is removed, the tombstone goes with it and whatever it was suppressing comes back.
+A layer makes it with a **tombstone** — a write whose meaning is "no value here". It enters the same per-value contest as any other write ([Layers](~peios/the-registry/layers)); if it wins, a read of that value returns "not found" rather than falling through to some other layer's write. Like any write, it belongs to a layer — so when that layer is removed, the tombstone goes with it and whatever it was suppressing comes back.
 
 A **blanket tombstone** is the same idea applied to a whole key at once: a marker that enters the contest as a "no value" candidate for *every* value name on the key. A layer can set a blanket tombstone and then write the specific values it does want — the effect is "clear everything here, then set these". It is how a layer declares the complete contents of a key instead of merging into whatever was already there.
 
@@ -60,20 +60,20 @@ A **role** is a bundle of configuration deployed as a layer. Installing a role c
 
 ## Group Policy
 
-Domain **Group Policy** is configuration delivered from outside the machine, and it rides on layers too — but at a *higher precedence* than local layers. That choice is deliberate, and [Layers](~peios/registry/layers) explained why: a higher-precedence write wins regardless of recency, so a domain setting beats local configuration even if a local administrator writes the value again afterwards. Applying a policy adds the layer; lifting it deletes the layer, and the local configuration it had been overriding resurfaces automatically — the same revert, one tier up. (High-precedence layers are privileged to create, so policy cannot be forged by an unprivileged process; see [Access control](~peios/registry/access-control).)
+Domain **Group Policy** is configuration delivered from outside the machine, and it rides on layers too — but at a *higher precedence* than local layers. That choice is deliberate, and [Layers](~peios/the-registry/layers) explained why: a higher-precedence write wins regardless of recency, so a domain setting beats local configuration even if a local administrator writes the value again afterwards. Applying a policy adds the layer; lifting it deletes the layer, and the local configuration it had been overriding resurfaces automatically — the same revert, one tier up. (High-precedence layers are privileged to create, so policy cannot be forged by an unprivileged process; see [Access control](~peios/the-registry/access-control).)
 
 ## What layers are *not*
 
 - **Not a transaction.** Layers decide *which* write wins and let you remove a group of writes together; atomicity — making several writes commit all-or-nothing — is a separate mechanism. A role install uses both: a transaction to apply the writes atomically, a layer to make them removable.
-- **Not access control.** A layer does not decide who may read or change a value; the [security descriptor](~peios/registry/access-control) on each key does. And the two do not mix: a security change made while a layer existed is **not** reverted when the layer is deleted. Security is operational state, not configuration overlay — the next page is where that distinction lives.
+- **Not access control.** A layer does not decide who may read or change a value; the [security descriptor](~peios/the-registry/access-control) on each key does. And the two do not mix: a security change made while a layer existed is **not** reverted when the layer is deleted. Security is operational state, not configuration overlay — the next page is where that distinction lives.
 - **Not a browsable history.** Layers are not a version-control timeline you can scroll through. You see the effective view — the current winners — not a log of every write that ever competed.
 
 ## Where to start
 
-If you want what "deleting a key" really does once names are layered — and why there is no recursive delete — read [Deleting keys and values](~peios/registry/deleting-keys-and-values).
+If you want what "deleting a key" really does once names are layered — and why there is no recursive delete — read [Deleting keys and values](~peios/the-registry/deleting-keys-and-values).
 
-If you want the security model and its sharp interaction with layers — why deleting a layer reverts its values but *not* a security change made under it — read [Access control on keys](~peios/registry/access-control).
+If you want the security model and its sharp interaction with layers — why deleting a layer reverts its values but *not* a security change made under it — read [Access control on keys](~peios/the-registry/access-control).
 
-If you want to see how a watcher experiences a layer being added or removed — it sees the effective values change, with the layer machinery invisible — read [Watching for changes](~peios/registry/watches).
+If you want to see how a watcher experiences a layer being added or removed — it sees the effective values change, with the layer machinery invisible — read [Watching for changes](~peios/the-registry/watches).
 
-For the sandboxing case — per-thread *private* layers that only one caller sees — read [Advanced: private hives and layers](~peios/registry/private-hives-and-layers).
+For the sandboxing case — per-thread *private* layers that only one caller sees — read [Advanced: private hives and layers](~peios/the-registry/private-hives-and-layers).

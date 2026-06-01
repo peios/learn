@@ -3,11 +3,11 @@ title: Layers
 type: concept
 description: This is the idea the registry is named for, and the one most worth getting right. The trap is picturing layers as a clean stack where the top one wins. In Peios most layers share the same precedence and resolve by recency — per value — so the reality is interwoven, not stacked. This page builds the correct model from the ground up.
 related:
-  - peios/registry/configuration-and-meaning
-  - peios/registry/what-layers-are-for
-  - peios/registry/access-control
-  - peios/registry/watches
-  - peios/registry/overview
+  - peios/the-registry/configuration-and-meaning
+  - peios/the-registry/what-layers-are-for
+  - peios/the-registry/access-control
+  - peios/the-registry/watches
+  - peios/the-registry/overview
 ---
 
 So far this topic has treated the registry as if each value had a single stored entry: you write it, you read it back. That was the *effective view* — true as far as it goes, and the right way to learn everything up to here. This page replaces it with what is actually underneath, because the registry is a **layered** store, and the layering is both the reason the subsystem exists and the part most likely to be misunderstood.
@@ -70,7 +70,7 @@ If you want one image to keep, use a **shared document where, for each cell, the
 
 When two writes have *different* precedence, recency stops mattering between them: **higher precedence always wins, even over a more recent lower-precedence write.** A value set by a precedence-1 layer long ago still beats one written to a precedence-0 layer a moment ago.
 
-This is precisely what makes precedence worth having. Recency is fine for cooperating local configuration, but it cannot express "this setting must win even if someone writes it again later" — and that is exactly what policy needs. A domain **Group Policy** is delivered as a higher-precedence layer for this reason: a local administrator cannot defeat it by re-writing the value, because their write lands at precedence 0 and loses to the higher tier regardless of how recent it is. Precedence is the mechanism behind "you cannot override this locally". (Creating a layer that outranks others is itself a privileged action, so the tiering cannot be forged from below — more on that in [Access control](~peios/registry/access-control).)
+This is precisely what makes precedence worth having. Recency is fine for cooperating local configuration, but it cannot express "this setting must win even if someone writes it again later" — and that is exactly what policy needs. A domain **Group Policy** is delivered as a higher-precedence layer for this reason: a local administrator cannot defeat it by re-writing the value, because their write lands at precedence 0 and loses to the higher tier regardless of how recent it is. Precedence is the mechanism behind "you cannot override this locally". (Creating a layer that outranks others is itself a privileged action, so the tiering cannot be forged from below — more on that in [Access control](~peios/the-registry/access-control).)
 
 ## "Most recent" is write order, not the clock
 
@@ -82,8 +82,8 @@ Everything above is framed around values, but the **same contest decides whether
 
 ## Where to start
 
-If you want the payoff — why all of this exists — read [What layers are for](~peios/registry/what-layers-are-for): the base layer, tombstones, the automatic-revert property, and how roles and Group Policy are built on it.
+If you want the payoff — why all of this exists — read [What layers are for](~peios/the-registry/what-layers-are-for): the base layer, tombstones, the automatic-revert property, and how roles and Group Policy are built on it.
 
-If you want the one thing layers do *not* revert — security — read [Access control on keys](~peios/registry/access-control). A security change made while a layer existed is *not* undone when the layer is removed, and the reason is worth understanding.
+If you want the one thing layers do *not* revert — security — read [Access control on keys](~peios/the-registry/access-control). A security change made while a layer existed is *not* undone when the layer is removed, and the reason is worth understanding.
 
-If you want to know how a watcher sees a layer change — it observes effective-state changes, with the layering made invisible — read [Watching for changes](~peios/registry/watches).
+If you want to know how a watcher sees a layer change — it observes effective-state changes, with the layering made invisible — read [Watching for changes](~peios/the-registry/watches).

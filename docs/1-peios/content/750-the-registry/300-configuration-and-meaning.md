@@ -3,15 +3,15 @@ title: Configuration, not storage
 type: concept
 description: "The registry stores values it does not understand. What a value means — its default, its valid range, what reads it — lives outside the registry, in the subsystem that owns it and in regman, the registry's manual. That separation has a consequence worth internalising: the value the registry shows and the value a subsystem is actually using can legitimately differ."
 related:
-  - peios/registry/keys-values-and-types
-  - peios/registry/regman
-  - peios/registry/watches
-  - peios/registry/bootstrap-and-self-configuration
+  - peios/the-registry/keys-values-and-types
+  - peios/the-registry/regman
+  - peios/the-registry/watches
+  - peios/the-registry/bootstrap-and-self-configuration
   - peios/auditing/overview
-  - peios/registry/overview
+  - peios/the-registry/overview
 ---
 
-A registry value is a type tag and a pile of bytes. The registry stores it, returns it on request, and protects it with a [security descriptor](~peios/registry/access-control) — but it never asks what the value *means*. As [Keys, values, and types](~peios/registry/keys-values-and-types) put it, the registry is typed but opaque: it knows the tag, not the meaning. This page is about what follows from that, because it is the single most counterintuitive thing about the registry and the thing that most often trips people up.
+A registry value is a type tag and a pile of bytes. The registry stores it, returns it on request, and protects it with a [security descriptor](~peios/the-registry/access-control) — but it never asks what the value *means*. As [Keys, values, and types](~peios/the-registry/keys-values-and-types) put it, the registry is typed but opaque: it knows the tag, not the meaning. This page is about what follows from that, because it is the single most counterintuitive thing about the registry and the thing that most often trips people up.
 
 ## Configuration and meaning, in one sentence
 
@@ -23,7 +23,7 @@ Every config system you have used before bundles storage and meaning together: t
 
 **In the subsystem that owns the value.** The code that reads `Machine\System\KMES\BufferCapacity` is the thing that knows it must be a power of two, knows the compiled-in default, and knows what to do when it changes. That knowledge is in KMES, not in the store. Ask the registry "is this a sensible buffer capacity?" and it has no answer — it was never told what the value is for.
 
-**In [`regman`](~peios/registry/regman), for a human.** `regman` is the registry's manual — the `man` of the registry. Give it a path and it tells you what a key or value actually does:
+**In [`regman`](~peios/the-registry/regman), for a human.** `regman` is the registry's manual — the `man` of the registry. Give it a path and it tells you what a key or value actually does:
 
 ```
 $ regman Machine\System\KMES BufferCapacity
@@ -67,7 +67,7 @@ So "what is this subsystem actually configured to right now?" is not always answ
 
 ## The registry does this to itself
 
-The cleanest demonstration is the registry subsystem configuring itself. It reads its own tuning parameters from `Machine\System\Registry\` and applies exactly this discipline to them: a valid value is hot-swapped into effect; an invalid one (out of range, wrong type) is ignored, the previous known-good value is retained, and an audit event is emitted naming the key, the rejected value, and the value still in force. Values are never clamped. The subsystem that owns the entire registry treats its *own* configuration as "stored bytes I must validate before I trust" — see [How the registry boots and configures itself](~peios/registry/bootstrap-and-self-configuration).
+The cleanest demonstration is the registry subsystem configuring itself. It reads its own tuning parameters from `Machine\System\Registry\` and applies exactly this discipline to them: a valid value is hot-swapped into effect; an invalid one (out of range, wrong type) is ignored, the previous known-good value is retained, and an audit event is emitted naming the key, the rejected value, and the value still in force. Values are never clamped. The subsystem that owns the entire registry treats its *own* configuration as "stored bytes I must validate before I trust" — see [How the registry boots and configures itself](~peios/the-registry/bootstrap-and-self-configuration).
 
 ## There is no invalid registry
 
@@ -81,8 +81,8 @@ Briefly, because it is worth knowing the trade rather than dwelling on it: keepi
 
 ## Where to start
 
-If you want to see how a subsystem *notices* a configuration change so it can re-validate and re-apply, read [Watching for changes](~peios/registry/watches).
+If you want to see how a subsystem *notices* a configuration change so it can re-validate and re-apply, read [Watching for changes](~peios/the-registry/watches).
 
-If you want the registry's own bootstrap and self-configuration story — the purest example of reject-or-keep — read [How the registry boots and configures itself](~peios/registry/bootstrap-and-self-configuration).
+If you want the registry's own bootstrap and self-configuration story — the purest example of reject-or-keep — read [How the registry boots and configures itself](~peios/the-registry/bootstrap-and-self-configuration).
 
-If you are ready for the layered model beneath the single value you read, read [Layers](~peios/registry/layers).
+If you are ready for the layered model beneath the single value you read, read [Layers](~peios/the-registry/layers).

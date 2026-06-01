@@ -3,15 +3,15 @@ title: "Advanced: private hives and layers"
 type: concept
 description: "Private hives and private layers give a single caller its own view of the registry — a sandbox or container can see different keys and different values from everyone else, without a separate path namespace. This is an advanced, forward-looking feature: the registry defines the resolution behaviour, while the credential model it depends on is part of KACS and not yet fully specified."
 related:
-  - peios/registry/lcs-and-sources
-  - peios/registry/layers
-  - peios/registry/access-control
-  - peios/registry/overview
+  - peios/the-registry/lcs-and-sources
+  - peios/the-registry/layers
+  - peios/the-registry/access-control
+  - peios/the-registry/overview
 ---
 
 Everything in the core topic describes one shared registry that every process sees the same way (subject to access control). **Private hives** and **private layers** relax that: they let a particular caller see a registry that differs from everyone else's — the building block for sandboxing and container-style isolation.
 
-This is an advanced feature, and a partly forward-looking one. The registry defines how a private hive or layer participates in [resolution](~peios/registry/layers); but *who* is allowed to see one is decided by a thread's credentials, and that credential model is part of KACS and not yet fully specified. Treat this page as the shape of the feature, not a how-to.
+This is an advanced feature, and a partly forward-looking one. The registry defines how a private hive or layer participates in [resolution](~peios/the-registry/layers); but *who* is allowed to see one is decided by a thread's credentials, and that credential model is part of KACS and not yet fully specified. Treat this page as the shape of the feature, not a how-to.
 
 ## Private hives
 
@@ -21,7 +21,7 @@ The powerful case is **shadowing**. A private hive can take the same name as a g
 
 ## Private layers
 
-A **private layer** is a [layer](~peios/registry/layers) that is globally disabled — invisible in normal resolution — but attached to a specific thread's credentials. For that thread, and only that thread, the layer is treated as active and competes in the per-value contest at its precedence exactly like any other layer. Everyone else resolves as if it were not there.
+A **private layer** is a [layer](~peios/the-registry/layers) that is globally disabled — invisible in normal resolution — but attached to a specific thread's credentials. For that thread, and only that thread, the layer is treated as active and competes in the per-value contest at its precedence exactly like any other layer. Everyone else resolves as if it were not there.
 
 This is the lighter-weight tool, for when you want a different *value* here and there rather than a whole separate hive:
 
@@ -37,6 +37,6 @@ The registry defines only the *resolution* behaviour — private hives are check
 
 ## Where to start
 
-For the resolution model these build on — precedence, recency, and the per-value contest — read [Layers](~peios/registry/layers).
+For the resolution model these build on — precedence, recency, and the per-value contest — read [Layers](~peios/the-registry/layers).
 
-For where private hives are routed and served, read [LCS and sources](~peios/registry/lcs-and-sources).
+For where private hives are routed and served, read [LCS and sources](~peios/the-registry/lcs-and-sources).

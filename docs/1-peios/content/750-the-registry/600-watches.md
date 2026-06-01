@@ -3,11 +3,11 @@ title: Watching for changes
 type: concept
 description: The registry is not passive storage you poll — a process can arm a persistent watch on a key or its subtree and be notified when the effective state changes. This page covers the watch model, what watchers see (effective-state changes, with the layering invisible), and the best-effort delivery that means a watcher must be ready to re-read.
 related:
-  - peios/registry/configuration-and-meaning
-  - peios/registry/layers
-  - peios/registry/bootstrap-and-self-configuration
-  - peios/registry/access-control
-  - peios/registry/overview
+  - peios/the-registry/configuration-and-meaning
+  - peios/the-registry/layers
+  - peios/the-registry/bootstrap-and-self-configuration
+  - peios/the-registry/access-control
+  - peios/the-registry/overview
 ---
 
 Configuration changes while the system is running — an administrator edits a value, a role is installed, a policy is applied. A subsystem could poll the registry to notice, but Peios does not make it: the registry can **tell** a process when something it cares about changes. This is what lets services react to configuration instead of repeatedly re-reading it, and it is how the registry behaves as a live configuration backbone rather than a passive store.
@@ -37,13 +37,13 @@ Events describe what changed, by kind:
 
 ## Watchers see effective state, not layers
 
-Here is the important tie-back to [Layers](~peios/registry/layers). A watcher is told about changes to the **effective** value — the winner of the contest — and nothing about the machinery underneath. Delete a layer and cause a value to revert, and the watcher sees a plain "value set" event for its new effective value. Apply a higher-precedence policy that overrides a local setting, and the watcher sees the value change. It never sees "a layer was added" or "a write lost a contest" — only that the answer it would get from a read is now different.
+Here is the important tie-back to [Layers](~peios/the-registry/layers). A watcher is told about changes to the **effective** value — the winner of the contest — and nothing about the machinery underneath. Delete a layer and cause a value to revert, and the watcher sees a plain "value set" event for its new effective value. Apply a higher-precedence policy that overrides a local setting, and the watcher sees the value change. It never sees "a layer was added" or "a write lost a contest" — only that the answer it would get from a read is now different.
 
 This is exactly right: the layering is an implementation of *how* the effective value is chosen, and a watcher only cares *that* it changed. The curtain stays down; the watcher watches the front of it.
 
 ## Committed state only
 
-Watch events fire when a change **commits**, never mid-flight. A [transaction](~peios/registry/lcs-and-sources) that writes many values produces its events as one batch at commit time; a watcher never observes a half-applied transaction, and an aborted one produces no events at all. What a watcher sees is always a state the system actually reached.
+Watch events fire when a change **commits**, never mid-flight. A [transaction](~peios/the-registry/lcs-and-sources) that writes many values produces its events as one batch at commit time; a watcher never observes a half-applied transaction, and an aborted one produces no events at all. What a watcher sees is always a state the system actually reached.
 
 ## Best-effort: be ready to re-read
 
@@ -53,7 +53,7 @@ So a correct watcher is written to do two things — apply individual events whe
 
 ## The reaction loop
 
-Put watches together with [reject-or-keep](~peios/registry/configuration-and-meaning) and you get the pattern that runs throughout Peios. A subsystem watches its own configuration subtree; when a value changes, the watch fires; the subsystem re-reads, re-validates, and either applies the new value or keeps its last known-good one and logs the rejection. KMES does this for its tuning; peinit does it for service definitions; the registry itself does it for its own parameters (see [How the registry boots and configures itself](~peios/registry/bootstrap-and-self-configuration)). Configuration is something you *react to*, and watches are the mechanism.
+Put watches together with [reject-or-keep](~peios/the-registry/configuration-and-meaning) and you get the pattern that runs throughout Peios. A subsystem watches its own configuration subtree; when a value changes, the watch fires; the subsystem re-reads, re-validates, and either applies the new value or keeps its last known-good one and logs the rejection. KMES does this for its tuning; peinit does it for service definitions; the registry itself does it for its own parameters (see [How the registry boots and configures itself](~peios/the-registry/bootstrap-and-self-configuration)). Configuration is something you *react to*, and watches are the mechanism.
 
 ## One subtlety: a watch follows the object
 
@@ -61,8 +61,8 @@ A watch is bound to the specific key object you opened, not to the path string. 
 
 ## Where to start
 
-If you want the registry's own use of watches — how it picks up changes to its own configuration without restarting — read [How the registry boots and configures itself](~peios/registry/bootstrap-and-self-configuration).
+If you want the registry's own use of watches — how it picks up changes to its own configuration without restarting — read [How the registry boots and configures itself](~peios/the-registry/bootstrap-and-self-configuration).
 
-If you want the validation half of the reaction loop — why a changed value might be read and then refused — read [Configuration, not storage](~peios/registry/configuration-and-meaning).
+If you want the validation half of the reaction loop — why a changed value might be read and then refused — read [Configuration, not storage](~peios/the-registry/configuration-and-meaning).
 
-If you want what it takes to be allowed to watch a key, read [Access control on keys](~peios/registry/access-control).
+If you want what it takes to be allowed to watch a key, read [Access control on keys](~peios/the-registry/access-control).

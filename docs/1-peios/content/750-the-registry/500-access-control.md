@@ -3,8 +3,8 @@ title: Access control on keys
 type: concept
 description: "Every registry key is a secured object, governed by the same KACS access check as files, processes, and tokens — checked once at open, cached on the handle. This page covers the registry-specific rights, the surprises (no traversal check; access is per key, not per value), and the sharp interaction with layers: a security change is not reverted when a layer is removed."
 related:
-  - peios/registry/layers
-  - peios/registry/watches
+  - peios/the-registry/layers
+  - peios/the-registry/watches
   - peios/security-descriptors/overview
   - peios/access-decisions/overview
   - peios/file-access/the-handle-model
@@ -36,8 +36,8 @@ A key's DACL is written in terms of rights specific to keys:
 | `KEY_SET_VALUE` | Writing and deleting values. |
 | `KEY_CREATE_SUB_KEY` | Creating child keys. |
 | `KEY_ENUMERATE_SUB_KEYS` | Listing child keys. |
-| `KEY_NOTIFY` | Arming a [watch](~peios/registry/watches). |
-| `KEY_CREATE_LINK` | Creating a [link key](~peios/registry/registry-links) (privileged). |
+| `KEY_NOTIFY` | Arming a [watch](~peios/the-registry/watches). |
+| `KEY_CREATE_LINK` | Creating a [link key](~peios/the-registry/registry-links) (privileged). |
 | `DELETE` | Deleting the key, or hiding it in a layer. |
 | `READ_CONTROL` | Reading the SD and key metadata. |
 | `WRITE_DAC` / `WRITE_OWNER` | Changing the DACL / the owner. |
@@ -45,7 +45,7 @@ A key's DACL is written in terms of rights specific to keys:
 
 The usual convenience bundles apply — `KEY_READ` (query, enumerate, notify, read the SD), `KEY_WRITE` (set values, create subkeys), and `KEY_ALL_ACCESS`.
 
-Ordinary access — reading a value, writing one, creating or listing subkeys — is decided entirely by the key's SD through AccessCheck. **No privilege grants ordinary registry access.** A few privileges appear only where a write means more than storage: establishing a layer that *outranks* others (policy — see [Layers](~peios/registry/layers)), creating a link, or bulk [backup and restore](~peios/registry/lcs-and-sources). Those are special operations, covered where they arise; everyday access is the SD's job alone.
+Ordinary access — reading a value, writing one, creating or listing subkeys — is decided entirely by the key's SD through AccessCheck. **No privilege grants ordinary registry access.** A few privileges appear only where a write means more than storage: establishing a layer that *outranks* others (policy — see [Layers](~peios/the-registry/layers)), creating a link, or bulk [backup and restore](~peios/the-registry/lcs-and-sources). Those are special operations, covered where they arise; everyday access is the SD's job alone.
 
 ## No traversal check
 
@@ -68,11 +68,11 @@ Subsystems that need something tighter than "Authenticated Users can read" set a
 
 ## Watching requires permission to read
 
-Arming a [watch](~peios/registry/watches) needs `KEY_NOTIFY`, so a process cannot monitor a key it could not otherwise observe. One deliberate asymmetry: a *subtree* watcher learns that a descendant key was created or deleted — structural facts — without holding any access to that descendant. It learns that something appeared; it must still open it (and pass AccessCheck) to read what is inside. Structure visibility is intentionally weaker than content visibility.
+Arming a [watch](~peios/the-registry/watches) needs `KEY_NOTIFY`, so a process cannot monitor a key it could not otherwise observe. One deliberate asymmetry: a *subtree* watcher learns that a descendant key was created or deleted — structural facts — without holding any access to that descendant. It learns that something appeared; it must still open it (and pass AccessCheck) to read what is inside. Structure visibility is intentionally weaker than content visibility.
 
 ## The sharp edge: security is not layered
 
-This is where the registry's two big ideas meet, and the result surprises people. [Layers](~peios/registry/what-layers-are-for) revert cleanly — delete a layer and its values fall away. **A security change does not.**
+This is where the registry's two big ideas meet, and the result surprises people. [Layers](~peios/the-registry/what-layers-are-for) revert cleanly — delete a layer and its values fall away. **A security change does not.**
 
 A key's SD is a direct property of the key object. It is *not* tagged with a layer and it is *not* a write in the per-value contest. So when you change a key's DACL — tightening access, say — you are mutating the key itself, permanently. If a role layer existed at the time and is later uninstalled, the values it set revert, but the security change you made stays exactly where it is.
 
@@ -82,8 +82,8 @@ The short version: **layers revert what the system is configured to do; they nev
 
 ## Where to start
 
-If you want to see how a process *reacts* to a change instead of polling for it — and how watch events report effective-state changes with the layering invisible — read [Watching for changes](~peios/registry/watches).
+If you want to see how a process *reacts* to a change instead of polling for it — and how watch events report effective-state changes with the layering invisible — read [Watching for changes](~peios/the-registry/watches).
 
-If you want the kernel/store split underneath all of this — who actually holds the SDs, and the trust boundary that follows — read [LCS and sources](~peios/registry/lcs-and-sources).
+If you want the kernel/store split underneath all of this — who actually holds the SDs, and the trust boundary that follows — read [LCS and sources](~peios/the-registry/lcs-and-sources).
 
 For the broader access model these rights plug into — the AccessCheck pipeline itself — read [Access decisions](~peios/access-decisions/overview).

@@ -3,10 +3,10 @@ title: Keys, values, and types
 type: concept
 description: "The registry's data model is deliberately small — a tree of keys, each holding named typed values, and nothing else. This page covers that two-level structure, the value type set, the rules for names and case, and the one property everything later depends on: the registry stores a value's type but never interprets its data."
 related:
-  - peios/registry/overview
-  - peios/registry/configuration-and-meaning
-  - peios/registry/layers
-  - peios/registry/access-control
+  - peios/the-registry/overview
+  - peios/the-registry/configuration-and-meaning
+  - peios/the-registry/layers
+  - peios/the-registry/access-control
   - peios/file-access/overview
 ---
 
@@ -25,7 +25,7 @@ This two-level rule is a hard constraint, not a convention. When you want struct
 
 ## Keys
 
-A **key** is identified by its path — `Machine\System\KMES` names a key three levels down from the `Machine\` hive root. Each key holds its children and its values, and each key is a first-class secured object with its own [security descriptor](~peios/registry/access-control); that is what makes "who can read or change this configuration" a per-key decision.
+A **key** is identified by its path — `Machine\System\KMES` names a key three levels down from the `Machine\` hive root. Each key holds its children and its values, and each key is a first-class secured object with its own [security descriptor](~peios/the-registry/access-control); that is what makes "who can read or change this configuration" a per-key decision.
 
 A few naming rules apply to each component of a path (each segment between separators):
 
@@ -52,7 +52,7 @@ A value's **type** is a small tag stored alongside its data. The full set:
 | `REG_EXPAND_SZ` | A string containing references to be expanded (e.g. environment variables) by whatever reads it. |
 | `REG_MULTI_SZ` | An array of strings. |
 | `REG_BINARY` | Raw bytes with no further structure. |
-| `REG_LINK` | A symbolic-link target. The one type the registry acts on itself — see [Advanced: registry links](~peios/registry/registry-links). |
+| `REG_LINK` | A symbolic-link target. The one type the registry acts on itself — see [Advanced: registry links](~peios/the-registry/registry-links). |
 | `REG_NONE` | No type / no meaningful data. |
 
 There are also three hardware-resource types carried over for format fidelity. Peios assigns them no meaning — they behave exactly like `REG_BINARY` and the registry never produces them itself. You will essentially never author one.
@@ -66,7 +66,7 @@ So "typed" here means **tagged**, not **validated**. The type travels with the v
 Two consequences follow immediately, and both get their own treatment:
 
 - The registry can hold a value for a subsystem that is not even running, or a setting nobody has read yet. Storage does not require a reader.
-- Whether a value is *valid* is never the registry's verdict. That belongs to whatever reads it — which is the whole subject of [Configuration, not storage](~peios/registry/configuration-and-meaning).
+- Whether a value is *valid* is never the registry's verdict. That belongs to whatever reads it — which is the whole subject of [Configuration, not storage](~peios/the-registry/configuration-and-meaning).
 
 ## Names, case, and paths
 
@@ -84,8 +84,8 @@ Watch the word, because it collides with a different idea. "Volatile" describes 
 
 ## Where to start
 
-If you want the idea that the registry stores values it does not understand — what `regman` documents, what "reject-or-keep" means, and why the value the registry shows can differ from the value a subsystem is using — read [Configuration, not storage](~peios/registry/configuration-and-meaning).
+If you want the idea that the registry stores values it does not understand — what `regman` documents, what "reject-or-keep" means, and why the value the registry shows can differ from the value a subsystem is using — read [Configuration, not storage](~peios/the-registry/configuration-and-meaning).
 
-If you want the layered truth beneath the single value you read — precedence, the base layer, and automatic revert — read [Layers](~peios/registry/layers).
+If you want the layered truth beneath the single value you read — precedence, the base layer, and automatic revert — read [Layers](~peios/the-registry/layers).
 
-If you want the security model — why every key carries a security descriptor and what the registry-specific access rights are — read [Access control on keys](~peios/registry/access-control).
+If you want the security model — why every key carries a security descriptor and what the registry-specific access rights are — read [Access control on keys](~peios/the-registry/access-control).

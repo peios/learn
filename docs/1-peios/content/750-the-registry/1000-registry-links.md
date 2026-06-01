@@ -3,10 +3,10 @@ title: "Advanced: registry links"
 type: concept
 description: A registry key can be a symbolic link to another key — open it and you land on the target. This is the single place the registry interprets a value rather than treating it as opaque bytes. This page covers how links work, how layers can redirect them, and why creating one is privileged.
 related:
-  - peios/registry/keys-values-and-types
-  - peios/registry/layers
-  - peios/registry/access-control
-  - peios/registry/overview
+  - peios/the-registry/keys-values-and-types
+  - peios/the-registry/layers
+  - peios/the-registry/access-control
+  - peios/the-registry/overview
 ---
 
 A registry key can be a **symbolic link** to another key. Open a link key by its path and the registry follows it through to the target, handing you a handle on the target key. Links let one part of the namespace point at another, the way a filesystem symlink does.
@@ -24,7 +24,7 @@ When path resolution reaches a link key, the registry reads that target and cont
 
 ## The one place the registry reads a value
 
-[Keys, values, and types](~peios/registry/keys-values-and-types) made a point of it: the registry stores a value's type and bytes but never interprets them. `REG_LINK` is the single exception. It is the one type the registry acts on itself — following it during path resolution — rather than handing it back untouched. Everything else remains opaque; links are the lone case where the store cares what a value *says*.
+[Keys, values, and types](~peios/the-registry/keys-values-and-types) made a point of it: the registry stores a value's type and bytes but never interprets them. `REG_LINK` is the single exception. It is the one type the registry acts on itself — following it during path resolution — rather than handing it back untouched. Everything else remains opaque; links are the lone case where the store cares what a value *says*.
 
 ## Managing the link itself
 
@@ -38,10 +38,10 @@ There is one safety rule worth knowing: a link target is followed **literally**,
 
 ## Layers can redirect a link
 
-The target is an ordinary [layered](~peios/registry/layers) value — the link key's default value — so it plays by the same rules as any other value. A higher-precedence or more-recent layer can write a *different* `REG_LINK` target and redirect the link; remove that layer and the original target resurfaces, by the usual automatic revert. And if a layer writes a default value that is *not* a `REG_LINK` onto a key that is still flagged as a link, resolution through it fails until the offending layer is removed or overridden. The link's *identity* is fixed at creation; its *target* is just configuration, and configuration is layered.
+The target is an ordinary [layered](~peios/the-registry/layers) value — the link key's default value — so it plays by the same rules as any other value. A higher-precedence or more-recent layer can write a *different* `REG_LINK` target and redirect the link; remove that layer and the original target resurfaces, by the usual automatic revert. And if a layer writes a default value that is *not* a `REG_LINK` onto a key that is still flagged as a link, resolution through it fails until the offending layer is removed or overridden. The link's *identity* is fixed at creation; its *target* is just configuration, and configuration is layered.
 
 ## Where to start
 
-For the opaque-value rule this is the exception to, read [Keys, values, and types](~peios/registry/keys-values-and-types).
+For the opaque-value rule this is the exception to, read [Keys, values, and types](~peios/the-registry/keys-values-and-types).
 
-For how a layer can redirect or break a link, read [Layers](~peios/registry/layers).
+For how a layer can redirect or break a link, read [Layers](~peios/the-registry/layers).
