@@ -32,6 +32,6 @@ The following terms are used throughout this specification with the precise mean
 
 **Ring buffer**: A per-CPU shared memory region created and managed by KMES, mapped into the address space of authorized userspace consumers. Each buffer consists of a producer metadata page (mapped read-only), a consumer metadata page (mapped read-write for consumer notification state), and a data region (mapped read-only, double virtual mapped). KMES maintains one ring buffer per CPU. Each buffer is independent, with its own write position, sequence counter, and futex notification. Ring buffers are the sole delivery mechanism from KMES to userspace.
 
-**Boot buffer**: Internal per-CPU kernel buffers used by KMES to capture events during early boot, before the registry is available and the consumer-facing ring buffers are created. One boot buffer exists per CPU. Boot buffers are not visible to consumers. When the ring buffers are created, surviving boot buffer events are copied into them.
+**Boot-time ring buffer**: The ordinary per-CPU KMES ring buffers created during KMES initialisation using compiled-in defaults. These buffers are the live consumer-facing buffers once consumers attach; there is no separate private boot-buffer copy phase in v0.20.
 
 **Consumer**: A userspace process that maps one or more KMES ring buffers and reads events from them. Consumers typically dedicate one thread per CPU buffer. eventd is the primary consumer.

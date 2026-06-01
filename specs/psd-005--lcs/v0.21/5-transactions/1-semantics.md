@@ -128,6 +128,22 @@ transaction. On successful commit, LCS uses the mutation log and
 source queries as needed to compute effective-state changes and emit
 watch events.
 
+If a successful or late-successful source commit requires source
+queries only to derive transaction watch events, and those replay
+snapshot queries cannot complete exactly, LCS MUST NOT reinterpret the
+already-successful source commit as a failed commit. LCS MUST NOT emit
+normal per-change watch events from incomplete replay data. Instead,
+LCS MUST deliver OVERFLOW to affected watchers, release retained
+transaction replay state once overflow recovery is selected, and
+continue to report the transaction commit as successful. If an RSI
+request had already been dispatched before timeout, its in-flight
+request record remains retained under §10.1 until a matching response
+or source teardown; the late response is validated normally but does
+not resurrect normal transaction watch events after overflow recovery
+has been selected. Malformed replay snapshot source data and malformed
+replay snapshot protocol follow the source-validation and teardown
+rules in §10.1.
+
 If REG_IOC_COMMIT returns EBUSY or a synchronous EIO before the
 transaction reaches a terminal state, the transaction remains
 ACTIVE_BOUND. LCS MUST retain the mutation log, MUST NOT emit normal

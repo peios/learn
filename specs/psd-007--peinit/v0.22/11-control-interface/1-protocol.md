@@ -36,6 +36,29 @@ about message boundaries.
 Field names, types, and value formats in JSON examples throughout
 this specification are normative.
 
+### Error codes
+
+The `code` field of an error response MUST be one of the following
+canonical values. The `message` field is human-readable and
+non-normative.
+
+| Code | Meaning |
+|---|---|
+| `ACCESS_DENIED` | AccessCheck denied the command against the target SD. |
+| `UNKNOWN_SERVICE` | The named service has no definition. |
+| `UNKNOWN_OPERATION` | The operation GUID is not known -- it never existed, or was dropped after its retention grace (§8.1). |
+| `MALFORMED_REQUEST` | The request line is not a single valid JSON object, or is not parseable. |
+| `REQUEST_TOO_LARGE` | The request exceeds `MaxRequestSize`. |
+| `INVALID_COMMAND` | The `command` field is missing or names no known command. |
+| `INVALID_ARGUMENTS` | Required fields for the command are missing or malformed (e.g. `shutdown` without a valid `type`). |
+| `INVALID_STATE` | The command is not valid for the service's current state -- the `ERROR` cells of the command x state matrix (§11.2). |
+| `OPERATION_TIMEOUT` | A `wait=true` request's operation did not reach a terminal state within its timeout. |
+| `INTERNAL_ERROR` | peinit encountered an internal failure while executing the command. |
+
+Connections that exceed `MaxControlConnections` are rejected at the
+socket level before any request is read; that rejection is a
+connection close, not one of the error codes above.
+
 ### Peer authentication
 
 When a client connects, peinit MUST obtain the caller's identity
@@ -73,6 +96,13 @@ peinit MUST enforce hard limits on the control socket:
 Connections exceeding MaxControlConnections MUST be rejected.
 Requests exceeding MaxRequestSize MUST be rejected. Idle
 connections exceeding ConnectionTimeout MUST be closed.
+
+A connection is "idle" only when it has no in-flight request. A
+connection blocked awaiting completion of a `wait=true` operation
+MUST NOT be treated as idle, even when the operation runs longer
+than ConnectionTimeout. peinit MUST keep such a connection open
+until the operation resolves, bounded by the operation's own
+timeout (e.g. StartTimeout) rather than ConnectionTimeout.
 
 ## Notify socket
 
@@ -173,9 +203,11 @@ following situations:
 - **Explicit stop:** when a service is stopped by an administrator
   or by shutdown (not a crash-triggered restart). The fds are no
   longer useful -- the service is not coming back.
-- **Service removal:** when a service definition is removed from
-  the registry. All associated state, including stored fds, is
-  discarded.
+- **Service removal:** when a service definition is removed and its
+  entry is finally discarded -- immediately if the service was not
+  running, or on the running instance's exit otherwise (§3.5). All
+  associated state, including stored fds, is discarded at that
+  point.
 
 The fd store survives across automatic restarts (crash -> restart
 policy -> new start). This is the entire point of the mechanism --
@@ -196,11 +228,18 @@ peinit connects to three services:
 
 | Service | Purpose | Protocol | Failure behaviour |
 |---|---|---|---|
-| registryd | Service definitions, mount config, boot settings. | LCS syscalls (boot); in-memory cache + change notifications (runtime). | Phase 1: recovery mode. Runtime: operates on cached model. |
-| authd | Service tokens. | JSON over Unix stream socket (non-blocking, state-machine driven with timeout). | Non-SYSTEM services cannot start. Platform services unaffected. |
-| eventd | Forward logs, drain pre-eventd ring buffer. | JSON over Unix stream socket (non-blocking). | Logs accumulate in pre-eventd ring buffer. Buffer is bounded. |
+| registryd | Service definitions, boot settings. | LCS syscalls (boot); in-memory cache + change notifications (runtime). | Phase 1: recovery mode. Runtime: operates on cached model. |
+| authd | Service tokens. | JSON over Unix stream socket (non-blocking, state-machine driven with timeout). Provisional -- wire schema, socket path, and fd-passing are deferred to the authd spec (§3.3). | Non-SYSTEM services cannot start. Platform services unaffected. |
+| eventd | Forward service stdout/stderr (logs only). | msgpack over a Unix **datagram** socket at `Machine\System\eventd\LogSocketPath` (non-blocking, loss-tolerant). | Logs buffered pre-eventd, then best-effort replayed. Datagrams may drop under load -- no backpressure. |
 
-All outbound IPC MUST be non-blocking. authd and eventd use Unix
-stream sockets with epoll. Token requests to authd are state-
-machine driven with timeouts -- if authd is unresponsive, the
-service start fails rather than PID 1 hanging.
+All outbound IPC MUST be non-blocking. authd uses a Unix stream
+socket with epoll; eventd's log socket is a Unix datagram socket.
+Token requests to authd are state-machine driven with timeouts --
+if authd is unresponsive, the service start fails rather than PID 1
+hanging.
+
+Structured events (job and operation lifecycle, audit records) are
+NOT sent over any of these sockets. peinit emits them via the KMES
+`kmes_emit` / `kmes_emit_batch` syscalls into the kernel ring
+buffer, whence eventd consumes them. KMES is the sole event path
+(PSD-003) -- there is no event socket to eventd.

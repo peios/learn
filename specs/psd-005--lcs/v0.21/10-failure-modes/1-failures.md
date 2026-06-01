@@ -63,6 +63,13 @@ If a source does not respond within RequestTimeoutMs (default
   request record and produces no normal watch or generation effects.
   A late successful `RSI_COMMIT_TRANSACTION` is a mutating response
   and applies the retained transaction commit kernel effects.
+- If a post-commit replay snapshot request used only to derive
+  transaction watch events times out or otherwise cannot provide exact
+  replay data, the transaction remains committed and §5.1 overflow
+  recovery applies. Post-dispatch request records remain retained until
+  a matching response or source teardown, but late responses do not
+  resurrect normal transaction watch events after overflow recovery has
+  been selected.
 - A malformed late response follows normal malformed-data or
   malformed-protocol rules. If LCS cannot safely process the
   kernel-side effects of a possibly-applied mutation because required
@@ -143,8 +150,9 @@ on live state follow from the data model with no special cases:
   deleted layer's blanket tombstone become visible.
 - **SDs unchanged.** SD modifications are permanent (semantic
   rule 4).
-- **Watches notified.** Appropriate events generated for all
-  effective state changes.
+- **Watches notified.** Appropriate specific events or layer-wide
+  OVERFLOW recovery are generated for effective state changes as
+  specified in §4.1.
 
 ## Memory bounding
 

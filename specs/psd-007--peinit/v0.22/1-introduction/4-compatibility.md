@@ -18,8 +18,10 @@ intentional and maintained.
 peinit supports the sd_notify datagram protocol for service-to-
 init communication. Services send `KEY=VALUE` messages to a Unix
 datagram socket whose path is provided via the `NOTIFY_SOCKET`
-environment variable. peinit authenticates senders via kernel-
-attested PID matching.
+environment variable. A single datagram MAY carry multiple
+newline-separated `KEY=VALUE` lines (as in systemd); peinit MUST
+parse and apply every line in the datagram. peinit authenticates
+senders via kernel-attested PID matching.
 
 The following sd_notify fields are supported:
 
@@ -28,9 +30,9 @@ The following sd_notify fields are supported:
 | `READY=1` | Service has completed startup and is ready to serve. Gates dependent startup for services using Notify readiness. |
 | `RELOADING=1` | Service is reloading configuration. Extends the reload detection window so peinit waits for `READY=1` completion (§5.3). |
 | `STOPPING=1` | Service is shutting down gracefully. Acknowledged by peinit. |
-| `STATUS=...` | Human-readable status string. Forwarded to eventd and exposed via status queries. |
-| `ERRNO=...` | Errno-style error number. Forwarded to eventd. |
-| `EXIT_STATUS=...` | Exit status for informational purposes. Forwarded to eventd. |
+| `STATUS=...` | Human-readable status string. Emitted as a KMES event and exposed via status queries. |
+| `ERRNO=...` | Errno-style error number. Emitted as a KMES event. |
+| `EXIT_STATUS=...` | Exit status for informational purposes. Emitted as a KMES event. |
 | `WATCHDOG=1` | Keepalive ping. Resets the watchdog timer. |
 | `WATCHDOG_USEC=...` | Updates the watchdog timeout at runtime. |
 | `EXTEND_TIMEOUT_USEC=...` | Requests additional time during start, stop, or reload transitions. |
@@ -50,6 +52,15 @@ Unrecognised fields are silently ignored. This ensures forward
 compatibility -- a service compiled against a newer sd_notify
 specification will not break when running under peinit.
 
+A malformed sd_notify line is not an unrecognised field. Empty
+lines are ignored. A non-empty line is malformed if it lacks `=`,
+has an empty key, or otherwise cannot be split into `KEY=VALUE`
+form. If any line in a datagram is
+malformed, peinit MUST reject the entire datagram, apply no fields
+from it, and log the rejection after sender authentication if a
+service attribution is available. This prevents partial application
+of ambiguous service-control messages.
+
 The exact semantics of each field are defined in their respective
 sections: sender authentication and peer identity in §11.1,
 state transitions (READY=1, RELOADING=1) and watchdog keepalives
@@ -58,15 +69,16 @@ state transitions (READY=1, RELOADING=1) and watchdog keepalives
 §10.1, fd store lifecycle (FDSTORE, FDNAME, FDSTOREREMOVE, FDPOLL)
 in §11.1, and STATUS= exposure in §11.2.
 
-`STATUS=`, `ERRNO=`, and `EXIT_STATUS=` are forwarding fields:
-peinit MUST authenticate the sender, then forward the value to
-eventd as a structured event tagged with the service name and job
-GUID. `STATUS=` is additionally stored on the service's runtime
-state and exposed via the `status_text` field in status query
-responses. `ERRNO=` and `EXIT_STATUS=` are not stored -- they
-are forwarded to eventd and discarded. All three fields MUST be
-subject to the same sender authentication as other sd_notify
-messages.
+`STATUS=`, `ERRNO=`, and `EXIT_STATUS=` are event-emitting fields:
+peinit MUST authenticate the sender, then emit the value as a
+structured KMES event (`kmes_emit`) whose msgpack payload carries
+the service name and job GUID -- the same event path as job and
+operation lifecycle events (§7.1, §8.1), not a forward to eventd.
+`STATUS=` is additionally stored on the service's runtime state and
+exposed via the `status_text` field in status query responses.
+`ERRNO=` and `EXIT_STATUS=` are not stored -- they are emitted as
+events and otherwise not retained. All three fields MUST be subject
+to the same sender authentication as other sd_notify messages.
 
 ## Calendar expressions
 
@@ -77,11 +89,13 @@ DayOfWeek Year-Month-Day Hour:Minute:Second Timezone
 ```
 
 Each field supports wildcards (`*`), lists (`1,15`), ranges
-(`Mon..Fri`), repetition (`*-*-* *:00/15:00`), and last-day-of-
-month (`~`). Timezone specifiers (e.g., `Europe/London`,
-`US/Eastern`) are supported; expressions without a timezone are
-interpreted in system-local time. The shortcuts `daily`, `hourly`,
-`weekly`, and `monthly` are supported.
+(`Mon..Fri`), repetition (`*-*-* *:0/15:00`), and last-day-of-month
+counting (`Year-Month~Day`, where `~01` is the last day). Timezone
+specifiers (e.g., `Europe/London`, `US/Eastern`) are supported;
+expressions without a timezone are interpreted in system-local
+time. systemd's named shortcuts (`minutely`, `hourly`, `daily`,
+`weekly`, `monthly`, `quarterly`, `semiannually`,
+`yearly`/`annually`) are supported.
 
 DST transitions are handled as follows:
 

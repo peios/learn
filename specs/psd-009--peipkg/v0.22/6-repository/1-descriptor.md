@@ -166,8 +166,10 @@ sensible default.
 
 The descriptor itself MUST be accompanied by a detached
 signature published at `<repo-base>/repo.json.sig`. The
-signature is over the descriptor file's exact bytes,
-encoded as Ed25519 base64 (RFC 4648 §4) without padding.
+detached signature is a signature envelope (§5.1.3) whose
+signature is over the SHA-256 digest of the descriptor
+file's exact bytes — the same signing scheme as a package
+signature (§5.1).
 
 The signing key MUST be one of the keys listed in the
 descriptor's `repo.signing.keys` array (any key with

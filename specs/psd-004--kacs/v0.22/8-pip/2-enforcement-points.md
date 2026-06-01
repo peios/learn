@@ -200,7 +200,7 @@ same process are not process-boundary operations. In that same-process case,
 the process-SD and PIP process-boundary checks do not apply, but
 `SeProfileSingleProcessPrivilege` is still required.
 
-Linux 6.19 resolves the target task after the stock `security_perf_event_open`
+Linux 7.0 resolves the target task after the stock `security_perf_event_open`
 hook has fired, so KACS enforces this rule through a target-resolved syscall
 path patch rather than by relying on that hook alone.
 

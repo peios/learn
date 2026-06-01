@@ -10,16 +10,20 @@ registered sources.
 
 | Field | Type | Description |
 |---|---|---|
-| Name | string | Unique hive name (e.g., "Machine", "Users"). Case-insensitive. |
+| Name | string | Hive name (e.g., "Machine", "Users"). Case-insensitive; unique within its route scope as described below. |
 | Root GUID | GUID | The GUID of the hive's root key. Provided by the source at registration. |
 | Source | fd reference | The char device fd of the source backing this hive. |
 | Status | enum | Active or Unavailable. Tracks source connectivity. |
 
 ## Constraints
 
-- A hive name MUST be unique across all registered sources. A source
-  attempting to register a hive name already claimed by another source
-  MUST be rejected.
+- A hive route identity is the tuple `(case-folded hive name, scope)`,
+  where scope is either the global hive namespace or one private scope
+  GUID. A hive route identity MUST be unique across all registered
+  sources. A source attempting to register a route identity already
+  claimed by another source MUST be rejected. The same hive name MAY
+  appear in different scopes; this is how private hives shadow global
+  hives without colliding with them.
 
 - A hive is backed by exactly one source. A source MAY back multiple
   hives.

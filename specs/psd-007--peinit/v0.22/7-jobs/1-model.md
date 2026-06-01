@@ -106,7 +106,7 @@ short-lived process execution.
 - A service tracks its **current job GUID**. Status queries include
   it.
 - When a service restarts, a new job is created. The old job's data
-  was already emitted to eventd.
+  was already emitted as a KMES event.
 - Job history for a service is queryable via eventd.
 
 ### Ownership
@@ -129,15 +129,18 @@ short-lived process execution.
 
 peinit tracks active jobs in memory. When a job reaches a terminal
 state (Completed, Failed, Abandoned), peinit MUST emit a
-structured event to eventd containing the full job record, then
-drop the job from memory.
+structured event via KMES (`kmes_emit`) containing the full job
+record, then drop the job from memory.
 
-peinit does not maintain job history. eventd is the historian.
+peinit does not maintain job history. eventd is the historian --
+it consumes these events from the KMES kernel ring buffer.
 
-## eventd integration
+## Event emission
 
-peinit MUST emit structured events to eventd at each job lifecycle
-transition:
+peinit MUST emit structured events via KMES (`kmes_emit` /
+`kmes_emit_batch`; eventd consumes them from the kernel ring
+buffer, not over any socket from peinit -- see §11.1) at each job
+lifecycle transition:
 
 **job.created** -- job object created. Includes job_id, service
 name, type, image_path, identity, operation_id.
@@ -148,7 +151,14 @@ path.
 **job.ended** -- process exited or was killed. Includes job_id,
 final state, exit_code or exit_signal, duration, failure_cause.
 
-All stdout/stderr from a job's process MUST be tagged with the job
-GUID when forwarded to eventd. This allows queries like "show me
+The event `type` is the dotted string above (`job.created`, …); the
+listed per-event fields form the event **payload**, encoded as
+msgpack per the KMES event-record format (PSD-003). The same
+encoding applies to the operation events in §8.1.
+
+All stdout/stderr from a job's process MUST be forwarded to
+eventd's log socket with the job's GUID in the log record's
+`job_id` field (PSD-008 §4.2) -- this is the log path, distinct
+from the KMES event path above. It allows queries like "show me
 logs for job X" to return exactly the output from that execution,
 not interleaved with previous or subsequent runs.

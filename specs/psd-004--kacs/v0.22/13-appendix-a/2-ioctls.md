@@ -23,7 +23,7 @@ Requires TOKEN_QUERY (0x0008).
 | TokenSource | 8-byte name + source ID. |
 | TokenType | Primary (1) or Impersonation (2). |
 | TokenImpersonationLevel | Anonymous / Identification / Impersonation / Delegation. Primary tokens return Anonymous. |
-| TokenStatistics | Token GUID, LogonSession ID, modified ID, token type, expiration. |
+| TokenStatistics | Token ID, LogonSession ID, modified ID, token type, expiration. |
 | TokenRestrictedSids | Restricting SID array. |
 | TokenInteractivityScope | Interactivity scope number. |
 | TokenOrigin | Originating LogonSession ID. |
@@ -80,9 +80,8 @@ process SD is preserved.
 - SeAssignPrimaryTokenPrivilege on the caller's real token.
 - The new token's user SID MUST match the caller's current primary token's user SID, unless the caller has SeTcbPrivilege.
 - The new token MUST belong to the same LogonSession (matching `auth_id`) as the caller's current primary token, unless the caller has SeTcbPrivilege.
-- The new token's LogonSession MUST NOT be dead.
 
-The SID and LogonSession constraints prevent a non-TCB holder of SeAssignPrimaryTokenPrivilege from installing an arbitrary high-privilege token on itself. SeTcbPrivilege bypasses the SID and LogonSession-matching constraints — this is the mechanism peinit uses when installing service tokens with different user SIDs. The dead-LogonSession check is unconditional (SeTcbPrivilege does not bypass it).
+The SID and LogonSession constraints prevent a non-TCB holder of SeAssignPrimaryTokenPrivilege from installing an arbitrary high-privilege token on itself. SeTcbPrivilege bypasses the SID and LogonSession-matching constraints — this is the mechanism peinit uses when installing service tokens with different user SIDs.
 
 ## KACS_IOC_DUPLICATE
 

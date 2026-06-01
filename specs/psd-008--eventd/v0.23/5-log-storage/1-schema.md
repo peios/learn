@@ -14,8 +14,9 @@ The log store is a single SQLite database. It MUST contain a `logs` table with t
 | `origin` | TEXT NOT NULL | Name of the service or component that produced the log line. |
 | `is_error` | INTEGER NOT NULL | 1 if the log line came from stderr or was explicitly marked as error. 0 otherwise. |
 | `message` | TEXT NOT NULL | The log text. |
+| `job_id` | BLOB | 16-byte GUID of the job that produced this line, when peinit forwarded it with a job correlation. NULL for direct logging or output with no associated job. |
 
-The log schema is deliberately minimal. Logs are text with light metadata. There are no payload blobs, no identity GUIDs, no origin classes. Services that need richer structure should emit events.
+The log schema is deliberately minimal. Logs are text with light metadata: the originating service, an error flag, a timestamp, and an optional job-correlation GUID. There are no payload blobs and no origin classes; the only identity-like field is the optional `job_id` correlation key. Services that need richer structure should emit events.
 
 ## Write-time indexes
 
@@ -23,6 +24,7 @@ At database creation, eventd MUST create the following indexes:
 
 - `idx_logs_timestamp` on `logs(timestamp)` -- required for time-range queries.
 - `idx_logs_origin` on `logs(origin)` -- required for service-filtered queries, the most common log access pattern ("show me logs from service X").
+- `idx_logs_job_id` on `logs(job_id) WHERE job_id IS NOT NULL` -- a partial index supporting per-job log queries ("show me logs for job X"). Partial because direct-logged lines carry no `job_id`, so only correlated lines are indexed.
 
 The log store does not use adaptive indexing. The schema is narrow and the two write-time indexes cover the dominant query patterns. Additional indexes are not expected to provide meaningful benefit.
 

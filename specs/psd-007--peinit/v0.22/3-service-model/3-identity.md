@@ -6,7 +6,8 @@ Every service process runs with a KACS token that determines its
 identity and access rights. peinit is responsible for obtaining or
 creating the token and installing it on the child process before
 exec. peinit MUST NOT share its own SYSTEM token directly with any
-service -- even `Identity=SYSTEM` services receive a clone.
+service -- even `Identity=SYSTEM` services receive a separately
+materialised token of their own.
 
 ## Token materialisation
 
@@ -14,16 +15,29 @@ Token materialisation depends on the Identity field:
 
 | Identity value | Token source | Mechanism |
 |---|---|---|
-| `SYSTEM` | Clone of peinit's token | `kacs_duplicate_token`. Produces an independent copy. |
+| `SYSTEM` | Minted by peinit from its own SYSTEM identity | `kacs_create_token` (see SYSTEM path below). |
 | Any other value | authd | Normal authd flow (below). |
 | Absent or empty | authd | Defaults to `LocalService`. |
 
 ### SYSTEM path
 
-peinit MUST clone its own SYSTEM token via `kacs_duplicate_token`
-(or equivalent KACS syscall). The clone is an independent copy --
-mutations to the clone (privilege stripping, per-service SID
-addition) MUST NOT affect peinit's original token.
+peinit MUST materialise an independent SYSTEM token by minting one
+with `kacs_create_token`, using its own token as the template:
+peinit reads its own SYSTEM token via `kacs_open_self_token` (user
+SID `S-1-5-18`, group list, and privilege set) and mints a new
+primary token with that same identity, adding the per-service SID
+to the group list (see Per-service SID). The minted token is fully
+independent -- the later privilege restriction MUST NOT affect
+peinit's own token. Minting requires peinit to hold
+`SeCreateTokenPrivilege`, which the boot SYSTEM token carries.
+
+> [!INFORMATIVE]
+> Minting is an interim mechanism. The intended model is for peinit
+> to *derive* the token from its own token handle via a KACS
+> duplicate-with-additions operation -- kernel-attested as a
+> descendant of peinit's real token, and requiring no token-minting
+> privilege. That operation does not exist in KACS yet; until it is
+> added (a tracked KACS dependency), peinit mints.
 
 ### authd path
 
@@ -44,7 +58,16 @@ a token:
 peinit does not know or care whether the identity is local or
 domain. The routing is authd's responsibility.
 
-## Per-service SID
+**External dependency (authd).** The steps above describe what
+peinit requires of authd -- send the Identity value, receive a
+materialised token fd -- not the wire interface. authd's
+request/response schema, its socket path, and the fd-passing
+mechanism (expected to be `SCM_RIGHTS` over a Unix socket) are
+owned by authd, and no authd spec exists yet (authd's design is
+deliberately deferred until KACS and the registry are settled).
+Every non-SYSTEM service start depends on this interface; it is not
+fully implementable from PSD-007 alone, and this path becomes
+normative once authd is specified.
 
 Every service token MUST carry a per-service SID in its group
 list. The SID uses authority `S-1-5-80` and is derived from the
@@ -55,8 +78,9 @@ sub-authorities.
 
 - **authd-minted tokens:** authd adds the per-service SID
   automatically.
-- **SYSTEM tokens:** peinit adds the per-service SID to the cloned
-  token directly. The SID is a deterministic hash -- no authd
+- **SYSTEM tokens:** peinit includes the per-service SID in the
+  group list when it mints the token (`kacs_create_token`; see
+  SYSTEM path). The SID is a deterministic hash -- no authd
   involvement is needed.
 
 Per-service SIDs enable fine-grained access control even when
@@ -72,13 +96,17 @@ token:
 
 1. Read the RequiredPrivileges list from the service definition.
 2. Remove every privilege NOT in the list from the token's
-   **present** bitmask via `kacs_restrict_token` (or equivalent
-   KACS syscall).
+   **present** bitmask via the `KACS_IOC_ADJUST_PRIVS` ioctl on the
+   token fd -- one `kacs_priv_entry` per removed privilege, carrying
+   the privilege-removed attribute, and requiring the
+   `KACS_TOKEN_ADJUST_PRIVS` right on the fd. peinit MUST NOT use
+   `KACS_IOC_RESTRICT`: that builds a restricted-SID token and does
+   not alter the privilege bitmask.
 
 Restriction is purely subtractive -- peinit removes privileges but
 MUST NOT add them. The enabled, enabled-by-default, and exercised
-bitmasks are left as the token source (authd or the SYSTEM clone)
-set them. Enable policy is authd's domain.
+bitmasks are left as the token source (authd or the minted SYSTEM
+token) set them. Enable policy is authd's domain.
 
 If RequiredPrivileges is absent, the token's default privilege set
 is used unchanged.
@@ -93,10 +121,11 @@ within a service:
 | Main process | Service's Identity field. |
 | ExecStartPre / ExecStartPost | HookIdentity field if set, otherwise the service's Identity field. |
 | Health checks | Service's Identity field (always). |
+| ExecReload (external command) | Service's Identity field (always); HookIdentity does not apply. |
 | Ad-hoc jobs | Token provided by JFS (caller's effective token). |
 
-If HookIdentity names `SYSTEM`, peinit clones its own token for
-the hook. If HookIdentity names any other principal, peinit
+If HookIdentity names `SYSTEM`, peinit mints a SYSTEM token (SYSTEM
+path) for the hook. If HookIdentity names any other principal, peinit
 requests a token from authd.
 
 > [!INFORMATIVE]

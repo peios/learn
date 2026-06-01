@@ -10,7 +10,7 @@ Mint a new token from scratch. The caller provides the security-meaningful conte
 
 **Gated by:** `SeCreateTokenPrivilege`.
 
-**Caller-supplied fields:** `user_sid`, `groups` (with attributes), privileges (`privs_present` + `privs_enabled`), `owner_sid_index`, `primary_group_index`, `default_dacl`, `integrity_level`, `mandatory_policy`, `token_type`, `impersonation_level`, `auth_id` (MUST reference an existing logon session), `expiration` (0 = no expiry), `audit_policy`, `source` (name + LUID), `user_claims`, `device_claims`, `device_groups`, `restricted_sids`, `restricted_device_groups`, `confinement_sid`, `confinement_capabilities`, `confinement_exempt`, `isolation_boundary`, `write_restricted`, `user_deny_only`, `projected_uid`, `projected_gid`, `projected_supplementary_gids`, `origin`, `interactive_session_id`. See §13.6 for the complete wire format.
+**Caller-supplied fields:** `user_sid`, `groups` (with attributes), privileges (`privs_present` + `privs_enabled`), `owner_sid_index`, `primary_group_index`, `default_dacl`, `integrity_level`, `mandatory_policy`, `token_type`, `impersonation_level`, `auth_id` (MUST reference an existing logon session), `expiration` (0 = no expiry), `audit_policy`, `source` (name + LUID), `user_claims`, `device_claims`, `lcs_scope_guids`, `lcs_private_layers`, `device_groups`, `restricted_sids`, `restricted_device_groups`, `confinement_sid`, `confinement_capabilities`, `confinement_exempt`, `isolation_boundary`, `write_restricted`, `user_deny_only`, `projected_uid`, `projected_gid`, `projected_supplementary_gids`, `origin`, `interactive_session_id`. See §13.6 for the complete wire format.
 
 **Kernel-generated fields:** `token_id` (LUID), `token_guid` (UUIDv4), `modified_id` (initialized to `token_id`), `created_at` (current time), `elevation_type` (always Default), `logon_sid` (derived from `session_id` as `S-1-5-5-{session_id >> 32}-{session_id & 0xFFFFFFFF}`), token SD (default SD per §4.8).
 
@@ -29,6 +29,13 @@ The kernel validates:
 9. `elevation_type` field in the wire format MUST be 0 (reserved). The kernel always sets Default.
 10. The caller-supplied group count plus the kernel-injected logon SID MUST
     fit the 1024-entry token group limit.
+11. The optional LCS registry credential extension, when present, MUST use the
+    version and layout defined in §13.6, MUST contain at most 256 scope GUIDs,
+    MUST contain at most 256 private layer names, MUST NOT contain the nil
+    scope GUID, MUST NOT contain duplicate scope GUIDs, MUST NOT contain empty
+    or overlong private layer names, and MUST NOT contain duplicate private
+    layer names under LCS case-insensitive matching. Malformed LCS registry
+    credentials MUST cause CreateToken to fail closed.
 
 The kernel MUST NOT authenticate the user, look up SIDs in the directory, resolve SID-to-UID mappings, or validate that the principal exists. The caller is trusted as TCB by virtue of holding `SeCreateTokenPrivilege`.
 
@@ -66,6 +73,7 @@ Fields on the new token:
 - `interactive_session_id` — copied from source.
 - `default_dacl`, `owner_sid_index`, `primary_group_index` — copied from source.
 - `user_claims`, `device_claims`, `device_groups`, `restricted_device_groups` — copied from source.
+- `lcs_scope_guids`, `lcs_private_layers` — copied from source.
 - `confinement_sid`, `confinement_capabilities`, `confinement_exempt` — copied from source.
 - `projected_uid`, `projected_gid`, `projected_supplementary_gids` — copied from source.
 - Token SD — new default SD per §4.8. The caller cannot supply a custom SD at duplication time; use WRITE_DAC on the new handle to modify afterward if needed.
@@ -110,6 +118,7 @@ FilterToken creates a new token object. The original is untouched. Fields on the
 - `auth_id`, `origin`, `source`, `created_at`, `expiration`, `audit_policy` — copied from source.
 - `default_dacl`, `owner_sid_index`, `primary_group_index` — copied from source.
 - `user_claims`, `device_claims`, `device_groups`, `restricted_device_groups` — copied from source.
+- `lcs_scope_guids`, `lcs_private_layers` — copied from source.
 - `confinement_sid`, `confinement_capabilities`, `confinement_exempt` — copied from source.
 - `projected_uid`, `projected_gid`, `projected_supplementary_gids` — copied from source.
 - Token SD — new default SD per §4.8.

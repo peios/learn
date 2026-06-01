@@ -61,18 +61,36 @@ affected value name.
 Watchers do not need to understand blanket tombstones. They see
 per-value effective state changes.
 
-### Layer operation events
+### Layer and restore operation events
 
 When a layer is deleted, changes precedence, or is enabled/disabled,
 LCS determines which keys and values have changed effective state
-and generates the appropriate events. This may produce a large burst
-of events -- the overflow mechanism handles this naturally.
+when the affected diff is bounded by retained mutation context and
+generates the appropriate events. This may produce a large burst of
+events -- the overflow mechanism handles this naturally.
 
-LCS MUST detect and emit events for ALL effective state changes
-caused by layer operations. A watch MUST observe every change to
-the effective value of a watched key, regardless of whether the
-change was caused by a direct write, a layer deletion, a precedence
-change, or a blanket tombstone.
+Layer-wide operations may affect arbitrary descendants for which
+LCS does not retain exact per-key or per-value mutation context. In
+that case LCS MUST increment the affected hive generation and enqueue
+OVERFLOW for every armed watch on the affected source or hive instead
+of emitting an incomplete exact diff. The OVERFLOW event is the
+notification for those layer-wide effective-state changes; the
+watcher MUST re-read as described above.
+
+REG_IOC_RESTORE is an atomic subtree replacement whose pre-restore
+and post-restore effective-state diff is not retained by LCS as an
+exact per-key or per-value mutation log. On successful restore, LCS
+MUST increment the affected hive generation and enqueue OVERFLOW for
+armed watches on the affected restore source or hive instead of
+emitting an incomplete exact diff. Failed or aborted restores MUST
+NOT emit normal watch events for uncommitted restore mutations.
+
+A watch MUST observe every change to the effective value of a
+watched key, regardless of whether the change was caused by a direct
+write, a layer deletion, a precedence change, or a blanket tombstone.
+Observation may be by exact VALUE_*/SUBKEY_* events or by OVERFLOW
+recovery where this section permits layer-wide or restore recovery
+dispatch.
 
 ## Event format
 

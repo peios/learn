@@ -36,6 +36,7 @@ Administrators (`S-1-5-32-544`) query and stop rights.
 | SERVICE_START | 0x0002 | Start the service. |
 | SERVICE_STOP | 0x0004 | Stop the service. |
 | SERVICE_INTERROGATE | 0x0008 | Reload the service. |
+| SERVICE_ALL_ACCESS | 0x000F | The union of all rights above. This is the "full access" granted to SYSTEM in the default SD. |
 
 Restart requires both SERVICE_STOP and SERVICE_START.
 

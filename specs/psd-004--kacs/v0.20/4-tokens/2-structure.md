@@ -112,6 +112,19 @@ input. Marking a privilege used MUST remain monotonic, but it MUST NOT bump
 | `user_claims` | CLAIM_ATTRIBUTES[] | Name-value pairs from the user's directory object. Fed into conditional ACE evaluation. |
 | `device_claims` | CLAIM_ATTRIBUTES[] | Name-value pairs from the machine's directory object. |
 
+## LCS registry credentials (fixed)
+
+| Field | Type | Description |
+|---|---|---|
+| `lcs_scope_guids` | GUID[] | Ordered private registry scope GUIDs used by LCS private hive routing. LCS checks this list in order before falling back to global hives. |
+| `lcs_private_layers` | string[] | Registry layer names that are visible to this token even when disabled globally. Names use the LCS layer-name syntax and matching rules. |
+
+These fields are KACS-owned credential material for PSD-005. They are fixed at
+token creation and copied by token duplication and filtering. Attachment is
+authorized by the same trusted-token-minting gate as the rest of CreateToken:
+only a caller holding `SeCreateTokenPrivilege` can create a token carrying these
+fields.
+
 ## Device identity (fixed)
 
 | Field | Type | Description |

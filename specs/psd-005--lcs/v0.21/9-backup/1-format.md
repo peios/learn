@@ -154,7 +154,8 @@ HEADER                          (exactly one)
 LAYER manifest records          (one per referenced layer, before key data)
 For each key in depth-first pre-order of the merged tree:
     KEY record                  (the key object)
-    PATH_ENTRY records          (all layers' entries for this key)
+    PATH_ENTRY records          (GUID-bearing incoming entries for this key,
+                                 plus parent-owned HIDDEN entries)
     VALUE records               (all layers' values for this key)
     BLANKET_TOMBSTONE records   (all layers' blankets for this key)
     (recurse into children)
@@ -175,12 +176,15 @@ the key itself.
 **HIDDEN path entries.** A HIDDEN entry (ChildGUID = all zeros)
 has no corresponding KEY record — it is a tombstone, not a key.
 HIDDEN entries are emitted as PATH_ENTRY records under the parent
-key's section in the stream. They appear alongside any GUID-bearing
-path entries for the same (parent, child name). No KEY record is
-emitted for the zero GUID. A HIDDEN entry that masks a path where
-no real key exists in any layer is still a valid PATH_ENTRY record
-— it expresses "this layer hides this name" regardless of whether
-any other layer has a key there.
+key's section in the stream. They are an explicit exception to the
+GUID-bearing incoming-entry rule for KEY sections: they belong to
+the parent section because there is no child key section for the
+zero GUID. They appear alongside any GUID-bearing path entries for
+the same (parent, child name). No KEY record is emitted for the
+zero GUID. A HIDDEN entry that masks a path where no real key exists
+in any layer is still a valid PATH_ENTRY record — it expresses "this
+layer hides this name" regardless of whether any other layer has a
+key there.
 
 **Cross-layer path dependencies.** A path entry's parent GUID may
 belong to a key that only has path entries in a different layer.
@@ -197,6 +201,13 @@ The entire restore (teardown + rebuild) MUST be wrapped in a
 single read-write source transaction for atomicity. Sources that do
 not support RSI_BEGIN_TRANSACTION with mode RSI_TXN_READ_WRITE MUST
 NOT be used as restore targets.
+
+After a restore transaction commits, LCS MUST publish the affected
+hive generation increment and dispatch no-name OVERFLOW watch
+recovery as defined in §4.1 and §4.2. LCS is not required to emit an
+exact per-record VALUE_*, SUBKEY_*, SD_CHANGED, or KEY_DELETED diff
+for restore. If restore fails or aborts before commit, LCS MUST NOT
+emit normal watch events for the uncommitted restore mutations.
 
 ## Restore root mapping
 
@@ -241,9 +252,12 @@ replaced is a GUID collision and fails with EEXIST.
    RSI_WRITE_KEY.
 5. Process the root record section's VALUE and BLANKET_TOMBSTONE
    records via RSI after applying the root GUID remapping to
-   KeyGUID and sequence remapping. The backup root's incoming
-   PATH_ENTRY records are not restored; the target key's existing
-   incoming path entries remain authoritative for the restore root.
+   KeyGUID and sequence remapping. GUID-bearing incoming PATH_ENTRY
+   records for HEADER.RootGUID are not restored; the target key's
+   existing incoming path entries remain authoritative for the
+   restore root. HIDDEN PATH_ENTRY records in the root section are
+   parent-owned records for the restore root and MUST be restored
+   after ParentGUID validation and sequence remapping.
 6. For each non-root KEY record in stream order (within the
    transaction):
    a. Buffer that KEY section's PATH_ENTRY records. To create the
@@ -251,13 +265,17 @@ replaced is a GUID collision and fails with EEXIST.
       stream order whose ChildGUID, after HEADER.RootGUID -> target
       GUID remapping, equals the KEY record's GUID. That path entry's
       remapped ParentGUID and child name are the RSI_CREATE_KEY
-      parent/name anchor. If no such path entry exists, or if any
-      PATH_ENTRY in a non-root KEY section is HIDDEN or targets a
-      different GUID after remapping, restore fails with EINVAL.
-      ParentGUID validation still applies before the create is
-      issued. LCS then issues RSI_CREATE_KEY using the KEY record's
-      GUID, SD, volatile flag, symlink flag, and the selected
-      parent/name anchor. Immediately after successful
+      parent/name anchor. HIDDEN PATH_ENTRY records in the same
+      section are parent-owned records for the KEY being created;
+      they do not satisfy the create-anchor requirement and are
+      replayed only after the key exists. If no GUID-bearing path
+      entry targets the KEY record's GUID, or if any GUID-bearing
+      PATH_ENTRY in a non-root KEY section targets a different GUID
+      after remapping, restore fails with EINVAL. ParentGUID
+      validation still applies before the create is issued. LCS then
+      issues RSI_CREATE_KEY using the KEY record's GUID, SD, volatile
+      flag, symlink flag, and the selected parent/name anchor.
+      Immediately after successful
       RSI_CREATE_KEY, LCS writes the KEY record's LastWriteTime to
       that key with RSI_WRITE_KEY before replaying the section's
       PATH_ENTRY, VALUE, or BLANKET_TOMBSTONE records.

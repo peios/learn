@@ -3,15 +3,24 @@ title: Overview
 ---
 
 A service is the primary unit of management in peinit. Every
-supervised process -- a long-running daemon, a run-to-completion
-task, a mount operation -- is represented as a service with a
-definition, a runtime state, and a security policy.
+supervised process -- a long-running daemon or a run-to-completion
+task -- is represented as a service with a definition, a runtime
+state, and a security policy.
 
 Service definitions are stored in the registry under
 `Machine\System\Services\<name>`. The key name is the service
 name. peinit reads definitions at Phase 2 boot and on demand
 when an administrator starts a service or issues a reload-config
 command.
+
+## Service names
+
+A service name MUST consist of characters from `[A-Za-z0-9._-]` and
+MUST be 1-128 bytes long. Any other character makes the name a
+validation error (cause ValidationError). In particular `/` is
+disallowed (names map directly onto cgroup ids, §4.1, and registry
+key names) and `:` is reserved for peinit-internal synthetic
+naming.
 
 ## Service types
 

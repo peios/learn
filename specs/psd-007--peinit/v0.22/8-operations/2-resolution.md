@@ -112,3 +112,7 @@ produce operations (stop/start for individual services) but are not
 operations themselves. There is no "shutdown operation" -- shutdown
 is a mode that peinit enters, which then generates per-service
 stop operations.
+
+Boot-generated per-service start operations use source `Boot`.
+Shutdown-generated per-service stop operations use source
+`Shutdown`.

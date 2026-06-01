@@ -55,6 +55,28 @@ EFAULT. On ERANGE, required size fields are updated, output buffers
 are not partially filled, and output scalar metadata is valid only
 when explicitly documented for ERANGE.
 
+## Syscall argument structs
+
+### reg_create_key_args
+
+The path and layer fields retain the syscall string convention from §6.2:
+they are pointers to null-terminated userspace strings, not length-delimited
+ioctl strings.
+
+| Offset | Size | Field | Description |
+|---|---|---|---|
+| 0 | 4 | parent_fd | Parent key fd, or -1 for an absolute path. |
+| 4 | 4 | _pad0 | Reserved. Must be zero on input. |
+| 8 | 8 | path_ptr | Pointer to null-terminated path string. |
+| 16 | 4 | desired_access | Requested key access mask. |
+| 20 | 4 | flags | `REG_OPTION_*` create flags. Reserved bits must be zero. |
+| 24 | 8 | layer_ptr | Pointer to null-terminated layer name, or null for base. |
+| 32 | 4 | txn_fd | Transaction fd (-1 if none). |
+| 36 | 4 | _pad1 | Reserved. Must be zero on input. |
+| 40 | 8 | disposition_ptr | Optional pointer to `uint32` disposition output. |
+
+Total: 48 bytes.
+
 ## Ioctl argument structs
 
 ### reg_query_value_args (REG_IOC_QUERY_VALUE)

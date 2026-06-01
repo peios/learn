@@ -49,7 +49,8 @@ duplicated here.
   Contains a user SID, group SIDs, a privilege bitmask, an
   integrity level, and metadata. peinit requests tokens from authd
   for service processes and installs them before exec. For SYSTEM
-  services, peinit clones its own token. Tokens are the sole
+  services, peinit mints a token from its own SYSTEM identity. Tokens
+are the sole
   identity mechanism -- peinit never sets Linux UIDs, GIDs, or
   capabilities on service processes.
 
@@ -102,7 +103,8 @@ duplicated here.
 - **eventd**: The logging and audit daemon. Drains the kernel
   audit ring buffer, captures service logs, stores events, and
   serves the query API. peinit forwards service stdout/stderr to
-  eventd and emits structured lifecycle events. eventd is
+  eventd's log socket and emits structured lifecycle events through
+  KMES, which eventd consumes from the kernel ring buffer. eventd is
   ErrorControl=Critical -- its failure triggers a reboot.
   Observability is a foundational guarantee in Peios, not an
   optional layer.
@@ -162,22 +164,15 @@ duplicated here.
   `/sys/fs/cgroup/peinit/`. peinit does not use cgroups for
   resource accounting or limits.
 
-- **Phase 1**: The hardcoded bootstrap phase. peinit remounts
-  root read-write, mounts virtual filesystems, sets the system
-  clock, starts registryd, and performs infrastructure setup
-  (control socket, JFS device, loopback interface). No registry
-  access occurs during Phase 1.
+- **Phase 1**: The hardcoded bootstrap phase. peinit verifies the
+  root is writable, mounts the remaining virtual filesystems, sets
+  the system clock, starts registryd, and performs infrastructure
+  setup (control socket, JFS device, loopback interface). No
+  registry access occurs during Phase 1.
 
 - **Phase 2**: The registry-driven boot phase. With registryd
   running, peinit reads service definitions from the registry
   and starts all boot-triggered services in dependency order.
-
-- **Mount pseudo-service**: A synthetic Oneshot service generated
-  by peinit from mount entries in `Machine\System\Boot\Mounts\`.
-  Named `mount:<mountpoint>` (e.g., `mount:/data`). Behaves as a
-  Oneshot with RemainAfterExit -- the mount completes, the
-  pseudo-service stays in Completed, and dependents can start.
-  Participates in the dependency graph like any other service.
 
 - **ErrorControl**: A per-service policy that determines peinit's
   response when a service fails irrecoverably. Normal (default):

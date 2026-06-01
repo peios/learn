@@ -11,7 +11,7 @@ properties, while path entries carry naming.
 
 | Field | Type | Mutable | Layer-qualified | Description |
 |---|---|---|---|---|
-| GUID | GUID | No | No | Immutable identity assigned by LCS at creation. Persisted by the source. Never reused. |
+| GUID | GUID | No | No | Immutable identity assigned by LCS at creation. Persisted by the source. Generated as an LCS-owned UUIDv4 value; non-reuse is the collision-resistance property of UUIDv4 generation plus source duplicate rejection, not a persistent retired-GUID ledger. |
 | Name | string | No | No | The key's name component (not a full path). Case-preserving, compared case-insensitively. Informational -- the authoritative name is in the path entry. |
 | Parent GUID | GUID | No | No | The GUID of the parent key. Null for hive root keys. |
 | Security Descriptor | SD (binary) | Yes | No | KACS Security Descriptor controlling access. Computed by the kernel from parent inheritance at creation (see PSD-004 §3.6). Modifiable at runtime via WRITE_DAC / WRITE_OWNER. SD changes are direct mutations on the key -- they are not reverted on layer deletion. |
@@ -35,6 +35,14 @@ GUIDs are assigned by LCS (not by sources) and pushed to the source
 at key creation via the RSI. The source persists them as primary keys
 in its storage schema. After path-to-GUID resolution at open time,
 all RSI operations use the GUID directly.
+
+LCS does not maintain a persistent retired-GUID catalogue solely to
+prevent future UUIDv4 collisions. A freshly generated LCS UUIDv4 GUID
+is fresh for this specification. If a source reports that
+RSI_CREATE_KEY collided with an existing key GUID, LCS MUST treat that
+as source/tracker inconsistency and fail closed with EIO. GUIDs dropped
+through orphan cleanup are not retained solely to prevent future UUIDv4
+collisions.
 
 ## Naming rules
 

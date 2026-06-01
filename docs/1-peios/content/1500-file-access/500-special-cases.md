@@ -140,11 +140,11 @@ The mount-policy classes are covered in [Mount policies](~peios/mount-policies/o
 
 ## Whiteouts in renameat2
 
-`renameat2(RENAME_WHITEOUT)` — the Linux-specific flag for creating a "whiteout" entry as part of a rename (used by overlay filesystems) — is **unsupported** on FACS-managed filesystems in v0.20. Calls with this flag fail with `-EOPNOTSUPP`.
+`renameat2(RENAME_WHITEOUT)` — the Linux-specific flag for creating a "whiteout" entry as part of a rename (used by overlay filesystems) — is **supported** on FACS-managed filesystems. The rename and the whiteout it leaves behind happen as one atomic operation, exactly as on stock Linux.
 
-The whiteout semantics are complex enough that FACS in v0.20 chooses not to support them rather than partially support them. Overlay-style filesystems can still work, but they do so through different mechanisms; the RENAME_WHITEOUT flag is not the path on FACS-managed mounts.
+A whiteout is a `chrdev(0,0)` sentinel that overlay filesystems drop at the old name to mask a file in a lower layer. FACS authorizes it the same way it authorizes any new node: you need FILE_ADD_FILE on the source directory (where the whiteout lands), in addition to the usual rename rights. If you lack that right the whole rename is denied before anything is created, and the whiteout — like every freshly created node — inherits a security descriptor from its parent directory and is recorded in the audit trail.
 
-For most administrators this is invisible — overlayfs and union-style filesystems are uncommon in server deployments. The flag's absence is worth knowing if you are building such a system.
+This matters if you run overlayfs or union-style filesystems on FACS-managed storage: they work without the partial-support caveats earlier previews carried.
 
 ## Summary table
 
@@ -160,6 +160,6 @@ The special cases at a glance:
 | fchown | Denied on FACS-managed fds; use kacs_set_sd |
 | NFS client | Dual authority; local FACS plus remote enforcement |
 | `/proc` and `/sys` | Unmanaged mount policy; per-operation check by kernel-specific rules |
-| renameat2 RENAME_WHITEOUT | Unsupported (`-EOPNOTSUPP`) |
+| renameat2 RENAME_WHITEOUT | Supported; atomic, needs FILE_ADD_FILE on the source directory, whiteout inherits an SD |
 
 Each is a deliberate decision. Some reflect Linux compatibility (POSIX ACLs replaced); some reflect security policy (exec dual gate, append-only enforcement); some reflect the model's limits (NFS dual authority). Knowing them keeps the surprises from being surprises.

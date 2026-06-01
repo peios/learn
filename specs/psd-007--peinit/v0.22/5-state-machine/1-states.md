@@ -16,6 +16,7 @@ every valid transition between them.
 | Reloading | Yes | Yes | Service is reloading configuration. Still satisfies dependents. |
 | Stopping | Yes (briefly) | No | SIGTERM sent, waiting for exit or SIGKILL escalation. |
 | Completed | No | Yes | Oneshot only. Process exited successfully. Satisfies dependents. With RemainAfterExit=1, remains in Completed. Without RemainAfterExit, transitions to Inactive after dependents are released. |
+| Backoff | No | No | A restart-policy restart is pending; the service is waiting out the exponential-backoff delay before its next start attempt. No process exists. Dependents are blocked. |
 | Failed | No | No | Service exited abnormally and restart policy is exhausted or not configured. |
 | Abandoned | Yes (unkillable) | No | SIGKILL sent but processes survived -- stuck in uninterruptible kernel sleep (D-state). peinit has abandoned supervision. The cgroup is leaked. |
 | Skipped | No | Yes | Conditions evaluated and not met. The service does not apply. Satisfies dependents. |
@@ -33,21 +34,25 @@ invalid -- peinit MUST NOT perform them.
 | Starting | Active | Readiness signal | Simple only. `READY=1` received (Notify) or process exists (Alive). |
 | Starting | Completed | Oneshot successful exit + RemainAfterExit | Process exited 0 (or SuccessExitCodes match) and RemainAfterExit=1. |
 | Starting | Completed | Oneshot successful exit, no RemainAfterExit | Process exited 0 (or SuccessExitCodes match) and RemainAfterExit=0. Transitions through Completed to release dependents, then to Inactive. |
-| Starting | Starting | Startup failure + restart policy | ReadinessTimeout, PreHookFailure, PreExecFailure, or ParentSetupFailure with RestartPolicy allowing restart and budget remaining. |
+| Starting | Backoff | Startup failure + restart policy | ReadinessTimeout, PreHookFailure, PreExecFailure, or ParentSetupFailure with RestartPolicy allowing restart and budget remaining. |
 | Starting | Stopping | Stop command cancels in-progress start | Explicit stop while Starting. Restart commands on a Starting service are queued, not cancelled. |
 | Starting | Failed | Timeout, hook failure, setup failure, or early exit | StartTimeout exceeded, pre-hook exited non-zero, parent setup failed, pre-exec failed, or process exited before readiness (Simple) or with non-zero exit (Oneshot). |
 | Starting | Failed | Shutdown | ShutdownWave causes SIGKILL of Starting service. |
 | Active | Reloading | Reload triggered | ExecReload command sent or SIGHUP delivered. |
 | Active | Stopping | Stop command, conflict, BindsTo, or shutdown | Explicit stop, conflicting service started, bound dependency stopped, or shutdown in progress. |
-| Active | Starting | Process crash + restart policy | Process exited unexpectedly, RestartPolicy allows restart, budget remaining. |
-| Active | Failed | Process crash + no restart | Process exited unexpectedly, RestartPolicy=Never or budget exhausted. |
-| Active | Starting | Health check failure + restart | HealthCheckRetries exhausted, RestartPolicy allows restart, budget remaining. |
+| Active | Backoff | Process crash + restart policy | Main process exited with non-zero status or a signal, RestartPolicy allows restart, budget remaining. |
+| Active | Failed | Process crash + no restart | Main process exited with non-zero status or a signal, RestartPolicy=Never or budget exhausted. |
+| Active | Inactive | Simple clean exit | Simple main process exited 0 (or a code in SuccessExitCodes) and RestartPolicy is not Always. A clean exit is success, not a crash. |
+| Active | Backoff | Simple clean exit + Always | Simple main process exited 0 (or SuccessExitCodes) and RestartPolicy=Always; routed through Backoff with cause CleanExitRestart for the restart. |
+| Active | Backoff | Health check failure + restart | HealthCheckRetries exhausted, RestartPolicy allows restart, budget remaining. |
 | Active | Failed | Health check failure + no restart | HealthCheckRetries exhausted, RestartPolicy=Never or budget exhausted. |
-| Active | Starting | Watchdog timeout + restart | Watchdog keepalive not received, RestartPolicy allows restart, budget remaining. |
+| Active | Backoff | Watchdog timeout + restart | Watchdog keepalive not received, RestartPolicy allows restart, budget remaining. |
 | Active | Failed | Watchdog timeout + no restart | Watchdog keepalive not received, RestartPolicy=Never or budget exhausted. |
-| Reloading | Active | Reload complete | `READY=1` received, detection window expires, or extended wait expires. |
+| Backoff | Starting | Backoff delay elapsed | The exponential-backoff delay has passed; peinit begins the activation sequence (StartTimeout starts now). Cause RestartPolicy. |
+| Backoff | Inactive | Stop command | Admin stops a service awaiting restart; the pending restart is cancelled. No process to kill. |
+| Reloading | Active | Reload resolved | `READY=1` received, detection window expires, extended wait expires, or the ExecReload command exits (success or failure -- a failed reload still returns to Active). |
 | Reloading | Stopping | Stop command, conflict, BindsTo, or shutdown | Same triggers as Active to Stopping. Reload is cancelled. |
-| Reloading | Starting | Process crash + restart policy | Process exited during reload, RestartPolicy allows restart, budget remaining. |
+| Reloading | Backoff | Process crash + restart policy | Process exited during reload, RestartPolicy allows restart, budget remaining. |
 | Reloading | Failed | Process crash during reload | Process exited while Reloading and RestartPolicy=Never or budget exhausted. |
 | Stopping | Inactive | Process exits (explicit stop or shutdown) | Clean shutdown requested by admin or system. |
 | Stopping | Failed | Process exits (conflict or BindsTo) | Service was forcibly stopped by conflict eviction or dependency loss. The cause recorded is ConflictEviction or BindsToPropagation respectively, carried from the transition that initiated the stop. |
@@ -57,7 +62,7 @@ invalid -- peinit MUST NOT perform them.
 | Completed | Inactive | Stop command | Explicit stop clears Completed state. |
 | Completed | Inactive | Shutdown | Completed services (oneshot with RemainAfterExit) are cleared during shutdown. |
 | Completed | Starting | Start command | Re-run the oneshot. |
-| Failed | Starting | Explicit start command or automatic restart | Administrator manually restarts, BindsTo recovery (bound service returns to Active), timer trigger, or restart policy. |
+| Failed | Starting | Explicit start command or recovery | Administrator manually restarts, BindsTo recovery (bound service returns to Active), or timer trigger. (Restart-policy auto-restarts flow through Backoff, never from Failed.) |
 | Failed | Inactive | Reset command | Administrator clears Failed state without starting. |
 | Abandoned | Inactive | Reset command | Administrator clears state. peinit re-checks the cgroup -- if it finally emptied, clean up. If still populated, log a warning. |
 | Skipped | Inactive | Reset or explicit start | Clears Skipped state. A subsequent start re-evaluates conditions. |

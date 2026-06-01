@@ -321,7 +321,24 @@ Backup and restore start/complete payloads:
 | `request_id` | `uint64` or nil | RSI request ID if known. |
 | `op_code` | `uint16` or nil | RSI operation code if known. |
 | `key_guid` | `bin(16)` or nil | Key GUID associated with the failed validation if known. |
-| `validation_class` | string | One of `malformed_security_descriptor`, `future_sequence_number`, `duplicate_winning_sequence_tie`, or `malformed_layer_metadata_security_descriptor`. |
+| `validation_class` | string | One of `malformed_security_descriptor`, `malformed_layer_name`, `malformed_key_name`, `malformed_value_name`, `malformed_response_payload`, `malformed_key_metadata`, `malformed_value_payload`, `malformed_delete_layer_orphan_list`, `unknown_rsi_status_code`, `future_sequence_number`, `duplicate_winning_sequence_tie`, or `malformed_layer_metadata_security_descriptor`. |
+
+Name validation classes are field-specific: `malformed_layer_name`
+identifies source-returned layer-name fields, `malformed_key_name`
+identifies source-returned key component or child-name fields, and
+`malformed_value_name` identifies source-returned value-name fields.
+
+Other source-validation classes identify structural source data failures:
+`malformed_response_payload` identifies otherwise matched responses whose
+operation-specific success payload has the wrong shape, trailing
+operation-specific bytes, invalid path-target encoding, or another
+operation-specific payload encoding error. `malformed_key_metadata` identifies
+lookup or enum-children metadata closure failures, including missing,
+duplicate, unreferenced, or nil metadata GUIDs. `malformed_value_payload`
+identifies query-values value type/data failures, including invalid value
+types, tombstone/data mismatches, and oversized value data.
+`malformed_delete_layer_orphan_list` identifies invalid `RSI_DELETE_LAYER`
+orphan GUID arrays, including nil or duplicate orphan GUIDs.
 
 `LCS_SELF_CONFIG_INVALID` payload:
 

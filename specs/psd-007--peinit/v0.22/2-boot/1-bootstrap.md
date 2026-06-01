@@ -10,26 +10,59 @@ boot.
 
 ## Initramfs contract
 
-peinit assumes the root filesystem is fully assembled, checked,
-and mountable when it starts. Root storage assembly -- LUKS
-decryption, LVM activation, RAID array assembly, filesystem checks
--- is handled entirely by the initramfs before peinit runs.
+peinit assumes the root filesystem is fully assembled and mountable
+when it starts. Root storage assembly -- LUKS decryption, LVM
+activation, RAID array assembly, and any filesystem check -- is the
+initramfs's responsibility, performed (if at all) before peinit
+runs. peinit neither performs nor assumes a root fsck.
 
-The initramfs performs `switch_root` and transfers control to
-peinit as PID 1. peinit MUST NOT perform root filesystem assembly,
-decryption, or repair. These operations require tools and
-configuration that belong to the initramfs environment.
+The initramfs transfers control to peinit as PID 1 by `chroot`-ing
+into the assembled root and exec'ing peinit there -- not via
+`switch_root`/`pivot_root`, because the kernel forbids relocating
+onto the initramfs rootfs. Consequently the initramfs rootfs is not
+gone: it remains the mount-namespace root (emptied and unreachable
+from peinit's view). peinit MUST NOT assume a clean single-root
+mount topology and MUST NOT attempt `pivot_root`.
+
+peinit is installed at a fixed path on the real root
+(`/usr/bin/peinit`); the boot-image tooling sets the kernel `init=`
+command line to that path, which the initramfs honours when
+transferring control.
+
+At handoff the initramfs has already mounted the real root
+**read-write** at `/`, and has mounted `/proc`, `/sys`, and `/dev`
+and moved them into the real root. peinit therefore neither
+assembles nor remounts the root, and does not blindly re-mount
+those three pseudo-filesystems (see Phase 1, Steps 1-2). registryd's
+storage backend requires a writable root (WAL and shared-memory
+files) even for read-only registry operations; delivering the root
+writable is the initramfs's responsibility, not peinit's.
+
+peinit MUST NOT perform root filesystem assembly, decryption, or
+repair. These operations require tools and configuration that
+belong to the initramfs environment.
+
+peinit starts with a minimal environment -- the initramfs provides
+`TERM` only, with no `PATH` or other variables -- and an argv of
+just its own path. peinit MUST NOT rely on inheriting any
+environment from the initramfs, and MUST NOT pass its own
+near-empty startup environment through to services; the base
+environment handed to services is defined by peinit (see §4.1).
 
 > [!INFORMATIVE]
-> Root storage configuration lives in the registry under
-> `Machine\System\Boot\RootStorage\`. When an administrator changes
-> root storage settings, the initramfs image is regenerated to bake
-> in the updated configuration. The initramfs itself contains no
-> registry infrastructure -- it uses flat, baked-in configuration
-> extracted from the registry at build time.
+> The initramfs is assembled by the Peios initramfs builder (mkirf)
+> from hook scripts contributed by packages; mkirf resolves the hook
+> ordering and bakes the sequence the initramfs PID 1 runs. Root
+> storage assembly -- decryption, RAID/LVM activation, the root
+> mount itself -- is performed by these hooks, not by peinit, and
+> not by reading the registry at boot time. What peinit depends on
+> is the handoff contract above, not the initramfs's internal
+> configuration mechanism.
 
-Non-root storage (data partitions, additional filesystems) is
-handled by mount pseudo-services in Phase 2.
+Non-root storage (data partitions, additional filesystems) is out
+of scope for peinit. It is handled at the services/roles layer
+(e.g. a Oneshot service that performs the mount), not by peinit
+directly -- peinit has no built-in mount feature.
 
 ## Bootstrap identity model
 
@@ -41,15 +74,16 @@ resolves this.
 
 **Platform services run as SYSTEM.** When peinit starts a service
 during Phase 1 or a platform service during early Phase 2, it
-MUST clone its own SYSTEM token (`S-1-5-18`) via
-`kacs_duplicate_token` and install the clone on the child process.
-No authd interaction is needed.
+MUST materialise a SYSTEM token (`S-1-5-18`) by minting one from
+its own token (`kacs_create_token`; see §3.3) and install it on the
+child process. No authd interaction is needed -- indeed authd does
+not yet exist when these services start.
 
 The following services use `Identity=SYSTEM`:
 
 - **registryd** -- MUST start before authd exists
-- **authd** -- needs PRIV_TCB and PRIV_CREATE_TOKEN; is the token
-  minter
+- **authd** -- needs SeTcbPrivilege and SeCreateTokenPrivilege; is
+  the token minter for non-platform services
 - **lpsd** -- MUST start before authd can resolve local identities
 - **eventd** -- starts early, before authd is necessarily available
 
@@ -58,8 +92,8 @@ There is no allowlist restricting which services MAY use
 `Machine\System\Services\` -- an administrator who can create
 service definitions is trusted to assign any identity.
 
-peinit MUST add a per-service SID to the group list of every
-cloned SYSTEM token. The SID is derived from the service name
+peinit MUST include a per-service SID in the group list of every
+SYSTEM token it mints. The SID is derived from the service name
 using the service SID algorithm defined in PSD-004 (SID authority `S-1-5-80`, sub-authorities from
 SHA-1 of the UTF-16LE uppercased service name). peinit computes
 this independently -- no authd involvement is needed. This ensures
@@ -83,33 +117,51 @@ Phase 1 is compiled into peinit. It MUST NOT change at runtime and
 has no registry dependency. Phase 1 performs the minimum operations
 necessary to prepare the system for Phase 2.
 
-### Step 1: Remount root filesystem read-write
+### Step 1: Verify the root filesystem is writable
 
-The Linux kernel typically mounts the root filesystem read-only.
-peinit MUST remount it read-write before any other operation.
-registryd's storage backend requires write access (WAL and shared-
-memory files) even for read operations.
+The initramfs delivers the real root mounted read-write (see the
+initramfs contract). peinit MUST NOT remount the root -- root
+assembly and mount flags are the initramfs's responsibility, and a
+redundant remount of an already-writable or overlay root can fail
+spuriously.
 
-If the remount fails, peinit MUST enter Recovery mode.
+peinit MUST confirm the root is writable with a single probe write
+(create and remove a file under `/.peinit/`). registryd's storage
+backend requires write access (WAL and shared-memory files) even
+for read operations, so a read-only root cannot support Phase 2.
 
-### Step 2: Mount virtual filesystems
+If the probe write fails -- the root is unexpectedly read-only or
+the filesystem is faulty -- peinit MUST enter Recovery mode.
 
-peinit MUST mount the following virtual filesystems:
+### Step 2: Mount remaining virtual filesystems
 
-| Mount point | Filesystem | Flags |
-|---|---|---|
-| `/proc` | proc | nosuid, nodev, noexec |
-| `/sys` | sysfs | nosuid, nodev, noexec |
-| `/dev` | devtmpfs | nosuid |
-| `/dev/pts` | devpts | nosuid, noexec |
-| `/dev/shm` | tmpfs | nosuid, nodev |
-| `/run` | tmpfs | nosuid, nodev |
-| `/sys/fs/cgroup` | cgroup2 | nosuid, nodev, noexec |
+The initramfs has already mounted `/proc`, `/sys`, and `/dev` and
+moved them into the real root (see the initramfs contract). peinit
+MUST NOT blindly re-mount them: a redundant mount stacks a second
+filesystem over the populated one, and on some kernel/flag
+combinations returns `EBUSY`.
 
-The mount set and flags are hardcoded. These filesystems MUST
-exist before any other process runs.
+peinit MUST ensure the following filesystems are present, mounting
+each only if it is not already mounted:
 
-If any mount fails, peinit MUST enter Recovery mode.
+| Mount point | Filesystem | Flags | Provided by |
+|---|---|---|---|
+| `/proc` | proc | nosuid, nodev, noexec | initramfs (mount only if absent) |
+| `/sys` | sysfs | nosuid, nodev, noexec | initramfs (mount only if absent) |
+| `/dev` | devtmpfs | nosuid | initramfs (mount only if absent) |
+| `/dev/pts` | devpts | nosuid, noexec | peinit |
+| `/dev/shm` | tmpfs | nosuid, nodev | peinit |
+| `/run` | tmpfs | nosuid, nodev | peinit |
+| `/sys/fs/cgroup` | cgroup2 | nosuid, nodev, noexec | peinit |
+
+The mount set and flags are hardcoded; all seven MUST exist before
+any other process runs. For the initramfs-provided mounts (`/proc`,
+`/sys`, `/dev`), peinit MUST treat an already-mounted filesystem
+(including an `EBUSY` result from an attempted mount) as success.
+
+If a filesystem peinit is responsible for mounting (`/dev/pts`,
+`/dev/shm`, `/run`, `/sys/fs/cgroup`) cannot be mounted, peinit MUST
+enter Recovery mode.
 
 ### Step 3: Set system clock from hardware RTC
 
@@ -136,8 +188,9 @@ peinit has a compiled-in service definition for registryd:
 
 peinit MUST:
 
-1. Clone its own SYSTEM token and add the per-service SID for
-   registryd (derived per the PSD-004 service SID algorithm).
+1. Mint a SYSTEM token from its own token (`kacs_create_token`),
+   including registryd's per-service SID in the group list (derived
+   per the PSD-004 service SID algorithm).
 2. Create registryd's cgroup tree under
    `/sys/fs/cgroup/peinit/`.
 3. Fork, install the token on the child, and exec
@@ -150,10 +203,11 @@ requests" -- not merely "process is alive." registryd MUST NOT
 send `READY=1` until its storage backend is open, its schema is
 validated, and it can handle reads.
 
-After receiving `READY=1`, peinit MUST perform a probe read: a
-read of a known registry key to verify the registry is functional.
-If the probe fails or times out, peinit MUST treat registryd as
-failed.
+After receiving `READY=1`, peinit MUST perform a probe read of
+`Machine\System\Services\SchemaVersion` (the schema-version guard;
+see §3.2 and the appendix) to verify the registry is serving reads.
+This key is guaranteed to exist on any valid system. If the probe
+read fails or times out, peinit MUST treat registryd as failed.
 
 If registryd fails to start, its readiness timeout expires, or the
 probe read fails, peinit MUST enter Recovery mode. There is no
@@ -186,8 +240,9 @@ option because Phase 2 cannot begin without working infrastructure.
 
 | Failure | Response |
 |---|---|
-| Root remount fails | Recovery mode |
-| Virtual filesystem mount fails | Recovery mode |
+| Root writability probe fails | Recovery mode |
+| A peinit-owned virtual filesystem (`/dev/pts`, `/dev/shm`, `/run`, `/sys/fs/cgroup`) fails to mount | Recovery mode |
+| `/proc`, `/sys`, or `/dev` already mounted (`EBUSY`) | Tolerated -- treated as success |
 | registryd fails to start | Recovery mode |
 | registryd sends READY=1 but probe read fails | Recovery mode |
 | registryd readiness timeout expires | Recovery mode |

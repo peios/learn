@@ -5,7 +5,7 @@ title: Phase 2
 With registryd running, peinit reads the service graph from the
 registry and boots the system. Phase 2 is entirely registry-driven.
 
-## Step 1: Read service definitions and mount configuration
+## Step 1: Read service definitions
 
 peinit MUST read all entries under `Machine\System\Services\` from
 the registry. Each key contains a service definition (see the
@@ -13,33 +13,29 @@ Service Model section). These reads are bounded by LCS's request
 timeout -- if registryd hangs mid-read, peinit receives ETIMEDOUT
 and MUST enter Recovery mode.
 
-Only services with a `boot` trigger are candidates for automatic
-start. Services with no triggers (demand-only) wait for explicit
-start commands. Services with `Disabled=1` MUST NOT be included in the boot
-graph. Their definitions are still loaded into peinit's in-memory
-model for on-demand start via the control interface.
-
-peinit MUST also read mount entries from
-`Machine\System\Boot\Mounts\`. Each mount entry generates a
-pseudo-service named `mount:<mountpoint>` (e.g., `mount:/data`).
-
-Mount pseudo-services behave as Oneshot services with
-RemainAfterExit. The mount operation completes, the pseudo-service
-stays in the Completed state, and dependents can start. Services
-that need a mount point declare it as a dependency:
-`Requires = ["mount:/data"]`.
-
-Mount pseudo-services MUST run `fsck` on the target device before
-mounting if the mount configuration specifies it. Root filesystem
-fsck is handled by the initramfs (§2.1), not
-peinit.
+Only services with a `boot` trigger are root candidates for
+automatic start. Services with no triggers (demand-only) are not
+root boot candidates, but MAY be pulled into the boot transaction
+as dependencies of a boot-triggered service. Services with
+`Disabled=1` MUST NOT be included in the boot graph. Their
+definitions are still loaded into peinit's in-memory model for
+on-demand start via the control interface.
 
 ## Step 2: Build and validate the dependency graph
 
-peinit MUST perform a topological sort of all boot-triggered
-services -- including mount pseudo-services -- and validate the
-graph before attempting to start anything. The full validation
-rules are defined in §6. The key outcomes:
+peinit MUST build the boot graph from all boot-triggered root
+candidate services plus the transitive dependency closure of their
+`Requires`, `BindsTo`, and existing non-disabled `Wants`
+dependencies. `Requires` and `BindsTo` dependencies pull in their
+target even if the target has no `boot` trigger. Existing
+non-disabled `Wants` dependencies are pulled in as best-effort
+boot transaction members. Missing or disabled `Wants` dependencies
+are ignored. Missing or disabled `Requires` or `BindsTo`
+dependencies fail the dependent with cause `DependencyFailure`.
+
+peinit MUST perform a topological sort of this boot graph and
+validate it before attempting to start anything. The full
+validation rules are defined in §6. The key outcomes:
 
 - **Cycle detected:** all services in the cycle are marked Failed.
   If the cycle involves a Critical service, peinit MUST downgrade
@@ -49,10 +45,6 @@ rules are defined in §6. The key outcomes:
 - **Missing Requires dependency:** the dependent is marked Failed.
 - **Validation warnings** (e.g., Readiness=Alive with dependents)
   are logged but do not prevent boot.
-
-Mount pseudo-services participate in the dependency graph. During
-shutdown, unmount happens after all services that Require the mount
-have stopped.
 
 ## Step 3: Start services in dependency order
 
@@ -118,11 +110,11 @@ If a service fails to reach readiness within its StartTimeout:
 
 | Service | Phase | Identity | Token source | Readiness | ErrorControl |
 |---|---|---|---|---|---|
-| registryd | 1 | SYSTEM | SYSTEM clone | sd_notify | Critical |
-| eudev | 2 | SYSTEM | SYSTEM clone (privileges stripped) | process alive | Normal |
-| lpsd | 2 | SYSTEM | SYSTEM clone | sd_notify | Critical |
-| authd | 2 | SYSTEM | SYSTEM clone | sd_notify | Critical |
-| eventd | 2 | SYSTEM | SYSTEM clone | sd_notify | Critical |
+| registryd | 1 | SYSTEM | minted from peinit's token | sd_notify | Critical |
+| eudev | 2 | SYSTEM | minted from peinit's token (privileges stripped) | process alive | Normal |
+| lpsd | 2 | SYSTEM | minted from peinit's token | sd_notify | Critical |
+| authd | 2 | SYSTEM | minted from peinit's token | sd_notify | Critical |
+| eventd | 2 | SYSTEM | minted from peinit's token | sd_notify | Critical |
 | networking | 2 | service token | authd | sd_notify | Normal |
 | sshd | 2 | service token | authd | process alive | Normal |
 | app services | 2 | service token | authd | per-service | Normal |
@@ -137,5 +129,4 @@ If a service fails to reach readiness within its StartTimeout:
 | Critical service fails during boot | Restart budget -> reboot. |
 | Non-critical service fails during boot | Service marked Failed. Requires dependents also fail. Other services continue. |
 | authd unavailable when service needs a token | Service marked Failed. |
-| Mount pseudo-service fails | Service marked Failed. Requires dependents also fail. |
 | Registry read times out during Step 1 | Recovery mode. |

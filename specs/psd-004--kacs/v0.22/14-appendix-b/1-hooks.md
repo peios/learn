@@ -93,11 +93,13 @@ on FACS-managed mounts.
 | `chmod()` / `fchmodat()` | `security_inode_setattr` | WRITE_DAC |
 | `chown()` / `lchown()` | `security_inode_setattr` | WRITE_OWNER |
 | `utimensat()` / `utimes()` | `security_inode_setattr` | FILE_WRITE_ATTRIBUTES |
-| `getxattr()` / `lgetxattr()` | `security_inode_getxattr` | FILE_READ_EA (SD xattr: deny) |
+| `getxattr()` / `lgetxattr()` | `security_inode_getxattr` | FILE_READ_EA (SD xattr: deny — see SD-xattr internal-read exception below) |
 | `setxattr()` / `lsetxattr()` | `security_inode_setxattr` | FILE_WRITE_EA (SD/POSIX ACL: deny) |
 | `removexattr()` | `security_inode_removexattr` | FILE_WRITE_EA (SD: deny) |
 | `listxattr()` / `llistxattr()` | `security_inode_listxattr` | Unconditional |
 | `access()` / `faccessat()` | Patch + `security_inode_permission` | Live AccessCheck: R_OK → FILE_READ_DATA, W_OK → FILE_WRITE_DATA, X_OK → FILE_EXECUTE. F_OK (existence) → FILE_READ_ATTRIBUTES. Uses the effective token (not real credential). |
+
+**SD-xattr internal-read exception.** The `(SD xattr: deny)` rule above applies to caller-originated `getxattr` / `fgetxattr` syscalls: userspace must read SDs via `kacs_get_sd`, not via raw xattr reads. KACS itself reads the canonical SD xattr internally to populate its in-memory SD cache; it normally bypasses `security_inode_getxattr` by calling `__vfs_getxattr` directly. A stacking filesystem (overlayfs in particular) can re-enter the hook on the real lower/upper inode from inside its own xattr handler, where the bypass no longer applies. KACS marks itself as inside an internal SD read via a per-task counter (`internal_sd_read_depth`) around its `__vfs_getxattr` calls; the hook checks this counter and allows the canonical SD xattr read when it is non-zero. Userspace callers always see counter == 0, so the spec's `deny` remains in force for them.
 
 ## Link operations (live)
 
@@ -110,7 +112,7 @@ on FACS-managed mounts.
 | `rename()` overwrite | `security_inode_rename` | Same as plain + (DELETE on existing dest OR FILE_DELETE_CHILD on dest parent) |
 | `renameat2(NOREPLACE)` | `security_inode_rename` | Same as plain when the target is absent. If the target exists, Linux rejects the operation before KACS needs to authorize destination deletion. |
 | `renameat2(EXCHANGE)` | `security_inode_rename` | (DELETE on each file OR FILE_DELETE_CHILD on its parent) + (FILE_ADD_FILE or FILE_ADD_SUBDIRECTORY) on each parent |
-| `renameat2(WHITEOUT)` | Patch before `security_inode_rename` | Unsupported for FACS-managed namespaces in v0.22; fail closed with `-EOPNOTSUPP`. Unmanaged mounts remain outside FACS. |
+| `renameat2(WHITEOUT)` | Patch before `security_inode_rename`; `security_inode_init_security` on the whiteout inode | Same as plain + FILE_ADD_FILE on the source parent for the `chrdev(0,0)` whiteout sentinel created at the source name. The native in-FS `RENAME_WHITEOUT` path (e.g. `shmem_whiteout` → `shmem_mknod`) skips `security_inode_mknod`, so the pre-rename patch recovers that hook's two remaining duties — authorize FILE_ADD_FILE on the source parent and emit the special-node creation audit record. SD stamping is unaffected: every in-tree filesystem that natively implements `RENAME_WHITEOUT` allocates the whiteout as a real inode and therefore still runs `security_inode_init_security`, which stamps the whiteout's inherited SD. The rename and whiteout creation remain atomic. A `chrdev(0,0)` whiteout addresses no driver, so no device-creation privilege beyond FILE_ADD_FILE is required. Unmanaged mounts remain outside FACS. |
 | `readlink()` | `security_inode_readlink` | FILE_READ_DATA on symlink |
 
 ### Link operation semantics
@@ -118,6 +120,8 @@ on FACS-managed mounts.
 **DELETE / FILE_DELETE_CHILD duality.** For `unlink()`, `rmdir()`, and the source side of `rename()`, the required right can be satisfied two ways: DELETE on the target's own SD, or FILE_DELETE_CHILD on the parent directory's SD. These are alternative gates checked against different SDs. The implementation checks the target file's SD for DELETE first; if denied, it checks the parent directory's SD for FILE_DELETE_CHILD. If neither grants the right, the operation is denied.
 
 **SD preservation on rename.** A renamed file retains its existing SD. The inheritance algorithm does not re-execute when a file moves to a new directory. This matches Windows: moving a file does not change its DACL unless an administrator explicitly re-propagates inheritance.
+
+**Whiteout creation on rename.** `RENAME_WHITEOUT` is supported natively on FACS-managed mounts: KACS does not refuse the flag and does not force callers onto the non-atomic `vfs_mknod` fallback. The mechanism splits `security_inode_mknod`'s responsibilities across two existing hooks. The pre-rename patch authorizes FILE_ADD_FILE on the source parent (the whiteout occupies the source name once the renamed entry moves away) and emits the creation audit record; this fails closed, so a caller lacking FILE_ADD_FILE on the source parent gets the rename denied before any inode is touched. The whiteout inode itself is allocated through each filesystem's ordinary new-inode path, which runs `security_inode_init_security`; KACS stamps the whiteout's inherited file SD there, identically to any other freshly created node. The result is an atomic rename-plus-whiteout where both the parent mutation and the new sentinel are authorized, audited, and SD-stamped. The whiteout's fixed `chrdev(0,0)` mode addresses no device driver, so it carries no device-creation risk and requires no privilege beyond FILE_ADD_FILE — consistent with the parent-only authorization the `mknod` hook already applies to special nodes.
 
 **Sticky bit.** The Linux sticky bit (restricted deletion flag) is a DAC concept. Under KACS, DAC is neutralized. FILE_DELETE_CHILD on the parent directory's SD is the sole gate for child deletion. The sticky bit has no effect under FACS.
 
@@ -183,92 +187,13 @@ fd possession, and no socket SD or KACS peer token is installed by
 `v0.22`; they do not carry a KACS token handle, do not install a socket
 `peer_token`, and do not authorize impersonation.
 
-## SysV IPC objects (live)
-
-SysV IPC objects (shared memory segments, semaphore arrays, and message queues) are securable objects. Each object carries a security descriptor in the `kern_ipc_perm` LSM security blob. The SD is created at object allocation time from the creator's effective token and evaluated via AccessCheck on every subsequent operation.
-
-### Shared memory
-
-| Operation | Hook | Right(s) |
-|---|---|---|
-| `shmget(IPC_CREAT)` | `security_shm_alloc` | Stamps default SD. No access right required. |
-| `shmget()` existing | `security_shm_associate` | IPC_READ_ATTRIBUTES on segment SD |
-| `shmat()` read-only | `security_shm_shmat` | IPC_READ_DATA |
-| `shmat()` read-write | `security_shm_shmat` | IPC_READ_DATA \| IPC_WRITE_DATA |
-| `shmctl(IPC_STAT)` | `security_shm_shmctl` | IPC_READ_ATTRIBUTES |
-| `shmctl(SHM_STAT)` | `security_shm_shmctl` | IPC_READ_ATTRIBUTES |
-| `shmctl(IPC_SET)` | `security_shm_shmctl` | IPC_WRITE_ATTRIBUTES |
-| `shmctl(IPC_RMID)` | `security_shm_shmctl` | DELETE |
-| `shmctl(SHM_LOCK/UNLOCK)` | `security_shm_shmctl` | IPC_WRITE_ATTRIBUTES + SeLockMemoryPrivilege |
-
-### Semaphores
-
-| Operation | Hook | Right(s) |
-|---|---|---|
-| `semget(IPC_CREAT)` | `security_sem_alloc` | Stamps default SD. No access right required. |
-| `semget()` existing | `security_sem_associate` | IPC_READ_ATTRIBUTES on array SD |
-| `semop()` / `semtimedop()` read-only | `security_sem_semop` | IPC_READ_DATA |
-| `semop()` / `semtimedop()` alter | `security_sem_semop` | IPC_READ_DATA \| IPC_WRITE_DATA |
-| `semctl(GETVAL/GETALL)` | `security_sem_semctl` | IPC_READ_DATA |
-| `semctl(SETVAL/SETALL)` | `security_sem_semctl` | IPC_WRITE_DATA |
-| `semctl(IPC_STAT/SEM_STAT)` | `security_sem_semctl` | IPC_READ_ATTRIBUTES |
-| `semctl(IPC_SET)` | `security_sem_semctl` | IPC_WRITE_ATTRIBUTES |
-| `semctl(IPC_RMID)` | `security_sem_semctl` | DELETE |
-| `semctl(GETPID/GETNCNT/GETZCNT)` | `security_sem_semctl` | IPC_READ_ATTRIBUTES |
-
-### Message queues
-
-| Operation | Hook | Right(s) |
-|---|---|---|
-| `msgget(IPC_CREAT)` | `security_msg_queue_alloc` | Stamps default SD. No access right required. |
-| `msgget()` existing | `security_msg_queue_associate` | IPC_READ_ATTRIBUTES on queue SD |
-| `msgsnd()` | `security_msg_queue_msgsnd` | IPC_WRITE_DATA |
-| `msgrcv()` | `security_msg_queue_msgrcv` | IPC_READ_DATA |
-| `msgctl(IPC_STAT/MSG_STAT)` | `security_msg_queue_msgctl` | IPC_READ_ATTRIBUTES |
-| `msgctl(IPC_SET)` | `security_msg_queue_msgctl` | IPC_WRITE_ATTRIBUTES |
-| `msgctl(IPC_RMID)` | `security_msg_queue_msgctl` | DELETE |
-
-### SysV IPC notes
-
-**SD lifetime.** IPC object SDs are volatile — they exist in kernel memory and are lost when the object is destroyed or the system reboots. This matches SysV IPC object lifetime semantics.
-
-**Default SD.** Generated from the creator's effective token at allocation time:
-
-```
-Owner: <creator's token user SID>
-Group: <creator's token primary group SID>
-DACL:
-  ALLOW  <creator's user SID>      GENERIC_ALL
-  ALLOW  BUILTIN\Administrators     GENERIC_ALL
-  ALLOW  SYSTEM                      GENERIC_ALL
-```
-
-**GenericMapping.**
-
-| Generic right | Maps to |
-|---|---|
-| GENERIC_READ | IPC_READ_DATA \| IPC_READ_ATTRIBUTES \| READ_CONTROL \| SYNCHRONIZE |
-| GENERIC_WRITE | IPC_WRITE_DATA \| IPC_WRITE_ATTRIBUTES \| WRITE_DAC \| SYNCHRONIZE |
-| GENERIC_EXECUTE | IPC_READ_ATTRIBUTES \| READ_CONTROL \| SYNCHRONIZE |
-| GENERIC_ALL | IPC_READ_DATA \| IPC_WRITE_DATA \| IPC_READ_ATTRIBUTES \| IPC_WRITE_ATTRIBUTES \| DELETE \| READ_CONTROL \| WRITE_DAC \| WRITE_OWNER \| SYNCHRONIZE |
-
-**security_ipc_permission.** This generic hook fires inside `ipcperms()` on every IPC data access path, in addition to the per-operation hooks. KACS registers it as a redundant AccessCheck: IPC_READ_DATA if the flag includes read bits, IPC_WRITE_DATA if the flag includes write bits. Defense-in-depth — the per-operation hooks are the primary enforcement points.
-
-**Per-message labels.** KACS does not label individual messages in message queues. Access control is on the queue object, not on individual messages. The `msg_msg` security blob is unused.
-
-**IPC_INFO / SHM_INFO / SEM_INFO / MSG_INFO.** These global information queries pass NULL to the control hooks. KACS allows them unconditionally — they expose system-wide IPC limits, not per-object data.
-
-**SD modification.** IPC object SDs cannot be modified in v0.22. The default SD is the only SD an IPC object receives. WRITE_DAC and WRITE_OWNER are present in the access mask for forward compatibility but have no enforcement path. For fine-grained IPC access control, use POSIX IPC (`/dev/shm`, `/dev/mqueue`) which is file-based and fully FACS-managed.
-
-**POSIX IPC.** POSIX shared memory (`shm_open`), named semaphores (`sem_open`), and POSIX message queues (`mq_open`) create files in `/dev/shm` or `/dev/mqueue`. These are ordinary inodes protected by FACS through the normal file open path. No additional IPC hooks are needed for POSIX IPC.
-
 ## Miscellaneous
 
 | Hook | Purpose |
 |---|---|
 | `security_inode_follow_link` | Unconditional allow. Registered for auditability. |
-| `security_inode_set_acl` | Deny POSIX ACL creation. KACS replaces POSIX ACLs. |
-| `security_inode_remove_acl` | Deny POSIX ACL removal. KACS replaces POSIX ACLs. |
+| `security_inode_set_acl` | POSIX ACLs are not a Peios concept (the SD in `security.peios.sd` is the entire access-control story). Return `-EOPNOTSUPP` so callers that defensively probe ACL support (overlayfs workdir setup, archive tools with `--acls`, etc.) treat the FS as "no ACLs here" rather than as a permission failure. |
+| `security_inode_remove_acl` | Same model as `security_inode_set_acl` — return `-EOPNOTSUPP`. |
 | `security_inode_xattr_skipcap` | Skip native security-xattr capability prechecks so KACS/FACS metadata hooks are authoritative. Non-empty `security.capability` installation remains denied by the dead `CAP_SETFCAP` policy. |
 | `security_inode_getsecurity` | Return SD bytes via the inode security interface. |
 

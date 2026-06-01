@@ -8,29 +8,28 @@ This section specifies the complete AccessCheck evaluation algorithm. The featur
 
 The complete evaluation runs in this order:
 
-0. **LogonSession validity gate.** If the token's LogonSession is marked dead, deny immediately.
-1. **Impersonation level gate.** If the token is an impersonation token at Identification level, deny immediately. Anonymous tokens proceed through the full pipeline.
-2. **Input validation.** Reject null SDs, SDs without owner, and malformed object type lists. A null group SID is valid and has no direct access-decision effect.
-3. **Generic mapping.** Map generic bits in the desired mask to object-specific bits. Strip MAXIMUM_ALLOWED.
-4. **Effective privileges.** Clear backup/restore bits when the corresponding intent flag is absent.
-5. **Privilege grants.** Resolve ACCESS_SYSTEM_SECURITY, backup, and restore. Seed `decided`, `granted`, and `privilege_granted`.
-6. **Pre-SACL walk.** Extract the mandatory integrity label, PIP trust label, resource attributes, and scoped policy IDs from the SACL. Enforce MIC and PIP.
-7. **Virtual group injection.** Inject S-1-3-4 and S-1-5-10 as virtual groups if the caller is the owner or matches the object's principal.
-8. **Tree initialization.** Copy scalar `decided`/`granted` to each tree node.
-9. **Normal DACL evaluation.** Owner implicit rights, then the DACL walk with token-based SID matching. Resource attributes extracted in step 6 are available to conditional expressions in callback ACEs.
-10. **Post-DACL privilege override.** SeTakeOwnershipPrivilege grants WRITE_OWNER if the DACL did not and mandatory policy (MIC/PIP) did not block it.
-11. **Restricted token pass.** If the token has restricting SIDs or restricted device groups, evaluate the DACL again with the restricted identity view and intersect. Privilege-granted bits are restored after intersection.
-12. **Confinement pass.** If the token is confined, evaluate the DACL with confinement SIDs and intersect. No privilege bypass.
+0. **Impersonation level gate.** If the token is an impersonation token at Identification level, deny immediately. Anonymous tokens proceed through the full pipeline.
+1. **Input validation.** Reject null SDs, SDs without owner, and malformed object type lists. A null group SID is valid and has no direct access-decision effect.
+2. **Generic mapping.** Map generic bits in the desired mask to object-specific bits. Strip MAXIMUM_ALLOWED.
+3. **Effective privileges.** Clear backup/restore bits when the corresponding intent flag is absent.
+4. **Privilege grants.** Resolve ACCESS_SYSTEM_SECURITY, backup, and restore. Seed `decided`, `granted`, and `privilege_granted`.
+5. **Pre-SACL walk.** Extract the mandatory integrity label, PIP trust label, resource attributes, and scoped policy IDs from the SACL. Enforce MIC and PIP.
+6. **Virtual group injection.** Inject S-1-3-4 and S-1-5-10 as virtual groups if the caller is the owner or matches the object's principal.
+7. **Tree initialization.** Copy scalar `decided`/`granted` to each tree node.
+8. **Normal DACL evaluation.** Owner implicit rights, then the DACL walk with token-based SID matching. Resource attributes extracted in step 5 are available to conditional expressions in callback ACEs.
+9. **Post-DACL privilege override.** SeTakeOwnershipPrivilege grants WRITE_OWNER if the DACL did not and mandatory policy (MIC/PIP) did not block it.
+10. **Restricted token pass.** If the token has restricting SIDs or restricted device groups, evaluate the DACL again with the restricted identity view and intersect. Privilege-granted bits are restored after intersection.
+11. **Confinement pass.** If the token is confined, evaluate the DACL with confinement SIDs and intersect. No privilege bypass.
 
-**Invariant:** Steps 11, 12, and 13 are intersections — they can only narrow the granted set. Bits denied by MIC or PIP in step 6 remain denied through all subsequent stages.
-13. **CAAP (Central Access and Auditing Policy).** For each scoped policy, evaluate each applicable rule's DACL using the full per-SD pipeline and intersect. Collect applicable rules' SACLs for the audit walk.
-14. **Privilege-use auditing.** Emit audit events for privileges that contributed to the final result.
-15. **Audit emission.** Walk the object's SACL and any CAAP effective SACLs for audit and alarm ACEs.
-16. **Result computation.** Derive the final granted mask and success/failure verdict.
+**Invariant:** Steps 10, 11, and 12 are intersections — they can only narrow the granted set. Bits denied by MIC or PIP in step 5 remain denied through all subsequent stages.
+12. **CAAP (Central Access and Auditing Policy).** For each scoped policy, evaluate each applicable rule's DACL using the full per-SD pipeline and intersect. Collect applicable rules' SACLs for the audit walk.
+13. **Privilege-use auditing.** Emit audit events for privileges that contributed to the final result.
+14. **Audit emission.** Walk the object's SACL and any CAAP effective SACLs for audit and alarm ACEs.
+15. **Result computation.** Derive the final granted mask and success/failure verdict.
 
 ## EvaluateSecurityDescriptor
 
-Per-SD evaluation (steps 0--12). Called once for the normal evaluation and once per CAAP rule with a synthetic SD.
+Per-SD evaluation (steps 0--11). Called once for the normal evaluation and once per CAAP rule with a synthetic SD.
 
 ```
 EvaluateSecurityDescriptor(
@@ -40,16 +39,12 @@ EvaluateSecurityDescriptor(
       max_allowed_mode, mapped_desired, resource_attributes,
       policy_sids) | error
 
-    // Step 0: LogonSession validity gate.
-    if token.logon_session.dead:
-        return ERROR_ACCESS_DENIED
-
-    // Step 1: Impersonation level gate.
+    // Step 0: Impersonation level gate.
     if token.token_type == Impersonation
        and token.impersonation_level == Identification:
         return ERROR_ACCESS_DENIED
 
-    // Step 2: Input validation.
+    // Step 1: Input validation.
     if sd is null:
         return ERROR_INVALID_PARAMETER
     if sd.owner is null:
@@ -59,19 +54,19 @@ EvaluateSecurityDescriptor(
         exactly one level-0 node, no level gaps,
         no duplicate GUIDs
 
-    // Step 3: Generic mapping.
+    // Step 2: Generic mapping.
     desired = MapGenericBits(desired, mapping)
     max_allowed_mode = (desired & MAXIMUM_ALLOWED) != 0
     desired = desired & ~MAXIMUM_ALLOWED
 
-    // Step 4: Effective privileges.
+    // Step 3: Effective privileges.
     effective_privileges = token.privileges_enabled
     if not (privilege_intent & BACKUP_INTENT):
         effective_privileges &= ~SeBackupPrivilege
     if not (privilege_intent & RESTORE_INTENT):
         effective_privileges &= ~SeRestorePrivilege
 
-    // Step 5: Privilege-based grants.
+    // Step 4: Privilege-based grants.
     decided = 0; granted = 0; privilege_granted = 0
 
     // ACCESS_SYSTEM_SECURITY: always decided by privilege.
@@ -98,14 +93,14 @@ EvaluateSecurityDescriptor(
 
     // Note: SeRestorePrivilege above includes WRITE_OWNER in
     // restore_bits. If restore is active, WRITE_OWNER is decided
-    // here. Step 10 (SeTakeOwnershipPrivilege) is a fallback for
+    // here. Step 9 (SeTakeOwnershipPrivilege) is a fallback for
     // when restore is not active and the DACL did not grant it.
 
-    // Step 6: Pre-SACL walk.
+    // Step 5: Pre-SACL walk.
     resource_attributes = {}
     policy_sids = []
     // mandatory_decided tracks bits decided by MIC and PIP
-    // (mandatory mechanisms). Used at step 10 to prevent
+    // (mandatory mechanisms). Used at step 9 to prevent
     // SeTakeOwnershipPrivilege from overriding mandatory
     // decisions. Populated by EnforceMIC and EnforcePIP.
     mandatory_decided = 0
@@ -114,23 +109,23 @@ EvaluateSecurityDescriptor(
                 &mandatory_decided, &resource_attributes,
                 &policy_sids)
 
-    // Step 7: Virtual group injection.
+    // Step 6: Virtual group injection.
     token = EnrichToken(token, sd.owner, self_sid)
 
-    // Step 8: Tree initialization.
+    // Step 7: Tree initialization.
     if object_tree is not null:
         for each node in object_tree:
             node.decided = decided
             node.granted = granted
 
-    // Step 9: Normal DACL evaluation.
+    // Step 8: Normal DACL evaluation.
     EvaluateDACL(sd, token, mapping, object_tree,
                  SidMatchesToken, desired, max_allowed_mode,
                  resource_attributes, local_claims,
                  skip_owner_implicit=false,
                  &decided, &granted)
 
-    // Step 10: Post-DACL WRITE_OWNER override.
+    // Step 9: Post-DACL WRITE_OWNER override.
     // Deny-proof but respects mandatory decisions (MIC/PIP).
     if (desired & WRITE_OWNER) != 0 or max_allowed_mode:
         if (effective_privileges & SeTakeOwnershipPrivilege):
@@ -145,7 +140,7 @@ EvaluateSecurityDescriptor(
                             node.decided |= WRITE_OWNER
                             node.granted |= WRITE_OWNER
 
-    // Step 11: Restricted token pass.
+    // Step 10: Restricted token pass.
     if token.restricted_sids is not empty
        or token.restricted_device_groups is not empty:
         r_decided = 0; r_granted = 0
@@ -191,7 +186,7 @@ EvaluateSecurityDescriptor(
                         object_tree[i].granted & r_tree[i].granted
                 object_tree[i].granted |= privilege_granted
 
-    // Step 12: Confinement pass.
+    // Step 11: Confinement pass.
     if token.confinement_sid is not null
        and not token.confinement_exempt:
         c_decided = 0; c_granted = 0
@@ -244,7 +239,7 @@ AccessCheckCore(
       max_allowed_mode, mapped_desired,
       continuous_audit_mask, staging_mismatch) | error
 
-    // Steps 0-12: per-SD evaluation.
+    // Steps 0-11: per-SD evaluation.
     (decided, granted, privilege_granted,
      max_allowed_mode, mapped_desired,
      resource_attributes, policy_sids
@@ -252,7 +247,7 @@ AccessCheckCore(
         sd, token, pip_type, pip_trust, desired, mapping,
         object_tree, self_sid, local_claims, privilege_intent)
 
-    // Step 13: CAAP (Central Access and Auditing Policy).
+    // Step 12: CAAP (Central Access and Auditing Policy).
     caap_sacls = []          // Effective SACLs from applicable rules.
     staged_caap_sacls = []   // Staged SACLs (or effective as fallback).
     staged_dacl_total = granted  // Staged DACL running total.
@@ -350,7 +345,7 @@ AccessCheckCore(
             // In result-list mode, any per-node staged/effective
             // grant delta sets staging_mismatch.
 
-    // Step 14: Privilege-use auditing.
+    // Step 13: Privilege-use auditing.
     // Only for explicit requests, not MAXIMUM_ALLOWED probing.
     // For each privilege tracked by a provenance mask
     // (security_granted, backup_granted, restore_granted,
@@ -384,7 +379,7 @@ AccessCheckCore(
     // the audit trail identifies which object the privilege was
     // exercised on.
 
-    // Step 15: Audit emission.
+    // Step 14: Audit emission.
     audit_events = []
     continuous_audit_mask = 0
     // Walk the object's own SACL.
@@ -393,7 +388,7 @@ AccessCheckCore(
                      object_tree, mapped_desired, granted, mapping,
                      resource_attributes, local_claims,
                      &audit_events, &continuous_audit_mask)
-    // Walk each CAAP effective SACL collected in step 13.
+    // Walk each CAAP effective SACL collected in step 12.
     // Same evaluation rules as the object's own SACL.
     for caap_sacl in caap_sacls:
         EvaluateSACL(caap_sacl, token, sd.owner, self_sid,
@@ -427,7 +422,7 @@ AccessCheckCore(
             staging_mismatch = true
             // Log: audit delta between effective and staged SACLs.
 
-    // Step 15b: Token audit_policy forced auditing.
+    // Step 14b: Token audit_policy forced auditing.
     // If the token's audit_policy has OBJECT_ACCESS_SUCCESS (0x01)
     // and the access succeeded, emit an audit event regardless
     // of whether the SACL matched. Similarly for
@@ -443,7 +438,7 @@ AccessCheckCore(
         audit_events.append(AuditEvent(
             policy_forced=true, mapped_desired, granted, false))
 
-    // Step 16: Result computation.
+    // Step 15: Result computation.
     return (decided, granted, privilege_granted,
             max_allowed_mode, mapped_desired,
             continuous_audit_mask, staging_mismatch)
@@ -652,14 +647,14 @@ The following functions are called in the pseudocode above but defined in other 
 
 ### Privilege provenance tracking
 
-Step 14 references per-privilege provenance masks. These are tracked throughout the pipeline as additional scalar variables:
+Step 13 references per-privilege provenance masks. These are tracked throughout the pipeline as additional scalar variables:
 
 | Variable | Set when | Used by |
 |----------|----------|---------|
-| `security_granted` | Step 5: SeSecurityPrivilege grants ACCESS_SYSTEM_SECURITY | Step 14: success if contributed requested bits survive to final granted; failure if they are later stripped |
-| `backup_granted` | Step 5: SeBackupPrivilege grants read bits | Step 14 |
-| `restore_granted` | Step 5: SeRestorePrivilege grants write+metadata bits | Step 14 |
-| `take_ownership_granted` | Step 10: SeTakeOwnershipPrivilege grants WRITE_OWNER | Step 14 |
-| `relabel_granted` | Step 6 (MIC): SeRelabelPrivilege adds WRITE_OWNER to MIC allowed set | Step 14 |
+| `security_granted` | Step 4: SeSecurityPrivilege grants ACCESS_SYSTEM_SECURITY | Step 13: success if contributed requested bits survive to final granted; failure if they are later stripped |
+| `backup_granted` | Step 4: SeBackupPrivilege grants read bits | Step 13 |
+| `restore_granted` | Step 4: SeRestorePrivilege grants write+metadata bits | Step 13 |
+| `take_ownership_granted` | Step 9: SeTakeOwnershipPrivilege grants WRITE_OWNER | Step 13 |
+| `relabel_granted` | Step 5 (MIC): SeRelabelPrivilege adds WRITE_OWNER to MIC allowed set | Step 13 |
 
-Each variable records which bits that privilege contributed. At step 14, for each privilege, compare the provenance mask against the mapped requested mask and the final result. In scalar `AccessCheck`, the comparison uses scalar final `granted`. In `AccessCheckResultList`, the comparison uses the final per-node granted list: if contributed requested bits survive on any node, the privilege was "actually necessary" — call `mark_used` and emit a successful PrivilegeUseEvent if the token's `audit_policy` has `PRIVILEGE_USE_SUCCESS` (0x04). If contributed requested bits were exercised but survive on no node, emit a failure PrivilegeUseEvent if the token's `audit_policy` has `PRIVILEGE_USE_FAILURE` (0x08), but do not call `mark_used`.
+Each variable records which bits that privilege contributed. At step 13, for each privilege, compare the provenance mask against the mapped requested mask and the final result. In scalar `AccessCheck`, the comparison uses scalar final `granted`. In `AccessCheckResultList`, the comparison uses the final per-node granted list: if contributed requested bits survive on any node, the privilege was "actually necessary" — call `mark_used` and emit a successful PrivilegeUseEvent if the token's `audit_policy` has `PRIVILEGE_USE_SUCCESS` (0x04). If contributed requested bits were exercised but survive on no node, emit a failure PrivilegeUseEvent if the token's `audit_policy` has `PRIVILEGE_USE_FAILURE` (0x08), but do not call `mark_used`.

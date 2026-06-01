@@ -61,19 +61,25 @@ loregd dispatches requests as follows:
    pool. Write operations go to the write connection.
 
 3. **Transaction routing.** RSI_BEGIN_TRANSACTION does not require
-   hive identification — loregd records the txn_id and returns
-   RSI_OK. For subsequent operations with a non-zero txn_id:
-   - For the first mutating operation: identify the target hive
-     from the operation's GUID, acquire the write connection for
+   hive identification — loregd records the txn_id and its mode
+   (read-write or read-only) and returns RSI_OK. For subsequent
+   operations with a non-zero txn_id:
+   - **Read-write, first mutating operation:** identify the target
+     hive from the operation's GUID, acquire the write connection for
      that hive, and begin a SQLite transaction (BEGIN IMMEDIATE).
      Associate the txn_id with this hive's write connection. If
      SQLITE_BUSY, return RSI_TXN_BUSY.
-   - For subsequent operations: verify the txn_id is associated
-     with the same hive. LCS enforces hive-scoping at the kernel
-     level, so loregd should never receive a cross-hive operation
-     within a transaction.
-   - For read operations within a transaction: use the write
-     connection (to get read-your-own-writes isolation).
+   - **Read-write, subsequent operations:** verify the txn_id is
+     associated with the same hive. LCS enforces hive-scoping at the
+     kernel level, so loregd should never receive a cross-hive
+     operation within a transaction. Read operations use the write
+     connection (read-your-own-writes isolation).
+   - **Read-only, first read operation:** identify the target hive,
+     acquire a dedicated connection (not from the read pool), and
+     begin a deferred read transaction (BEGIN DEFERRED) to pin a
+     point-in-time snapshot. Subsequent reads reuse this connection.
+   - **Read-only, mutating operation:** reject with RSI_INVALID and
+     do not mutate (PSD-005 §7.2).
 
 4. **Execute and respond.** Process the operation against the
    appropriate database, construct the RSI response, and write it

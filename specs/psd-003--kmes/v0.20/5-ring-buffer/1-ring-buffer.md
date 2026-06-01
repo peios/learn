@@ -101,7 +101,7 @@ Written by KMES when waking consumers. Read by consumers for futex-based sleep.
 
 ## Consumer metadata page (offset 4096, read-write)
 
-The consumer metadata page is mapped read-write to consumers. KMES reads from this page but treats all values as advisory. A malicious or buggy consumer that corrupts this page can only affect its own notification behavior -- it cannot affect KMES correctness, the producer metadata, the data region, or other consumers' view of producer metadata.
+The consumer metadata page is mapped read-write to consumers. KMES reads from this page but treats all values as advisory. A malicious or buggy direct consumer that corrupts this page can affect advisory notification behavior for direct consumers attached to the same per-CPU buffer, but it cannot affect KMES correctness, the producer metadata, the data region, or other consumers' view of producer metadata.
 
 | Offset | Size | Type | Field | Description |
 |---|---|---|---|---|

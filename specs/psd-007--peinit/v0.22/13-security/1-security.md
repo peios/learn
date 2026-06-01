@@ -49,18 +49,25 @@ paths).
 peinit runs as SYSTEM with all privileges for the lifetime of the
 system. It requires:
 
-- **PRIV_TCB** -- to request tokens from authd on behalf of
-  services.
-- **PRIV_IMPERSONATE** -- to impersonate control socket callers for
-  AccessCheck evaluation.
+- **SeTcbPrivilege** -- to request tokens from authd on behalf of
+  services and to install a primary token on a child whose identity
+  differs from peinit's own.
+- **SeImpersonatePrivilege** -- to impersonate control socket
+  callers for AccessCheck evaluation.
+- **SeCreateTokenPrivilege** -- to mint SYSTEM tokens for platform
+  services during bootstrap, before authd exists (§3.3). Interim:
+  the preferred model derives the token from peinit's own handle
+  via a future KACS operation requiring no minting privilege.
 - **Process creation** -- fork/exec authority (inherent to PID 1).
 - **cgroup management** -- create/destroy cgroups under
   `/sys/fs/cgroup/peinit/`.
 - **Signal delivery** -- SIGTERM/SIGKILL to managed processes.
 - **Mount operations** -- Phase 1 virtual filesystem mounts.
 
-peinit does not use PRIV_CREATE_TOKEN directly. Token creation is
-authd's responsibility. peinit receives token fds from authd.
+For non-platform services peinit does not create tokens -- it
+installs the token fds authd mints. peinit mints tokens only for
+the SYSTEM platform services it starts during bootstrap, before
+authd is available.
 
 ## Attack surface
 
@@ -72,7 +79,7 @@ authd's responsibility. peinit receives token fds from authd.
 | Service cgroups | peinit only (creator). | Process tracking, clean kill. | cgroup hierarchy ownership. |
 | Phase 1 mounts | peinit only. | VFS availability. | Hardcoded, no external input. |
 | Boot attempt counter | peinit only (pre-FACS: any UID 0 process). | Recovery mode entry. | File on root filesystem. Pre-FACS, any process can tamper. |
-| JFS device | Processes with PRIV_CREATE_JOB. | Ad-hoc job submission. | KACS privilege check (kernel-enforced by JFS). |
+| JFS device | Processes with SeCreateJobPrivilege. | Ad-hoc job submission. | KACS privilege check (kernel-enforced by JFS). |
 
 ## Security invariants
 
@@ -102,8 +109,8 @@ Properties that peinit MUST NOT violate under any circumstances:
    hardcoded lists) for access decisions.
 
 6. **peinit MUST NOT share its SYSTEM token.** Even
-   `Identity=SYSTEM` services receive a clone, never peinit's
-   original token.
+   `Identity=SYSTEM` services receive a separately minted token,
+   never peinit's original token.
 
 7. **peinit MUST NOT drop its SYSTEM identity.** PID 1 runs as
    SYSTEM for the lifetime of the system.

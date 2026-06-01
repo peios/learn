@@ -49,6 +49,11 @@ Registry paths use backslash as the path separator (e.g.,
 All timeout and interval values in the service definition schema
 are in seconds unless explicitly stated otherwise.
 
+All GUIDs that peinit generates -- job IDs, operation IDs, and any
+other identifiers -- are UUIDv7. UUIDv7 is time-ordered, so GUIDs
+sort by creation time, which keeps eventd's time-range and recency
+queries over jobs and operations cheap.
+
 JSON examples in the control interface sections represent the
 exact wire format. Field names, types, and value formats are
 normative. Enum values in JSON use snake_case (e.g., `"start"`,

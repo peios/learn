@@ -55,11 +55,11 @@ Mints a new token from a wire-format specification.
 | `spec_len` | Length in bytes. |
 | Returns | Token fd on success, `-errno` on failure. |
 
-Requires SeCreateTokenPrivilege. The kernel validates: all SIDs well-formed, owner/primary_group indices valid, `auth_id` references an existing LogonSession that is not dead, Primary tokens have `impersonation_level` = Anonymous, `write_restricted` = true requires `user_deny_only` = true, `isolation_boundary` = true requires `confinement_sid` present, wire format `_reserved1` (elevation_type) must be 0. See §4.4 for the full validation list.
+Requires SeCreateTokenPrivilege. The kernel validates: all SIDs well-formed, owner/primary_group indices valid, `auth_id` references an existing LogonSession, Primary tokens have `impersonation_level` = Anonymous, `write_restricted` = true requires `user_deny_only` = true, `isolation_boundary` = true requires `confinement_sid` present, wire format `_reserved1` (elevation_type) must be 0, and any LCS registry credential extension is structurally valid. See §4.4 for the full validation list.
 
 The kernel MUST NOT authenticate the user, look up SIDs, or resolve mappings.
 
-The kernel generates: `token_guid` (UUIDv4), `modified_id` (initialized to 0), `created_at` (current time), `elevation_type` (always Default), and the token's own SD (default template). The kernel derives the logon SID from `logon_session_id` (`S-1-5-5-{high}-{low}`) and appends it to the groups array with SE_GROUP_LOGON_ID. Callers MUST NOT include the logon SID in the supplied groups. `owner_sid_index` and `primary_group_index` are relative to the caller-supplied groups (0 = user SID, 1..N = caller's groups), not including the injected logon SID. See §13.7 for the wire format.
+The kernel generates: `token_id`, `token_guid` (UUIDv4), `modified_id` (= token_id), `created_at` (current time), `elevation_type` (always Default), and the token's own SD (default template). The kernel derives the logon SID from `logon_session_id` (`S-1-5-5-{high}-{low}`) and appends it to the groups array with SE_GROUP_LOGON_ID. Callers MUST NOT include the logon SID in the supplied groups. `owner_sid_index` and `primary_group_index` are relative to the caller-supplied groups (0 = user SID, 1..N = caller's groups), not including the injected logon SID. See §13.7 for the wire format.
 
 Because this syscall does not take a desired-access parameter, the returned
 token fd always carries the fixed cached access mask `TOKEN_ALL_ACCESS`.
@@ -161,17 +161,6 @@ kernel references. On success, the kernel emits the normal
 `logon-session-destroyed` KMES event. A nonexistent LogonSession returns
 `-ENOENT`. A LogonSession with any live token, linked-token state, or other
 in-flight kernel reference returns `-EBUSY`.
-
-### kacs_invalidate_logon_session
-
-Marks a LogonSession as dead. All future AccessCheck evaluations against tokens referencing this LogonSession will be denied. Token creation and installation against the LogonSession are also rejected.
-
-| Parameter | Description |
-|---|---|
-| `auth_id` | LogonSession ID (LUID) to invalidate. |
-| Returns | 0 on success, `-errno` on failure. |
-
-Requires SeTcbPrivilege. Invalidating an already-dead LogonSession is a no-op (returns 0). Invalidating a nonexistent LogonSession returns `-ENOENT`. Emits a LogonSession-invalidated event through KMES.
 
 ## Privilege operations
 

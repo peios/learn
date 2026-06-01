@@ -14,19 +14,20 @@ administrator comprehension.
 |---|---|---|
 | ExplicitStart | -> Starting | Administrator or trigger initiated start. |
 | DependencyStart | -> Starting | Started to satisfy another service's dependency. |
-| RestartPolicy | -> Starting | Automatic restart after failure. |
+| RestartPolicy | -> Starting | Automatic restart after a Backoff delay. |
 | BindsToRecovery | -> Starting | Bound dependency returned to Active. peinit automatically restarts the dependent. Does not consume the restart budget. |
 | ExplicitStop | -> Stopping | Administrator requested stop. |
 | ConflictEviction | -> Stopping | Conflicting service started; this service lost. |
 | BindsToPropagation | -> Stopping | Bound dependency stopped. |
 | ShutdownWave | -> Stopping or Failed | System shutdown in progress. Services in Active or Reloading transition to Stopping. Services in Starting transition directly to Failed (SIGKILL, no graceful stop). |
-| ProcessCrash | -> Failed or Starting | Main process exited unexpectedly (non-zero or signal). |
-| ReadinessTimeout | -> Failed | StartTimeout expired before readiness. |
-| WatchdogTimeout | -> Failed or Starting | Watchdog keepalive not received in time. |
-| HealthCheckFailure | -> Failed or Starting | HealthCheckRetries consecutive failures. |
-| PreHookFailure | -> Failed | ExecStartPre exited non-zero. |
-| ParentSetupFailure | -> Failed | Parent-side failure before fork (pipe2 EMFILE, clone3 EAGAIN/ENOMEM, cgroup creation failed). No child process was created. |
-| PreExecFailure | -> Failed | Post-fork setup failed before exec (token installation, rlimit, environment). Detected via the cloexec error pipe. |
+| ProcessCrash | -> Failed or Backoff | Main process exited unexpectedly (non-zero or signal). |
+| CleanExitRestart | -> Backoff | Simple main process exited successfully, but RestartPolicy=Always requires peinit to restart it. This is not a crash. |
+| ReadinessTimeout | -> Failed or Backoff | StartTimeout expired before readiness. |
+| WatchdogTimeout | -> Failed or Backoff | Watchdog keepalive not received in time. |
+| HealthCheckFailure | -> Failed or Backoff | HealthCheckRetries consecutive failures. |
+| PreHookFailure | -> Failed or Backoff | ExecStartPre exited non-zero. |
+| ParentSetupFailure | -> Failed or Backoff | Parent-side failure before fork (pipe2 EMFILE, clone3 EAGAIN/ENOMEM, cgroup creation failed). No child process was created. |
+| PreExecFailure | -> Failed or Backoff | Post-fork setup failed before exec (token installation, rlimit, environment). Detected via the cloexec error pipe. |
 | DependencyFailure | -> Failed | A Requires dependency entered Failed. |
 | RestartBudgetExhausted | -> Failed | RestartMaxRetries reached within RestartWindow. |
 | CycleDetected | -> Failed | Service is part of a dependency cycle. |
@@ -37,7 +38,7 @@ administrator comprehension.
 
 ## Restart eligibility
 
-Causes are classified into two groups that determine whether the
+Causes are classified into three groups that determine whether the
 restart policy is consulted.
 
 ### Restart-eligible causes
@@ -45,7 +46,8 @@ restart policy is consulted.
 For these causes, peinit MUST consult RestartPolicy and the
 restart budget before deciding the next state. If the policy
 allows restart and the budget is not exhausted, the service
-transitions to Starting.
+transitions to Backoff (and then to Starting once the backoff
+delay elapses; see §5.3). Otherwise it transitions to Failed.
 
 - ProcessCrash
 - WatchdogTimeout
@@ -54,6 +56,19 @@ transitions to Starting.
 - PreHookFailure
 - PreExecFailure
 - ParentSetupFailure
+
+### Always-only restart causes
+
+CleanExitRestart is consulted only when a Simple service exits
+successfully (exit code 0 or SuccessExitCodes) and
+RestartPolicy=Always. It uses the same exponential backoff and
+RestartMaxRetries budget as restart-eligible failures. This
+prevents a daemon that exits cleanly in a tight loop from bypassing
+restart throttling.
+
+CleanExitRestart MUST NOT be treated as ProcessCrash. Logs and
+status MUST make clear that the process exited successfully and was
+restarted solely because the service policy is Always.
 
 > [!INFORMATIVE]
 > Startup failures (ReadinessTimeout, PreHookFailure,
@@ -91,16 +106,43 @@ target state). Retrying cannot help.
 
 ## OnFailure
 
-When a service transitions to Failed -- for any cause -- and the
-service definition includes an OnFailure field, peinit MUST start
-the designated fallback service. The OnFailure service fires on
-every transition to Failed regardless of cause. The transition
-cause is logged, so the OnFailure service or eventd can distinguish
-causes.
+When a service transitions to Failed and the service definition
+includes an OnFailure field, peinit MUST start the designated
+fallback service -- except for the causes excluded below. The
+transition cause is logged, so the OnFailure service or eventd can
+distinguish causes.
+
+OnFailure MUST NOT fire for:
+
+- **ShutdownWave** -- no new services may start during shutdown
+  (§10.1), so a fallback would be both impossible and pointless. A
+  Starting service SIGKILLed by the shutdown wave transitions to
+  Failed without triggering OnFailure.
+- **ValidationError, CycleDetected, DependencyFailure,
+  AssertionError** -- these are definition or dependency-graph
+  breakage, not runtime degradation. A broken or unsatisfiable
+  definition cannot meaningfully trigger a fallback, and the
+  fallback would likely sit in the same broken graph. OnFailure is
+  for degrading a *running* service, not for configuration errors.
+
+For all other Failed causes -- including ProcessCrash,
+WatchdogTimeout, HealthCheckFailure, the startup-failure causes,
+and RestartBudgetExhausted -- OnFailure fires.
 
 OnFailure is for graceful degradation (e.g., primary web UI fails,
 start minimal emergency endpoint), not for monitoring or alerting
 (that is eventd's responsibility).
+
+### Loop guard
+
+An OnFailure service can itself fail and carry its own OnFailure, so
+a misconfiguration (A's OnFailure is B, B's OnFailure is A) could
+loop indefinitely. peinit MUST bound the chain originating from a
+single failure: it tracks the set of services already started as
+OnFailure handlers for that originating failure and MUST NOT start
+one already in the set, and MUST NOT follow the chain beyond a fixed
+depth (16). When the guard trips, peinit logs the loop and stops --
+it does not keep firing fallbacks.
 
 ## Logging contract
 

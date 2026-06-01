@@ -4,23 +4,39 @@ title: Restart and Reload
 
 ## Restart semantics
 
-When a service transitions to Failed with a restart-eligible cause
-(§5.2), peinit evaluates the restart
-policy:
+When a restart-eligible cause occurs (§5.2), or when a Simple clean
+exit produces the always-only CleanExitRestart cause (§5.2), peinit
+evaluates the restart policy. The outcome is either **Failed** (no
+restart) or **Backoff** -- the service waits out a delay, then
+transitions to Starting:
 
 ```
 evaluate_restart(service, cause):
     // Step 1: Check policy.
     if service.restart_policy == Never:
         return STAY_FAILED
+    if cause == CleanExitRestart and service.restart_policy != Always:
+        return INVALID_CAUSE_FOR_POLICY
     if service.restart_policy == OnFailure:
-        if exit_code in service.success_exit_codes:
+        // A termination counts as success (no restart) only when the
+        // cause is a process exit whose code is in SuccessExitCodes.
+        // Only ProcessCrash and CleanExitRestart carry an exit code.
+        // CleanExitRestart is Always-only and was handled above.
+        // Every other
+        // restart-eligible cause (WatchdogTimeout, HealthCheckFailure,
+        // ReadinessTimeout, PreHookFailure, PreExecFailure,
+        // ParentSetupFailure -- see §5.2) has no exit code and is
+        // always a failure under OnFailure.
+        if cause == ProcessCrash and exit_code in service.success_exit_codes:
             return STAY_FAILED
     // restart_policy == Always falls through unconditionally.
 
-    // Step 2: Check budget.
-    recent_restarts = count restarts within service.restart_window
-    if recent_restarts >= service.restart_max_retries:
+    // Step 2: Check budget. consecutive_failures is the count of
+    // prior consecutive restart-eligible failures (the same counter
+    // backoff uses in Step 3). It resets to 0 only after the service
+    // stays Active for RestartWindow seconds -- it is NOT a count of
+    // restarts within a trailing window.
+    if consecutive_failures >= service.restart_max_retries:
         service.cause = RestartBudgetExhausted
         if service.error_control == Critical:
             sync filesystems and reboot
@@ -35,13 +51,25 @@ evaluate_restart(service, cause):
     return RESTART_AFTER(delay)
 ```
 
+`RESTART_AFTER(delay)` places the service in the **Backoff** state
+for `delay` seconds; when the delay elapses the service transitions
+to Starting and the normal activation sequence (and its
+StartTimeout) begins. A restart-policy retry therefore never passes
+through Failed -- Failed is reached only via `STAY_FAILED`
+(RestartPolicy=Never, invalid policy for CleanExitRestart, or budget
+exhausted). This is why OnFailure (§5.2), which fires on entry to
+Failed, does not fire on each retry, only when the service finally
+fails out. While in Backoff the service is down and does not satisfy
+dependents; an explicit `start` honors the remaining delay and a
+`stop` cancels the pending restart (§11.2).
+
 ### Policy values
 
 | Policy | Value | Behaviour |
 |---|---|---|
 | Never | 0 | Never restart. Service remains Failed. |
 | OnFailure | 1 | Restart only on non-zero exit or runtime failure. Exits matching SuccessExitCodes are not restarted. |
-| Always | 2 | Restart on any failure regardless of exit code. Successful Oneshot exits (code 0 or SuccessExitCodes match) are not restart-eligible -- see below. |
+| Always | 2 | Restart on any failure regardless of exit code. For Simple services, also restart successful clean exits using CleanExitRestart. Successful Oneshot exits (code 0 or SuccessExitCodes match) are not restart-eligible -- see below. |
 
 For Oneshot services with RestartPolicy=Always, a successful exit
 (code 0 or SuccessExitCodes match) is NOT restart-eligible.
@@ -60,10 +88,11 @@ service stays healthy for RestartWindow seconds.
 
 ### Budget exhaustion
 
-If RestartMaxRetries restarts occur within RestartWindow seconds,
-the service transitions to Failed with cause
-RestartBudgetExhausted. peinit MUST then apply the service's
-ErrorControl level:
+Once RestartMaxRetries restarts have occurred without the service
+recovering -- that is, without it staying Active for RestartWindow
+seconds to reset the counter -- the next failure is not restarted:
+the service transitions to Failed with cause RestartBudgetExhausted.
+peinit MUST then apply the service's ErrorControl level:
 
 - **Normal:** service remains in Failed state.
 - **Critical:** peinit syncs filesystems and reboots.
@@ -72,9 +101,11 @@ ErrorControl level:
 
 If a restarted service stays in the Active state for at least
 RestartWindow seconds without failing, the restart counter MUST
-reset to zero. This means a service that crashes once every few
-minutes with a 120-second RestartWindow never exhausts its budget
--- each crash is treated as a fresh failure.
+reset to zero. A service that recovers and stays Active for longer
+than RestartWindow between crashes therefore never exhausts its
+budget -- each crash starts from a counter of zero. Only failures
+recurring faster than the service can sustain RestartWindow of
+health accumulate toward RestartMaxRetries.
 
 ## Reload semantics
 
@@ -86,54 +117,68 @@ and transitions the service to the Reloading state.
 
 ```
 evaluate_reload(service):
-    // Step 1: Send reload.
-    if service.exec_reload is not null:
-        if exec_reload starts with "signal:":
-            send the named signal to the main process
-        else:
-            fork and exec the reload command
-    else:
-        send SIGHUP to the main process
-
-    // Step 2: Enter Reloading state.
+    // Step 1: Issue the reload and enter the Reloading state.
+    // ExecReload is either a signal (e.g. "signal:SIGHUP") or an
+    // external command. An external command runs in the service's
+    // hooks/ sub-cgroup under the service's own Identity (§3.3) --
+    // never peinit's token, and HookIdentity does not apply.
     service.state = Reloading
+
+    if service.exec_reload is null:
+        send SIGHUP to the main process
+        return await_signal_reload(service)
+    if service.exec_reload starts with "signal:":
+        send the named signal to the main process
+        return await_signal_reload(service)
+    else:
+        materialise the service token, fork the command into hooks/,
+        exec it, and wait for it to exit
+        return await_command_reload(service)
+
+// Signal / SIGHUP path: there is no command exit to observe, so
+// completion is inferred from the main process's sd_notify protocol.
+await_signal_reload(service):
     start detection_window timer (2 seconds)
 
-    // Step 3: Wait for protocol detection.
-    // Three outcomes:
-
-    // 3a: RELOADING=1 arrives within detection window.
-    //     Service speaks the reload protocol.
-    //     Extend wait up to StartTimeout for READY=1.
+    on READY=1 (any time):
+        service.state = Active
+        return "confirmed"
     on RELOADING=1 within detection_window:
         cancel detection_window
         start extended_wait timer (StartTimeout)
-
-    // 3b: READY=1 arrives at any point during Reloading.
-    //     Reload complete. Transition to Active.
-    on READY=1:
+    on detection_window expired (no RELOADING=1):
         service.state = Active
-        return "confirmed"
-
-    // 3c: Detection window expires with no RELOADING=1.
-    //     Service does not speak the protocol.
-    //     Assume reload was instant. Transition to Active.
-    on detection_window expired:
+        return "advisory"
+    on extended_wait expired (no READY=1):
+        log warning: "service signalled RELOADING=1 but never
+                      completed reload"
         service.state = Active
         return "advisory"
 
-    // 3d: Extended wait expires without READY=1.
-    //     Service signalled RELOADING=1 but never completed.
-    //     Transition to Active with a warning.
-    on extended_wait expired:
-        log warning: "service signalled RELOADING=1 but
-                      never completed reload"
+// External-command path: the command's exit gates FAILURE; the main
+// process's READY=1 (if any) gates CONFIRMATION.
+await_command_reload(service):
+    on command exits non-zero:
+        log error: "ExecReload command failed (exit <code>)"
+        service.state = Active   // a failed reload does NOT kill a running service
+        return "failed"
+    on command runtime exceeds StartTimeout:
+        SIGKILL the command and its hooks/ descendants
+        log error: "ExecReload command timed out"
         service.state = Active
-        return "advisory"
+        return "failed"
+    on command exits zero:
+        service.state = Active
+        if READY=1 was received from the main process during reload:
+            return "confirmed"
+        else:
+            return "advisory"
 ```
 
 The detection window duration (2 seconds) is fixed and is not
-configurable via the registry.
+configurable via the registry. A failed reload (either branch)
+leaves the service Active -- reload failure is reported to the
+caller but never transitions a running service out of Active.
 
 ### Auto-detection
 
@@ -152,12 +197,16 @@ peinit MUST treat it as a ProcessCrash. The restart policy is
 consulted:
 
 - If RestartPolicy allows restart and the budget is not exhausted,
-  the service transitions Reloading → Starting (restart).
+  the service transitions Reloading → Backoff (then Starting after
+  the backoff delay).
 - If RestartPolicy does not allow restart or the budget is
   exhausted, the service transitions Reloading → Failed.
 
 The reload detection window and extended wait timers are cancelled
-on process exit.
+on process exit. This concerns the service's **main process**
+crashing -- distinct from an external ExecReload *command* exiting
+non-zero, which is the "failed" reload outcome above and leaves the
+main process (and the service) running.
 
 ### Reload during stop
 
@@ -173,9 +222,14 @@ The control socket `reload` command returns immediately by default
 commands). If `wait=true`, the connection stays open until the
 Reloading state resolves. The response includes:
 
-- `"mode": "confirmed"` -- if `READY=1` was received.
-- `"mode": "advisory"` -- if the detection window expired without
-  `RELOADING=1`, or if the extended wait expired without `READY=1`.
+- `"mode": "confirmed"` -- `READY=1` was received (signal path), or
+  the ExecReload command exited 0 and `READY=1` was received.
+- `"mode": "advisory"` -- the detection window expired without
+  `RELOADING=1`, the extended wait expired without `READY=1`, or the
+  ExecReload command exited 0 without a `READY=1` from the main
+  process.
+- `"mode": "failed"` -- the ExecReload command exited non-zero or
+  timed out. The service remains Active.
 
 ## Runtime watchdog timeout update
 

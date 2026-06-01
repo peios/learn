@@ -10,11 +10,11 @@ Mint a new token from scratch. The caller provides the security-meaningful conte
 
 **Gated by:** `SeCreateTokenPrivilege`.
 
-**Caller-supplied fields:** `user_sid`, `groups` (with attributes), privileges (`privs_present` + `privs_enabled`), `owner_sid_index`, `primary_group_index`, `default_dacl`, `integrity_level`, `mandatory_policy`, `token_type`, `impersonation_level`, `auth_id` (MUST reference an existing LogonSession), `expiration` (0 = no expiry), `audit_policy`, `source` (name + LUID), `user_claims`, `device_claims`, `device_groups`, `restricted_sids`, `restricted_device_groups`, `confinement_sid`, `confinement_capabilities`, `confinement_exempt`, `isolation_boundary`, `write_restricted`, `user_deny_only`, `projected_uid`, `projected_gid`, `projected_supplementary_gids`, `origin`, `interactivity_scope`. See §13.7 for the complete wire format.
+**Caller-supplied fields:** `user_sid`, `groups` (with attributes), privileges (`privs_present` + `privs_enabled`), `owner_sid_index`, `primary_group_index`, `default_dacl`, `integrity_level`, `mandatory_policy`, `token_type`, `impersonation_level`, `auth_id` (MUST reference an existing LogonSession), `expiration` (0 = no expiry), `audit_policy`, `source` (name + LUID), `user_claims`, `device_claims`, `lcs_scope_guids`, `lcs_private_layers`, `device_groups`, `restricted_sids`, `restricted_device_groups`, `confinement_sid`, `confinement_capabilities`, `confinement_exempt`, `isolation_boundary`, `write_restricted`, `user_deny_only`, `projected_uid`, `projected_gid`, `projected_supplementary_gids`, `origin`, `interactivity_scope`. See §13.7 for the complete wire format.
 
 The caller (authd) is responsible for including well-known implicit groups in the `groups` array: Everyone (`S-1-1-0`), Authenticated Users (`S-1-5-11`), and any other groups that the principal's authentication context implies (e.g., `S-1-5-4` Interactive, `S-1-5-6` Service, `S-1-5-15` This Organization). The kernel does NOT inject these — only the logon SID is kernel-generated.
 
-**Kernel-generated fields:** `token_guid` (UUIDv4), `modified_id` (initialized to 0), `created_at` (current time), `elevation_type` (always Default), `logon_sid` (derived from `logon_session_id` as `S-1-5-5-{logon_session_id >> 32}-{logon_session_id & 0xFFFFFFFF}`), token SD (default SD per §4.8).
+**Kernel-generated fields:** `token_id` (LUID), `token_guid` (UUIDv4), `modified_id` (initialized to `token_id`), `created_at` (current time), `elevation_type` (always Default), `logon_sid` (derived from `logon_session_id` as `S-1-5-5-{logon_session_id >> 32}-{logon_session_id & 0xFFFFFFFF}`), token SD (default SD per §4.8).
 
 The kernel injects the logon SID into the groups array with `SE_GROUP_MANDATORY | SE_GROUP_ENABLED_BY_DEFAULT | SE_GROUP_ENABLED | SE_GROUP_LOGON_ID`. Callers MUST NOT include the logon SID in their supplied groups array — it is always kernel-generated. The injected entry is appended after the caller's groups. `owner_sid_index` and `primary_group_index` are interpreted relative to the caller-supplied groups (0 = user SID, 1..N = caller's groups), not including the kernel-injected logon SID entry.
 
@@ -31,6 +31,13 @@ The kernel validates:
 9. `elevation_type` field in the wire format MUST be 0 (reserved). The kernel always sets Default.
 10. The caller-supplied group count plus the kernel-injected logon SID MUST
     fit the 1024-entry token group limit.
+11. The optional LCS registry credential extension, when present, MUST use the
+    version and layout defined in §13.7, MUST contain at most 256 scope GUIDs,
+    MUST contain at most 256 private layer names, MUST NOT contain the nil
+    scope GUID, MUST NOT contain duplicate scope GUIDs, MUST NOT contain empty
+    or overlong private layer names, and MUST NOT contain duplicate private
+    layer names under LCS case-insensitive matching. Malformed LCS registry
+    credentials MUST cause CreateToken to fail closed.
 
 The kernel MUST NOT authenticate the user, look up SIDs in the directory, resolve SID-to-UID mappings, or validate that the principal exists. The caller is trusted as TCB by virtue of holding `SeCreateTokenPrivilege`.
 
@@ -53,8 +60,9 @@ The caller MAY change during duplication:
 
 Fields on the new token:
 
+- `token_id` — new LUID.
 - `token_guid` — new UUIDv4.
-- `modified_id` — initialized to 0.
+- `modified_id` — initialized to the new `token_id`.
 - `token_type` — caller-specified (Primary or Impersonation).
 - `impersonation_level` — caller-specified for Impersonation. If the source token is an impersonation token, the new level must be <= the source level. If the source token is Primary, any impersonation level is valid. Primary duplicates always use Anonymous.
 - `elevation_type` — reset to Default (not part of any linked pair).
@@ -67,6 +75,7 @@ Fields on the new token:
 - `interactivity_scope` — copied from source.
 - `default_dacl`, `owner_sid_index`, `primary_group_index` — copied from source.
 - `user_claims`, `device_claims`, `device_groups`, `restricted_device_groups` — copied from source.
+- `lcs_scope_guids`, `lcs_private_layers` — copied from source.
 - `confinement_sid`, `confinement_capabilities`, `confinement_exempt` — copied from source.
 - `projected_uid`, `projected_gid`, `projected_supplementary_gids` — copied from source.
 - Token SD — new default SD per §4.8. The caller cannot supply a custom SD at duplication time; use WRITE_DAC on the new handle to modify afterward if needed.
@@ -98,8 +107,9 @@ request is invalid and no token is created.
 
 FilterToken creates a new token object. The original is untouched. Fields on the new token:
 
+- `token_id` — new LUID.
 - `token_guid` — new UUIDv4.
-- `modified_id` — initialized to 0.
+- `modified_id` — initialized to the new `token_id`.
 - `elevation_type` — reset to Default (not part of any linked pair).
 - `user_sid`, `logon_sid`, `integrity_level`, `mandatory_policy`, `token_type`, `impersonation_level` — copied from source.
 - `groups` — SIDs copied from source. Per-group attributes modified per the deny-only list. No SIDs added or removed.
@@ -110,6 +120,7 @@ FilterToken creates a new token object. The original is untouched. Fields on the
 - `auth_id`, `origin`, `source`, `created_at`, `expiration`, `audit_policy` — copied from source.
 - `default_dacl`, `owner_sid_index`, `primary_group_index` — copied from source.
 - `user_claims`, `device_claims`, `device_groups`, `restricted_device_groups` — copied from source.
+- `lcs_scope_guids`, `lcs_private_layers` — copied from source.
 - `confinement_sid`, `confinement_capabilities`, `confinement_exempt` — copied from source.
 - `projected_uid`, `projected_gid`, `projected_supplementary_gids` — copied from source.
 - Token SD — new default SD per §4.8.

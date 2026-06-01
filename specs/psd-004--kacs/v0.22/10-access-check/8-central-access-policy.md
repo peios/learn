@@ -49,7 +49,7 @@ For each scoped policy ACE, AccessCheck:
 
 ## Audit evaluation (SACL component)
 
-For each applicable rule that carries an effective SACL, the rule's audit ACEs are evaluated alongside the object's own SACL during the audit walk (step 15 of the AccessCheck algorithm). Audit ACEs from the CAAP effective SACL are treated identically to ACEs from the object's own SACL — if either says "audit this operation," it is audited.
+For each applicable rule that carries an effective SACL, the rule's audit ACEs are evaluated alongside the object's own SACL during the audit walk (step 14 of the AccessCheck algorithm). Audit ACEs from the CAAP effective SACL are treated identically to ACEs from the object's own SACL — if either says "audit this operation," it is audited.
 
 The SACL component is additive: a CAAP SACL can only add audit coverage, never suppress auditing that the object's own SACL requests.
 
@@ -116,7 +116,7 @@ When a scoped policy ACE references a policy SID not in the kernel cache (authd 
 - ALLOW GENERIC_ALL to SYSTEM (`S-1-5-18`)
 - ALLOW GENERIC_ALL to OWNER_RIGHTS (`S-1-3-4`)
 
-The ACE masks MUST use the literal `GENERIC_ALL` bit (0x10000000), not pre-mapped object-specific bits. `EvaluateSecurityDescriptor` step 3 expands `GENERIC_ALL` via the caller's GenericMapping at evaluation time, ensuring the recovery policy works correctly for all object types.
+The ACE masks MUST use the literal `GENERIC_ALL` bit (0x10000000), not pre-mapped object-specific bits. `EvaluateSecurityDescriptor` step 2 expands `GENERIC_ALL` via the caller's GenericMapping at evaluation time, ensuring the recovery policy works correctly for all object types.
 
 Because CAAP is applied as an intersection, the recovery policy does not widen
 access beyond the object's own DACL. It limits missing-policy access to callers
@@ -125,7 +125,7 @@ administrator, SYSTEM, and owner escape hatches, not a no-effect fallback.
 
 ## Error handling
 
-If a CAAP rule's DACL evaluation produces an error (e.g., malformed DACL in the policy definition), the rule denies all access except rights granted by privileges. Privilege-granted rights are preserved as an escape hatch: an administrator with SeSecurityPrivilege retains the ability to read and modify the SACL to remove the scoped policy ACE. Note: PIP enforcement (step 6) runs before CAAP (step 13) and may have already stripped ACCESS_SYSTEM_SECURITY from `privilege_granted` for non-dominant callers. The escape hatch only works for callers who are PIP-dominant or have no PIP trust label on the object.
+If a CAAP rule's DACL evaluation produces an error (e.g., malformed DACL in the policy definition), the rule denies all access except rights granted by privileges. Privilege-granted rights are preserved as an escape hatch: an administrator with SeSecurityPrivilege retains the ability to read and modify the SACL to remove the scoped policy ACE. Note: PIP enforcement (step 5) runs before CAAP (step 12) and may have already stripped ACCESS_SYSTEM_SECURITY from `privilege_granted` for non-dominant callers. The escape hatch only works for callers who are PIP-dominant or have no PIP trust label on the object.
 
 If a CAAP rule's SACL evaluation produces an error, the error is logged and the rule's audit contribution is skipped.
 

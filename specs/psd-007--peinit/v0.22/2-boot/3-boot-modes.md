@@ -11,17 +11,24 @@ Full mode is the default. All boot-triggered services start in
 dependency order as described in §2.2.
 
 A successful Full boot MUST reset the boot attempt counter to 0.
-A boot is successful when all Critical services have been Active
-for a grace period:
+A boot is successful when every Critical service has reached and
+held a **dependent-satisfying state** -- Active, Completed, or
+Skipped (§5.1) -- for a grace period. The criterion is "satisfying,"
+not "Active," because a Critical Oneshot reaches Completed and never
+Active; requiring Active would make such a service unable to ever
+mark the boot successful.
 
 | Registry key | Default | Description |
 |---|---|---|
-| `Machine\System\Boot\BootSuccessGrace` | 30 | Seconds all Critical services must remain Active before the boot is considered successful. |
+| `Machine\System\Boot\BootSuccessGrace` | 30 | Seconds every Critical service must hold a dependent-satisfying state (Active, Completed, or Skipped) before the boot is considered successful. |
 
 ## Safe mode
 
-Safe mode starts a reduced set of services. Two categories of
-services are eligible:
+Safe mode starts a reduced set of boot-triggered services. A
+service with no `boot` trigger does not auto-start in Safe mode,
+regardless of `SafeMode` or `ErrorControl`; it remains demand-only.
+Within the boot-triggered set, two categories of services are
+eligible:
 
 - **Critical services** (`ErrorControl=Critical`): MUST start. If
   a Critical service fails in Safe mode, the normal Critical
@@ -48,9 +55,9 @@ A successful Safe boot MUST reset the boot attempt counter to 0.
 > for situations where the system configuration is broken but the
 > TCB itself is healthy.
 
-`SafeMode=1` is a filter within the boot-triggered set. A service
-with no `boot` trigger does not auto-start in Safe mode regardless
-of its SafeMode flag.
+`SafeMode=1` and `ErrorControl=Critical` are filters within the
+boot-triggered set. They do not make a demand-only service
+auto-start in Safe mode.
 
 ### Entry conditions
 
@@ -93,14 +100,24 @@ The administrator gets an unrestricted SYSTEM shell on the console.
 
 When entering Recovery mode, peinit MUST:
 
-1. Complete Phase 1 steps 1-3 (remount root read-write, mount
-   virtual filesystems, set clock from RTC) if not already done.
+1. Complete Phase 1 steps 1-3 (verify the root is writable, mount
+   the remaining virtual filesystems, set clock from RTC) if not
+   already done.
 2. Attempt to start registryd. If registryd fails, ignore the
    failure and continue. Recovery mode MUST deliver a shell
    regardless of registryd's state.
 3. Skip all Phase 2 services.
 4. Start a root shell on the console using a compiled-in definition
-   (no registry dependency).
+   (no registry dependency). peinit MUST exec `/bin/recsh` if it is
+   present and executable, otherwise `/bin/sh`, running it as SYSTEM
+   on `/dev/console`. peinit does not care where either binary comes
+   from. If the shell exits, peinit MUST respawn it -- Recovery mode
+   never exits to an unmanaged PID 1. If neither `/bin/recsh` nor
+   `/bin/sh` can be exec'd, peinit cannot deliver a Recovery shell;
+   it MUST log the reason to `/dev/console`, sync, and halt (PID 1
+   exiting would panic the kernel). A missing shell is a
+   binary-integrity failure, outside the boot-attempt machinery's
+   remit.
 5. Log the failure reason to console.
 
 > [!INFORMATIVE]
@@ -108,6 +125,14 @@ When entering Recovery mode, peinit MUST:
 > environment. There are no underlying security protections beyond
 > what the kernel provides. The administrator has a SYSTEM shell
 > and must treat it with corresponding care.
+
+> [!INFORMATIVE]
+> `/bin/recsh` lets a system ship a purpose-built recovery shell --
+> one that bundles the offline registry tools, presents guidance, or
+> curates a recovery command set -- without making it mandatory.
+> Plain `/bin/sh` is the floor where it is absent. peinit treats both
+> as opaque executables; what they contain is the system's choice,
+> not peinit's.
 
 ### Offline registry access
 
@@ -149,13 +174,29 @@ peinit MUST maintain a boot attempt counter at
 a file on the root filesystem (not in the registry, because the
 registry may be the reason for the failure).
 
-- The counter MUST be incremented at the start of every boot,
-  before Phase 1 begins.
+- peinit MUST read the counter at startup, before selecting the
+  boot mode. The Recovery threshold (`counter >= N`) is evaluated
+  against this pre-increment value, so a default N of 3 admits
+  exactly three boot attempts before Recovery.
+- peinit MUST increment the counter once per boot, immediately
+  after Phase 1 Step 1 confirms the root is writable, and before
+  Phase 2 begins. peinit MUST NOT increment before the root is
+  known writable: doing so on a read-only root would silently lose
+  the increment and defeat escalation entirely.
 - The counter MUST be reset to 0 on a successful Full or Safe boot
   (after the grace period).
 - If the counter file cannot be written (e.g., disk full), peinit
   MUST treat the counter as 0 and continue. A write failure MUST
   NOT trigger Recovery mode.
+
+> [!INFORMATIVE]
+> The counter protects against boots where peinit runs but the
+> system fails to reach health -- a crash-looping Critical service,
+> for example. It deliberately does not try to catch a peinit that
+> is too broken to reach its own increment: Recovery mode is itself
+> a peinit mode, so a peinit that cannot start cannot deliver
+> Recovery either, and a higher count could not help. That failure
+> belongs to binary integrity, not to the boot-attempt counter.
 
 ## Escalation summary
 

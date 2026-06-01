@@ -78,17 +78,22 @@ active and errors are returned to the caller.
 Commands sent to a service in an unexpected state return an error,
 not a silent no-op.
 
-| Command | Inactive | Starting | Active | Reloading | Stopping | Completed | Failed | Abandoned | Skipped |
-|---|---|---|---|---|---|---|---|---|---|
-| start | Start | ALREADY | ALREADY | ALREADY | QUEUE | Start | Start | ERROR | Start |
-| stop | NOOP | Cancel+Stop | Stop | Stop | ALREADY | Clear | NOOP | ERROR | NOOP |
-| restart | Start | QUEUE | Restart | Restart | QUEUE | Start | Start | ERROR | Start |
-| reload | ERROR | ERROR | Reload | ALREADY | ERROR | ERROR | ERROR | ERROR | ERROR |
-| reset | NOOP | ERROR | ERROR | ERROR | ERROR | ERROR | Clear | Clear | Clear |
-| status | OK | OK | OK | OK | OK | OK | OK | OK | OK |
+| Command | Inactive | Starting | Active | Reloading | Stopping | Completed | Backoff | Failed | Abandoned | Skipped |
+|---|---|---|---|---|---|---|---|---|---|---|
+| start | Start | MERGE | ALREADY | ALREADY | QUEUE | Start | MERGE | Start | ERROR | Start |
+| stop | NOOP | Cancel+Stop | Stop | Stop | MERGE | Clear | Cancel | NOOP | ERROR | NOOP |
+| restart | Start | QUEUE | Restart | Restart | QUEUE | Start | Restart | Start | ERROR | Start |
+| reload | ERROR | ERROR | Reload | MERGE | ERROR | ERROR | ERROR | ERROR | ERROR | ERROR |
+| reset | NOOP | ERROR | ERROR | ERROR | ERROR | ERROR | ERROR | Clear | Clear | Clear |
+| status | OK | OK | OK | OK | OK | OK | OK | OK | OK | OK |
 
-- **ALREADY:** command is redundant. Return current state (not an
-  error).
+- **ALREADY:** the service is already in the command's target state
+  and no operation of this type is in flight. Return current state
+  (not an error).
+- **MERGE:** an operation of this type is already in progress. The
+  command merges into it (§8.2); the caller receives the in-flight
+  operation's GUID and, when waiting, blocks on that operation's
+  terminal state.
 - **NOOP:** command has no effect. Return success.
 - **ERROR:** command is invalid for this state. Return error with
   explanation.
@@ -96,6 +101,13 @@ not a silent no-op.
 - **Cancel:** abort current operation then proceed.
 - **QUEUE:** operation is queued as Pending. Executes after the
   current operation completes (§8.2).
+
+In the **Backoff** column the service is down with an automatic
+restart pending (§5.1): `start` merges into that pending restart and
+honors the backoff delay; `stop` cancels the pending restart (the
+service goes Inactive); `restart` cancels the automatic restart and
+performs an admin-initiated one; `reload` and `reset` are invalid
+(no process exists).
 
 ## Status response
 
@@ -134,3 +146,66 @@ restarts.
 
 The `warnings` array MUST include leaked sub-cgroups, if any (see
 §4.2).
+
+The `definition_removed` field MUST be `true` when the service's
+definition has been removed from the registry but a running instance
+is still draining (§3.5), and `false` otherwise. A `start`,
+`restart`, or `reload` on a definition-removed service returns
+`UNKNOWN_SERVICE`; `stop` drains it.
+
+The `health` field MUST be one of:
+
+| Value | Meaning |
+|---|---|
+| `healthy` | The most recent HealthCheck passed. |
+| `unhealthy` | HealthCheck is currently failing (within HealthCheckRetries; the service has not yet failed out). |
+| `unknown` | A HealthCheck is configured but has not produced a result yet. |
+| `null` | No HealthCheck is configured for the service. |
+
+## list response
+
+`list` returns every service the caller can query, with a compact
+per-service summary. Services for which the caller lacks
+`SERVICE_QUERY_STATUS` are omitted (not denied).
+
+```json
+{
+    "status": "ok",
+    "services": [
+        {"service": "jellyfin", "state": "active", "cause": "explicit_start", "health": "healthy"},
+        {"service": "registryd", "state": "active", "cause": "dependency_start", "health": null}
+    ]
+}
+```
+
+## operation-status response
+
+`operation-status` returns the state of a single operation by GUID.
+If the GUID is unknown or its record has been dropped after the
+retention grace (§8.1), peinit MUST return the `UNKNOWN_OPERATION`
+error (§11.1).
+
+```json
+{
+    "status": "ok",
+    "operation": {
+        "id": "e5f6g7h8-...",
+        "type": "start",
+        "service": "jellyfin",
+        "source": "admin",
+        "state": "completed",
+        "result": "active",
+        "merged_into": null,
+        "error": null,
+        "requested_at": "...",
+        "completed_at": "..."
+    }
+}
+```
+
+The operation `state` MUST be one of `pending`, `running`,
+`completed`, `failed`, `cancelled`, `merged`, or `aborted` (§8).
+`result` carries the resulting service state on success; `error`
+carries the failure reason on `failed`; `merged_into` carries the
+surviving operation's GUID on `merged`. Fields that do not apply
+to the current `state` MUST be `null`.

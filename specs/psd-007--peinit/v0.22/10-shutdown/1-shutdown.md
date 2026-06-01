@@ -103,11 +103,10 @@ If the global timeout expires:
 
 After all services have stopped:
 
-1. Unmount Phase 2 mounts (registry-defined) in reverse order.
-2. Unmount Phase 1 mounts (`/run`, `/dev/shm`, `/dev/pts`,
-   `/sys/fs/cgroup`).
-3. `/dev`, `/sys`, `/proc` are left mounted (kernel needs them).
-4. Remount root filesystem read-only.
+1. Unmount the Phase 1 virtual filesystems peinit mounted (`/run`,
+   `/dev/shm`, `/dev/pts`, `/sys/fs/cgroup`).
+2. `/dev`, `/sys`, `/proc` are left mounted (kernel needs them).
+3. Remount root filesystem read-only.
 
 ### Step 7: Sync and final action
 

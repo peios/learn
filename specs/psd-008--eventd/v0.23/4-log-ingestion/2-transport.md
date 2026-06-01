@@ -18,6 +18,7 @@ Each datagram is a single msgpack-encoded map representing one log record:
 | `is_error` | bool | Yes | True if the log line was captured from stderr or explicitly marked as error by the sender. False for stdout / normal output. |
 | `message` | string | Yes | The log text. A single line of output. |
 | `timestamp` | u64 | No | Wall clock timestamp in nanoseconds since Unix epoch, as captured by the sender. If omitted, eventd uses its own wall clock at receipt time. |
+| `job_id` | binary (16 bytes) | No | Correlation GUID identifying the supervised job that produced this line. peinit sets it when forwarding a service's stdout/stderr so log lines can be correlated to a specific job execution (PSD-007 §7.1). Omitted for direct logging and for output with no associated job. |
 
 peinit SHOULD include the timestamp captured at the time the line was read from the service's pipe, not the time it was forwarded to eventd. This preserves timing accuracy when peinit batches log records.
 
@@ -30,6 +31,8 @@ If a datagram contains a valid msgpack value that is not a map and not an array 
 For a single record (map), if a required field is missing or has the wrong type (e.g., `origin` is an integer instead of a string), the record MUST be dropped silently.
 
 For a batched datagram (array of maps), each record is validated independently. Invalid records MUST be dropped. Valid records in the same batch MUST still be processed. One malformed record MUST NOT cause the entire batch to be discarded.
+
+The optional `job_id` field, when present, MUST be 16 bytes of binary. A present `job_id` of the wrong type or length MUST be ignored (treated as absent) rather than causing the record to be dropped -- a malformed correlation key must not cost the log line itself.
 
 eventd MUST NOT emit synthetic events, log errors, or increment visible counters in response to malformed input. These are untrusted inputs from arbitrary senders -- reacting to invalid data would be a denial-of-service vector.
 

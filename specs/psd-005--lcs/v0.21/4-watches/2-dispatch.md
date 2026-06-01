@@ -162,6 +162,31 @@ filling a watcher's queue.
 
 Aborted transactions generate no events.
 
+## Layer-wide and restore recovery dispatch
+
+Layer deletion, precedence changes, and enable/disable changes can
+alter effective state for keys and values whose fds are not open and
+whose exact descendant contexts are not retained by the kernel. When
+LCS has a bounded exact diff for a layer operation, it SHOULD dispatch
+the specific events through the normal algorithm above. When the exact
+diff is not bounded by retained mutation context, LCS MUST dispatch a
+no-name OVERFLOW event to every armed watch on the affected source or
+hive after publishing the corresponding hive generation increment.
+
+Layer-wide OVERFLOW recovery is object-semantic: it is delivered to
+currently armed watches for objects in the affected source or hive and
+does not re-resolve path strings. OVERFLOW bypasses the caller's event
+filter, remains queued through the normal per-fd queue rules, and does
+not disarm persistent watches.
+
+Successful REG_IOC_RESTORE uses the same recovery mechanism. Because
+restore replaces an arbitrary subtree from a stream and LCS does not
+retain a bounded exact effective-state diff for every key and value in
+that subtree, LCS MUST publish the affected hive generation increment
+and dispatch no-name OVERFLOW to armed watches on the affected restore
+source or hive after the restore transaction commits. LCS MUST NOT
+emit restore watch recovery before the source commit succeeds.
+
 ## Source restart behaviour
 
 When a source disconnects and re-registers, LCS cannot determine

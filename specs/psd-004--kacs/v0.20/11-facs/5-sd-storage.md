@@ -51,6 +51,120 @@ For kernel purposes, the superblock policy object carries the mount-policy
 class and an optional mount-level default SD template for synthesize-class
 mounts.
 
+### Default policy by filesystem type
+
+In the absence of an explicit `kacs_set_mount_policy` call, FACS MUST select a
+default mount-policy class from the superblock's filesystem magic. The
+following defaults apply in `v0.20`:
+
+- `PROC_SUPER_MAGIC`, `SYSFS_MAGIC` — `unmanaged`. These pseudo-filesystems
+  expose kernel state through inode-shaped handles that have no meaningful
+  on-disk identity and no SD to consult; ordinary FACS access checks do not
+  apply.
+- `NULL_FS_MAGIC` (nullfs) — `unmanaged`. nullfs is the immutable,
+  permanently-empty filesystem the kernel mounts as the mount-namespace root,
+  with the mutable rootfs mounted on top of it (see `Initial SDs on
+  kernel-internal mounts` below). It declares no xattr support
+  (`s_xattr == NULL`), so it can never carry a `security.peios.sd` SD, and its
+  single root inode is immutable and childless — there is nothing to stamp and
+  nothing to protect. As with `/proc` and `/sys`, ordinary FACS access checks
+  do not apply.
+- `RAMFS_MAGIC`, `NFS_SUPER_MAGIC`, `MSDOS_SUPER_MAGIC`, `EXFAT_SUPER_MAGIC` —
+  `facs_synthesize_ephemeral`. These either have no persistent backing at all
+  (ramfs) or live on storage that has no native SD slot (FAT family, NFS
+  client mounts).
+- Any other magic, including `TMPFS_MAGIC`, `SQUASHFS_MAGIC`, and native disk
+  filesystems such as `EXT4_SUPER_MAGIC` and `BTRFS_SUPER_MAGIC` —
+  `facs_deny_missing`. These can all carry the `security.peios.sd` xattr
+  natively and are expected to do so on every inode that participates in
+  access checks.
+
+This mapping is a default. Trusted userspace MAY override the class for any
+superblock via `kacs_set_mount_policy` (see below).
+
+Note that `TMPFS_MAGIC` covers both userspace tmpfs mounts and the
+kernel-mounted tmpfs instances established before any userspace runs
+(initial rootfs and devtmpfs). The latter are handled by the seeding
+requirement in `Initial SDs on kernel-internal mounts` below; they are not
+exempted from the default.
+
+## Initial SDs on kernel-internal mounts
+
+Two filesystems are mounted by the kernel itself before any userspace process
+exists and before any trusted component has had the opportunity to call
+`kacs_set_mount_policy` or `kacs_set_sd`:
+
+- the mutable root filesystem mounted by `init_mount_tree`, which is a tmpfs
+  in the `v0.20` kernel configuration (`CONFIG_TMPFS=y` and no `root=` /
+  `rootfstype=` override). Under the Linux 7.0 mount model `init_mount_tree`
+  mounts this tmpfs (mount id 2) on top of an immutable `nullfs` namespace
+  root (mount id 1); the tmpfs is what `set_fs_root` makes `/` and what the
+  initramfs is unpacked into, and it is the inode seeded below. The nullfs
+  root is not seeded — it is `unmanaged` by the magic mapping above, being
+  permanently empty and incapable of xattr storage;
+- the devtmpfs instance mounted by `devtmpfs_init` and populated by the
+  `kdevtmpfs` kernel thread.
+
+Both use `TMPFS_MAGIC` and therefore default to `facs_deny_missing`. Their
+root inodes are created by the kernel and never traverse a userspace-supplied
+artifact, so they contain no `security.peios.sd` xattr at the moment they
+become reachable.
+
+To make `facs_deny_missing` viable for these mounts, the kernel MUST write an
+initial self-relative file SD to the `security.peios.sd` xattr of each root
+inode at the moment the mount is established and before any task — kernel or
+userspace — can act on it:
+
+- the rootfs root inode is seeded inside `init_mount_tree` immediately after
+  `vfs_kern_mount` returns successfully and before the new mount is published
+  into `init_mnt_ns`, with the inode's `i_rwsem` held;
+- the devtmpfs root inode is seeded inside `devtmpfs_init` immediately after
+  `vfs_kern_mount` returns successfully and before `kdevtmpfs` is started,
+  with the inode's `i_rwsem` held.
+
+The seeded SD MUST be identical in both cases and MUST be:
+
+- owner = group = `SYSTEM` (`S-1-5-18`);
+- a DACL containing a single `ACCESS_ALLOWED` ACE granting `GENERIC_ALL` to
+  `SYSTEM`, flagged `OBJECT_INHERIT_ACE | CONTAINER_INHERIT_ACE` so the
+  inheritance algorithm derives a child SD for every inode subsequently
+  created on that mount;
+- no SACL.
+
+Writes MUST happen through the kernel-internal xattr path that bypasses both
+the FACS read/write denial hooks and the LSM permission hook for setxattr.
+They MUST NOT consult the current task's token, because at the point either
+seed runs there may not be a meaningful subject token; the seeded SD is the
+sole authority for the mount until trusted userspace replaces it. They MUST
+NOT depend on FACS being fully initialised beyond the LSM scaffold that
+allocates inode and superblock security blobs.
+
+These SDs are not exempt from subsequent management. Trusted userspace MAY
+overwrite the per-inode SD via `kacs_set_sd` or change the per-superblock
+policy class via `kacs_set_mount_policy` once it has the privileges to do so.
+
+## Boot artifacts and offline-built filesystems
+
+Filesystems shipped as boot artifacts — a squashfs payload concatenated into
+the initrd, a vendor squashfs delivered as a peipkg, a partition image
+flashed onto a disk — default to `facs_deny_missing` under the magic mapping
+above and the kernel does not seed their inodes. They are already-populated
+trees that the kernel cannot extend with SDs at mount time, and in the
+read-only case (squashfs) cannot extend at all.
+
+The build pipeline that produces such an artifact MUST emit
+`security.peios.sd` xattrs on every regular file, directory, and other inode
+that ordinary access checks will reach. `mksquashfs`, ext utilities, and the
+standard userland xattr surfaces preserve `security.*` xattrs natively; the
+obligation is on the artifact builder, not the kernel and not the consuming
+mount.
+
+A boot artifact that fails to carry SDs on its files is a packaging defect.
+FACS treats every missing SD on a `facs_deny_missing` mount as a corruption
+indicator and denies access. The operator path is to either rebuild the
+artifact with SDs or to call `kacs_set_mount_policy` on the affected
+superblock to adopt it under a synthesize-class policy.
+
 ## Mount policy administration
 
 Trusted userspace components such as `peinit`, a udev-equivalent policy agent,
@@ -88,7 +202,13 @@ FACS handles files without a `security.peios.sd` xattr according to the mount-po
 
 ### `facs_deny_missing`
 
-No SD means deny all FACS-managed access. This is the default for Peios system mounts (root, `/home`, `/var`). A missing SD on a system mount is a corruption indicator.
+No SD means deny all FACS-managed access. This is the default class for any
+superblock not mapped elsewhere by `Default policy by filesystem type` above
+— in practice tmpfs, squashfs, and native disk filesystems. A missing SD on
+a `facs_deny_missing` mount is a corruption or packaging indicator; the only
+expected source of newly-mounted `facs_deny_missing` filesystems without SDs
+is the kernel-internal mounts covered by `Initial SDs on kernel-internal
+mounts`, and those are seeded before any task can observe them missing.
 
 **Directory traversal exception:** SeChangeNotifyPrivilege (granted to all by default) bypasses intermediate path-resolution traverse checks, including on directories with missing SDs. This ensures path resolution works for the repair path. It does not bypass explicit `chdir()` / `chroot()` or `fchdir()` use-time checks.
 

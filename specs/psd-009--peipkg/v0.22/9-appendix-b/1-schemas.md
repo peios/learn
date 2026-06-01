@@ -207,7 +207,9 @@ Each `keys` entry has the form:
 ignored for other statuses.
 
 Hosted at `<repo-base>/repo.json`. Detached signature at
-`<repo-base>/repo.json.sig`.
+`<repo-base>/repo.json.sig` — a signature envelope (see
+"Signature envelope" above) over the SHA-256 digest of the
+descriptor's exact bytes (§6.1.6).
 
 ## Active index
 

@@ -18,9 +18,14 @@ Every service runs in its own cgroup tree:
 /sys/fs/cgroup/peinit/<cgroup-id>/health/  (health checks)
 ```
 
-`<cgroup-id>` is the service name with `/` replaced by `-` (e.g.,
-`mount:/data` becomes `mount:-data`). This escaping is internal --
-the user-facing name is unchanged.
+`<cgroup-id>` is the service name with every character outside
+`[A-Za-z0-9._-]` percent-encoded (`%` followed by the byte's two
+uppercase hex digits). Service names are already restricted to that
+character set (§3.1), so in practice the cgroup id equals the
+service name; the encoding is a defensive, **injective** guarantee
+that distinct names always map to distinct, cgroup-safe ids (unlike
+a plain `/`->`-` substitution, where `a/b` and `a-b` would collide).
+It is internal -- the user-facing name is unchanged.
 
 The sub-cgroup structure satisfies cgroups v2's "no internal
 processes" constraint (required when controllers are active) and
@@ -54,6 +59,30 @@ state. This evaluation gates the Inactive → Starting transition.
 
 Only after conditions and asserts pass does the service transition
 to Starting and the pre-exec sequence below begins.
+
+### Non-blocking evaluation
+
+peinit MUST NOT call a blocking syscall from its event loop while
+evaluating checks (§3.2):
+
+- `registry:` checks are evaluated against the in-memory model
+  (§3.5). A non-cached key is a validation error (§3.2), so this
+  evaluation never reads the registry live.
+- `path:`/`file:`/`directory:` checks are performed by a short-lived
+  **forked helper** in a dedicated cgroup -- not by `stat()` on the
+  main loop. The helper stats the service's filesystem checks and
+  reports the results over a pipe; peinit waits on the helper's
+  pidfd and the pipe via epoll, never blocking. The helper is
+  bounded by a timeout.
+
+If the helper does not report within the timeout (e.g. `stat()` is
+wedged in uninterruptible sleep on a hung mount), peinit MUST treat
+the affected checks as **not satisfied** -- a Condition skips the
+service, an Assert fails it with cause AssertionError -- and
+continue. peinit SIGKILLs the helper; if it survives (D-state), its
+cgroup is leaked and abandoned exactly as a service process that
+survives SIGKILL (§4.2). The event loop is never held up by a hung
+check.
 
 ## The sequence
 
@@ -103,9 +132,10 @@ starts.
 ### Step 4: Materialise service token
 
 peinit MUST materialise the service's main process token as
-defined in §3.3. For SYSTEM services,
-clone peinit's token. For all other identities, request a token
-from authd. Apply RequiredPrivileges restriction if configured.
+defined in §3.3. For SYSTEM services, mint a token from peinit's
+own SYSTEM identity (`kacs_create_token`). For all other
+identities, request a token from authd. Apply RequiredPrivileges
+restriction if configured.
 
 If token materialisation fails (authd unreachable, identity not
 found, KACS syscall error), no child process exists. peinit MUST
@@ -128,9 +158,12 @@ the service to Failed with cause ParentSetupFailure.
 
 ### Step 6: Fork
 
-peinit MUST fork via `clone3(CLONE_PIDFD)` to atomically obtain
-a pidfd for the child. There MUST be no window where the child
-exists without a pidfd.
+peinit MUST fork via `clone3(CLONE_PIDFD | CLONE_INTO_CGROUP)`,
+targeting the service's `main/` sub-cgroup (created in Step 2). This
+atomically (a) obtains a pidfd for the child and (b) places the
+child directly into `main/` at creation. There MUST be no window
+where the child exists without a pidfd, and none where it runs or
+execs in peinit's own cgroup before being placed.
 
 If `clone3` fails, no child process exists. peinit MUST transition
 the service to Failed with cause ParentSetupFailure. Common causes:
@@ -140,17 +173,20 @@ EMFILE/ENFILE (fd exhaustion), EAGAIN (PID limit), ENOMEM.
 
 Immediately after fork, in the parent:
 
-1. Move the child into the `main/` sub-cgroup by writing the child
-   PID to `main/cgroup.procs`. The parent does this -- not the
-   child -- because cgroup writes require SYSTEM privileges that
-   the child's token will not carry after token installation.
-2. Close the write end of the error pipe.
-3. Read from the error pipe:
+1. Close the write end of the error pipe.
+2. Read from the error pipe:
    - **EOF:** exec succeeded. Record the child pidfd as the
      service's main process.
    - **Data:** pre-exec setup failed. Parse the step identifier
      and errno. Log the specific failure. Transition the service
      to Failed with cause PreExecFailure.
+
+The child is already in the `main/` sub-cgroup -- `CLONE_INTO_CGROUP`
+(Step 6) placed it there atomically at creation, so the parent
+performs no post-fork cgroup move. This removes the window in which
+a child could exec in peinit's cgroup, and avoids requiring the
+child to write its own `cgroup.procs`, which its post-installation
+token could not do.
 
 ### Step 8: Child pre-exec
 
@@ -159,23 +195,42 @@ allocation, no complex library calls, no logging. Straight-line
 setup then exec.
 
 1. Close the read end of the error pipe.
-2. Install the service's KACS token.
-3. Set RLIMIT values (LimitNOFILE, LimitCORE) if configured.
-4. Set `oom_score_adj`:
+2. Reset the signal environment: restore the signal mask to unblock
+   all signals and reset every signal disposition to `SIG_DFL`.
+   peinit blocks all signals for its signalfd (§10.1) and the child
+   inherits that mask across fork; a service MUST NOT start with
+   signals blocked or with peinit's handlers installed.
+3. Install the service's KACS token.
+4. Set RLIMIT values (LimitNOFILE, LimitCORE) if configured.
+5. Set `oom_score_adj`:
    - `-1000` (OOM-immune) for ErrorControl=Critical services.
    - `0` (default) for all others.
-5. Set working directory.
-6. Set environment variables (base environment + Environment
+6. Set working directory.
+7. Set environment variables (base environment + Environment
    values from the definition).
-7. Set `NOTIFY_SOCKET` to the notify socket path. This is set
+8. Set `NOTIFY_SOCKET` to the notify socket path. This is set
       unconditionally regardless of the Readiness field -- services
       use sd_notify for watchdog, STOPPING=1, FDSTORE, and
       EXTEND_TIMEOUT_USEC in addition to readiness signalling.
-8. Inject stored file descriptors if the service has an fd store
+9. Inject stored file descriptors if the service has an fd store
    with entries from a previous run.
-9. Exec the binary (`ImagePath` + `Arguments`).
-10. If exec fails: write error to the pipe, `_exit(127)`.
-11. If any step 2-8 fails: write error to the pipe, `_exit(126)`.
+10. Exec the binary (`ImagePath` + `Arguments`).
+11. If exec fails: write error to the pipe, `_exit(127)`.
+12. If any step 2-9 fails: write error to the pipe, `_exit(126)`.
+
+### Inherited execution context
+
+A service MUST inherit only the execution context peinit explicitly
+hands it: its stdio (the stdout/stderr pipes and the `/dev/null`
+stdin -- see §12.1) and any file descriptors injected from the fd
+store (sub-step 9). Every other file descriptor peinit holds -- the
+control socket, the notify socket, the epoll fd, the JFS device fd,
+and the registryd/authd/eventd connections -- MUST be created with
+`O_CLOEXEC` (or have CLOEXEC set immediately on creation) so that it
+closes automatically at exec and never leaks into a service. The
+signal reset (sub-step 2) and the CLOEXEC discipline together
+guarantee a service starts from a clean context, not from peinit's
+privileged one.
 
 ### Step 9: Wait for readiness
 
@@ -202,6 +257,56 @@ On readiness (Simple) or successful exit (Oneshot):
 3. Start the watchdog timer if WatchdogTimeout > 0 (Simple only).
 4. Start the health check timer if HealthCheck is set (Simple
    only).
+
+## Base environment
+
+peinit constructs each service or hook process's environment in
+layers, lowest precedence first:
+
+1. **Compiled-in base.** A fixed floor peinit always provides:
+
+   | Variable | Value |
+   |---|---|
+   | `PATH` | `/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin` |
+
+2. **Global `EnvVars`.** Each value under
+   `Machine\System\Init\EnvVars\` is injected as a variable (value
+   name = variable name, `REG_SZ` data = value). An `EnvVars\PATH`
+   value overrides the compiled-in `PATH`; other names add. Because
+   this key is served by registryd, it is available only to services
+   started in Phase 2: the Phase 1 / early-Phase 2 platform services
+   (registryd, authd, lpsd, eventd) are launched with the
+   compiled-in base only, since the registry is not yet readable
+   when they start.
+3. **Per-service `Environment`.** The definition's `Environment`
+   values, which override layers 1-2.
+4. **Protocol variables.** `NOTIFY_SOCKET` (always) and `LISTEN_FDS`
+   / `LISTEN_FDNAMES` (only when stored fds are injected), set by the
+   pre-exec sequence above. These have the highest precedence and
+   MUST NOT be overridable by `EnvVars\` or a service's
+   `Environment` -- a service overriding `NOTIFY_SOCKET` would break
+   sd_notify.
+
+A change to `EnvVars\` takes effect on a service's next start (like
+the per-service `Environment` field); it is not applied to
+already-running services.
+
+peinit does NOT set `HOME`, `USER`, `LOGNAME`, `SHELL`, or `TERM`
+by default. Peios identity is a KACS token (a SID), not a passwd
+entry, so there is no canonical home directory or login shell to
+populate; a service that needs any of these supplies it via
+`EnvVars\` or its `Environment` field. peinit's own minimal startup
+environment (`TERM=linux` only; see §2.1) is NOT passed through --
+the environment is constructed by peinit, not inherited.
+
+**Security.** Write access to `Machine\System\Init\EnvVars\` lets a
+principal inject environment into every service peinit starts
+(`LD_PRELOAD`, `LD_LIBRARY_PATH`, and the like), so it is equivalent
+to compromising those services. peinit MUST NOT filter variable
+names -- the key's Security Descriptor is the control boundary,
+consistent with the registry's write-authority threat model. That
+SD MUST NOT be permissive; the recommended default is SYSTEM full,
+Administrators read-only.
 
 ## Parent-side failure summary
 

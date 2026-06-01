@@ -117,10 +117,15 @@ fd. peinit MUST subscribe to `Machine\System\Services\` and
 processes it in its event loop -- reading the changed key at a time
 of its choosing, not synchronously at the moment of change.
 
+These notifications use the LCS Watch mechanism defined in PSD-005:
+a persistent subscription that delivers change events on a pollable
+key fd, with an OVERFLOW event when the kernel-side notification
+queue is exceeded.
+
 If the notification queue overflows (bulk admin operations, rapid
-scripted writes), peinit MUST detect the overflow event and trigger
-a full reload-config to resynchronise its in-memory model with the
-registry.
+scripted writes), peinit MUST detect the PSD-005 OVERFLOW event and
+trigger a full reload-config to resynchronise its in-memory model
+with the registry.
 
 > [!INFORMATIVE]
 > The in-memory model exists because peinit's event loop MUST
@@ -130,3 +135,44 @@ registry.
 > and every other event stops while the syscall is stuck. The
 > in-memory model ensures supervision never blocks on registry
 > availability.
+
+## Service removal
+
+When a service definition is removed from `Machine\System\Services\`,
+peinit learns of it through the same change-notification path.
+Removal handling depends on whether the service is running:
+
+- **Not running** (Inactive, Failed, Completed, Skipped, Abandoned):
+  peinit discards the in-memory entry immediately. There is no
+  process to consider.
+- **Running** (Active, Starting, Reloading, Backoff, Stopping):
+  peinit MUST NOT kill the running instance. The running process is
+  a job, and a job's lifecycle is independent of its service
+  definition -- removing the definition stops future management, it
+  does not terminate work in progress. peinit marks the entry
+  **definition-removed** and retains the cached definition solely to
+  keep supervising the existing instance. When that instance exits
+  it is NOT restarted (RestartPolicy is moot -- the definition is
+  gone), and peinit then discards the entry entirely.
+
+While an entry is definition-removed:
+
+- it keeps satisfying its dependents for as long as the instance is
+  alive (it is still running);
+- `stop` is accepted -- an administrator may drain it cleanly, using
+  the cached StopTimeout;
+- `start`, `restart`, and `reload` are rejected with
+  `UNKNOWN_SERVICE` (§11.1) -- there is no definition to (re)start
+  from;
+- `status` reports the current runtime state plus a
+  `definition_removed: true` flag (§11.2), so the draining instance
+  is visible, not silent.
+
+`definition-removed` is a flag on the existing runtime state, not a
+distinct state -- the state machine (§5.1) and the command x state
+matrix (§11.2) are unchanged. Once the instance exits or is stopped,
+the entry -- including any fd-store contents (§11.1) -- is
+discarded. A dependent that `Requires` a removed service keeps being
+satisfied while the instance runs; after it exits and the entry is
+discarded, the dependent's next start sees an unresolved dependency,
+handled by the normal validation path.

@@ -55,7 +55,7 @@ Mints a new token from a wire-format specification.
 | `spec_len` | Length in bytes. |
 | Returns | Token fd on success, `-errno` on failure. |
 
-Requires SeCreateTokenPrivilege. The kernel validates: all SIDs well-formed, owner/primary_group indices valid, `auth_id` references an existing session, Primary tokens have `impersonation_level` = Anonymous, `write_restricted` = true requires `user_deny_only` = true, `isolation_boundary` = true requires `confinement_sid` present, wire format `_reserved1` (elevation_type) must be 0. See §4.4 for the full validation list.
+Requires SeCreateTokenPrivilege. The kernel validates: all SIDs well-formed, owner/primary_group indices valid, `auth_id` references an existing session, Primary tokens have `impersonation_level` = Anonymous, `write_restricted` = true requires `user_deny_only` = true, `isolation_boundary` = true requires `confinement_sid` present, wire format `_reserved1` (elevation_type) must be 0, and any LCS registry credential extension is structurally valid. See §4.4 for the full validation list.
 
 The kernel MUST NOT authenticate the user, look up SIDs, or resolve mappings.
 

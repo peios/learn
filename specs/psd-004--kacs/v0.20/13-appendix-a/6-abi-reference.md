@@ -449,7 +449,7 @@ Binary layout passed to syscall 1003 (`kacs_create_token`). Fixed 192-byte heade
 | 172 | 4 | `restricted_device_groups_count` | `u32` | Number of restricted device group entries (0=none) |
 | 176 | 8 | `origin` | `u64` | Originating logon session LUID (0 for non-derived tokens) |
 | 184 | 4 | `interactive_session_id` | `u32` | Interactive session number (0 for services) |
-| 188 | 4 | `_reserved3` | `u32` | Must be 0 |
+| 188 | 4 | `lcs_credentials_offset` | `u32` | Byte offset to optional LCS registry credentials extension (0=none) |
 
 ### Variable sections
 
@@ -499,6 +499,34 @@ At `confinement_sid_offset`. Single binary SID. Length given by `confinement_sid
 #### Projected supplementary GIDs (optional)
 
 At `supp_gids_offset`. Array of `u32le` GID values, `supp_gids_count` entries.
+
+#### LCS registry credentials (optional)
+
+At `lcs_credentials_offset`. The section is bounded by the next active
+variable-section offset or by the end of the token spec. When absent, the token
+carries no private registry scope GUIDs and no private layer names.
+
+Header:
+
+| Offset | Size | Field | Type | Description |
+|--------|------|-------|------|-------------|
+| 0 | 4 | `version` | `u32` | Must be 1 |
+| 4 | 4 | `_reserved` | `u32` | Must be 0 |
+| 8 | 4 | `scope_count` | `u32` | Number of private hive scope GUIDs |
+| 12 | 4 | `private_layer_count` | `u32` | Number of private layer names |
+
+Payload:
+
+1. `scope_count` raw 16-byte GUIDs in caller-specified order.
+2. `private_layer_count` little-endian `u32` name byte lengths.
+3. The concatenated UTF-8 private layer names.
+
+`scope_count` MUST be at most 256. `private_layer_count` MUST be at most 256.
+Scope GUIDs MUST NOT be nil and MUST NOT contain duplicates. Private layer
+names MUST be non-empty, MUST be at most 255 UTF-8 bytes, MUST NOT contain
+backslash, forward slash, or NUL, and MUST NOT contain duplicates under LCS
+case-insensitive matching. The section MUST be consumed exactly; trailing bytes
+are malformed.
 
 ## 6. Session Wire Format (kacs_create_session spec)
 

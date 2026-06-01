@@ -7,16 +7,33 @@ wire format details, see PSD-005 §11.3.
 
 ## Transaction-aware request routing
 
-Every RSI request carries a txn_id in the header. When txn_id is
-non-zero and the transaction is bound to a hive (a prior mutating
-operation established the binding), loregd routes the request to
-that hive's write connection — even for read operations. This
-provides read-your-own-writes isolation: reads within a transaction
-see the transaction's uncommitted writes.
+Every RSI request carries a txn_id in the header. Routing depends on
+the transaction's mode (read-write or read-only, established at
+RSI_BEGIN_TRANSACTION) and whether it is yet bound to a connection.
 
-When txn_id is non-zero but the transaction is not yet bound (no
-prior mutating operation), reads use the normal read connection pool.
-There are no uncommitted writes to see.
+**Read-write transactions.** When txn_id is non-zero and the
+transaction is bound to a hive (a prior mutating operation established
+the binding), loregd routes the request to that hive's write
+connection — even for read operations. This provides
+read-your-own-writes isolation: reads within a transaction see the
+transaction's uncommitted writes.
+
+When txn_id is non-zero but the read-write transaction is not yet
+bound (no prior mutating operation), reads use the normal read
+connection pool. There are no uncommitted writes to see.
+
+**Read-only transactions.** A read-only transaction never accepts a
+mutating operation: loregd MUST reject any mutating operation tagged
+with a read-only txn_id with RSI_INVALID and MUST NOT mutate state
+(PSD-005 §7.2). Reads tagged with a read-only txn_id observe a stable
+point-in-time snapshot. loregd binds the snapshot lazily on the first
+read: it identifies the hive from the operation's GUID, opens a
+dedicated connection (separate from the read pool so a long-lived
+snapshot does not starve concurrent readers), and begins a deferred
+SQLite read transaction on it. WAL mode fixes the snapshot at that
+first read; all subsequent reads with the same txn_id reuse the
+connection and observe the same snapshot. The snapshot is released by
+RSI_ABORT_TRANSACTION (LCS does not commit read-only transactions).
 
 When txn_id is zero, the request is dispatched normally: reads to
 the read pool, writes to the write connection.
@@ -319,12 +336,16 @@ Return the set of orphaned GUIDs in the response.
 
 ## RSI_BEGIN_TRANSACTION
 
-Record the txn_id as a pending transaction. No SQLite transaction
-is opened at this point — hive binding and BEGIN IMMEDIATE are
-deferred until the first mutating operation arrives with this
-txn_id (see §4.1). Return RSI_OK immediately.
+The request carries the txn_id and a transaction mode
+(RSI_TXN_READ_WRITE = 0 or RSI_TXN_READ_ONLY = 1, PSD-005 §11.3).
+loregd records the txn_id as a pending transaction of the requested
+mode and returns RSI_OK immediately. No SQLite transaction is opened
+at this point — connection binding is deferred. loregd supports both
+modes (its SQLite backing provides both atomic read-write commits and
+stable read-only snapshots), so it never returns
+RSI_TXN_NOT_SUPPORTED.
 
-The actual SQLite transaction lifecycle:
+**Read-write transaction lifecycle:**
 - **First mutating op with this txn_id:** loregd identifies the
   target hive from the operation's GUID, opens `BEGIN IMMEDIATE`
   on that hive's write connection, and associates the txn_id with
@@ -333,6 +354,27 @@ The actual SQLite transaction lifecycle:
   connection.
 - **RSI_ABORT_TRANSACTION:** `ROLLBACK` on the associated
   connection.
+
+**Read-only transaction lifecycle:**
+- **First read op with this txn_id:** loregd identifies the target
+  hive from the operation's GUID, opens a dedicated connection, and
+  begins a deferred read transaction (`BEGIN DEFERRED`). The snapshot
+  is fixed at this first read (see the routing rules above). Subsequent
+  reads reuse the connection for a stable point-in-time view.
+- **Any mutating op with this txn_id:** rejected with RSI_INVALID; no
+  state is mutated (PSD-005 §7.2).
+- **RSI_ABORT_TRANSACTION:** `ROLLBACK` and release the dedicated
+  connection. This is how LCS releases the snapshot after
+  REG_IOC_BACKUP completes or fails.
+- **RSI_COMMIT_TRANSACTION:** LCS MUST NOT commit a read-only
+  transaction. If one nonetheless arrives, loregd releases the
+  snapshot and returns RSI_OK.
+
+Volatile keys are stored in a shared-cache in-memory database, which
+provides table-level locking rather than WAL snapshot isolation, so
+the point-in-time guarantee is exact only for persistent data. This
+matches REG_IOC_BACKUP's use of read-only snapshots over persistent
+hives.
 
 ## RSI_COMMIT_TRANSACTION
 

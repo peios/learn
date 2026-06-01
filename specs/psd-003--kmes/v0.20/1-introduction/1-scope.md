@@ -21,5 +21,5 @@ This specification does not cover:
 - Event type schemas or naming conventions (eventd)
 - Boot identity and cross-boot sequencing (peinit / eventd)
 - KACS (PSD-004)
-- LCS (PSD-006)
+- LCS (PSD-005)
 - Authentication or principal management (authd)

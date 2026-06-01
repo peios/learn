@@ -40,7 +40,9 @@ existence claims rather than data.
 ## Key creation
 
 Creating a key in a layer always assigns a fresh GUID and produces
-two records:
+two records. Fresh means an LCS-generated UUIDv4 GUID as defined in
+§2.3; it does not require consulting a persistent retired-GUID
+catalogue.
 
 1. A path entry: `(parent GUID, name, layer) → GUID` with a new
    sequence number.

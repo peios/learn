@@ -9,6 +9,23 @@ graph is built from all boot-triggered services (during boot) or
 from a specific service's transitive closure (on demand start).
 Validation runs once per graph build. It is not incremental.
 
+### Multiple validation findings
+
+A service can have more than one validation finding in the same
+graph validation pass. peinit MUST retain and log all findings for
+diagnostics. The service runtime state records a single primary
+Failed cause. When multiple failed causes apply to the same service,
+peinit MUST choose the primary cause by this precedence:
+
+1. CycleDetected
+2. ValidationError
+3. DependencyFailure
+
+This precedence affects only the primary cause stored on the
+service state. It MUST NOT suppress logging of the lower-precedence
+findings, Safe-mode downgrade evidence, or any other validation
+side effect required by this section.
+
 ### Cycle detection
 
 peinit MUST perform a topological sort of the graph. If the sort

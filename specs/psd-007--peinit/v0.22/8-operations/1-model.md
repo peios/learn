@@ -49,9 +49,10 @@ Operation {
     created_at:   timestamp   // when the operation was created
     started_at:   timestamp?  // when execution began
     completed_at: timestamp?  // when terminal state was reached
-    source:       enum        // Admin, DependencyPropagation,
-                              // RestartPolicy, Timer,
-                              // BindsToRecovery, ConflictResolution
+    source:       enum        // Admin, Boot, Shutdown,
+                              // DependencyPropagation, RestartPolicy,
+                              // Timer, BindsToRecovery,
+                              // ConflictResolution
     caller:       token_summary?  // caller identity (admin-initiated)
     result:       string?     // human-readable result or error
     merged_into:  GUID?       // if Merged, the target operation
@@ -59,6 +60,21 @@ Operation {
 ```
 
 ## Operation types
+
+## Operation sources
+
+Operation sources identify why peinit created an operation:
+
+| Source | Meaning |
+|---|---|
+| Admin | A control client requested the operation. |
+| Boot | The Phase 2 boot lifecycle generated a per-service start operation. |
+| Shutdown | The shutdown lifecycle generated a per-service stop operation. |
+| DependencyPropagation | A start operation created another start operation for an unsatisfied dependency. |
+| RestartPolicy | A service restart policy generated a start operation. |
+| Timer | A timer trigger generated a start operation. |
+| BindsToRecovery | A `BindsTo` target returned to Active and generated a budget-exempt dependent start operation. |
+| ConflictResolution | A `Conflicts` relationship generated a stop operation for the currently active conflicting service. |
 
 ### Start
 
@@ -98,27 +114,37 @@ service to Inactive. Synchronous -- completes immediately.
 
 ## Timeout
 
-Operations inherit their target service's StartTimeout or
-StopTimeout as a maximum lifetime. The timeout clock starts at
-operation creation (including queue time), not at execution. From
-the caller's perspective, they have been waiting since they sent
-the command.
+Start, reload, and reset operations inherit their target service's
+StartTimeout as their maximum lifetime. Stop operations inherit
+their target service's StopTimeout as their maximum lifetime.
+Restart operations have two timeout legs: the stop leg uses
+StopTimeout and the start leg uses StartTimeout. The maximum
+restart operation lifetime is the sum of those two legs, and each
+leg is still enforced against its own timeout.
+
+The timeout clock starts at operation creation (including queue
+time), not at execution. From the caller's perspective, they have
+been waiting since they sent the command. For restart operations,
+queue time counts against the combined operation lifetime before
+the stop and start legs execute.
 
 ## Retention
 
 peinit retains operation objects in memory while they are Pending
 or Running. Terminal operations (Completed, Failed, Cancelled,
-Merged, Aborted) are emitted to eventd as structured events and
+Merged, Aborted) are emitted as structured events via KMES and
 dropped from memory after a grace period (default 60 seconds --
 long enough for a polling client to retrieve the result).
 
 peinit MUST NOT maintain operation history. eventd is the
-historian.
+historian -- it consumes these events from the KMES kernel ring
+buffer.
 
-## eventd integration
+## Event emission
 
-peinit MUST emit a structured event at each operation lifecycle
-transition:
+peinit MUST emit a structured event via KMES (`kmes_emit`; eventd
+consumes it from the kernel ring buffer, not over a socket from
+peinit) at each operation lifecycle transition:
 
 - **operation.requested** -- operation created. Includes
   operation_id, type, service, source, caller.

@@ -19,6 +19,7 @@ KMES specification.
 | 1004 | `kacs_create_logon_session` | `const void __user *spec`, `size_t len` | LogonSession ID (u64, >= 0) or `-errno` |
 | 1005 | `kacs_set_psb` | `int pidfd`, `u32 mitigations` | 0 or `-errno` |
 | 1006 | `kacs_destroy_empty_logon_session` | `u64 auth_id` | 0 or `-errno` |
+| 1007 | `kacs_privilege_check` | `const u32 __user *privileges`, `u32 count`, `u32 flags` | 0 if all required privileges held, `-EPERM` otherwise |
 | 1010 | `kacs_open_peer_token` | `int conn_fd` | Token fd (>= 0) or `-errno` |
 | 1011 | `kacs_impersonate_peer` | `int conn_fd` | 0 or `-errno` |
 | 1012 | `kacs_revert` | (none) | 0 |
@@ -151,7 +152,7 @@ The non-empty output payload range `[buf_ptr, buf_ptr + required_payload_size)` 
 | 8 | `0x08` | `TOKEN_CLASS_INTERACTIVITY_SCOPE` | `[interactivity_scope:u32le]` (4 bytes) |
 | 9 | `0x09` | `TOKEN_CLASS_RESTRICTED_SIDS` | Same format as class 2. `[count:u32le]` then per SID: `[sid_len:u32le][sid_bytes][attrs:u32le]`. Count=0 if unrestricted. |
 | 10 | `0x0A` | `TOKEN_CLASS_SOURCE` | `[name:8 bytes][source_id:u64le]` (16 bytes) |
-| 11 | `0x0B` | `TOKEN_CLASS_STATISTICS` | `[token_guid:u8[16]][auth_id:u64le][modified_id:u64le][type:u32le][_pad:u32le][expiration:u64le]` (48 bytes) |
+| 11 | `0x0B` | `TOKEN_CLASS_STATISTICS` | `[token_id:u64le][auth_id:u64le][modified_id:u64le][type:u32le][_pad:u32le][expiration:u64le]` (40 bytes) |
 | 12 | `0x0C` | `TOKEN_CLASS_ORIGIN` | `[origin:u64le]` (8 bytes) |
 | 13 | `0x0D` | `TOKEN_CLASS_ELEVATION_TYPE` | `[type:u32le]` — 1=Default, 2=Full, 3=Limited (4 bytes) |
 | 14 | `0x0E` | `TOKEN_CLASS_DEVICE_GROUPS` | Same format as class 2. Count=0 if no device groups. |
@@ -165,6 +166,11 @@ The non-empty output payload range `[buf_ptr, buf_ptr + required_payload_size)` 
 | 22 | `0x16` | `TOKEN_CLASS_USER_CLAIMS` | KACS claim-array wrapper as defined by `security-descriptors/claim-attribute-format.md`: repeated `[entry_len:u32le][entry_bytes]` until the buffer is exhausted. Empty if no user claims. |
 | 23 | `0x17` | `TOKEN_CLASS_DEVICE_CLAIMS` | KACS claim-array wrapper as defined by `security-descriptors/claim-attribute-format.md`: repeated `[entry_len:u32le][entry_bytes]` until the buffer is exhausted. Empty if no device claims. |
 | 24 | `0x18` | `TOKEN_CLASS_PROJECTED_SUPPLEMENTARY_GIDS` | `[count:u32le]` then `count` little-endian `u32` gids. Count=0 if there are no projected supplementary gids. |
+
+The `TOKEN_CLASS_STATISTICS` payload remains LUID-based in v0.22 for ABI
+compatibility. Kernel-internal consumers that require immutable UUID identity
+MUST use the accessors defined in §13.4 rather than deriving a GUID from
+`token_id`.
 
 ## 4. Struct Layouts
 
@@ -444,7 +450,7 @@ Binary layout passed to syscall 1003 (`kacs_create_token`). Fixed 192-byte heade
 | 172 | 4 | `restricted_device_groups_count` | `u32` | Number of restricted device group entries (0=none) |
 | 176 | 8 | `origin` | `u64` | Originating LogonSession LUID (0 for non-derived tokens) |
 | 184 | 4 | `interactivity_scope` | `u32` | Interactivity scope number (0 for services) |
-| 188 | 4 | `_reserved3` | `u32` | Must be 0 |
+| 188 | 4 | `lcs_credentials_offset` | `u32` | Byte offset to optional LCS registry credentials extension (0=none) |
 
 ### Variable sections
 
@@ -494,6 +500,34 @@ At `confinement_sid_offset`. Single binary SID. Length given by `confinement_sid
 #### Projected supplementary GIDs (optional)
 
 At `supp_gids_offset`. Array of `u32le` GID values, `supp_gids_count` entries.
+
+#### LCS registry credentials (optional)
+
+At `lcs_credentials_offset`. The section is bounded by the next active
+variable-section offset or by the end of the token spec. When absent, the token
+carries no private registry scope GUIDs and no private layer names.
+
+Header:
+
+| Offset | Size | Field | Type | Description |
+|--------|------|-------|------|-------------|
+| 0 | 4 | `version` | `u32` | Must be 1 |
+| 4 | 4 | `_reserved` | `u32` | Must be 0 |
+| 8 | 4 | `scope_count` | `u32` | Number of private hive scope GUIDs |
+| 12 | 4 | `private_layer_count` | `u32` | Number of private layer names |
+
+Payload:
+
+1. `scope_count` raw 16-byte GUIDs in caller-specified order.
+2. `private_layer_count` little-endian `u32` name byte lengths.
+3. The concatenated UTF-8 private layer names.
+
+`scope_count` MUST be at most 256. `private_layer_count` MUST be at most 256.
+Scope GUIDs MUST NOT be nil and MUST NOT contain duplicates. Private layer
+names MUST be non-empty, MUST be at most 255 UTF-8 bytes, MUST NOT contain
+backslash, forward slash, or NUL, and MUST NOT contain duplicates under LCS
+case-insensitive matching. The section MUST be consumed exactly; trailing bytes
+are malformed.
 
 ## 6. LogonSession Wire Format (kacs_create_logon_session spec)
 
@@ -642,26 +676,6 @@ Per-handle access rights on a KACS token fd. Specified as the `access_mask` para
 | `KACS_TOKEN_ADJUST_DEFAULT` | `0x0080` | 7 | Adjust default DACL/owner/group (IOC_ADJUST_DEFAULT) |
 | `KACS_TOKEN_ADJUST_INTERACTIVITY_SCOPE` | `0x0100` | 8 | Adjust interactivity scope (IOC_ADJUST_INTERACTIVITY_SCOPE) |
 | `KACS_TOKEN_ALL_ACCESS` | `0x000F01FF` | 0-8, 16-19 | All token-specific rights (0x01FF, including reserved bit 4 = 0x0010 for TOKEN_QUERY_SOURCE) + STANDARD_RIGHTS_REQUIRED (DELETE \| READ_CONTROL \| WRITE_DAC \| WRITE_OWNER = 0x000F0000) |
-
-## 11. IPC Access Rights
-
-Object-specific access rights for SysV IPC objects (shared memory segments, semaphore arrays, message queues). Used in IPC object SD DACLs.
-
-| Constant | Value | Bit | Description |
-|----------|-------|-----|-------------|
-| `IPC_READ_DATA` | `0x0001` | 0 | Read object data (shmat read, semctl GETVAL/GETALL, msgrcv) |
-| `IPC_WRITE_DATA` | `0x0002` | 1 | Write/modify object data (shmat write, semop alter, semctl SETVAL/SETALL, msgsnd) |
-| `IPC_READ_ATTRIBUTES` | `0x0004` | 2 | Query object attributes (IPC_STAT, GETPID/GETNCNT/GETZCNT) |
-| `IPC_WRITE_ATTRIBUTES` | `0x0008` | 3 | Modify object attributes (IPC_SET) |
-
-### IPC GenericMapping
-
-| Generic right | Maps to |
-|---|---|
-| GENERIC_READ | IPC_READ_DATA \| IPC_READ_ATTRIBUTES \| READ_CONTROL \| SYNCHRONIZE |
-| GENERIC_WRITE | IPC_WRITE_DATA \| IPC_WRITE_ATTRIBUTES \| WRITE_DAC \| SYNCHRONIZE |
-| GENERIC_EXECUTE | IPC_READ_ATTRIBUTES \| READ_CONTROL \| SYNCHRONIZE |
-| GENERIC_ALL | IPC_READ_DATA \| IPC_WRITE_DATA \| IPC_READ_ATTRIBUTES \| IPC_WRITE_ATTRIBUTES \| DELETE \| READ_CONTROL \| WRITE_DAC \| WRITE_OWNER \| SYNCHRONIZE |
 
 ### Privilege attribute constants (for kacs_priv_entry)
 

@@ -168,7 +168,7 @@ KMES creates a single file descriptor for the ring buffer of CPU `cpu_id` and re
 
 If `cpu_id` is greater than or equal to `num_cpus`, the syscall fails with EINVAL. This includes CPUs brought online after KMES initialisation -- CPU hotplug is not supported in v0.20 (see §7.1). Consumers discover the CPU count by calling `kmes_attach` with incrementing `cpu_id` values starting from 0 until EINVAL is returned.
 
-Repeated calls with the same `cpu_id` are permitted and return a new, independent file descriptor each time. Each file descriptor has its own mapping and its own consumer metadata page. This allows multiple consumers to attach to the same CPU's ring buffer independently.
+Repeated calls with the same `cpu_id` are permitted and return a new file descriptor each time. Each file descriptor maps that CPU's ring buffer. The producer metadata page, consumer metadata page, and data region are shared for all file descriptors attached to the same per-CPU buffer, as defined in §5.1. This allows multiple direct consumers to attach to the same CPU's ring buffer concurrently while sharing the buffer's advisory notification state.
 
 The returned file descriptor supports:
 
@@ -177,7 +177,7 @@ The returned file descriptor supports:
 
 The mapped region is split into read-only and read-write sections. The producer metadata page and the data region are mapped read-only -- no privilege, capability, or token grants write access to these regions from userspace. Only KMES writes event data and producer metadata. The consumer metadata page is mapped read-write for consumer notification state (`need_wake`). KMES treats consumer metadata as advisory and validates all values read from it.
 
-Multiple consumers MAY attach to the same CPU's ring buffer simultaneously. Each consumer maintains its own read position independently.
+Multiple consumers MAY attach to the same CPU's ring buffer simultaneously. Each consumer maintains its own read position independently in userspace; the mapped consumer metadata page is shared per per-CPU buffer and is not a per-consumer read-position store.
 
 ### Notification
 

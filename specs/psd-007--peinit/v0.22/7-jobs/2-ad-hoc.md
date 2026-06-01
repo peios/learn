@@ -58,13 +58,26 @@ handle_jfs_request(request):
     fork, install token_fd on child, exec
     // Normal supervision: cgroup, log routing, exit tracking.
 
-    // Step 6: Emit lifecycle events.
-    emit job.created, job.started, job.ended to eventd
+    // Step 6: Emit lifecycle events via KMES (kmes_emit).
+    emit job.created, job.started, job.ended
 ```
 
 If nothing has `/dev/jfs` open, the caller's syscall returns
 ENODEV. JFS is a generic secure forwarding primitive -- peinit
 happens to be the consumer.
+
+**External dependency (JFS).** The pseudocode above shows the
+*shape* of the JFS consumption protocol, not its wire interface.
+The byte-level `/dev/jfs` ABI is owned by the JFS kernel subsystem,
+not by PSD-007, and no JFS spec exists yet. In particular, JFS --
+not this spec -- defines: the encoding of the request (job
+definition) read from the device; the kernel mechanism by which the
+caller's `token_fd` is delivered into peinit's descriptor table on
+read (a device read returns bytes, not a descriptor, so fd delivery
+requires explicit kernel support); and how the job id or error is
+written back to unblock the caller. peinit's JFS consumption is
+therefore not fully implementable from PSD-007 alone; this section
+becomes normative once JFS is specified.
 
 ## Ad-hoc job definition
 

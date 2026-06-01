@@ -349,13 +349,13 @@ for each affected hive regardless of how many operations it contains.
 **Layer operations and atomicity.** When a layer metadata key is
 deleted, LCS processes the metadata key deletion and the resulting
 layer effects (RSI_DELETE_LAYER, effective state recomputation,
-watch events) as a single atomic generation increment. There is no
-generation number at which the metadata key is gone but the layer's
-data entries are still resolving. For layer operations that affect
-multiple hives, each affected hive's generation number is
-incremented independently. Layer precedence changes that alter
-effective state also produce a single generation increment
-encompassing all effects.
+specific watch events or layer-wide OVERFLOW recovery) as a single
+atomic generation increment. There is no generation number at which
+the metadata key is gone but the layer's data entries are still
+resolving. For layer operations that affect multiple hives, each
+affected hive's generation number is incremented independently. Layer
+precedence changes that alter effective state also produce a single
+generation increment encompassing all effects.
 
 **Behaviour:** LCS queries the source for subkey and value counts,
 maximum name/data lengths, and SD size via RSI operations. The key

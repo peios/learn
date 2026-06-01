@@ -82,21 +82,21 @@ resolution, opens it. If not, creates it with an inherited SD.
 Returns a disposition indicating which occurred.
 
 ```
-int reg_create_key(int parent_fd, const char *path,
-                   uint32_t desired_access, const char *layer,
-                   uint32_t flags, uint32_t *disposition);
+int reg_create_key(const struct reg_create_key_args *args);
 ```
 
 ### Parameters
 
-| Parameter | Description |
+| Field | Description |
 |---|---|
 | parent_fd | As reg_open_key. |
-| path | As reg_open_key. |
+| path_ptr | Pointer to a null-terminated path string. As reg_open_key. |
 | desired_access | As reg_open_key. |
-| layer | Null-terminated layer name for key creation. If null, the base layer is used. Ignored if the key already exists. |
+| layer_ptr | Pointer to a null-terminated layer name for key creation. If null, the base layer is used. Ignored if the key already exists. |
 | flags | Bitfield. REG_OPTION_VOLATILE (0x01): create a volatile key. REG_OPTION_CREATE_LINK (0x02): create a symlink key. All other bits reserved, MUST be zero. |
-| disposition | Output pointer. Set to REG_CREATED_NEW (1) if created, or REG_OPENED_EXISTING (2) if the key already existed. MAY be null. |
+| txn_fd | Transaction fd. Set to -1 for no transaction. If non-negative, key creation is a mutating operation under §5.1 and binds or reuses that transaction. |
+| disposition_ptr | Output pointer. Set to REG_CREATED_NEW (1) if created, or REG_OPENED_EXISTING (2) if the key already existed. MAY be null. |
+| _pad0, _pad1 | Reserved. MUST be zero. |
 
 ### Returns
 
@@ -113,6 +113,11 @@ existing. If RSI_CREATE_ENTRY returns RSI_ALREADY_EXISTS, LCS
 retries as an open (disposition REG_OPENED_EXISTING). EEXIST is
 never returned to userspace from reg_create_key.
 
+If RSI_CREATE_ENTRY succeeds but the following RSI_CREATE_KEY for the
+fresh LCS-assigned GUID returns RSI_ALREADY_EXISTS, LCS MUST treat the
+source state as inconsistent and fail closed with EIO. This case MUST
+NOT be retried as open-existing and MUST NOT expose EEXIST to userspace.
+
 ### Behaviour (key does not exist)
 
 1. Resolve the parent path. The parent MUST exist. Validate that
@@ -125,7 +130,7 @@ never returned to userspace from reg_create_key.
    the base layer's metadata key does not yet exist (first boot
    before seed restore), LCS uses the compiled-in default SD
    (SYSTEM and Administrators: KEY_ALL_ACCESS).
-4. Assign a new GUID.
+4. Assign a new LCS-generated UUIDv4 GUID as defined in §2.3.
 5. Compute the new key's SD from the parent's SD via the KACS
    inheritance algorithm (PSD-004 §3.6).
 6. Create a path entry (parent, name, layer) → GUID with a new

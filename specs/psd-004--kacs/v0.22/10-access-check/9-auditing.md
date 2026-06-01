@@ -59,9 +59,9 @@ KACS distinguishes success and failure privilege-use auditing:
 
 If a privilege did not contribute to the requested access at all, no privilege-use audit event is emitted.
 
-## Per-token audit policy (algorithm step 15b)
+## Per-token audit policy (algorithm step 14b)
 
-The token's `audit_policy` field MAY force audit events for specific categories regardless of SACL content. This runs after the SACL walk (step 15) and before result computation (step 16). The kernel checks:
+The token's `audit_policy` field MAY force audit events for specific categories regardless of SACL content. This runs after the SACL walk (step 14) and before result computation (step 15). The kernel checks:
 
 - If the access succeeded and `audit_policy & OBJECT_ACCESS_SUCCESS` (0x01): emit a success audit event.
 - If the access failed and `audit_policy & OBJECT_ACCESS_FAILURE` (0x02): emit a failure audit event.

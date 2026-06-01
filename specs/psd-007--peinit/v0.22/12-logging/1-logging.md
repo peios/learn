@@ -14,6 +14,11 @@ stdout and stderr before exec. The child's stdout and stderr are
 redirected to the write end of these pipes. peinit holds the read
 end and monitors them via epoll.
 
+The child's stdin MUST be redirected to `/dev/null`. peinit does
+not provide an interactive input channel to services; a service
+that requires input MUST obtain it through an explicit mechanism
+(a socket or a stored fd), never inherited stdin.
+
 peinit MUST read service output line-by-line and tag each line
 with:
 
@@ -29,20 +34,21 @@ tagged with the service name and hook identifier (e.g.,
 Health check output MUST be captured -- useful for diagnosing why
 a health check failed.
 
-## Pre-eventd buffer
+## Pre-eventd log buffer
 
-Before eventd starts, peinit MUST buffer all captured output in
-fixed-size in-memory pre-eventd ring buffers:
+Before eventd starts there is nowhere to send service logs --
+eventd's log datagram socket does not exist until eventd binds it.
+peinit MUST therefore buffer captured stdout/stderr in a fixed-size
+in-memory pre-eventd log buffer (default 1 MB). When the buffer
+fills, the oldest entries MUST be dropped.
 
-| Buffer | Default size | Contents |
-|---|---|---|
-| Service output | 1 MB | stdout/stderr from pre-eventd services. |
-| Audit | 256 KB | peinit's own events -- access denials, critical failures, recovery mode entry, graph errors, security-relevant state transitions. |
-
-The audit buffer is separate and additive. A noisy service MUST NOT
-crowd out audit events.
-
-When either buffer fills, the oldest entries MUST be dropped.
+peinit's own audit records (access denials, critical failures,
+recovery-mode entry, graph errors, security-relevant state
+transitions) are **events, not logs**: peinit emits them via KMES
+(`kmes_emit`), and the KMES kernel ring buffer persists them from
+the moment PKM loads -- before eventd, before the registry. peinit
+therefore keeps NO pre-eventd buffer for them; eventd picks them up
+from the kernel ring buffer when it attaches (see §11.1).
 
 > [!INFORMATIVE]
 > In practice, the only services that run before eventd are
@@ -70,14 +76,20 @@ The exact budget is an implementation tuning parameter.
 
 ### Backpressure
 
-If a service writes faster than peinit can forward to eventd (or
-than the pre-eventd ring buffer can absorb), the service's pipe
-buffer fills. When the kernel pipe buffer is full, the service's
-`write()` calls to stdout/stderr block. This is deliberate -- the
-service naturally slows down.
+If a service writes faster than peinit can read from its pipe, the
+kernel pipe buffer fills and the service's `write()` calls to
+stdout/stderr block. This is deliberate -- the service naturally
+slows down. Backpressure via the pipe is the flow-control mechanism
+between the service and peinit; at this stage peinit MUST NOT drop
+output -- it MUST keep reading the pipe within its per-iteration
+budget.
 
-peinit MUST NOT drop service output silently. Backpressure via the
-pipe is the flow control mechanism.
+Downstream of the pipe, delivery is loss-tolerant by design: the
+pre-eventd log buffer drops oldest entries when full, and eventd's
+datagram log socket may drop records under load (see Lossy log
+delivery). The no-silent-drop guarantee covers reading the pipe,
+not delivery to eventd -- logs are a best-effort path. Audit
+*events* are not subject to this loss; they go through KMES.
 
 ## Event loop fairness
 
@@ -93,40 +105,52 @@ take priority over all other event sources in every iteration.
 
 When eventd reaches Active state:
 
-1. peinit MUST connect to eventd via its IPC socket.
-2. peinit MUST drain the entire service output pre-eventd ring
-   buffer to eventd (oldest first), preserving timestamps and
-   metadata.
-3. peinit MUST drain the audit pre-eventd ring buffer to eventd.
-4. peinit MUST switch to real-time forwarding -- new service output
-   is sent to eventd as it arrives.
-5. The pre-eventd ring buffers are cleared.
+1. peinit MUST begin sending to eventd's log datagram socket (path
+   from `Machine\System\eventd\LogSocketPath`).
+2. peinit MUST replay the pre-eventd log buffer (oldest first),
+   preserving each line's timestamp and metadata. This replay is
+   **best-effort**: the records are msgpack datagrams on a
+   loss-tolerant socket (PSD-008 §4.2), so some MAY be dropped by
+   the kernel under load. peinit MUST NOT block waiting to deliver
+   them.
+3. peinit MUST switch to real-time forwarding -- new service output
+   is sent as it arrives, as msgpack records (batched as an array
+   of maps under load).
+4. The pre-eventd log buffer is cleared.
 
 From this point, peinit is a pipe relay: read from service pipes,
-tag with metadata, forward to eventd.
+tag each line with metadata (service name in `origin`, stream in
+`is_error`, the line timestamp, and the job's `job_id`), and
+forward as msgpack datagrams. Audit records continue to flow as
+KMES events, independent of this log path.
 
-### Outbound write backpressure
+### Lossy log delivery
 
-The eventd socket is non-blocking. If eventd processes data slower
-than services generate it, the kernel socket buffer fills. peinit
-MUST maintain a bounded outbound write buffer (same 1 MB limit as
-the pre-eventd ring buffer). When the outbound buffer fills, oldest
-messages are dropped.
+The eventd log socket is a non-blocking Unix datagram socket. If
+eventd cannot drain it fast enough, its `SO_RCVBUF` fills and the
+kernel drops further datagrams silently (PSD-008 §4.2) -- log
+ingestion MUST NOT exert backpressure on senders. peinit therefore
+keeps no stream-style outbound write buffer: it sends each record
+(or batch) as a datagram and accepts that some MAY be dropped under
+load.
 
-peinit MUST NOT block on a write to eventd and MUST NOT allow
-unbounded memory growth from pending writes.
+peinit MUST NOT block on a send to eventd and MUST NOT allow
+unbounded memory growth from pending log records.
 
 ## eventd failure
 
 If eventd crashes after it was running:
 
-1. peinit detects the disconnection (socket closes).
-2. peinit re-enables the pre-eventd ring buffers.
-3. When eventd restarts and reaches Active, the handoff sequence
-   repeats.
+1. peinit detects eventd's exit (it supervises eventd as a service)
+   and re-enables the pre-eventd log buffer.
+2. When eventd restarts and reaches Active, the handoff sequence
+   repeats (best-effort replay).
 
 There is a log gap between eventd crashing and restarting, bounded
-by the pre-eventd ring buffer size.
+by the pre-eventd log buffer size. Events are unaffected: they
+continue to land in the KMES kernel ring buffer regardless of
+eventd's state, and eventd resumes consuming them from the last
+persisted sequence when it restarts.
 
 ## Console output
 
