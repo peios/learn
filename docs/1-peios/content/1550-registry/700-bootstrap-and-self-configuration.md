@@ -4,6 +4,7 @@ type: concept
 description: The registry is the configuration store for the whole system — so what configures the registry? It mostly configures itself, which means breaking a circular dependency. It does so by running on compiled-in defaults from the instant the kernel loads, then hot-swapping to registry-backed configuration once its store is available. It never waits for configuration to exist.
 related:
   - peios/registry/configuration-and-meaning
+  - peios/registry/backup-and-restore
   - peios/registry/watches
   - peios/registry/lcs-and-sources
   - peios/registry/layers
@@ -51,7 +52,7 @@ A fresh install has an empty store, and the sequence is built to cope:
 
 1. The store starts, finds its database empty, and creates the hive root keys with their default [security descriptors](~peios/registry/access-control) — but no configuration beneath them.
 2. The registry looks for its parameter keys, finds nothing, and keeps its compiled-in defaults. It is fully operational regardless.
-3. The init system (not the registry's concern) restores a **seed** that populates `Machine\` with the system's real configuration.
+3. The init system (not the registry's concern) restores a **seed** — a [backup](~peios/registry/backup-and-restore) of the system's initial configuration — that populates `Machine\` with the system's real configuration.
 4. That write trips the registry's watch on its own configuration area; it re-reads, validates, and hot-swaps to the seeded values. Normal operation continues.
 
 At no point is there a stall. Empty store, missing keys, seed arriving later — each is handled by "use the defaults until something better shows up", driven by the same [watch](~peios/registry/watches) mechanism every other reactive consumer uses.

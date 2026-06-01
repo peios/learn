@@ -6,6 +6,8 @@ related:
   - peios/registry/overview
   - peios/registry/layers
   - peios/registry/access-control
+  - peios/registry/backup-and-restore
+  - peios/registry/transactions
   - peios/registry/private-hives-and-layers
   - peios/registry/registry-links
 ---
@@ -53,10 +55,7 @@ This is not a gap so much as a fact about where the boundary is: trusting the st
 
 ## Two operations the kernel coordinates
 
-Two registry capabilities are worth placing here, because they are the kernel orchestrating a source rather than features of the data model:
-
-- **Transactions.** The kernel can group many writes into one atomic unit — all commit together or none do — which is how a [role](~peios/registry/what-layers-are-for) installs without ever being half-applied. The source executes the commit atomically; the kernel coordinates it.
-- **Backup and restore.** The kernel can stream an entire subtree out (a point-in-time snapshot) and stream one back in, replacing a subtree wholesale. This is the mechanism behind first-boot seeding and disaster recovery, and it is a privileged operation — it bypasses per-key access checks, so it is gated on backup/restore privileges rather than the keys' own SDs.
+Two registry capabilities are the kernel *orchestrating a source* rather than features of the data model: atomic [transactions](~peios/registry/transactions), and [backup and restore](~peios/registry/backup-and-restore). In both, the source does the storage work — committing a batch atomically, or reading out and replacing a subtree — while the kernel coordinates it and enforces the rules around it. Each has its own page; the point here is only that the same division of labour holds: the kernel decides, the source stores.
 
 ## When a source goes away
 
@@ -68,7 +67,9 @@ You have now seen the whole model — data, meaning, layers, security, change no
 
 For the tool you will reach for most when configuring a system — looking up what any key or value means — read [The registry manual (regman)](~peios/registry/regman).
 
-Two advanced topics remain:
+Three advanced topics remain:
+
+For grouping several writes into one all-or-nothing change — how a role installs without ever being half-applied — read [Advanced: transactions](~peios/registry/transactions).
 
 For complete per-caller isolation — hives and layers visible only to one sandboxed process — read [Advanced: private hives and layers](~peios/registry/private-hives-and-layers).
 

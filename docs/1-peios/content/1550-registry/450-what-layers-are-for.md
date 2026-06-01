@@ -5,6 +5,7 @@ description: Layering earns its complexity by making configuration removable. Be
 related:
   - peios/registry/layers
   - peios/registry/access-control
+  - peios/registry/deleting-keys-and-values
   - peios/registry/configuration-and-meaning
   - peios/registry/watches
   - peios/registry/overview
@@ -68,6 +69,8 @@ Domain **Group Policy** is configuration delivered from outside the machine, and
 - **Not a browsable history.** Layers are not a version-control timeline you can scroll through. You see the effective view — the current winners — not a log of every write that ever competed.
 
 ## Where to start
+
+If you want what "deleting a key" really does once names are layered — and why there is no recursive delete — read [Deleting keys and values](~peios/registry/deleting-keys-and-values).
 
 If you want the security model and its sharp interaction with layers — why deleting a layer reverts its values but *not* a security change made under it — read [Access control on keys](~peios/registry/access-control).
 
