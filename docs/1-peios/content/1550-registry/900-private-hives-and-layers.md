@@ -1,7 +1,7 @@
 ---
 title: "Advanced: private hives and layers"
 type: concept
-description: Private hives and private layers give a single caller its own view of the registry — a sandbox or container can see different keys and different values from everyone else, without a separate path namespace. This is an advanced, forward-looking feature: the registry defines the resolution behaviour, while the credential model it depends on is part of KACS and not yet fully specified.
+description: "Private hives and private layers give a single caller its own view of the registry — a sandbox or container can see different keys and different values from everyone else, without a separate path namespace. This is an advanced, forward-looking feature: the registry defines the resolution behaviour, while the credential model it depends on is part of KACS and not yet fully specified."
 related:
   - peios/registry/lcs-and-sources
   - peios/registry/layers

@@ -1,7 +1,7 @@
 ---
 title: Access control on keys
 type: concept
-description: Every registry key is a secured object, governed by the same KACS access check as files, processes, and tokens — checked once at open, cached on the handle. This page covers the registry-specific rights, the surprises (no traversal check; access is per key, not per value), and the sharp interaction with layers: a security change is not reverted when a layer is removed.
+description: "Every registry key is a secured object, governed by the same KACS access check as files, processes, and tokens — checked once at open, cached on the handle. This page covers the registry-specific rights, the surprises (no traversal check; access is per key, not per value), and the sharp interaction with layers: a security change is not reverted when a layer is removed."
 related:
   - peios/registry/layers
   - peios/registry/watches

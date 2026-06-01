@@ -1,7 +1,7 @@
 ---
 title: The registry
 type: concept
-description: The registry is the system's typed, access-controlled, watchable configuration store — the one place subsystems read their settings from. It looks like three familiar things and is none of them. This page is the map: what the registry is, the few ideas that make it unlike the config systems you already know, and where the rest of the topic goes.
+description: "The registry is the system's typed, access-controlled, watchable configuration store — the one place subsystems read their settings from. It looks like three familiar things and is none of them. This page is the map: what the registry is, the few ideas that make it unlike the config systems you already know, and where the rest of the topic goes."
 related:
   - peios/registry/keys-values-and-types
   - peios/registry/configuration-and-meaning

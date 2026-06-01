@@ -1,7 +1,7 @@
 ---
 title: Keys, values, and types
 type: concept
-description: The registry's data model is deliberately small — a tree of keys, each holding named typed values, and nothing else. This page covers that two-level structure, the value type set, the rules for names and case, and the one property everything later depends on: the registry stores a value's type but never interprets its data.
+description: "The registry's data model is deliberately small — a tree of keys, each holding named typed values, and nothing else. This page covers that two-level structure, the value type set, the rules for names and case, and the one property everything later depends on: the registry stores a value's type but never interprets its data."
 related:
   - peios/registry/overview
   - peios/registry/configuration-and-meaning

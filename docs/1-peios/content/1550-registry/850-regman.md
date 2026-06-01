@@ -1,7 +1,7 @@
 ---
 title: The registry manual (regman)
 type: concept
-description: The registry stores a value's type but not its meaning, so the meaning is written down beside the registry — in regman, the manual. regman tells you what a key or value is: its type, default, valid range, when a change takes effect, and what it does. Crucially, it documents what a setting should be, never what it is currently set to.
+description: "The registry stores a value's type but not its meaning, so the meaning is written down beside the registry — in regman, the manual. regman tells you what a key or value is: its type, default, valid range, when a change takes effect, and what it does. Crucially, it documents what a setting should be, never what it is currently set to."
 related:
   - peios/registry/configuration-and-meaning
   - peios/registry/keys-values-and-types

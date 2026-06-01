@@ -1,7 +1,7 @@
 ---
 title: Configuration, not storage
 type: concept
-description: The registry stores values it does not understand. What a value means — its default, its valid range, what reads it — lives outside the registry, in the subsystem that owns it and in regman, the registry's manual. That separation has a consequence worth internalising: the value the registry shows and the value a subsystem is actually using can legitimately differ.
+description: "The registry stores values it does not understand. What a value means — its default, its valid range, what reads it — lives outside the registry, in the subsystem that owns it and in regman, the registry's manual. That separation has a consequence worth internalising: the value the registry shows and the value a subsystem is actually using can legitimately differ."
 related:
   - peios/registry/keys-values-and-types
   - peios/registry/regman

@@ -1,7 +1,7 @@
 ---
 title: LCS and sources
 type: concept
-description: For the whole topic the registry has been one thing. Underneath it is two — a kernel subsystem that is the sole authority, and one or more userspace stores that only persist data. This page names them (LCS and its sources, loregd first among them), draws the line between them, and states the trust boundary honestly: a source is trusted, and a compromised one can lie.
+description: "For the whole topic the registry has been one thing. Underneath it is two — a kernel subsystem that is the sole authority, and one or more userspace stores that only persist data. This page names them (LCS and its sources, loregd first among them), draws the line between them, and states the trust boundary honestly: a source is trusted, and a compromised one can lie."
 related:
   - peios/registry/overview
   - peios/registry/layers
