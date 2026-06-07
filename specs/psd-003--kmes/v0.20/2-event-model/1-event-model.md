@@ -28,7 +28,7 @@ The payload begins at offset `header_size` from the start of the event. The next
 
 `header_size` is exactly `77 + type_len`. Consumers MUST use `header_size` to locate the payload.
 
-There is no separate limit on event type string length. The event type length is constrained only by the total event size limits (MaxEventSize for syscall emitters, 50% of ring buffer capacity for all emitters).
+The event type length MUST fit in the `u16` `type_len` field. Within that encoding bound, there is no additional event-type-specific limit: the event type length is constrained by the total event size limits (MaxEventSize for syscall emitters, 50% of ring buffer capacity for all emitters).
 
 ## Stamp fields
 
@@ -88,4 +88,4 @@ KMES does not validate payloads from kernel emitters. For events emitted via the
 
 ## Size limits
 
-For events emitted via syscall, the maximum permitted event size is runtime-configurable via the registry (MaxEventSize). KMES uses an internal default until the registry is reachable. Events exceeding the limit MUST be rejected and the syscall MUST return an error. Kernel emitters are not subject to the configurable size limit -- they are subject only to the 50% ring buffer capacity structural limit defined in §3.1.6.
+For events emitted via syscall, the maximum permitted event size is runtime-configurable via the registry (MaxEventSize). KMES uses an internal default until the registry is reachable. Events exceeding the limit MUST be rejected and the syscall MUST return an error. Kernel emitters are not subject to the configurable size limit -- they are subject to the `u16` event-type encoding bound and the 50% ring buffer capacity structural limit defined in §3.1.6.

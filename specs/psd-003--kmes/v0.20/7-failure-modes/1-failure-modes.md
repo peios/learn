@@ -19,7 +19,7 @@ Overrun is a normal operating condition under heavy load, not an error. The syst
 
 An event is dropped without being written to the ring buffer when:
 
-- **Structural limit exceeded.** The event exceeds 50% of the per-CPU ring buffer capacity. Applies to both kernel and syscall emitters.
+- **Structural limit exceeded.** The event type length cannot be encoded in the header's `u16` `type_len` field, or the event exceeds 50% of the per-CPU ring buffer capacity. Applies to kernel emitters; syscall emitters cannot pass an unencodable event type length because their ABI length field is already `u16`, but they remain subject to the 50% capacity bound.
 - **Policy limit exceeded** (syscall only). The event exceeds MaxEventSize.
 - **Validation failure** (syscall only). The payload is not valid msgpack or exceeds MaxNestingDepth.
 

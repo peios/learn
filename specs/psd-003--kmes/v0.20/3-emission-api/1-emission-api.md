@@ -45,6 +45,8 @@ KMES does not validate the origin class, event type encoding, or payload content
 The emission API performs the following structural checks on every call:
 
 - The event type string MUST have nonzero length.
+- The event type string length MUST fit in the event header's `u16` `type_len`
+  field.
 - The total event size (header + payload) MUST fit in a `u32`.
 - The total event size MUST NOT exceed 50% of the per-CPU ring buffer capacity.
 
