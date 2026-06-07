@@ -6,15 +6,15 @@ This appendix lists capabilities that are intentionally omitted from v0.20 but a
 
 ## CPU topology changes
 
-v0.20 fixes the set of per-CPU ring buffers at KMES initialisation time. The following topology changes are not handled:
+v0.20 fixes the set of per-CPU ring buffers at KMES initialisation time to the kernel's possible-CPU set. The following topology changes are not dynamically handled:
 
-**CPU hot-add.** A CPU brought online after KMES initialisation has no ring buffer. Events emitted on that CPU are dropped silently. The `kmes_attach(cpu_id)` API returns EINVAL for the new CPU.
+**CPU hot-add beyond the initial possible-CPU set.** A CPU whose logical index was not in the possible-CPU set when KMES initialised has no ring buffer. KMES does not create a new ring or publish a topology-change notification for that CPU, and `kmes_attach(cpu_id)` returns EINVAL for indexes outside the fixed set. A CPU that was possible but offline at KMES initialisation is not in this category: it already has a ring buffer, and events emitted after it comes online are written to that ring.
 
 **CPU offline.** A CPU taken offline via `cpu_online` still has a ring buffer. The drain thread for that CPU sleeps on `futex_wait` indefinitely since no new events are emitted. This is harmless (one sleeping thread) but not clean.
 
 **CPU hot-remove.** A CPU that had a ring buffer is physically removed. The drain thread sleeps forever on a buffer that will never receive new events. Without a notification mechanism, the consumer cannot distinguish a quiet CPU from a removed one.
 
-The fix for all three is a topology change notification mechanism. Options include a new generation bump that signals "re-enumerate CPUs", a dedicated topology-change file descriptor, or a field in the producer metadata page indicating CPU status. The `kmes_attach(cpu_id)` design accommodates all of these -- consumers discover new CPUs by extending their attach loop, and detect removed CPUs via a status field or error code. No changes to the ring buffer format, event format, or emission API are required.
+The fix for fully dynamic topology is a topology change notification mechanism, plus dynamic ring creation if future Peios kernels support CPUs outside the initial possible-CPU set. Options include a new generation bump that signals "re-enumerate CPUs", a dedicated topology-change file descriptor, or a field in the producer metadata page indicating CPU status. The `kmes_attach(cpu_id)` design accommodates all of these -- consumers discover new CPUs by extending their attach loop, and detect removed CPUs via a status field or error code. No changes to the ring buffer format, event format, or emission API are required.
 
 CPU hot-add is the most likely real-world scenario (hypervisors adding vCPUs to a running guest). CPU hot-remove is rare outside mainframes.
 

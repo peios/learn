@@ -65,7 +65,7 @@ Cross-CPU ordering during a clock discontinuity is best-effort. Events from diff
 
 ## CPU hotplug
 
-CPU hotplug (adding or removing CPUs at runtime) is not supported in v0.20. The number of per-CPU ring buffers is fixed at KMES initialisation time based on the number of online CPUs when PKM loads. If a CPU is brought online after KMES initialisation, events emitted on that CPU are dropped.
+CPU hotplug topology changes are not dynamically supported in v0.20. The number of per-CPU ring buffers is fixed at KMES initialisation time based on the kernel's possible-CPU set when PKM loads. CPUs that are possible but offline at KMES initialisation have ring buffers from startup; if they are later brought online, events emitted on those CPUs are written to their existing rings. KMES does not resize the ring set, emit topology-change notifications, or create rings for CPUs outside the initial possible-CPU set.
 
 A future version MAY support dynamic per-CPU buffer creation for hotplugged CPUs.
 
@@ -73,7 +73,7 @@ A future version MAY support dynamic per-CPU buffer creation for hotplugged CPUs
 
 KMES kernel memory usage is bounded by:
 
-- **Per-CPU ring buffers:** In steady state, `num_cpus × BufferCapacity`. At boot, these begin at the compiled-in default size. During a live BufferCapacity swap, old and new per-CPU ring buffers MAY temporarily coexist until existing mappings to the old generation are released. Capacity values remain bounded by the configured limits.
+- **Per-CPU ring buffers:** In steady state, `num_cpus × BufferCapacity`, where `num_cpus` is the fixed possible-CPU count defined for `kmes_attach`. At boot, these begin at the compiled-in default size. During a live BufferCapacity swap, old and new per-CPU ring buffers MAY temporarily coexist until existing mappings to the old generation are released. Capacity values remain bounded by the configured limits.
 - **Event construction:** Temporary allocations during event construction are bounded by the maximum event size and freed immediately after the event is written to the ring buffer.
 - **Consumer file descriptors:** Each `kmes_attach` call creates one file descriptor. A consumer attaching to all CPUs creates `num_cpus` file descriptors. Bounded by RLIMIT_NOFILE and the SeSecurityPrivilege requirement.
 

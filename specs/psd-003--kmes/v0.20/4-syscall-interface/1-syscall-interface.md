@@ -162,11 +162,11 @@ The caller's effective token MUST hold SeSecurityPrivilege. If the privilege is 
 
 ### Behavior
 
-`cpu_id` is a logical CPU index in the range `[0, num_cpus)`, where `num_cpus` is the number of CPUs that were online when KMES initialised (at PKM load time). This is the same numbering used in the ring buffer's `cpu_id` metadata field and in event headers.
+`cpu_id` is a logical CPU index in the range `[0, num_cpus)`, where `num_cpus` is the fixed number of logical CPUs in the kernel's possible-CPU set when KMES initialised (at PKM load time). This is the same numbering used in the ring buffer's `cpu_id` metadata field and in event headers.
 
 KMES creates a single file descriptor for the ring buffer of CPU `cpu_id` and returns it. The current per-CPU ring buffer capacity is written to `*capacity`. The returned file descriptor maps exactly one CPU's ring buffer.
 
-If `cpu_id` is greater than or equal to `num_cpus`, the syscall fails with EINVAL. This includes CPUs brought online after KMES initialisation -- CPU hotplug is not supported in v0.20 (see §7.1). Consumers discover the CPU count by calling `kmes_attach` with incrementing `cpu_id` values starting from 0 until EINVAL is returned.
+If `cpu_id` is greater than or equal to `num_cpus`, the syscall fails with EINVAL. CPUs that are possible but offline when KMES initialises are still included in `num_cpus` and have ring buffers from startup; if such a CPU is later brought online, its events are written to its existing ring. CPU hotplug is still not dynamically handled in v0.20: KMES does not resize the fixed ring set, publish topology-change notifications, or create rings for CPUs outside the initial possible-CPU set (see §7.1). Consumers discover `num_cpus` by calling `kmes_attach` with incrementing `cpu_id` values starting from 0 until EINVAL is returned.
 
 Repeated calls with the same `cpu_id` are permitted and return a new file descriptor each time. Each file descriptor maps that CPU's ring buffer. The producer metadata page, consumer metadata page, and data region are shared for all file descriptors attached to the same per-CPU buffer, as defined in §5.1. This allows multiple direct consumers to attach to the same CPU's ring buffer concurrently while sharing the buffer's advisory notification state.
 
