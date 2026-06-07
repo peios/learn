@@ -94,8 +94,10 @@ A high-precedence layer (e.g., Group Policy) can override another
 layer's precedence -- this is useful and intentional. The cached
 layer table picks up the change on the next watch event.
 
-Modifying layer metadata requires SeTcbPrivilege, which limits the
-circularity surface to highly privileged callers.
+Modifying layer metadata requires KEY_SET_VALUE on the layer metadata
+key. Establishing or elevating a layer's precedence above 0 additionally
+requires SeTcbPrivilege, which limits the high-precedence circularity
+surface to highly privileged callers.
 
 ## Layer metadata is global
 
