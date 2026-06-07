@@ -8,6 +8,8 @@ KMES reads its operational parameters from the registry under `Machine\System\KM
 
 All keys live under `Machine\System\KMES\`. Each has a defined type, compiled-in default, and valid range. KMES ignores unknown keys in this subtree.
 
+KMES configuration value names are matched using the LCS value-name comparison rules: Unicode Simple Case Folding, case-preserving, and case-insensitive. The canonical key names in the table below identify the KMES-controlled setting and are used in KMES self-configuration audit payloads. Registry entries whose folded value name does not match one of these canonical names are unknown keys and are ignored.
+
 | Key | Type | Default | Valid range | Description |
 |---|---|---|---|---|
 | BufferCapacity | REG_QWORD | 4194304 | 65536--268435456 | Per-CPU ring buffer capacity in bytes. MUST be a power of two. Values that are not powers of two are treated as invalid. Default is 4 MB. Maximum is 256 MB. |
@@ -17,13 +19,43 @@ All keys live under `Machine\System\KMES\`. Each has a defined type, compiled-in
 
 ## Validation
 
-When KMES reads a configuration value, it validates against the defined type, range, and constraints:
+When KMES reads a configuration value, it validates against the defined type, payload length, range, and constraints. `REG_DWORD` KMES values MUST contain exactly four little-endian payload bytes. `REG_QWORD` KMES values MUST contain exactly eight little-endian payload bytes. A value whose registry type tag is `REG_DWORD` or `REG_QWORD` but whose payload length is wrong for that type is invalid and is treated as a wrong-type value for retention and self-configuration audit purposes.
 
 - **Valid value:** Applied to the in-memory configuration. For MaxEventSize and MaxNestingDepth, the new value takes effect for subsequent syscalls. For BufferCapacity, KMES triggers a ring buffer swap -- creating new per-CPU ring buffers at the configured size, copying surviving events from the old buffers, incrementing the generation counter, and discarding the old buffers. The swap protocol is defined in §5.1.9.4.
 
-- **Invalid value** (out of range, wrong type, not a power of two for BufferCapacity, missing): Ignored. KMES retains the previously active value (compiled-in default or last known-good). An event is emitted via KMES itself identifying the key, the invalid value, and the value being retained.
+- **Invalid value** (out of range, wrong type, malformed payload length, not a power of two for BufferCapacity, missing): Ignored. KMES retains the previously active value (compiled-in default or last known-good). An event is emitted via KMES itself identifying the key, the invalid value class, and the value being retained.
 
 Values are never clamped or silently corrected. The write to the registry succeeds (the source does not enforce kernel semantics), but KMES refuses to use it. The registry shows what was written; the event log shows what KMES is actually using.
+
+## Self-configuration events
+
+KMES emits self-configuration events with origin class `KMES`. These events are best-effort diagnostics. Failure to emit a self-configuration event MUST NOT roll back a valid configuration application and MUST NOT make an invalid configuration value active.
+
+### `KMES_SELF_CONFIG_INVALID`
+
+KMES emits `KMES_SELF_CONFIG_INVALID` when a defined configuration value is missing or invalid during a self-configuration read. The payload is a msgpack map with exactly these keys:
+
+| Key | Type | Description |
+|---|---|---|
+| `configuration_parent_path` | string | Canonical parent path, `Machine\System\KMES`. |
+| `configuration_name` | string | Canonical KMES configuration key name from the table above. |
+| `expected_type` | unsigned integer | Expected LCS registry type code. |
+| `expected_min` | unsigned integer | Minimum accepted numeric value for the key. |
+| `expected_max` | unsigned integer | Maximum accepted numeric value for the key. |
+| `received_kind` | string | One of `missing`, `wrong_type`, `u32_out_of_range`, or `u64_out_of_range`. Malformed `REG_DWORD` or `REG_QWORD` payload lengths use `wrong_type`. |
+| `received_type` | unsigned integer or nil | Actual registry type code for `wrong_type`; nil for `missing` and out-of-range values. |
+| `received_value` | unsigned integer or nil | Numeric value for out-of-range values; nil for `missing` and `wrong_type`. |
+| `retained_value` | unsigned integer | Previously active value retained by KMES. |
+
+### `KMES_BUFFER_SWAP_FAILED`
+
+KMES emits `KMES_BUFFER_SWAP_FAILED` when a valid `BufferCapacity` configuration change cannot be applied because KMES cannot allocate replacement ring buffers. The payload is a msgpack map with exactly these keys:
+
+| Key | Type | Description |
+|---|---|---|
+| `requested_capacity` | unsigned integer | Valid requested BufferCapacity value that triggered the swap attempt. |
+| `retained_capacity` | unsigned integer | Active BufferCapacity value retained by KMES. |
+| `errno` | signed integer | Kernel errno for the failed swap attempt. |
 
 ## Bootstrap sequence
 

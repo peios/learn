@@ -43,7 +43,7 @@ KMES has no dependency on consumers. A system with no consumers attached operate
 When KMES attempts to create new ring buffers (due to a BufferCapacity configuration change, including the first LCS-driven resize away from the boot-time default), memory allocation may fail.
 
 - If allocation fails, KMES retains the existing ring buffers at their current size. The configuration change is not applied.
-- An event is emitted via KMES itself recording the allocation failure and the retained buffer size.
+- A `KMES_BUFFER_SWAP_FAILED` event is emitted via KMES itself recording the allocation failure and the retained buffer size. Its payload schema is defined in §6.1 Self-configuration events.
 - The generation counter is not incremented. Consumers are unaffected.
 - KMES does not retry automatically. A subsequent configuration write (or system reboot) triggers another attempt.
 
