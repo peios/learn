@@ -86,6 +86,8 @@ The payload MUST be valid msgpack. A zero-length payload (`event_size == header_
 
 KMES does not validate payloads from kernel emitters. For events emitted via the syscall interface, KMES MUST validate that the payload is well-formed msgpack before accepting the event. Validation is iterative with a bounded maximum nesting depth. Events with invalid payloads MUST be rejected and the syscall MUST return an error to the caller.
 
+For syscall payload validation, nesting depth is counted from 1 at the top-level msgpack value. A child value inside an array or map has depth one greater than the containing array or map. A payload exceeds `MaxNestingDepth` if parsing it would place any value at depth greater than `MaxNestingDepth`; equivalently, a non-empty array or map at depth `MaxNestingDepth` is invalid because its children would exceed the limit. Empty arrays and maps at depth `MaxNestingDepth` are valid.
+
 ## Size limits
 
 For events emitted via syscall, the maximum permitted event size is runtime-configurable via the registry (MaxEventSize). KMES uses an internal default until the registry is reachable. Events exceeding the limit MUST be rejected and the syscall MUST return an error. Kernel emitters are not subject to the configurable size limit -- they are subject to the `u16` event-type encoding bound and the 50% ring buffer capacity structural limit defined in §3.1.6.
