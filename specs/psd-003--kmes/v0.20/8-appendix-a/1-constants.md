@@ -164,9 +164,18 @@ Registry path: `Machine\System\KMES\`
 | MaxNestingDepth | REG_DWORD | 32 | 4--256 |
 | MaxEmitRatePerProcess | REG_DWORD | 10000 | 100--1000000 |
 
+KMES uses the LCS registry value type codes for these configuration values:
+
+| Name | Value | Description |
+|---|---:|---|
+| REG_DWORD | 4 | 32-bit integer, little-endian. |
+| REG_QWORD | 11 | 64-bit integer, little-endian. |
+
 ## Privilege requirements
 
-| Operation | Required privilege |
-|---|---|
-| Emit event from userspace (`kmes_emit`, `kmes_emit_batch`) | SeAuditPrivilege |
-| Attach as consumer (`kmes_attach`) | SeSecurityPrivilege |
+KMES uses the KACS privilege bit assignments for standalone privilege checks:
+
+| Operation | Required privilege | Bit index | Mask |
+|---|---|---:|---:|
+| Emit event from userspace (`kmes_emit`, `kmes_emit_batch`) | SeAuditPrivilege | 21 | 0x0000000000200000 |
+| Attach as consumer (`kmes_attach`) | SeSecurityPrivilege | 8 | 0x0000000000000100 |
