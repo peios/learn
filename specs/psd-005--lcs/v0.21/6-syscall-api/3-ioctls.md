@@ -357,12 +357,13 @@ affected hive's generation number is incremented independently. Layer
 precedence changes that alter effective state also produce a single
 generation increment encompassing all effects.
 
-**Behaviour:** LCS queries the source for subkey and value counts,
-maximum name/data lengths, and SD size via RSI operations. The key
-name, flags, last write time, and hive generation number are
-available from kernel-side state (the fd's metadata and the
-per-hive generation counter). The hive generation number is purely
-kernel-side state and is not persisted or reported by the source.
+**Behaviour:** LCS queries the source for the key's persisted
+metadata, subkey and value counts, maximum name/data lengths, and
+SD size via RSI operations. The key fd supplies the target GUID and
+retained open-time routing context; it does not cache the key's
+mutable last write time. The hive generation number is purely
+kernel-side state from the per-hive generation counter and is not
+persisted or reported by the source.
 Sources persist only layer-entry sequence numbers. On source
 registration or LCS restart, LCS MAY initialise the volatile hive
 generation baseline from the source's reported max_sequence so
