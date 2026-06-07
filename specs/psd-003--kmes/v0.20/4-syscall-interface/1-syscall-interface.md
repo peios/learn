@@ -44,6 +44,12 @@ KMES performs the following validation on every `kmes_emit` call, in order:
 
 Validation stops at the first failure. The error reflects the first check that failed.
 
+### Privilege used-state
+
+The SeAuditPrivilege requirement is a PSD-004 standalone privilege gate. If the caller's enabled SeAuditPrivilege satisfies the gate, KMES records SeAuditPrivilege as used on the token. If the caller lacks enabled SeAuditPrivilege and the syscall fails with EPERM, SeAuditPrivilege is not recorded as used.
+
+The SeTcbPrivilege rate-limit exemption is also a PSD-004 standalone privilege gate when the caller holds enabled SeTcbPrivilege. If enabled SeTcbPrivilege exempts the caller from the per-process rate bucket, KMES records SeTcbPrivilege as used on the token. If the caller does not hold enabled SeTcbPrivilege, KMES performs normal rate limiting and does not record SeTcbPrivilege as used.
+
 ### Preemption
 
 Validation (steps 1--8) runs with preemption enabled. The userspace copy at step 7 may trigger page faults, and msgpack validation at step 8 may take microseconds for large payloads. Neither requires CPU affinity.
@@ -111,6 +117,8 @@ Total struct size: 32 bytes.
 7. The declared total event size for the entry MUST be within MaxEventSize and within 50% of the ring buffer capacity. If either limit is exceeded, processing stops and the failing entry is rejected with ENOSPC.
 8. The event type and payload are copied from userspace into kernel memory. The event type and payload pointers for the failing entry are checked only after steps 6 and 7 pass. If a per-entry pointer is inaccessible, processing stops and the failing entry is rejected with EFAULT.
 9. The staged entry is validated using the same remaining rules as `kmes_emit` (nonzero event type length, valid UTF-8 event type, valid msgpack within MaxNestingDepth). If any entry fails validation, processing stops. Events before the failing entry that passed validation are emitted. The failing entry and all subsequent entries are not processed.
+
+The SeAuditPrivilege and SeTcbPrivilege used-state rules from `kmes_emit` also apply to `kmes_emit_batch`: a successful SeAuditPrivilege gate records SeAuditPrivilege as used, and an enabled SeTcbPrivilege rate-limit exemption records SeTcbPrivilege as used.
 
 ### Preemption
 
