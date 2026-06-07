@@ -18,7 +18,7 @@ configuration.
 | Full path | Default | Min | Max | Unit | Description | Errno on violation |
 |---|---|---|---|---|---|---|
 | `Machine\System\Registry\RequestTimeoutMs` | 30000 | 1000 | 600000 | milliseconds | Per-request timeout for RSI operations, measured from first attempt to reserve an in-flight slot through response receipt. When exceeded, the calling thread receives ETIMEDOUT. The source stays alive. | ETIMEDOUT |
-| `Machine\System\Registry\TransactionTimeoutMs` | 30000 | 1000 | 600000 | milliseconds | Maximum lifetime of an open transaction from reg_begin_transaction to auto-abort. Prevents stalled or malicious processes from holding the source's write lock indefinitely. | Transaction auto-aborted; caller's next operation returns EINVAL. |
+| `Machine\System\Registry\TransactionTimeoutMs` | 30000 | 1000 | 600000 | milliseconds | Maximum lifetime of an open transaction from reg_begin_transaction to auto-abort. Prevents stalled or malicious processes from holding the source's write lock indefinitely. | Transaction auto-aborted; caller's next operation returns ETIMEDOUT. |
 
 ## Path and naming limits
 
