@@ -54,6 +54,13 @@ SeTakeOwnershipPrivilege allows setting ownership to the caller's own SID regard
 
 Without SeRelabelPrivilege, callers MAY only set a label at or below their own integrity level. With SeRelabelPrivilege, any level is permitted.
 
+This constraint applies to a `SYSTEM_MANDATORY_LABEL_ACE` set through either
+path: the dedicated `LABEL_SECURITY_INFORMATION` subset, or one embedded in a
+full `SACL_SECURITY_INFORMATION` write. A `SACL_SECURITY_INFORMATION` write
+whose SACL contains a mandatory-label ACE raising integrity above the caller's
+level requires SeRelabelPrivilege exactly as the label path does, even though
+the SACL component itself is gated only by `ACCESS_SYSTEM_SECURITY`.
+
 ## SeRestorePrivilege bypass
 
 SeRestorePrivilege bypasses the access check when `kacs_set_sd` runs a live AccessCheck — i.e., when called via O_PATH fd + AT_EMPTY_PATH, via pidfd, via token fd + AT_EMPTY_PATH, or via path. The privilege fires in the AccessCheck pipeline and grants all requested rights including WRITE_OWNER, WRITE_DAC, and ACCESS_SYSTEM_SECURITY.

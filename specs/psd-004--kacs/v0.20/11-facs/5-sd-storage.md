@@ -237,6 +237,15 @@ system-policy creator:
 
 The current accessor's token MUST NOT affect the synthesized file SD.
 
+### Synthesis depth bound
+
+Inheriting from the parent (source 1) is recursive: a parent whose own SD is
+also missing is synthesized first, walking toward the mount root where the
+mount-level template (source 2) terminates the walk. To bound in-kernel
+recursion, synthesis MUST walk at most 32 ancestor levels. A target nested more
+than 32 levels below the nearest ancestor that already has a resolvable SD
+fails closed with `-EACCES` rather than synthesizing.
+
 Class-specific persistence behavior:
 
 - `facs_synthesize_persistent` (adopted foreign media) — the synthesized SD is written to xattr immediately. Synthesis happens once.

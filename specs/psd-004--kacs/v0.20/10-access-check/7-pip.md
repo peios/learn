@@ -62,7 +62,8 @@ to the current object.
 EnforcePIP(ace, pip_type, pip_trust, mapping, &decided,
            &granted, &privilege_granted):
 
-    // pip_type and pip_trust come from the PSB, not the token.
+    // pip_type and pip_trust are the subject's process-trust context, not a
+    // token field. See "PIP source" below for how the value is sourced.
 
     ace_type = ace.sid.pip_type
     ace_trust = ace.sid.pip_trust
@@ -88,3 +89,18 @@ EnforcePIP(ace, pip_type, pip_trust, mapping, &decided,
     granted &= ~pip_denied
     privilege_granted &= ~pip_denied
 ```
+
+## PIP source
+
+`pip_type` and `pip_trust` are the subject's process-trust context. They are
+never derived from a token field.
+
+During enforcement (FACS file access, process boundaries) the value is the
+subject process's PSB pip, set at exec from the binary signature (§6.1, §8).
+
+The `kacs_access_check` query (§13.6) MAY instead supply `pip_type`/`pip_trust`
+through its args, where `0` means the calling process's PSB pip and a non-zero
+value evaluates against the supplied trust context. This lets a userspace
+broker evaluate access under a client's trust level — the same way the query's
+`token_fd` arg lets it evaluate a token other than its own. The query is
+advisory and gates nothing in-kernel; enforcement always uses the PSB.

@@ -194,14 +194,14 @@ Total size: **136 bytes**. Minimum accepted size (v1): **40 bytes** (`KACS_ACCES
 | 48 | 4 | `self_sid_len` | `u32` | Length of self SID |
 | 52 | 4 | `privilege_intent` | `u32` | `KACS_BACKUP_INTENT` / `KACS_RESTORE_INTENT` |
 | 56 | 8 | `object_tree_ptr` | `u64` | OBJECT_TYPE_LIST array (0 = none) |
-| 64 | 4 | `object_tree_count` | `u32` | Number of object type entries |
+| 64 | 4 | `object_tree_count` | `u32` | Number of object type entries. Maximum 1024; larger values fail with `-EINVAL`. |
 | 68 | 4 | `_pad0` | `u32` | Reserved, must be 0 (alignment padding) |
 | 72 | 8 | `local_claims_ptr` | `u64` | Conditional ACE claims (0 = none) |
-| 80 | 4 | `local_claims_len` | `u32` | Length of local claims |
+| 80 | 4 | `local_claims_len` | `u32` | Length of local claims. Maximum 65536 bytes; larger values fail with `-EINVAL`. |
 | 84 | 4 | `_pad1` | `u32` | Reserved, must be 0 (alignment padding) |
 | 88 | 8 | `granted_out_ptr` | `u64` | Output: pointer to u32 for granted mask. 0 = not used. In scalar syscall 1023, the same granted mask is also returned directly in the syscall return value. In syscall 1024 (`kacs_access_check_list`), this pointer receives the root node's granted mask (the intersection value) because the syscall return value is 0/`-errno`. A bad pointer returns -EFAULT. |
-| 96 | 4 | `pip_type` | `u32` | PIP type for evaluation. 0 = use the calling process's pip_type (set at exec from binary signature). |
-| 100 | 4 | `pip_trust` | `u32` | PIP trust for evaluation. 0 = use the calling process's pip_trust (set at exec from binary signature). |
+| 96 | 4 | `pip_type` | `u32` | PIP type for evaluation. 0 = use the calling process's pip_type (set at exec from binary signature). A non-zero value evaluates against the supplied trust context (broker / what-if queries); see §10.7 "PIP source". |
+| 100 | 4 | `pip_trust` | `u32` | PIP trust for evaluation. 0 = use the calling process's pip_trust (set at exec from binary signature). A non-zero value evaluates against the supplied trust context; see §10.7 "PIP source". |
 | 104 | 8 | `audit_context_ptr` | `u64` | Pointer to opaque audit context blob (0 = no object identification in audit events). |
 | 112 | 4 | `audit_context_len` | `u32` | Length of audit context blob in bytes. Max 4096. |
 | 116 | 4 | `_pad2` | `u32` | Reserved, must be 0 (alignment padding). |
@@ -260,7 +260,7 @@ Total size: **40 bytes**.
 | 0 | 8 | `privs_to_delete` | `u64` | Bitmask of privileges to permanently remove |
 | 8 | 4 | `num_deny_indices` | `u32` | Count of zero-based group indices to flip to deny-only |
 | 12 | 4 | `num_restrict_sids` | `u32` | Count of restricting SIDs to add |
-| 16 | 4 | `data_len` | `u32` | Total length of variable data at `data_ptr` |
+| 16 | 4 | `data_len` | `u32` | Total length of variable data at `data_ptr`. Maximum 65536 bytes; larger values fail with `-EINVAL`. |
 | 20 | 4 | `flags` | `u32` | Bit 0: `KACS_RESTRICT_WRITE_RESTRICTED` (0x01) — enable write-restricted mode + user_deny_only. All other bits reserved, must be 0. |
 | 24 | 8 | `data_ptr` | `u64` | Userspace pointer: `u32[]` deny indices, then `num_restrict_sids` packed binary SIDs with no padding; `data_len` must match exactly |
 | 32 | 4 | `result_fd` | `s32` | Output: new restricted token fd |
