@@ -57,15 +57,19 @@ The synthesis-only-in-memory pattern lets FACS apply access control to these fil
 
 ## facs_synthesize_persistent
 
-A FACS-managed mount where missing SDs are synthesised **and** written back. The synthesis happens once; from then on the file has a real SD.
+A FACS-managed mount where missing SDs are synthesised **and** written back. Each file is synthesised once; from then on it has a real SD.
 
 The runtime behaviour:
 
 1. The kernel reads the file's SD from the filesystem.
 2. If no SD is present, the kernel synthesises one using the synthesis chain.
-3. The synthesised SD is used for the access check.
+3. The synthesised SD is used for the access check — immediately, from the kernel's cache.
 4. The synthesised SD is **also** written back to the filesystem (typically as the SD xattr). The file now has a persistent SD.
 5. On a subsequent open, the SD is read from storage — no re-synthesis needed.
+
+The write-back in step 4 does not happen *during* the access — it is **deferred** until just after the triggering operation finishes (when the kernel can safely write without holding the locks the access is using). In practice the SD is on disk by the time the syscall that first touched the file returns to userspace, so for an observer it is effectively immediate.
+
+Because the synthesised SD is a deterministic function of its inputs (the parent's SD, or the mount template), the on-disk copy is a *cache* of a value the kernel can always recompute. If the write-back is interrupted — the inode is evicted first, or the process exits in the gap — nothing is lost: the next access re-synthesises the identical SD and tries the write-back again. A file is never left with the *wrong* SD, only occasionally with the SD still in memory rather than on disk. (A mount-template change in that gap simply discards the pending SD and re-synthesises against the new template, so a superseded SD is never frozen onto the disk.)
 
 This class is for filesystems being adopted into Peios. A previously-unmanaged filesystem (say, an ext4 volume from a Linux system without KACS) can be mounted with `facs_synthesize_persistent`; every file accessed gets an SD on first access; over time, every file ends up with an SD.
 

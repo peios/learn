@@ -190,11 +190,12 @@ changed.
 Policy changes are lazy. They do not recursively walk the filesystem and do not
 stamp every file. The superblock policy object carries a monotonic generation
 counter. Each successful policy or template replacement increments the
-generation. Missing-SD and ephemeral-synthetic inode cache entries record the
-generation they were derived from; when the generation changes, those entries
-MUST be discarded and repopulated on next use. Xattr-backed valid SD caches and
-corrupt-SD caches are not made valid by policy changes. Existing open file
-descriptions retain their immutable granted masks.
+generation. Missing-SD, ephemeral-synthetic, and not-yet-written-back
+persistent-synthetic inode cache entries (see `Deferred write-back` below)
+record the generation they were derived from; when the generation changes,
+those entries MUST be discarded and repopulated on next use. Xattr-backed valid
+SD caches and corrupt-SD caches are not made valid by policy changes. Existing
+open file descriptions retain their immutable granted masks.
 
 ## Missing SDs
 
@@ -248,8 +249,47 @@ fails closed with `-EACCES` rather than synthesizing.
 
 Class-specific persistence behavior:
 
-- `facs_synthesize_persistent` (adopted foreign media) — the synthesized SD is written to xattr immediately. Synthesis happens once.
 - `facs_synthesize_ephemeral` (removable media, FAT/exFAT, NFS client mounts) — the synthesized SD is cached in the inode blob only and MUST NOT be written back automatically. The original filesystem remains unmodified.
+- `facs_synthesize_persistent` (adopted foreign media) — the synthesized SD is additionally written back to the `security.peios.sd` xattr so the medium acquires durable SDs. The write-back is deferred, never performed inline with synthesis; see `Deferred write-back`.
+
+### Deferred write-back
+
+Synthesis runs while holding the FACS inode lock, and writing the SD xattr
+acquires the inode's `i_rwsem`. Writing the xattr inline would acquire `i_rwsem`
+under the FACS inode lock, inverting the `i_rwsem` → FACS-inode-lock order the
+access path requires, and would self-deadlock when synthesis is reached from a
+metadata operation (`chmod`, `setxattr`, …) whose VFS caller already holds
+`i_rwsem`. A `facs_synthesize_persistent` write-back therefore MUST NOT run
+while any FACS or VFS lock is held.
+
+Persistence is consequently deferred:
+
+- Synthesis caches the SD immediately and marks the cache entry
+  write-back-pending. The access decision is correct from this cached SD the
+  instant synthesis completes; correctness never depends on the xattr being
+  present on disk.
+- The write-back runs later, from a context holding no FACS or VFS lock. In the
+  `v0.20` kernel this is a task-work callback that fires when the triggering
+  syscall returns to userspace, so a `facs_synthesize_persistent` SD is normally
+  on disk by the time the operation that first observed the missing SD returns.
+- A write-back-pending entry is generation-tagged exactly like an ephemeral
+  synthetic entry: a mount policy or template change before the write-back
+  occurs discards the pending entry and re-synthesizes on next use, so a stale
+  pre-change SD is never pinned to disk.
+- Write-back is best-effort. The synthesized SD is a deterministic function of
+  the parent SD (or the mount template) — see `Synthesis depth bound` — so the
+  on-disk xattr is a cache of a recomputable value, not unique state. If the
+  write-back does not occur (the cache entry is evicted first, or the triggering
+  task exits before the callback runs), the identical SD is re-synthesized on
+  the next access and the write-back is retried. A failed or skipped write-back
+  MUST NOT fail the operation that triggered synthesis.
+- Once the xattr is written, the next cache miss reads it back as an ordinary
+  xattr-backed SD. From that point the SD is durable, is no longer
+  generation-tagged, and synthesis for that inode does not recur.
+
+A synthesized ancestor that exists only to supply inheritance inputs for a
+descendant (the recursive parent walk above) is itself write-back-pending and
+persists under the same rules when it is next accessed in its own right.
 
 ## Corrupt SDs
 
