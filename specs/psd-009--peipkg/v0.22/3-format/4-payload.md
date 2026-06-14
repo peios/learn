@@ -21,8 +21,10 @@ Permitted top-level install destinations:
 |---|---|
 | `/usr/bin/` | Executable binaries (user-facing and system) |
 | `/usr/lib/<triplet>/` | Architecture-specific libraries and arch-dependent data |
+| `/usr/lib/debug/` | Separated debug information, mirroring the install paths of the files it describes (typically in `-dbg`/`-dbgsym` packages) |
 | `/usr/share/` | Architecture-independent data |
 | `/usr/include/` | Header files (typically in `-dev` packages) |
+| `/usr/src/debug/` | Debugger source files, mirroring the build's source tree (typically in `-dbgsym`/`-debugsource` packages) |
 | `/etc/` | Default configuration files |
 | `/var/` | Runtime variable state directories (typically empty at install time) |
 | `/opt/` | Self-contained third-party software trees |
@@ -68,6 +70,28 @@ of the following under `/usr/lib/<triplet>/` where
 Packages whose architecture is `noarch` MUST NOT install any
 files under `/usr/lib/<triplet>/`. A `noarch` package whose
 contents includes any of the above categories is INVALID.
+
+Separated debug information is the one arch-dependent payload
+category exempt from the triplet path. It MUST install under
+`/usr/lib/debug/` (§3.4.1), not `/usr/lib/<triplet>/`. Debug
+files mirror the full install path of the binary or library
+they describe — the debug info for `/usr/bin/foo` is
+`/usr/lib/debug/usr/bin/foo.debug`, and for
+`/usr/lib/<triplet>/libfoo.so.1` is
+`/usr/lib/debug/usr/lib/<triplet>/libfoo.so.1.debug` — and
+MAY additionally be indexed by build-id under
+`/usr/lib/debug/.build-id/`. Debug information is nonetheless
+arch-dependent: a `noarch` package MUST NOT install any files
+under `/usr/lib/debug/`.
+
+The debugger *source* files that this debug information
+references install under `/usr/src/debug/` (§3.4.1), not under
+`/usr/lib/`. Source is architecture-independent, so
+`/usr/src/debug/` carries neither a triplet nor the `noarch`
+restriction above: it is a plain permitted destination, like
+`/usr/share/`, that both arch-specific and `noarch` packages
+MAY use. Only the `debug/` subtree of `/usr/src/` is a
+permitted destination; the rest of `/usr/src/` is not.
 
 > [!INFORMATIVE]
 > Example: an `x86_64` nginx package installs the binary at
