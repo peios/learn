@@ -43,9 +43,13 @@ until reboot.
 
 ## Pre-start evaluation
 
-Before entering the pre-exec sequence, peinit MUST evaluate
-conditions and asserts while the service is still in Inactive
-state. This evaluation gates the Inactive → Starting transition.
+Before running hooks or the service process, peinit MUST evaluate
+conditions and asserts. For a fresh start from Inactive, this
+evaluation gates the Inactive → Starting transition. If activation
+has already entered Starting (for example, the start phase of a
+Restart after the stop phase completed), the evaluation happens
+while the service remains in Starting and gates further pre-exec
+progress.
 
 1. Read the service definition from the in-memory cache (see the
    §3.5). This read MUST NOT block
@@ -57,8 +61,10 @@ state. This evaluation gates the Inactive → Starting transition.
    all of them. If any assert fails, the service transitions to
    Failed with cause AssertionError and the start is abandoned.
 
-Only after conditions and asserts pass does the service transition
-to Starting and the pre-exec sequence below begins.
+Only after conditions and asserts pass may the pre-exec sequence
+below continue. For a fresh Inactive start this is when the service
+transitions to Starting; for an activation already in Starting,
+passing checks leaves the service in Starting.
 
 ### Non-blocking evaluation
 
@@ -141,6 +147,12 @@ If token materialisation fails (authd unreachable, identity not
 found, KACS syscall error), no child process exists. peinit MUST
 transition the service to Failed with cause ParentSetupFailure.
 
+If token materialisation succeeds but any later parent-side setup
+step fails before fork, peinit MUST close the materialised service
+token fd exactly once before reporting ParentSetupFailure. A token-fd
+close failure MUST be retained as cleanup evidence, but MUST NOT
+change the start outcome classification.
+
 ### Step 5: Create error pipe
 
 peinit MUST create a cloexec pipe (`pipe2(O_CLOEXEC)`). The parent
@@ -152,6 +164,34 @@ If exec succeeds, the write end auto-closes (CLOEXEC) and the
 parent reads EOF -- meaning setup succeeded. If any setup step
 fails before exec, the child writes a structured error (step
 identifier + errno) over the pipe before exiting.
+
+The structured error payload MUST be exactly 8 bytes and MUST be
+written with one `write(2)` call:
+
+1. Bytes 0-3: little-endian `u32` child setup step identifier.
+2. Bytes 4-7: little-endian `i32` positive Linux errno value.
+
+The child MUST write at most one structured error payload: the first
+reportable failed child setup step. The parent MUST treat any non-EOF
+payload whose length is not exactly 8 bytes, whose step identifier is
+unknown, or whose errno is less than or equal to zero as malformed
+pre-exec error evidence and fail closed with cause PreExecFailure.
+
+Child setup step identifiers are:
+
+| Identifier | Step |
+| --- | --- |
+| 1 | Close read end of error pipe |
+| 2 | Set service stdio (`/dev/null` stdin, stdout/stderr pipe write ends) |
+| 3 | Reset signal environment |
+| 4 | Install service KACS token |
+| 5 | Set RLIMIT values |
+| 6 | Set `oom_score_adj` |
+| 7 | Set working directory |
+| 8 | Set environment variables |
+| 9 | Set `NOTIFY_SOCKET` |
+| 10 | Inject stored file descriptors |
+| 11 | Exec binary |
 
 If `pipe2` fails, no child process exists. peinit MUST transition
 the service to Failed with cause ParentSetupFailure.
@@ -168,6 +208,14 @@ execs in peinit's own cgroup before being placed.
 If `clone3` fails, no child process exists. peinit MUST transition
 the service to Failed with cause ParentSetupFailure. Common causes:
 EMFILE/ENFILE (fd exhaustion), EAGAIN (PID limit), ENOMEM.
+
+In the parent execution path, peinit MUST close the materialised service
+token fd and its `main/` cgroup fd exactly once immediately after
+`clone3` returns, whether `clone3` succeeded or failed. The child path
+relies on each fd's close-on-exec flag and process exit for cleanup.
+A parent token-fd or cgroup-fd close failure MUST be retained as cleanup
+evidence, but MUST NOT change whether the start is classified as clone
+success, clone failure, missing-pidfd failure, or pre-exec failure.
 
 ### Step 7: Parent post-fork
 
@@ -195,28 +243,34 @@ allocation, no complex library calls, no logging. Straight-line
 setup then exec.
 
 1. Close the read end of the error pipe.
-2. Reset the signal environment: restore the signal mask to unblock
-   all signals and reset every signal disposition to `SIG_DFL`.
+2. Set standard streams: redirect stdin from `/dev/null`, redirect
+   stdout to the service stdout pipe write end, redirect stderr to
+   the service stderr pipe write end, and close inherited pipe ends
+   that are not needed after duplication.
+3. Reset the signal environment: restore the signal mask to unblock
+   all signals and reset every resettable signal disposition to `SIG_DFL`.
    peinit blocks all signals for its signalfd (§10.1) and the child
    inherits that mask across fork; a service MUST NOT start with
    signals blocked or with peinit's handlers installed.
-3. Install the service's KACS token.
-4. Set RLIMIT values (LimitNOFILE, LimitCORE) if configured.
-5. Set `oom_score_adj`:
+4. Install the service's KACS token.
+5. Set RLIMIT values (LimitNOFILE, LimitCORE) if configured.
+6. Set `oom_score_adj`:
    - `-1000` (OOM-immune) for ErrorControl=Critical services.
    - `0` (default) for all others.
-6. Set working directory.
-7. Set environment variables (base environment + Environment
-   values from the definition).
-8. Set `NOTIFY_SOCKET` to the notify socket path. This is set
+7. Set working directory.
+8. Set environment variables (base environment + global
+   `Machine\System\Init\EnvVars` values + `Environment` values from
+   the definition). Global `EnvVars` override the compiled-in base
+   environment; service `Environment` entries override both.
+9. Set `NOTIFY_SOCKET` to the notify socket path. This is set
       unconditionally regardless of the Readiness field -- services
       use sd_notify for watchdog, STOPPING=1, FDSTORE, and
       EXTEND_TIMEOUT_USEC in addition to readiness signalling.
-9. Inject stored file descriptors if the service has an fd store
+10. Inject stored file descriptors if the service has an fd store
    with entries from a previous run.
-10. Exec the binary (`ImagePath` + `Arguments`).
-11. If exec fails: write error to the pipe, `_exit(127)`.
-12. If any step 2-9 fails: write error to the pipe, `_exit(126)`.
+11. Exec the binary (`ImagePath` + `Arguments`).
+12. If exec fails: write error to the pipe, `_exit(127)`.
+13. If any step 1-10 fails: write error to the pipe, `_exit(126)`.
 
 ### Inherited execution context
 

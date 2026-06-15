@@ -34,8 +34,10 @@ invalid -- peinit MUST NOT perform them.
 | Starting | Active | Readiness signal | Simple only. `READY=1` received (Notify) or process exists (Alive). |
 | Starting | Completed | Oneshot successful exit + RemainAfterExit | Process exited 0 (or SuccessExitCodes match) and RemainAfterExit=1. |
 | Starting | Completed | Oneshot successful exit, no RemainAfterExit | Process exited 0 (or SuccessExitCodes match) and RemainAfterExit=0. Transitions through Completed to release dependents, then to Inactive. |
+| Starting | Skipped | Condition check fails during activation | At least one Condition evaluated to false after the activation has already entered Starting. |
 | Starting | Backoff | Startup failure + restart policy | ReadinessTimeout, PreHookFailure, PreExecFailure, or ParentSetupFailure with RestartPolicy allowing restart and budget remaining. |
 | Starting | Stopping | Stop command cancels in-progress start | Explicit stop while Starting. Restart commands on a Starting service are queued, not cancelled. |
+| Starting | Failed | Assertion fails during activation | At least one Assert evaluated to false after the activation has already entered Starting. |
 | Starting | Failed | Timeout, hook failure, setup failure, or early exit | StartTimeout exceeded, pre-hook exited non-zero, parent setup failed, pre-exec failed, or process exited before readiness (Simple) or with non-zero exit (Oneshot). |
 | Starting | Failed | Shutdown | ShutdownWave causes SIGKILL of Starting service. |
 | Active | Reloading | Reload triggered | ExecReload command sent or SIGHUP delivered. |
@@ -66,6 +68,17 @@ invalid -- peinit MUST NOT perform them.
 | Failed | Inactive | Reset command | Administrator clears Failed state without starting. |
 | Abandoned | Inactive | Reset command | Administrator clears state. peinit re-checks the cgroup -- if it finally emptied, clean up. If still populated, log a warning. |
 | Skipped | Inactive | Reset or explicit start | Clears Skipped state. A subsequent start re-evaluates conditions. |
+
+For the `Abandoned -> Inactive` Reset transition, the re-check targets
+the service's `main/` sub-cgroup. If it is empty, peinit MUST plan cleanup
+of the leaked `main/` sub-cgroup. If it is still populated, peinit MUST leave
+the cgroup leaked, log a warning, and include the following lifecycle
+acknowledgement warning when the Reset command returns an operation
+acknowledgement:
+
+```
+abandoned main cgroup for service <service> is still populated after reset -- cgroup remains leaked; underlying D-state process requires investigation
+```
 
 ## Dependent satisfaction
 

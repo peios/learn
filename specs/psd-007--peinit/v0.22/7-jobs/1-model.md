@@ -17,8 +17,8 @@ history is visible via eventd.
 
 ```
 Created --> Running --> Completed
-                         |
-                         +--> Failed
+   |                     |
+   +--> Failed          +--> Failed
                          |
                          +--> Abandoned
 ```
@@ -28,7 +28,7 @@ Created --> Running --> Completed
 | Created | Job object exists but the process has not been forked yet (pre-exec hooks may be running). |
 | Running | The main process is alive. |
 | Completed | The process exited successfully (exit code 0 or configured success codes). |
-| Failed | The process exited with a failure (non-zero exit, signal, timeout, health check failure). |
+| Failed | The process failed, or peinit classified the job as failed before fork because parent setup failed. |
 | Abandoned | The process survived SIGKILL (D-state). |
 
 Job states are simpler than service states. A service has Starting,
@@ -48,12 +48,16 @@ Job {
                                 // Failed, Abandoned
     pid:            pid_t?      // main process PID (null until forked)
     pidfd:          fd?         // pidfd for race-free tracking
+    resolved_identity:
+                    string      // resolved service, hook, or submitter
+                                // identity string
     token_summary:  object      // identity (SID, groups, privileges)
     image_path:     string      // binary that was exec'd
     arguments:      string[]    // argv
     created_at:     timestamp   // when the job object was created
     started_at:     timestamp?  // when the process was forked
-    ended_at:       timestamp?  // when the process exited
+    ended_at:       timestamp?  // when the process exited, or when
+                                // peinit classified the job terminal
     exit_code:      int?        // exit code (null if signal death)
     exit_signal:    int?        // signal (null if clean exit)
     failure_cause:  string?     // structured cause
@@ -65,8 +69,21 @@ Job {
 ```
 
 The `id` MUST be assigned before fork. The `pid` and `pidfd` are
-populated at fork time. The `ended_at`, `exit_code`, and
-`exit_signal` are populated when the process exits.
+populated at fork time. If parent setup fails before fork, the job
+transitions directly from Created to Failed; `ended_at` records the
+classification time, `failure_cause` records the setup failure cause,
+and `pid`, `pidfd`, `started_at`, `exit_code`, and `exit_signal`
+remain null. The `ended_at` field is otherwise populated when the
+process exits, or when peinit classifies the job as terminal without
+observing process exit. The `exit_code` and `exit_signal` fields are
+populated only when the process exits. For Abandoned jobs, `ended_at`
+records the time peinit ended supervision and classified the job as
+terminal; `exit_code` and `exit_signal` remain null.
+
+The `resolved_identity` field records the resolved identity string used
+for the execution. It is distinct from `token_summary`, which records
+the resulting SID, groups, and privileges. Status views and job-created
+payloads that expose `identity` use this resolved identity string.
 
 ## Job types
 

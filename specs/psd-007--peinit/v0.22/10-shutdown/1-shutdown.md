@@ -52,6 +52,7 @@ peinit MUST set an internal shutdown flag. While the flag is set:
 - No new services may be started.
 - Timer triggers are disarmed.
 - New control socket commands are rejected (except status queries).
+  Rejected commands return `INVALID_STATE`.
 
 ### Step 2: Suspend Critical failure semantics
 
@@ -68,20 +69,70 @@ participate in, allowing their dependents to be stopped cleanly.
 
 ### Step 4: Stop services in reverse dependency order
 
-peinit MUST build the reverse dependency graph and stop services
-in waves:
+After Step 3, peinit MUST classify remaining service states for
+shutdown stop eligibility:
 
-1. Each service receives SIGTERM.
+- Services in Active or Reloading are graceful-stop eligible and
+  enter the reverse dependency stop waves.
+- Services in Stopping are already in a stop path. They participate
+  in the shutdown stop waves for ordering and timeout/escalation
+  purposes, but peinit MUST NOT send an additional initial SIGTERM
+  to a service already in Stopping.
+- Services in Starting are not graceful-stop eligible. peinit MUST
+  cancel the startup path and send SIGKILL to the service cgroup if
+  one exists; they do not receive graceful shutdown ordering.
+- Services in Inactive, Failed, Skipped, Backoff, or Abandoned do not
+  enter graceful stop waves. Abandoned cgroups remain leaked and
+  shutdown continues.
+- Completed services have already been cleared to Inactive by Step 3
+  and do not enter stop waves.
+
+peinit MUST build the reverse dependency graph for graceful-stop
+eligible and already-stopping services and stop them in waves:
+
+1. Each graceful-stop eligible service receives SIGTERM.
+   Already-stopping services do not receive an additional initial
+   SIGTERM.
 2. Each service has StopTimeout seconds to exit.
 3. If StopTimeout expires, SIGKILL is sent to the service's entire
    cgroup.
 4. A service MUST NOT be stopped until all services that depend on
    it (via Requires or BindsTo) have stopped.
 
+If the operation object for a later-wave shutdown Stop expires while
+it is still Pending, peinit fails that operation and notifies waiters
+according to §8.1. This does not override the wave ordering above:
+peinit MUST NOT send SIGTERM or SIGKILL to that service until all
+dependent services have stopped and the service's wave is eligible.
+
 Services that send `STOPPING=1` via sd_notify are acknowledged.
 Services that send `EXTEND_TIMEOUT_USEC=...` during shutdown get
 additional time, capped by both the per-service StopTimeout (x4)
 and the global shutdown timeout.
+
+For a service that is already in Stopping when graceful shutdown
+classification runs, peinit MUST NOT reset the service's stop timeout
+clock at shutdown entry or at wave eligibility. If an in-flight Stop
+operation or in-flight Restart operation currently executing its stop
+leg exists, that operation's retained timing evidence governs the
+StopTimeout enforcement for the already-Stopping participant. If no
+operation object exists for the active stop path, peinit MUST use
+retained service-level Stopping timeout evidence from the stop path that
+placed the service in Stopping, and that retained evidence MUST include the
+cause that initiated the `Stopping` transition (`ExplicitStop`,
+`ShutdownWave`, `ConflictEviction`, or `BindsToPropagation`). Missing,
+stale, or ambiguous timing or stop-cause evidence for such a no-operation
+already-Stopping service MUST fail closed for timeout scans and child-reap
+completion until stronger retained evidence is available.
+
+When peinit services a retained shutdown StopTimeout timerfd for
+already-Stopping participants, it MUST validate that the retained scheduler
+deadline and retained timerfd topology describe the same timeout before
+consuming the timerfd. If the timerfd has been read successfully, the timeout
+firing is consumed evidence and peinit MUST NOT continue to treat the old
+timerfd deadline as armed. Timerfd or epoll cleanup failure after such a
+successful read MUST be retained or reported as cleanup failure evidence, but
+it MUST NOT suppress the timeout effects for the consumed firing.
 
 ### Step 5: Global timeout enforcement
 
@@ -133,6 +184,20 @@ PID 1 handles all signals via signalfd. All signals are blocked
 and read from the event loop -- no signal handlers, no
 async-signal-safety concerns.
 
+On Linux, "all signals are blocked" means peinit MUST build a mask
+containing every blockable Linux signal in the supported signal-number
+range. SIGKILL and SIGSTOP are not blockable and are not expected to be
+delivered through signalfd. peinit MUST install the mask with
+`rt_sigprocmask(SIG_BLOCK, ...)` before entering the main event loop, then
+create the PID 1 signal fd with `signalfd4(-1, mask, ...)`.
+
+The PID 1 signalfd MUST be created with close-on-exec and nonblocking
+semantics (`SFD_CLOEXEC | SFD_NONBLOCK`). The same signal mask used for
+`rt_sigprocmask` MUST be used for signalfd creation. If signal blocking,
+signalfd creation, retained fd installation, or event-loop registration
+fails, peinit MUST fail closed and MUST NOT fall back to async signal
+handlers.
+
 | Signal | Behaviour |
 |---|---|
 | SIGCHLD | Reap children via `waitpid`. Match to tracked services. Also reaps orphaned processes (not tracked by any service). |
@@ -140,6 +205,16 @@ async-signal-safety concerns.
 | SIGTERM | Poweroff request. |
 | SIGHUP | Ignored. PID 1 has no controlling terminal. |
 | SIGPIPE | Ignored. Broken pipes on the control socket MUST NOT crash PID 1. |
+
+When SIGCHLD reaping observes a child exit status, peinit MUST normalize the
+Linux wait status before applying service or job policy:
+
+- exited children carry the exact 0-255 exit code;
+- signalled children carry the terminating signal number and whether the Linux
+  core-dump bit was present;
+- stopped or continued statuses are invalid for the normal Peinit reaping path
+  because Peinit does not request them with `waitpid`; observing one MUST fail
+  closed.
 
 All other signals are ignored. PID 1 cannot be killed by any
 signal -- the kernel protects PID 1 from fatal signals.

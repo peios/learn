@@ -95,7 +95,10 @@ the service transitions to Failed with cause RestartBudgetExhausted.
 peinit MUST then apply the service's ErrorControl level:
 
 - **Normal:** service remains in Failed state.
-- **Critical:** peinit syncs filesystems and reboots.
+- **Critical:** peinit syncs filesystems and reboots immediately.
+  This immediate reboot takes precedence over OnFailure; peinit
+  MUST NOT start an OnFailure handler for the Critical budget
+  exhaustion.
 
 ### Budget reset
 
@@ -128,7 +131,7 @@ evaluate_reload(service):
         send SIGHUP to the main process
         return await_signal_reload(service)
     if service.exec_reload starts with "signal:":
-        send the named signal to the main process
+        send the validated named signal (§3.2) to the main process
         return await_signal_reload(service)
     else:
         materialise the service token, fork the command into hooks/,

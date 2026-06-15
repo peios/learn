@@ -126,9 +126,11 @@ redundant remount of an already-writable or overlay root can fail
 spuriously.
 
 peinit MUST confirm the root is writable with a single probe write
-(create and remove a file under `/.peinit/`). registryd's storage
-backend requires write access (WAL and shared-memory files) even
-for read operations, so a read-only root cannot support Phase 2.
+(create, write, and remove one uniquely named file under `/.peinit/`).
+If `/.peinit/` is absent, peinit MAY create it as part of the probe.
+registryd's storage backend requires write access (WAL and
+shared-memory files) even for read operations, so a read-only root
+cannot support Phase 2.
 
 If the probe write fails -- the root is unexpectedly read-only or
 the filesystem is faulty -- peinit MUST enter Recovery mode.
@@ -154,6 +156,10 @@ each only if it is not already mounted:
 | `/run` | tmpfs | nosuid, nodev | peinit |
 | `/sys/fs/cgroup` | cgroup2 | nosuid, nodev, noexec | peinit |
 
+When invoking `mount(2)` for this table, peinit MUST pass the listed
+`Filesystem` value as both the `source` and `filesystemtype` argument,
+MUST pass only the listed flags, and MUST pass null mount data.
+
 The mount set and flags are hardcoded; all seven MUST exist before
 any other process runs. For the initramfs-provided mounts (`/proc`,
 `/sys`, `/dev`), peinit MUST treat an already-mounted filesystem
@@ -169,6 +175,15 @@ peinit MUST read the hardware RTC and call `clock_settime()` to
 initialise the system clock before registryd starts. This ensures
 timestamps on registry operations, log entries, and the boot
 attempt counter are meaningful.
+
+On Linux, peinit MUST read the RTC via `RTC_RD_TIME` on `/dev/rtc`.
+If `/dev/rtc` is absent, peinit MUST try `/dev/rtc0`. The returned
+`struct rtc_time` value is interpreted as UTC and converted to
+`CLOCK_REALTIME` seconds plus zero nanoseconds. If no RTC device can
+be opened, the RTC read fails, the RTC value is invalid or
+pre-Unix-epoch, `clock_settime(CLOCK_REALTIME, ...)` fails, or the
+RTC file descriptor cannot be closed after a successful read, peinit
+MUST enter Recovery mode.
 
 > [!INFORMATIVE]
 > NTP provides accurate time later in the boot process. This step
@@ -208,6 +223,25 @@ After receiving `READY=1`, peinit MUST perform a probe read of
 see §3.2 and the appendix) to verify the registry is serving reads.
 This key is guaranteed to exist on any valid system. If the probe
 read fails or times out, peinit MUST treat registryd as failed.
+The probe is successful only if the value is present and decodes as
+the schema-version `REG_DWORD`; a missing value, type mismatch, or
+malformed payload is a probe failure.
+
+When registryd passes readiness and the schema-version probe, peinit
+MUST retain the activation as a normal runtime service instance. The
+retained record MUST include the service state, pidfd-tracked main
+process identity, cgroup generation and paths, output-pipe ownership,
+notify generation, job identity, and any cleanup evidence needed to
+supervise, stop, restart, or report the service later. Peinit MUST NOT
+discard this ownership at the Phase 2 boundary.
+
+During Phase 2 service-model materialisation, the registry definition
+for `registryd` is merged onto the retained Phase 1 activation. Peinit
+MUST NOT create a second inactive `registryd` runtime record and MUST
+NOT restart registryd merely because the registry definition has been
+loaded. If the registry definition for `registryd` is absent or invalid,
+the normal complete-graph validation rules apply before Phase 2 boot
+continues.
 
 If registryd fails to start, its readiness timeout expires, or the
 probe read fails, peinit MUST enter Recovery mode. There is no
@@ -230,8 +264,9 @@ infrastructure setup before Phase 2 begins:
    interface to be operational.
 
 If control socket creation fails, peinit MUST enter Recovery mode.
-JFS device open failure and loopback bring-up failure MUST be
-logged as warnings but MUST NOT prevent Phase 2 from starting.
+JFS device open failure, JFS event-loop registration failure, and
+loopback bring-up failure MUST be logged as warnings but MUST NOT
+prevent Phase 2 from starting.
 
 ## Phase 1 failure summary
 
@@ -248,4 +283,5 @@ option because Phase 2 cannot begin without working infrastructure.
 | registryd readiness timeout expires | Recovery mode |
 | Control socket creation fails | Recovery mode |
 | JFS device open fails | Warning logged, Phase 2 continues |
+| JFS event-loop registration fails | Warning logged, Phase 2 continues |
 | Loopback bring-up fails | Warning logged, Phase 2 continues |

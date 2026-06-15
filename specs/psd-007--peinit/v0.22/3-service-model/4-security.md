@@ -40,16 +40,32 @@ Administrators (`S-1-5-32-544`) query and stop rights.
 
 Restart requires both SERVICE_STOP and SERVICE_START.
 
+### ServiceSecurity GenericMapping
+
+When peinit calls AccessCheck for a ServiceSecurity SD, it MUST use the
+following GenericMapping:
+
+| Generic right | Maps to |
+|---|---|
+| GENERIC_READ | SERVICE_QUERY_STATUS |
+| GENERIC_WRITE | SERVICE_START \| SERVICE_STOP \| SERVICE_INTERROGATE |
+| GENERIC_EXECUTE | SERVICE_START \| SERVICE_STOP \| SERVICE_INTERROGATE |
+| GENERIC_ALL | SERVICE_ALL_ACCESS |
+
 When a client sends a control command via the control socket,
 peinit MUST:
 
 1. Obtain the caller's token via `kacs_open_peer_token`.
-2. Call AccessCheck with the caller's token against the target
+2. Resolve the target service and its ServiceSecurity SD. If the
+   command names no service definition and no definition-removed
+   runtime entry that this specification keeps addressable, peinit
+   MUST return `UNKNOWN_SERVICE` and MUST NOT invent a synthetic SD.
+3. Call AccessCheck with the caller's token against the target
    service's ServiceSecurity SD.
-3. If AccessCheck denies the requested access: return an
+4. If AccessCheck denies the requested access: return an
    ACCESS_DENIED error and log the attempt (caller SID, target
    service, requested right).
-4. If AccessCheck grants the requested access: proceed with the
+5. If AccessCheck grants the requested access: proceed with the
    command.
 
 ### ServiceSecurity hot-reload
@@ -74,6 +90,18 @@ registry change notifications.
 |---|---|---|
 | SYSTEM_SHUTDOWN | 0x0001 | Initiate shutdown (poweroff, reboot, halt). |
 | SYSTEM_RELOAD_CONFIG | 0x0002 | Re-read all service definitions from the registry. |
+
+### ControlSecurity GenericMapping
+
+When peinit calls AccessCheck for the peinit ControlSecurity SD, it MUST use
+the following GenericMapping:
+
+| Generic right | Maps to |
+|---|---|
+| GENERIC_READ | 0 |
+| GENERIC_WRITE | SYSTEM_RELOAD_CONFIG |
+| GENERIC_EXECUTE | SYSTEM_SHUTDOWN |
+| GENERIC_ALL | SYSTEM_SHUTDOWN \| SYSTEM_RELOAD_CONFIG |
 
 The default ControlSecurity SD MUST grant:
 

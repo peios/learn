@@ -73,6 +73,12 @@ rules as admin-created operations. If a dependency is already
 starting (due to another service also depending on it), the
 operations merge.
 
+For an explicit on-demand start, dependency-created operations and any adopted
+already-starting operations are associated with the retained on-demand graph
+execution context for that requested start. Graph execution events from
+terminal pre-start outcomes are dispatched only through that associated context,
+as defined in §6.2.
+
 ## Restart policy integration
 
 When a service transitions to Failed with a restart-eligible cause

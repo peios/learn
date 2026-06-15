@@ -97,6 +97,23 @@ be marked Failed with cause ValidationError:
 
 ## Graph execution
 
+Graph execution is scoped by an explicit retained graph execution context. A
+boot graph context is created from the boot-triggered service graph. An
+on-demand graph context is created from the requested service's validated
+transitive closure. These contexts use the same scheduler, dependency
+satisfaction, failure propagation, and parallelism rules, but they are distinct
+runtime contexts.
+
+Any operation that participates in graph execution MUST be associated with every
+retained graph execution context that created or adopted it. A single operation
+MAY be associated with more than one active on-demand graph context when
+multiple explicit on-demand starts merge into, or adopt, the same already
+starting operation. When a pre-start outcome is terminal for that operation,
+peinit MUST dispatch the corresponding graph event once for each associated
+active graph context. If no graph execution context is associated with the
+operation, the terminal pre-start outcome completes or fails the operation and
+any waiters normally, but MUST NOT dispatch a graph execution event.
+
 ### Parallel start
 
 After validation, peinit executes the graph by starting services

@@ -150,9 +150,9 @@ cmdline = "console=hvc0 quiet"
 
 | Type | Required | Description |
 |---|---|---|
-| string | yes (must be non-empty) | Default kernel command line. Empty cmdlines (or whitespace-only) are rejected with `profile \`<name>\` has empty cmdline`. |
+| string | one of `cmdline` / `cmdline_file` | Inline kernel command line. May be empty or omitted **when `cmdline_file` is set** — the two compose. A profile with neither a non-empty `cmdline` nor a `cmdline_file` is rejected with `profile \`<name>\` has empty cmdline and no \`cmdline_file\`; set at least one`. |
 
-`vm:boot({kernel_cmdline = "..."})` overrides this for one boot.
+`vm:boot({kernel_cmdline = "..."})` overrides the whole command line for one boot.
 
 Provium **always appends `console=ttyS0`** if absent. The kernel happily uses multiple `console=` directives, so any user-set values are preserved alongside. The reason: the QEMU command wires the serial port into Provium's console capture, so the kernel's printk needs to land there for failure diagnostics to be visible. Without `console=ttyS0`, PID 1's `/dev/console` may resolve to a device QEMU doesn't capture, and writes to stderr can fail and crash userspace.
 
@@ -161,6 +161,22 @@ Common additions:
 - `loglevel=7` — verbose kernel logging for debugging.
 - `nokaslr` — for reproducible kernel addresses in panic dumps.
 - `panic=1` — panic immediately rather than hanging on unrecoverable errors.
+
+### `cmdline_file`
+
+```toml
+[profiles.peios]
+cmdline_file = "../peiso/out/root/boot/cmdline"
+cmdline      = "loglevel=7"   # optional; appended after the file
+```
+
+| Type | Required | Description |
+|---|---|---|
+| path string | one of `cmdline` / `cmdline_file` | Path to a file whose contents are the **base** command line — typically an image builder's generated `cmdline`. Read at VM-boot time; resolved relative to the current directory, like `kernel`/`initrd`. |
+
+All whitespace in the file — including newlines — is collapsed to single spaces, then the inline `cmdline` (if any) is appended **after**. Because the kernel applies last-wins semantics to most repeated parameters (`init=`, `loglevel=`, …), an inline token overrides the file's value for those.
+
+The point is to stop the command line from drifting. If a builder bakes `init=/usr/bin/protoinit` into the image's cmdline and you hand-copy that into `cmdline`, the two silently diverge the next time the builder changes. Pointing `cmdline_file` at the builder's output means Provium reads the authoritative value every boot. See [Dynamic profiles](~provium/configuration/dynamic-profiles#cmdline-from-the-builder).
 
 ### `guest_os`
 
@@ -176,6 +192,37 @@ guest_os = "peios"
 Validated at config load time. A profile with `guest_os = "linux"` (or any other value) errors with `profile \`<name>\` has guest_os = \`linux\`, only \`peios\` is supported in v1`.
 
 The field exists to future-proof the schema for other ports — when there's a Windows agent, this would be how a profile selects it.
+
+### `build`
+
+```toml
+[profiles.peios]
+build        = "peiso build manifests/peios.toml --out {out}"
+kernel       = "{out}/root/boot/vmlinuz"
+initrd       = "{out}/initrd.img"
+cmdline_file = "{out}/root/boot/cmdline"
+```
+
+| Type | Default | Description |
+|---|---|---|
+| string | unset | Shell command (run with `sh -c`) that produces this profile's boot artifacts. Runs **once before any VM boots**. A non-zero exit aborts the run. |
+
+The literal token `{out}` — in `build` and in the path fields — expands to this profile's build-output directory (see `build_out`), so the command's `--out` and the `kernel`/`initrd`/`cmdline_file` Provium later reads are the same path and cannot drift.
+
+Provium tracks no staleness: the command runs every invocation. Making rebuilds cheap when nothing changed is the builder's job, not Provium's. Skip the hook with `--no-build`, or run it without booting via `provium prepare`. Full treatment on [Dynamic profiles](~provium/configuration/dynamic-profiles).
+
+### `build_out`
+
+```toml
+[profiles.peios]
+build_out = "/tmp/provium-builds/peios"
+```
+
+| Type | Default | Description |
+|---|---|---|
+| path string | `$XDG_CACHE_HOME/provium/builds/<profile>/` | The directory `{out}` expands to. |
+
+When unset, the default base is resolved like the fixture cache — `$PROVIUM_BUILD_DIR`, then `$XDG_CACHE_HOME/provium/builds`, then `~/.cache/provium/builds`, then `/tmp/provium-builds` — with the profile name appended. Provium creates the directory before running `build` but **never wipes it**: the `build` command owns its contents (so it can keep its own incremental-build caches there).
 
 ## Multiple profiles
 
@@ -212,8 +259,9 @@ provium:vm("stable-v", "peios-stable")   -- pinned older kernel
 |---|---|
 | 1. Read | `provium.toml` is read from `--config <path>` (default `./provium.toml`). |
 | 2. Parse | TOML is parsed. Parse errors include the file path. |
-| 3. Validate | Each profile is validated (`cmdline` non-empty, `guest_os = "peios"`). |
-| 4. Use | The `Config` struct is wrapped in an `Arc` and passed to every file runner. |
+| 3. Validate | Each profile is validated (a non-empty `cmdline` **or** a `cmdline_file`; `guest_os = "peios"`). |
+| 4. Expand | The `{out}` token in each profile's `build` command and path fields is replaced with that profile's resolved build-output directory. |
+| 5. Use | The `Config` struct is wrapped in an `Arc` and passed to every file runner. |
 
 Errors:
 

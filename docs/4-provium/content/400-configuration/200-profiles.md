@@ -6,7 +6,7 @@ description: Patterns for using multiple profiles — testing across kernel vers
 
 A profile is one named `(kernel, initrd, cmdline, guest_os)` tuple in `provium.toml`. Tests pick a profile by name when they create a VM. This page covers the practical patterns.
 
-The configuration field reference is on [provium.toml](~provium/configuration/provium-toml).
+The configuration field reference is on [provium.toml](~provium/configuration/provium-toml). A profile can also *build* its own artifacts before booting rather than pointing at files already on disk — see [Dynamic profiles](~provium/configuration/dynamic-profiles).
 
 ## When you need more than one profile
 

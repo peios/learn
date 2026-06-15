@@ -177,7 +177,12 @@ registry may be the reason for the failure).
 - peinit MUST read the counter at startup, before selecting the
   boot mode. The Recovery threshold (`counter >= N`) is evaluated
   against this pre-increment value, so a default N of 3 admits
-  exactly three boot attempts before Recovery.
+  exactly three boot attempts before Recovery. If the counter file
+  is absent, peinit MUST treat the pre-increment value as `0`. If
+  the counter file exists but cannot be read, is empty, contains a
+  non-decimal value, contains trailing non-whitespace data, or
+  overflows the counter representation, peinit MUST enter Recovery
+  mode.
 - peinit MUST increment the counter once per boot, immediately
   after Phase 1 Step 1 confirms the root is writable, and before
   Phase 2 begins. peinit MUST NOT increment before the root is

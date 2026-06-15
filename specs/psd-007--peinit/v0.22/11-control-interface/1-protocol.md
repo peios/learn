@@ -27,6 +27,10 @@ about message boundaries.
 {"status": "ok", "operation_id": "a1b2c3d4-...", "service": "jellyfin", "state": "active", "cause": "explicit_start", "warnings": []}
 ```
 
+For lifecycle operation acknowledgement responses, `warnings` is
+an array of human-readable warning strings. Structured warning
+objects are used only by the `status` response shape (§11.2).
+
 **Error response:**
 
 ```json
@@ -35,6 +39,22 @@ about message boundaries.
 
 Field names, types, and value formats in JSON examples throughout
 this specification are normative.
+
+### Timestamp values
+
+All timestamp fields in control JSON responses, including fields
+named `started_at`, `requested_at`, and `completed_at`, MUST be
+UTC RFC3339 strings with exactly nine fractional-second digits and
+a trailing `Z` offset marker:
+
+```json
+"2026-06-01T12:34:56.123456789Z"
+```
+
+These wire timestamps describe wall-clock instants and are derived
+from `CLOCK_REALTIME` observations. Timeout, retry, duration, and
+ordering decisions remain monotonic-clock concerns and MUST NOT use
+wall-clock deltas for elapsed-time enforcement.
 
 ### Error codes
 
@@ -51,7 +71,7 @@ non-normative.
 | `REQUEST_TOO_LARGE` | The request exceeds `MaxRequestSize`. |
 | `INVALID_COMMAND` | The `command` field is missing or names no known command. |
 | `INVALID_ARGUMENTS` | Required fields for the command are missing or malformed (e.g. `shutdown` without a valid `type`). |
-| `INVALID_STATE` | The command is not valid for the service's current state -- the `ERROR` cells of the command x state matrix (§11.2). |
+| `INVALID_STATE` | The command is not valid for the service's current state -- the `ERROR` cells of the command x state matrix (§11.2) -- or is rejected because peinit is already in shutdown state (§10.1). |
 | `OPERATION_TIMEOUT` | A `wait=true` request's operation did not reach a terminal state within its timeout. |
 | `INTERNAL_ERROR` | peinit encountered an internal failure while executing the command. |
 

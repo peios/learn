@@ -14,6 +14,16 @@ stdout and stderr before exec. The child's stdout and stderr are
 redirected to the write end of these pipes. peinit holds the read
 end and monitors them via epoll.
 
+The parent-held read ends of service stdout/stderr pipes MUST be made
+nonblocking before they are monitored by the event loop. This
+nonblocking setting applies to peinit's read ends only; the
+child-facing stdout/stderr write ends MUST retain ordinary blocking
+pipe semantics so pipe backpressure continues to slow an overproducing
+service instead of converting normal writes into `EAGAIN` failures.
+
+The event-loop epoll instance is peinit-owned runtime state. It MUST be
+created close-on-exec, and service children MUST NOT inherit it.
+
 The child's stdin MUST be redirected to `/dev/null`. peinit does
 not provide an interactive input channel to services; a service
 that requires input MUST obtain it through an explicit mechanism

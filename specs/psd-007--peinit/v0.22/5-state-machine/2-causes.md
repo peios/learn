@@ -12,15 +12,17 @@ administrator comprehension.
 
 | Cause | Applies to | Description |
 |---|---|---|
-| ExplicitStart | -> Starting | Administrator or trigger initiated start. |
+| ExplicitStart | -> Starting or Skipped -> Inactive | Administrator or trigger initiated start. A start from Skipped first clears Skipped to Inactive before re-evaluating conditions. |
 | DependencyStart | -> Starting | Started to satisfy another service's dependency. |
 | RestartPolicy | -> Starting | Automatic restart after a Backoff delay. |
 | BindsToRecovery | -> Starting | Bound dependency returned to Active. peinit automatically restarts the dependent. Does not consume the restart budget. |
 | ExplicitStop | -> Stopping | Administrator requested stop. |
+| ExplicitReset | -> Inactive | Administrator cleared Failed, Abandoned, or Skipped state without starting the service. |
 | ConflictEviction | -> Stopping | Conflicting service started; this service lost. |
 | BindsToPropagation | -> Stopping | Bound dependency stopped. |
 | ShutdownWave | -> Stopping or Failed | System shutdown in progress. Services in Active or Reloading transition to Stopping. Services in Starting transition directly to Failed (SIGKILL, no graceful stop). |
 | ProcessCrash | -> Failed or Backoff | Main process exited unexpectedly (non-zero or signal). |
+| CleanExit | -> Inactive | Simple main process exited successfully and RestartPolicy is not Always. This is not a crash and does not consult restart policy. |
 | CleanExitRestart | -> Backoff | Simple main process exited successfully, but RestartPolicy=Always requires peinit to restart it. This is not a crash. |
 | ReadinessTimeout | -> Failed or Backoff | StartTimeout expired before readiness. |
 | WatchdogTimeout | -> Failed or Backoff | Watchdog keepalive not received in time. |
@@ -70,6 +72,11 @@ CleanExitRestart MUST NOT be treated as ProcessCrash. Logs and
 status MUST make clear that the process exited successfully and was
 restarted solely because the service policy is Always.
 
+CleanExit is the non-restart counterpart for a Simple service that
+exits successfully while RestartPolicy is not Always. CleanExit MUST
+transition directly to Inactive, MUST NOT consult RestartPolicy or the
+restart budget, and MUST NOT be treated as ProcessCrash.
+
 > [!INFORMATIVE]
 > Startup failures (ReadinessTimeout, PreHookFailure,
 > PreExecFailure, ParentSetupFailure) are restart-eligible because
@@ -91,6 +98,7 @@ service transitions directly to Failed (or the cause-specific
 target state). Retrying cannot help.
 
 - ExplicitStop -- intentional stop.
+- ExplicitReset -- intentional administrative state clear.
 - ShutdownWave -- system is shutting down.
 - ConflictEviction -- the conflict winner would stop it again.
 - BindsToPropagation -- bound dependency is down. Recovery is
@@ -127,7 +135,14 @@ OnFailure MUST NOT fire for:
 
 For all other Failed causes -- including ProcessCrash,
 WatchdogTimeout, HealthCheckFailure, the startup-failure causes,
-and RestartBudgetExhausted -- OnFailure fires.
+and non-Critical RestartBudgetExhausted -- OnFailure fires.
+
+If RestartBudgetExhausted is produced for an ErrorControl=Critical
+service, the immediate reboot requirement in §5.3/§10.1 takes
+precedence. peinit MUST NOT start the OnFailure service in that
+case. Implementations MAY record that OnFailure was suppressed by
+Critical reboot; eventd-backed logging remains governed by the
+logging/event specifications.
 
 OnFailure is for graceful degradation (e.g., primary web UI fails,
 start minimal emergency endpoint), not for monitoring or alerting

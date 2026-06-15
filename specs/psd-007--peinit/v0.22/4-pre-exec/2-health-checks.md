@@ -95,6 +95,18 @@ sub-cgroups per service and expose them:
   from a previous generation -- indicates underlying I/O problem
   requiring investigation."
 
+Each leaked sub-cgroup entry in the status response `warnings`
+array MUST be a JSON object with the following fields:
+
+```json
+{"path": "/sys/fs/cgroup/peinit/jellyfin/health", "type": "health", "detected_at": "2026-06-01T12:34:56.123456789Z"}
+```
+
+The `path` field is the leaked sub-cgroup path. The `type` field
+MUST be `health` for leaked `health/` sub-cgroups or `hooks` for
+leaked `hooks/` sub-cgroups. The `detected_at` field follows the
+control timestamp format in §11.1.
+
 ## Critical service guidance
 
 > [!INFORMATIVE]

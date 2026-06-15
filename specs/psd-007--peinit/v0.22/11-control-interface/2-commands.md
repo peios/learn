@@ -8,7 +8,7 @@ title: Command Set
 |---|---|---|
 | start | Start the service. Full pre-exec sequence. | Wait for Active or Failed. |
 | stop | Send SIGTERM, escalate to SIGKILL after StopTimeout. | Wait for Inactive. |
-| restart | Stop then start. | Wait for Active or Failed. |
+| restart | Stop then start. | Wait for the successful start target or Failed. |
 | reload | Send reload signal/command (ExecReload or SIGHUP). | Immediate (wait defaults to false). |
 | reset | Clear Failed, Abandoned, or Skipped state. Transition to Inactive. | Immediate. |
 | status | Return current state, transition cause, PID, uptime, health, warnings, current job, current operation. | Immediate. |
@@ -47,8 +47,16 @@ When waiting, the response is sent when:
 - The service enters Failed state.
 - The operation timeout expires.
 
-For Oneshot services, the start target state is Completed (if
-RemainAfterExit=1) or Inactive (if RemainAfterExit=0).
+Lifecycle commands that create, merge into, queue, cancel, clear, or
+execute an operation return the lifecycle operation acknowledgement
+shape from §8.1. With `wait=false`, peinit returns that response
+after accepting the operation. With `wait=true`, peinit returns the
+same response shape after the operation resolves, with the current
+service `state`, `cause`, and `warnings` observed at that time.
+`warnings` is an array of human-readable warning strings.
+
+For Oneshot services, the start and restart target state is Completed
+(if RemainAfterExit=1) or Inactive (if RemainAfterExit=0).
 
 Reload defaults to `wait=false`. If `wait=true`, the connection
 stays open until the Reloading state resolves. The response
@@ -89,12 +97,12 @@ not a silent no-op.
 
 - **ALREADY:** the service is already in the command's target state
   and no operation of this type is in flight. Return current state
-  (not an error).
+  using the status response shape (not an error).
 - **MERGE:** an operation of this type is already in progress. The
   command merges into it (§8.2); the caller receives the in-flight
   operation's GUID and, when waiting, blocks on that operation's
   terminal state.
-- **NOOP:** command has no effect. Return success.
+- **NOOP:** command has no effect. Return the status response shape.
 - **ERROR:** command is invalid for this state. Return error with
   explanation.
 - **Clear:** reset to Inactive.
@@ -115,6 +123,7 @@ The status response for a service MUST include:
 
 ```json
 {
+    "status": "ok",
     "service": "jellyfin",
     "state": "active",
     "cause": "explicit_start",
@@ -133,9 +142,15 @@ The status response for a service MUST include:
     },
     "health": "healthy",
     "uptime_seconds": 86400,
+    "definition_removed": false,
     "warnings": []
 }
 ```
+
+The response `status` field MUST be `"ok"` for a successful status
+query. `current_job` MUST be the current service-main job object
+when one exists and null otherwise. `current_operation` MUST be the
+current service operation object when one exists and null otherwise.
 
 The `status_text` field carries the most recent `STATUS=` string
 sent by the service via sd_notify. If the service has never sent

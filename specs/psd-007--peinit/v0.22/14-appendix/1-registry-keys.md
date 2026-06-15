@@ -18,7 +18,7 @@ Definitions and semantics are in the sections referenced below.
 
 | Key | Type | Default | Purpose | Defined in |
 |---|---|---|---|---|
-| `Machine\System\Boot\MaxParallelStarts` | dword | 10 | Maximum services starting concurrently during boot. | §2.2 |
+| `Machine\System\Boot\MaxParallelStarts` | dword, >0 | 10 | Maximum services starting concurrently during boot. Missing uses default; zero, type mismatch, or malformed payload is invalid boot configuration. | §2.2 |
 | `Machine\System\Boot\BootSuccessGrace` | dword | 30 | Seconds every Critical service must hold a dependent-satisfying state (Active/Completed/Skipped) before boot is successful. | §2.3 |
 | `Machine\System\Boot\ShutdownTimeout` | dword | 90 | Maximum seconds for the entire graceful shutdown sequence. | §10.1 |
 

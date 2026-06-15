@@ -169,6 +169,33 @@ Command string parsing only produces argv. Executable path
 validation, if any, is performed by the service-definition
 validation or runtime execution rules that consume the parsed argv.
 
+For service-definition executable command fields (`ExecStartPre`,
+`ExecStartPost`, command-form `ExecReload`, and `HealthCheck`),
+the first argv element is the executable path and MUST be an absolute
+path beginning with `/`. Relative executable names, empty executable
+names, and PATH-search execution are invalid definition-validation
+errors. Arguments after argv[0] are opaque strings and are not path
+validated by this rule.
+
+### ExecReload signal names
+
+When `ExecReload` uses the `signal:<name>` form, `<name>` MUST be
+an exact canonical Linux standard signal name. Numeric signal
+values, realtime signal expressions, aliases, lowercase spellings,
+and names with surrounding whitespace are invalid. `SIGKILL` and
+`SIGSTOP` are invalid for reload because they cannot be handled by
+the service as a configuration reload signal.
+
+peinit MUST map the accepted names to the host signal numbers before
+runtime delivery. At minimum, peinit MUST accept the standard
+non-realtime Linux signal names other than `SIGKILL` and `SIGSTOP`
+(`SIGHUP`, `SIGINT`, `SIGQUIT`, `SIGILL`, `SIGTRAP`, `SIGABRT`,
+`SIGBUS`, `SIGFPE`, `SIGUSR1`, `SIGSEGV`, `SIGUSR2`, `SIGPIPE`,
+`SIGALRM`, `SIGTERM`, `SIGSTKFLT`, `SIGCHLD`, `SIGCONT`,
+`SIGTSTP`, `SIGTTIN`, `SIGTTOU`, `SIGURG`, `SIGXCPU`, `SIGXFSZ`,
+`SIGVTALRM`, `SIGPROF`, `SIGWINCH`, `SIGIO`, `SIGPWR`, and
+`SIGSYS`).
+
 If a command requires shell features, a wrapper script MUST be
 used.
 

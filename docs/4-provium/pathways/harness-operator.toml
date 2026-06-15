@@ -10,4 +10,5 @@ pages = [
   "running-tests/pools-and-parallelism",
   "configuration/provium-toml",
   "configuration/profiles",
+  "configuration/dynamic-profiles",
 ]

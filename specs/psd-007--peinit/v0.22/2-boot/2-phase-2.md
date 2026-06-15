@@ -56,6 +56,13 @@ a configurable concurrency limit:
 |---|---|---|
 | `Machine\System\Boot\MaxParallelStarts` | 10 | Maximum services starting concurrently. |
 
+If `MaxParallelStarts` is absent, peinit MUST use the default of
+10. If it is present, it MUST be a `REG_DWORD` greater than zero.
+A zero value, type mismatch, or malformed payload is invalid boot
+configuration and MUST make peinit enter Recovery mode. peinit
+MUST NOT run the boot scheduler with an effective concurrency
+limit of zero.
+
 As each service reaches a satisfied state (Active for Simple,
 Completed for Oneshot -- both with and without RemainAfterExit),
 its dependents become eligible and are added to the start queue.
@@ -130,3 +137,4 @@ If a service fails to reach readiness within its StartTimeout:
 | Non-critical service fails during boot | Service marked Failed. Requires dependents also fail. Other services continue. |
 | authd unavailable when service needs a token | Service marked Failed. |
 | Registry read times out during Step 1 | Recovery mode. |
+| Invalid `MaxParallelStarts` boot configuration | Recovery mode. |
