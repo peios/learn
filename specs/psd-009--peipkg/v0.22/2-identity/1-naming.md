@@ -24,10 +24,16 @@ underscores, or any character outside the set above.
 
 Package names MUST start with a lowercase letter or digit.
 
-Package names MUST end with a lowercase letter or digit.
+Package names MUST end with a lowercase letter, digit, or plus
+sign (`+`).
+
+The hyphen `-` and period `.` are separator characters. The plus
+sign `+` is NOT a separator but a regular name character — it is
+intrinsic to names such as `libstdc++` and `g++`, so it MAY repeat
+(`++`) and MAY end a name.
 
 Package names MUST NOT contain two consecutive separator
-characters (`--`, `..`, `++`, `-.`, `.+`, etc.).
+characters (`--`, `..`, `-.`, `.-`).
 
 Package names MUST be at least 2 characters long.
 
