@@ -55,13 +55,21 @@ For routine "who is signed in" use this is fine. For an authoritative listing, t
 
 ### `logonse create`
 
-Creates a new logon session from a binary specification.
+Creates a new logon session for a user, described by a logon type, an authentication-package name, and the user's SID.
 
 ```
-$ logonse create session-spec.bin
+$ logonse create --logon-type interactive --auth-package Negotiate --user-sid S-1-5-21-...-1001
 ```
 
-`SPEC` is a file, or `-` to read the specification from standard input. On success `logonse` prints the new session's id. Creating a session is a **privileged** operation — minting authentication records is reserved for the components that legitimately do so.
+| Flag | Meaning |
+|---|---|
+| `--logon-type TYPE` | The kind of logon: `interactive`, `network`, `batch`, `service`, `network-cleartext`, or `new-credentials`. |
+| `--auth-package STR` | The name of the authentication package that vouched for the logon. |
+| `--user-sid SID` | The user the session belongs to, as an `S-1-…` SID or an SDDL alias such as `BA`. |
+
+On success `logonse` prints the new session's id. Creating a session is a **privileged** operation — minting authentication records is reserved for the components that legitimately do so.
+
+> The tool builds the kernel's binary session spec from these fields for you. The underlying [wire format](~peios/wire-formats-reference/token-and-session-specs) is unchanged; only the command-line surface is typed.
 
 ### `logonse destroy`
 
