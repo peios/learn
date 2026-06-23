@@ -79,7 +79,7 @@ The exact ordering — which services need to wait for what — is part of peini
 
 If you want the kernel-direct bootstrap tokens — what SYSTEM and Anonymous contain, why they're constructed without going through `kacs_create_token`, how they relate to the rest of the token model — read [Bootstrap tokens](~peios/boot-and-trust-establishment/bootstrap-tokens).
 
-If you want the initramfs stage — prelude, the in-memory startup environment, the `/system/boot/prelude/` directory it is built from, and the handoff to the real root — read [The initramfs stage](~peios/boot-and-trust-establishment/initramfs-stage).
+If you want the initramfs stage — prelude, the in-memory startup environment, the `/boot/initramfs/` directory it is built from, and the handoff to the real root — read [The initramfs stage](~peios/boot-and-trust-establishment/initramfs-stage).
 
 If you want how the initramfs is composed — boot hooks, the capabilities they declare, how their order is resolved, and how to write one — read [Boot hooks](~peios/boot-and-trust-establishment/boot-hooks).
 

@@ -1,0 +1,162 @@
+---
+title: Triggers and timers
+type: concept
+description: "A trigger decides when a service starts. peinit has two: boot and timer, plus demand-only for services with no trigger at all. This page covers the trigger model, the Disabled flag, and the calendar-expression language that timer schedules are written in — the full OnCalendar grammar, persistent catch-up after a reboot, jitter, and how timers behave when the clock jumps."
+related:
+  - peios/peinit/defining-a-service
+  - peios/peinit/service-types
+  - peios/peinit/the-service-lifecycle
+  - peios/peinit/jobs-and-operations
+  - peios/peinit/controlling-services
+---
+
+A **trigger** decides *when* a service starts on its own. A service's triggers are independent of its [type](~peios/peinit/service-types): a boot-triggered Oneshot and a timer-triggered Simple service are both perfectly ordinary. Triggers live in the `Triggers` field as a list, each entry written `type` or `type:argument`.
+
+| Trigger | Form | Meaning |
+|---|---|---|
+| **Boot** | `boot` | Start during the Phase 2 [boot](~peios/peinit/boot-and-boot-modes) sequence, in dependency order. |
+| **Timer** | `timer:<schedule>` | Start on a schedule. The schedule is a [calendar expression](#calendar-expressions). |
+
+A service with **no** triggers is **demand-only**: it never starts itself, and is brought up only by an explicit [control command](~peios/peinit/controlling-services) or because another service [depends](~peios/peinit/dependencies) on it. Many services are demand-only by design.
+
+You can list more than one trigger, including more than one of the same type. `["timer:*-*-* 02:00:00", "timer:*-*-* 14:00:00"]` runs at 2 am and 2 pm. The model is built to grow — future trigger types (path, device, event) will slot into the same list without a schema change.
+
+## The Disabled flag
+
+`Disabled=1` suppresses **automatic activation**. A disabled service will not be started by *any* trigger — boot, timer, or anything added later — but it can still be started by hand through the control interface. It is the switch for "configured, but not running on its own right now."
+
+Two related controls are easy to confuse with it:
+
+| To… | Use |
+|---|---|
+| Stop a service from auto-starting, but keep manual start | `Disabled=1` |
+| Stop a service from being started *at all*, even manually | Deny `SERVICE_START` in its [ServiceSecurity](~peios/peinit/who-can-manage-a-service) descriptor |
+| Stop a *running* service | The [`stop` command](~peios/peinit/controlling-services) |
+
+Enabling and disabling are registry writes performed by admin tooling, not peinit commands. peinit picks up a `Disabled` change through a [registry notification](~peios/the-registry/watches) or on `reload-config`. A disabled service's definition is still loaded into peinit's model, so it is ready for an on-demand start the instant you ask.
+
+## Calendar expressions
+
+Timer schedules are written in systemd's `OnCalendar` format. peinit's grammar is normative and self-contained — what follows is the whole language. The general shape is:
+
+```
+DayOfWeek Year-Month-Day Hour:Minute:Second Timezone
+```
+
+Every field is optional and has a default, so most real schedules are short.
+
+| Field | Form | If omitted |
+|---|---|---|
+| DayOfWeek | weekday name(s) | any day (`*`) |
+| Date | `Year-Month-Day` | `*-*-*` (any date) |
+| Time | `Hour:Minute:Second` | `00:00:00` |
+| Second | the `:Second` of Time | `:00` |
+| Timezone | IANA zone name | system-local time |
+
+So `02:00:00` is a complete expression — date defaults to *every day*, and it means "every day at 02:00." `Hour:Minute` with no seconds defaults the seconds to `00`.
+
+### Component syntax
+
+Each numeric component — year, month, day, hour, minute, second — and the weekday accept the same operators:
+
+| Operator | Example | Matches |
+|---|---|---|
+| **Wildcard** | `*` | any value |
+| **List** | `1,15` | any listed value |
+| **Range** | `Mon..Fri`, `8..17` | the inclusive range |
+| **Repetition** | `0/15` | `0`, then every multiple of the step — 0, 15, 30, 45 |
+| **Range + step** | `8..17/2` | `8`, `10`, `12`, … up to and including `17` |
+
+Weekdays are English names, case-insensitive, abbreviated (`Mon`) or full (`Monday`), and take lists and ranges.
+
+### Last day of the month
+
+A `~` in place of the `-` between Month and Day counts the day **from the end** of the month: `~01` is the last day, `~02` the second-to-last, and so on. So `*-*~01` is the last day of every month. Repetition combines with it — `Mon *-05~07/1` is "the last Monday in May."
+
+### Named shortcuts
+
+These stand in for the expression shown:
+
+| Shortcut | Equivalent |
+|---|---|
+| `minutely` | `*-*-* *:*:00` |
+| `hourly` | `*-*-* *:00:00` |
+| `daily` | `*-*-* 00:00:00` |
+| `weekly` | `Mon *-*-* 00:00:00` |
+| `monthly` | `*-*-01 00:00:00` |
+| `quarterly` | `*-01,04,07,10-01 00:00:00` |
+| `semiannually` | `*-01,07-01 00:00:00` |
+| `yearly` / `annually` | `*-01-01 00:00:00` |
+
+### Timezones and precision
+
+A timezone specifier follows the IANA database — `Europe/London`, `US/Eastern`, `UTC`. With none, the expression is interpreted in system-local time.
+
+Precision is **second-level**. Unlike systemd, peinit does not accept sub-second fractions; a fractional second is a parse error. Service scheduling has no use for finer granularity.
+
+### Examples
+
+| Expression | Meaning |
+|---|---|
+| `*-*-* 02:00:00` | Every day at 2 am (system-local) |
+| `Mon *-*-* 00:00:00` | Every Monday at midnight |
+| `*-*-1,15 12:00:00` | 1st and 15th of each month at noon |
+| `*-*~01 00:00:00` | Last day of each month at midnight |
+| `Mon..Fri *-*-* 09:00:00` | Weekdays at 9 am |
+| `*-*-* *:00/15:00` | Every 15 minutes |
+| `*-*-* 02:00:00 Europe/London` | Every day at 2 am London time |
+
+## What happens when a timer fires
+
+A timer firing does not blindly start the service — peinit considers the service's current state first, so a firing never collides with a run already in progress.
+
+| Type | Current state | Action |
+|---|---|---|
+| Oneshot | Inactive / Completed / Failed | Start it (operation source `Timer`). |
+| Oneshot | Active / Starting | Set a single **pending** flag — one catch-up run when the current one finishes. |
+| Simple | Inactive / Failed | Start it. |
+| Simple | Active / Starting | No-op; the firing is logged. |
+
+The Oneshot "pending" flag is deliberately not a queue: many firings that land while a Oneshot is busy collapse into *one* catch-up run, taken when the current run ends. A service cannot stampede itself.
+
+Each timer firing creates a normal [start operation](~peios/peinit/jobs-and-operations), so a timer-started service is observable exactly like an admin-started one — same GUIDs, same events.
+
+## Persistent timers and catch-up
+
+`TimerPersistent` (default `1`) controls whether runs **missed while the machine was off** are caught up after a reboot.
+
+peinit records the last-run timestamp of each timer in the registry. On boot, for each persistent timer it reads that timestamp, computes the next firing after it, and — if that time is already in the past — **fires once, immediately**, then resumes the normal schedule.
+
+The catch-up is always a *single* run, never one-per-missed-occurrence. A daily timer that was off for five days fires once on the next boot, not five times. A non-persistent timer (`TimerPersistent=0`) ignores history entirely and simply computes its next future firing from now.
+
+One subtlety worth knowing: the last-run timestamp is keyed by the **schedule string**. If you change a timer's schedule, the old timestamp is orphaned and the new schedule has no history, which causes exactly one spurious catch-up run. Schedule changes are rare and the cost is one extra run, so peinit accepts it rather than tracking trigger identity.
+
+> [!NOTE]
+> The timestamp is written *when the timer fires and the start is initiated*, not when the run completes. A service that crashes mid-run is not re-triggered on the next boot — the run was attempted, not missed.
+
+## Jitter
+
+`TimerJitter` (default `0`) adds a random delay of 0 to `TimerJitter` seconds to each firing, recomputed every time. A daily timer with `TimerJitter=900` fires at a slightly different moment between 00:00 and 00:15 each day. Jitter only ever delays — a timer never fires *before* its scheduled time. It is the standard remedy for a fleet of machines all hammering the same backend at exactly midnight.
+
+## When the clock jumps
+
+Calendar timers are **wall-clock** schedules: `*-*-* 02:00:00` means "02:00 on the wall," not "every 86,400 seconds." peinit arms them as absolute real-time timers that are cancelled and recomputed whenever the system clock is stepped, so the schedule stays anchored to the wall clock across corrections.
+
+| Event | Behaviour |
+|---|---|
+| **NTP step or manual clock set** | Armed calendar timers are cancelled and recomputed against the new wall clock. A backward step pushes the next firing later; a forward step that crosses a missed time fires it once. |
+| **Suspend / resume** | A scheduled time that elapsed while suspended fires once on resume — once, not once per missed occurrence. |
+| **A missed occurrence within one uptime** | Fire once, then resume the normal schedule. peinit never replays every occurrence in the gap. |
+
+This is distinct from peinit's *interval* timers — the watchdog, health-check intervals, restart backoff, and the start/stop/reload phase timeouts. Those are genuine durations measured on the monotonic clock, so "wait 30 seconds" means 30 elapsed seconds and never lurches when the wall clock is set.
+
+> [!CAUTION]
+> If a machine boots with a wildly wrong clock (a dead RTC battery) and NTP corrects it only later, the boot-time persistent catch-up decision is made against the wrong time and may fire spuriously or not at all. The *runtime* half self-heals once NTP steps the clock, but the boot-time decision is already made by then. This is a known edge case short of NTP-aware rescheduling — worth knowing if you run timers on hardware with unreliable clocks.
+
+## Where to start
+
+To see how a timer-started run appears as a job and an operation, read [Jobs and operations](~peios/peinit/jobs-and-operations).
+
+To understand the states a timer-started service moves through, read [The service lifecycle](~peios/peinit/the-service-lifecycle).
+
+For the exact registry keys that store last-run timestamps, see the [Registry key reference](~peios/peinit/registry-key-reference).

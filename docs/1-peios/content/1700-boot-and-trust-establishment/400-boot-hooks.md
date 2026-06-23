@@ -14,13 +14,13 @@ The work hooks do is the work of getting to the real root: loading the storage d
 
 ## Where hooks live
 
-Hooks are files in `/system/boot/prelude/hooks/`. Every regular file directly in that directory is a hook, and prelude runs all of them. The directory is not searched recursively — a subdirectory is not a hook — and the file extension does not matter. A hook is recognised by being a file in `hooks/`, and it is run according to its `#!` shebang line, the same way any script is run. In practice hooks are `#!/bin/sh` scripts, and the initramfs's `/bin/sh` is the one provided by busybox.
+Hooks are files in `/boot/initramfs/hooks/`. Every regular file directly in that directory is a hook, and prelude runs all of them. The directory is not searched recursively — a subdirectory is not a hook — and the file extension does not matter. A hook is recognised by being a file in `hooks/`, and it is run according to its `#!` shebang line, the same way any script is run. In practice hooks are `#!/bin/sh` scripts, and the initramfs's `/bin/sh` is the one provided by busybox.
 
 ## How hooks get there
 
 There are two ways a hook reaches the directory, and they are identical as far as prelude is concerned:
 
-- **From a package.** Most hooks arrive as part of a feature peipkg. Installing `peios-luks` (disk encryption) drops a hook that unlocks encrypted volumes; installing a filesystem feature drops a hook that mounts that kind of root. The package's payload simply includes a file under `/system/boot/prelude/hooks/`, and removing the package removes the hook. This is the feature-as-a-package model applied to boot: there is no edition of Peios that "has LUKS" and another that does not — there is a `peios-luks` package, and a machine either has it installed or it does not.
+- **From a package.** Most hooks arrive as part of a feature peipkg. Installing `peios-luks` (disk encryption) drops a hook that unlocks encrypted volumes; installing a filesystem feature drops a hook that mounts that kind of root. The package's payload simply includes a file under `/boot/initramfs/hooks/`, and removing the package removes the hook. This is the feature-as-a-package model applied to boot: there is no edition of Peios that "has LUKS" and another that does not — there is a `peios-luks` package, and a machine either has it installed or it does not.
 - **By hand.** An administrator can write a hook and place it in `hooks/` directly. A site with an unusual storage arrangement, or a one-off need, does not have to build a package — a script in the directory is a hook.
 
 Either way, the next time the initramfs is built the new hook is picked up. (See [The initramfs stage](~peios/boot-and-trust-establishment/initramfs-stage) for the build.)
@@ -94,7 +94,7 @@ Two situations are build errors. They stop the build, and no initramfs is produc
 
 This is the payoff of declared capabilities: an impossible or incomplete hook set is a build error on a running system, with a readable message, never a boot that hangs with no explanation.
 
-The resolved order is recorded inside the initramfs image, in a file prelude reads at boot. An operator does not write or edit that file — it is generated. The hooks in `/system/boot/prelude/hooks/` are the source of truth; the order is derived from them.
+The resolved order is recorded inside the initramfs image, in a file prelude reads at boot. An operator does not write or edit that file — it is generated. The hooks in `/boot/initramfs/hooks/` are the source of truth; the order is derived from them.
 
 ## Hooks with no metadata
 

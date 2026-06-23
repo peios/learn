@@ -102,6 +102,19 @@ deduplicated and batched per §7.4.6.
 
 Remove the package's record from the package database.
 
+If the removed package held any role (§4.4), withdraw the
+claim within this transaction: remove the role's claim links
+and mark the role unheld (§7.7.6). The package manager MUST
+NOT automatically promote another provider, and MUST surface
+the withdrawal — naming any remaining eligible providers and
+the grant command — to the operator (§7.7.6).
+
+If the removed package declared a consumer-side claim path
+for any role that remains held by another package, reconcile
+that role's links (§4.4.4): remove the claim links that only
+the removed package declared, leaving paths still declared by
+other installed packages in place.
+
 ## File ownership and overlap
 
 A path that is part of multiple installed packages is

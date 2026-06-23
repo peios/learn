@@ -1,7 +1,7 @@
 ---
 title: The initramfs stage
 type: concept
-description: Between the kernel finishing its own initialisation and peinit taking over on the real root, Peios runs a small in-memory userspace stage — the initramfs — with prelude as its PID 1. prelude prepares the environment, runs the hooks that mount the real root, and hands the machine off. This page covers what the initramfs stage is for, the prelude component, the /system/boot/prelude/ directory the initramfs is built from, how it is kept current, and the handoff to the real root.
+description: Between the kernel finishing its own initialisation and peinit taking over on the real root, Peios runs a small in-memory userspace stage — the initramfs — with prelude as its PID 1. prelude prepares the environment, runs the hooks that mount the real root, and hands the machine off. This page covers what the initramfs stage is for, the prelude component, the /boot/initramfs/ directory the initramfs is built from, how it is kept current, and the handoff to the real root.
 related:
   - peios/boot-and-trust-establishment/overview
   - peios/boot-and-trust-establishment/bootstrap-tokens
@@ -31,12 +31,12 @@ This division is the important design point. A machine that boots from a plain d
 
 ## Where the initramfs comes from
 
-The initramfs is not a mysterious binary blob. It is **compiled from an ordinary directory** on the real root filesystem: `/system/boot/prelude/`. Whatever is in that directory becomes the contents of the in-memory root. The directory is the source; the initramfs image is the build product.
+The initramfs is not a mysterious binary blob. It is **compiled from an ordinary directory** on the real root filesystem: `/boot/initramfs/`. Whatever is in that directory becomes the contents of the in-memory root. The directory is the source; the initramfs image is the build product.
 
 The layout is straightforward:
 
 ```
-/system/boot/prelude/
+/boot/initramfs/
     init             the prelude binary — becomes the initramfs PID 1
     bin/
         busybox      supplies /bin/sh and the utilities hooks call
@@ -45,9 +45,9 @@ The layout is straightforward:
         ...
 ```
 
-It is a normal directory. You can list it, read it, and see exactly what the initramfs will contain — inspecting the boot environment is `ls /system/boot/prelude/`, not unpacking an archive. This is intentional: the initramfs should feel like part of the filesystem an administrator already understands, not a separate, opaque build system.
+It is a normal directory. You can list it, read it, and see exactly what the initramfs will contain — inspecting the boot environment is `ls /boot/initramfs/`, not unpacking an archive. This is intentional: the initramfs should feel like part of the filesystem an administrator already understands, not a separate, opaque build system.
 
-Most of what lands in the directory is put there by **packages**. A boot feature — disk encryption, an exotic storage backend — is an ordinary peipkg; installing it drops its hook (and any helper binaries) into `/system/boot/prelude/`, and removing the package takes them away. There is no separate "initramfs configuration" to edit and no central list of supported features: the directory *is* the configuration, and a package contributes to the boot simply by installing files into it. [Boot hooks](~peios/boot-and-trust-establishment/boot-hooks) covers this in full.
+Most of what lands in the directory is put there by **packages**. A boot feature — disk encryption, an exotic storage backend — is an ordinary peipkg; installing it drops its hook (and any helper binaries) into `/boot/initramfs/`, and removing the package takes them away. There is no separate "initramfs configuration" to edit and no central list of supported features: the directory *is* the configuration, and a package contributes to the boot simply by installing files into it. [Boot hooks](~peios/boot-and-trust-establishment/boot-hooks) covers this in full.
 
 Because hooks are shell scripts, the initramfs has to carry a shell. `bin/busybox` is a single static binary that provides `/bin/sh` along with the standard utilities a hook invokes — `mount`, `modprobe`, `blkid`, and the rest.
 
@@ -71,15 +71,15 @@ This is the right behaviour for the stage. The initramfs's only job is to delive
 
 ## Keeping the initramfs current
 
-Because the directory is the source and the initramfs image is a build product, the two have to be kept in step. Whenever `/system/boot/prelude/` changes — a feature package is installed or removed, the kernel is updated, an administrator edits a hook — the image has to be rebuilt from the directory.
+Because the directory is the source and the initramfs image is a build product, the two have to be kept in step. Whenever `/boot/initramfs/` changes — a feature package is installed or removed, the kernel is updated, an administrator edits a hook — the image has to be rebuilt from the directory.
 
-The tool that does this is **mkirf**. It reads `/system/boot/prelude/`, resolves the order the hooks must run in, checks the directory is internally consistent, and writes the compressed initramfs image. Three properties of it matter to an operator:
+The tool that does this is **mkirf**. It reads `/boot/initramfs/`, resolves the order the hooks must run in, checks the directory is internally consistent, and writes the compressed initramfs image. Three properties of it matter to an operator:
 
 - **It validates.** mkirf will not produce an image from a directory that cannot boot. A hook set with an impossible ordering, a hook that depends on a capability nothing provides, a missing `init` — each of these stops the build with a clear error. A misconfigured boot is caught when the image is built, on a running system where the message is easy to read, rather than as a mystery failure at the next boot. [Boot hooks](~peios/boot-and-trust-establishment/boot-hooks) covers exactly what is checked.
 - **It is deterministic.** The same directory always compiles to the same image, byte for byte — identities, timestamps, and ordering are all normalised. This is what makes "did anything actually change?" a meaningful question, and it underpins later work such as signed boot artifacts.
-- **It keeps the directory pristine.** mkirf reads the directory and writes the image elsewhere; it never writes back into `/system/boot/prelude/`. The resolved hook order is recorded *inside the image*, not in the source. The directory you inspect is always exactly what packages and you have put there.
+- **It keeps the directory pristine.** mkirf reads the directory and writes the image elsewhere; it never writes back into `/boot/initramfs/`. The resolved hook order is recorded *inside the image*, not in the source. The directory you inspect is always exactly what packages and you have put there.
 
-mkirf can run once and exit, or run in a **watch mode** where it stays resident and recompiles automatically whenever the directory changes. Watch mode is what lets `/system/boot/prelude/` behave like an ordinary part of the filesystem — edit a hook and the initramfs is current again — rather than a build artifact an administrator has to remember to regenerate.
+mkirf can run once and exit, or run in a **watch mode** where it stays resident and recompiles automatically whenever the directory changes. Watch mode is what lets `/boot/initramfs/` behave like an ordinary part of the filesystem — edit a hook and the initramfs is current again — rather than a build artifact an administrator has to remember to regenerate.
 
 When more than one kernel is installed, there is one initramfs per kernel: the drivers a kernel needs are specific to its version, so each kernel gets an image built against its own modules.
 

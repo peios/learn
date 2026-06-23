@@ -3,6 +3,7 @@ title: peinit at PID 1
 type: concept
 description: peinit is the init system of the real root, signed at TCB trust level, running with the SYSTEM token — it takes over once the initramfs has mounted the real root. It is responsible for the rest of userspace boot — applying mount policies, launching services, transitioning to a steady-state system. This page covers what peinit does, why it has to be PID 1, and the service-launching pattern that's its primary job.
 related:
+  - peios/peinit/overview
   - peios/boot-and-trust-establishment/overview
   - peios/boot-and-trust-establishment/bootstrap-tokens
   - peios/boot-and-trust-establishment/initramfs-stage
@@ -24,6 +25,9 @@ The specific responsibilities are:
 - Continue running as the system's lifecycle manager — handling service crashes, system shutdown, eventual reboot.
 
 This page covers each of these responsibilities, why peinit specifically is the right thing to be PID 1, and the patterns peinit uses for the work.
+
+> [!NOTE]
+> This page is about peinit's place in the **boot and trust chain** — why it is PID 1, the identity it holds, and how it hands off to the rest of userspace. The full **service-manager model** — the service definition schema, the state machine, dependencies, supervision and restart policy, timers, jobs and operations, and the control interface — has its own topic. Start at [peinit](~peios/peinit/overview).
 
 ## Why peinit at PID 1
 
@@ -136,7 +140,7 @@ A few clarifications:
 - **peinit is not the only TCB process.** authd, loregd, eventd, lpsd are also at TCB level. They have their own jobs.
 - **peinit does not enforce policy.** Mount policies, DACLs, conditional ACEs — peinit applies them but doesn't make access decisions. The kernel runs AccessCheck; peinit just sets up the inputs.
 - **peinit does not handle user sessions directly.** Users sign in via authd; authd produces tokens; peinit launches the session's first process. The user's session is managed by authd, not peinit.
-- **peinit is not a service manager in the usual sense.** It launches services, but the "service management" concepts (start order, dependencies, restart policy) are part of peinit's configuration, not a separate service manager that lives alongside peinit.
+- **peinit's service management is peinit, not a separate daemon.** Start order, dependencies, restart policy, the service state machine, and the control interface are peinit's own responsibility — there is no service-manager process living alongside it. That model is substantial enough to have its own topic; this page does not cover it. See [peinit](~peios/peinit/overview).
 
 ## When peinit fails
 

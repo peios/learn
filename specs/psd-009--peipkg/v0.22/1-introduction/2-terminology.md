@@ -45,6 +45,20 @@ same meaning and are not redefined.
   The complete set of declarable side-effects is enumerated
   normatively (§4.3).
 
+- **Role**: A virtual name that several installed packages
+  may contend to own on the filesystem, with at most one
+  *holding* it at a time. Defined normatively in §4.4.
+
+- **Claim**: The binding of a contended filesystem name (a
+  *claim path*) to a file supplied by the package that holds
+  a role (a *target*). Consumers declare the path, providers
+  declare the target; the package manager materialises the
+  claim as a symlink (§4.4).
+
+- **Holder**: The single installed package that currently
+  owns a role. Its targets fill the role's claim paths. A
+  role with no holder is *unheld* (§4.4).
+
 - **Custom repository**: A repository hosted by a party other
   than the official Peios project. Custom repositories use
   the same protocol and trust model as the official

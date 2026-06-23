@@ -58,6 +58,14 @@ of the following hold:
 A conflict is *triggered* by a candidate package when the
 same conditions hold with respect to a `conflicts` entry.
 
+> [!INFORMATIVE]
+> A `claims` field on a dependency or `provides` entry (§4.4)
+> has no effect on satisfaction. A dependency on a role is
+> satisfied by any installed eligible provider regardless of
+> which one currently holds the role; claims govern only
+> which installed file owns a contended filesystem name, not
+> dependency resolution (§4.4.6).
+
 ## Candidate selection
 
 When multiple available packages satisfy a dependency, the

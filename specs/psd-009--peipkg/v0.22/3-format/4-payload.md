@@ -10,16 +10,24 @@ conventions that payload entries MUST follow.
 ## Filesystem layout
 
 Peios uses a usrmerged filesystem layout: the historical
-distinction between `/bin` and `/usr/bin`, between `/lib`
-and `/usr/lib`, and between `/sbin` and `/usr/sbin` does not
-exist. Packages MUST install only under `/usr/`, with
-exceptions for conventional system paths listed below.
+distinction between the root-level `/bin`, `/lib`, `/sbin`
+and their `/usr` counterparts does not exist — `/bin`,
+`/lib`, and `/sbin` are symlinks into `/usr`. Packages MUST
+install only under `/usr/`, with exceptions for conventional
+system paths listed below.
+
+Within `/usr`, executables are split by kind: `/usr/sbin/`
+holds *system binaries* — daemons, init/boot binaries, and
+service executables not normally invoked directly by a user
+— and `/usr/bin/` holds everything else, including user
+tools that require administrator privileges.
 
 Permitted top-level install destinations:
 
 | Path | Purpose |
 |---|---|
-| `/usr/bin/` | Executable binaries (user-facing and system) |
+| `/usr/bin/` | Executable binaries that are not system binaries — user-facing tools, and admin tools a user invokes directly (including those requiring administrator privileges) |
+| `/usr/sbin/` | System binaries — daemons, init/boot binaries, and service executables not normally invoked directly by a user |
 | `/usr/lib/<triplet>/` | Architecture-specific libraries and arch-dependent data |
 | `/usr/lib/debug/` | Separated debug information, mirroring the install paths of the files it describes (typically in `-dbg`/`-dbgsym` packages) |
 | `/usr/share/` | Architecture-independent data |
@@ -48,7 +56,7 @@ validator does not enforce the symlink rule.
 
 > [!INFORMATIVE]
 > Notably absent from this list: `/bin`, `/sbin`, `/lib`,
-> `/lib64`, `/usr/sbin`, `/usr/local`, `/srv`, `/home`,
+> `/lib64`, `/usr/local`, `/srv`, `/home`,
 > `/root`, `/tmp`. These are either symlinks to permitted
 > paths in the running system, runtime-only directories, or
 > reserved for purposes other than package installation.

@@ -96,3 +96,54 @@ named using a hyphen-suffix convention:
 These conventions are advisory. The package format does not
 enforce them, and other suffixes MAY be used for other purposes.
 
+## Virtual (capability) names
+
+The `name` of a `dependencies`, `optional_dependencies`, or
+`provides` entry (§4.1) MAY be a **virtual name** rather than a
+real package name. Virtual names express capabilities a package
+provides or requires that are not themselves package names —
+most importantly machine-derived capabilities such as ELF
+sonames and pkg-config modules (§4.1.5).
+
+A virtual name uses a grammar that is a strict SUPERSET of the
+package-name grammar above, in two respects:
+
+1. **Uppercase letters are permitted.** A virtual name often
+   mirrors an exact machine identifier — an ELF soname
+   (`libGL.so.1`, `libICE.so.6`) or a foreign module name —
+   that is case-sensitive. Folding case would be unsound (a
+   case-sensitive dynamic loader treats `libGL.so.1` and
+   `libgl.so.1` as distinct), so case MUST be preserved.
+
+2. **A namespaced form `namespace(argument)` is permitted**, for
+   capabilities drawn from a foreign namespace. The `namespace`
+   is lowercase letters and digits beginning with a letter; the
+   `argument` is bracketed by parentheses, is non-empty, and may
+   contain letters, digits, the separators `- . +`, and
+   additionally `_ : /` (so that `pkgconfig(gtk+-3.0)`,
+   `perl(Foo::Bar)`, and `python3dist(ruamel.yaml)` are
+   well-formed).
+
+Outside the namespaced form, a virtual name uses the
+package-name character set extended with the underscore `_`
+(common in real sonames such as `libgcc_s.so.1` and
+`libnss_files.so.2`). It MUST start with a letter or digit and
+MUST end with a letter, digit, or `+` (real identifiers such as
+`g++` and `libstdc++` end in a plus). Unlike package names, a
+virtual name MAY contain consecutive separators
+(`libstdc++.so.6`). A virtual name MUST be 2 to 128 characters
+long.
+
+`conflicts` and `replaces` entries target real packages and so
+MUST use the package-name grammar (§2.1), not the virtual-name
+grammar.
+
+> [!INFORMATIVE]
+> Virtual names share a namespace with real package names: a
+> dependency on `libssl` is satisfied by a package literally
+> named `libssl` or by any package whose `provides` includes
+> `libssl`. The namespaced form keeps machine-derived
+> capabilities from colliding with package names —
+> `pkgconfig(zlib)` is unambiguously the pkg-config module, not
+> a package.
+

@@ -66,12 +66,14 @@ Defined normatively in §4.1.1.
 {
   "name": "<string>",
   "constraint": "<string>",
-  "arch": "<string>"
+  "arch": "<string>",
+  "claims": { "<slot>": { "path": "<absolute path>" } }
 }
 ```
 
-`name` required; `constraint` and `arch` optional. `arch`
-defaults to `any`.
+`name` required; `constraint`, `arch`, and `claims` optional.
+`arch` defaults to `any`. On a dependency entry a `claims`
+slot descriptor carries `path` only (§4.4.2).
 
 ## Conflict
 
@@ -85,11 +87,15 @@ Defined normatively in §4.1.4.
 ```json
 {
   "name": "<string>",
-  "version": "<string>"
+  "version": "<string>",
+  "claims": { "<slot>": { "target": "<absolute path>",
+                          "path": "<absolute path>" } }
 }
 ```
 
-`name` required; `version` optional.
+`name` required; `version` and `claims` optional. On a
+`provides` entry a `claims` slot descriptor carries `target`
+(required) and `path` (optional default) (§4.4.2).
 
 ## Replaces
 

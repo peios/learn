@@ -123,6 +123,8 @@ For the structural reference (numbers, struct layouts, constants), see [Constant
 
 ## J
 
+**Job.** A single supervised process execution under peinit — a service's main process, a hook, a health check, or an ad-hoc run — with its own GUID and exit result. A restart creates a new job; eventd keeps the history. See [Jobs and operations](~peios/peinit/jobs-and-operations).
+
 **Just-in-time impersonation (JIT).** The recommended pattern for services on M:N runtimes (Go, Rust async, etc.): capture the peer's token fd at request start, install it only at the moment of the access-requiring action, revert immediately. See [Impersonation overview](~peios/impersonation/overview).
 
 ## K
@@ -175,6 +177,8 @@ For the structural reference (numbers, struct layouts, constants), see [Constant
 
 **Object type list.** A caller-supplied tree of GUIDs representing properties being requested. Required for `kacs_access_check_list`. See [Access decisions overview](~peios/access-decisions/overview).
 
+**Operation (peinit).** A first-class object representing a requested state-machine action on a service — start, stop, restart, reload, or reset — validated, queued, and executed by peinit with explicit conflict resolution and a GUID for tracking. See [Jobs and operations](~peios/peinit/jobs-and-operations).
+
 **Owner implicit rights.** The READ_CONTROL and WRITE_DAC rights an SD's owner gets automatically, before the DACL walk. Suppressible via an OWNER RIGHTS (`S-1-3-4`) ACE. See [Ownership and implicit rights](~peios/security-descriptors/ownership).
 
 **OWNER RIGHTS.** The well-known SID `S-1-3-4`. When present in a DACL, it suppresses the owner's implicit rights. See [Ownership and implicit rights](~peios/security-descriptors/ownership).
@@ -183,7 +187,7 @@ For the structural reference (numbers, struct layouts, constants), see [Constant
 
 **Package.** The unit of software peipkg installs and tracks, distributed as a signed, self-contained `.peipkg` file carrying a manifest and a payload. A low-level primitive; roles and applications are layered above it. See [Package management](~peios/package-management/overview).
 
-**peinit.** The Peios PID-1 process — signed at TCB, running with the SYSTEM token, responsible for the rest of userspace boot and as the TCB lifecycle manager. See [peinit at PID 1](~peios/boot-and-trust-establishment/peinit-pid-1).
+**peinit.** The Peios PID-1 process and sole service manager — signed at TCB, running with the SYSTEM token, responsible for the rest of userspace boot, for supervising every service from boot to shutdown, and for the TCB lifecycle. See [peinit](~peios/peinit/overview) and [peinit at PID 1](~peios/boot-and-trust-establishment/peinit-pid-1).
 
 **peipkg.** The consumer-side package manager — the command that installs, upgrades, removes, and queries packages on a running Peios system. Holds no authority of its own; it runs as the calling user. See [Package management](~peios/package-management/overview).
 
@@ -232,6 +236,8 @@ For the structural reference (numbers, struct layouts, constants), see [Constant
 **Self_sid.** The caller-supplied SID that `PRINCIPAL_SELF` resolves to during a specific AccessCheck. Used by directory-style objects where an ACE refers to "the principal this object is about".
 
 **Service SID.** A SID in the `S-1-5-80-*` range derived from a service's name via SHA-1. Used to grant access specifically to a named service. See [Well-known principals](~peios/identity/well-known-principals).
+
+**ServiceSecurity.** The security descriptor controlling who may start, stop, query, or reload a service through peinit's control interface — stored on the service's registry key, enforced by peinit, and distinct from the registry key's own SD. See [Who can manage a service](~peios/peinit/who-can-manage-a-service).
 
 **SID (Security Identifier).** The unique name for a principal. Hierarchical, binary-comparable, 8–68 bytes encoded. See [SIDs](~peios/identity/sids).
 

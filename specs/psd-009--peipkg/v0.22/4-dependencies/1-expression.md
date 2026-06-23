@@ -34,9 +34,10 @@ has the form:
 
 | Field | Type | Description |
 |---|---|---|
-| `name` | string | The depended-on package name or a virtual name (§4.1.4). MUST conform to §2.1. |
+| `name` | string | The depended-on package name or a virtual name (§4.1.4). MUST conform to the package-name grammar (§2.1) or the virtual-name grammar (§2.1). |
 | `constraint` | string | OPTIONAL. A version constraint per §2.2.8. If absent, any version satisfies. |
 | `arch` | string | OPTIONAL. An architecture qualifier (§4.1.3). Default: `any`. |
+| `claims` | object | OPTIONAL. Filesystem claim paths this dependency expects a holder to materialise (the consumer side of a claim). See §4.4. |
 
 A dependency object MUST contain at least the `name` field.
 Other fields are optional.
@@ -102,8 +103,9 @@ A single entry in `provides` has the form:
 
 | Field | Type | Description |
 |---|---|---|
-| `name` | string | The virtual name being provided. MUST conform to §2.1. |
-| `version` | string | OPTIONAL. A version string per §2.2 expressing the version of the virtual capability provided. If absent, the entry provides any version of the virtual name. |
+| `name` | string | The virtual name being provided. MUST conform to the virtual-name grammar (§2.1). |
+| `version` | string | OPTIONAL. A version string per §2.2 expressing the version of the virtual capability provided. The Peios revision MAY be omitted (e.g. `3.0`): a provides version is a capability level, not a packaging iteration, and is parsed revision-relaxed like a constraint operand (§2.2.8). If absent, the entry provides any version of the virtual name. |
+| `claims` | object | OPTIONAL. Filesystem targets this package materialises when it holds the named role (the provider side of a claim). See §4.4. |
 
 A virtual name in the namespace of real package names MAY be
 provided. When a real package name and a virtual name
@@ -128,6 +130,29 @@ constraint-based dependency resolution.
 The provides relation does not transitively flow: providing
 `smtp-server` does not provide whatever `smtp-server` itself
 provides.
+
+## Derived capability conventions
+
+Some capabilities are derived mechanically from a package's
+built contents rather than declared by hand. So that producers
+and consumers agree on the name, the following conventions are
+normative for the capability `name`:
+
+| Capability | Virtual name | Version |
+|---|---|---|
+| Shared library | The ELF soname verbatim, e.g. `libssl.so.3`. | None by default. The soname's ABI-version field is part of the name and is matched by exact equality — `libssl.so.3` is never satisfied by `libssl.so.4`. A version MAY be carried when the soname's symbol versions are commensurable with the providing package's version (e.g. glibc). |
+| pkg-config module | `pkgconfig(<module>)`, where `<module>` is the `.pc` file's base name, e.g. `pkgconfig(glib-2.0)`. | The `.pc` `Version:` field, matched as an ordered constraint per §2.2.8. |
+
+A shared-library dependency is the soname listed in a binary's
+`DT_NEEDED`; the corresponding provide is the soname in the
+providing library's `DT_SONAME`. A pkg-config dependency is a
+module named in a `.pc` file's `Requires:` or
+`Requires.private:`; the provide is the `.pc` file itself.
+
+Whether a producer derives these automatically is a producer
+concern, not a format requirement; this section fixes only the
+names, so that a hand-written and a derived entry for the same
+capability are identical.
 
 ## Replaces
 

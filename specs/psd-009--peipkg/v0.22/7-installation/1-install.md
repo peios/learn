@@ -179,6 +179,24 @@ installed:
 The database update MUST be part of the transaction and
 MUST be visible only on transaction commit (§7.4.5).
 
+### Step 6: claims
+
+Apply the install's claim effects within this transaction:
+
+- If the package is an eligible provider of one or more roles
+  (§4.4.3), apply the transaction's claim set (§7.7.1,
+  §7.7.2): for each role claimed, record the package as
+  holder.
+- For every role whose inputs this install changes — a role
+  the package provides, and any already-held role for which
+  the package declares a consumer-side claim path —
+  reconcile the role's materialised links (§4.4.4). A
+  consumer-side path declared for an already-held role is
+  materialised retroactively against the current holder.
+
+Claim materialisation follows the same atomicity and
+rollback rules as payload file operations (§7.4.5 step 2).
+
 ## Side-effect timing
 
 Side effects (§4.3) are NOT invoked during step 3

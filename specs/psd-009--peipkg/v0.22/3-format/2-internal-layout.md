@@ -184,6 +184,8 @@ packages that exceed them.
 | `replaces` array length | 1,000 |
 | `sd_overrides` array length | 100,000 |
 | Single SD override `sd` field decoded length | 64 KiB |
+| Slots per `claims` field (§4.4) | 64 |
+| Claim paths materialised per role (§4.4) | 256 |
 
 A consumer MAY raise these limits via operator
 configuration but MUST NOT raise them silently;
