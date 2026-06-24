@@ -22,6 +22,7 @@ section.
   "description": "<string>",
   "license": "<string>",
   "homepage": "<string>",
+  "default_root": "<root reference>",
   "dependencies": [<dependency>...],
   "optional_dependencies": [<dependency>...],
   "conflicts": [<dependency>...],
@@ -57,6 +58,7 @@ invalid.
 | `description` | string | One-line human-readable description. | empty string |
 | `license` | string | SPDX license identifier or expression. | empty string |
 | `homepage` | string | URL of the upstream project. | empty string |
+| `default_root` | string | A root reference (§3.3.6) naming the installation root a *top-level* install of this package lands in, when the operator names no root explicitly. See §3.3.6. | absent — the operator's current root |
 | `optional_dependencies` | array | Dependencies that enhance functionality but are not required. | empty array |
 | `provides` | array | Virtual packages or capabilities this package provides. | empty array |
 | `replaces` | array | Packages this one supersedes (rename succession). | empty array |
@@ -172,6 +174,39 @@ The `homepage` field, when present, MUST use the `https`
 or `http` URL scheme. Other schemes (`javascript:`,
 `file:`, `data:`, etc.) MUST cause the package to be
 rejected.
+
+## Installation roots and root references
+
+An **installation root** is a self-contained filesystem tree into
+which packages are installed. The default root is the system root;
+a system MAY define additional **named roots** (for example an
+initramfs image built and maintained alongside the main system). A
+named root is identified by a name registered with the consumer; how
+roots are registered and resolved to filesystem paths is **consumer
+mechanics (§7)**, not part of the package format.
+
+A **root reference** is the string form by which a manifest names a
+root. Within a manifest, a root reference MUST be a **named
+reference**: one or more name segments separated by `.`, where each
+segment matches `[a-z0-9][a-z0-9_-]*`. A leading `.` segment denotes
+nesting (`initramfs.subroot` names the root `subroot` registered
+within the root `initramfs`). A root reference in a manifest MUST NOT
+be an absolute or relative filesystem path: a package declares roots
+by name only and never dictates a filesystem location — placement is
+the installing system's prerogative.
+
+The `default_root` field, when present, MUST be a valid root
+reference. It governs **only** the placement of a *top-level* install
+of this package — an operator request naming this package directly
+with no explicit root. It has no effect when the package is pulled in
+as a dependency; dependency placement is governed by the depending
+package and the dependency's own `root` field (§4.1.1). An explicit
+operator-supplied root always overrides `default_root`.
+
+A manifest whose `default_root` is syntactically not a valid root
+reference is INVALID and MUST cause the package to be rejected.
+Whether the named root *exists* is a consumer-side resolution concern
+(§7), not a format-validity concern.
 
 ## Authoritative status
 

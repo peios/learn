@@ -28,7 +28,8 @@ has the form:
 {
   "name": "<package or virtual name>",
   "constraint": "<version constraint>",
-  "arch": "<arch qualifier>"
+  "arch": "<arch qualifier>",
+  "root": "<root reference>"
 }
 ```
 
@@ -37,10 +38,46 @@ has the form:
 | `name` | string | The depended-on package name or a virtual name (§4.1.4). MUST conform to the package-name grammar (§2.1) or the virtual-name grammar (§2.1). |
 | `constraint` | string | OPTIONAL. A version constraint per §2.2.8. If absent, any version satisfies. |
 | `arch` | string | OPTIONAL. An architecture qualifier (§4.1.3). Default: `any`. |
+| `root` | string | OPTIONAL. A root reference (§3.3.6) naming the installation root this dependency is placed and satisfied in. If absent, the dependency is placed in the **same root as the depending package**. See "Dependency placement" below. |
 | `claims` | object | OPTIONAL. Filesystem claim paths this dependency expects a holder to materialise (the consumer side of a claim). See §4.4. |
 
 A dependency object MUST contain at least the `name` field.
 Other fields are optional.
+
+### Dependency placement
+
+A dependency is satisfied within a specific installation root
+(§3.3.6). By default that is the **same root as the depending
+package** — a package's dependency closure flows into the root the
+package itself occupies. The optional `root` field overrides this,
+naming a different root: `{ "name": "peiosutils", "root":
+"initramfs" }` declares that `peiosutils` is required in the
+`initramfs` root, regardless of where the depending package lives.
+
+The identity of a satisfier is the pair (name, root): the same
+package name installed in two different roots is two independent
+satisfactions, possibly at different versions, and a dependency is
+satisfied only by an installation in the named (or defaulted) root.
+The `constraint` and `arch` qualifiers are evaluated against that
+installation.
+
+The `root` field, when present, MUST be a syntactically valid root
+reference (§3.3.6) — a named reference, never a filesystem path.
+Whether the named root exists, and how a placement across roots is
+applied transactionally, is consumer mechanics (§7). A dependency
+whose `root` value is not a syntactically valid root reference is
+INVALID.
+
+> [!INFORMATIVE]
+> Cross-root dependencies let a root be composed through the
+> dependency graph. An initramfs package may depend on ordinary
+> packages (a shell, core utilities) and have them placed into the
+> initramfs root — either implicitly, by living in that root itself,
+> or explicitly via `root`. The depended-on package declares no root
+> affinity of its own; where it lands is the depender's and the
+> operator's choice. This generalises the fixed build-host/target
+> dependency split seen in other systems to an open set of named
+> roots.
 
 > [!INFORMATIVE]
 > A bare-name dependency (`{ "name": "libssl" }`) is satisfied

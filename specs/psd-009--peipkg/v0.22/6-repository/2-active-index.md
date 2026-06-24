@@ -131,6 +131,7 @@ Each entry in `packages` has the following schema:
   "description": "<string>",
   "license": "<string>",
   "homepage": "<string>",
+  "default_root": "<root reference>",
   "dependencies": [<dependency>...],
   "optional_dependencies": [<dependency>...],
   "conflicts": [<dependency>...],
@@ -159,6 +160,7 @@ Each entry in `packages` has the following schema:
 | `description` | string | Package manifest (OPTIONAL; empty string if absent) |
 | `license` | string | Package manifest (OPTIONAL) |
 | `homepage` | string | Package manifest (OPTIONAL) |
+| `default_root` | string | Package manifest (OPTIONAL; §3.3.6). Carried so a consumer can plan top-level placement before fetching the package. |
 | `dependencies` | array | Package manifest (object schema per §4.1.1) |
 | `optional_dependencies` | array | Package manifest |
 | `conflicts` | array | Package manifest |

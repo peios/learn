@@ -23,6 +23,7 @@ Defined normatively in §3.3.
   "description": "<string>",
   "license": "<string>",
   "homepage": "<string>",
+  "default_root": "<root reference>",
   "dependencies": [<dependency>...],
   "optional_dependencies": [<dependency>...],
   "conflicts": [<dependency>...],
@@ -48,6 +49,7 @@ Defined normatively in §3.3.
 | `description` | no | §3.3.3 |
 | `license` | no | §3.3.3 |
 | `homepage` | no | §3.3.3 |
+| `default_root` | no | §3.3.3, §3.3.6 |
 | `dependencies` | yes (MAY be empty) | §3.3.2, §4.1 |
 | `optional_dependencies` | no | §3.3.3, §4.1 |
 | `conflicts` | yes (MAY be empty) | §3.3.2, §4.1.2 |
@@ -67,13 +69,16 @@ Defined normatively in §4.1.1.
   "name": "<string>",
   "constraint": "<string>",
   "arch": "<string>",
+  "root": "<root reference>",
   "claims": { "<slot>": { "path": "<absolute path>" } }
 }
 ```
 
-`name` required; `constraint`, `arch`, and `claims` optional.
-`arch` defaults to `any`. On a dependency entry a `claims`
-slot descriptor carries `path` only (§4.4.2).
+`name` required; `constraint`, `arch`, `root`, and `claims`
+optional. `arch` defaults to `any`. `root` defaults to the
+depending package's root (§4.1.1); when present it MUST be a named
+root reference (§3.3.6), never a filesystem path. On a dependency
+entry a `claims` slot descriptor carries `path` only (§4.4.2).
 
 ## Conflict
 
@@ -262,6 +267,7 @@ Defined normatively in §6.2.4.
   "description": "<string>",
   "license": "<string>",
   "homepage": "<string>",
+  "default_root": "<root reference>",
   "dependencies": [<dependency>...],
   "optional_dependencies": [<dependency>...],
   "conflicts": [<dependency>...],
