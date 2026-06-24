@@ -170,6 +170,7 @@ Defined normatively in §3.4.1.
 | `/var/` | Runtime variable state directories |
 | `/opt/` | Self-contained third-party software trees |
 | `/boot/` | Bootloader-discoverable artifacts (typically symlinks) |
+| `/hooks/` | Initramfs boot hooks (mkirf-scanned; initramfs roots only) |
 
 Payload entries MUST NOT install under any other top-level
 path. Entries under `/boot/` SHOULD be symlinks (§3.4.1).

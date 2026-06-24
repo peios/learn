@@ -37,9 +37,16 @@ Permitted top-level install destinations:
 | `/var/` | Runtime variable state directories (typically empty at install time) |
 | `/opt/` | Self-contained third-party software trees |
 | `/boot/` | Bootloader-discoverable artifacts (typically symlinks into `/usr/lib/<triplet>/`) |
+| `/hooks/` | Initramfs boot hooks — the scripts `mkirf` discovers and orders when packing the initramfs cpio |
 
 Payload entries MUST NOT install under any other top-level
 path.
+
+`/hooks/` is meaningful only in an initramfs root: `mkirf`
+scans it when assembling the boot cpio, so packages homed in
+an initramfs root (e.g. the live-boot root-mount hook) ship
+their hooks there. In an ordinary system root it is simply an
+unused permitted destination.
 
 Entries installed under `/boot/` SHOULD be symlinks whose
 targets resolve to a regular file under one of the other
