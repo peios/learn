@@ -16,6 +16,22 @@ and their `/usr` counterparts does not exist — `/bin`,
 install only under `/usr/`, with exceptions for conventional
 system paths listed below.
 
+These merge symlinks are **not** package payload: the
+composer mints them intrinsically in every root it assembles
+(`/bin → usr/bin`, `/sbin → usr/sbin`, `/lib → usr/lib`, and,
+on x86-64, `/lib64 → usr/lib/<triplet>` so the ABI-fixed ELF
+interpreter `/lib64/ld-linux-x86-64.so.2` resolves to the
+loader glibc ships under the triplet). Because the merge is
+composer-owned filesystem policy rather than payload, a
+package never ships — and cannot ship — a root-level `/bin`,
+`/sbin`, `/lib`, or `/lib64` entry; it installs its files
+under `/usr` and they become reachable at the legacy paths
+through the merge. This also makes the merge uniform across
+every composed root (including the initramfs, which carries
+no base-filesystem package). A well-known legacy *file* a
+provider must own directly — e.g. `/init` — is still a claim
+(§7.7), distinct from the directory-level merge.
+
 Within `/usr`, executables are split by kind: `/usr/sbin/`
 holds *system binaries* — daemons, init/boot binaries, and
 service executables not normally invoked directly by a user
@@ -30,6 +46,7 @@ Permitted top-level install destinations:
 | `/usr/sbin/` | System binaries — daemons, init/boot binaries, and service executables not normally invoked directly by a user |
 | `/usr/lib/<triplet>/` | Architecture-specific libraries and arch-dependent data |
 | `/usr/lib/debug/` | Separated debug information, mirroring the install paths of the files it describes (typically in `-dbg`/`-dbgsym` packages) |
+| `/usr/lib/os-release` | The freedesktop OS-identity file. A fixed external contract path the ecosystem hard-codes, and arch-independent — so it is exempt from the §3.4.2 triplet rule and permitted directly under `/usr/lib/`, including in a `noarch` package. Typically paired with an `/etc/os-release` symlink to it. |
 | `/usr/libexec/` | Architecture-independent helper executables run by another program rather than the user directly (e.g. feature lifecycle scripts under `/usr/libexec/peios/features.d/`). The §3.4.2 triplet rule does not apply here — it is scoped to `/usr/lib/`; arch-*dependent* helper binaries still belong under `/usr/lib/<triplet>/`. |
 | `/usr/share/` | Architecture-independent data |
 | `/usr/include/` | Header files (typically in `-dev` packages) |
@@ -104,6 +121,12 @@ MAY additionally be indexed by build-id under
 `/usr/lib/debug/.build-id/`. Debug information is nonetheless
 arch-dependent: a `noarch` package MUST NOT install any files
 under `/usr/lib/debug/`.
+
+The freedesktop `os-release` file is the other exemption: it
+installs at exactly `/usr/lib/os-release` (a fixed external
+contract path) rather than under `/usr/lib/<triplet>/`. Unlike
+debug information it is arch-*independent*, so a `noarch`
+package — the OS-identity package — MAY (and does) ship it.
 
 The debugger *source* files that this debug information
 references install under `/usr/src/debug/` (§3.4.1), not under
