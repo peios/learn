@@ -29,6 +29,34 @@ When asked for values or path entries, a source MUST return ALL
 layer entries. Sources MUST NOT pre-filter, resolve, or omit
 entries. Layer resolution is LCS's responsibility.
 
+## Deterministic enumeration order
+
+A source MUST order the entries within an enumeration response
+deterministically: the same request against unchanged hive state MUST
+return the same ordering on every call. This applies to the child list
+of RSI_ENUM_CHILDREN, the value entries of RSI_QUERY_VALUES, and the
+path entries of RSI_LOOKUP. A canonical order -- for example ascending
+folded name, then layer, then sequence -- satisfies this.
+
+This is a correctness requirement, not a cosmetic one. LCS exposes
+subkey and value enumeration to callers as a dense index walk: callers
+read position 0, 1, 2, ... until exhaustion (§2.7), and the walk
+observes the source's response ordering at each step. If a source
+returns the same set in a different order across those observations,
+the walk both revisits some entries (surfacing as duplicate keys or
+values) and never observes others (silent omissions). An ordinary,
+unordered SQL query or a hash/map iteration does NOT satisfy this:
+many such backings (including SQLite `UNION ALL` without `ORDER BY`,
+and deliberately randomised map iteration) yield different orderings
+for identical input.
+
+This obligation constrains only the order of entries *within a
+response*. It does not constrain the order in which a source processes
+concurrent requests (see Concurrency above). It also does not by itself
+make a multi-step enumeration atomic against concurrent mutation: a
+caller that requires a stable view across an entire walk uses a
+read-only transaction (§5).
+
 ## GUID fidelity
 
 GUIDs are assigned by LCS and passed to the source for storage.

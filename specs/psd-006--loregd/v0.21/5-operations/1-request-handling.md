@@ -5,6 +5,30 @@ title: Request Handling
 This section describes how loregd handles each RSI operation. For
 wire format details, see PSD-005 §11.3.
 
+## Deterministic response ordering
+
+The enumeration and lookup queries below are written as `UNION ALL`
+over the main and volatile databases with no `ORDER BY`, and
+RSI_ENUM_CHILDREN additionally groups rows by folded child name. SQL
+without `ORDER BY` does not guarantee row order, and Go map iteration
+is randomised, so the raw result of these queries is unordered.
+
+loregd MUST NOT return that raw order. Per the source obligation in
+PSD-005 §7.3 (Deterministic enumeration order), the entries within
+each response MUST be in a stable, canonical order — LCS walks them by
+dense index across repeated calls, so an unstable order makes that walk
+duplicate or drop entries. Before encoding a response, loregd sorts:
+
+- **RSI_ENUM_CHILDREN** children by folded child name; the per-layer
+  entries of each child by (layer, sequence).
+- **RSI_QUERY_VALUES** value entries by (folded value name, layer,
+  sequence).
+- **RSI_LOOKUP** path entries by (layer, sequence).
+
+Key-metadata blocks are likewise emitted in ascending GUID order. This
+ordering is a wire-stability guarantee only; it does not affect layer
+resolution, which is order-independent (it selects a maximum).
+
 ## Transaction-aware request routing
 
 Every RSI request carries a txn_id in the header. Routing depends on
