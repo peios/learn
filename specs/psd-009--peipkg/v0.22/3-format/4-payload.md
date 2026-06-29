@@ -30,6 +30,7 @@ Permitted top-level install destinations:
 | `/usr/sbin/` | System binaries — daemons, init/boot binaries, and service executables not normally invoked directly by a user |
 | `/usr/lib/<triplet>/` | Architecture-specific libraries and arch-dependent data |
 | `/usr/lib/debug/` | Separated debug information, mirroring the install paths of the files it describes (typically in `-dbg`/`-dbgsym` packages) |
+| `/usr/libexec/` | Architecture-independent helper executables run by another program rather than the user directly (e.g. feature lifecycle scripts under `/usr/libexec/peios/features.d/`). The §3.4.2 triplet rule does not apply here — it is scoped to `/usr/lib/`; arch-*dependent* helper binaries still belong under `/usr/lib/<triplet>/`. |
 | `/usr/share/` | Architecture-independent data |
 | `/usr/include/` | Header files (typically in `-dev` packages) |
 | `/usr/src/debug/` | Debugger source files, mirroring the build's source tree (typically in `-dbgsym`/`-debugsource` packages) |
@@ -38,6 +39,7 @@ Permitted top-level install destinations:
 | `/opt/` | Self-contained third-party software trees |
 | `/boot/` | Bootloader-discoverable artifacts (typically symlinks into `/usr/lib/<triplet>/`) |
 | `/hooks/` | Initramfs boot hooks — the scripts `mkirf` discovers and orders when packing the initramfs cpio |
+| `/system/` | System-internal artifacts a package owns but users must not touch (e.g. `/system/boot/`, where the boot cpio and prelude live). The strongest "hands-off (from users)" tier a package can install into. Distinct from `/usr/system/`, which is reserved for the *image composer* and is NOT a package destination. |
 
 Payload entries MUST NOT install under any other top-level
 path.
@@ -78,7 +80,11 @@ of the following under `/usr/lib/<triplet>/` where
 - Static libraries (`.a`)
 - Loadable modules (plugin shared objects, kernel modules
   outside of `/usr/lib/modules/`)
-- Helper binaries not on user PATH (`libexec`-style content)
+- Architecture-*dependent* helper binaries not on user PATH
+  (`libexec`-style content). Architecture-*independent* helper
+  executables — e.g. shell scripts run by another program —
+  instead go under `/usr/libexec/` (see §3.4.1), which carries
+  no triplet rule.
 - Any other arch-dependent files that are not user-facing
   binaries
 
