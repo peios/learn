@@ -88,7 +88,7 @@ not a silent no-op.
 
 | Command | Inactive | Starting | Active | Reloading | Stopping | Completed | Backoff | Failed | Abandoned | Skipped |
 |---|---|---|---|---|---|---|---|---|---|---|
-| start | Start | MERGE | ALREADY | ALREADY | QUEUE | Start | MERGE | Start | ERROR | Start |
+| start | Start | MERGE | ALREADY | ALREADY | QUEUE | Start | DEFER | Start | ERROR | Start |
 | stop | NOOP | Cancel+Stop | Stop | Stop | MERGE | Clear | Cancel | NOOP | ERROR | NOOP |
 | restart | Start | QUEUE | Restart | Restart | QUEUE | Start | Restart | Start | ERROR | Start |
 | reload | ERROR | ERROR | Reload | MERGE | ERROR | ERROR | ERROR | ERROR | ERROR | ERROR |
@@ -102,6 +102,10 @@ not a silent no-op.
   command merges into it (§8.2); the caller receives the in-flight
   operation's GUID and, when waiting, blocks on that operation's
   terminal state.
+- **DEFER:** create a Pending start operation, but do not execute it
+  until the service's existing backoff deadline expires. If a deferred
+  start operation already exists for the service, merge into that
+  operation.
 - **NOOP:** command has no effect. Return the status response shape.
 - **ERROR:** command is invalid for this state. Return error with
   explanation.
@@ -111,11 +115,12 @@ not a silent no-op.
   current operation completes (§8.2).
 
 In the **Backoff** column the service is down with an automatic
-restart pending (§5.1): `start` merges into that pending restart and
-honors the backoff delay; `stop` cancels the pending restart (the
+restart pending (§5.1): `start` creates or merges into a deferred
+start operation and honors the remaining backoff delay; `stop`
+cancels the pending restart and any deferred start operation (the
 service goes Inactive); `restart` cancels the automatic restart and
-performs an admin-initiated one; `reload` and `reset` are invalid
-(no process exists).
+performs an admin-initiated one; `reload` and `reset` are invalid (no
+process exists).
 
 ## Status response
 

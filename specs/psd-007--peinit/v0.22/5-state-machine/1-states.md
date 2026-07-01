@@ -28,7 +28,7 @@ invalid -- peinit MUST NOT perform them.
 
 | From | To | Trigger | Conditions |
 |---|---|---|---|
-| Inactive | Starting | Start command or dependency resolution | Service is boot-triggered or explicitly started. |
+| Inactive | Starting | Start command, dependency resolution, or timer trigger | Service is boot-triggered, explicitly started, started for a dependency, or started by a timer trigger. |
 | Inactive | Skipped | Condition check fails | At least one Condition evaluated to false. |
 | Inactive | Failed | Validation, assertion, cycle, or dependency failure | Service failed before any process was created. |
 | Starting | Active | Readiness signal | Simple only. `READY=1` received (Notify) or process exists (Alive). |
@@ -63,9 +63,10 @@ invalid -- peinit MUST NOT perform them.
 | Completed | Inactive | RemainAfterExit=0, dependents released | Oneshot without RemainAfterExit, after dependents have been released. |
 | Completed | Inactive | Stop command | Explicit stop clears Completed state. |
 | Completed | Inactive | Shutdown | Completed services (oneshot with RemainAfterExit) are cleared during shutdown. |
-| Completed | Starting | Start command | Re-run the oneshot. |
-| Failed | Starting | Explicit start command or recovery | Administrator manually restarts, BindsTo recovery (bound service returns to Active), or timer trigger. (Restart-policy auto-restarts flow through Backoff, never from Failed.) |
+| Completed | Starting | Start command or timer trigger | Re-run the oneshot. |
+| Failed | Starting | Explicit start command, recovery, or timer trigger | Administrator manually restarts, BindsTo recovery (bound service returns to Active), or timer trigger. (Restart-policy auto-restarts flow through Backoff, never from Failed.) |
 | Failed | Inactive | Reset command | Administrator clears Failed state without starting. |
+| Failed | Abandoned | Shutdown post-kill timeout | A service that was Starting when shutdown began was SIGKILLed and entered Failed with cause ShutdownWave, but its service cgroup remained populated after the post-kill timeout. The cgroup is leaked. |
 | Abandoned | Inactive | Reset command | Administrator clears state. peinit re-checks the cgroup -- if it finally emptied, clean up. If still populated, log a warning. |
 | Skipped | Inactive | Reset or explicit start | Clears Skipped state. A subsequent start re-evaluates conditions. |
 

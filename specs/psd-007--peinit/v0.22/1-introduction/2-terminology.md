@@ -165,10 +165,14 @@ are the sole
   resource accounting or limits.
 
 - **Phase 1**: The hardcoded bootstrap phase. peinit verifies the
-  root is writable, mounts the remaining virtual filesystems, sets
-  the system clock, starts registryd, and performs infrastructure
-  setup (control socket, JFS device, loopback interface). No
-  registry access occurs during Phase 1.
+  root is writable, mounts the remaining virtual filesystems,
+  restores any persisted random seed, ensures the local machine ID,
+  sets the system clock, starts registryd, and performs
+  boot-time path provisioning and infrastructure setup (control
+  socket, JFS device, loopback interface). No registry access occurs
+  before registryd is running; registry-backed provisioning entries
+  under `Machine\System\Init\ProvisionedPaths\` are read only after
+  registryd has passed readiness and the schema-version probe.
 
 - **Phase 2**: The registry-driven boot phase. With registryd
   running, peinit reads service definitions from the registry

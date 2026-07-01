@@ -4,7 +4,7 @@ title: Shutdown
 
 ## Shutdown triggers
 
-Shutdown is initiated through three paths.
+Shutdown is initiated through four paths.
 
 ### Control socket command
 
@@ -22,16 +22,41 @@ Only principals with SYSTEM_SHUTDOWN may initiate shutdown.
 
 ### Signals
 
-PID 1 handles two shutdown-related signals:
+PID 1 handles three shutdown-related signals:
 
 | Signal | Behaviour |
 |---|---|
 | SIGINT | Reboot request. Sent by the kernel on Ctrl+Alt+Del. |
 | SIGTERM | Poweroff request. PID 1 cannot be killed by SIGTERM but may choose to handle it. |
+| SIGPWR | Poweroff request. Compatibility path for environments that surface power failure or power-button policy as a signal. |
 
 Repeated SIGINT within a short window (3 presses in 5 seconds)
 MUST trigger an immediate forced shutdown -- skip the graceful
 stop sequence, SIGKILL all services, sync, reboot.
+
+### Power-button event
+
+On Linux, peinit MUST treat an `EV_KEY` / `KEY_POWER` press from a
+readable `/dev/input/event*` input device as a graceful `poweroff`
+request.
+
+Only key press events (`value == 1`) initiate shutdown. Key release
+events (`value == 0`), key repeat events (`value == 2`), other keys,
+and other input event types MUST be ignored by peinit's minimal
+power-button path.
+
+Power-button input is a fail-soft runtime source. If `/dev/input` is
+absent, an event device cannot be opened or registered, or a registered
+input fd later fails while being read, peinit MUST continue normal
+operation. A failed registered input fd SHOULD be removed from the
+runtime event loop so repeated read failures do not spin PID 1. Such
+failures degrade only direct power-button handling; shutdown via the
+control socket and signal paths remains available.
+
+This path is intentionally minimal. It is not a complete power-management
+policy engine and does not replace a future acpid/logind-equivalent
+daemon. Such a daemon may translate richer policy into peinit control
+socket shutdown commands.
 
 ### Critical service failure
 
@@ -80,7 +105,11 @@ shutdown stop eligibility:
   to a service already in Stopping.
 - Services in Starting are not graceful-stop eligible. peinit MUST
   cancel the startup path and send SIGKILL to the service cgroup if
-  one exists; they do not receive graceful shutdown ordering.
+  one exists; they do not receive graceful shutdown ordering. They
+  enter Failed with cause ShutdownWave while post-kill verification is
+  pending. If the service cgroup remains populated after the post-kill
+  timeout, peinit MUST transition the service to Abandoned with cause
+  ProcessUnkillable and leak the cgroup.
 - Services in Inactive, Failed, Skipped, Backoff, or Abandoned do not
   enter graceful stop waves. Abandoned cgroups remain leaked and
   shutdown continues.
@@ -150,22 +179,71 @@ If the global timeout expires:
    leaked.
 3. Continue to step 6 regardless of Abandoned services.
 
-### Step 6: Unmount filesystems
+### Step 6: Save persisted random seed
+
+After all services have stopped, and before remounting or unmounting
+filesystems, peinit MUST attempt to save a fresh persisted random seed to
+`/var/lib/peinit/random-seed` for the next boot.
+
+The saved seed MUST be generated from the kernel CSPRNG on the running
+machine. It MUST NOT be copied from a packaged image, live ISO, VM template,
+or any other shared artifact. peinit MUST store it as a machine-local object
+protected by Peios file security so that only SYSTEM-equivalent authority can
+read or replace it.
+
+The write MUST be crash-conscious: write the new seed to a temporary path on
+the same filesystem, flush it, atomically replace the previous seed, and flush
+the containing directory where the platform supports directory flush. Failure
+to save the seed MUST be retained or logged, but MUST NOT abort final shutdown
+and MUST NOT enter Recovery mode.
+
+Forced shutdown and Critical-service immediate reboot paths MAY skip seed
+save. Those paths are required to reach `sync()` and the final kernel action
+with minimal additional work.
+
+### Step 7: Unmount filesystems
 
 After all services have stopped:
 
-1. Unmount the Phase 1 virtual filesystems peinit mounted (`/run`,
-   `/dev/shm`, `/dev/pts`, `/sys/fs/cgroup`).
-2. `/dev`, `/sys`, `/proc` are left mounted (kernel needs them).
-3. Remount root filesystem read-only.
+1. Snapshot the current mount table before beginning unmounts. peinit
+   MUST attempt to unmount every remaining non-root mount in its mount
+   namespace, not only mounts that peinit personally mounted during
+   Phase 1. This includes the Phase 1 mount set (`/proc`, `/sys`,
+   `/dev`, `/dev/pts`, `/dev/shm`, `/run`, `/sys/fs/cgroup`) whenever
+   those mount points are still present.
+2. Unmount child mount points before parent mount points. Implementations
+   SHOULD process the mount-table snapshot in descending mount-point
+   path-depth order.
+3. A mount point that is already gone or no longer mounted is a successful
+   no-op. peinit MUST NOT treat this as a shutdown failure.
+4. If an unmount fails, peinit MUST attempt to remount that mount point
+   read-only when the kernel and filesystem permit it. If the read-only
+   remount also fails, peinit MUST retain or log the cleanup failure
+   evidence, but MUST NOT abort final shutdown and MUST NOT enter Recovery
+   mode.
+5. The root filesystem (`/`) is not unmounted. After all non-root unmount
+   attempts have completed, peinit MUST remount the root filesystem
+   read-only. If the root read-only remount fails, peinit MUST retain or
+   log the failure evidence, but MUST continue to Step 8.
 
-### Step 7: Sync and final action
+### Step 8: Sync and final action
 
-1. `sync()` -- flush all pending writes.
+Step 8 is irreversible finalization. Cleanup failures retained from
+Steps 6 and 7 affect logging and diagnostics only; they MUST NOT block the
+final kernel action.
+
+1. `sync()` -- flush all pending writes. peinit MUST call `sync()` for
+   graceful shutdown, forced shutdown, and Critical-service immediate
+   reboot paths.
 2. Call `reboot(2)` with the appropriate command:
    - `RB_POWER_OFF` for poweroff.
    - `RB_AUTOBOOT` for reboot.
    - `RB_HALT_SYSTEM` for halt.
+3. If `reboot(2)` returns, the final action failed. peinit MUST enter a
+   minimal failed-shutdown state, keep PID 1 alive, retain or log the
+   failure evidence, and retry the same final action no more frequently
+   than once per second. It MUST NOT restart normal services and MUST NOT
+   enter Recovery mode after finalization has begun.
 
 ## Shutdown during boot
 
@@ -203,6 +281,7 @@ handlers.
 | SIGCHLD | Reap children via `waitpid`. Match to tracked services. Also reaps orphaned processes (not tracked by any service). |
 | SIGINT | Reboot request. Repeated = forced reboot. |
 | SIGTERM | Poweroff request. |
+| SIGPWR | Poweroff request. Compatibility path for power-button/power-failure policy. |
 | SIGHUP | Ignored. PID 1 has no controlling terminal. |
 | SIGPIPE | Ignored. Broken pipes on the control socket MUST NOT crash PID 1. |
 

@@ -79,16 +79,16 @@ evaluating checks (§3.2):
   main loop. The helper stats the service's filesystem checks and
   reports the results over a pipe; peinit waits on the helper's
   pidfd and the pipe via epoll, never blocking. The helper is
-  bounded by a timeout.
+  bounded by `PreStartCheckTimeout` (default 5 seconds).
 
 If the helper does not report within the timeout (e.g. `stat()` is
 wedged in uninterruptible sleep on a hung mount), peinit MUST treat
 the affected checks as **not satisfied** -- a Condition skips the
 service, an Assert fails it with cause AssertionError -- and
-continue. peinit SIGKILLs the helper; if it survives (D-state), its
-cgroup is leaked and abandoned exactly as a service process that
-survives SIGKILL (§4.2). The event loop is never held up by a hung
-check.
+continue. peinit SIGKILLs the helper cgroup and unregisters the
+helper result fd; if the helper survives (D-state), its cgroup is
+leaked and abandoned exactly as a service process that survives
+SIGKILL (§4.2). The event loop is never held up by a hung check.
 
 ## The sequence
 
@@ -222,12 +222,23 @@ success, clone failure, missing-pidfd failure, or pre-exec failure.
 Immediately after fork, in the parent:
 
 1. Close the write end of the error pipe.
-2. Read from the error pipe:
-   - **EOF:** exec succeeded. Record the child pidfd as the
-     service's main process.
+2. Register the read end of the error pipe with the PID 1 runtime
+   event loop. peinit MUST NOT block the runtime loop waiting for
+   this pipe; signals, control traffic, timers, and log pipes remain
+   serviceable while child setup is pending.
+3. When the error pipe becomes readable or hung up, read it
+   non-blockingly:
+   - **Would block:** keep the source registered and leave the job
+     in its pending setup state.
+   - **EOF:** exec succeeded. Record the child pidfd as the job's
+     process, emit the job-started event, and only then apply service
+     readiness side effects such as Simple/Alive activation.
    - **Data:** pre-exec setup failed. Parse the step identifier
      and errno. Log the specific failure. Transition the service
      to Failed with cause PreExecFailure.
+
+While setup is pending, peinit MUST NOT treat the job as Running and
+MUST NOT release dependents that require the service's readiness.
 
 The child is already in the `main/` sub-cgroup -- `CLONE_INTO_CGROUP`
 (Step 6) placed it there atomically at creation, so the parent

@@ -36,7 +36,9 @@ is queued (see cross-type rules below).
 | Any (Pending or Running) | Reset | Reject. Reset MUST NOT be issued while an operation is in progress. |
 | Start (Pending) | Restart | Cancel the pending start. Queue restart as Pending. |
 | Start (Running) | Restart | Queue restart as Pending. Executes after start completes. |
+| Reload (Pending) | Stop | Cancel the reload. Create stop operation. |
 | Reload (Running) | Stop | Abort the reload. Create stop operation. |
+| Reload (Pending) | Restart | Cancel the reload. Create restart operation. |
 | Reload (Running) | Restart | Abort the reload. Create restart operation. |
 
 ## Resolution principles

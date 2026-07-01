@@ -38,6 +38,7 @@ optional fields) without breaking older peinit versions.
 | ExecStartPost | multi_string | no | -- | Commands to run after readiness (Simple) or successful exit (Oneshot). |
 | HookIdentity | string | no | -- | Principal name for ExecStartPre and ExecStartPost processes. If absent, hooks run as the service's Identity. |
 | ExecReload | string | no | -- | Reload command or signal. Prefix with `signal:` for a signal (e.g., `signal:SIGHUP`); anything else is parsed as an argv command. If absent, reload sends SIGHUP. |
+| PreStartCheckTimeout | dword | no | 5 | Seconds before a filesystem-backed Condition/Assert helper is killed and its checks are considered not satisfied. |
 | StartTimeout | dword | no | 30 | Seconds. Covers the entire start sequence: pre-hooks, fork/exec, and readiness wait. |
 | StopTimeout | dword | no | 10 | Seconds to wait after SIGTERM before sending SIGKILL. |
 | WatchdogTimeout | dword | no | 0 | Seconds between expected `WATCHDOG=1` pings. 0 = disabled. |
@@ -56,6 +57,7 @@ optional fields) without breaking older peinit versions.
 | TimerJitter | dword | no | 0 | Maximum random delay in seconds added to each timer firing. |
 | Environment | multi_string | no | -- | KEY=VALUE pairs added to the service's environment. |
 | WorkingDirectory | string | no | / | Working directory for the service process. |
+| RuntimeDirectories | multi_string | no | -- | Service-private runtime directories under `/run`, created before the service's main process starts. |
 | LimitNOFILE | dword | no | -- | RLIMIT_NOFILE (max open file descriptors). |
 | LimitCORE | dword | no | -- | RLIMIT_CORE (core dump size in bytes). |
 | Conditions | multi_string | no | -- | Start-time conditions. Each entry is `type:argument`. All MUST pass or the service is skipped. |
@@ -84,6 +86,19 @@ compatibility.
   absolute path. If absent, it defaults to `/`. Filesystem
   existence, type, and access checks are performed by the later
   validation or runtime rules that consume the working directory.
+- **RuntimeDirectories** -- each entry names one directory directly
+  under `/run`. Entries MUST be non-empty relative names and MUST
+  NOT contain `/`, `\`, `.`, `..`, NUL, or control characters. For
+  an entry `foo`, peinit creates `/run/foo` immediately before
+  launching the service's main process. The directory is protected
+  with a Peios file SD granting full access to SYSTEM,
+  Administrators, and the service SID for this service. Hook
+  processes inherit the service environment and identity rules but
+  do not cause runtime-directory provisioning; provisioning belongs
+  to the main service start. If directory creation or SD assignment
+  fails, the service start fails with `ParentSetupFailure`. peinit
+  does not remove runtime directories when the service stops; `/run`
+  is a boot-scoped tmpfs and is cleared by the next boot.
 
 - **SuccessExitCodes** -- each entry is a decimal integer in the
   range 0-255 (a process exit code). Signal names and ranges are
@@ -136,9 +151,11 @@ while evaluating checks. Two constraints follow:
   I/O, so peinit evaluates these in a bounded forked helper rather
   than calling `stat()` from its event loop (see §4.1).
 
-A check that cannot complete within its timeout is treated as
-**not satisfied** (fail-safe): the Condition skips the service, and
-the Assert fails it with cause AssertionError.
+A filesystem check that cannot complete within
+`PreStartCheckTimeout` seconds is treated as **not satisfied**
+(fail-safe): the Condition skips the service, and the Assert fails
+it with cause AssertionError. peinit kills the helper cgroup and
+unregisters the helper result fd before continuing.
 
 ## Command string parsing
 

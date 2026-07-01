@@ -60,8 +60,9 @@ through Failed -- Failed is reached only via `STAY_FAILED`
 exhausted). This is why OnFailure (§5.2), which fires on entry to
 Failed, does not fire on each retry, only when the service finally
 fails out. While in Backoff the service is down and does not satisfy
-dependents; an explicit `start` honors the remaining delay and a
-`stop` cancels the pending restart (§11.2).
+dependents; an explicit `start` creates or merges into a deferred
+start operation that honors the remaining delay, and a `stop` cancels
+the pending restart (§11.2).
 
 ### Policy values
 

@@ -33,3 +33,8 @@ Definitions and semantics are in the sections referenced below.
 | `Machine\System\Init\MaxLogLineLength` | dword | 8192 | Maximum bytes per service output line before truncation. | §12.1 |
 | `Machine\System\Init\MaxLogBufferPerService` | dword | 65536 | Maximum bytes buffered per service pipe before backpressure. | §12.1 |
 | `Machine\System\Init\EnvVars\` | parent key | empty | Default environment variables injected into Phase 2 services (value name = variable name, REG_SZ data = value). Overrides the compiled-in base. SD is security-critical (write = inject into every service). | §4.1 |
+| `Machine\System\Init\ProvisionedPaths\` | parent key | empty | Boot-time path provisioning entries. Each child key describes one directory or file that peinit creates/verifies and secures before Phase 2 starts. | §2.1 |
+| `Machine\System\Init\ProvisionedPaths\<name>\Kind` | string | -- | Provisioned path kind: `directory` or `file`. Required on each entry. | §2.1 |
+| `Machine\System\Init\ProvisionedPaths\<name>\Path` | string | -- | Absolute filesystem path for the provisioned object. Required on each entry. | §2.1 |
+| `Machine\System\Init\ProvisionedPaths\<name>\Security` | binary | built-in default | Peios file security descriptor to apply to the provisioned object. | §2.1 |
+| `Machine\System\Init\ProvisionedPaths\<name>\Required` | dword | 0 | If 1, failure to provision the entry enters Recovery mode before Phase 2. | §2.1 |

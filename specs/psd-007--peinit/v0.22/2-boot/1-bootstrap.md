@@ -169,7 +169,61 @@ If a filesystem peinit is responsible for mounting (`/dev/pts`,
 `/dev/shm`, `/run`, `/sys/fs/cgroup`) cannot be mounted, peinit MUST
 enter Recovery mode.
 
-### Step 3: Set system clock from hardware RTC
+### Step 3: Restore persisted random seed
+
+peinit MUST attempt to restore the persisted random seed from
+`/var/lib/peinit/random-seed` after `/dev` is available and before
+registryd starts. The seed is a machine-local entropy cache for the
+kernel CSPRNG. It is not configuration, and it MUST NOT be shipped in
+packaged images, live ISOs, VM templates, or other cloned system
+artifacts.
+
+If the seed file is absent, peinit MUST treat this as a normal first-boot
+or stateless-live-boot condition and continue. It MUST NOT enter Recovery
+mode merely because no persisted seed exists. Environments that need strong
+first-boot entropy for a stateless image MUST provide a kernel entropy
+source such as hardware RNG or virtio-rng; a public seed in the image is
+not an acceptable substitute.
+
+If a seed file is present, peinit MUST mix it into the kernel random pool.
+On Linux, peinit SHOULD use the random-device interface that credits entropy
+for the locally persisted seed. If that interface is unavailable or fails,
+peinit MAY still mix the bytes without crediting entropy, but MUST retain or
+log the failure evidence and continue boot. A seed-restore failure MUST NOT
+enter Recovery mode.
+
+The initramfs MAY perform the same restore earlier once the persistent root
+is mounted. peinit's Phase 1 restore remains required as a fallback for
+non-participating initramfs images and non-initramfs boots.
+
+### Step 4: Ensure local machine ID
+
+peinit MUST ensure `/etc/machine-id` contains a stable local machine ID before
+registryd or any Phase 2 service starts. This ID is a local opaque install ID
+used for software compatibility, log correlation, D-Bus-style instance
+identity, and similar infrastructure. It is distinct from Peios domain
+machine identity and MUST NOT be treated as a security principal, credential,
+SID, account, or authorization input.
+
+The machine ID format is 128 bits encoded as exactly 32 lowercase hexadecimal
+characters followed by a single newline. A valid existing file MUST be left
+unchanged. If the file is absent, empty, or contains invalid contents, peinit
+MUST generate a new 128-bit value from the kernel CSPRNG and atomically write a
+valid file before continuing. Invalid non-empty contents MUST be retained or
+logged as warning evidence, but MUST NOT enter Recovery mode.
+
+Packaged images, live ISOs, VM templates, and other cloned system artifacts
+MUST NOT ship a populated real machine ID. They MAY omit `/etc/machine-id` or
+ship it empty as a reset marker. Clone/reset tooling that wants a new local
+identity MUST remove or truncate `/etc/machine-id`; peinit will generate a new
+ID on the next boot. Stateless live boots without persistent overlay get an
+ephemeral ID for that boot.
+
+The file is not secret and is expected to be readable by normal userspace, but
+replacement is a system bootstrap operation and MUST be protected by Peios file
+security so only SYSTEM-equivalent authority can create or replace it.
+
+### Step 5: Set system clock from hardware RTC
 
 peinit MUST read the hardware RTC and call `clock_settime()` to
 initialise the system clock before registryd starts. This ensures
@@ -190,7 +244,7 @@ MUST enter Recovery mode.
 > gets the clock in the right ballpark so that early timestamps are
 > not wildly wrong.
 
-### Step 4: Start registryd
+### Step 6: Start registryd
 
 peinit has a compiled-in service definition for registryd:
 
@@ -247,7 +301,50 @@ If registryd fails to start, its readiness timeout expires, or the
 probe read fails, peinit MUST enter Recovery mode. There is no
 Phase 2 without a working registry.
 
-### Step 5: Infrastructure setup
+### Step 7: Provision boot-time paths
+
+After registryd is running and before Phase 2 services are planned
+or started, peinit MUST read and apply boot-time path provisioning
+entries from `Machine\System\Init\ProvisionedPaths\`. This is the
+registry-backed equivalent of the tmpfiles.d role: it creates
+boot-scoped or persistent filesystem objects that are not owned by
+one service definition, and applies Peios file security descriptors
+to them.
+
+Each child key under `Machine\System\Init\ProvisionedPaths\` is one
+provisioning entry. Unknown values on an entry are ignored. Unknown
+or malformed entries are logged as warnings and skipped; they MUST
+NOT by themselves enter Recovery mode.
+
+| Value | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `Kind` | string | yes | -- | `directory` or `file`. |
+| `Path` | string | yes | -- | Absolute path to create or verify. |
+| `Security` | binary | no | built-in default | Peios file security descriptor to apply to the target object. |
+| `Required` | dword | no | 0 | If 1, failure to provision this entry prevents Phase 2 and enters Recovery mode. |
+
+For `Kind=directory`, peinit MUST ensure `Path` exists as a
+directory and MUST fail the entry if the path exists with another
+file type. For `Kind=file`, peinit MUST ensure `Path` exists as a
+regular file and MUST fail the entry if the path exists with another
+file type. `Kind=file` MUST NOT truncate an existing file. peinit
+MUST NOT create unspecified parent directories for a provisioning
+entry; packages that need a hierarchy MUST define each required
+directory explicitly or depend on the package that owns the parent.
+
+When `Security` is absent, peinit applies a built-in default SD that
+grants SYSTEM and Administrators full access and grants ordinary
+users read/traverse access. When `Security` is present, peinit
+applies the supplied binary Peios security descriptor. A malformed
+or rejected descriptor fails that entry.
+
+Entries with `Required=0` are fail-soft: peinit logs the failure and
+continues. Entries with `Required=1` are fail-closed: peinit logs
+the failure and enters Recovery mode before Phase 2 starts. This
+allows packages to mark paths that are essential to boot separately
+from best-effort compatibility paths.
+
+### Step 8: Infrastructure setup
 
 After registryd is running, peinit MUST perform the following
 infrastructure setup before Phase 2 begins:
@@ -270,17 +367,24 @@ prevent Phase 2 from starting.
 
 ## Phase 1 failure summary
 
-All Phase 1 failures are fatal to boot. Recovery mode is the only
-option because Phase 2 cannot begin without working infrastructure.
+Most Phase 1 failures are fatal to boot. Recovery mode is the only
+option for failures that prevent Phase 2 from starting with working
+infrastructure. Explicitly fail-open bootstrap best-effort operations
+are called out below.
 
 | Failure | Response |
 |---|---|
 | Root writability probe fails | Recovery mode |
 | A peinit-owned virtual filesystem (`/dev/pts`, `/dev/shm`, `/run`, `/sys/fs/cgroup`) fails to mount | Recovery mode |
 | `/proc`, `/sys`, or `/dev` already mounted (`EBUSY`) | Tolerated -- treated as success |
+| Persisted random seed is absent or cannot be restored | Warning/no-op; Phase 2 continues |
+| `/etc/machine-id` is absent, empty, or invalid | Generate/replace and continue |
 | registryd fails to start | Recovery mode |
 | registryd sends READY=1 but probe read fails | Recovery mode |
 | registryd readiness timeout expires | Recovery mode |
+| Provisioned path entry is malformed | Warning logged, entry skipped |
+| Optional provisioned path cannot be created or secured | Warning logged, Phase 2 continues |
+| Required provisioned path cannot be created or secured | Recovery mode |
 | Control socket creation fails | Recovery mode |
 | JFS device open fails | Warning logged, Phase 2 continues |
 | JFS event-loop registration fails | Warning logged, Phase 2 continues |

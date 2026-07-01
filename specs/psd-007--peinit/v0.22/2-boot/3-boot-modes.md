@@ -100,9 +100,10 @@ The administrator gets an unrestricted SYSTEM shell on the console.
 
 When entering Recovery mode, peinit MUST:
 
-1. Complete Phase 1 steps 1-3 (verify the root is writable, mount
-   the remaining virtual filesystems, set clock from RTC) if not
-   already done.
+1. Complete Phase 1 steps 1-5 (verify the root is writable, mount
+   the remaining virtual filesystems, restore the persisted random
+   seed if present, ensure the local machine ID, set clock from RTC)
+   if not already done.
 2. Attempt to start registryd. If registryd fails, ignore the
    failure and continue. Recovery mode MUST deliver a shell
    regardless of registryd's state.
