@@ -1,0 +1,2 @@
+name = "authd"
+description = "Authentication subsystem — the authd authentication broker, the lpsd local principal store, logon, credential verification, token minting, and the source-transparent client protocol."
