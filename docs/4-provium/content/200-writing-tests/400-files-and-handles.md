@@ -2,6 +2,11 @@
 title: Files and handles
 type: how-to
 description: Patterns for guest-side file I/O — read_file/write_file vs open_file, mode tables, seek/tell, tail streams, stat, listdir, mkdir, unlink, rename, and ioctl over open handles.
+related:
+  - provium/reference/file-handle
+  - provium/reference/vm
+  - provium/writing-tests/streams-and-tails
+  - provium/reference/streams
 ---
 
 Provium gives you two layers for guest-side file I/O. Most tests use the high-level `vm:read_file` / `vm:write_file` / `vm:stat` calls; tests that need cursor control, partial reads, or POSIX semantics drop to `vm:open_file` and the [File](~provium/reference/file-handle) userdata.
@@ -46,7 +51,7 @@ Relative `host_path` is resolved against the fixture (or helper) file's director
 vm:push_file("../big-corpus.tar", "/data.tar", {auto_dep = false})
 ```
 
-The auto-fold relies on static scanning of the call site, so non-literal host paths (variables, concatenation) are NOT tracked. Use [`lab:depends_on_file`](~provium/reference/lab#labdepends_on_file) with a literal string to declare them explicitly. See [Fixtures and dependencies — External host-file deps](~provium/running-tests/fixtures-and-dependencies#external-host-file-deps) for the full model.
+The auto-fold relies on static scanning of the call site, so non-literal host paths (variables, concatenation) are NOT tracked. Use [`lab:depends_on_file`](~provium/reference/lab#labdepends-on-filehost-path) with a literal string to declare them explicitly. See [Fixtures and dependencies — External host-file deps](~provium/running-tests/fixtures-and-dependencies#external-host-file-deps) for the full model.
 
 Mode bits follow `write_file`'s agent defaults — `vm:run("chmod +x …")` after the push if you need executable bits.
 

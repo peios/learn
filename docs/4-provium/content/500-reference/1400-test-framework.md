@@ -2,6 +2,10 @@
 title: Test framework
 type: reference
 description: The test() function registers tests, the t context object provides assertions and skip / fail / log, todo() declaratively skips a whole file, and wait_until() polls a predicate to truthy.
+related:
+  - provium/writing-tests/the-test-function
+  - provium/reference/meta-tags
+  - provium/reference/provium-module
 ---
 
 Provium's test framework is implemented mostly in Lua and installed onto every test file's state. This page documents every callable: `test`, `todo`, `wait_until`, the `t` context, and the per-test metadata table.
@@ -76,7 +80,7 @@ The predicate runs under `pcall` — if it raises, the error propagates immediat
 
 ## The `t` context
 
-A fresh `t` table is built per test. It carries the test's name, metadata, and a sticky `_failed` flag so a `pcall(t:assert(false))` is still classified as a failure (the inner pcall swallows the raise, but the runner inspects `_failed` on the Ok return path).
+A fresh `t` table is built per test. It carries the test's name and metadata, and the runner keeps a sticky per-test failure record so a `pcall(t:assert(false))` is still classified as a failure (the inner pcall swallows the raise, but the failure was recorded before it).
 
 ### Fields
 
@@ -107,7 +111,7 @@ Raise unless `string.find(haystack, needle, 1, true)` returns non-nil. **Both ar
 
 Run `fn` under `pcall` and assert that it raised. Returns the error value if the raise happened. Errors with `<msg>: expected to raise` if `fn` returned cleanly.
 
-The sticky `_failed` flag is saved before invoking `fn` and restored on a successful raise — that way an assertion *inside* `fn` (used to trigger the expected raise) doesn't leave `_failed=true` and poison the rest of the test.
+The sticky failure record is saved before invoking `fn` and restored on a successful raise — that way an assertion *inside* `fn` (used to trigger the expected raise) doesn't poison the rest of the test.
 
 ### Skip and fail
 
@@ -142,8 +146,8 @@ A test ends in one of three states:
 
 | Status | Triggered by |
 |---|---|
-| **Passed** | Test fn returned without raising AND `_failed` flag wasn't set. |
-| **Failed** | Test fn raised (via `error()`, `t:assert*`, `t:fail`), or its `_failed` flag was sticky after pcall caught an inner assertion. A Rust panic during the test also marks Failed and poisons every subsequent test in the file. |
+| **Passed** | Test fn returned without raising AND no assertion failure was recorded. |
+| **Failed** | Test fn raised (via `error()`, `t:assert*`, `t:fail`), or a sticky assertion failure was recorded before a pcall caught the raise. A Rust panic during the test also marks Failed and poisons every subsequent test in the file. |
 | **Skipped** | `t:skip(reason)` was called, OR `meta.skip = true` / `meta.skip = "reason"`, OR `--tag` / `--no-tag` filtered the test out, OR `--include-slow` was off and `meta.slow = true`, OR file-scope `todo()` was called. |
 
 A skipped test produces no event lifecycle other than `TestSkipped`. A failed test additionally captures the last 4 KiB of every booted VM's console log into the `TestFailed.console_excerpt` field — useful for diagnosing kernel-side regressions without reproducing the run.

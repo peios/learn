@@ -81,7 +81,7 @@ A typical subject record for a user-mode access:
     <bin: S-1-5-5-X-Y>,            // The logon SID
   ],
   "group_attributes": [
-    0x01,         // mandatory + enabled
+    0x05,         // mandatory + enabled
     0x07,         // mandatory + enabled-by-default + enabled
     0x07,
     0x07,

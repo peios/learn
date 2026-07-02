@@ -91,6 +91,8 @@ By default, a lifecycle command **blocks until its operation reaches a terminal 
 | `advisory` | The reload was issued and the detection window elapsed without explicit confirmation. |
 | `failed` | The `ExecReload` command exited non-zero or timed out. **The service stays Active** — a failed reload never takes down a running service. |
 
+The detection window is a **fixed 2 seconds** — it is built in and is *not* configurable via the registry. If the service says nothing within that window, the reload resolves as `advisory` and the service stays Active.
+
 > [!NOTE]
 > A connection blocked on a `--wait` operation is *not* counted as idle, so it is not closed by `ConnectionTimeout`. It stays open until the operation resolves, bounded by the operation's own timeout (e.g. `StartTimeout`).
 
@@ -100,7 +102,7 @@ A command sent to a service in an unexpected state returns an **error**, not a s
 
 | Command | Inactive | Starting | Active | Reloading | Stopping | Completed | Backoff | Failed | Abandoned | Skipped |
 |---|---|---|---|---|---|---|---|---|---|---|
-| **start** | Start | MERGE | ALREADY | ALREADY | QUEUE | Start | MERGE | Start | ERROR | Start |
+| **start** | Start | MERGE | ALREADY | ALREADY | QUEUE | Start | DEFER | Start | ERROR | Start |
 | **stop** | NOOP | Cancel+Stop | Stop | Stop | MERGE | Clear | Cancel | NOOP | ERROR | NOOP |
 | **restart** | Start | QUEUE | Restart | Restart | QUEUE | Start | Restart | Start | ERROR | Start |
 | **reload** | ERROR | ERROR | Reload | MERGE | ERROR | ERROR | ERROR | ERROR | ERROR | ERROR |
@@ -110,13 +112,14 @@ A command sent to a service in an unexpected state returns an **error**, not a s
 Legend:
 
 - **MERGE** — an operation of this type is already running; your command merges into it and you get its GUID.
+- **DEFER** — your `start` is accepted and creates a Pending start operation, but it does *not* run yet: it waits out the service's existing backoff deadline and then starts. If a deferred start is already waiting, you merge into it and get its GUID.
 - **ALREADY** — already in the target state; returns the current status, not an error.
 - **QUEUE** — queued as Pending; runs after the current operation finishes.
 - **NOOP** — no effect; returns the current status.
 - **Clear** / **Cancel** — clear the state to Inactive / abort the current operation, then proceed.
 - **ERROR** — invalid for this state; returns an error with an explanation.
 
-The [Backoff](~peios/peinit/the-service-lifecycle) column is the subtle one: the service is down with an automatic restart pending, so `start` merges into that pending restart (honouring the delay), `stop` cancels it (the service goes Inactive), `restart` cancels the automatic one and does an admin restart, and `reload`/`reset` are invalid because no process exists.
+The [Backoff](~peios/peinit/the-service-lifecycle) column is the subtle one: the service is down with an automatic restart pending, so `start` is *deferred* — it creates a Pending start that honours the remaining backoff delay and only runs once that deadline expires (a second `start` merges into the one already waiting), `stop` cancels the pending restart and any deferred start (the service goes Inactive), `restart` cancels the automatic one and does an admin restart, and `reload`/`reset` are invalid because no process exists.
 
 ## Reading status
 

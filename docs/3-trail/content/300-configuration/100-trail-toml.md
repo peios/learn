@@ -1,7 +1,11 @@
 ---
-title: trail.toml Reference
+title: trail.toml reference
 type: reference
 description: Complete reference for every field in the trail.toml configuration file, covering both single-product and multi-product modes.
+related:
+  - trail/configuration/multi-product
+  - trail/configuration/nav-and-theme
+  - trail/getting-started/project-structure
 ---
 
 The `trail.toml` file is the sole configuration file for a Trail site. It lives at the root of your project directory.
@@ -92,7 +96,7 @@ The `[[products]]` array enables multi-product mode. When at least one product i
 | `slug` | string | -- | **Required.** URL-safe identifier. Must match the directory name under `content/` and `pathways/`. |
 | `description` | string | `""` | Product description. Displayed on the homepage product card and the product index page. |
 | `order` | integer | `0` | Sort position on the homepage. Lower numbers first. Products with `0` sort after products with explicit order values. Products with equal order are sorted alphabetically by name. |
-| `category_order` | list of strings | `[]` | Controls category display order for this product. Same behavior as the top-level `category_order` but scoped to the product. |
+| `category_order` | list of strings | `[]` | Controls category display order for this product. Same behaviour as the top-level `category_order` but scoped to the product. |
 
 ```toml
 [[products]]

@@ -1,6 +1,6 @@
 ---
 title: Catalog
-type: concept
+type: reference
 description: Peios defines eight active process mitigations in v0.20 — LSV, WXP, TLP, CFIF, CFIB, PIE, SML, NO_CHILD — plus a reserved UI_ACCESS slot. This page covers each one in turn — what it does, which kernel surface it gates, what it blocks, and when to enable it.
 related:
   - peios/process-mitigations/overview

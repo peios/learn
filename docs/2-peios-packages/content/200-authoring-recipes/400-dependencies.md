@@ -1,6 +1,6 @@
 ---
-title: Declaring Dependencies
-type: how-to
+title: Declaring dependencies
+type: concept
 description: How to declare what your package needs — runtime dependencies, optional dependencies, conflicts, virtual provides, and side-effect tools that run at install time.
 related:
   - peios-packages/authoring-recipes/multi-package
@@ -57,7 +57,7 @@ To require a specific version range, add a constraint string:
 
 Constraint operators: `=`, `>`, `>=`, `<`, `<=`, `!=`. Multiple constraints combine with logical AND, separated by commas. A bare version string with no operator is the same as `=`.
 
-Multi-package recipes use `same_build = true` on dependency entries that point at sibling stanzas — see [Multi-package recipes](./multi-package#the-same_build--true-shorthand).
+Multi-package recipes use `same_build = true` on dependency entries that point at sibling stanzas — see [Multi-package recipes](~peios-packages/authoring-recipes/multi-package#the-same_build--true-shorthand).
 
 ## `optional_dependencies`
 
@@ -79,7 +79,7 @@ conflicts = [
 A bare-name conflict (no constraint) means "any version of this package conflicts." A constrained conflict means "specifically these versions conflict" — useful when the conflict is only with old versions that lacked some integration fix.
 
 > [!CAUTION]
-> Conflicts force-uninstall the conflicting package on the consumer's side, which is disruptive. Use them only for packages that genuinely cannot coexist (two HTTP servers binding port 80 by default, two implementations of the same `/etc/` config). Do not use conflicts for "I want my version to win"; that's what `replaces` is for.
+> Conflicts block installation on the consumer's side — the whole transaction is refused until the user removes the conflicting package — which is disruptive. Use them only for packages that genuinely cannot coexist (two HTTP servers binding port 80 by default, two implementations of the same `/etc/` config). Do not use conflicts for "I want my version to win"; that's what `replaces` is for.
 
 ## `provides`
 
@@ -124,7 +124,7 @@ The package manager invokes these tools from a fixed allowlist of trusted paths.
 > [!NOTE]
 > The fixed list is deliberate. It prevents packages from running arbitrary code at install time — a major attack surface in distros that allow custom maintainer scripts. If your package needs maintenance behaviour outside this list, the right answer is to express it through manifest fields the spec defines, not through arbitrary scripts.
 
-The full normative list is in [PSD-009 §4.3](../../../specs/psd-009--peipkg/v0.22/4-dependencies/3-side-effects).
+The full normative list is in [PSD-009 §4.3](/spec/psd-009/v0.22/dependencies/side-effects/).
 
 ## What's not yet possible
 
@@ -133,3 +133,9 @@ The schema is forward-compatible; future versions of the spec may add more field
 - **No conditional dependencies.** You can't say "depend on libssl on x86_64 but on libtomcrypt on arm64" in one stanza. Use separate stanzas per architecture.
 - **No transitive `provides`.** Providing `http-server` doesn't transitively provide whatever `http-server` itself provides.
 - **No file-level dependencies.** You depend on packages, not on individual files. This matches Debian's model, not RPM's.
+
+## Where to go from here
+
+- [Multi-package recipes](~peios-packages/authoring-recipes/multi-package) — `same_build = true` and splitting output across sibling stanzas.
+- [Tracking upstream versions](~peios-packages/authoring-recipes/tracking-upstream) — the `[upstream]` and `[watch]` sections that keep versions rolling forward.
+- [Recipe format reference](~peios-packages/reference/recipe-format) — the normative schema for every dependency field.

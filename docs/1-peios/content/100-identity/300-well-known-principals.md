@@ -179,3 +179,9 @@ The catalog above is comprehensive. In practice, day-to-day administrative work 
 - Specific user/group SIDs allocated by the directory (the `S-1-5-21-...-RID` form) for everyone else.
 
 The remaining well-known SIDs — service SIDs, capability SIDs, integrity labels, PIP labels — show up in specialised contexts that have their own topics in these docs.
+
+## Where to go next
+
+For the attributes a token carries beyond fixed identity — the other input to attribute-based access rules — read [Claims on a token](~peios/identity/claims).
+
+For the exact numeric values in machine-readable form, see the [Well-known SIDs](~peios/constants-and-catalogs/well-known-sids) reference.

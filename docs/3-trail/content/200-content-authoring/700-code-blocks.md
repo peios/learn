@@ -1,7 +1,11 @@
 ---
-title: Code Blocks
+title: Code blocks
 type: concept
 description: Trail highlights code blocks at build time using Chroma with the Dracula theme. Every code block has a copy button.
+related:
+  - trail/content-authoring/tab-groups
+  - trail/content-authoring/diagrams
+  - trail/features/dark-mode
 ---
 
 Code blocks in Trail are highlighted at build time. There is no client-side syntax highlighting library loaded at runtime.
@@ -22,9 +26,9 @@ The language tag after the opening fence determines which syntax rules are appli
 
 ## Syntax highlighting
 
-Trail uses [Goldmark](https://github.com/yuin/goldmark) with the [goldmark-highlighting](https://github.com/yuin/goldmark-highlighting) extension, which is powered by [Chroma](https://github.com/alecthomas/chroma). Highlighting happens at build time and produces inline `<span>` elements with color styles.
+Trail uses [Goldmark](https://github.com/yuin/goldmark) with the [goldmark-highlighting](https://github.com/yuin/goldmark-highlighting) extension, which is powered by [Chroma](https://github.com/alecthomas/chroma). Highlighting happens at build time and produces inline `<span>` elements with colour styles.
 
-The theme is **Dracula** -- a dark background with colored syntax tokens. The code block background is always dark (`#282a36`) regardless of whether the page is in light or dark mode.
+The theme is **Dracula** -- a dark background with coloured syntax tokens. The code block background is always dark (`#282a36`) regardless of whether the page is in light or dark mode.
 
 ## Supported languages
 
@@ -67,7 +71,7 @@ Inline code uses single backticks and is styled differently from code blocks:
 Use the `trail build` command to generate the site.
 ```
 
-Inline code renders with a light gray background in light mode and a dark gray background in dark mode. It does not receive syntax highlighting or a copy button.
+Inline code renders with a light grey background in light mode and a dark grey background in dark mode. It does not receive syntax highlighting or a copy button.
 
 ## Code blocks in tab groups
 

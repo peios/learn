@@ -163,7 +163,7 @@ This is also why an ACE that grants `GENERIC_READ` to a principal will produce d
 
 `MAXIMUM_ALLOWED` (bit 25) is special. It is not a right an ACE can grant — it is a marker the **caller** sets in a desired-access mask when asking "what is the maximum access I could be granted right now?". The access check sees the flag, evaluates the DACL fully, and returns every right the caller could be granted.
 
-`MAXIMUM_ALLOWED` MUST NOT appear in an ACE. It is meaningless there.
+`MAXIMUM_ALLOWED` must not appear in an ACE. It is meaningless there.
 
 ## Sizes and limits
 
@@ -178,3 +178,11 @@ For reference:
 | ACE size granularity | Multiple of 4 bytes |
 
 A practical SD on a typical object is far below these limits — a few hundred bytes at most. The limits exist for the pathological cases.
+
+## Where to go next
+
+For how the ACEs in a DACL actually decide "allowed" or "denied" — first-writer-wins, ordering, the null/empty distinction — read [DACL evaluation](~peios/security-descriptors/dacl-evaluation).
+
+For the full numeric catalog of ACE types, flags, and access-mask bits, see [ACE types and flags](~peios/constants-and-catalogs/ace-types-and-flags).
+
+To read and edit ACLs from a shell, read [The sd command](~peios/security-descriptors/sd-command).

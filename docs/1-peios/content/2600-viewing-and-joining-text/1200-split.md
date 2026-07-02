@@ -24,6 +24,8 @@ By default `split` writes 1000 lines per piece, names the pieces `xaa`, `xab`, `
 
 To put the file back together, concatenate the pieces in order: [`cat`](~peios/viewing-and-joining-text/cat)` xaa xab xac … > original`.
 
+Each piece is a newly created file, and a new file needs a [security descriptor](~peios/security-descriptors/overview); each piece inherits one from the directory it is created in.
+
 ## How big each piece is
 
 Choose one of these to set the piece size:

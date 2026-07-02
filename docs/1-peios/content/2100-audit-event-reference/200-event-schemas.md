@@ -1,7 +1,7 @@
 ---
 title: Event schemas
 type: reference
-description: Full field schemas for each audit event type emitted by the kernel — access-audit, continuous-audit, privilege-use, logon-session-destroyed. Every key with its type, meaning, and constraints.
+description: Full field schemas for each audit event type emitted by the kernel — access-audit, continuous-audit, privilege-use, caap-policy-diagnostic, logon-session-destroyed, corrupt-sd. Every key with its type, meaning, and constraints.
 related:
   - peios/audit-event-reference/overview
   - peios/audit-event-reference/common-records
@@ -63,7 +63,7 @@ A successful read by a user where an audit ACE on the SACL matched:
 
 ## continuous-audit
 
-Fires per-operation on an open handle whose continuous audit mask overlaps the operation's required mask. Configured by `SYSTEM_ALARM*` ACEs at the access check that opened the handle; fires by the enforcement point (FACS, registryd, etc.) for each subsequent operation.
+Fires per-operation on an open handle whose continuous audit mask overlaps the operation's required mask. Configured by `SYSTEM_ALARM*` ACEs at the access check that opened the handle; fired by the kernel enforcement point for the operation (FACS for file handles — always a kernel subsystem, never a userspace store like registryd) for each subsequent operation.
 
 `event_type` value: `"continuous-audit"`.
 
@@ -148,6 +148,29 @@ A backup tool using SeBackup that confinement stripped:
   "process": { ... }
 }
 ```
+
+## caap-policy-diagnostic
+
+Fires during the CAAP step of AccessCheck for two kinds of unusual condition, discriminated by the `kind` key: a CAAP SACL evaluation error (`"sacl-error"`), or a staged policy producing a different result than the effective policy (`"staging-mismatch"` — see [Staged policies](~peios/central-access-policies/staged-policies)).
+
+`event_type` value: `"caap-policy-diagnostic"`.
+
+| Key | Type | Always present? | Meaning |
+|---|---|---|---|
+| `subject` | map | Yes | Subject record for the access being checked. |
+| `object_context` | bin or nil | Yes | Caller-supplied object identifier. |
+| `kind` | string | Yes | `"sacl-error"` or `"staging-mismatch"`. |
+| `phase` | string | Yes | Which phase of CAAP evaluation produced the diagnostic. |
+| `policy_sid` | bin or nil | Yes | The policy involved. Nil for `staging-mismatch` — the mismatch is not attributed to a specific policy. |
+| `rule_index` | uint or nil | Yes | The rule involved. Nil for `staging-mismatch`. |
+| `reason` | string or nil | Yes | Diagnostic description for `sacl-error`. |
+| `requested_access` | uint | Yes | The access mask the caller requested. |
+| `effective_granted_access` | uint | Yes | Total granted mask under the effective policy. |
+| `staged_granted_access` | uint | Yes | Total granted mask the staged policy would have produced. |
+| `object_results_differ` | bool | Yes | Whether the staged and effective results differed for this object. |
+| `process` | map | Yes | Process record. |
+
+Note the limits of the staging-mismatch report: it carries only the two total granted masks and the differ flag — it does not identify which rule differed or which audit events changed. For a pure SACL mismatch the two masks can be equal.
 
 ## logon-session-destroyed
 

@@ -2,6 +2,11 @@
 title: Process
 type: reference
 description: A Process userdata is a handle to an async-spawned guest process. Use it to wait, kill, signal, write stdin, stream stdout/stderr, and query exit status.
+related:
+  - provium/writing-tests/running-commands
+  - provium/reference/vm
+  - provium/reference/streams
+  - provium/reference/worker
 ---
 
 A Process is what `vm:run_async(...)` (or `worker:run_async(...)`) returns: a handle to a guest process that the agent has launched but is not waiting on. You control the lifetime — the agent does not auto-kill it.

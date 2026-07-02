@@ -6,6 +6,7 @@ related:
   - peios/the-registry/keys-values-and-types
   - peios/the-registry/configuration-and-meaning
   - peios/the-registry/regman
+  - peios/the-registry/reg
   - peios/the-registry/layers
   - peios/the-registry/access-control
   - peios/the-registry/watches
@@ -78,3 +79,5 @@ If you are ready for the layered truth under the effective view — precedence, 
 If you want the security model — why every key carries a security descriptor, the registry-specific access rights, and the rule that security changes are *not* undone by layer removal — read [Access control on keys](~peios/the-registry/access-control).
 
 If you want to know how a service reacts to a configuration change instead of polling for it, read [Watching for changes](~peios/the-registry/watches).
+
+For the two command-line tools, read [`regman`](~peios/the-registry/regman) — the registry's manual, which tells you what a key *means* — and [`reg`](~peios/the-registry/reg) — the scripting interface that reads and writes what a key *is*. You consult the first to decide what to set, and use the second to set it.

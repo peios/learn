@@ -51,6 +51,13 @@ With `-e`, `echo` recognises these backslash sequences and prints the character 
 
 `echo` is fixed: arguments, spaces, a newline. The moment you need *control* over the output — columns, padding, a number formatted a particular way, output with no spaces between pieces — reach for [`printf`](~peios/output-and-evaluation/printf) instead. `printf` is also more predictable across environments, since `echo`'s handling of escapes and `-n` varies.
 
+## A note on shells
+
+Many command shells provide their own built-in `echo`, and the shell's version is what runs when you type `echo` at a prompt. Built-in versions vary — especially in how they treat `-n`, `-e`, and escape sequences — so their behaviour may differ from what is described here. To be certain you are running this command rather than the shell built-in, invoke it by its full path.
+
 ## Exit status
 
-`echo` returns `0` unless it cannot write its output.
+| Code | Meaning |
+|---|---|
+| `0` | The output was written. |
+| `1` | The output could not be written. |

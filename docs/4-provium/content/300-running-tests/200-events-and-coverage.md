@@ -2,6 +2,10 @@
 title: Events and coverage
 type: how-to
 description: How to capture Provium's structured event stream — to a file, to stdout, or over a Unix socket — and feed it to provium-coverage or your own consumer.
+related:
+  - provium/reference/events
+  - provium/reference/protocol-version
+  - provium/running-tests/the-cli
 ---
 
 Provium emits a structured msgpack event stream covering every file, test, VM, fixture, and pool transition. This page covers the practical side of consuming it; the wire format is on [events](~provium/reference/events).
@@ -133,7 +137,7 @@ fn main() -> std::io::Result<()> {
 }
 ```
 
-For other languages, use any msgpack library that handles the length-prefix framing (e.g. read 4 bytes BE length, then read N bytes, then deserialize as msgpack).
+For other languages, use any msgpack library that handles the length-prefix framing (e.g. read 4 bytes BE length, then read N bytes, then deserialise as msgpack).
 
 ## Live multiplexing for dashboards
 

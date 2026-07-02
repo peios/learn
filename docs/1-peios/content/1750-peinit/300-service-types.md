@@ -75,6 +75,7 @@ A Oneshot is not restarted on *success*, regardless of `RestartPolicy` — even 
 | Successful end state | Active (until stopped) | Completed, then Inactive (unless `RemainAfterExit=1`) |
 | `ExecStartPost` fires | After readiness | After successful exit only |
 | `StartTimeout` covers | Startup until readiness | The whole execution |
+| Watchdog & health checks | Supervised while Active | None — `WatchdogTimeout`/`HealthCheck` are inert |
 | Restart on success | n/a | Never (use a timer to re-run) |
 
 ## The sd_notify contract
@@ -82,6 +83,8 @@ A Oneshot is not restarted on *success*, regardless of `RestartPolicy` — even 
 A Notify-readiness service signals readiness by sending `READY=1` over the [sd_notify](~peios/peinit/output-and-logging) protocol — a datagram to the socket named in the `NOTIFY_SOCKET` environment variable, which peinit sets for *every* service. `READY=1` is only the most visible message; the same channel carries watchdog keepalives (`WATCHDOG=1`), graceful-stop notice (`STOPPING=1`), timeout extensions (`EXTEND_TIMEOUT_USEC`), status strings (`STATUS=`), and the fd store. These are covered where they belong — readiness here, the rest in [Keeping services running](~peios/peinit/supervision) and [Controlling services](~peios/peinit/controlling-services).
 
 Readiness is always **per start generation**. A `READY=1` left over from a previous incarnation of the process is never valid for the current start — peinit ties every notify message to the specific process it is currently supervising, verified by [pidfd](#no-forking-daemons).
+
+Who is allowed to send these messages is governed by `NotifyAccess`, which currently has a single value: `Main` (`0`, the default). Under `Main`, only the tracked main PID — the process peinit forked and supervises — is authorised to send sd_notify readiness and status messages; a message arriving from any other PID (a child, a helper, an unrelated process) is ignored. So if a worker your service spawns sends `READY=1`, peinit will not act on it — the readiness signal must come from the main process itself.
 
 ## No forking daemons
 

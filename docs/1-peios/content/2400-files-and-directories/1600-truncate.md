@@ -19,7 +19,7 @@ $ truncate -s 1G disk.img      # make a 1 GiB file
 
 Shrinking a file discards everything past the new size. Extending it adds space that reads back as zero bytes; that added space is a *hole* — it costs no actual storage until something writes real data into it, which is how `truncate -s 1G` can create a "1 GiB file" instantly.
 
-By default, `truncate` creates a file that does not yet exist (as an empty file, then sized as asked).
+By default, `truncate` creates a file that does not yet exist (as an empty file, then sized as asked). A file created this way needs a [security descriptor](~peios/security-descriptors/overview), and it inherits one from the directory it is created in.
 
 ## Specifying the size
 

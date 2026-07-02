@@ -16,7 +16,7 @@ etymology = "From Windows SIDs (MS-DTYP §2.4.2)"
 
 [[terms.refs]]
 label = "SID Format Specification"
-path = "spec/kacs/v0.22/sids/format"
+path = "spec/psd-004/v0.22/sids/format"
 
 [[terms]]
 term = "Relative Identifier"
@@ -91,7 +91,7 @@ product = "kacs"
 
 [[terms.refs]]
 label = "Token Specification"
-path = "spec/kacs/v0.22/tokens/token-structure"
+path = "spec/psd-004/v0.22/tokens/structure"
 
 [[terms]]
 term = "Primary Token"
@@ -181,7 +181,7 @@ etymology = "From the Windows NT security model (MS-DTYP §2.4.6)"
 
 [[terms.refs]]
 label = "SD Structure Specification"
-path = "spec/kacs/v0.22/security-descriptors/structure"
+path = "spec/psd-004/v0.22/security-descriptors/structure"
 
 [[terms]]
 term = "Securable Object"

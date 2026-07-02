@@ -24,4 +24,6 @@ Where [`hostname`](~peios/system-and-processes/hostname) gives the system's *nam
 
 ## Exit status
 
-`hostid` returns `0`.
+| Code | Meaning |
+|---|---|
+| `0` | The host id was printed. |

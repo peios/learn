@@ -35,9 +35,7 @@ They are the simplest commands there are — and the [overview](~peios/output-an
 
 ## Exit status
 
-| Command | Code |
+| Code | Meaning |
 |---|---|
-| `true` | Always `0`. |
-| `false` | Always `1`. |
-
-Each command also accepts `--help` and `--version`; using one of those makes the command print that text instead of doing its usual nothing. (A write error while printing causes even `true` to exit non-zero.)
+| `0` | Returned by `true`, always. |
+| `1` | Returned by `false`, always. |

@@ -135,3 +135,9 @@ The privilege-use audit event for each fire records:
 - Whether the use was successful (bits survived) or failed (bits were stripped).
 
 This is enough for an audit consumer to reconstruct what happened. A success event with non-empty surviving bits shows what the privilege ended up granting; a failure event with empty surviving bits shows what the privilege tried to grant and lost. Together they tell the story of where the access landed.
+
+## Where to go next
+
+For the three layers that can strip privilege-granted bits after the fact, read [Narrowing layers](~peios/access-decisions/narrowing-layers).
+
+For the privilege-use events themselves and where they end up, read [Auditing](~peios/auditing/overview).

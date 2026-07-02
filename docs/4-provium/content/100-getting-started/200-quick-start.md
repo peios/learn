@@ -1,7 +1,12 @@
 ---
-title: Quick Start
+title: Quick start
 type: how-to
 description: Install Provium, configure a profile, write a first test, and run it. Five minutes from a clean checkout to a passing test.
+related:
+  - provium/getting-started/project-structure
+  - provium/configuration/provium-toml
+  - provium/writing-tests/vms-and-profiles
+  - provium/running-tests/the-cli
 ---
 
 This guide walks through the minimum setup needed to run one Provium test against a real VM. It assumes you have KVM, QEMU, iproute2, and nftables installed; see [project structure](~provium/getting-started/project-structure) for prerequisites detail.
@@ -29,10 +34,10 @@ provium --help
 
 ## Pre-flight check
 
-Provium runs a startup pre-flight on every invocation. You can run it explicitly to catch environment issues before you start writing tests:
+Provium runs a startup pre-flight on every invocation — there is no standalone pre-flight command, so any cheap run (e.g. `provium list`) exercises it before you start writing tests. To skip the checks (useful in containers without KVM):
 
 ```
-provium --no-preflight  # to skip; useful in containers without KVM
+provium --no-preflight  # skip the pre-flight checks
 ```
 
 The pre-flight checks for:
@@ -68,7 +73,7 @@ roots = ["tests"]
 [profiles.peios]
 kernel  = "/path/to/bzImage"
 initrd  = "/path/to/provium-initrd.cpio.gz"
-cmdline = "console=hvc0 quiet"
+cmdline = "console=ttyS0 quiet"
 ```
 
 `[profiles.<name>]` is the dictionary `provium:vm("name", "<profile>")` looks up. The `roots` setting is the list of directories scanned for `*.test.lua` and `*.fixture.lua` files; it also controls where `require("helper")` resolves.

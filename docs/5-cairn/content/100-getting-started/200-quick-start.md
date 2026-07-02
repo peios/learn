@@ -1,7 +1,12 @@
 ---
-title: Quick Start
+title: Quick start
 type: how-to
 description: Create a Cairn project, add tasks and milestones, and serve the web board in under five minutes.
+related:
+  - cairn/getting-started/what-is-cairn
+  - cairn/getting-started/project-structure
+  - cairn/cli/commands
+  - cairn/web-board/overview
 ---
 
 This guide walks through creating a Cairn project from scratch, adding tasks, and viewing them on the web board.

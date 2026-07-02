@@ -140,3 +140,11 @@ If authd crashes and restarts, it picks up where it left off (re-reading the dir
 The reason: the running services have already been assigned real tokens. Going back to SYSTEM would require reassigning every service's token, which would mean restarting every service. That's a system-wide reboot, not a recovery.
 
 So the trust establishment chain is a one-time event per boot. It happens early; it sets up the system's authority distribution; it stays in place until shutdown. Reboot is the only way to redo it.
+
+## Where to go next
+
+For the init system that launches authd and waits on its readiness, read [peinit at PID 1](~peios/boot-and-trust-establishment/peinit-pid-1).
+
+For the SYSTEM-everywhere state the handoff replaces, read [Bootstrap tokens](~peios/boot-and-trust-establishment/bootstrap-tokens).
+
+For the recovery policy that applies until the CAAP cache is populated, read [Distribution and recovery](~peios/central-access-policies/distribution-and-recovery).

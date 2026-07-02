@@ -92,14 +92,14 @@ Specifically:
 
 The kernel will not silently translate POSIX ACLs to KACS DACLs. Migrating from a Linux system with POSIX ACLs requires re-writing the SDs in KACS form. Tools that can do this conversion exist in the migration tooling; the kernel does not do it on the fly.
 
-## fchown — denied on FACS-managed fds
+## fchown — gated on WRITE_OWNER
 
-The legacy `fchown` syscall changes a file's owner UID/GID. Under FACS, this is denied entirely:
+The legacy `fchown` syscall changes a file's owner UID/GID. Under FACS, the family is permitted but gated on SD rights:
 
-- `fchown()` on a FACS-managed fd returns `-EACCES`.
-- `chown()` and `lchown()` are similarly redirected through the SD path.
+- `fchown()` succeeds only if the fd's granted mask includes `WRITE_OWNER`; otherwise `-EACCES`.
+- `chown()` and `lchown()` run a fresh access check requiring `WRITE_OWNER` on the file's SD.
 
-Changing ownership goes through `kacs_set_sd` with `OWNER_SECURITY_INFORMATION`. The KACS semantics for ownership (covered in [Managing file security](~peios/file-access/managing-file-security)) replace the legacy mode-and-owner duo.
+The Linux uid/gid change does not alter the SD's owner SID. Changing the *real* owner goes through `kacs_set_sd` with `OWNER_SECURITY_INFORMATION` — the KACS semantics for ownership (covered in [Managing file security](~peios/file-access/managing-file-security)) replace the legacy mode-and-owner duo.
 
 The kernel surfaces the file's owner SID's projected UID as the result of `stat`-style queries, so `ls -l` shows a UID. But the UID is derived from the owner SID; setting it via `fchown` is not the way.
 
@@ -113,9 +113,11 @@ The consequence: a locally-authorised open can still produce I/O errors when the
 
 This is "dual authority": the client and the server both have a say, and both have to permit. The client's denial is final on the client side; the server's denial is final on the server side. There is no single source of truth for what is allowed.
 
-Implications:
+> [!WARNING]
+> **Don't trust FACS results on NFS for security purposes.** The local FACS decision is "the client will let this go forward"; the server may still refuse. If you need a security guarantee, the server's access control is what matters.
 
-- **Don't trust FACS results on NFS for security purposes.** The local FACS decision is "the client will let this go forward"; the server may still refuse. If you need a security guarantee, the server's access control is what matters.
+Other implications:
+
 - **Expect I/O errors from server-side denial.** A successful open does not guarantee a successful read. Handle `EACCES` (or `EIO`) from the operation, not just from the open.
 - **The synthesised SD is local.** Changes to the file's actual SD on the server are not visible to FACS's local synthesis. Tools that want to inspect the real SD need to query the server.
 
@@ -142,7 +144,7 @@ The mount-policy classes are covered in [Mount policies](~peios/mount-policies/o
 
 `renameat2(RENAME_WHITEOUT)` — the Linux-specific flag for creating a "whiteout" entry as part of a rename (used by overlay filesystems) — is **supported** on FACS-managed filesystems. The rename and the whiteout it leaves behind happen as one atomic operation, exactly as on stock Linux.
 
-A whiteout is a `chrdev(0,0)` sentinel that overlay filesystems drop at the old name to mask a file in a lower layer. FACS authorizes it the same way it authorizes any new node: you need FILE_ADD_FILE on the source directory (where the whiteout lands), in addition to the usual rename rights. If you lack that right the whole rename is denied before anything is created, and the whiteout — like every freshly created node — inherits a security descriptor from its parent directory and is recorded in the audit trail.
+A whiteout is a `chrdev(0,0)` sentinel that overlay filesystems drop at the old name to mask a file in a lower layer. FACS authorises it the same way it authorises any new node: you need FILE_ADD_FILE on the source directory (where the whiteout lands), in addition to the usual rename rights. If you lack that right the whole rename is denied before anything is created, and the whiteout — like every freshly created node — inherits a security descriptor from its parent directory and is recorded in the audit trail.
 
 This matters if you run overlayfs or union-style filesystems on FACS-managed storage: they work without the partial-support caveats earlier previews carried.
 
@@ -163,3 +165,11 @@ The special cases at a glance:
 | renameat2 RENAME_WHITEOUT | Supported; atomic, needs FILE_ADD_FILE on the source directory, whiteout inherits an SD |
 
 Each is a deliberate decision. Some reflect Linux compatibility (POSIX ACLs replaced); some reflect security policy (exec dual gate, append-only enforcement); some reflect the model's limits (NFS dual authority). Knowing them keeps the surprises from being surprises.
+
+## Where to go next
+
+For the model these cases are edges of, read [The handle model](~peios/file-access/the-handle-model).
+
+For how a mount's policy decides whether FACS applies at all, read [Mount policies](~peios/mount-policies/overview).
+
+For the SD read/write syscalls referenced throughout, read [Managing file security](~peios/file-access/managing-file-security).

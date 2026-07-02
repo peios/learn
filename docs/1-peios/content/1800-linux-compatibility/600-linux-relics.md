@@ -32,3 +32,11 @@ already an event stream there, keyed on each process's GUID and carrying its rea
 identity, exit status, and resource usage — structured and queryable, where `acct`
 produces an opaque append-only file built around the Linux UID model. See the eventd
 and KMES material for the native way to account for what processes do.
+
+## Where to go next
+
+For the compatibility model that decides what survives and how, read [Linux compatibility](~peios/linux-compatibility/overview).
+
+For the native event pipeline that replaces process accounting, read [Events and transport](~peios/auditing/events-and-transport).
+
+For following that event stream from the command line, read [The event stream](~peios/inspecting/the-event-stream).

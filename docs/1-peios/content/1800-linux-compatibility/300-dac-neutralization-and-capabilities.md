@@ -1,5 +1,5 @@
 ---
-title: DAC neutralization and capabilities
+title: DAC neutralisation and capabilities
 type: concept
 description: Linux's classical DAC (file mode bits) and capability checks run before KACS hooks. To prevent DAC from refusing accesses that KACS would allow, every process carries a mandatory capability substrate that defers DAC checks to LSM. The 41 Linux capabilities are classified as ALLOW, PRIVILEGE, or DENY. This page covers the model.
 related:
@@ -12,9 +12,9 @@ related:
 
 Linux has its own access-control mechanisms below the LSM layer — DAC (file mode bits, owner/group checks) and capabilities (POSIX-style fine-grained privileges). When Peios's KACS runs as an LSM, it sees an access after these other layers have already had their say. If DAC has already refused the access for legacy reasons, KACS never gets a chance to evaluate.
 
-The fix is **DAC neutralization** — Peios sets up every process with a specific set of mandatory Linux capabilities that effectively defer the DAC and capability decisions to the LSM layer. Combined with a classification of the 41 standard Linux capabilities (some always-on, some mapped to KACS privileges, some always-off), this lets KACS be the authoritative access-decision layer.
+The fix is **DAC neutralisation** — Peios sets up every process with a specific set of mandatory Linux capabilities that effectively defer the DAC and capability decisions to the LSM layer. Combined with a classification of the 41 standard Linux capabilities (some always-on, some mapped to KACS privileges, some always-off), this lets KACS be the authoritative access-decision layer.
 
-This page covers the model — what DAC neutralization is, how it works, and the three-way classification of Linux capabilities.
+This page covers the model — what DAC neutralisation is, how it works, and the three-way classification of Linux capabilities.
 
 ## The problem: DAC runs first
 
@@ -131,7 +131,8 @@ The two views are kept consistent for ALLOW (the bits are always on) and DENY (t
 
 The kernel maintains the apparent capability state consistent with the KACS privileges (and the ALLOW/DENY rules). A program using `capset()` to try to drop privileges sees the visible mask drop, but the underlying KACS state is what `security_capable()` consults.
 
-This is intentional: programs that drop capabilities for security hardening (the standard "drop CAP_NET_ADMIN before processing untrusted input" pattern) do not get the semantics they expect, because the kernel's authoritative decision uses KACS. To actually drop authority on Peios, use AdjustPrivileges to remove the corresponding KACS privilege.
+> [!WARNING]
+> This is intentional: programs that drop capabilities for security hardening (the standard "drop CAP_NET_ADMIN before processing untrusted input" pattern) do not get the semantics they expect, because the kernel's authoritative decision uses KACS. The drop appears to succeed but does not take effect. To actually drop authority on Peios, use AdjustPrivileges to remove the corresponding KACS privilege.
 
 ## prctl(PR_SET_KEEPCAPS) and the secure bits
 
@@ -166,3 +167,11 @@ For an application running on Peios:
 - **File capabilities don't work.** Binaries that depended on `security.capability` need to be run under tokens with the appropriate KACS privileges instead.
 
 For most applications this is transparent. They make their normal calls; the access decisions come out as KACS decides. The exceptions are programs that explicitly manipulate Linux capabilities — a paranoid daemon that calls `prctl(PR_CAPBSET_DROP)` to drop unneeded capabilities — and these programs see their drops not take effect in the way they expect. Migrating to use KACS privileges via AdjustPrivileges is the right pattern.
+
+## Where to go next
+
+For the projection that feeds `getuid` and friends, read [Credential projection](~peios/linux-compatibility/credential-projection).
+
+For the setuid family's reinterpretation, read [setuid and uid0](~peios/linux-compatibility/setuid-and-uid0).
+
+For the KACS privileges the PRIVILEGE-class capabilities map to, read [Privileges](~peios/privileges/overview).

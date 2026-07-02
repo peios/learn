@@ -130,3 +130,11 @@ Two themes underlie all of these:
 **PKM must be the sole authoritative LSM.** Trying to compose PKM with MAC LSMs would give either over-restrictive or inconsistent semantics; the Peios access model is built on PKM's decisions, and that requires PKM to make the decisions alone.
 
 The invariants are what make these themes operational: the kernel is built and initialised in ways that protect itself from runtime modification and that ensure PKM is in charge.
+
+## Where to go next
+
+For the tokens the verified kernel constructs at init, read [Bootstrap tokens](~peios/boot-and-trust-establishment/bootstrap-tokens).
+
+For the signing scheme module signing shares its keys with, read [Binary signing](~peios/binary-signing/overview).
+
+For the protection model these invariants defend, read [Process integrity protection](~peios/process-integrity-protection/overview).

@@ -135,3 +135,9 @@ The full set of auditing channels:
 Plus the session-destruction event (covered in [Logon sessions](~peios/logon-sessions/lifecycle)) which fires independently of any access check.
 
 A single access can produce events from many of these channels at once. An audit consumer sees them, deduplicates or correlates as appropriate, and persists what is needed for downstream use.
+
+## Where to go next
+
+For the schemas of the events these mechanisms emit and how they reach consumers, read [Events and transport](~peios/auditing/events-and-transport).
+
+For the privilege model behind privilege-use audit, read [Privileges](~peios/privileges/overview).

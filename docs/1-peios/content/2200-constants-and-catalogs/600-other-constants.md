@@ -295,10 +295,7 @@ A summary of the limits the kernel enforces:
 | Recommended max conditional stack depth | 1024 | Evaluator limit |
 | Max TLP cache entries | 64 | Trusted Library Path prefixes |
 | Max TLP path length | 4096 bytes | Per prefix |
-| Max mount template SD | 64 KiB | `kacs_set_mount_policy` template |
-| Anonymous session ID | 998 | The kernel-direct Anonymous session |
-| SYSTEM session ID | 0 | The kernel-direct SYSTEM session |
-| Default impersonation level | Impersonation (2) | If client does not set otherwise |
+| Max mount template SD | 64 KB | `kacs_set_mount_policy` template |
 
 ## Magic numbers and sentinels
 
@@ -311,7 +308,9 @@ A summary of the limits the kernel enforces:
 | Reset-all-groups index | 0xFFFFFFFF | `kacs_group_entry.index` value meaning "reset all to defaults". |
 | Reset-all-privileges luid | 0 | `kacs_priv_entry.luid` with `KACS_PRIV_RESET_ALL_DEFAULTS` attributes. |
 | Bootstrap logon SID | `S-1-5-5-0-0` | The logon SID of the kernel-direct SYSTEM session. |
-| Anonymous logon LUID | 998 (0x3E6) | The Anonymous session's `auth_id`. |
+| SYSTEM session ID | 0 | The kernel-direct SYSTEM session's `session_id`. |
+| Anonymous session ID | 998 (0x3E6) | The kernel-direct Anonymous session's `session_id` — the `auth_id` on the Anonymous token. |
+| Default impersonation level | Impersonation (2) | Assumed when the client does not set one. |
 | `no_change` index for AdjustDefault | 0xFFFF | `owner_index` / `group_index` value meaning "no change". |
 | Linux "nobody" UID/GID | 65534 | Standard fallback for unmapped principals. |
 

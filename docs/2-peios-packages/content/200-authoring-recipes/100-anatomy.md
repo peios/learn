@@ -1,5 +1,5 @@
 ---
-title: Anatomy of a Recipe
+title: Anatomy of a recipe
 type: concept
 description: A recipe describes one source package — how to build it, how to split its outputs, and how the build farm should detect new upstream versions. Two files, four TOML sections.
 related:
@@ -97,10 +97,10 @@ If you're publishing a single package by hand (no farm), `peipkg-build` takes th
 
 ## Where each section is documented
 
-- [Build scripts](./build-scripts) — what `build.sh` receives and what it must produce.
-- [Multi-package recipes](./multi-package) — when to split into runtime/`-dev`/`-doc`, how `[[package]].files` globs work, and the `same_build` shorthand.
-- [Dependencies](./dependencies) — how to declare what your package needs.
-- [Tracking upstream](./tracking-upstream) — `[upstream]` and `[watch]` in detail, including the regex patterns and webhook setup.
-- [Recipe format reference](../reference/recipe-format) — flat schema reference; useful when writing or reviewing recipes mechanically.
+- [Build scripts](~peios-packages/authoring-recipes/build-scripts) — what `build.sh` receives and what it must produce.
+- [Multi-package recipes](~peios-packages/authoring-recipes/multi-package) — when to split into runtime/`-dev`/`-doc`, how `[[package]].files` globs work, and the `same_build` shorthand.
+- [Dependencies](~peios-packages/authoring-recipes/dependencies) — how to declare what your package needs.
+- [Tracking upstream](~peios-packages/authoring-recipes/tracking-upstream) — `[upstream]` and `[watch]` in detail, including the regex patterns and webhook setup.
+- [Recipe format reference](~peios-packages/reference/recipe-format) — flat schema reference; useful when writing or reviewing recipes mechanically.
 
-The normative spec for the recipe format lives in [PSD-009 appendix A.2](../../../specs/psd-009--peipkg/v0.22/8-appendix-a/2-recipe-format).
+The normative spec for the recipe format lives in [PSD-009 appendix A.2](/spec/psd-009/v0.22/appendix-a/recipe-format/).

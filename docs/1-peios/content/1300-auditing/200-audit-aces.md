@@ -69,7 +69,7 @@ During step 14 of access check, when a `SYSTEM_ALARM` ACE matches, the kernel:
 
 1. Computes a continuous-audit mask — the union of all matching alarm ACEs' masks.
 2. Returns the mask to the caller as part of the access check's output.
-3. The caller (typically FACS for files, or registryd for registry keys) stores the mask on the open handle.
+3. The caller (typically FACS for files) stores the mask on the open handle. For registry keys the enforcement point is LCS, the kernel registry subsystem — never the registryd source, which stores data but makes no security decisions (and LCS v0.21 defines only open-time SACL audit for keys, not continuous audit).
 
 Then, on each subsequent operation through the handle, the enforcement point compares the operation's required-access mask against the handle's continuous audit mask. If they overlap (any bit shared), the kernel emits a `continuous-audit` event for the operation.
 
@@ -147,3 +147,11 @@ A `SYSTEM_SCOPED_POLICY_ID_ACE` in the object's SACL references a central access
 From the audit consumer's perspective, an event triggered by a CAAP's effective SACL looks the same as one triggered by the object's own SACL. The event records what fired, and where the matched ACE came from is part of the event metadata, but the structure is uniform.
 
 Practical implication: a policy administrator who wants to audit a class of objects can put the audit ACE in the policy's effective SACL once, and every object referencing the policy contributes audit events. Better than putting a copy of the audit ACE on every object's SACL individually.
+
+## Where to go next
+
+For the events that fire without any SACL ACE — privilege-use audit and the token's audit_policy — read [Policy-forced auditing](~peios/auditing/policy-forced-auditing).
+
+For what the fired events contain and how they reach userspace, read [Events and transport](~peios/auditing/events-and-transport).
+
+For where audit ACEs live and who may read or write them, read [The SACL](~peios/security-descriptors/the-sacl).

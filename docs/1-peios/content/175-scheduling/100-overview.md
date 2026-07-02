@@ -1,13 +1,17 @@
 ---
-title: Overview
+title: Scheduling
 type: concept
-description: How the kernel decides which thread runs when — the scheduling classes Peios offers, when to use each, and the privileges required to elevate scheduling parameters.
+description: The scheduling classes available on Peios, when to use each, and the authority needed to change scheduling parameters.
 related:
   - peios/threads-and-processes/the-process-and-thread-model
   - peios/threads-and-processes/process-lifecycle
+  - peios/privileges/overview
+  - peios/process-integrity-protection/overview
 ---
 
 A computer has a small number of CPU cores and a large number of threads competing for them. The kernel's **scheduler** decides, every few microseconds, which threads run on which cores and for how long. The decision rule depends on the **scheduling class** each thread belongs to — a small set of named policies that express different goals: throughput-with-fairness, real-time responsiveness, missable-but-CPU-hungry batch work, and so on.
+
+Scheduling is one of the areas Peios deliberately leaves to the substrate — the upstream Linux kernel Peios builds on. The mechanics below (classes, nice values, deadlines, preemption) are substrate behaviour; what Peios adds is the authority model on top: which privilege lets you elevate priority, and which checks gate touching *another* process's scheduling.
 
 This page covers what classes Peios offers, what each is for, and what authority is needed to change them.
 
@@ -41,12 +45,9 @@ Nice is a per-thread integer in the range **−20 to +19** that scales the share
 | **0** | Default. |
 | **+19** | Minimum share. Roughly 1/68 the share of a nice-0 thread. |
 
-Each step of one nice level changes a thread's weight by about 1.25×, so the
-extremes are far apart. These ratios describe the *relative* CPU split between two
-otherwise-equal, CPU-bound threads competing alone; with more threads, or threads
-that sleep, the actual division differs.
+Each step of one nice level changes a thread's weight by about 1.25×, so the extremes are far apart. These ratios describe the *relative* CPU split between two otherwise-equal, CPU-bound threads competing alone; with more threads, or threads that sleep, the actual division differs.
 
-A thread can lower its own priority freely (set nice to a higher value than current) — there is no privilege check for being polite. **Raising priority** (setting nice lower than current, including ever returning to a lower nice if it was previously raised) requires `SeIncreaseBasePriorityPrivilege`. The same privilege gates real-time elevation; see below.
+A thread can lower its own priority freely (set nice to a higher value than current) — there is no privilege check for being polite. **Raising priority** (setting nice lower than current, including ever returning to a lower nice if it was previously raised) requires `SeIncreaseBasePriorityPrivilege` — Peios's mapping of Linux's `CAP_SYS_NICE` (see [Linux compatibility](~peios/linux-compatibility/dac-neutralization-and-capabilities)). The same privilege gates real-time elevation; see below.
 
 `nice()`, `setpriority()`, and `getpriority()` are the syscalls. `setpriority()` accepts a thread, a process group, or a user as the target.
 
@@ -90,9 +91,11 @@ The kernel admits the thread only if it can guarantee these numbers will be met 
 
 Use `SCHED_DEADLINE` when you have well-characterised periodic work and need analytical timing guarantees, not just "high priority."
 
-### Privilege
+### Who may change scheduling parameters
 
-Switching a thread to any real-time class — including `SCHED_DEADLINE` — requires **`SeIncreaseBasePriorityPrivilege`**. The same privilege gates raising nice into negative values, raising real-time priority within the class, and switching between real-time policies. There is no separate "real-time privilege"; real-time is conceptually "elevating priority" and the spec maps it to the same gate as nice elevation, the same way Windows uses `SeIncreaseBasePriorityPrivilege` for `REALTIME_PRIORITY_CLASS` and Linux uses `CAP_SYS_NICE` for both.
+Switching a thread to any real-time class — including `SCHED_DEADLINE` — requires **`SeIncreaseBasePriorityPrivilege`** ("Raise process scheduling priority and set CPU affinity for other processes" in the [privilege catalog](~peios/constants-and-catalogs/privilege-catalog)). There is no separate "real-time privilege"; real-time is conceptually "elevating priority", the same way Windows gates `REALTIME_PRIORITY_CLASS` on `SeIncreaseBasePriorityPrivilege` and Linux gates both on `CAP_SYS_NICE`.
+
+Changing *another* process's scheduling — nice, class, or CPU affinity — passes through KACS first. The caller needs `PROCESS_SET_INFORMATION` on the target's process SD and must PIP-dominate the target; the kernel enforces this on its `task_setnice` and `task_setscheduler` hooks and on the `sched_setaffinity()` path (which additionally requires `SeIncreaseBasePriorityPrivilege`). Self-targeted changes skip the SD and PIP checks — the privilege check still applies to elevation. `SeDebugPrivilege` bypasses only the SD check, never PIP dominance and never the priority privilege.
 
 ### Layered defences
 
@@ -104,7 +107,7 @@ Real-time threads can starve everything if misbehaving — including the kernel 
 | `RLIMIT_RTTIME` | The CPU time a real-time thread can consume in a single block before being downgraded to `SCHED_OTHER`. Defends against runaway tight loops. |
 | `kernel.sched_rt_runtime_us` / `kernel.sched_rt_period_us` | System-wide cap on aggregate real-time CPU consumption per period. The kernel reserves the remainder for non-RT work. |
 
-The system-wide values are sysctls, configured under `\System\Scheduling\` in the registry and applied by `ksyncd`. The per-process rlimits are set with `setrlimit()` or inherited from a supervisor.
+The system-wide values are ordinary sysctls; Peios does not currently define a registry surface for them. The per-process rlimits are set with `setrlimit()` or inherited from a supervisor.
 
 ## Setting scheduling parameters
 
@@ -114,11 +117,11 @@ Three syscall pairs cover scheduling-parameter manipulation:
 |---|---|
 | `sched_setscheduler()` / `sched_getscheduler()` | Set or get the scheduling class. |
 | `sched_setparam()` / `sched_getparam()` | Set or get the priority within the current class (real-time priority; ignored for normal classes). |
-| `sched_setattr()` / `sched_getattr()` | Extended interface taking a `struct sched_attr` covering class, priority, deadline parameters, latency-nice, and util-clamp values in one call. Required for `SCHED_DEADLINE`. |
+| `sched_setattr()` / `sched_getattr()` | Extended interface taking a `struct sched_attr` covering class, priority, deadline parameters, and util-clamp values in one call. Required for `SCHED_DEADLINE`. |
 
-`sched_setattr()` is the modern interface; new code should prefer it. The older calls remain functional for compatibility.
+`sched_setattr()` is the modern interface; new code should prefer it. The older calls remain functional for compatibility. All of them route through the same KACS checks described above when the target is another process.
 
-`sched_yield()` is unchanged from substrate — a thread voluntarily relinquishes the CPU. For real-time threads it has well-defined semantics (yield to others at the same priority); for normal threads it's a hint to the scheduler that other work might be runnable.
+`sched_yield()` is unchanged from the substrate — a thread voluntarily relinquishes the CPU. For real-time threads it has well-defined semantics (yield to others at the same priority); for normal threads it's a hint to the scheduler that other work might be runnable.
 
 `sched_get_priority_min()` and `sched_get_priority_max()` return the legal priority range for a given class.
 
@@ -130,14 +133,11 @@ For real-time work this can be a hazard: a privileged service running `SCHED_FIF
 
 `SCHED_RESET_ON_FORK` does not affect the parent itself, only its future children. `clone()` with `CLONE_THREAD` (creating threads in the same process) is unaffected — threads always share the process's primary token and scheduling attributes within their thread group.
 
-## Latency hints and utilisation clamping
+## Utilisation clamping
 
-Two newer per-thread hints exist on top of the class system:
+On top of the class system, `sched_setattr()` accepts per-thread utilisation clamps — **`sched_util_min`** / **`sched_util_max`** — which tell the cpufreq governor "treat this thread as needing at least X% / at most Y% of CPU capacity." Use them to coax the governor into scaling frequency more aggressively for latency-sensitive work, or to cap a hot loop.
 
-- **`sched_latency_nice`** — a hint to the Normal-class scheduler about preference for low latency vs throughput. Lower values prefer low latency (faster preemption on wake-up); higher values prefer throughput. Applies only to Normal-class threads.
-- **`sched_util_min`** / **`sched_util_max`** — utilisation clamping. Tells the cpufreq governor "treat this thread as needing at least X% / at most Y% of CPU capacity." Used to coax the governor into scaling frequency more aggressively for latency-sensitive work, or to cap a hot loop.
-
-Both are set via `sched_setattr()`. Setting either to a non-default value requires `SeIncreaseBasePriorityPrivilege`.
+Raising a clamp beyond its default follows the substrate's `CAP_SYS_NICE` rule, which Peios maps to `SeIncreaseBasePriorityPrivilege`; changing another process's clamps is gated like any other cross-process scheduling change (process SD + PIP dominance).
 
 ## Core scheduling and SMT co-scheduling
 
@@ -152,13 +152,13 @@ Core scheduling is requested via `prctl(PR_SCHED_CORE, ...)`. A thread or proces
 | `PR_SCHED_CORE_SHARE_TO` | Push the calling thread's cookie onto another thread. |
 | `PR_SCHED_CORE_GET` | Read a thread's cookie. |
 
-Setting a cookie on the calling thread requires no privilege. Setting a cookie on another process requires `PROCESS_QUERY_INFORMATION` on the target's process SD and is also subject to PIP dominance — a non-dominant caller cannot manipulate a Protected process's core-scheduling configuration. This is the same authority pattern used elsewhere when one process wants to manage another's properties: process SD for "may I touch this process at all," PIP for "may I cross this protection level."
+Setting a cookie on the calling thread requires no privilege. Cookie operations targeting another process go through the substrate's standard cross-task access checks; KACS does not add a scheduling-specific gate here.
 
 Core scheduling is the recommended mitigation when running mutually-untrusting workloads on the same machine without disabling SMT entirely.
 
 ## Preemption model
 
-The kernel's **preemption model** is the rule that decides when a running task can be involuntarily switched off the CPU. The model is selected at kernel-build time:
+The kernel's **preemption model** is the rule that decides when a running task can be involuntarily switched off the CPU:
 
 | Model | Behaviour |
 |---|---|
@@ -170,27 +170,10 @@ The kernel's **preemption model** is the rule that decides when a running task c
 
 There are two layers to choosing a model, and they are not the same kind of choice:
 
-- **`PREEMPT_RT` versus everything else is a build-time choice.** A real-time
-  image (audio, control loops, networking gateways) is compiled with `PREEMPT_RT`;
-  you cannot switch a running kernel *into* full real-time preemption. Peios
-  provides reference images at the RT and non-RT levels, and downstream image
-  builders pick whichever matches their workload.
-- **Among the non-real-time models** (`PREEMPT_NONE`, `PREEMPT_VOLUNTARY`,
-  `PREEMPT_LAZY`, `PREEMPT_FULL`) the selection is **not** baked into the build on
-  the architectures that support dynamic preemption (x86 among them). The kernel
-  patches its preemption checkpoints in place, so the model can be chosen at boot
-  and even changed on a running system. `PREEMPT_LAZY` is the throughput-preferring
-  default in this set; `PREEMPT_FULL` the latency-preferring one. On architectures
-  without dynamic-preemption support the non-RT model is fixed at build time.
+- **`PREEMPT_RT` versus everything else is a build-time choice.** A real-time image (audio, control loops, networking gateways) is compiled with `PREEMPT_RT`; you cannot switch a running kernel *into* full real-time preemption. Peios provides reference images at the RT and non-RT levels, and downstream image builders pick whichever matches their workload.
+- **Among the non-real-time models** (`PREEMPT_NONE`, `PREEMPT_VOLUNTARY`, `PREEMPT_LAZY`, `PREEMPT_FULL`) the selection is **not** baked into the build on the architectures that support dynamic preemption (x86 among them). The kernel patches its preemption checkpoints in place, so the model can be chosen at boot and even changed on a running system. `PREEMPT_LAZY` is the throughput-preferring default in this set; `PREEMPT_FULL` the latency-preferring one. On architectures without dynamic-preemption support the non-RT model is fixed at build time.
 
-So preemption is unlike CPU isolation: isolation (`isolcpus=` and friends, below) is
-boot-cmdline-and-reboot only, whereas the non-RT preemption model is genuinely
-runtime-tunable on supporting hardware.
-
-> **Open Peios decision.** Whether Peios surfaces the runtime non-RT preemption
-> selection as a registry knob under `\System\Scheduling\` (managed by `ksyncd`,
-> alongside the RT bandwidth caps) or leaves it to the boot command line is not yet
-> settled — flagged for design.
+So preemption is unlike CPU isolation: isolation (`isolcpus=` and friends) is boot-cmdline-and-reboot only, whereas the non-RT preemption model is genuinely runtime-tunable on supporting hardware. Peios does not currently surface the runtime preemption-model selection through the registry; select the non-RT model on the kernel command line.
 
 ## SMP-only
 
@@ -204,24 +187,24 @@ The mechanism is bounded — the kernel will not defer preemption indefinitely, 
 
 ## Pressure stall information
 
-Modern Linux exposes per-resource **Pressure Stall Information** (PSI) — files at `/proc/pressure/cpu`, `/proc/pressure/memory`, and `/proc/pressure/io` that report what fraction of recent time tasks were stalled waiting for the resource. Two metrics per file:
+The kernel exposes per-resource **Pressure Stall Information** (PSI) — files at `/proc/pressure/cpu`, `/proc/pressure/memory`, and `/proc/pressure/io` that report what fraction of recent time tasks were stalled waiting for the resource. Two metrics per file:
 
 - `some` — fraction of time at least one runnable task was stalled
 - `full` — fraction of time *all* runnable tasks were stalled (memory and io only)
 
 Each metric is reported over three time windows: 10-second, 60-second, and 300-second moving averages.
 
-PSI is the recommended observability surface for capacity planning and autoscaling decisions on Peios. It replaces older indicators like load average — load average conflates runnable, blocked, and uninterruptible-sleep tasks; PSI distinguishes them and reports actual contention. Per-cgroup PSI is also available under each cgroup's `cpu.pressure`, `memory.pressure`, `io.pressure` files, gated by the cgroup hierarchy's normal access controls.
+PSI is the recommended observability surface for capacity planning and autoscaling decisions on Peios. It replaces older indicators like load average — load average conflates runnable, blocked, and uninterruptible-sleep tasks; PSI distinguishes them and reports actual contention. Per-cgroup PSI is also available under each cgroup's `cpu.pressure`, `memory.pressure`, `io.pressure` files.
 
-Reading the global PSI files is unprivileged. Reading a cgroup's PSI is gated by the cgroup membership-management SD.
+Reading the global PSI files is unprivileged. Reading a cgroup's PSI is subject to the cgroup filesystem's access controls.
 
 ## Scheduler observability and tuning internals
 
-A handful of additional substrate features appear in the inventory of completeness:
+A few more substrate features are worth knowing about, even though Peios adds nothing on top of them:
 
 - **Autogroups (`CONFIG_SCHED_AUTOGROUP`).** Per-session automatic process grouping for the Normal class. When enabled, each interactive session is treated as a group and gets a fair share of CPU, preventing one user's heavy compute from starving another's interactive work. A kernel-build option Peios images may enable or disable depending on workload.
 - **Energy-aware scheduling (EAS).** On heterogeneous-CPU hardware (big.LITTLE, P-core/E-core hybrids), EAS factors energy efficiency into placement decisions. Activates automatically when running on appropriate hardware; no user-facing API.
-- **Load balancing.** The scheduler periodically rebalances runnable tasks across CPUs to keep them all busy. Substrate behaviour with no Peios-specific knobs beyond affinity (covered above) and isolation (covered in [CPU Affinity and Isolation](cpu-affinity-and-isolation)).
+- **Load balancing.** The scheduler periodically rebalances runnable tasks across CPUs to keep them all busy. Substrate behaviour with no Peios-specific knobs beyond CPU affinity (gated as described above) and boot-time isolation (`isolcpus=` and related command-line options).
 - **`/proc/schedstat`.** System-wide scheduler statistics — wakeup counts, balance counts, runtime distributions. Useful for tuning when investigating scheduler behaviour. Read access is unprivileged.
 - **`/proc/[pid]/sched`.** Per-task scheduler debug information — virtual runtime, runqueue placement, and other internal counters. Read access is gated by the process SD (`PROCESS_QUERY_INFORMATION`) and by the PIP `/proc` default-deny rule for protected processes.
 
@@ -233,20 +216,24 @@ For workloads with very specific scheduling requirements that the standard class
 
 A BPF scheduler is a userspace project (typically written in C with libbpf or in Rust) that compiles to BPF and is loaded into the kernel at runtime. Once loaded, it owns scheduling decisions for tasks placed in its class: enqueue, dequeue, pick-next-task, runqueue migration, and idle-CPU selection are all callbacks into the BPF program. If the BPF program crashes, errors out, or fails to make progress within a timeout, the kernel automatically reverts to the default scheduler — sched_ext cannot brick the system.
 
-The framework includes substrate niceties beyond the basic dispatch: LLC and NUMA-aware idle-CPU selection so BPF schedulers get sensible cache behaviour by default, and a deadline-server backstop that bounds how much CPU bandwidth a misbehaving BPF scheduler can monopolise before kernel intervention.
+The framework includes niceties beyond the basic dispatch: LLC and NUMA-aware idle-CPU selection so BPF schedulers get sensible cache behaviour by default, and a deadline-server backstop that bounds how much CPU bandwidth a misbehaving BPF scheduler can monopolise before kernel intervention.
 
-### Privilege model
+### Authority
 
-Loading a BPF scheduler is one of the most consequential operations on a system. The scheduler runs at every dispatch decision on every CPU; it sees timing information about every task; a poorly-written or malicious scheduler can degrade the entire host's performance even with the kernel's safety nets in place.
-
-Peios gates BPF scheduler loading on a dedicated **`SeLoadSchedulerPrivilege`**. The privilege is not held by default by any standard service or user role — it must be granted explicitly to the operator or daemon responsible for managing custom schedulers. Holding `CAP_BPF` or `CAP_SYS_ADMIN` is not sufficient on Peios; the dedicated privilege is the gate.
-
-Loading, swapping, or unloading a BPF scheduler is unconditionally audit-loud regardless of the success/failure quartet. The audit record includes the scheduler's BPF program identity, the loading principal's token, and the previous scheduler (if any).
+Loading a BPF scheduler is one of the most consequential operations on a system: the scheduler runs at every dispatch decision on every CPU, and it sees timing information about every task. Loading is gated by the substrate's own BPF capability checks — Peios defines no dedicated scheduler-loading privilege. Treat scheduler management as platform-administrator work; on a hardened deployment, no ordinary service or user role should hold the capability-substrate bits that allow it.
 
 ### Operational notes
 
 - BPF schedulers compose with the standard real-time classes (`SCHED_FIFO`, `SCHED_RR`, `SCHED_DEADLINE`) — those continue to take precedence. sched_ext effectively replaces the Normal class for tasks that opt into it.
-- A BPF scheduler is process-state in the same sense the standard scheduler is: it survives across `fork` and `exec`, but is unloaded when the loading principal explicitly detaches or when the kernel revokes it under a fault.
+- A BPF scheduler is loaded system-wide: it survives across `fork` and `exec`, and is unloaded when the loading principal explicitly detaches or when the kernel revokes it under a fault.
 - Native Peios applications do not interact with sched_ext directly — they continue to use the standard `sched_setattr()` API. sched_ext is an operator-tier facility for site-wide scheduler customisation, not an application-level API.
 
-For most Peios deployments the default scheduler (EEVDF + the standard real-time classes) is the right answer. sched_ext is available for advanced operators with a specific workload-tuning case, gated behind a privilege that makes accidental enabling impossible.
+For most Peios deployments the default scheduler (EEVDF + the standard real-time classes) is the right answer.
+
+## Where to go next
+
+For the process and thread model this page builds on — what a thread is, how clone and exec behave — read [The process and thread model](~peios/threads-and-processes/the-process-and-thread-model).
+
+For how `SeIncreaseBasePriorityPrivilege` fits the wider privilege model, read [Privileges](~peios/privileges/overview); for the full catalog entry, see the [privilege catalog](~peios/constants-and-catalogs/privilege-catalog).
+
+For the PIP dominance rules that gate cross-process scheduling changes, read [Process integrity protection](~peios/process-integrity-protection/overview).

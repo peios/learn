@@ -2,6 +2,11 @@
 title: Pools and parallelism
 type: how-to
 description: How the resource pool, per-file claims, PSI throttling, and CPU overcommit shape parallel test execution. How to tune for your hardware.
+related:
+  - provium/running-tests/the-cli
+  - provium/writing-tests/labs-and-scope
+  - provium/reference/lab
+  - provium/running-tests/events-and-coverage
 ---
 
 Provium's dispatcher runs multiple test files in parallel against a shared resource pool. Each file declares what it needs (or accepts the per-file overhead default), and the dispatcher schedules as many as fit. This page covers how to think about that for your test corpus.
@@ -71,9 +76,9 @@ Files queue at the pool until their reservation fits. The order is stable — th
 
 ## PSI throttling
 
-On Linux hosts with `/proc/pressure/cpu` available, Provium spawns a PSI monitor at startup. When CPU pressure crosses the threshold (default 50 % some-pressure averaged over 10 seconds), the dispatcher pauses new file dispatches until pressure drops.
+On Linux hosts with pressure stall information (PSI) available, Provium spawns a pressure monitor at startup. It polls CPU and memory pressure once a second; when either crosses the threshold (10 % some-pressure averaged over 10 seconds), the dispatcher pauses new file dispatches until pressure drops.
 
-Tunable via the harness source — the constants are `DEFAULT_PSI_THRESHOLD_PCT` and `DEFAULT_PSI_INTERVAL` in `provium-host/src/scheduler/psi.rs`. There's no CLI flag yet (under discussion).
+The threshold and poll interval are fixed — they are not configurable from the CLI.
 
 Files that are already in flight continue. The throttling only delays new dispatch.
 
@@ -143,7 +148,7 @@ provium tests/ --cpus 4 --mem 8G --no-ksm
 
 ### "I want to detect over-subscription"
 
-Watch the `pool_state` and `file_blocked` event streams. Frequent `file_blocked` with `reason = pool_full` means files are claiming more than the pool can serve in parallel — either the pool is too small or claims are too generous. Frequent `file_blocked` with `reason = psi_pressure` means the host is genuinely overloaded — raise the PSI threshold or reduce parallelism.
+Watch the `pool_state` and `file_blocked` event streams. Frequent `file_blocked` with `reason = pool_full` means files are claiming more than the pool can serve in parallel — either the pool is too small or claims are too generous. Frequent `file_blocked` with `reason = psi_pressure` means the host is genuinely overloaded — reduce parallelism (`--cpus`, `--mem`) or move other workloads off the host.
 
 ### "I want to debug a slow run"
 

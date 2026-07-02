@@ -44,7 +44,7 @@ $ logonse show 4711
 
 ### A caveat on list and show
 
-There is no single kernel call that enumerates logon sessions. `logonse list` and `logonse show` work by walking the running processes and reading each one's token to find which session it belongs to. That has two consequences worth knowing:
+There is no *syscall* that enumerates logon sessions, and `logonse` does not read the kernel's sessions file (whose SD restricts it to Administrators and SYSTEM). `logonse list` and `logonse show` work by walking the running processes and reading each one's token to find which session it belongs to. That has two consequences worth knowing:
 
 - It is **best-effort**. A session that has no running process — held alive only by a token file descriptor somewhere — will not appear, because there is no process to find it through.
 - It is a **snapshot under change**. Processes start and exit while the walk runs, so the result is a close approximation of the moment, not a locked one.

@@ -2,6 +2,11 @@
 title: Meta tags
 type: reference
 description: The optional second arg to test() is a metadata table. Provium inspects a handful of well-known keys (slow, skip, tags, timeout, spec) for filtering, gating, and event emission; arbitrary keys are passed through to consumers like provium-coverage.
+related:
+  - provium/reference/test-framework
+  - provium/writing-tests/the-test-function
+  - provium/reference/cli
+  - provium/reference/events
 ---
 
 Each `test(name, meta, fn)` call may include a metadata table. Provium's runner inspects a handful of well-known keys, but every key is preserved in the `MetaMap` it ships in `TestStarted` / `TestPassed` / `TestFailed` / `TestSkipped` events. Consumers like `provium-coverage` use this for spec linkage, classification, and filtering.

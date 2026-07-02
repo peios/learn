@@ -1,5 +1,5 @@
 ---
-title: Signing Keys
+title: Signing keys
 type: how-to
 description: How to generate, store, publish, and rotate the Ed25519 signing key that authenticates everything the build farm produces.
 related:
@@ -13,7 +13,7 @@ The build farm's signing key is the single point of trust for everything it publ
 
 Every artefact `peipkg-manager` publishes carries a signature made by this one key:
 
-- Each `.peipkg` file (inline signature inside the tar archive — [PSD-009 §5.1](../../../specs/psd-009--peipkg/v0.22/5-signing/1-package-signature)).
+- Each `.peipkg` file (inline signature inside the tar archive — [PSD-009 §5.1](/spec/psd-009/v0.22/signing/package-signature/)).
 - The repository descriptor at `<repo-base>/repo.json` (detached `.sig` file).
 - The active and archive indexes (detached `.sig` files).
 
@@ -70,7 +70,7 @@ Consumers fetch the public key file at the conventional URL `<repo-base>/keys/<f
 
 Publishing the *fingerprint* (so a user can verify they've fetched the right key) is the operator's job. For the official Peios repo, fingerprints go on the project website, in the OS image, and in trail-of-trust documentation. For a custom repo, anywhere your users will look.
 
-> [!IMPORTANT]
+> [!WARNING]
 > Fingerprint distribution is the trust anchor. A user adding your repo will type or paste the fingerprint they got from your website to verify the key the package manager fetched. If an attacker can substitute the fingerprint *at the source* — by compromising your DNS, your TLS cert, your website CMS — they own the trust chain. Pick distribution channels you can defend, and consider distributing through more than one (website, README in the OS image, a side-channel like an email signature).
 
 ## What NOT to do
@@ -90,7 +90,7 @@ A standard backup test: occasionally stand up a fresh build host from the backup
 
 ## Rotation
 
-The spec defines three key statuses ([PSD-009 §6.1.4](../../../specs/psd-009--peipkg/v0.22/6-repository/1-descriptor)): `active`, `transitioning`, `revoked`. Rotation moves a key through these states.
+The spec defines three key statuses ([PSD-009 §6.1.4](/spec/psd-009/v0.22/repository/descriptor/)): `active`, `transitioning`, `revoked`. Rotation moves a key through these states.
 
 ### Routine rotation (no compromise)
 
@@ -107,7 +107,7 @@ The transitioning model lets you rotate without breaking consumers. Steps:
 5. Restart `peipkg-manager`. New publishes are signed with the new key.
 6. After 30 days (or whenever you're confident consumers have refreshed), edit `repo.json` again to remove the old key entirely. Re-sign with the new key.
 
-The transition window must be longer than your consumers' typical refresh interval. The default consumer trust-state max-age is 30 days ([PSD-009 §6.5.4](../../../specs/psd-009--peipkg/v0.22/6-repository/5-trust-model)), so 30 days is a sensible floor.
+The transition window must be longer than your consumers' typical refresh interval. The default consumer trust-state max-age is 30 days ([PSD-009 §6.5.4](/spec/psd-009/v0.22/repository/trust-model/)), so 30 days is a sensible floor.
 
 > [!NOTE]
 > v0 of `peipkg-repo` doesn't ship a `rotate-key` subcommand — the workflow is manual JSON edits + a re-sign with the existing key. Rotation is rare enough that automating it carefully (with a transition-period scheduler, sanity checks against descriptor consistency, etc.) is real work that v1 doesn't yet need. When the workflow becomes a regular operation, the subcommand can be added.
@@ -122,4 +122,10 @@ If the key is *known* compromised:
 4. Publish the new descriptor. Consumers refreshing get the revoked status and reject any signature from the compromised key going forward.
 5. Notify users out-of-band — the in-band revocation works for consumers who refresh, but consumers caching the old descriptor still trust the compromised key until they re-sync.
 
-The spec recommends keeping an *offline* signing key for descriptor updates so you can publish revocation even if the compromised key is the same one that signs descriptors ([PSD-009 §5.2.6](../../../specs/psd-009--peipkg/v0.22/5-signing/2-key-management)). For v0 with one signing key, you can't sign a revocation without using the compromised key — practically, this means a compromise event means consumers need to add a new trust anchor out-of-band. Plan accordingly.
+The spec recommends keeping an *offline* signing key for descriptor updates so you can publish revocation even if the compromised key is the same one that signs descriptors ([PSD-009 §5.2.6](/spec/psd-009/v0.22/signing/key-management/)). For v0 with one signing key, you can't sign a revocation without using the compromised key — practically, this means a compromise event means consumers need to add a new trust anchor out-of-band. Plan accordingly.
+
+## Where to go from here
+
+- [Configuration](~peios-packages/running-a-farm/configuration) — pointing the daemon at the key via `[signing].key_file`.
+- [Hosting on Cloudflare R2](~peios-packages/running-a-farm/hosting/r2) — publishing the repository (and the public key) where consumers fetch it.
+- [peipkg-repo CLI](~peios-packages/reference/cli-peipkg-repo) — the tool that signs and re-signs descriptors and indexes.

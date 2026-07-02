@@ -1,6 +1,6 @@
 ---
 title: Inspecting tokens
-type: concept
+type: reference
 description: A token's contents are read via KACS_IOC_QUERY on a token fd. Token fds come from kacs_open_self_token, /proc/<pid>/token, /sys/kernel/security/kacs/self, and a few other paths. Each query is a numbered class returning structured data. This page covers the query mechanism, the catalog of classes, and the two-call pattern for variable-length data.
 related:
   - peios/inspecting/overview
@@ -10,7 +10,7 @@ related:
   - peios/tokens/token-types
 ---
 
-A token's fields are read through the `KACS_IOC_QUERY` ioctl on a token fd. The ioctl takes a query class — a small integer naming what to return — and returns the corresponding data structured per that class. There are 24 defined classes covering everything from "the user SID" to "the full set of resource attribute claims".
+A token's fields are read through the `KACS_IOC_QUERY` ioctl on a token fd. The ioctl takes a query class — a small integer naming what to return — and returns the corresponding data structured per that class. There are 24 defined classes covering everything from "the user SID" to "the full set of user and device claims".
 
 This page covers how to obtain a token fd, the query ioctl mechanics, the two-call pattern for queries with variable-length output, and an overview of the class catalog.
 
@@ -63,7 +63,7 @@ The "two-call pattern" — size query then fetch — is the standard way to hand
 2. Allocate a buffer of the indicated size.
 3. Call again with `buf_ptr` set to the buffer and `buf_len` set to its size. The kernel writes the response.
 
-For classes with a fixed-size response (most of them), a single call with a buffer of the known size works in one go. The two-call pattern is needed only for classes whose response size depends on the token's contents (the groups class, the privileges class, the claims classes).
+For classes with a fixed-size response, a single call with a buffer of the known size works in one go. The two-call pattern is needed only for classes whose response size depends on the token's contents (the groups class, the restricted-SIDs class, the default-DACL class, the claims classes).
 
 The ioctl is **idempotent** — multiple queries for the same class produce the same result as long as the token has not been modified. Tokens carry a `modified_id` counter that increments on adjustment; if a query is part of a pipeline that depends on consistency across multiple queries, the `modified_id` can be queried first to detect mid-pipeline changes.
 
@@ -75,30 +75,28 @@ There are 24 defined query classes. Each returns a structured payload defined fo
 |---|---|
 | `TokenUser` | The token's `user_sid` and its attributes. |
 | `TokenGroups` | The `groups` array — every group SID with its attributes. Variable length. |
-| `TokenPrivileges` | The privilege bitmask — present, enabled, used, enabled_by_default. |
+| `TokenPrivileges` | The four privilege bitmasks — present, enabled, enabled-by-default, used. |
 | `TokenOwner` | The default owner SID. |
 | `TokenPrimaryGroup` | The default primary group SID. |
 | `TokenDefaultDacl` | The token's default DACL. Variable length. |
 | `TokenSource` | The source name and source-LUID identifying who minted the token. |
 | `TokenType` | Primary or Impersonation. |
-| `TokenImpersonationLevel` | Anonymous / Identification / Impersonation / Delegation (only meaningful for Impersonation tokens). |
-| `TokenStatistics` | `token_id`, `auth_id`, modified_id, creation timestamp, expiry, dynamic charge, and so on. |
+| `TokenImpersonationLevel` | Anonymous / Identification / Impersonation / Delegation (Primary tokens return Anonymous). |
+| `TokenStatistics` | `token_id`, `auth_id` (the logon-session ID), `modified_id`, token type, and expiry. |
 | `TokenRestrictedSids` | The `restricted_sids` array. Variable length. |
 | `TokenSessionId` | The interactive session ID. |
-| `TokenGroupsAndPrivileges` | A combined version of TokenGroups and TokenPrivileges for performance. Variable length. |
-| `TokenSessionReference` | The session reference (a token holds onto its session via this; less commonly inspected). |
-| `TokenSandBoxInert` | (Reserved / future use.) |
-| `TokenAuditPolicy` | The token's `audit_policy` bitmask. |
-| `TokenOrigin` | The originating session LUID for derived tokens. |
+| `TokenOrigin` | The originating logon-session ID. |
 | `TokenElevationType` | Default / Full / Limited. |
-| `TokenLinkedToken` | If part of a linked pair, the partner. (Returns a token fd; subject to additional access rules.) |
-| `TokenElevation` | A simplified "is this elevated" query. |
-| `TokenHasRestrictions` | A boolean: is this a restricted token? |
 | `TokenIntegrityLevel` | The integrity SID. |
-| `TokenUiAccess` | The UI-access flag. (Reserved.) |
 | `TokenMandatoryPolicy` | The `mandatory_policy` flags (NO_WRITE_UP, NEW_PROCESS_MIN). |
+| `TokenLogonType` | How the token's logon session was created — interactive, network, batch, service, and so on. |
+| `TokenLogonSid` | The logon session's logon SID (`S-1-5-5-X-Y`). |
+| `TokenAppContainerSid` | The confinement SID. Empty if the token is not confined. |
+| `TokenCapabilities` | The confinement capability SIDs with their attributes. Variable length. |
 
-This is the full v0.20 list. Each class's exact byte-level payload format is in the [Wire formats reference](~peios/wire-formats-reference/overview); this page covers what each class is for.
+The remaining classes are `TokenDeviceGroups` (the device group SIDs), `TokenUserClaims` and `TokenDeviceClaims` (the claim arrays evaluated by conditional ACEs), and `TokenProjectedSupplementaryGids` (the token's projected Linux supplementary GIDs). Note there is no query class for the partner of a linked token pair — that goes through a separate ioctl, `KACS_IOC_GET_LINKED_TOKEN`, with its own access rules.
+
+Each class's exact byte-level payload format is in the [Wire formats reference](~peios/wire-formats-reference/overview); this page covers what each class is for.
 
 ## Patterns by use case
 
@@ -123,7 +121,7 @@ A few clarifications:
 - **You cannot modify a token through a query class.** Queries are read-only. Modification goes through AdjustPrivileges, AdjustGroups, AdjustDefault, or `kacs_set_sd`.
 - **You cannot enumerate every token on the system.** There is no "list all tokens" call. You can walk `/proc/*/token` to find tokens belonging to currently-running processes, but tokens held only by file descriptors with no associated running process are not enumerable.
 - **You cannot read tokens you do not have authority for.** A token fd with only `TOKEN_QUERY` lets you query, but the fd had to be opened with appropriate authority. The query ioctl does not bypass the access checks at open time.
-- **You cannot query classes that are reserved.** A class number reserved for future use (some of the higher-numbered slots) returns `-EINVAL`. Only the defined classes are valid.
+- **You cannot query undefined classes.** Class numbers outside the defined range (1–24) return `-EINVAL`. There are no hidden or reserved slots — all 24 defined classes are valid.
 
 ## Reading from the shell
 

@@ -41,6 +41,7 @@ Treat `shred` as effective on a plain local file system and uncertain otherwise.
 | `-x`, `--exact` | Do not round the shredded size up to the next full block. Without it, `shred` rounds up so the block's slack space is overwritten too. |
 | `--random-source=FILE` | Take the random bytes for the overwrite passes from `FILE`. |
 | `-v`, `--verbose` | Show progress as each pass runs. |
+| `-f`, `--force` | Override a file's protection: when a live access check shows you cannot write the file, rewrite its security descriptor so the overwrite can proceed (see below). |
 
 ## `--force` and a file's protection
 

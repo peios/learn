@@ -29,7 +29,7 @@ Signing is a kernel concern, not a userspace one. The kernel:
 - Verifies it against the compiled-in public-key catalogue.
 - Sets the `pip_type` and `pip_trust` fields on the new process's PSB.
 
-Userspace tools — typically the image builder, `peiso` — produce the signature at build time. They have the private key, compute the hash, generate the signature blob, attach it to the binary, and ship it. After that, the private key MUST NOT be present on any running Peios system. Verification is public-key only; the only credential a running system needs is the public key, which is compiled into the kernel image.
+Userspace tools — typically the image builder, `peiso` — produce the signature at build time. They have the private key, compute the hash, generate the signature blob, attach it to the binary, and ship it. After that, the private key must not be present on any running Peios system. Verification is public-key only; the only credential a running system needs is the public key, which is compiled into the kernel image.
 
 The split between userspace signing and kernel verification means a Peios system can never sign new binaries itself. Distribution of new signed binaries happens through the package system, with signatures produced offline by whoever holds the relevant private key.
 

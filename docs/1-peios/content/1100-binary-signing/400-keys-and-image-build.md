@@ -1,7 +1,7 @@
 ---
 title: Keys and image build
 type: concept
-description: The kernel's public-key catalogue is compiled into the kernel image at build time. The corresponding private keys are held by image builders and MUST NOT be present on a running Peios system. This page covers the key catalogue, the peiso image-build flow, the constraints on key handling, and the v0.20 limitation of one signing key.
+description: The kernel's public-key catalogue is compiled into the kernel image at build time. The corresponding private keys are held by image builders and must not be present on a running Peios system. This page covers the key catalogue, the peiso image-build flow, the constraints on key handling, and the v0.20 limitation of one signing key.
 related:
   - peios/binary-signing/overview
   - peios/binary-signing/signature-format
@@ -47,9 +47,11 @@ Future Peios versions will add keys for the other tiers. App-level signing will 
 
 The TCB **private key** is what `peiso` uses to sign TCB binaries at image build. It is the most security-sensitive artefact in the entire system: anyone with the TCB private key can sign a binary that the kernel will then trust at the highest level. There is no revocation, no per-binary blocklist, no way to invalidate a signed binary short of removing it.
 
-The constraints on the private key are absolute:
+> [!CAUTION]
+> **The TCB private key must never be present on any running Peios system.** It is for image build, and only image build. A running system has no need for the private key — the kernel verifies with the public key only.
 
-- **The TCB private key MUST NOT be present on any running Peios system.** It is for image build, and only image build. A running system has no need for the private key — the kernel verifies with the public key only.
+The other constraints on the private key are just as absolute:
+
 - **The key is held by whoever builds the system image** (in practice, the Peios project's release infrastructure for the official distribution; potentially a downstream packager for a fork).
 - **The key is not distributed.** Users do not get a copy of the private key. They get the binaries the private key was used to sign.
 
@@ -69,7 +71,7 @@ At build time, peiso:
    - Computes the appropriate content hash (ELF section zeroed for ELF, full file for non-ELF — see [Signature format](~peios/binary-signing/signature-format)).
    - Signs the hash with the TCB private key, producing a 64-byte Ed25519 signature.
    - Constructs the 65-byte blob (version byte + signature).
-   - For ELF binaries: inserts the `.peios.sig` section with the blob as its content, then re-computes the hash (now over the binary including the populated section, with the section zeroed during hashing per the ELF rule) and re-signs. (In practice the section is reserved with zeros first, then the signature is computed against the same zeroed bytes, then the section is populated; the resulting hash matches whatever the kernel will compute at verification time.)
+   - For ELF binaries: reserves the `.peios.sig` section (65 zero bytes) *before* hashing, then writes the blob into the reserved section after signing. Because the section is zeroed during hashing per the ELF rule, the hash the kernel computes at verification time matches the one that was signed.
    - For non-ELF binaries: writes the blob as a detached `.sig` file next to the binary. At image-assembly time, peiso reads the detached file and stamps the `security.peios.sig` xattr on the binary in the image's filesystem.
 4. The signed binaries are placed in the image. The detached `.sig` files are discarded.
 5. The image is finalised and emitted as an installable artefact.
@@ -100,3 +102,9 @@ For someone running Peios:
 - **Updates to TCB binaries come through the package system.** A new release of authd, say, is in a `.peipkg` signed by the project's package-signing infrastructure (separate from the TCB binary signing — packages have their own signature for distribution integrity). The binary inside the package carries the TCB-key signature for PIP. Installing the package places the binary on disk; the kernel verifies it at next exec.
 
 For administrators of a custom Peios fork (using their own kernel image with their own key catalogue), the same model applies with whatever keys they have defined: their TCB-equivalent key signs their TCB binaries, those binaries run at TCB-equivalent PIP, and nothing else has PIP protection unless they add keys to their catalogue.
+
+## Where to go next
+
+For the enforcement flow these keys feed — verification at exec and inode pinning — read [Verification and pinning](~peios/binary-signing/verification-and-pinning).
+
+For the per-process hardening flags that build on signing — LSV gates executable mappings by signature trust — read [Process mitigations](~peios/process-mitigations/overview).

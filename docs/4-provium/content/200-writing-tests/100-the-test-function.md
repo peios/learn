@@ -2,6 +2,10 @@
 title: Writing tests with test() and t
 type: how-to
 description: How to register tests, organise a file, use assertions, skip cleanly, log diagnostic data, and pick per-test metadata.
+related:
+  - provium/reference/test-framework
+  - provium/reference/meta-tags
+  - provium/writing-tests/labs-and-scope
 ---
 
 A Provium test file is a sequence of `test(...)` calls. The harness runs them in declaration order, gives each one a fresh `t` context, and records pass / fail / skip. This page covers the patterns for getting the most out of that loop.
@@ -61,13 +65,13 @@ The `t` context exposes:
 
 Every assertion that fires raises (with `error(..., 2)` so the call site, not the assertion implementation, is in the message). The harness catches the raise and records the test as Failed.
 
-Even when you wrap a body in `pcall` and swallow the error, the harness still detects the failure — `_failed` is sticky:
+Even when you wrap a body in `pcall` and swallow the error, the harness still detects the failure — an assertion marks the test failed before it raises, and that mark is sticky:
 
 ```lua
 test("expected to detect a failure", function(t)
     local ok = pcall(function() t:assert(false, "should fail") end)
     -- ok is false (we caught the assert), but the test still
-    -- reports Failed because t._failed is set.
+    -- reports Failed: the failure was recorded before the raise.
 end)
 ```
 

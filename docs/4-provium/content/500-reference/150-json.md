@@ -2,6 +2,9 @@
 title: json
 type: reference
 description: The `json` global — encode and decode JSON between Lua values and strings, backed by serde_json.
+related:
+  - provium/reference/provium-module
+  - provium/reference/test-framework
 ---
 
 `json` is a top-level Lua global. Two methods, both pure host-side functions (no VM round-trip).
@@ -71,7 +74,7 @@ Building a request body for a test client:
 
 ```lua
 local body = json.encode({op = "write", key = "k", value = "v"})
-vm:run({"curl", "-X", "POST", "-d", body, "http://localhost:8080/api"}):assert_ok()
+vm:run("curl", {"-X", "POST", "-d", body, "http://localhost:8080/api"}):assert_ok()
 ```
 
 ## Performance

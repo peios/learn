@@ -1,5 +1,5 @@
 ---
-title: peipkg-config.toml Reference
+title: peipkg-config.toml reference
 type: reference
 description: Compact field-by-field reference for peipkg-manager's configuration file. The how-to is on the configuration page.
 related:
@@ -8,7 +8,7 @@ related:
 
 `peipkg-manager` reads a single TOML configuration file passed via `--config`. Conventional path: `/etc/peipkg-manager/config.toml`.
 
-For the full discussion (defaults, edge cases, what-not-to-do), see [Configuration](../running-a-farm/configuration). This page is the schema reference.
+For the full discussion (defaults, edge cases, what-not-to-do), see [Configuration](~peios-packages/running-a-farm/configuration). This page is the schema reference.
 
 ## Sections
 

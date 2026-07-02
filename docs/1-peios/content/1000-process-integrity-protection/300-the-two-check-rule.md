@@ -150,3 +150,9 @@ The answer is that the two checks model different things and have different admi
 If you only had the SD, every binary that ran with the right token could reach any process. Privilege isolation would not exist; an administrator's debugger could attach to the TCB. Conversely, if you only had PIP, fine-grained per-process access control would be impossible; the TCB would be all-or-nothing.
 
 The two together give you both: identity-based control with PIP as a hard ceiling above it. The combination is the security model.
+
+## Where to go next
+
+For the practical consequences of the rule — the impersonation asymmetry, peinit as lifecycle manager, and the v0.20 limitations — read [PIP in practice](~peios/process-integrity-protection/pip-in-practice).
+
+For where PIP's checks sit in the wider AccessCheck pipeline, read [Access decisions](~peios/access-decisions/overview).

@@ -21,6 +21,7 @@ This page is the map.
 | [`printf`](~peios/output-and-evaluation/printf) | Print text from a format string, with precise control over layout. |
 | [`yes`](~peios/output-and-evaluation/yes) | Print a line over and over, without stopping. |
 | [`seq`](~peios/output-and-evaluation/seq) | Print a sequence of numbers. |
+| [`tee`](~peios/output-and-evaluation/tee) | Copy standard input to standard output and to each named file. |
 
 **The environment**
 

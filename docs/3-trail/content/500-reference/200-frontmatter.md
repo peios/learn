@@ -1,7 +1,11 @@
 ---
-title: Frontmatter Reference
+title: Frontmatter reference
 type: reference
 description: Complete table of all YAML frontmatter fields supported by Trail, with types, defaults, and descriptions.
+related:
+  - trail/content-authoring/pages-and-frontmatter
+  - trail/content-authoring/inter-page-links
+  - trail/features/seo
 ---
 
 Every content page in Trail can include a YAML frontmatter block at the top of the file, delimited by `---` lines. This page documents every supported field.
@@ -30,7 +34,7 @@ If a file has no frontmatter block, it is still processed. The page will have no
 | Field | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `title` | string | Yes | `""` | The page title. Displayed in the browser tab, breadcrumb navigation, sidebar links, category listings, search results, and the page heading. |
-| `type` | string | No | `""` | The page type. Trail renders a colored badge for recognized values. Common values are `concept` and `how-to`. Arbitrary strings are rendered as-is without an icon. |
+| `type` | string | No | `""` | The page type. Trail renders a coloured badge for recognised values. Common values are `concept` and `how-to`. Arbitrary strings are rendered as-is without an icon. |
 | `order` | integer | No | `0` | Sort position within the page's category. Lower numbers appear first. Pages with the same order are sorted alphabetically by slug. |
 | `description` | string | No | `""` | A short summary of the page. Used in `<meta name="description">`, `og:description`, search result cards, and category listing cards. |
 | `updated` | string | No | `""` | A date string displayed on the page as "Updated {date}". Trail does not parse or validate this value -- it is rendered as-is. Common formats: `2026-03-15`, `March 2026`. |
@@ -57,7 +61,7 @@ Pages without a title will have empty text in all of these locations.
 
 ### type
 
-Trail recognizes two type values with special rendering:
+Trail recognises two type values with special rendering:
 
 | Value | Badge text | Icon |
 |---|---|---|
@@ -75,6 +79,11 @@ Pages within a category are sorted by `order` first, then alphabetically by slug
 A common convention is to use increments of 10:
 
 ```yaml
+# first-page.md
+order: 10
+
+# second-page.md
+order: 20
 ```
 
 This leaves room to insert pages later without renumbering.

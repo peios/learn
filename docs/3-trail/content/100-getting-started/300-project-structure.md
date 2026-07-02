@@ -1,7 +1,12 @@
 ---
-title: Project Structure
+title: Project structure
 type: concept
-description: A Trail site is organized into four directories — trail.toml for configuration, content/ for pages, pathways/ for learning paths, and static/ for assets.
+description: A Trail site is organised into four directories — trail.toml for configuration, content/ for pages, pathways/ for learning paths, and static/ for assets.
+related:
+  - trail/getting-started/quick-start
+  - trail/configuration/trail-toml
+  - trail/content-authoring/pages-and-frontmatter
+  - trail/content-authoring/pathways
 ---
 
 A Trail project follows a fixed directory layout. There is no scaffolding command; you create the directories yourself.
@@ -48,7 +53,7 @@ All Markdown pages live here. The directory structure determines the site's info
 
 In multi-product mode, content is nested one level deeper: `content/product-slug/category/page.md`.
 
-Pages at the root of `content/` (not in any subdirectory) are uncategorized. They appear in the site but have no category sidebar.
+Pages at the root of `content/` (not in any subdirectory) are uncategorised. They appear in the site but have no category sidebar.
 
 ### How slugs are derived
 
@@ -72,7 +77,7 @@ The category is the first directory component of the path relative to the conten
 | `content/guides/configure.md` | `guides` |
 | `content/reference/api.md` | `reference` |
 
-Category titles are generated automatically by replacing hyphens with spaces and capitalizing the first letter. The directory name `getting-started` becomes the display title "Getting started".
+Category titles are generated automatically by replacing hyphens with spaces and capitalising the first letter. The directory name `getting-started` becomes the display title "Getting started".
 
 ## pathways/
 
@@ -90,7 +95,10 @@ A file at `static/images/logo.png` is available at `/images/logo.png` in the bui
 
 ## _site/ (output)
 
-The default output directory. Trail deletes and recreates this directory on every build. Do not put hand-written files here.
+The default output directory.
+
+> [!WARNING]
+> Trail deletes and recreates this directory on every build. Do not put hand-written files here.
 
 The output directory can be changed with the `--output` flag:
 

@@ -130,3 +130,9 @@ A few things distribution does not handle, that are worth knowing:
 - **Per-user policies.** A policy that should apply only to specific users is one whose effective DACL or applies-to expression filters by user identity. Distribution does not target specific users; every policy in the cache applies to whoever accesses an object that references it.
 
 These are policy-author concerns, not distribution concerns. The distribution layer is simple: push policies, identified by SID, into a cache the kernel consults. Everything else is the policy author's responsibility.
+
+## Where to go next
+
+For what the kernel does with a cached policy on each access check, read [Evaluation](~peios/central-access-policies/evaluation).
+
+For the boot-time coordination that decides when the CAAP cache is ready, read [Boot and trust establishment](~peios/boot-and-trust-establishment/overview).

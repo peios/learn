@@ -35,7 +35,7 @@ Confinement state lives in three fields on the token:
 
 All three are **set at token creation** and cannot be changed at runtime. authd is responsible for putting the right values on a confined application's token; once the token is minted, the fields are immutable.
 
-There is one rule the kernel checks at token creation: a confined token (one with a non-null `confinement_sid`) **must not** carry `ALL_APPLICATION_PACKAGES` (`S-1-15-2-1`) as one of its `confinement_capabilities`. The well-known SID would defeat the model — it matches every confined application, so granting it to one would be equivalent to no confinement at all. Tokens that violate this rule are rejected at creation.
+The kernel imposes no special rule on `ALL_APPLICATION_PACKAGES` (`S-1-15-2-1`) at token creation: its presence in `confinement_capabilities` is what selects normal confinement mode, and its absence selects strict mode. The kernel neither synthesises it nor rejects tokens that carry it — authd decides which capabilities a package's token receives. See [Capabilities and modes](~peios/confinement/capabilities-and-modes).
 
 ## The model in one paragraph
 

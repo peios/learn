@@ -126,3 +126,11 @@ The `unmanaged` class is what tells FACS to not interfere with these. The kernel
 | /sys | n/a — kernel-managed SDs | `unmanaged` |
 
 The pattern: real on-disk filesystems with xattr support get one of the `facs_*` classes depending on policy needs. Pseudo-filesystems and the kernel's own filesystems are `unmanaged`. Filesystems without xattr support default to ephemeral synthesis as the only viable mode.
+
+## Where to go next
+
+For what each policy class does with a missing SD, read [Policy classes](~peios/mount-policies/policy-classes).
+
+For setting and reading a mount's policy at runtime, read [Managing mounts](~peios/mount-policies/managing-mounts).
+
+For the structure of the SD being stored, read [Security descriptors](~peios/security-descriptors/overview).

@@ -1,7 +1,11 @@
 ---
-title: Pages and Frontmatter
+title: Pages and frontmatter
 type: concept
 description: Every page is a Markdown file with YAML frontmatter. The frontmatter controls the page's title, type, order, description, and relationships to other pages.
+related:
+  - trail/reference/frontmatter
+  - trail/getting-started/project-structure
+  - trail/content-authoring/inter-page-links
 ---
 
 Trail content files are standard Markdown with YAML frontmatter. The frontmatter block appears at the top of the file, delimited by `---` lines.
@@ -53,7 +57,7 @@ Trail processes content files through this pipeline:
 
 ## Page types
 
-The `type` field is a free-form string, but Trail renders badges for two recognized values:
+The `type` field is a free-form string, but Trail renders badges for two recognised values:
 
 | Type | Badge | Icon | Use for |
 |---|---|---|---|

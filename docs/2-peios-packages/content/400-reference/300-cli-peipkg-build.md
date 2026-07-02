@@ -66,7 +66,7 @@ Most users never need `pack`. If you're not sure whether you need it, you don't.
 
 ## Determinism
 
-Same recipe + same source + same flags → same `.peipkg` bytes, every time. The byte-determinism rules ([PSD-009 §3.1.4](../../../specs/psd-009--peipkg/v0.22/3-format/1-container)) are enforced internally:
+Same recipe + same source + same flags → same `.peipkg` bytes, every time. The byte-determinism rules ([PSD-009 §3.1.4](/spec/psd-009/v0.22/format/container/)) are enforced internally:
 
 - Tar entries are lex-sorted by path.
 - Every entry's mtime equals `--timestamp`.

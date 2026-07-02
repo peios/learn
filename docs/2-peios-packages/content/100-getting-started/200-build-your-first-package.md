@@ -1,5 +1,5 @@
 ---
-title: Build Your First Package
+title: Build your first package
 type: how-to
 description: Walk through producing a signed .peipkg from scratch using peipkg-build. The example builds a tiny "hello" package end-to-end on any Linux host.
 related:
@@ -19,9 +19,9 @@ A `.peipkg` named `hello_0.1-1_noarch.peipkg` containing one file: `usr/share/he
 Install the latest static `peipkg-build` binary:
 
 ```bash
-curl -sSL -o /usr/local/bin/peipkg-build \
+sudo curl -sSL -o /usr/local/bin/peipkg-build \
   https://github.com/peios/peipkg-build/releases/download/latest/peipkg-build-linux-amd64
-chmod +x /usr/local/bin/peipkg-build
+sudo chmod +x /usr/local/bin/peipkg-build
 peipkg-build help
 ```
 
@@ -83,8 +83,8 @@ chmod +x hello-pkg/recipe/build.sh
 openssl genpkey -algorithm ed25519 -out hello-pkg/test-signing.ed25519
 ```
 
-> [!CAUTION]
-> This key is for the example only. Real signing keys live on the build farm host with appropriate permissions; see [Signing keys](../running-a-farm/signing-keys) for the operational discussion.
+> [!NOTE]
+> This key is for the example only. Real signing keys live on the build farm host with appropriate permissions; see [Signing keys](~peios-packages/running-a-farm/signing-keys) for the operational discussion.
 
 ## Run the build
 
@@ -115,7 +115,7 @@ The filename follows the convention `<name>_<version>_<architecture>.peipkg` and
 |---|---|
 | `--recipe` | Path to `peipkg.toml`. The recipe directory is implied; `build.sh` is found relative to it. |
 | `--source` | Read-only source tree exposed to `build.sh` as `$SOURCE_DIR`. |
-| `--version` | The package version string. Format: `[<epoch>:]<upstream>-<peios_revision>` per [PSD-009 §2.2](../../../specs/psd-009--peipkg/v0.22/2-identity/2-versioning). |
+| `--version` | The package version string. Format: `[<epoch>:]<upstream>-<peios_revision>` per [PSD-009 §2.2](/spec/psd-009/v0.22/identity/versioning/). |
 | `--source-ref` | Recorded in the manifest's `build.source_ref` field — a machine-resolvable pointer to the inputs. Conventionally `git+<url>#<ref>`. |
 | `--farm-id` | The build farm's identifier. Recorded in the manifest's `build.farm_id` for provenance. |
 | `--timestamp` | RFC 3339 UTC timestamp ending in `Z`. Used as the mtime on every tar entry, which is how `peipkg-build` achieves byte-determinism. |
@@ -151,7 +151,15 @@ Run the same command a second time, with the same flags, and the resulting `.pei
 ```bash
 sha256sum hello-pkg/out/hello_0.1-1_noarch.peipkg
 mv hello-pkg/out/hello_0.1-1_noarch.peipkg hello-pkg/out/run-1.peipkg
-peipkg-build build --recipe ... --out hello-pkg/out  # same flags
+peipkg-build build \
+  --recipe hello-pkg/recipe/peipkg.toml \
+  --source hello-pkg/source \
+  --version 0.1-1 \
+  --source-ref "test://hello/0.1.0" \
+  --farm-id local-test \
+  --timestamp 2026-05-01T12:00:00Z \
+  --out hello-pkg/out \
+  --sign-key hello-pkg/test-signing.ed25519
 sha256sum hello-pkg/out/hello_0.1-1_noarch.peipkg hello-pkg/out/run-1.peipkg
 ```
 
@@ -161,7 +169,7 @@ Same input, same bytes. That property is what makes signatures meaningful and au
 
 The example is intentionally minimal — one stanza, one file, no dependencies. Real recipes have more moving parts:
 
-- **Multi-package splits.** A library typically ships as runtime + `-dev` + `-doc`, three stanzas from one build. See [Multi-package recipes](../authoring-recipes/multi-package).
-- **Dependencies.** Every non-trivial package depends on others. See [Dependencies](../authoring-recipes/dependencies).
-- **Tracking upstream.** When you want a build farm to pick up new upstream releases automatically, the recipe gains `[upstream]` and `[watch]` sections. See [Tracking upstream](../authoring-recipes/tracking-upstream).
-- **Putting it on a farm.** Once recipes work locally, [Set up a build farm](./set-up-a-build-farm) walks through `peipkg-manager`.
+- **Multi-package splits.** A library typically ships as runtime + `-dev` + `-doc`, three stanzas from one build. See [Multi-package recipes](~peios-packages/authoring-recipes/multi-package).
+- **Dependencies.** Every non-trivial package depends on others. See [Dependencies](~peios-packages/authoring-recipes/dependencies).
+- **Tracking upstream.** When you want a build farm to pick up new upstream releases automatically, the recipe gains `[upstream]` and `[watch]` sections. See [Tracking upstream](~peios-packages/authoring-recipes/tracking-upstream).
+- **Putting it on a farm.** Once recipes work locally, [Set up a build farm](~peios-packages/getting-started/set-up-a-build-farm) walks through `peipkg-manager`.

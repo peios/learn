@@ -2,6 +2,11 @@
 title: File
 type: reference
 description: A File userdata wraps an open file descriptor inside the guest. Use it to read, write, seek, tell, fd-to-int, tail, and close. Mirrors POSIX semantics.
+related:
+  - provium/writing-tests/files-and-handles
+  - provium/reference/vm
+  - provium/reference/streams
+  - provium/reference/worker
 ---
 
 A File is an open guest-side file handle, returned by `vm:open_file(path, mode)` or `worker:open_file(path, mode)`. Once closed, all ops error with `file is closed`. Idempotent: closing twice is safe.
@@ -13,7 +18,7 @@ A File is an open guest-side file handle, returned by `vm:open_file(path, mode)`
 | `vm:open_file(path, mode)` | New file handle in the guest. |
 | `worker:open_file(path, mode)` | Same but allocated under a worker's namespace. |
 
-Mode table fields: `read`, `write`, `create`, `truncate`, `append`, `exclusive`, `perm`. See [VM open_file](~provium/reference/vm#vmopen_filepath-mode_table) for the full mode-table reference.
+Mode table fields: `read`, `write`, `create`, `truncate`, `append`, `exclusive`, `perm`. See [VM open_file](~provium/reference/vm#vmopen-filepath-mode-table) for the full mode-table reference.
 
 At least one of `read`, `write`, or `append` must be true.
 

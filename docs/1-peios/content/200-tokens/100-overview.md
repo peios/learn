@@ -100,3 +100,5 @@ If you want to know how a token moves through fork, exec, adjustment, and destru
 If you are interested in the restricted-token model — the sandbox primitive where a token is intersected with a secondary identity list — read [Restricted and write-restricted tokens](~peios/tokens/restricted-tokens).
 
 If you need to understand UAC-style elevation — the linked Full/Limited token pair that lets one principal have two tokens for the same session — read [Elevation and linked tokens](~peios/tokens/elevation).
+
+To work with tokens from a shell — inspect, adjust, duplicate, restrict, impersonate — read [The token command](~peios/tokens/token-command).

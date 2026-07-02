@@ -1,7 +1,11 @@
 ---
-title: Built-in Templates
+title: Built-in templates
 type: concept
 description: Trail uses a fixed set of Go HTML templates to render every page type. This page documents what each template renders and the data it receives.
+related:
+  - trail/configuration/nav-and-theme
+  - trail/configuration/multi-product
+  - trail/content-authoring/pathways
 ---
 
 Trail has a fixed set of built-in templates. There is no theme system and no way to override templates through configuration. The templates are embedded in the Trail binary.
@@ -99,7 +103,7 @@ List all pathways as cards in a grid. Each card shows the pathway name, descript
 
 ## 404 template
 
-A simple centered page showing "404", "This page doesn't exist.", and a link back to the homepage.
+A simple centred page showing "404", "This page doesn't exist.", and a link back to the homepage.
 
 ## Print template
 

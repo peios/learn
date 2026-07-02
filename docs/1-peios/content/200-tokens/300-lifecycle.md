@@ -30,7 +30,7 @@ In all three cases the kernel:
 2. Allocates a new token object with `refcount = 1`.
 3. Assigns a fresh `token_id` LUID and `modified_id = 0`.
 4. Stamps the `created_at` timestamp.
-5. Injects the appropriate logon SID into the groups list (callers MUST NOT supply it).
+5. Injects the appropriate logon SID into the groups list (callers must not supply it).
 6. Returns a token file descriptor with `TOKEN_ALL_ACCESS` (for create) or the access mask the caller asked for (for duplicate).
 
 Any validation failure results in no token being created — the operation is all-or-nothing.
@@ -151,3 +151,11 @@ A token's `expiration` field has no effect on the lifecycle in v0.20 — it is s
 | AdjustGroups | Same | Same | Changed (within rules) | Same | Same object |
 | KACS_IOC_INSTALL | Same token, different process | — | — | — | New attachment |
 | Process exit | — | — | — | — | −1 |
+
+## Where to go next
+
+For what FilterToken's restricted variants actually do at access-check time, read [Restricted and write-restricted tokens](~peios/tokens/restricted-tokens).
+
+For the session a token belongs to and what happens when the last token of a session is released, read [Logon sessions](~peios/logon-sessions/overview).
+
+To drive these transitions from a shell — duplicate, restrict, adjust, install — read [The token command](~peios/tokens/token-command).

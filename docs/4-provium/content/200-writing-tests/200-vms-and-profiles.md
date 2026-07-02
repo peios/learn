@@ -2,6 +2,11 @@
 title: VMs and profiles
 type: how-to
 description: How to create, boot, snapshot, restore, pause, reset, and inject files into VMs. How profiles map to kernel/initrd choices, and how multiple profiles let one test run against different kernels.
+related:
+  - provium/reference/vm
+  - provium/configuration/profiles
+  - provium/reference/snapshot
+  - provium/writing-tests/labs-and-scope
 ---
 
 Every Provium test ultimately drives one or more guest VMs. This page covers the lifecycle: creating a VM, picking its profile, controlling boot, taking snapshots, and tearing down.
@@ -24,7 +29,7 @@ Optional third arg is a boot-opts table (memory, cpus, kernel cmdline, files, et
 local vm = provium:vm("v", "peios", {
     memory = "2G",
     cpus = 4,
-    kernel_cmdline = "console=hvc0 quiet earlyprintk=hvc0",
+    kernel_cmdline = "console=ttyS0 quiet earlyprintk=ttyS0",
     rng_seed = 0xdeadbeef,
     initial_time = 1700000000,
     files = {
@@ -69,7 +74,7 @@ A profile is a `[profiles.<name>]` block in `provium.toml`:
 [profiles.peios]
 kernel   = "/build/peios/bzImage"
 initrd   = "/build/peios/initrd.cpio.gz"
-cmdline  = "console=hvc0 quiet"
+cmdline  = "console=ttyS0 quiet"
 guest_os = "peios"
 ```
 
@@ -120,7 +125,7 @@ You typically don't call `:shutdown()` explicitly. The harness's resource-graph 
 | `memory` | int (bytes) or `"512M"`/`"2G"` | VM memory cap. Hands to QEMU as `-m <size>`. |
 | `cpus` | int | vCPU count. Hands to QEMU as `-smp <n>`. |
 | `kernel_cmdline` | string | Replaces the profile's `cmdline`. Useful for per-VM `loglevel`, `nokaslr`, etc. |
-| `rng_seed` | int (u64) | Seeds `virtio-rng`. Use for determinism in randomized tests. |
+| `rng_seed` | int (u64) | Seeds `virtio-rng`. Use for determinism in randomised tests. |
 | `initial_time` | int or float (sec since epoch) | Sets the guest's wall clock at boot. Float for sub-second precision. |
 | `files` | array of `{path, content}` | Files to inject into the guest's filesystem before init runs. The agent injects them by appending to the initramfs cpio. |
 

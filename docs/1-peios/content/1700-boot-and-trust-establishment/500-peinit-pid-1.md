@@ -1,7 +1,7 @@
 ---
 title: peinit at PID 1
 type: concept
-description: peinit is the init system of the real root, signed at TCB trust level, running with the SYSTEM token — it takes over once the initramfs has mounted the real root. It is responsible for the rest of userspace boot — applying mount policies, launching services, transitioning to a steady-state system. This page covers what peinit does, why it has to be PID 1, and the service-launching pattern that's its primary job.
+description: peinit is the init system of the real root, signed at TCB trust level, running with the SYSTEM token — it takes over once the initramfs has mounted the real root. It is responsible for the rest of userspace boot — bringing up the platform, launching services in dependency order, transitioning to a steady-state system. This page covers what peinit does, why it has to be PID 1, and the service-launching pattern that's its primary job.
 related:
   - peios/peinit/overview
   - peios/boot-and-trust-establishment/overview
@@ -16,12 +16,9 @@ related:
 
 The specific responsibilities are:
 
-- Apply mount policies to filesystems.
-- Push any boot-time CAAP via `kacs_set_caap`.
-- Populate the TLP (Trusted Library Paths) cache from configuration.
-- Launch authd.
-- Wait for authd to be ready.
-- Launch the remaining services, each with the appropriate token (from authd) and the appropriate mitigation flags applied.
+- Run the compiled-in Phase 1 bootstrap: probe that the root is writable, mount the virtual filesystems, restore the random seed, ensure the machine-id, set the clock from the RTC, and start registryd.
+- Read the service catalog from the registry (`Machine\System\Services\`), validate the dependency graph, and start services in dependency order — authd among them.
+- Mint SYSTEM tokens for platform services itself; request every other identity from authd.
 - Continue running as the system's lifecycle manager — handling service crashes, system shutdown, eventual reboot.
 
 This page covers each of these responsibilities, why peinit specifically is the right thing to be PID 1, and the patterns peinit uses for the work.
@@ -37,7 +34,7 @@ Peios chooses peinit specifically because:
 
 - **It's signed at TCB level.** When peinit is exec'd — by prelude, at the switch to the real root — the signature verification at exec sets `pip_type = Protected`, `pip_trust = 8192`. peinit is now PIP-protected at the highest level. No other process can signal it, debug it, or interfere with it.
 - **It runs on the SYSTEM token.** Inherited from init. peinit has every privilege; it can do anything that requires authority.
-- **It's purpose-built for the bootstrap.** Other init-style processes do general-purpose process management; peinit specifically knows about Peios's identity model, mount policies, CAAP distribution, and the service-launching pattern Peios uses.
+- **It's purpose-built for the bootstrap.** Other init-style processes do general-purpose process management; peinit specifically knows about Peios's identity model, its registry-defined service catalog, and the service-launching pattern Peios uses.
 
 The combination of "PIP-protected" and "all privileges" and "purpose-built" makes peinit the right thing to be PID 1. A general-purpose init that wasn't signed at TCB level would be a weak link — every TCB-level process (authd, loregd, eventd) is unreachable by their lifecycle manager, which means lifecycle management could only be done by another TCB-level process. That role is peinit.
 
@@ -51,94 +48,57 @@ This is documented in [PIP in practice](~peios/process-integrity-protection/pip-
 
 ## What peinit does at startup
 
-The full peinit startup sequence, in order:
+peinit's startup is two phases. The authoritative, step-by-step account lives in the peinit topic at [Boot and boot modes](~peios/peinit/boot-and-boot-modes); what follows is the trust-chain summary.
 
-### 1. Verify own integrity
+### Phase 1 — compiled-in bootstrap
 
-Before doing anything operationally meaningful, peinit verifies it is running in the right state — PID 1, PIP-protected at TCB level, holding the SYSTEM token. Anything else indicates the boot is broken; peinit refuses to proceed.
+Phase 1 runs before any configuration is available, in a fixed order compiled into the binary:
 
-This is defensive coding: peinit could be exec'd by an attacker who somehow inserted themselves between the initramfs and peinit. The verification catches that case. In normal operation it always passes.
+1. **Assert PID 1.** peinit refuses to run as anything else.
+2. **Probe that the real root is writable**, and ensure the virtual filesystems (`/proc`, `/sys`, `/dev`, …) are mounted.
+3. **Restore the random seed, ensure the machine-id, set the clock from the RTC.**
+4. **Start registryd** and probe the registry schema. The registry is the source of all subsequent configuration, so its daemon comes up before anything else.
+5. **Provision boot paths and infrastructure** — the control socket, the job filesystem, loopback networking.
 
-### 2. Apply mount policies
+### Phase 2 — the service graph
 
-peinit reads the mount-policy configuration from the registry (or compiled-in defaults if the registry isn't available yet) and applies each policy via `kacs_set_mount_policy`. This is what establishes the FACS behaviour for each filesystem — what's `facs_deny_missing`, what's `facs_synthesize_ephemeral`, etc.
+With the registry available, peinit reads the service catalog from `Machine\System\Services\`, validates the dependency graph, and starts services in dependency order. authd is an ordinary Critical service in this graph — started after the infrastructure it depends on (eudev, lpsd), gated by the same readiness mechanics as any other service, not by a special wait-for-authd phase.
 
-Mount policies need to be applied before any services start using their filesystems. Without a policy applied, FACS may default to a different behaviour than the deployment expects; getting the policies in place first means every subsequent access uses the intended rules.
+For each service, the pattern is **fork-install-exec**:
 
-### 3. Populate the TLP cache
-
-The Trusted Library Paths cache is a machine-wide kernel cache of approved directory prefixes that mitigation-enabled processes can load libraries from. peinit reads the TLP configuration (from the registry) and populates the cache.
-
-The cache is populated **before** any services are launched — services that have TLP enabled need the cache to be in place when they try to `mmap(PROT_EXEC)` libraries. A service starting with an empty TLP cache would have every library load refused.
-
-### 4. Push early-boot CAAP
-
-Some deployments have central access policies that need to be active before services start. peinit pushes these (via `kacs_set_caap`) so that the recovery policy isn't applied for objects covered by such CAAP during the rest of boot.
-
-This is a peinit-only operation in normal operation; authd will subsequently push the rest of the CAAP catalog. peinit handles only what needs to be in place very early.
-
-### 5. Launch authd
-
-peinit forks; the child becomes authd. The specific sequence:
-
-1. peinit calls `fork()`.
-2. The child runs early-startup code (still on the SYSTEM token).
-3. The child calls `KACS_IOC_INSTALL` to install a specific authd-tailored token (or, more commonly, peinit uses `FilterToken` first to produce a narrower token, then `KACS_IOC_INSTALL`s that). The token typically has fewer privileges than the full SYSTEM token — authd doesn't need `SeLoadDriverPrivilege` or `SeShutdownPrivilege`.
-4. peinit applies mitigations on the child via `kacs_set_psb` — WXP, LSV, TLP, CFIF, CFIB, PIE, etc. as appropriate.
-5. The child calls `execve` on the authd binary. The kernel verifies the binary's signature (signed at TCB) and sets `pip_type = Protected, pip_trust = 8192` on the new process.
-6. authd starts running.
-
-peinit waits for authd to signal readiness — typically by authd writing a status fd, by reaching a steady state observable from peinit, or by authd's own startup protocol indicating completion.
-
-### 6. Wait for authd to be ready
-
-peinit blocks until authd has finished its own startup work — connecting to the directory, populating the CAAP cache, marking itself ready. While waiting, peinit may run other services that don't depend on authd (the registry daemon, observability daemons).
-
-Services that depend on authd cannot start until this step completes. peinit's startup configuration declares the dependencies; peinit honours them.
-
-### 7. Launch the rest of the services
-
-Once authd is ready, peinit can launch the rest of userspace. For each service, the pattern is:
-
-1. peinit asks authd for a token for this service. Authd consults the directory and produces a token with the appropriate identity, groups, privileges, claims for this service.
-2. peinit forks. The child gets a SYSTEM-derived token initially (inherited).
+1. peinit obtains the service's token — minted by peinit itself for SYSTEM/platform services, requested from authd for every other identity (see [Identity and privileges](~peios/peinit/identity-and-privileges)).
+2. peinit forks; the child inherits a SYSTEM-derived token.
 3. peinit installs the service-specific token on the child via `KACS_IOC_INSTALL`.
-4. peinit applies mitigations on the child PSB via `kacs_set_psb`.
-5. The child execs the service binary. The kernel verifies signature, sets PIP fields.
-6. The service starts running.
+4. The child execs the service binary. The kernel verifies the signature and sets the PIP fields.
 
-This is the "fork-install-mitigate-exec" pattern. Every service goes through it. The launching is centralised in peinit because peinit holds the necessary privileges and PIP authority.
+> [!NOTE]
+> PSD-004 (KACS) assigns two further boot jobs to peinit — populating the machine-wide TLP cache from the registry, and applying per-service mitigation flags via `kacs_set_psb` between fork and exec — but neither is part of peinit's specified or implemented behaviour yet (PSD-007 v0.22 defines no such steps). Mount-policy application (`kacs_set_mount_policy`) and boot-time CAAP distribution are likewise not peinit responsibilities today; CAAP distribution belongs to authd and is currently deferred.
 
-### 8. Transition to steady state
+### Steady state
 
-After all services are launched, peinit transitions to its steady-state role: the lifecycle manager. It watches for service crashes (a child process dies; peinit receives SIGCHLD), restarts them per policy, handles shutdown signals (an administrator calling `shutdown`), and otherwise runs as a long-lived daemon.
+After the graph is started, peinit transitions to its steady-state role: the lifecycle manager. It watches for service crashes (a child process dies; peinit receives SIGCHLD), restarts them per policy, handles shutdown signals (an administrator calling `shutdown`), and otherwise runs as a long-lived daemon.
 
 The system is now "up" — services are running, authd is creating tokens for users who sign in, FACS and KACS are enforcing access control, audit events are flowing through KMES.
 
-## The fork-install-mitigate-exec pattern
+## The fork-install-exec pattern
 
 The pattern is the most important thing peinit does, and it's worth pinning. The order of operations is deliberate:
 
 1. **fork.** Creates the child process. The child inherits the parent's token, file descriptors, and PSB. At this point the child is essentially a clone of peinit.
 2. **Install token.** The child gets its service-specific token via `KACS_IOC_INSTALL`. This is the moment its identity is set to be the right thing for the service.
-3. **Apply mitigations.** `kacs_set_psb` enables the mitigation flags the service needs. The flags are one-way; once on, they cannot be relaxed by the service itself.
-4. **exec.** The new program runs. The kernel verifies the binary's signature and sets the PIP fields. The mitigations apply from this moment.
+3. **exec.** The new program runs. The kernel verifies the binary's signature and sets the PIP fields.
 
-The reason for this order:
+The reason for this order: the service's token needs to be in place before the service's startup code runs — the service should be able to assume from its first instruction that it's running as the right identity. exec comes last because that is the moment the new program takes over; by then the identity has been decided.
 
-- Token install **before** exec: the service's token needs to be in place before the service's startup code runs. The service should be able to assume from its first instruction that it's running as the right identity.
-- Mitigations **before** exec: same reasoning. The mitigations need to be in place before the new binary runs. PIE specifically requires the flag to be on the PSB before exec, because exec checks it.
-- exec **after** install and mitigations: this is the moment the new program takes over. By this time, both the identity and the hardening posture have been decided. The new program inherits both.
-
-The pattern is what every service is launched through. Variations are minor — the specific token and the specific mitigation set differ per service — but the structural sequence is the same.
+The pattern is what every service is launched through. Variations are minor — the specific token differs per service — but the structural sequence is the same. (When per-service mitigations land in peinit — see the note above — they will slot in between install and exec, since mitigation flags must be on the PSB before the new binary runs.)
 
 ## What peinit does *not* do
 
 A few clarifications:
 
-- **peinit does not create tokens directly.** It asks authd for tokens. The SYSTEM token has `SeCreateTokenPrivilege` (peinit could create tokens), but the convention is that authd is the source of truth for who-gets-what privileges. peinit can mint tokens directly in emergencies (when authd is not yet running) but normally delegates.
+- **peinit mints only SYSTEM tokens.** Minting the SYSTEM token for platform services via `kacs_create_token` is peinit's normal, specified path — no authd interaction is needed for those. Every other identity is requested from authd, the source of truth for who-gets-what privileges.
 - **peinit is not the only TCB process.** authd, loregd, eventd, lpsd are also at TCB level. They have their own jobs.
-- **peinit does not enforce policy.** Mount policies, DACLs, conditional ACEs — peinit applies them but doesn't make access decisions. The kernel runs AccessCheck; peinit just sets up the inputs.
+- **peinit does not enforce policy.** DACLs, conditional ACEs, mount policies — the kernel runs AccessCheck and makes every access decision; peinit just launches processes with the right identities.
 - **peinit does not handle user sessions directly.** Users sign in via authd; authd produces tokens; peinit launches the session's first process. The user's session is managed by authd, not peinit.
 - **peinit's service management is peinit, not a separate daemon.** Start order, dependencies, restart policy, the service state machine, and the control interface are peinit's own responsibility — there is no service-manager process living alongside it. That model is substantial enough to have its own topic; this page does not cover it. See [peinit](~peios/peinit/overview).
 

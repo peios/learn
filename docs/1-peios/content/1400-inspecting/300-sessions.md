@@ -125,3 +125,9 @@ Token `expiration` (a field on each token) is set by authd but **not enforced by
 If a deployment needs strict session timeouts, the enforcement is in userspace. authd can monitor `created_at` against a policy maximum and revoke sessions whose age exceeds the limit. Revocation is the userspace-coordinated process described in [Session lifecycle](~peios/logon-sessions/lifecycle): authd walks `/proc/*/token`, finds tokens with the target `auth_id`, kills the holding processes.
 
 The lack of kernel-side timer enforcement is a deliberate simplification. Adding kernel timers for session expiry would push expiry policy into the kernel; keeping it in userspace lets administrators define their own rules.
+
+## Where to go next
+
+For the rest of a process's inspectable state — its PSB and its process SD — read [Inspecting processes](~peios/inspecting/processes).
+
+For what sessions are, how they are created, and how revocation actually works, read [Session lifecycle](~peios/logon-sessions/lifecycle).

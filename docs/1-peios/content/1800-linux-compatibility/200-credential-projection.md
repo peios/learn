@@ -133,3 +133,11 @@ A few clarifications:
 - **The projection is not a substitute for the token.** Code that needs to make security decisions on identity should use the token, not the projection. The projection is for compatibility; the token is for authority.
 
 The cleanest mental model: the projection is the *Linux-shaped view* of an identity that fundamentally lives in KACS. It exists to satisfy POSIX programs that ask "what's my UID?" and have to get a number back. The number is computed; the actual identity is something else.
+
+## Where to go next
+
+For how Linux's own DAC and capability checks are made to defer to KACS, read [DAC neutralisation and capabilities](~peios/linux-compatibility/dac-neutralization-and-capabilities).
+
+For what the setuid family does — and does not do — to the projection, read [setuid and uid0](~peios/linux-compatibility/setuid-and-uid0).
+
+For the security-grade replacement for projected peer credentials, read [Peer credentials](~peios/linux-compatibility/peer-credentials).

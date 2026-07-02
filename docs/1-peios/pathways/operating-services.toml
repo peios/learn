@@ -1,0 +1,17 @@
+name = "Operate services with peinit"
+description = "From service definition to steady-state operations — service types, the lifecycle, supervision, dependencies, day-to-day control, boot modes, and troubleshooting."
+featured = true
+order = 2
+
+pages = [
+  "peinit/overview",
+  "peinit/defining-a-service",
+  "peinit/service-types",
+  "peinit/the-service-lifecycle",
+  "peinit/supervision",
+  "peinit/dependencies",
+  "peinit/controlling-services",
+  "peinit/who-can-manage-a-service",
+  "peinit/boot-and-boot-modes",
+  "peinit/troubleshooting",
+]

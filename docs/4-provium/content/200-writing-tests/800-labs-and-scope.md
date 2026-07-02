@@ -2,6 +2,11 @@
 title: Labs and scope
 type: how-to
 description: How to use sub-labs to organise multi-VM topologies, claim resources from the pool, synchronise across workers with barriers, snapshot and restore whole labs, and use lab fixtures for cached setups.
+related:
+  - provium/reference/lab
+  - provium/reference/provium-module
+  - provium/running-tests/pools-and-parallelism
+  - provium/writing-tests/vms-and-profiles
 ---
 
 A Lab is the unit of resource ownership in Provium. The `provium` global is the root Lab; sub-labs let you carve out scoped subsets. This page covers the patterns for using labs effectively.
@@ -89,7 +94,8 @@ db:run("psql -c 'CREATE TABLE t (...)'")  -- baseline schema
 test("api writes propagate to db", function(t)
     -- web and db are restored to baseline at start of every test.
     web:run("curl -X POST http://localhost/items -d '...'")
-    t:assert_eq(db:run("psql -c 'SELECT count(*) FROM t'"):row(), "1")
+    local r = db:run("psql -tA -c 'SELECT count(*) FROM t'")
+    t:assert_eq(r.stdout:match("%d+"), "1")
 end)
 
 test("scratch VM joins the network", function(t)
@@ -112,7 +118,7 @@ When to use which:
 
 Most simple tests use only the root lab — `provium:vm("a", "peios")`, `provium:bridge("lan")`. Sub-labs are useful when:
 
-- You're modeling multi-DC topologies (`provium:lab("dc1")`, `provium:lab("dc2")`).
+- You're modelling multi-DC topologies (`provium:lab("dc1")`, `provium:lab("dc2")`).
 - You want to snapshot or restore a coherent subset of resources.
 - You want to use `lab_fixture` to cache an entire topology.
 
@@ -155,7 +161,7 @@ provium:remove(v)         -- and gone from root
 
 It errors on duplicate names within the lab (`DuplicateVmName`, `DuplicateBridgeName`), reserved names (`pack`, `unpack`, `vm_fixture`, `lab_fixture`), and on shadow conflicts when called from a test scope and the name is already declared at a parent scope.
 
-`lab:remove` is graph-state only — the underlying VM, bridge, or sub-lab is NOT shut down. It's removed from the lab's child list. Useful when you want to take ownership of a resource somewhere else.
+`lab:remove` is [graph-state only](~provium/writing-tests/bridges-and-impairments#declared-vs-realised) — the underlying VM, bridge, or sub-lab is NOT shut down. It's removed from the lab's child list. Useful when you want to take ownership of a resource somewhere else.
 
 Both forms accept either a name or a userdata.
 
@@ -224,26 +230,20 @@ The claim emits `claim_acquired` and `claim_released` events for observability.
 
 ## Barriers
 
-Barriers synchronise across workers (or between workers and the test driver):
+`lab:barrier(name, count, timeout?)` is an N-arrival rendezvous: it blocks the caller until `count` callers have hit the same `name`-keyed barrier, then returns `true` for all of them. On timeout it returns `false` — it does not raise. Default timeout: 60 seconds. The count is locked in by the first arrival; a later call with a different count for the same name returns `false` with a warning. Barriers are reusable — after a round releases, the same name starts a fresh round.
 
 ```lua
-local w1 = vm:spawn_worker()
-local w2 = vm:spawn_worker()
+-- count = 1 is satisfied immediately: a labelled checkpoint.
+provium:barrier("setup-done", 1)
 
-co.wrap(function()
-    -- … worker 1 prep work …
-    provium:barrier("ready", 2)
-    -- … now safe to proceed …
-end)()
-
-co.wrap(function()
-    -- … worker 2 prep work …
-    provium:barrier("ready", 2)
-    -- … now safe to proceed …
-end)()
+-- An unmet count times out and returns false rather than raising.
+local ok = provium:barrier("both-ready", 2, 0.5)
+if not ok then
+    error("second arriver never showed up")
+end
 ```
 
-`lab:barrier(name, count, timeout?)` blocks the caller until `count` callers have hit the same `name`-keyed barrier. Default timeout: 60 seconds. Raises on timeout.
+A count above 1 needs a second concurrent host-side caller. Test files execute on a single thread, and workers run guest processes (they can't call back into the test's Lua), so today a `count > 1` barrier in an ordinary test file simply times out. The multi-caller form is aimed at thread-mode workers (`vm:spawn_worker({thread = true})`), which aren't supported yet.
 
 For inter-VM coordination (e.g. between two guests), use a guest-side primitive (file in a shared mount, fifo, network message). Barriers are host-side only.
 

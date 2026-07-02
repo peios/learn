@@ -119,3 +119,9 @@ Audit events for privilege exercise carry enough information to distinguish:
 A backup tool with `BACKUP_INTENT` set on every AccessCheck call produces clean audit events: one privilege-use event per backup-flavoured access, none for incidental accesses. This is the audit trail intent gating was designed to produce. Without the flag, the privilege would fire on every access from the same token, and the audit would be unable to distinguish "I exercised SeBackup because I'm a backup" from "I exercised SeBackup because the file would have been readable to me anyway".
 
 The full audit model lives in [Auditing](~peios/auditing/overview).
+
+## Where to go next
+
+For the four functional categories the rest of the privileges fall into, read [Privilege categories](~peios/privileges/categories).
+
+For exactly where SeBackup and SeRestore fire during a check — and which layers can still strip their grants — read [Privileges in the pipeline](~peios/access-decisions/privileges-in-the-pipeline).

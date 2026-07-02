@@ -1,12 +1,14 @@
 ---
 title: Installing and removing packages
-type: reference
+type: how-to
 description: install puts packages on the system and remove takes them off. This page covers the plan-and-confirm flow both share, installing straight from a local .peipkg file, and what happens when you remove a package something else depends on.
 related:
   - peios/package-management/overview
   - peios/package-management/keeping-a-system-current
   - peios/package-management/dependency-resolution
   - peios/package-management/transactions-and-recovery
+  - peios/package-management/claims
+  - peios/package-management/named-roots
 ---
 
 `peipkg install` puts packages on the system; `peipkg remove` takes them off. They are the two commands you reach for most, and they share one flow — peipkg works out the full set of changes, shows it to you, and waits for your approval before touching anything.
@@ -47,8 +49,15 @@ Answer `y` and peipkg carries the plan out as a single [transaction](~peios/pack
 |---|---|
 | `--dry-run` | Produce and print the plan, then stop — never prompt, never change anything. |
 | `--yes`, `-y` | Skip the `proceed?` prompt and apply the plan. |
+| `--no-claim` | Install a provider without taking any claim it offers. |
+| `--claim <names>` | Comma-separated claims to force-claim, overriding the current holder(s). |
+| `--claim-all` | Force-claim every claim the installed packages provide, overriding incumbents. |
 
 `--dry-run` is the safe way to see what a command *would* do. `--yes` is for scripts and unattended runs — but note that it skips only the *routine* prompt. A plan that contains an action needing deliberate authorisation will still stop and ask; `--yes` does not override that. See [Elevated authorisation](~peios/package-management/dependency-resolution) for which actions those are and why.
+
+`--claim-all` cannot be combined with `--claim` or `--no-claim`. Claims — shared names exactly one package may hold — are covered in [Claims](~peios/package-management/claims).
+
+An install can also target a root other than the current one — either explicitly with `--root`, or because a package declares its own default root. See [Named roots](~peios/package-management/named-roots) for how roots are named and nested.
 
 ### Installing from a local file
 

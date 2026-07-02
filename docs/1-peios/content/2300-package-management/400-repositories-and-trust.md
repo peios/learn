@@ -132,3 +132,11 @@ trust_anchors    = ["ef86709c4b1d8a02e5f3c719d640aa8b7c2e9105f8d3b6470a1c2e9d8b5
 ```
 
 The files are hand-editable, and editing one is a legitimate way to configure a repository — a trust anchor written into the file *is* you supplying that anchor out of band. `peipkg repo add` is the convenient front end: it runs the interactive ceremony, shows you the fetched fingerprint, and writes the file for you. Who may edit these files is, like everything else on Peios, the [security descriptor](~peios/security-descriptors/overview) on `/conf/peipkg/`.
+
+## Exit status
+
+| Code | Meaning |
+|---|---|
+| `0` | The operation succeeded — the repository was added, listed, or removed. |
+| `1` | The operation failed — the trust ceremony failed (`repo add` backs out and leaves nothing behind), or the subcommand was missing, unknown, or given the wrong arguments (a missing `repo add <name> <base-url>`, a malformed option). Removing a name that is not configured is not a failure. |
+| `2` | A usage error before any command ran — no command, an unknown command, or a malformed global option. |

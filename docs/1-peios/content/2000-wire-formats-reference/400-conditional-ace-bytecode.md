@@ -267,7 +267,7 @@ A concrete example. The expression `@User.Department == "Engineering"` would enc
 ```
 [magic: 0x61 0x72 0x74 0x78]
 [@User. opcode: 0xF9]
-[name length: 14 (u32le) — for UTF-16LE "Department"]
+[name length: 20 (u32le) — for UTF-16LE "Department"]
 [name: UTF-16LE "Department"]
 [string literal opcode: 0x10]
 [string length: 22 (u32le) — for UTF-16LE "Engineering"]

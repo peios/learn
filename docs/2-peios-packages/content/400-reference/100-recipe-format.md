@@ -1,5 +1,5 @@
 ---
-title: Recipe Format Reference
+title: Recipe format reference
 type: reference
 description: Schema reference for peipkg.toml. The spec appendix is the normative source; this is the operator-friendly view.
 related:
@@ -7,7 +7,7 @@ related:
   - peios-packages/authoring-recipes/dependencies
 ---
 
-A recipe is a directory containing `peipkg.toml` and `build.sh`. This page is the schema reference for the TOML file. For the normative spec, see [PSD-009 appendix A.2](../../../specs/psd-009--peipkg/v0.22/8-appendix-a/2-recipe-format).
+A recipe is a directory containing `peipkg.toml` and `build.sh`. This page is the schema reference for the TOML file. For the normative spec, see [PSD-009 appendix A.2](/spec/psd-009/v0.22/appendix-a/recipe-format/).
 
 ## Top-level sections
 
@@ -37,15 +37,15 @@ One stanza per output `.peipkg`. Multiple stanzas allowed; each becomes a separa
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `name` | string | **Yes** | Package name. Conforms to [PSD-009 §2.1](../../../specs/psd-009--peipkg/v0.22/2-identity/1-naming) — lowercase letters, digits, `-`, `+`, `.`. |
-| `architecture` | string | **Yes** | Architecture identifier — `noarch` or one of the supported values per [§2.3](../../../specs/psd-009--peipkg/v0.22/2-identity/3-architecture). |
+| `name` | string | **Yes** | Package name. Conforms to [PSD-009 §2.1](/spec/psd-009/v0.22/identity/naming/) — lowercase letters, digits, `-`, `+`, `.`. |
+| `architecture` | string | **Yes** | Architecture identifier — `noarch` or one of the supported values per [§2.3](/spec/psd-009/v0.22/identity/architecture/). |
 | `description` | string | Recommended | One-line human-readable description. ASCII printable, < 80 characters by convention. |
 | `dependencies` | array of dependency objects | Recommended | Required runtime dependencies. |
 | `optional_dependencies` | array of dependency objects | Optional | Enhance functionality but not required. |
 | `conflicts` | array of dependency objects | Optional | Cannot be installed alongside. |
 | `provides` | array of provides objects | Optional | Virtual capabilities this package fulfils. |
 | `replaces` | array of replaces objects | Optional | Packages this one supersedes. |
-| `side_effects` | array of strings | Optional | Maintenance operations from the [§4.3.4 enumerated list](../../../specs/psd-009--peipkg/v0.22/4-dependencies/3-side-effects). |
+| `side_effects` | array of strings | Optional | Maintenance operations from the [§4.3.4 enumerated list](/spec/psd-009/v0.22/dependencies/side-effects/). |
 | `files` | array of strings | **Yes** | Doublestar globs matching paths under `$DESTDIR/` that this stanza claims. |
 
 ### Dependency object
@@ -57,7 +57,7 @@ One stanza per output `.peipkg`. Multiple stanzas allowed; each becomes a separa
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `name` | string | **Yes** | Depended-on package name (or virtual capability). |
-| `constraint` | string | Optional | Version constraint per [§2.2.8](../../../specs/psd-009--peipkg/v0.22/2-identity/2-versioning). Operators: `=`, `>`, `>=`, `<`, `<=`, `!=`. Multiple constraints comma-separated. |
+| `constraint` | string | Optional | Version constraint per [§2.2.8](/spec/psd-009/v0.22/identity/versioning/). Operators: `=`, `>`, `>=`, `<`, `<=`, `!=`. Multiple constraints comma-separated. |
 | `arch` | string | Optional (default `any`) | Architecture qualifier. Only `any` is currently valid. |
 | `same_build` | bool | Optional | Recipe-level shorthand: rewrites `constraint` to `= <this build's version>` at build time. Only valid when `name` refers to a sibling stanza in the same recipe. |
 

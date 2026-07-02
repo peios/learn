@@ -139,3 +139,11 @@ A few clarifications:
 - **The SACL is not for "extra security".** It is the kernel's place for system-level policy. Putting more entries in the SACL does not make an object more secure; it just records more policy.
 - **The SACL is not where the DACL goes if you forget the DACL.** The two lists are structurally distinct in the SD format; an SD with a missing DACL but a populated SACL has a NULL DACL (grant all access) regardless of what the SACL says.
 - **The SACL is not visible to ordinary users.** Reading the SACL — `kacs_get_sd` with `SACL_SECURITY_INFORMATION` — also requires `ACCESS_SYSTEM_SECURITY`. An owner can read their object's DACL freely but cannot read its SACL without the same privilege required to modify it.
+
+## Where to go next
+
+For the events audit and alarm ACEs produce, and where they go, read [Auditing](~peios/auditing/overview).
+
+For how the SACL's labels and policies fit into the full check pipeline, read [Access decisions](~peios/access-decisions/overview).
+
+To read and edit a SACL from a shell, read [The sd command](~peios/security-descriptors/sd-command).

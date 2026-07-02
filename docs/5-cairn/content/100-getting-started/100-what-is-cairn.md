@@ -1,7 +1,12 @@
 ---
-title: What Is Cairn
+title: What is Cairn
 type: concept
 description: Cairn is a file-based project tracker with two first-class interfaces — a CLI for automation and a milestone-centric web board for visual planning.
+related:
+  - cairn/getting-started/quick-start
+  - cairn/cli/commands
+  - cairn/web-board/overview
+  - cairn/configuration/data-model
 ---
 
 Cairn is a project tracking tool built for solo developers working on large projects. It stores tasks as TOML files on disk, provides a CLI for scripting and automation, and serves a milestone-centric web board for visual planning.
@@ -41,10 +46,10 @@ The CLI and web board are peers. Changes made through either interface are immed
 |---|---|---|---|---|
 | **Storage** | Local files | Cloud | Cloud | Local file |
 | **Offline** | Yes | No | No | Yes |
-| **Dependencies** | Built-in | Manual labels | Built-in | Manual |
+| **Task dependencies** | Built-in | Manual labels | Built-in | Manual |
 | **Milestones** | Built-in, visual | Built-in | Cycles | Manual |
 | **Subtasks** | Built-in, hierarchical | Checklists | Built-in | Manual |
 | **Web board** | Built-in | Projects board | Built-in | No |
 | **CLI** | Built-in | gh CLI | Linear CLI | Any editor |
 | **Multi-user** | No | Yes | Yes | No |
-| **Dependencies** | Zero | Internet | Internet | Zero |
+| **Runtime dependencies** | Zero | Internet | Internet | Zero |

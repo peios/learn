@@ -38,11 +38,11 @@ The exception is the SID `IdentifierAuthority` field — big-endian, for cross-s
 
 **Reserved fields and padding** must be zero. Non-zero values in reserved fields return `-EINVAL`. This is the forward-compatibility hook — future versions may give reserved fields meaning.
 
-**Version bytes.** Most wire formats start with a version byte at offset 0. v0.20 uses version byte `0x01` for every format that has one. Unknown version bytes are rejected.
+**Versioning.** Versioned formats carry a version field at offset 0, but its shape varies per format: the token spec starts with a 4-byte u32 `version` that must be `TOKEN_SPEC_VERSION` (2 in v0.20); security descriptors start with a one-byte `Revision` that must be 1; CAAP policies (and signature blobs) start with a version byte that must be `0x01`. Conditional ACE bytecode is not versioned — it starts with the 4-byte magic `"artx"` — and the session spec has no version field. Unknown versions are rejected with `-EINVAL`.
 
 **Size limits.** Every format has an enforced maximum size to prevent unbounded inputs. Most are in the 64 KB to 256 KB range; specific limits are documented per format.
 
-**No embedded pointers.** Wire formats are self-contained. Offsets within a format are relative to the start of the format's buffer; there are no pointers to other userspace addresses. This is what makes the formats serializable.
+**No embedded pointers.** Wire formats are self-contained. Offsets within a format are relative to the start of the format's buffer; there are no pointers to other userspace addresses. This is what makes the formats serialisable.
 
 ## Common building blocks
 

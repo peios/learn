@@ -1,0 +1,2 @@
+name = "Peios SDK"
+description = "Build software that talks to Peios. The SDK is the C-ABI library family for the kernel↔userspace boundary — access control, the registry, and events — starting with libpeios. Link it from C, or from anything that speaks the C ABI."

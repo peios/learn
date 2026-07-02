@@ -34,4 +34,7 @@ The default line packs in four things:
 
 ## Exit status
 
-`uptime` returns `0`, or non-zero if the boot time could not be read.
+| Code | Meaning |
+|---|---|
+| `0` | The uptime was printed. |
+| `1` | The boot time could not be read. |

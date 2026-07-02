@@ -1,5 +1,5 @@
 ---
-title: Tracking Upstream Versions
+title: Tracking upstream versions
 type: how-to
 description: How [upstream] and [watch] sections tell peipkg-manager where source lives and how to recognise new versions, so the recipe stays stable while versions roll forward automatically.
 related:
@@ -99,3 +99,9 @@ What does NOT live in the recipe:
 - The build farm's URL. Same — operational, not authorial.
 
 This separation is why a recipes repository can have one PR per *capability change* (a new package, a build-script fix) rather than one PR per release. Routine version updates touch nothing.
+
+## Where to go from here
+
+- [Configuration](~peios-packages/running-a-farm/configuration) — the manager-side `[poll]` and `[http]` settings these sections pair with.
+- [Monitoring](~peios-packages/running-a-farm/monitoring) — watching polls, webhooks, and builds once the farm is running.
+- [Recipe format reference](~peios-packages/reference/recipe-format) — the normative `[upstream]` and `[watch]` schema.

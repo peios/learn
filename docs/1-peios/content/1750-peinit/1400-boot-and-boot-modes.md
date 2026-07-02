@@ -28,11 +28,17 @@ Phase 1 is compiled into peinit. It cannot change at runtime and touches no regi
 
 1. **Confirm the root is writable** with a single probe write. registryd's storage needs a writable root even for reads, so a read-only root cannot support Phase 2 → Recovery.
 2. **Mount the remaining virtual filesystems** — `/dev/pts`, `/dev/shm`, `/run`, `/sys/fs/cgroup` — mounting each only if absent. A failure here → Recovery.
-3. **Set the clock from the hardware RTC**, so early timestamps and the boot counter are meaningful. A failure here → Recovery.
-4. **Start registryd** and wait for it to signal readiness, then **probe-read** the schema-version key to confirm it is actually serving reads. Any failure → Recovery — there is no Phase 2 without a registry.
-5. **Infrastructure setup** — create the [control socket](~peios/peinit/controlling-services), open the JFS device for [ad-hoc jobs](~peios/peinit/jobs-and-operations), bring up the loopback interface. Control-socket failure → Recovery; the other two are logged as warnings and boot continues.
+3. **Restore the persisted random seed** from `/var/lib/peinit/random-seed`, mixing it into the kernel's entropy pool early so anything that needs randomness during boot gets it. A missing seed is normal — first boots and stateless live boots have none — so peinit just carries on; a seed problem is never fatal and never sends boot to Recovery.
+4. **Establish the machine-id** from `/etc/machine-id` — a stable, opaque identifier for this install (used for log correlation, instance identity, and software compatibility). It is *not* a security principal: it is not a SID, an account, or a credential, and no authorisation decision depends on it. If the file is missing, empty, or malformed, peinit generates a fresh 128-bit ID and writes it before continuing.
+5. **Set the clock from the hardware RTC**, so early timestamps and the boot counter are meaningful. A failure here → Recovery.
+6. **Start registryd** and wait for it to signal readiness, then **probe-read** the schema-version key to confirm it is actually serving reads. Any failure → Recovery — there is no Phase 2 without a registry.
+7. **Provision boot-time paths.** With registryd up and before Phase 2 starts, peinit applies the entries under `Machine\System\Init\ProvisionedPaths\` — the registry-driven equivalent of tmpfiles.d, creating directories and files (with Peios security descriptors) that no single service owns. Best-effort entries that fail are logged and skipped, but an entry marked `Required=1` that cannot be provisioned sends boot → Recovery. The individual keys are catalogued in the [registry key reference](~peios/peinit/registry-key-reference).
+8. **Infrastructure setup** — create the [control socket](~peios/peinit/controlling-services), open the JFS device for [ad-hoc jobs](~peios/peinit/jobs-and-operations), bring up the loopback interface. Control-socket failure → Recovery; the other two are logged as warnings and boot continues.
 
-Every Phase 1 failure is fatal to a normal boot, because none of the later machinery can run without this foundation. The only outcome is [Recovery mode](#recovery-mode).
+Most Phase 1 failures are fatal to a normal boot, because none of the later machinery can run without this foundation — the only outcome is [Recovery mode](#recovery-mode). The exceptions are the fail-soft steps called out above: a missing or unusable random seed, a regenerated machine-id, and best-effort provisioned paths all let boot continue.
+
+> [!CAUTION]
+> Packaged images, VM templates, and live ISOs must not ship a populated `/etc/machine-id` or a `/var/lib/peinit/random-seed` file. A shipped machine-id gives every clone the same identity, and a shipped seed is a public value that is not acceptable entropy. Clone and reset tooling should remove or truncate `/etc/machine-id` so peinit generates a fresh ID on the next boot, and should never bake a seed into the image — if you need strong first-boot randomness for a stateless image, provide a real kernel entropy source (hardware RNG or virtio-rng) instead.
 
 ### registryd and loregd
 
@@ -60,9 +66,10 @@ The platform daemons come up first because everything rests on them. They are al
 | authd | 2 | minted by peinit | sd_notify | Critical |
 | eventd | 2 | minted by peinit | sd_notify | Critical |
 | networking | 2 | authd | sd_notify | Normal |
+| sshd | 2 | authd | process alive | Normal |
 | application services | 2 | authd | per-service | Normal |
 
-Once authd is up, every subsequent service gets its token through the [normal authd flow](~peios/peinit/identity-and-privileges). The order above is *emergent* from the standard role definitions' dependencies, not hardcoded — change the dependencies and the order changes.
+Once authd is up, every subsequent service gets its token through the [normal authd flow](~peios/peinit/identity-and-privileges). The order above is *emergent* from the standard role definitions' dependencies, not hardcoded — change the dependencies and the order changes. In practice login services such as `sshd` come up last, so the system is fully operational before it starts accepting user sessions.
 
 ## The three boot modes
 

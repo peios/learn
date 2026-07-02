@@ -50,7 +50,7 @@ This is the cleanest demonstration of the idea from [Configuration, not storage]
 
 A fresh install has an empty store, and the sequence is built to cope:
 
-1. The store starts, finds its database empty, and creates the hive root keys with their default [security descriptors](~peios/the-registry/access-control) — but no configuration beneath them.
+1. The store — `registryd`, the base registry source [peinit](~peios/peinit/overview) starts at early boot (see [LCS and sources](~peios/the-registry/lcs-and-sources)) — starts, finds its database empty, and creates the hive root keys with their default [security descriptors](~peios/the-registry/access-control) — but no configuration beneath them.
 2. The registry looks for its parameter keys, finds nothing, and keeps its compiled-in defaults. It is fully operational regardless.
 3. The init system (not the registry's concern) restores a **seed** — a [backup](~peios/the-registry/backup-and-restore) of the system's initial configuration — that populates `Machine\` with the system's real configuration.
 4. That write trips the registry's watch on its own configuration area; it re-reads, validates, and hot-swaps to the seeded values. Normal operation continues.
@@ -61,7 +61,7 @@ At no point is there a stall. Empty store, missing keys, seed arriving later —
 
 The registry notices changes to its own configuration the same way any service notices changes — by watching the subtree — except the watcher is internal to the kernel rather than a userspace handle. It is the [reaction loop](~peios/the-registry/watches) turned on the registry itself: a change to a parameter key fires the watch, the registry re-reads and re-validates, and applies or rejects. There is no polling and no special-case configuration path; self-configuration is just the registry being one more consumer of the registry.
 
-## Where to start
+## Where to go next
 
 If you want the store itself — what it is, how the kernel and the userspace store divide the work, and the trust boundary between them — read [LCS and sources](~peios/the-registry/lcs-and-sources).
 

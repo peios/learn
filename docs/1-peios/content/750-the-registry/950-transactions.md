@@ -41,7 +41,7 @@ A transaction provides *atomicity*; it is not a [layer](~peios/the-registry/laye
 
 Transactions are not conflict-detected at the value level. If two committed transactions wrote the same value, both succeed, and the usual rule settles it: the more recent write wins, exactly as in [layer resolution](~peios/the-registry/layers). A transaction guarantees its *own* writes land together; it does not lock anyone else out of the values it touched. (For the case where you must not clobber a concurrent change, a conditional write lets a single write proceed only if the value has not changed since you read it.)
 
-## Where to start
+## Where to go next
 
 For how a role uses a transaction and a layer together, read [What layers are for](~peios/the-registry/what-layers-are-for).
 

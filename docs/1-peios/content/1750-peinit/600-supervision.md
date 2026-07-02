@@ -63,6 +63,8 @@ For a **Simple** service, exiting with code 0 (or a `SuccessExitCodes` match) is
 
 A live process is not always a working one — it can lose its database connection, wedge in a bad state, or return errors while still "up." An active **health check** closes that gap by running a command periodically and treating its exit code as a verdict: 0 is healthy, non-zero is a failure.
 
+Health checks apply to **Simple** services only. peinit starts a service's health-check timer once the service becomes Active; a [Oneshot](~peios/peinit/service-types) has no long-running process to probe, so it never has one. `HealthCheck` and its companion fields are inert on a Oneshot — no timer is started — so don't set them there expecting supervision.
+
 | Field | Default | Controls |
 |---|---|---|
 | `HealthCheck` | — | The command to run (runs under the service's own [token](~peios/peinit/identity-and-privileges)). |
@@ -90,6 +92,8 @@ A health check stuck in D-state is handled like any other stuck helper: its sub-
 ## The watchdog
 
 The watchdog inverts the health check: instead of peinit asking the service if it is alive, the service must periodically tell peinit. Set `WatchdogTimeout` (seconds; 0 disables) and the service must send `WATCHDOG=1` via [sd_notify](~peios/peinit/output-and-logging) at least that often. Miss the deadline and peinit treats it as a failure (cause `WatchdogTimeout`) and applies the restart policy.
+
+Like health checks, the watchdog is a **Simple**-only supervision mechanism. peinit arms the watchdog timer only once a Simple service becomes Active; on a [Oneshot](~peios/peinit/service-types) `WatchdogTimeout` is inert — no timer is started, and setting it changes nothing.
 
 A service can adjust its own watchdog at runtime by sending `WATCHDOG_USEC=<microseconds>`: a positive value re-arms the timer with the new interval immediately; `0` disables the watchdog. This is for services whose phases have different latencies — a database might run a tight 5 s watchdog normally but widen it to 60 s during a compaction pass, because it knows its own phases better than the schema author did. The runtime value does **not** persist: a restart reverts to the schema's `WatchdogTimeout`.
 

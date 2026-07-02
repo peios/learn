@@ -2,6 +2,11 @@
 title: Streams and tails
 type: how-to
 description: Patterns for the three stream userdata types — when to use next vs read_until vs expect vs drain, how to handle EOF, what creation_site is for, and how snapshots interact with live streams.
+related:
+  - provium/reference/streams
+  - provium/reference/console
+  - provium/writing-tests/files-and-handles
+  - provium/writing-tests/running-commands
 ---
 
 Provium has three stream userdata types — Tail, Capture, and ConsoleStream — that share a common surface: `next` / `read_until` / `expect` / `drain` / `close` / `eof` / `creation_site`. This page is the practical guide.
@@ -181,7 +186,7 @@ console:write("toor\n")
 stream:expect("# ", "5s")
 ```
 
-ConsoleStream wraps a `UnixStream` to QEMU's chardev socket. Reads come back as raw bytes from the chardev — typically the boot log, login prompt, and anything the guest has written to `/dev/hvc0` since the last read.
+ConsoleStream wraps a `UnixStream` to QEMU's chardev socket. Reads come back as raw bytes from the chardev — typically the boot log, login prompt, and anything the guest has written to `/dev/ttyS0` since the last read.
 
 Mid-stream `ConnectionReset` and `BrokenPipe` are mapped to "console EOF" — they happen on VM reset / shutdown, where they're semantically EOF rather than I/O errors.
 

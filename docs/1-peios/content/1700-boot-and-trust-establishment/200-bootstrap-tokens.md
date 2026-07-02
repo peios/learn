@@ -117,3 +117,11 @@ A few clarifications:
 - **They are not interchangeable with administrator tokens.** A real user in the `BUILTIN\Administrators` group has a different token from SYSTEM — same group membership conceptually, but with the user's actual user_sid, the user's session, etc. SYSTEM and Administrators are not the same identity.
 - **They don't persist across reboots.** Every boot constructs fresh instances. Anything keyed to the SYSTEM token's instance ID (which is rare; nothing should be) would lose its reference at reboot.
 - **They cannot be modified.** Almost everything about them is immutable. AdjustPrivileges would technically be possible on SYSTEM (a token holder of SYSTEM could enable/disable privileges, or even remove them) but the kernel makes such adjustments a one-time event for the bootstrap token, and the field-level operations are constrained. In practice nothing modifies the SYSTEM token directly; peinit makes filtered copies for child tokens.
+
+## Where to go next
+
+For the first userspace process the SYSTEM token is handed to, read [The initramfs stage](~peios/boot-and-trust-establishment/initramfs-stage).
+
+For the moment real identities start replacing SYSTEM, read [authd handoff](~peios/boot-and-trust-establishment/authd-handoff).
+
+For what a token is in general — types, fields, lifecycle — read [Tokens](~peios/tokens/overview).

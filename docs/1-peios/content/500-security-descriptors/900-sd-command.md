@@ -175,7 +175,7 @@ Sets the file's mandatory integrity label.
 $ sd integrity ./report.txt high
 ```
 
-The level is one of `untrusted`, `low`, `medium`, `medium-plus`, `high`, `system`, `protected`.
+The level is one of `untrusted`, `low`, `medium`, `medium-plus`, `high`, `system`, `protected`. The standard catalog is five levels (`untrusted`, `low`, `medium`, `high`, `system`); `medium-plus` (RID 8448) and `protected` (RID 20480) are non-standard Windows-compatibility levels — the kernel compares any `S-1-16-<rid>` numerically.
 
 | Flag | Effect |
 |---|---|

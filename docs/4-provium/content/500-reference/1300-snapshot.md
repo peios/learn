@@ -2,6 +2,11 @@
 title: Snapshot and LabSnapshot
 type: reference
 description: Snapshot and LabSnapshot userdata wrap the on-disk artefacts that `vm:snapshot()` and `lab:snapshot()` produce. Use them to introspect, restore, or delete cached snapshots.
+related:
+  - provium/reference/vm
+  - provium/reference/lab
+  - provium/running-tests/fixtures-and-dependencies
+  - provium/writing-tests/vms-and-profiles
 ---
 
 `vm:snapshot()` returns a **Snapshot** wrapping a single file. `lab:snapshot()` returns a **LabSnapshot** wrapping a directory containing per-VM snapshot files plus a `lab.json` index.

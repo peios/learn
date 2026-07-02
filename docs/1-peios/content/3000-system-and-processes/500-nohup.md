@@ -11,7 +11,7 @@ related:
 `nohup` runs a command so that it **survives the terminal closing**. Normally, when a terminal session ends, the system sends a hangup signal to the commands running under it, and they stop. A command started with `nohup` ignores that signal and keeps running.
 
 ```
-nohup command [arg]...
+nohup [options] command [arg]...
 ```
 
 ```
@@ -44,4 +44,9 @@ The reasoning is that `nohup.out` captures whatever the command writes, which th
 
 ## Exit status
 
-`nohup` exits with the command's own status once it finishes. If `nohup` cannot set things up — it cannot detach from the terminal, or cannot open `nohup.out` anywhere — it exits `125` without running the command.
+When `nohup` runs a command, it exits with **that command's** status once it finishes. The exception is a failure in `nohup` itself:
+
+| Code | Meaning |
+|---|---|
+| (command's own) | The command ran; this is its exit status. |
+| `125` | `nohup` could not set things up — it could not detach from the terminal, or could not open `nohup.out` anywhere. The command was not run. |

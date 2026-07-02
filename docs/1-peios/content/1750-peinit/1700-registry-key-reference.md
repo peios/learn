@@ -38,8 +38,12 @@ Every service is a key under `Machine\System\Services\<name>`; these are the val
 | `Arguments` | multi_string | — | Command-line arguments. |
 | `WorkingDirectory` | string | `/` | Working directory (non-empty absolute path). |
 | `Environment` | multi_string | — | `KEY=VALUE` pairs added to the environment. |
+| `RuntimeDirectories` | multi_string | — | Directories created directly under `/run` just before the main process starts, each secured for SYSTEM, Administrators, and the service's own SID. |
 | `LimitNOFILE` | dword | — | `RLIMIT_NOFILE`. |
 | `LimitCORE` | dword | — | `RLIMIT_CORE`, in bytes. |
+
+> [!NOTE]
+> Each `RuntimeDirectories` entry is a plain relative name — just `foo`, never a path — and must not contain `/`, `\`, `.`, `..`, NUL, or control characters. For an entry `foo`, peinit creates `/run/foo` immediately before launching the main process and applies a Peios file security descriptor granting full access to SYSTEM, Administrators, and this service's own SID. If the directory can't be created or the descriptor can't be applied, the start fails with `ParentSetupFailure`. peinit does *not* remove these directories when the service stops — `/run` is a boot-scoped tmpfs that the next boot clears for you.
 
 **Type and readiness** — see [Simple and Oneshot services](~peios/peinit/service-types)
 
@@ -59,6 +63,7 @@ Every service is a key under `Machine\System\Services\<name>`; these are the val
 | `SafeMode` | dword | 0 | If 1, attempt to start in Safe mode. Critical implies SafeMode. |
 | `Conditions` | multi_string | — | Start-time checks; a failure *skips* the service. |
 | `Asserts` | multi_string | — | Start-time checks; a failure *fails* the service. |
+| `PreStartCheckTimeout` | dword | 5 | Seconds allowed for the helper that evaluates filesystem `Conditions`/`Asserts`; if it overruns, it is killed and the check counts as *not satisfied* (a Condition skips, an Assert fails). |
 | `TimerPersistent` | dword | 1 | Catch up a missed timer run after a reboot. |
 | `TimerJitter` | dword | 0 | Maximum random delay (seconds) added to each firing. |
 
@@ -147,6 +152,14 @@ Under `Machine\System\Init\`:
 | `MaxLogLineLength` | dword | 8192 | Maximum bytes per service output line before truncation. | [Service output and logging](~peios/peinit/output-and-logging) |
 | `MaxLogBufferPerService` | dword | 65536 | Maximum bytes buffered per service pipe before back-pressure. | [Service output and logging](~peios/peinit/output-and-logging) |
 | `EnvVars\` | (parent key) | empty | Default environment variables injected into Phase 2 services (value name = variable, `REG_SZ` data = value). The descriptor here is security-critical. | [The execution environment](~peios/peinit/execution-environment) |
+| `ProvisionedPaths\` | (parent key) | empty | Boot-time path provisioning: each child key names one directory or file that peinit creates and secures after registryd starts and before Phase 2 — the registry-backed equivalent of tmpfiles.d. | [Boot and boot modes](~peios/peinit/boot-and-boot-modes) |
+| `ProvisionedPaths\<name>\Kind` | string | *(required)* | `directory` or `file` — what to create at `Path`. | [Boot and boot modes](~peios/peinit/boot-and-boot-modes) |
+| `ProvisionedPaths\<name>\Path` | string | *(required)* | Absolute path to create or verify. | [Boot and boot modes](~peios/peinit/boot-and-boot-modes) |
+| `ProvisionedPaths\<name>\Security` | binary | SYSTEM + Administrators full, users read/traverse | Peios file security descriptor to apply to the object. | [Boot and boot modes](~peios/peinit/boot-and-boot-modes) |
+| `ProvisionedPaths\<name>\Required` | dword | 0 | If 1, a failure to provision this entry sends boot to [Recovery mode](~peios/peinit/boot-and-boot-modes) before Phase 2 starts. | [Boot and boot modes](~peios/peinit/boot-and-boot-modes) |
+
+> [!NOTE]
+> A few `ProvisionedPaths` rules worth knowing before you rely on them: `Kind=file` never truncates an existing file (it only makes sure the file is present), and peinit does *not* create missing parent directories for you — define each directory you need as its own entry, or depend on the package that owns the parent. A malformed entry is logged and skipped rather than blocking boot; only an entry you mark `Required=1` can send boot to [Recovery mode](~peios/peinit/boot-and-boot-modes), and only when it genuinely can't be created or secured.
 
 ## Keys peinit reads from other subsystems
 

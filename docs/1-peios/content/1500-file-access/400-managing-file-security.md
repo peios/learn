@@ -1,6 +1,6 @@
 ---
 title: Managing file security
-type: concept
+type: reference
 description: File SDs are read and written via kacs_get_sd and kacs_set_sd. Both take a security_information bitmask saying which SD components to access — OWNER, GROUP, DACL, SACL, LABEL. The xattr layer is never the path; direct xattr operations on the SD are unconditionally denied. This page covers the syscalls, the access rules, and the special LABEL_SECURITY_INFORMATION flag.
 related:
   - peios/file-access/overview
@@ -162,17 +162,15 @@ The same rules apply whether you set ownership via `OWNER_SECURITY_INFORMATION` 
 
 ## What about file mode (the POSIX rwx bits)?
 
-The traditional POSIX file mode — `chmod`-style read/write/execute bits — does not exist in the same way under FACS. The Linux mode bits are stored alongside the SD as filesystem metadata (the inode's mode field), but they are **not consulted by FACS for access control**. The DACL is what decides access; the mode is informational only.
+The traditional POSIX file mode — `chmod`-style read/write/execute bits — does not exist in the same way under FACS. The Linux mode bits are stored alongside the SD as ordinary inode metadata, but they are **not consulted by FACS for access control** (except the execute bit as an exec prerequisite). The DACL is what decides access; the mode is informational only.
 
-The kernel does still update the mode field when an SD is set (to maintain compatibility with tools that read the mode, like `ls -l`), but the mode is derived from the SD's DACL rather than being authoritative.
+The mode-changing syscalls still work, gated on SD rights:
 
-In particular:
+- `fchmod()` succeeds only if the fd's granted mask includes `WRITE_DAC` (legacy opens request it as a compat right); otherwise `-EACCES` (`-EBADF` on O_PATH fds).
+- `chmod()` runs a fresh access check requiring `WRITE_DAC` on the file's SD.
+- In both cases the mode bits are updated but the SD is untouched. To change what actually decides access, call `kacs_set_sd` with a new DACL.
 
-- `fchmod()` is denied on FACS-managed fds. To change permissions you call `kacs_set_sd` with a new DACL.
-- `chmod()` is allowed at the syscall level but the kernel translates it to an attempt to modify the SD, which goes through the usual access check.
-- The mode bits in `stat()` results reflect the synthesised mode derived from the DACL, not a separate authoritative value.
-
-This is the cleanest way to layer KACS on top of Linux file systems while preserving compatibility with tools that consult the mode. The mode is a derived view; the SD is the truth.
+The mode is inert metadata; the SD is the truth.
 
 ## Errors
 

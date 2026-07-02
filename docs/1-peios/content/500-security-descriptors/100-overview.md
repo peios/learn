@@ -103,3 +103,5 @@ If you want the inheritance model — how a child's SD is computed from its pare
 If you want conditional ACEs — the ABAC-style mechanism where access depends on token claims and resource attributes — read [Conditional ACEs](~peios/security-descriptors/conditional-aces).
 
 If you want the SACL specifically — audit, alarm, integrity labels, central access policy references, PIP trust labels — read [The SACL](~peios/security-descriptors/the-sacl).
+
+To read and change a descriptor from a shell — owner, DACL, SACL, label, inheritance — read [The sd command](~peios/security-descriptors/sd-command).

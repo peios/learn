@@ -1,0 +1,11 @@
+name = "Writing a Registry Source"
+description = "Implement the provider side of the registry with librsi — register your hives, then serve the RSI protocol: read requests, decode them, and reply."
+featured = true
+order = 5
+
+pages = [
+  "registry-sources/overview",
+  "registry-sources/registering-a-source",
+  "registry-sources/serving-requests",
+  "registry-sources/building-responses",
+]

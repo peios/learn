@@ -37,6 +37,7 @@ A definition is a set of typed registry values. Rather than list all of them in 
 | `Arguments` | — | Argument list passed to the binary. |
 | `WorkingDirectory` | `/` | Working directory for the process. |
 | `Environment` | — | `KEY=VALUE` pairs added to the environment. |
+| `RuntimeDirectories` | — | Private directories created under `/run` just before the process starts. See [The execution environment](~peios/peinit/execution-environment). |
 | `LimitNOFILE`, `LimitCORE` | — | `RLIMIT_NOFILE` / `RLIMIT_CORE`. |
 
 **What kind of service** — type and readiness. See [Simple and Oneshot services](~peios/peinit/service-types).

@@ -126,3 +126,9 @@ A reasonable question: if all three are intersections, why not just one? The rea
 The three sources of narrowing — the application, the local administrator, the directory — produce different layers because they answer different questions. "Does this code restrict its own authority?" is a programming concern; "is this service running in a sandbox?" is a deployment concern; "is this resource under enterprise data-protection policy?" is an organisational concern. Each layer handles its question.
 
 The privilege-bypass split is the most consequential difference. Restricted tokens are application-internal and the application is trusted to use privileges responsibly. Confinement and CAAP are external policy and the bypassed code is not trusted; privileges must not be an escape route.
+
+## Where to go next
+
+For the systematic walk when an access comes back denied and you need to know which layer did it, read [Debugging a denial](~peios/access-decisions/debugging-a-denial).
+
+For the token-side mechanics of the restricted pass, read [Restricted and write-restricted tokens](~peios/tokens/restricted-tokens).

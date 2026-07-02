@@ -121,3 +121,11 @@ A binary that is being verified has not yet finished exec'ing. The pin happens a
 But if verification succeeds and exec then fails for unrelated reasons (out of memory, mmap failure, etc.), the PIP values are not committed to the PSB. The pin, however, has been applied. A subsequent exec of the same file will re-verify and re-pin (or rather, find the pin already in place), but the original failed exec does not roll back the pin.
 
 This is consistent with the pin being about the inode's bytes, not about any specific process. Once an inode has been verified, the kernel knows what those bytes are and will not let them change, independent of whether any specific exec succeeded in using them.
+
+## Where to go next
+
+For where the public keys come from and how signed binaries are produced, read [Keys and image build](~peios/binary-signing/keys-and-image-build).
+
+For the exact blob layout and content-hash rules verification relies on, read [Signature format](~peios/binary-signing/signature-format).
+
+For what the assigned PIP fields go on to enforce, read [Process integrity protection](~peios/process-integrity-protection/overview).

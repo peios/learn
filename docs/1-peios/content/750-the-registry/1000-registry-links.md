@@ -40,7 +40,7 @@ There is one safety rule worth knowing: a link target is followed **literally**,
 
 The target is an ordinary [layered](~peios/the-registry/layers) value — the link key's default value — so it plays by the same rules as any other value. A higher-precedence or more-recent layer can write a *different* `REG_LINK` target and redirect the link; remove that layer and the original target resurfaces, by the usual automatic revert. And if a layer writes a default value that is *not* a `REG_LINK` onto a key that is still flagged as a link, resolution through it fails until the offending layer is removed or overridden. The link's *identity* is fixed at creation; its *target* is just configuration, and configuration is layered.
 
-## Where to start
+## Where to go next
 
 For the opaque-value rule this is the exception to, read [Keys, values, and types](~peios/the-registry/keys-values-and-types).
 

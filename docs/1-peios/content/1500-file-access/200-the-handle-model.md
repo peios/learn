@@ -122,7 +122,8 @@ The exception list is short. For the overwhelming majority of operations, the ca
 
 Knowing the handle model has practical implications for code that handles files:
 
-**Don't expect tightening to revoke open handles.** A security incident response that revokes a permission needs to also close fds. The kernel does not.
+> [!WARNING]
+> **Don't expect tightening to revoke open handles.** A security incident response that revokes a permission needs to also close fds. The kernel does not.
 
 **Open with exactly the rights you need.** A fd opened with broader rights than needed is a broader capability than needed. If something might pass the fd elsewhere, the something gets the broader rights too. Minimum-rights opens are good hygiene.
 
@@ -131,3 +132,11 @@ Knowing the handle model has practical implications for code that handles files:
 **Use FD_CLOEXEC for fds you don't want exec to inherit.** This is also a defence-in-depth measure against accidental capability leakage to child processes.
 
 **Refreshing access requires reopening.** A program that wants to see DACL changes needs to close and reopen, not poll for changes.
+
+## Where to go next
+
+For the two syscalls that produce these fds and stamp the granted mask, read [Opening files](~peios/file-access/opening-files).
+
+For reading and writing the SD behind a handle, read [Managing file security](~peios/file-access/managing-file-security).
+
+For the edges of the model — O_PATH, the exec dual gate, append-only handles — read [Special cases](~peios/file-access/special-cases).

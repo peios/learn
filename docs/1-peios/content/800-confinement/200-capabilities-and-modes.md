@@ -72,7 +72,7 @@ The mode is a property of the token at creation. It is encoded by whether `ALL_A
 - If `ALL_APPLICATION_PACKAGES` (`S-1-15-2-1`) is **present** in the token's confinement capabilities → normal mode.
 - If it is **absent** → strict mode.
 
-Token construction rejects tokens that try to carry `ALL_APPLICATION_PACKAGES` as a capability **in strict-mode tokens** (any non-strict combination is fine).
+There is no separate mode flag and no rejection rule — the mode is purely the presence or absence of the SID, and the kernel never synthesises or strips it.
 
 The practical effect of strict mode: a strict-mode application can reach only objects whose DACLs explicitly grant access to its capabilities or to `ALL_RESTRICTED_APPLICATION_PACKAGES`. The much larger set of objects that grant to `ALL_APPLICATION_PACKAGES` are off-limits.
 
@@ -128,3 +128,11 @@ A typical SD on a resource intended to be reachable by confined applications mig
 A non-confined token reaches the resource through its normal identity (Authenticated Users, administrative groups, etc.). A confined token additionally needs the capability ACE to match a SID in its `confinement_capabilities` for the confinement pass to leave the access intact. The two sides — normal identity for the DACL walk, capability for the confinement pass — both have to grant.
 
 The presence of capability ACEs on system resources is what makes confined applications usable in practice. Without them, every confined application would be locked out of everything that did not specifically know about it.
+
+## Where to go next
+
+For the mechanics of how these capabilities are matched at access-check time — what fires, what gets intersected, and what is preserved — read [The confinement pass](~peios/confinement/the-confinement-pass).
+
+For the other use of the same capability SIDs — placed in `groups` as positive grants — read [Positive confinement](~peios/confinement/positive-confinement).
+
+For the wider catalog of system-defined SIDs these capabilities sit alongside, read [Well-known principals](~peios/identity/well-known-principals).

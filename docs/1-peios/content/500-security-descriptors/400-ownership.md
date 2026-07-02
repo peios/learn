@@ -46,7 +46,8 @@ The two pieces — suppress implicit, then evaluate normally — let you write D
 - "The owner has the same rights as any other authenticated user; no special privileges."
 - "The owner has no access at all; only specific named principals can touch this object."
 
-These constructions are not always wise. Locking the owner out of `WRITE_DAC` means no one short of an administrator with `SeTakeOwnership` can change the DACL. That can be exactly what you want, but it is also how an object becomes administratively unrecoverable. Use sparingly.
+> [!WARNING]
+> These constructions are not always wise. Locking the owner out of `WRITE_DAC` means no one short of an administrator with `SeTakeOwnership` can change the DACL. That can be exactly what you want, but it is also how an object becomes administratively unrecoverable. Use sparingly.
 
 ## Changing ownership
 
@@ -54,7 +55,7 @@ Ownership is itself a property the access check protects. To change an SD's owne
 
 Once a caller has `WRITE_OWNER`, they cannot just name any SID as the new owner. The kernel applies one of two rules, depending on the caller's privileges.
 
-**Without `SeRestorePrivilege`**, the new owner SID MUST be either:
+**Without `SeRestorePrivilege`**, the new owner SID must be either:
 
 - The caller's own `user_sid`, or
 - A SID present in the caller's `groups` list with the `SE_GROUP_OWNER` flag set.
@@ -103,3 +104,11 @@ A few patterns for when ownership is the lever you need:
 - **Inherited a mess of objects from a departed user.** Their tokens are gone, but their SIDs are still in the DACLs. An administrator with `SeTakeOwnership` can take ownership of each object (subject to the same-self-or-owner-group rule for the new owner) and then rewrite the DACLs.
 - **Restoring backups.** A backup tool with `SeRestorePrivilege` can set arbitrary owners during restore, reproducing the original SDs even when the original principals are not present on the current system.
 - **Locking the owner out deliberately.** Use an `OWNER RIGHTS` ACE — explicitly grant the owner what you want them to have (perhaps nothing) and the implicit grant of `READ_CONTROL | WRITE_DAC` will be suppressed. Use with care; this is what makes objects administratively unrecoverable except via `SeTakeOwnership`.
+
+## Where to go next
+
+For how the `CREATOR_OWNER` and `CREATOR_GROUP` placeholders get substituted when children are created, read [Inheritance](~peios/security-descriptors/inheritance).
+
+For how `SeTakeOwnership` and `SeRestore` fit the wider privilege model, read [Privileges](~peios/privileges/overview).
+
+To view and change an object's owner from a shell, read [The sd command](~peios/security-descriptors/sd-command).

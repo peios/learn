@@ -1,7 +1,12 @@
 ---
-title: Quick Start
+title: Quick start
 type: how-to
 description: Create a Trail documentation site from scratch, build it, and serve it locally in under five minutes.
+related:
+  - trail/getting-started/project-structure
+  - trail/configuration/trail-toml
+  - trail/content-authoring/pages-and-frontmatter
+  - trail/content-authoring/pathways
 ---
 
 This guide walks through creating a minimal Trail site, building it, and serving it locally.

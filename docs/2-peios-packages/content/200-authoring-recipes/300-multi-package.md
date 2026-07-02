@@ -1,5 +1,5 @@
 ---
-title: Multi-Package Recipes
+title: Multi-package recipes
 type: how-to
 description: How to split one upstream's build output across several .peipkg files (runtime, -dev, -doc), how the file-glob partition works, and the same_build dependency shorthand.
 related:
@@ -91,7 +91,7 @@ The runtime stanza ships the SONAME chain a binary needs at *load* time. The dev
 
 The `-dev` stanza's `.so` symlink (`libfoo.so`) typically points at the runtime stanza's `.so.1` (`libfoo.so.1`). That target lives in a different package — at build time, `-dev`'s payload alone doesn't contain `libfoo.so.1`.
 
-This is permitted. The recipe expresses the dependency through the `dependencies` array, and the symlink target is verified at extract time when both packages are installed together. See [Dependencies](./dependencies) for the dep declaration; the spec details are in [PSD-009 §3.4 symlinks](../../../specs/psd-009--peipkg/v0.22/3-format/4-payload).
+This is permitted. The recipe expresses the dependency through the `dependencies` array, and the symlink target is verified at extract time when both packages are installed together. See [Dependencies](~peios-packages/authoring-recipes/dependencies) for the dep declaration; the spec details are in [PSD-009 §3.4 symlinks](/spec/psd-009/v0.22/format/payload/).
 
 ## The `same_build = true` shorthand
 
@@ -120,3 +120,9 @@ If this build's version is `1.2.3-1`, the produced manifest will contain:
 If a package has no headers, no static lib, no developer-link symlink, no man pages — split would leave `-dev` and `-doc` empty. Don't bother. One stanza is fine. The convention is "split when there's something to put in each output," not "always have three packages."
 
 A binary application (a daemon, a CLI tool) typically ships as one stanza: the binary, its config files in `/etc/`, and any man pages all under one name.
+
+## Where to go from here
+
+- [Declaring dependencies](~peios-packages/authoring-recipes/dependencies) — the full dependency surface beyond `same_build`.
+- [Build scripts](~peios-packages/authoring-recipes/build-scripts) — producing the staged tree the stanzas partition.
+- [Recipe format reference](~peios-packages/reference/recipe-format) — the normative schema for `[[package]]` stanzas and their fields.

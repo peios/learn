@@ -2,11 +2,16 @@
 title: Worker
 type: reference
 description: A Worker userdata gives a test concurrent agent connections to the same guest VM, so you can drive multiple ops in parallel without spinning up another VM.
+related:
+  - provium/reference/vm
+  - provium/reference/process
+  - provium/reference/file-handle
+  - provium/writing-tests/running-commands
 ---
 
 A Worker is what `vm:spawn_worker()` returns: a sub-agent connection to the same VM. It exposes the same VM-style API for running commands, opening files, and issuing syscalls — handles allocated under it live in the worker's own namespace on the agent side.
 
-Workers are not a hard isolation boundary in v1. They're bookkeeping namespaces — handles are routable from outside the worker, but the agent tracks per-worker membership for cleanup. Per-worker dispatch wire ops are deferred to a future slice; for now, treat workers as parallelism, not security.
+Workers are not a hard isolation boundary. They're bookkeeping namespaces — handles are routable from outside the worker, but the agent tracks per-worker membership for cleanup. Enforced per-worker isolation is not currently supported; treat workers as parallelism, not security.
 
 ## Constructing
 
@@ -21,7 +26,7 @@ The worker mirrors the VM's run / file / syscall surface. Where semantics differ
 
 ### `worker:run(cmd, opts?)`
 
-Synchronous exec. Same call shape as [`vm:run`](~provium/reference/vm#vmruncmd_or_args-opts). Returns a [RunResult](~provium/reference/vm#runresult).
+Synchronous exec. Same call shape as [`vm:run`](~provium/reference/vm#vmruncmd-or-args-opts). Returns a [RunResult](~provium/reference/vm#runresult).
 
 ### `worker:run_async(cmd, opts?)`
 
@@ -79,7 +84,7 @@ test("two concurrent writers don't tear", function(t)
 end)
 ```
 
-For coordination between workers, use [`lab:barrier(name, count, timeout?)`](~provium/reference/lab#barriername-count-timeout) or a guest-side primitive (file, fifo, etc.).
+For coordination between workers' guest processes, use a guest-side primitive (file, fifo, etc.). [`lab:barrier(name, count, timeout?)`](~provium/reference/lab#labbarriername-count-timeout) is a host-side rendezvous — a worker's guest processes can't call it. See [Labs and scope — Barriers](~provium/writing-tests/labs-and-scope#barriers) for what barriers can and can't synchronise today.
 
 ## See also
 

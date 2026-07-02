@@ -127,7 +127,7 @@ A process can read its own mitigation flags via the PSB query. The interface —
 
 For reading another process's flags, the same `PROCESS_QUERY_INFORMATION` + PIP dominance rules apply as for setting them. Typically only peinit or a debug tool would read another process's mitigation flags.
 
-Note that the flags are independent of the PSB's other fields. Querying the mitigation flags does not reveal anything about the process's PIP level, its SD, or its `no_child_process` state — those are separate queries. The mitigation bitfield is its own thing.
+Note that the flags are independent of the PSB's other fields. Querying the mitigation flags does not reveal anything about the process's PIP level or its SD — those are separate queries. It *does* include `NO_CHILD`, which is bit `0x020` of the same bitfield.
 
 ## What happens at process exit
 
@@ -150,3 +150,9 @@ The corollary: a process whose launcher does not apply mitigations runs without 
 | `-EINVAL` | Unknown flag bits in `flags`. |
 
 In normal operation, the call succeeds. Failures are typically programming errors (wrong pidfd) or insufficient authority (a low-trust caller trying to modify a high-trust target).
+
+## Where to go next
+
+For what each flag actually enforces once set, read the [Catalog](~peios/process-mitigations/catalog).
+
+For the SD-plus-dominance rules that gate setting mitigations on another process, read [The two-check rule](~peios/process-integrity-protection/the-two-check-rule).

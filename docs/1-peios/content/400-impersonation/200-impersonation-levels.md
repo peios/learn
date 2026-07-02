@@ -17,7 +17,7 @@ There is one rule worth pinning before the catalog: **the level is set by the cl
 | Value | Name | What a server may do |
 |---|---|---|
 | 0 | **Anonymous** | Nothing identity-related. The impersonation token has the Anonymous SID as its user; the server learns nothing about the actual client. |
-| 1 | **Identification** | Inspect the client's identity. The server may read the client's SIDs, groups, integrity level, and privileges — but the token MUST NOT be used for AccessCheck. Any access check using an Identification-level token is denied immediately, no matter what the DACL says. |
+| 1 | **Identification** | Inspect the client's identity. The server may read the client's SIDs, groups, integrity level, and privileges — but the token must not be used for AccessCheck. Any access check using an Identification-level token is denied immediately, no matter what the DACL says. |
 | 2 | **Impersonation** | Act as the client for all local operations. This is the default and the level most server-to-client code paths assume. |
 | 3 | **Delegation** | Identical to Impersonation locally, plus the client's credentials may be forwarded to a remote machine over Kerberos. The kernel only records that Delegation was granted; the actual forwarding is authd's responsibility. |
 
@@ -87,3 +87,9 @@ The first sets the *maximum*. The second can lower it. The third is about the me
 A server that has just impersonated can read its own effective token to check what level it actually got. Reading the `impersonation_level` field of the effective token (via `KACS_IOC_QUERY` on the thread's token fd) returns the level in effect.
 
 This is worth doing at runtime if your code branches on level. The "client asked for Impersonation, but the integrity ceiling silently downgraded to Identification" case is silent by design — the impersonation call succeeds and the work proceeds, but every access check on the downgraded token will fail. Code that wants to detect the downgrade before doing access-requiring work should query the level first and skip work for which the level is insufficient.
+
+## Where to go next
+
+For how the kernel decides the level a server actually ends up with — and why the downgrade is silent — read [The two-gate model](~peios/impersonation/the-two-gates).
+
+For how a server gets hold of a client's identity in the first place, read [Peer tokens and capture](~peios/impersonation/peer-tokens).

@@ -140,3 +140,11 @@ Changing a mount's policy class is allowed (subject to access rules covered in [
 - **`facs_deny_missing` → `facs_synthesize_*`.** Unusual; would relax strictness. The kernel allows it but the operational reasoning is rarely good — synthesis is a recovery mechanism, not an everyday setting.
 
 A class transition is just a policy update; no files are touched at the transition. The new policy applies to future accesses. Existing cached state (synthesised SDs in memory) may need to be re-evaluated — see the generation counter in [Managing mounts](~peios/mount-policies/managing-mounts).
+
+## Where to go next
+
+For how each filesystem physically stores the SD, read [SD storage by filesystem](~peios/mount-policies/sd-storage-by-filesystem).
+
+For the syscalls that set and read a mount's policy, read [Managing mounts](~peios/mount-policies/managing-mounts).
+
+For choosing a policy from the command line at attach time, read [mount](~peios/mount-policies/mount).

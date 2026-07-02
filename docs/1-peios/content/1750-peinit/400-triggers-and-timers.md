@@ -119,6 +119,8 @@ A timer firing does not blindly start the service — peinit considers the servi
 
 The Oneshot "pending" flag is deliberately not a queue: many firings that land while a Oneshot is busy collapse into *one* catch-up run, taken when the current run ends. A service cannot stampede itself.
 
+That single flag is shared across *all* of a Oneshot's timers, not one per timer. If a Oneshot has several timer triggers and two of them fire while it is busy, at most **one** run is still pending when the current one finishes. The timers are otherwise fully independent — each keeps its own next-firing time and its own last-run timestamp — but they can only ever queue up a single shared catch-up between them.
+
 Each timer firing creates a normal [start operation](~peios/peinit/jobs-and-operations), so a timer-started service is observable exactly like an admin-started one — same GUIDs, same events.
 
 ## Persistent timers and catch-up
@@ -147,8 +149,16 @@ Calendar timers are **wall-clock** schedules: `*-*-* 02:00:00` means "02:00 on t
 | **NTP step or manual clock set** | Armed calendar timers are cancelled and recomputed against the new wall clock. A backward step pushes the next firing later; a forward step that crosses a missed time fires it once. |
 | **Suspend / resume** | A scheduled time that elapsed while suspended fires once on resume — once, not once per missed occurrence. |
 | **A missed occurrence within one uptime** | Fire once, then resume the normal schedule. peinit never replays every occurrence in the gap. |
+| **Daylight-saving transition** (timezone-aware timer only) | A scheduled time in the *skipped* hour never fires; a scheduled time in the *repeated* hour fires once. See below. |
+
+Daylight-saving is the case most likely to surprise you, and it only affects timers that name an IANA zone that observes DST (a bare `02:30:00` in system-local time follows whatever the system does). Say you schedule `*-*-* 02:30:00 Europe/London`:
+
+- **Spring forward** — the clock jumps from 01:59 straight to 03:00, so 02:30 *does not exist* on that day. The timer **does not fire**; it simply resumes at the next valid `02:30`.
+- **Fall back** — the clock reaches 02:30, then rewinds and reaches 02:30 a second time. The timer fires **exactly once**, on the first occurrence, not twice.
 
 This is distinct from peinit's *interval* timers — the watchdog, health-check intervals, restart backoff, and the start/stop/reload phase timeouts. Those are genuine durations measured on the monotonic clock, so "wait 30 seconds" means 30 elapsed seconds and never lurches when the wall clock is set.
+
+There is one boot-time case worth calling out on its own. When peinit reads a timer's stored last-run timestamp at boot and finds it is *in the future* relative to the current wall clock — meaning the clock has gone backwards since that run — it can't trust the timestamp, so it treats the timer as having an **unknown last run** and fires the persistent catch-up immediately. This only applies to the boot-time check; the runtime handling above is unaffected.
 
 > [!CAUTION]
 > If a machine boots with a wildly wrong clock (a dead RTC battery) and NTP corrects it only later, the boot-time persistent catch-up decision is made against the wrong time and may fire spuriously or not at all. The *runtime* half self-heals once NTP steps the clock, but the boot-time decision is already made by then. This is a known edge case short of NTP-aware rescheduling — worth knowing if you run timers on hardware with unreliable clocks.

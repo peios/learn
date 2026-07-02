@@ -118,3 +118,9 @@ For the Limited token this happens naturally when the user logs out. For the Ful
 **Service accounts (no pair).** Services do not generally need elevation; their tokens are unpaired and `elevation_type = Default`. A service that needs occasional elevated work is a different pattern — usually IPC to an already-elevated service rather than a linked-pair within the same service.
 
 **Diagnostics ("am I elevated?").** A process can call `KACS_IOC_GET_LINKED_TOKEN` on its own primary token (which it always has at least `TOKEN_QUERY` on). Without `SeTcb` it gets an Identification-level clone — enough to read `elevation_type` and `groups` on the partner and display "elevated rights available". The clone itself cannot be used for anything but inspection.
+
+## Where to go next
+
+For the session object that holds the pair together — and what happens to the pair when it dies — read [Logon sessions](~peios/logon-sessions/overview).
+
+To inspect a token's elevation type and its partner from a shell, read [The token command](~peios/tokens/token-command).

@@ -28,7 +28,7 @@ By default `realpath` requires every component of the path *except the last* to 
 |---|---|
 | (default) | Every component except the last must exist. |
 | `-e`, `--canonicalize-existing` | Every component must exist — including the final one. |
-| `-m`, `--canonicalize-missing` | No component need exist. The path is canonicalized purely as text where it cannot be walked. |
+| `-m`, `--canonicalize-missing` | No component need exist. The path is canonicalised purely as text where it cannot be walked. |
 
 ## How symbolic links are handled
 
@@ -49,7 +49,7 @@ By default `realpath` requires every component of the path *except the last* to 
 
 ## `realpath` and `readlink`
 
-[`readlink`](~peios/listing-and-paths/readlink) with `-f`/`-e`/`-m` does the same canonicalizing job. The difference is focus: `readlink` is primarily for reading a single link's target, with canonicalizing as an extra; `realpath` is built for canonicalizing and carries the richer option set — relative output, the symlink-handling modes, the strip-only mode. Reach for `realpath` when canonicalizing is the actual goal.
+[`readlink`](~peios/listing-and-paths/readlink) with `-f`/`-e`/`-m` does the same canonicalising job. The difference is focus: `readlink` is primarily for reading a single link's target, with canonicalising as an extra; `realpath` is built for canonicalising and carries the richer option set — relative output, the symlink-handling modes, the strip-only mode. Reach for `realpath` when canonicalising is the actual goal.
 
 ## Exit status
 

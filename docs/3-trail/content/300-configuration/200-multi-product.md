@@ -1,7 +1,11 @@
 ---
-title: Multi-Product Mode
+title: Multi-product mode
 type: concept
 description: A single Trail site can host documentation for multiple products, each with its own categories, pathways, and content hierarchy.
+related:
+  - trail/configuration/trail-toml
+  - trail/getting-started/project-structure
+  - trail/content-authoring/pathways
 ---
 
 Multi-product mode lets a single Trail site serve documentation for multiple products under one domain. Each product has its own content directory, category ordering, pathway definitions, and index page.
@@ -28,7 +32,7 @@ order = 2
 
 ## Directory structure
 
-In multi-product mode, content and pathways are organized by product:
+In multi-product mode, content and pathways are organised by product:
 
 ```
 my-docs/

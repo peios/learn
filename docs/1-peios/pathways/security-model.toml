@@ -1,0 +1,19 @@
+name = "Understand the Peios security model"
+description = "The conceptual spine of Peios access control — identity, tokens, sessions, security descriptors, the access-check pipeline, and the layers that narrow it — ending with how to debug a denial."
+featured = true
+order = 1
+
+pages = [
+  "identity/overview",
+  "identity/sids",
+  "tokens/overview",
+  "logon-sessions/overview",
+  "security-descriptors/overview",
+  "security-descriptors/acls-and-aces",
+  "security-descriptors/dacl-evaluation",
+  "access-decisions/overview",
+  "access-decisions/mandatory-integrity-control",
+  "confinement/overview",
+  "process-integrity-protection/overview",
+  "access-decisions/debugging-a-denial",
+]

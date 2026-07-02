@@ -72,7 +72,7 @@ Each bit is independent. Setting a bit enables the mitigation; the bit can be se
 
 The one-way rule is what makes mitigations trustworthy. A process that has WXP enabled cannot be tricked or coerced into disabling it. There is no syscall to clear a mitigation; there is no privilege that bypasses the rule. Once on, on for the lifetime of the process (and beyond — see below).
 
-The same applies to the related flag `no_child_process`, stored alongside on the PSB. Once set, the process can never fork or clone again. There is no way to undo it.
+The same applies to `NO_CHILD` — bit `0x020` in the same bitfield. Once set, the process can never fork or clone again. There is no way to undo it.
 
 ## Exec preservation
 

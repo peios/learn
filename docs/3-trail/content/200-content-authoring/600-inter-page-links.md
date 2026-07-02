@@ -1,7 +1,11 @@
 ---
-title: Inter-Page Links
-type: how-to
+title: Inter-page links
+type: concept
 description: Use the ~slug shorthand to link between pages. Trail resolves these at build time to absolute URLs.
+related:
+  - trail/getting-started/project-structure
+  - trail/content-authoring/pages-and-frontmatter
+  - trail/reference/cli
 ---
 
 Trail provides a shorthand syntax for linking between pages in your documentation site. Instead of writing absolute paths that may break if the site structure changes, you reference pages by their slug.

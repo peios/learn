@@ -2,6 +2,11 @@
 title: Fixtures and dependencies
 type: how-to
 description: How fixtures are discovered, cached, keyed, locked, and evicted. When a fixture rebuilds. How to manage the cache from the CLI.
+related:
+  - provium/reference/snapshot
+  - provium/reference/lab
+  - provium/configuration/provium-toml
+  - provium/running-tests/the-cli
 ---
 
 Fixtures are pre-built VM (or whole-lab) snapshots that test files restore from instead of re-doing setup work. This page covers the cache model end-to-end.

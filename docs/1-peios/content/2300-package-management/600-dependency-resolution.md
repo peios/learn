@@ -6,6 +6,8 @@ related:
   - peios/package-management/overview
   - peios/package-management/installing-and-removing
   - peios/package-management/repositories-and-trust
+  - peios/package-management/claims
+  - peios/package-management/named-roots
   - peios/auditing/overview
 ---
 
@@ -30,6 +32,10 @@ A package's manifest declares how it relates to others. Four relationships drive
 **Provides.** Several packages can advertise the same capability — a *virtual* name that is not itself a package. A dependency written against that name is satisfied by *any* package that provides it. This is how "needs a mail transport agent" can be met by whichever one you actually install.
 
 **Replaces.** A package can declare that it supersedes another — the usual case being a rename, or a merge of two packages into one. Installing a package that `replaces` another causes the replaced package to be removed as part of the same plan.
+
+`provides` has a stronger cousin: a **claim**, a single shared name that exactly one package may hold at a time. Where any number of packages can advertise the same `provides` name at once, a claim has one holder — see [Claims](~peios/package-management/claims).
+
+A dependency can also be routed into a different root, written `Depends: foo IN <root>`, so that a whole root can be composed through the dependency graph — see [Named roots](~peios/package-management/named-roots).
 
 ## Choosing a version
 

@@ -6,6 +6,9 @@ related:
   - peios/mount-policies/policy-classes
   - peios/mount-policies/sd-storage-by-filesystem
   - peios/mount-policies/managing-mounts
+  - peios/mount-policies/mount
+  - peios/mount-policies/umount
+  - peios/mount-policies/lsblk
   - peios/file-access/overview
   - peios/file-access/the-handle-model
 ---
@@ -82,3 +85,7 @@ If you want each class in detail — what `facs_deny_missing` actually does at r
 If you want to know how each filesystem stores SDs — ext4's `ea_inode`, XFS's native xattr support, NTFS via `system.ntfs_security`, the no-xattr-support filesystems — read [SD storage by filesystem](~peios/mount-policies/sd-storage-by-filesystem).
 
 If you want the operational story — `kacs_set_mount_policy`, `kacs_get_mount_policy`, the generation counter that makes invalidation lazy, why mount policy changes don't walk the filesystem — read [Managing mounts](~peios/mount-policies/managing-mounts).
+
+## The commands
+
+The concept pages above describe the model; three command-line tools put it to work. [`mount`](~peios/mount-policies/mount) attaches a filesystem to the mount tree and is where a KACS mount policy (and its optional SD template) is chosen at attach time — the one place the policy classes above meet a command line. [`umount`](~peios/mount-policies/umount) detaches a filesystem again, by mount point or by source, with lazy, forced, recursive and all-targets variants. [`lsblk`](~peios/mount-policies/lsblk) lists the block devices available to mount, with their filesystems and, like `ls -l`, their SD-derived owner and mode. Reach for these when you want the operational reference for a specific flag rather than the model behind it.

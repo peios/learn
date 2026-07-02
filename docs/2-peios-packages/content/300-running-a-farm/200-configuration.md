@@ -44,7 +44,7 @@ Identity and disk layout for the daemon itself.
 
 | Field | Required | Description |
 |---|---|---|
-| `id` | Yes | The build farm's identifier. Recorded in every package's `manifest.build.farm_id` ([PSD-009 §3.3.4](../../../specs/psd-009--peipkg/v0.22/3-format/3-manifest)). Use a stable string like `peios-build-1`. |
+| `id` | Yes | The build farm's identifier. Recorded in every package's `manifest.build.farm_id` ([PSD-009 §3.3.4](/spec/psd-009/v0.22/format/manifest/)). Use a stable string like `peios-build-1`. |
 | `recipes_dir` | Yes | Directory containing one subdirectory per package. Each subdirectory must contain a `peipkg.toml`; subdirectories without one are silently ignored, so it's safe to keep notes or scratch directories alongside. |
 | `state_dir` | Yes | Manager's writable working area. Subdirectories `sources/`, `stage/`, `publish/`, and `repo/` are created on first run. |
 
@@ -54,11 +54,11 @@ The repository's identity. Used at first-run init only — once the repository s
 
 | Field | Required | Description |
 |---|---|---|
-| `name` | Yes | Recorded in `repo.json`'s `repo.name`. Should be kebab-case ([PSD-009 §6.1.2](../../../specs/psd-009--peipkg/v0.22/6-repository/1-descriptor)). |
+| `name` | Yes | Recorded in `repo.json`'s `repo.name`. Should be kebab-case ([PSD-009 §6.1.2](/spec/psd-009/v0.22/repository/descriptor/)). |
 | `description` | No | Human-readable one-line description. Empty string if omitted. |
 
 > [!NOTE]
-> If you need to change `repo.name` after the repository has been initialised, edit `repo.json` directly and re-sign with `peipkg-repo` (the descriptor is signed independently of the indexes; see the [CLI reference](../reference/cli-peipkg-repo)).
+> If you need to change `repo.name` after the repository has been initialised, edit `repo.json` directly and re-sign with `peipkg-repo` (the descriptor is signed independently of the indexes; see the [CLI reference](~peios-packages/reference/cli-peipkg-repo)).
 
 ## `[signing]`
 
@@ -66,11 +66,11 @@ The Ed25519 private key that signs every package and every published index/descr
 
 | Field | Required | Description |
 |---|---|---|
-| `key_file` | Yes | Path to the key on disk. Either a 32-byte raw seed or a PEM-encoded PKCS#8 `PRIVATE KEY` block ([PSD-009 §5.2.2](../../../specs/psd-009--peipkg/v0.22/5-signing/2-key-management)). |
+| `key_file` | Yes | Path to the key on disk. Either a 32-byte raw seed or a PEM-encoded PKCS#8 `PRIVATE KEY` block ([PSD-009 §5.2.2](/spec/psd-009/v0.22/signing/key-management/)). |
 
 The file must be readable by the daemon's user. Mode 0600 is recommended.
 
-[Signing keys](./signing-keys) discusses generation, custody, and rotation.
+[Signing keys](~peios-packages/running-a-farm/signing-keys) discusses generation, custody, and rotation.
 
 ## `[upload]`
 
@@ -83,7 +83,7 @@ Where to publish the repository state after each successful publish.
 
 When `backend = "rclone"`, the daemon runs `rclone sync <state_dir>/repo/ <remote>` after every successful `peipkg-repo publish`.
 
-[Hosting on R2](./hosting/r2) covers the rclone setup. For GitHub Pages or VPS deployments, set `backend = "none"` and run your own sync logic from a wrapper script — see [Hosting on Pages](./hosting/pages) or [Hosting on a VPS](./hosting/vps).
+[Hosting on R2](~peios-packages/running-a-farm/hosting/r2) covers the rclone setup. For GitHub Pages or VPS deployments, set `backend = "none"` and run your own sync logic from a wrapper script — see [Hosting on Pages](~peios-packages/running-a-farm/hosting/pages) or [Hosting on a VPS](~peios-packages/running-a-farm/hosting/vps).
 
 ## `[http]`
 
@@ -99,7 +99,7 @@ The webhook secret file's contents are taken as-is, with trailing whitespace (in
 The HTTP server exposes three endpoints:
 
 - `GET /healthz` — always returns `200 ok`. For readiness checks.
-- `GET /status` — JSON status report. See [Monitoring](./monitoring).
+- `GET /status` — JSON status report. See [Monitoring](~peios-packages/running-a-farm/monitoring).
 - `POST /webhooks/github` — webhook receiver. HMAC-verified.
 
 ## `[poll]`
@@ -134,3 +134,10 @@ systemctl reload peipkg-manager
 (`Reload=` isn't currently wired into the systemd unit — `systemctl reload` is equivalent to `kill -HUP <pid>`.)
 
 The webhook secret and signing key are read on startup; changing those requires a full restart.
+
+## Where to go from here
+
+- [Signing keys](~peios-packages/running-a-farm/signing-keys) — generation, custody, and rotation of the key `[signing].key_file` points at.
+- [Hosting on Cloudflare R2](~peios-packages/running-a-farm/hosting/r2) — setting up the rclone remote `[upload]` publishes to.
+- [Monitoring](~peios-packages/running-a-farm/monitoring) — the `/status` endpoint the `[http]` server exposes, and what to alert on.
+- [peipkg-config.toml reference](~peios-packages/reference/config-format) — the normative config schema.

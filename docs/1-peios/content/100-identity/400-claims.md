@@ -105,3 +105,9 @@ A few things claims look like at a glance but are not:
 - **Claims are not groups.** A group is a SID in the token's group list; group membership is presence-or-absence. A claim is a typed attribute with a value. The two appear in different parts of the token and are matched by different parts of an ACE.
 - **Claims are not privileges.** Privileges are a fixed system bitmask gating specific operations. Claims are administrator-defined attributes with arbitrary names.
 - **Claims are not the audit log.** Claims describe the principal; the audit log describes what the principal did. The audit-event subject record does include the principal's claims (so audit consumers can write rules over them), but a claim is not itself an event.
+
+## Where to go next
+
+For how the token that carries these claims is built, adjusted, and destroyed, read [Tokens](~peios/tokens/overview).
+
+For the expression grammar that consumes claims — operators, three-valued logic, worked examples — read [Conditional ACEs](~peios/security-descriptors/conditional-aces).

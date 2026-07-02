@@ -59,7 +59,7 @@ Put watches together with [reject-or-keep](~peios/the-registry/configuration-and
 
 A watch is bound to the specific key object you opened, not to the path string. If layers later cause a *different* key to appear at the same path, your watch stays with the original object — it does not jump to the newcomer. If the original key is removed, you get a "key deleted" event; to watch whatever now lives at that path, you reopen the path and arm a fresh watch. This follows from keys having an identity of their own, distinct from the name that currently points at them.
 
-## Where to start
+## Where to go next
 
 If you want the registry's own use of watches — how it picks up changes to its own configuration without restarting — read [How the registry boots and configures itself](~peios/the-registry/bootstrap-and-self-configuration).
 

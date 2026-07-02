@@ -1,7 +1,11 @@
 ---
 title: Admonitions
-type: how-to
+type: concept
 description: Use GitHub-style blockquote syntax to create NOTE, WARNING, IMPORTANT, TIP, and CAUTION callouts in your documentation.
+related:
+  - trail/content-authoring/pages-and-frontmatter
+  - trail/content-authoring/tab-groups
+  - trail/content-authoring/code-blocks
 ---
 
 Admonitions are highlighted callout blocks that draw attention to important information. Trail supports five types using GitHub's blockquote alert syntax.
@@ -19,7 +23,7 @@ The type marker must be on the first line of the blockquote, in the format `[!TY
 
 ## Available types
 
-Trail supports five admonition types. Each has a distinct color and icon.
+Trail supports five admonition types. Each has a distinct colour and icon.
 
 ### NOTE
 
@@ -83,9 +87,9 @@ Renders with a red left border and a warning icon.
 
 ## Styling details
 
-Each admonition type has a specific color scheme for both light and dark modes:
+Each admonition type has a specific colour scheme for both light and dark modes:
 
-| Type | Border color | Background color | Title |
+| Type | Border colour | Background colour | Title |
 |---|---|---|---|
 | NOTE | Blue | Light blue / dark blue | "Note" |
 | TIP | Green | Light green / dark green | "Tip" |

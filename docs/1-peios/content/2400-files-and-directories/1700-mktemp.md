@@ -29,6 +29,8 @@ work=$(mktemp)
 rm "$work"
 ```
 
+The temporary file or directory `mktemp` creates is a new object, and a new object needs a [security descriptor](~peios/security-descriptors/overview); it inherits one from the directory it is created in.
+
 ## Templates
 
 The name comes from a **template** — a name with a run of trailing `X` characters, each of which `mktemp` replaces with a random character. More `X`s means a wider range of possible names.

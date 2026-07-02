@@ -1,7 +1,11 @@
 ---
-title: Data Model
+title: Data model
 type: concept
 description: The task and milestone data model — fields, statuses, dependencies, and how blocking is computed.
+related:
+  - cairn/reference/meta-toml
+  - cairn/getting-started/project-structure
+  - cairn/cli/commands
 ---
 
 Cairn's data model is designed around two tiers of tasks and a separate milestone system.

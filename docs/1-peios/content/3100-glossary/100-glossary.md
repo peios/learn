@@ -19,7 +19,7 @@ For the structural reference (numbers, struct layouts, constants), see [Constant
 
 **ACE (Access Control Entry).** A single rule inside an ACL — a type byte, flag byte, access mask, SID, and (depending on the type) optional GUIDs or application data. See [ACLs, ACEs, and access masks](~peios/security-descriptors/acls-and-aces).
 
-**ACL (Access Control List).** An ordered list of ACEs. The DACL contains access-grant/deny ACEs; the SACL contains audit and system-policy ACEs.
+**ACL (Access Control List).** An ordered list of ACEs. The DACL contains access-grant/deny ACEs; the SACL contains audit and system-policy ACEs. See [ACLs, ACEs, and access masks](~peios/security-descriptors/acls-and-aces).
 
 **Active index.** A repository's catalogue of the current version of each package — names, versions, dependencies, hashes, download locations. peipkg resolves installs and upgrades against it. See [Repositories and trust](~peios/package-management/repositories-and-trust).
 
@@ -47,11 +47,13 @@ For the structural reference (numbers, struct layouts, constants), see [Constant
 
 **Capability SID.** A SID in the `S-1-15-3-*` range that names a capability. Used in confinement and in positive confinement. See [Capabilities and modes](~peios/confinement/capabilities-and-modes).
 
-**Capability switchboard.** The classification of the 41 Linux capabilities as ALLOW (always present), PRIVILEGE (mapped to KACS privilege), or DENY (always denied). See [DAC neutralization and capabilities](~peios/linux-compatibility/dac-neutralization-and-capabilities).
+**Capability switchboard.** The classification of the 41 Linux capabilities as ALLOW (always present), PRIVILEGE (mapped to KACS privilege), or DENY (always denied). See [DAC neutralisation and capabilities](~peios/linux-compatibility/dac-neutralization-and-capabilities).
 
 **CFI / CFIF / CFIB.** Control Flow Integrity mitigations. CFIF (forward) constrains indirect branches to ENDBR-marked targets; CFIB (backward) verifies returns via the shadow stack. CFI is a legacy alias setting both. See [Process mitigations catalog](~peios/process-mitigations/catalog).
 
 **Claim.** A typed key-value attribute on a token (user or device claims) or object (resource attributes). Referenced in conditional ACE expressions. See [Claims on a token](~peios/identity/claims).
+
+**Claim (package).** A shared filesystem name that many installed packages can answer but only one may hold at a time. Materialises as a peipkg-managed symlink from the claim path to the holder's target. Distinct from the token-attribute sense of the word. See [Claims](~peios/package-management/claims).
 
 **Conditional ACE.** An ACE whose grant or deny is gated by a conditional expression in a stack-based bytecode. See [Conditional ACEs](~peios/security-descriptors/conditional-aces).
 
@@ -67,7 +69,7 @@ For the structural reference (numbers, struct layouts, constants), see [Constant
 
 **DACL (Discretionary Access Control List).** The ACL controlling who may access an object. Walked first-writer-wins during AccessCheck. See [DACL evaluation](~peios/security-descriptors/dacl-evaluation).
 
-**DAC neutralization.** The set of mandatory Linux capabilities (CAP_DAC_OVERRIDE, etc.) that every process carries so the kernel's classical DAC checks always defer to the LSM layer. See [DAC neutralization and capabilities](~peios/linux-compatibility/dac-neutralization-and-capabilities).
+**DAC neutralisation.** The set of mandatory Linux capabilities (CAP_DAC_OVERRIDE, etc.) that every process carries so the kernel's classical DAC checks always defer to the LSM layer. See [DAC neutralisation and capabilities](~peios/linux-compatibility/dac-neutralization-and-capabilities).
 
 **Default DACL.** The DACL applied to new objects when the creator does not supply an explicit SD. Stored on the creating token. See [Token lifecycle](~peios/tokens/lifecycle).
 
@@ -79,15 +81,15 @@ For the structural reference (numbers, struct layouts, constants), see [Constant
 
 ## E
 
-**Effective token.** The token AccessCheck reads on a thread — the impersonation token if the thread is impersonating, the primary token otherwise. See [Tokens overview](~peios/tokens/overview).
-
 **Eager inheritance.** The Peios inheritance model: a child object's SD is fully computed at creation time. Parent changes do not propagate to existing children. See [Inheritance](~peios/security-descriptors/inheritance).
+
+**Effective token.** The token AccessCheck reads on a thread — the impersonation token if the thread is impersonating, the primary token otherwise. See [Tokens overview](~peios/tokens/overview).
 
 **Elevated authorisation.** A second, deliberate confirmation peipkg requires for the few package operations a routine yes should not cover — a downgrade, a foreign `replaces`, a low-trust `provides`. Not satisfied by `--yes`; fails closed when unattended. See [Dependency resolution](~peios/package-management/dependency-resolution).
 
 **Elevation type.** A token field marking it as `Default` (no pair), `Full` (elevated half), or `Limited` (non-elevated half) of a linked pair. See [Elevation and linked tokens](~peios/tokens/elevation).
 
-**eventd.** The userspace audit daemon that drains KMES audit events and persists them.
+**eventd.** The userspace audit daemon that drains KMES audit events and persists them. See [Events and transport](~peios/auditing/events-and-transport).
 
 ## F
 
@@ -129,9 +131,9 @@ For the structural reference (numbers, struct layouts, constants), see [Constant
 
 ## K
 
-**KACS (Kernel Access Control Subsystem).** The kernel-level authorisation engine in Peios. Implemented as the PKM LSM.
+**KACS (Kernel Access Control Subsystem).** The kernel-level authorisation engine in Peios. Implemented as the PKM LSM. See [Kernel invariants](~peios/boot-and-trust-establishment/kernel-invariants).
 
-**KMES (Kernel Message Event Stream).** The kernel-to-userspace event transport that carries audit events. Best-effort delivery.
+**KMES (Kernel Message Event Stream).** The kernel-to-userspace event transport that carries audit events. Best-effort delivery. See [Events and transport](~peios/auditing/events-and-transport).
 
 ## L
 
@@ -162,6 +164,8 @@ For the structural reference (numbers, struct layouts, constants), see [Constant
 **Mount policy.** A per-superblock setting controlling how FACS treats a filesystem. One of `facs_deny_missing`, `facs_synthesize_ephemeral`, `facs_synthesize_persistent`, `unmanaged`. See [Mount policies](~peios/mount-policies/overview).
 
 ## N
+
+**Named root.** A registered name for a subtree that is itself a peipkg root, recorded in the registry of the root it lives under. Referenced from `--root` by bare name; names compose by dotting. See [Named roots](~peios/package-management/named-roots).
 
 **NEW_PROCESS_MIN.** A `mandatory_policy` flag that, when set, lowers the token's integrity to match the new binary's mandatory label at exec if the binary's label is lower. See [Mandatory integrity control](~peios/access-decisions/mandatory-integrity-control).
 
@@ -197,7 +201,7 @@ For the structural reference (numbers, struct layouts, constants), see [Constant
 
 **PIP dominance.** The all-or-nothing comparison: caller dominates target iff `caller.pip_type >= target.pip_type AND caller.pip_trust >= target.pip_trust`. See [The two-check rule](~peios/process-integrity-protection/the-two-check-rule).
 
-**PKM (Peios Kernel Module).** The LSM that implements KACS. The sole authoritative access-decision LSM on a Peios system.
+**PKM (Peios Kernel Module).** The LSM that implements KACS. The sole authoritative access-decision LSM on a Peios system. See [Kernel invariants](~peios/boot-and-trust-establishment/kernel-invariants).
 
 **Positive confinement.** The convention of placing capability SIDs in a token's normal `groups` list (in addition to or instead of `confinement_capabilities`), so the capability acts as a grant via the DACL walk rather than a confinement constraint. Does not bypass confinement. See [Positive confinement](~peios/confinement/positive-confinement).
 
@@ -233,7 +237,7 @@ For the structural reference (numbers, struct layouts, constants), see [Constant
 
 **Security descriptor (SD).** The four-part policy structure (owner, primary group, DACL, SACL) on every protected object. See [Security descriptors](~peios/security-descriptors/overview).
 
-**Self_sid.** The caller-supplied SID that `PRINCIPAL_SELF` resolves to during a specific AccessCheck. Used by directory-style objects where an ACE refers to "the principal this object is about".
+**Self_sid.** The caller-supplied SID that `PRINCIPAL_SELF` resolves to during a specific AccessCheck. Used by directory-style objects where an ACE refers to "the principal this object is about". See [Well-known principals](~peios/identity/well-known-principals).
 
 **Service SID.** A SID in the `S-1-5-80-*` range derived from a service's name via SHA-1. Used to grant access specifically to a named service. See [Well-known principals](~peios/identity/well-known-principals).
 
@@ -253,7 +257,7 @@ For the structural reference (numbers, struct layouts, constants), see [Constant
 
 ## T
 
-**TCB (Trusted Computing Base).** The kernel plus the TCB binaries (peinit, authd, loregd, lpsd, eventd) whose correctness the security model depends on.
+**TCB (Trusted Computing Base).** The kernel plus the TCB binaries (peinit, authd, loregd, lpsd, eventd) whose correctness the security model depends on. See [Boot and trust establishment](~peios/boot-and-trust-establishment/overview).
 
 **TLP (Trusted Library Paths).** A mitigation that requires `mmap(PROT_EXEC)`'d files to come from one of the approved directory prefixes (configured machine-wide at boot). See [Process mitigations catalog](~peios/process-mitigations/catalog).
 

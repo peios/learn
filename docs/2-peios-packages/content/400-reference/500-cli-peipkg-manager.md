@@ -39,7 +39,7 @@ Operator interactions:
 - **`SIGTERM` / `SIGINT`** — clean shutdown. Drains the in-flight build (if any), then exits zero.
 - **`SIGHUP`** — reload recipes from `recipes_dir`. The daemon picks up new recipes and dropped ones; in-progress builds finish.
 - **`/healthz`** — HTTP endpoint returning `200 ok`. For readiness probes.
-- **`/status`** — HTTP endpoint returning JSON status. See [Monitoring](../running-a-farm/monitoring).
+- **`/status`** — HTTP endpoint returning JSON status. See [Monitoring](~peios-packages/running-a-farm/monitoring).
 
 ## One-shot mode
 
@@ -83,7 +83,7 @@ Build/publish failures within the daemon are *not* propagated as exit codes — 
 
 ## Environment
 
-`peipkg-manager` itself doesn't read environment variables (configuration is via the TOML file). The `build.sh` scripts it invokes do — see [Build scripts](../authoring-recipes/build-scripts) for what the script gets.
+`peipkg-manager` itself doesn't read environment variables (configuration is via the TOML file). The `build.sh` scripts it invokes do — see [Build scripts](~peios-packages/authoring-recipes/build-scripts) for what the script gets.
 
 ## What `peipkg-manager` does NOT do
 

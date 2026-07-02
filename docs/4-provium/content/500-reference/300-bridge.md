@@ -2,9 +2,14 @@
 title: Bridge
 type: reference
 description: A Bridge userdata wraps a Linux bridge with TAP attachments. Use it to wire VMs together, partition the network, inject latency or drops, capture packets, isolate VMs, or NAT outbound traffic.
+related:
+  - provium/writing-tests/bridges-and-impairments
+  - provium/reference/nic
+  - provium/reference/lab
+  - provium/reference/streams
 ---
 
-A Bridge represents one Linux bridge with TAP-interface attachments. It is created via `lab:bridge("name")` and lazily realized — the host-side bridge and per-VM TAPs come up the first time any attached VM boots.
+A Bridge represents one Linux bridge with TAP-interface attachments. It is created via `lab:bridge("name")` and lazily realised — the host-side bridge and per-VM TAPs come up the first time any attached VM boots.
 
 ## Constructing
 
@@ -85,7 +90,7 @@ Directional: `bridge:drop_rate({from=A, to=B, p=10})`.
 
 Whole-bridge: `bridge:bandwidth_limit(1_000_000)` caps the bridge to 1 Mbit/s via `tc tbf`.
 
-Directional: `bridge:bandwidth_limit({from=A, to=B, bps=500_000})` installs an HTB-root + one rate-limited class on `A`'s source TAP, with a `netem` child when latency/drop is also set for the same source. Bits per second, not bytes. The `to` is graph-recorded but the realization shapes every packet leaving the source TAP — HTB at the bridge layer can't select by destination MAC. Multiple `(from=A, to=*)` pairs collapse to `max(bps)` on `A`'s TAP so no pair is over-shaped.
+Directional: `bridge:bandwidth_limit({from=A, to=B, bps=500_000})` installs an HTB-root + one rate-limited class on `A`'s source TAP, with a `netem` child when latency/drop is also set for the same source. Bits per second, not bytes. The `to` is graph-recorded but the realisation shapes every packet leaving the source TAP — HTB at the bridge layer can't select by destination MAC. Multiple `(from=A, to=*)` pairs collapse to `max(bps)` on `A`'s TAP so no pair is over-shaped.
 
 ### `bridge:add_directional_latency({from=A, to=B, ms=N})`
 
@@ -139,7 +144,7 @@ Enable / disable NAT for this bridge. Both can fail if the host doesn't have a d
 
 ### `bridge:nic(vm)`
 
-Returns a [Nic](~provium/reference/nic) bound to the (bridge, vm) pair. When `vm` is a VM userdata, the Nic carries the VM handle through so `nic:disconnect()` / `nic:reconnect()` can drive QMP `set_link`. With a bare string, the Nic is graph-state only.
+Returns a [Nic](~provium/reference/nic) bound to the (bridge, vm) pair. When `vm` is a VM userdata, the Nic carries the VM handle through so `nic:disconnect()` / `nic:reconnect()` can drive QMP `set_link`. With a bare string, the Nic is [graph-state only](~provium/writing-tests/bridges-and-impairments#declared-vs-realised).
 
 ### `bridge:capture()`
 

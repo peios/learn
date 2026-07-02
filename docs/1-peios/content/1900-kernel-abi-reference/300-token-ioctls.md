@@ -98,7 +98,7 @@ No args struct. The token represented by `token_fd` becomes the calling process'
 
 **Process-wide.** All threads of the calling process eventually converge to the new token; the change is propagated asynchronously by the kernel.
 
-**Errors**: `-EACCES`; `-EPERM` (no privilege); `-EINVAL` (impersonation-type token cannot be installed as primary).
+**Errors**: `-EACCES` (SD denies, or required privilege missing); `-EINVAL` (impersonation-type token cannot be installed as primary).
 
 ## KACS_IOC_RESTRICT (4)
 
@@ -143,7 +143,7 @@ ioctl(any_token_fd, _IOWR('K', 5, struct kacs_link_tokens_args))
 - Both tokens must reference the same session_id.
 - Neither token may already be linked.
 
-**Errors**: `-EPERM`; `-EACCES`; `-EINVAL` (self-link; role mismatch; session mismatch; already-linked).
+**Errors**: `-EACCES` (SD denies, or required privilege missing); `-EINVAL` (self-link; role mismatch; session mismatch; already-linked).
 
 ## KACS_IOC_GET_LINKED_TOKEN (6)
 
@@ -240,7 +240,7 @@ The argument is a `u32` containing the new session ID.
 - `TOKEN_ADJUST_SESSIONID` on the fd.
 - `SeTcbPrivilege` on the calling token.
 
-**Errors**: `-EACCES`; `-EPERM`.
+**Errors**: `-EACCES` (SD denies, or required privilege missing).
 
 Bumps `modified_id`.
 

@@ -1,0 +1,2 @@
+name = "Pekit"
+description = "The recipe-driven build and packaging tool for Peios. Pekit reads declarative recipes, resolves sources and versions, plans the work before touching anything, then builds, tests, installs, packages, and publishes — one recipe or a whole workspace at a time. It is the tool that turns source into .peipkg files."

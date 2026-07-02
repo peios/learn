@@ -1,7 +1,11 @@
 ---
-title: What Is Provium
+title: What is Provium
 type: concept
 description: Provium is a KVM-backed test harness for kernel and system code. You write tests in Lua, and they run inside real virtual machines against a real Linux kernel.
+related:
+  - provium/getting-started/quick-start
+  - provium/getting-started/project-structure
+  - provium/writing-tests/the-test-function
 ---
 
 Provium is a test harness for software that needs a real operating system underneath it. It boots a VM per file, exposes a Lua API for driving the guest (commands, files, syscalls, networking, faults), and reports results through the same `passed`/`failed`/`skipped` shape any other test runner would.

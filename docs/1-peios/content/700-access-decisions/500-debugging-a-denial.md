@@ -165,3 +165,9 @@ For complex investigations, calling `kacs_access_check` directly is the precise 
 You can call it from a debugging tool with the exact inputs the failing code used and see what comes back. The granted mask tells you which bits ended up granted; the audit emissions tell you which layers fired. A denial that is inscrutable from logs becomes visible from a manual access-check invocation with a known set of inputs.
 
 This is how authoritative diagnoses work for the hard cases: reproduce the access check inputs, call the syscall manually, examine the output.
+
+## Where to go next
+
+For the inspection surfaces this walk relies on — reading tokens, sessions, and process state on a live system — read [Inspecting tokens, sessions, and processes](~peios/inspecting/overview).
+
+To rehearse an access check from a shell against a real file and token, read [The sd command](~peios/security-descriptors/sd-command).

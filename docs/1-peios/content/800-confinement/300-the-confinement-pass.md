@@ -121,7 +121,7 @@ A service is deployed under confinement. Its token has:
 
 - `user_sid = jellyfin_user_SID`
 - `groups = [jellyfin_user_SID, BUILTIN\Users, Authenticated Users, Everyone]`
-- `confinement_sid = S-1-15-2-1` (the package identity)
+- `confinement_sid = S-1-15-2-<jellyfin-package-hash>` (the package identity — a hash-derived SID, not a well-known one)
 - `confinement_capabilities = [S-1-15-3-1 (internetClient), S-1-15-3-10 (removableStorage), S-1-15-2-1 (ALL_APPLICATION_PACKAGES — normal mode)]`
 - `privileges = [SeChangeNotifyPrivilege, SeCreateSymbolicLinkPrivilege]` (default-grant set; nothing else)
 
@@ -151,3 +151,9 @@ The access check:
 8. Result: the service can read the file but cannot modify its DACL even though it owns the file. The owner implicit grant is gone because confinement does not preserve it.
 
 This is the expected behaviour. The service runs as the user who owns its library file but does not get owner-style authority on the file because the confinement layer specifically removed it.
+
+## Where to go next
+
+For the convention that turns the same capability SIDs into positive grants — the canonical pattern for service access at scale — read [Positive confinement](~peios/confinement/positive-confinement).
+
+For how the confinement intersection composes with the restricted-token and CAAP intersections, read [Narrowing layers](~peios/access-decisions/narrowing-layers).

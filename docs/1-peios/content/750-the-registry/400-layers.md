@@ -80,7 +80,7 @@ One precision worth stating, because it is what makes the model trustworthy: rec
 
 Everything above is framed around values, but the **same contest decides whether a key exists at a path.** Each layer can make its own claim about a name — "a key lives here" — and the winner is chosen by the same precedence-then-recency rule. A layer can even claim that *nothing* lives there, masking a key another layer provides. That is how a layer adds, replaces, or hides a key, and it resolves exactly as a value does. The markers that express absence — tombstones for values, hidden entries for keys — are the subject of the next page.
 
-## Where to start
+## Where to go next
 
 If you want the payoff — why all of this exists — read [What layers are for](~peios/the-registry/what-layers-are-for): the base layer, tombstones, the automatic-revert property, and how roles and Group Policy are built on it.
 

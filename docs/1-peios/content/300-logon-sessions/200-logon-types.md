@@ -82,3 +82,11 @@ AccessCheck does not read the logon type. The DACL walk, the MIC check, the PIP 
 If you want different access for "Interactive users" vs "Network users", you write ACEs that reference the well-known group SIDs (`S-1-5-4`, `S-1-5-2`, etc.). Those SIDs end up in the token because of the logon type, but the access check matches on the SID, not the type.
 
 The type matters at the seams: when authd is making decisions about which groups to add to a token, when the audit subsystem is recording provenance, when a SIEM correlates events across sessions. Inside the access check itself, the type is invisible.
+
+## Where to go next
+
+For how a session is created, destroyed, and forcibly revoked, read [Session lifecycle](~peios/logon-sessions/lifecycle).
+
+For the well-known group SIDs (`S-1-5-4` Interactive, `S-1-5-2` Network, and the rest) that authd derives from the logon type, read [Well-known principals](~peios/identity/well-known-principals).
+
+To see the logon type of each active session from a shell, read [The logonse command](~peios/logon-sessions/logonse-command).

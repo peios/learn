@@ -1,6 +1,6 @@
 ---
 title: Signature format
-type: concept
+type: reference
 description: A Peios signature is 65 bytes — a version byte plus a 64-byte Ed25519 signature over a 32-byte SHA-256 hash. The same blob lives in different places depending on the file type. This page covers the format itself, where it goes for ELF and non-ELF files, and how the hash is computed in each case.
 related:
   - peios/binary-signing/overview
@@ -23,7 +23,7 @@ Every Peios signature is exactly **65 bytes**:
 
 The version byte is what gives the kernel room to evolve the format. A signature with version `0x02` (for example) would be treated as unrecognised in v0.20 — the kernel does not panic, it just declines to verify the signature, and the process runs at `pip_type = None`. Future versions may define new layouts; current versions will see them as if they were absent.
 
-The Ed25519 signature is computed over a 32-byte content hash (covered below), using standard Ed25519 — **not** Ed25519ph. The pre-hash variant Ed25519ph is for cases where the message is hashed first by the signer; here the kernel signs a 32-byte hash as if it were the message itself. The hash is what is hashed-and-signed inside the Ed25519 algorithm; there is no double-hashing.
+The Ed25519 signature is computed over a 32-byte content hash (covered below), using standard Ed25519 — **not** Ed25519ph. The pre-hash variant Ed25519ph is for cases where the message is hashed first by the signer; here the signer signs a 32-byte hash as if it were the message itself. The hash is what is hashed-and-signed inside the Ed25519 algorithm; there is no double-hashing.
 
 The 64-byte signature is the raw `(R || S)` pair Ed25519 produces — no encoding, no envelope, no metadata. The kernel parses it as raw bytes and feeds them straight into the verification routine.
 

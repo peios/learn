@@ -18,7 +18,7 @@ MIC fires in step 5 of the access check pipeline — pre-DACL. Its decisions are
 
 ## The integrity levels
 
-There are five integrity levels in v0.20, with strictly ordered SIDs:
+There are five standard integrity levels, with strictly ordered SIDs:
 
 | Level | SID | RID | Typical use |
 |---|---|---|---|
@@ -36,7 +36,7 @@ The comparison is the obvious one: Untrusted < Low < Medium < High < System. A c
 
 An object's mandatory integrity label is in its SACL, as a `SYSTEM_MANDATORY_LABEL_ACE`. The ACE has:
 
-- A **SID** from the integrity namespace (one of the five above).
+- A **SID** from the integrity namespace (an `S-1-16` SID, normally one of the five above).
 - A **mask** containing the MIC policy bits.
 
 When the access check looks at an SD, it scans the SACL for `SYSTEM_MANDATORY_LABEL_ACE` entries that are not inherit-only. The first such ACE is the object's effective label. If there is none, the object's effective label is **Medium with `NO_WRITE_UP`** — that is the default for an unlabelled object.
@@ -106,7 +106,7 @@ A surprisingly important set of things.
 
 The exception is **PIP**. Where MIC ignores privilege grants, PIP strips them. A non-dominant PIP caller loses privilege-granted rights, not just DACL-granted ones. PIP is the stricter integrity-style enforcement; MIC is the looser one. See [Process integrity protection](~peios/process-integrity-protection/overview).
 
-**MIC does not deny WRITE_OWNER granted by SeTakeOwnership.** Same reasoning. A backup tool can take ownership of higher-integrity objects via SeTakeOwnership even though it could not write to them via the DACL.
+**MIC does deny WRITE_OWNER sought via SeTakeOwnership.** Unlike the step-4 privileges, SeTakeOwnership fires post-DACL (step 9) and only on bits not already mandatorily decided — and MIC pre-decides WRITE_OWNER as denied for every non-dominant caller. A tool that needs ownership of higher-integrity objects must hold `SeRelabelPrivilege` (the one privilege that punches WRITE_OWNER through MIC) or use `SeRestorePrivilege` with `RESTORE_INTENT`, whose step-4 grant precedes MIC.
 
 **MIC does not lower integrity automatically on access denial.** A non-dominant caller blocked by MIC just gets the relevant bits denied. The token's integrity is not adjusted. The same token can succeed at accessing a lower-integrity object on the next call.
 
@@ -114,11 +114,11 @@ The exception is **PIP**. Where MIC ignores privilege grants, PIP strips them. A
 
 ## Integrity and impersonation
 
-The two-gate model in [Impersonation](~peios/impersonation/the-two-gates) caps an impersonation token's integrity at the server's own primary token's integrity. A Medium-integrity service that captures a High-integrity client's peer token gets an impersonation token at Medium, not High.
+The two-gate model in [Impersonation](~peios/impersonation/the-two-gates) refuses to let a server act as a client of higher integrity. A Medium-integrity service that captures a High-integrity client's peer token gets an **Identification-level** impersonation token — it can inspect the identity, but no access check will pass.
 
 This is enforced unconditionally. `SeImpersonatePrivilege` does not bypass it. A High-integrity client connecting to a Medium service should not be able to make the Medium service operate at High — that would void the MIC model for the service.
 
-The implication for MIC enforcement: a non-dominant caller cannot escape MIC by impersonating someone with higher integrity. The integrity ceiling on impersonation makes sure the impersonation token sits no higher than the impersonator's own integrity.
+The implication for MIC enforcement: a non-dominant caller cannot escape MIC by impersonating someone with higher integrity. The integrity ceiling downgrades such a token to Identification, so it can never be used to act at a higher integrity than the server's own.
 
 ## Setting an integrity label
 
@@ -141,3 +141,9 @@ MIC and PIP look superficially similar. Both compare a level on the caller again
 - **MIC has a default (Medium/NO_WRITE_UP). PIP has no default.** Objects without a `SYSTEM_PROCESS_TRUST_LABEL_ACE` are not PIP-protected; objects without a `SYSTEM_MANDATORY_LABEL_ACE` get the default MIC treatment.
 
 The two layers complement each other. MIC is the "user identity is at this trust level" axis; PIP is the "the binary running this process has this trust level" axis. An access can be blocked by either, allowed by both, or — in the rare cases where a privilege bridges MIC but not PIP — allowed by MIC and blocked by PIP.
+
+## Where to go next
+
+For the privileges that can carry an access past MIC — and where each fires in the pipeline — read [Privileges in the pipeline](~peios/access-decisions/privileges-in-the-pipeline).
+
+For the binary-trust axis MIC is so often compared with, read [Process integrity protection](~peios/process-integrity-protection/overview).

@@ -1,5 +1,5 @@
 ---
-title: How Peios Packages Work
+title: How Peios Packages work
 type: concept
 description: The package system at a glance — three tools, one workflow. From an upstream tag on GitHub to a signed package fetchable from the official repository, with no human in the middle.
 related:
@@ -49,11 +49,11 @@ flowchart LR
 
 ## Where to start
 
-If you are writing a recipe for a new package, start with [Build your first package](./build-your-first-package). It walks through `peipkg-build` end-to-end with a working example.
+If you are writing a recipe for a new package, start with [Build your first package](~peios-packages/getting-started/build-your-first-package). It walks through `peipkg-build` end-to-end with a working example.
 
-If you are operating a build farm — running the official Peios repository or a custom one — start with [Set up a build farm](./set-up-a-build-farm). It covers installation, configuration, signing keys, and hosting backends.
+If you are operating a build farm — running the official Peios repository or a custom one — start with [Set up a build farm](~peios-packages/getting-started/set-up-a-build-farm). It covers installation, configuration, signing keys, and hosting backends.
 
-If you want the on-wire format details (what a `.peipkg` file contains, how indexes are signed, how versions compare), the **PSD-009** specification under `learn-new/specs/` is the normative reference. These docs explain how to *use* the system; the spec defines what it *is*.
+If you want the on-wire format details (what a `.peipkg` file contains, how indexes are signed, how versions compare), the [PSD-009 specification](/spec/psd-009/v0.22/) is the normative reference. These docs explain how to *use* the system; the spec defines what it *is*.
 
 ## Why three tools instead of one?
 

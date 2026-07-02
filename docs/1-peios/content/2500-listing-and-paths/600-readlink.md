@@ -1,7 +1,7 @@
 ---
 title: readlink
 type: reference
-description: Print the target of a symbolic link, or canonicalize a path by resolving every link in it.
+description: Print the target of a symbolic link, or canonicalise a path by resolving every link in it.
 related:
   - peios/listing-and-paths/realpath
   - peios/listing-and-paths/overview
@@ -22,9 +22,9 @@ $ readlink /home/jack/work
 
 By default `readlink` resolves exactly one level: it prints the link's immediate target, whether or not that target is itself a link, and whether or not it exists. If the named file is not a symbolic link, `readlink` prints nothing and reports failure.
 
-## Canonicalizing a whole path
+## Canonicalising a whole path
 
-The canonicalize options change `readlink` from "read this one link" into "resolve this entire path to its real, absolute form" — following every symbolic link in every component, collapsing `.` and `..`. The three differ only in how strict they are about components existing:
+The canonicalise options change `readlink` from "read this one link" into "resolve this entire path to its real, absolute form" — following every symbolic link in every component, collapsing `.` and `..`. The three differ only in how strict they are about components existing:
 
 | Option | Resolves | Existence requirement |
 |---|---|---|
@@ -32,7 +32,7 @@ The canonicalize options change `readlink` from "read this one link" into "resol
 | `-e`, `--canonicalize-existing` | Every link in the path. | Every component must exist. |
 | `-m`, `--canonicalize-missing` | Every link in the path. | No component need exist. |
 
-With any of these, `readlink` succeeds on an ordinary (non-link) file too — it simply returns the canonical path. [`realpath`](~peios/listing-and-paths/realpath) is the dedicated command for this canonicalizing job and has more options for it; the canonicalize flags here exist so `readlink` can do it without a second tool.
+With any of these, `readlink` succeeds on an ordinary (non-link) file too — it simply returns the canonical path. [`realpath`](~peios/listing-and-paths/realpath) is the dedicated command for this canonicalising job and has more options for it; the canonicalise flags here exist so `readlink` can do it without a second tool.
 
 ## Output and error control
 

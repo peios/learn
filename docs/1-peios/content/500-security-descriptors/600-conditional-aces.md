@@ -193,3 +193,9 @@ They are the wrong tool when:
 - The expression depends on state that changes faster than you can update the SD. Conditional ACEs evaluate at access-check time using the data on the token and object *now*; if the relevant data is stale, the result is stale.
 
 Most DACLs in practice use no conditional ACEs at all. They appear in the SDs of objects whose access policy is genuinely attribute-driven — central access policies, data-classification-driven sharing, time-bound access. For everything else, plain ACEs are clearer.
+
+## Where to go next
+
+For the object-side attributes that `@Resource.*` references resolve against, read [Resource attributes](~peios/security-descriptors/resource-attributes).
+
+For the token-side attributes behind `@User.*` and `@Device.*`, read [Claims on a token](~peios/identity/claims).

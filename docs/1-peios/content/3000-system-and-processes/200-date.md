@@ -5,6 +5,7 @@ description: Print or set the system date and time, with a flexible output forma
 related:
   - peios/system-and-processes/uptime
   - peios/privileges/overview
+  - peios/system-and-processes/overview
 ---
 
 `date` prints the current date and time. With the right option, it can also *set* the system clock, display some other moment, or format a date however you need.

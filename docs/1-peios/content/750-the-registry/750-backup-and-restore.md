@@ -34,7 +34,8 @@ The target key itself survives as the anchor — it keeps its identity and its p
 
 Backup and restore do not consult the security descriptor on each key the way an ordinary open does. They are gated by **privilege** instead — a backup privilege to read the whole subtree, a restore privilege to write it. This is the same model as file backup: a backup operator reads files they were never granted access to, because reading-for-backup is the privilege, not per-file permission.
 
-For restore, the consequence is sharp and worth stating plainly. **The privilege to restore is, in effect, the privilege to rewrite security on everything in the target subtree.** A backup carries each key's security descriptor, and restore writes those descriptors back — so restoring lets the caller replace owners and permissions throughout the subtree, which is close to taking ownership of all of it. Granting restore privilege is therefore a serious act, not a routine one: read it as "may rewrite this subtree, security and all," because that is what it grants.
+> [!WARNING]
+> **The privilege to restore is, in effect, the privilege to rewrite security on everything in the target subtree.** A backup carries each key's security descriptor, and restore writes those descriptors back — so restoring lets the caller replace owners and permissions throughout the subtree, which is close to taking ownership of all of it. Granting restore privilege is therefore a serious act, not a routine one: read it as "may rewrite this subtree, security and all," because that is what it grants.
 
 (Both operations are audited every time they run, regardless of a key's own audit settings — see the [auditing topic](~peios/auditing/overview).)
 
@@ -44,7 +45,7 @@ For restore, the consequence is sharp and worth stating plainly. **The privilege
 - **Disaster recovery.** Snapshot a subtree — or a whole hive — and restore it after a failure or a bad change.
 - **Migration.** Move configuration between machines by backing up on one and restoring on another; the stream is portable.
 
-## Where to start
+## Where to go next
 
 For where restore comes from at first boot, read [How the registry boots and configures itself](~peios/the-registry/bootstrap-and-self-configuration).
 

@@ -47,4 +47,7 @@ For the machine architecture alone, [`arch`](~peios/system-and-processes/arch) i
 
 ## Exit status
 
-`uname` returns `0`, or `1` if the system information could not be read.
+| Code | Meaning |
+|---|---|
+| `0` | The requested information was printed. |
+| `1` | The system information could not be read. |

@@ -2,6 +2,11 @@
 title: Running commands inside the guest
 type: how-to
 description: Patterns for vm:run (sync, shell-form vs direct exec, env, cwd, stdin, timeouts), vm:run_async (Process handles, signals, stdout/stderr streams), and worker-side variants.
+related:
+  - provium/reference/vm
+  - provium/reference/process
+  - provium/reference/worker
+  - provium/writing-tests/streams-and-tails
 ---
 
 Provium gives you several ways to run commands inside a guest. This page is the practical guide; the canonical method reference is on [VM](~provium/reference/vm).
@@ -195,7 +200,7 @@ p2:wait("10s"):assert_ok()
 
 Workers expose the same surface as the VM (`run`, `run_async`, `open_file`, `syscall`, `kill`, `join`, `close`). Files and processes allocated under a worker live in the worker's namespace; cleanup is per-worker.
 
-For coordination between workers, use [`lab:barrier(name, count, timeout?)`](~provium/reference/lab#barriername-count-timeout).
+For coordination between workers' guest processes, use a guest-side primitive (file on a shared mount, fifo, network message). [`lab:barrier(name, count, timeout?)`](~provium/reference/lab#labbarriername-count-timeout) is a host-side rendezvous and can't be reached from inside a guest — see [Labs and scope — Barriers](~provium/writing-tests/labs-and-scope#barriers).
 
 ## Common patterns
 

@@ -24,7 +24,7 @@ The catalogue is split into five pages:
 | [Well-known SIDs](~peios/constants-and-catalogs/well-known-sids) | Every SID that has fixed value, organised by authority. Universal SIDs, NT Authority SIDs, BUILTIN aliases, integrity labels, PIP trust labels, confinement and capability SIDs. |
 | [Privilege catalog](~peios/constants-and-catalogs/privilege-catalog) | All privilege names with their LUID bit positions and categorical classification. |
 | [ACE types and flags](~peios/constants-and-catalogs/ace-types-and-flags) | The 21 ACE type values, the AceFlags bits, the inheritance flag combinations. |
-| [Access mask bits](~peios/constants-and-catalogs/access-mask-bits) | Per-object-type catalogues of access mask bits — file, process, token, plus standard rights, special rights, generic rights, and GenericMapping tables. |
+| [Access mask bits](~peios/constants-and-catalogs/access-mask-bits) | Per-object-type catalogues of access mask bits — file, process, token, registry key, and service — plus standard rights, special rights, generic rights, and GenericMapping tables. |
 | [Other constants](~peios/constants-and-catalogs/other-constants) | Mitigation flags, mount policy values, integrity levels, impersonation levels, logon types, error codes, magic numbers, sizes and limits. |
 
 ## Conventions

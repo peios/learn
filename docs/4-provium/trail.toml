@@ -1,2 +1,2 @@
 name = "Provium"
-description = "General-purpose KVM test harness for kernel modules. Write tests in Lua, run them against real VMs."
+description = "General-purpose KVM test harness for kernel and system code. Write tests in Lua, run them against real VMs."

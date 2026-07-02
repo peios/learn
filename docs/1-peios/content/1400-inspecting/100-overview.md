@@ -6,6 +6,7 @@ related:
   - peios/inspecting/tokens
   - peios/inspecting/sessions
   - peios/inspecting/processes
+  - peios/inspecting/the-event-stream
   - peios/access-decisions/debugging-a-denial
   - peios/tokens/overview
   - peios/logon-sessions/overview
@@ -97,5 +98,7 @@ If you want to inspect a token — what fields it has, how to query each one, th
 If you want to inspect a session — the text listing format, how to find which tokens belong to a session, how to track session lifecycle — read [Inspecting sessions](~peios/inspecting/sessions).
 
 If you want to inspect a process — the process SD, the PSB's PIP and mitigation fields, the rules for cross-process inspection — read [Inspecting processes](~peios/inspecting/processes).
+
+If you want to inspect the audit *event stream* rather than static state — the live flow of events as access checks fire — read [The event stream](~peios/inspecting/the-event-stream). That page covers `revstrm`, a low-level diagnostic probe that taps the raw KMES stream directly. It is a debugging tool for the audit pipeline, not the everyday way to view events (that is eventd's job).
 
 If you have a denial in front of you and want a systematic walk through the diagnosis, [Debugging a denial](~peios/access-decisions/debugging-a-denial) is the right page.

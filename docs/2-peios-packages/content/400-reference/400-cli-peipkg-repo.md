@@ -49,7 +49,7 @@ Reads the previous state, ingests new `.peipkg` files, emits a fresh state with 
 | `--sign-key PATH` | **Yes** | Ed25519 private key. The same key that signed the previous state. |
 | `--timestamp TS` | **Yes** | RFC 3339 UTC. Recorded as the new `generated_at` for both indexes. |
 | `--out DIR` | **Yes** | New state directory. May be the same as `--in` (publish-in-place). |
-| `--package-url-template TMPL` | Optional | URL template for new package entries. Placeholders: `{name}`, `{version}`, `{arch}`, `{filename}`. Default: `/p/{name}/{version}/{filename}` (the [PSD-009 §6.4](../../../specs/psd-009--peipkg/v0.22/6-repository/4-url-conventions) conventional path). Applies only to NEW entries — already-published entries keep their original URLs. |
+| `--package-url-template TMPL` | Optional | URL template for new package entries. Placeholders: `{name}`, `{version}`, `{arch}`, `{filename}`. Default: `/p/{name}/{version}/{filename}` (the [PSD-009 §6.4](/spec/psd-009/v0.22/repository/url-conventions/) conventional path). Applies only to NEW entries — already-published entries keep their original URLs. |
 | `--rebuild` | Optional | Ignore the previous archive entries and rebuild from scratch. Recovery hatch for when state has drifted. |
 | `--all-packages-dir DIR` | Required with `--rebuild` | Directory containing every `.peipkg` ever published. Slow path (rehashes everything) but exhaustive. |
 
@@ -111,7 +111,7 @@ Causes:
 
 ## What's not yet a subcommand
 
-- `peipkg-repo rotate-key` — key rotation is currently a manual JSON edit + re-sign. See [Signing keys](../running-a-farm/signing-keys).
-- `peipkg-repo prune-prerelease` — pre-release version pruning per [PSD-009 §6.3](../../../specs/psd-009--peipkg/v0.22/6-repository/3-archive-index) is permitted but not implemented in v0.
+- `peipkg-repo rotate-key` — key rotation is currently a manual JSON edit + re-sign. See [Signing keys](~peios-packages/running-a-farm/signing-keys).
+- `peipkg-repo prune-prerelease` — pre-release version pruning per [PSD-009 §6.3](/spec/psd-009/v0.22/repository/archive-index/) is permitted but not implemented in v0.
 
 Both are operationally rare enough that automating them in v0 isn't a priority. They'll get subcommands once there's a real workflow to design against.

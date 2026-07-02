@@ -1,7 +1,11 @@
 ---
-title: CLI Commands
+title: CLI commands
 type: reference
 description: Complete reference for every Cairn CLI command — task management, milestones, queries, and the web server.
+related:
+  - cairn/getting-started/quick-start
+  - cairn/configuration/data-model
+  - cairn/reference/meta-toml
 ---
 
 The Cairn CLI is the primary interface for automation and scripting. Every command reads from and writes to the `.cairn/` directory on disk.
@@ -121,7 +125,8 @@ cairn promote <ref>
 
 ### cairn rm
 
-Delete a task and all its subtasks.
+> [!CAUTION]
+> `cairn rm` deletes a task **and all its subtasks**.
 
 ```
 cairn rm <ref>

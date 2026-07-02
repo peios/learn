@@ -2,6 +2,9 @@
 title: Search
 type: concept
 description: Trail builds a search index at build time and provides instant fuzzy search powered by Fuse.js, with keyboard navigation and result highlighting.
+related:
+  - trail/content-authoring/pages-and-frontmatter
+  - trail/reference/cli
 ---
 
 Trail includes a complete search implementation with no external services. The search index is generated at build time, and the client performs fuzzy matching entirely in the browser.
@@ -23,7 +26,7 @@ The content field is truncated to keep the index size reasonable for client-side
 
 ## Client-side search
 
-Search is powered by [Fuse.js](https://www.fusejs.io/), a lightweight fuzzy search library loaded from CDN. On page load, the browser fetches `search-index.json` and initializes a Fuse instance.
+Search is powered by [Fuse.js](https://www.fusejs.io/), a lightweight fuzzy search library loaded from CDN. On page load, the browser fetches `search-index.json` and initialises a Fuse instance.
 
 The search configuration:
 
@@ -62,7 +65,7 @@ The mobile search is a separate input in the mobile menu with its own results dr
 | `Enter` | Navigate to the highlighted result |
 | `Escape` | Close the results dropdown and blur the input |
 
-The currently highlighted result has a gray background. Results scroll into view as you navigate with the keyboard.
+The currently highlighted result has a grey background. Results scroll into view as you navigate with the keyboard.
 
 ## Search highlighting
 

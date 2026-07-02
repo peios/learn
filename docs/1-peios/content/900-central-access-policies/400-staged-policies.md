@@ -35,7 +35,7 @@ Tools watching the flag can correlate it with the call's parameters (which token
 
 The flag is **informational**. It does not change behaviour — the access check returned the granted mask the effective policy produced, and the caller's operation proceeds accordingly. The flag is for observers (audit systems, deployment tools, monitoring dashboards).
 
-The flag is **boolean**. It says "yes, somewhere a staged version differed from the effective" or "no, the staged versions all produced identical results". It does not enumerate which rules differed, what they granted, or what specifically was different. Richer staging diagnostics are a job for the test pipeline (running representative AccessCheck calls and recording the differences); the kernel's report is the existence of a difference, not its detail.
+The flag is **boolean**. It says "yes, somewhere a staged version differed from the effective" or "no, the staged versions all produced identical results". It does not enumerate which rules differed or which audit events changed; the accompanying `caap-policy-diagnostic` event records only the effective and staged total granted masks. Richer staging diagnostics are a job for the test pipeline (running representative AccessCheck calls and recording the differences); the kernel's report is the existence of a difference, not its detail.
 
 The flag is **per access check**. Each access check call produces its own flag value in its own output. Aggregating mismatches across many calls is the consumer's job.
 
@@ -53,7 +53,7 @@ The SACL mismatch is more subtle because SACL evaluation produces audit *events*
 
 "Different set" means: the union of events that would have fired from the staged SACL is not equal to the union from the effective SACL. An event in one but not the other, or vice versa, is a mismatch. This includes audit ACE matches that would have triggered, and conditional audit ACEs whose conditional expressions differ.
 
-The mismatch records the delta — what events the effective version emitted versus what the staged version would have emitted — though the bit in the flag is just "differ" or "do not differ".
+The mismatch does not record which events differed. The kernel compares the two event sets internally and discards them; the `caap-policy-diagnostic` event (`kind = staging-mismatch`) it emits carries only the effective and staged total granted masks and an `object_results_differ` boolean. For a pure SACL mismatch those masks may even be equal — the flag is the only signal that the audit behaviour differed.
 
 ## The rollout pattern
 
@@ -91,3 +91,9 @@ An audit consumer that wants to use staging meaningfully should look for the sta
 Aggregating mismatches over time and bucketing them by (token, object class, requested rights) gives the administrator a picture: "the proposed change would have denied N accesses, of which M look intentional and (N-M) look unintentional". From there, deciding whether to commit is straightforward.
 
 Without staging, the equivalent diagnostic is impossible without either a parallel test system or an A/B rollout — both expensive. Staging makes the comparison free per access check.
+
+## Where to go next
+
+For how a committed policy is pushed to the kernel — and the recovery behaviour when a referenced policy is missing — read [Distribution and recovery](~peios/central-access-policies/distribution-and-recovery).
+
+For the `caap-policy-diagnostic` event that carries the staging mismatch, read [Events and transport](~peios/auditing/events-and-transport).

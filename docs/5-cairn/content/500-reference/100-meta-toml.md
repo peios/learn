@@ -1,7 +1,11 @@
 ---
-title: meta.toml Reference
+title: meta.toml reference
 type: reference
 description: Complete field reference for task meta.toml files.
+related:
+  - cairn/configuration/data-model
+  - cairn/getting-started/project-structure
+  - cairn/cli/commands
 ---
 
 Every task directory contains a `meta.toml` file. This is the complete field reference.

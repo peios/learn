@@ -129,3 +129,9 @@ A few patterns that bite first-time service authors:
 - **Reverting too early.** A thread that reverts before all of the work is done — perhaps because an inner function is doing cleanup that runs as the service identity — will fail access checks on the parts that needed to remain impersonated. Keep the impersonation scope wide enough to cover the whole user-facing operation.
 - **Holding a peer token fd across exec.** Token fds are file descriptors and survive exec by default (unless O_CLOEXEC was set). But the impersonation state of the *thread* does not survive exec — it is reverted automatically. If your service execs another binary, the new binary starts with no impersonation, even if the old code was impersonating.
 - **Assuming the level you asked for is the level you got.** The two-gate model can silently downgrade. Code that branches on level should query, not assume.
+
+## Where to go next
+
+For what the impersonated identity is checked against once the server starts acting as the client, read [Security descriptors](~peios/security-descriptors/overview).
+
+To drive impersonation from a shell — impersonate a peer, revert, inspect the effective token — read [The token command](~peios/tokens/token-command).

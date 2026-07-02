@@ -81,7 +81,7 @@ Token materialisation for hooks follows the same rules: a `HookIdentity` of `SYS
 `HookIdentity` exists so hooks can run with *different* — usually higher — privileges than the service itself: creating directories in privileged locations, or running a database migration as an admin identity, before the long-running daemon drops to a lesser identity.
 
 > [!WARNING]
-> peinit does **not** validate filesystem permissions on hook binaries. If `HookIdentity` grants elevated privileges, it is the administrator's responsibility to ensure the hook binary and every parent directory are not writable by a lower-privileged identity — otherwise a less-trusted principal could replace the hook and run code as the elevated identity. (Until [FACS](~peios/file-access/overview) is in place, the filesystem does not enforce KACS descriptors at all, so this is conventional trust — correct packaging and controlled paths.)
+> peinit does **not** validate filesystem permissions on hook binaries. If `HookIdentity` grants elevated privileges, it is the administrator's responsibility to ensure the hook binary and every parent directory are not writable by a lower-privileged identity — otherwise a less-trusted principal could replace the hook and run code as the elevated identity. ([FACS](~peios/file-access/overview) enforces KACS descriptors on managed filesystems, but peinit itself performs no such check — protecting hook binaries still depends on correct SDs from packaging and controlled paths.)
 
 ## Security invariants
 

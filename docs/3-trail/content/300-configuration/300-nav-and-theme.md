@@ -1,10 +1,14 @@
 ---
-title: Navigation and Theming
+title: Navigation and theming
 type: how-to
 description: Configure the navbar links, announcement bar, favicon, head injection, and repository URL for edit links.
+related:
+  - trail/configuration/trail-toml
+  - trail/features/seo
+  - trail/getting-started/project-structure
 ---
 
-Trail's visual appearance is built in and not customizable through themes or templates. However, several configuration options let you control the navigation, branding, and page-level additions.
+Trail's visual appearance is built in and not customisable through themes or templates. However, several configuration options let you control the navigation, branding, and page-level additions.
 
 ## Navbar links
 
@@ -102,7 +106,7 @@ This assumes:
 - The default branch is `main`.
 - Content files are in a `content/` directory at the repository root.
 
-If your repository uses a different branch name or directory structure, the edit links may point to incorrect locations. There is currently no configuration to customize the edit URL pattern.
+If your repository uses a different branch name or directory structure, the edit links may point to incorrect locations. There is currently no configuration to customise the edit URL pattern.
 
 ## Site title
 

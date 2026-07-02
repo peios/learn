@@ -1,6 +1,6 @@
 ---
 title: Managing mounts
-type: concept
+type: reference
 description: Mount policies are set via kacs_set_mount_policy and read via kacs_get_mount_policy. Changes are lazy — the kernel maintains a generation counter that invalidates in-memory cached state on next access rather than walking the filesystem. This page covers the syscalls, the generation counter, and the privilege rules.
 related:
   - peios/mount-policies/overview
@@ -44,11 +44,10 @@ The change is **atomic at the superblock level** — every future access against
 
 ### Privilege requirement
 
-`SeTcbPrivilege` is the privilege gating this call. The privilege is held by peinit and a handful of other TCB components; not by ordinary services or administrators.
+> [!IMPORTANT]
+> `SeTcbPrivilege` is the privilege gating this call. The privilege is held by peinit and a handful of other TCB components; not by ordinary services or administrators. In practice this means mount policy is configured at boot (by peinit, applying mount-time configuration) or by a privileged management daemon. Ad-hoc policy changes are rare.
 
 The reasoning: changing a mount's policy is an administrative decision that affects the entire filesystem's access semantics. It belongs in the TCB tier, not in the regular-administrator tier. An ordinary administrator who wants to change a mount's policy goes through a tool that itself has the privilege.
-
-In practice this means mount policy is configured at boot (by peinit, applying mount-time configuration) or by a privileged management daemon. Ad-hoc policy changes are rare.
 
 ### The template SD
 

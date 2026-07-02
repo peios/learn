@@ -1,7 +1,11 @@
 ---
-title: Project Structure
+title: Project structure
 type: concept
 description: A Provium project is a directory with provium.toml, one or more test roots holding *.test.lua and *.fixture.lua files, and a per-user fixture cache. Nothing else is needed.
+related:
+  - provium/getting-started/quick-start
+  - provium/configuration/provium-toml
+  - provium/running-tests/fixtures-and-dependencies
 ---
 
 Provium has no scaffolding command. A project is whatever directory `provium.toml` lives in. This page documents what each piece does.
@@ -42,13 +46,13 @@ cache_max_size  = "20G"                            # optional
 [profiles.peios]
 kernel   = "/build/peios/bzImage"
 initrd   = "/build/peios/initrd.cpio.gz"
-cmdline  = "console=hvc0 quiet"
+cmdline  = "console=ttyS0 quiet"
 guest_os = "peios"
 
 [profiles.peios-debug]
 kernel   = "/build/peios-debug/bzImage"
 initrd   = "/build/peios-debug/initrd.cpio.gz"
-cmdline  = "console=hvc0 debug loglevel=7"
+cmdline  = "console=ttyS0 debug loglevel=7"
 ```
 
 `[profiles.<name>]` blocks declare named (kernel, initrd, cmdline) tuples. Test code looks them up by name: `provium:vm("a", "peios")` boots the VM using `[profiles.peios]`. You can have any number of profiles; tests pick whichever they need.

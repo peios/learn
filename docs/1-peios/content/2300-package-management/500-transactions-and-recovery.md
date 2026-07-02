@@ -6,6 +6,7 @@ related:
   - peios/package-management/overview
   - peios/package-management/keeping-a-system-current
   - peios/package-management/installing-and-removing
+  - peios/package-management/named-roots
   - peios/auditing/overview
 ---
 
@@ -80,6 +81,10 @@ recovered: the interrupted transaction was rolled back
 Recovery only ever **rolls back**. A transaction that was interrupted *after* its commit instant is already complete — there is nothing pending and nothing to recover. Recovery deals exclusively with the "before the instant" case, and it always resolves it the same way: back to the prior state.
 
 If there is no pending transaction, `recover` says so and exits cleanly.
+
+### Across more than one root
+
+When an operation spans more than one named root, those roots commit as a unit under a single **cross-root transaction**, and `undo` reverses all participating roots together. `recover` reconciles pending cross-root transactions across every reachable root: a torn commit is rolled back, or — if it had already passed the commit instant — rolled forward to completion. See [Named roots](~peios/package-management/named-roots) for how multiple roots come about.
 
 ## The transaction log
 

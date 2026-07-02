@@ -1,6 +1,6 @@
 ---
-title: Build Scripts
-type: how-to
+title: Build scripts
+type: concept
 description: How peipkg-build invokes build.sh, what environment it gets, and how to write one for autotools, cmake, meson, or anything else.
 related:
   - peios-packages/authoring-recipes/anatomy
@@ -36,7 +36,7 @@ set -eu
 cp -a "$SOURCE_DIR/." "$DESTDIR/"
 ```
 
-This is exactly what the [hello example](../getting-started/build-your-first-package) uses.
+This is exactly what the [hello example](~peios-packages/getting-started/build-your-first-package) uses.
 
 ## Autotools
 
@@ -94,11 +94,17 @@ DESTDIR="$DESTDIR" meson install -C build
 This is intentional: it forces recipes to be explicit about what ships and prevents transient build artefacts (test binaries, intermediate files, autotools cruft) from silently leaking into a published package.
 
 > [!TIP]
-> When a build fails with orphans, the fix is almost always "add the path to the right stanza's `files` list" or "remove the unwanted output from `$DESTDIR/` in `build.sh`." See [Multi-package recipes](./multi-package) for how to split outputs across stanzas.
+> When a build fails with orphans, the fix is almost always "add the path to the right stanza's `files` list" or "remove the unwanted output from `$DESTDIR/` in `build.sh`." See [Multi-package recipes](~peios-packages/authoring-recipes/multi-package) for how to split outputs across stanzas.
 
 ## Things to avoid
 
 - **Don't write outside `$DESTDIR/`.** `peipkg-build` doesn't sandbox the script — it trusts you. Writing to `/etc`, `/usr`, or anywhere else on the host is undefined behaviour and almost certainly a bug.
 - **Don't depend on `pwd`.** The script runs with cwd set to a per-build tmpdir, not `$SOURCE_DIR`. Always anchor paths against `$SOURCE_DIR` or `$DESTDIR`.
 - **Don't fetch network resources.** `build.sh` should be deterministic and offline-runnable. The build farm clones source ahead of time and gives you the result; if you need vendored dependencies, vendor them into the upstream tree and use them from `$SOURCE_DIR`.
-- **Don't call `git`** to read commit metadata. The source tree's `.git/` is stripped before `build.sh` runs (by design — see the discussion in [tracking upstream](./tracking-upstream)). The version comes from the build farm, not from the source tree.
+- **Don't call `git`** to read commit metadata. The source tree's `.git/` is stripped before `build.sh` runs (by design — see the discussion in [tracking upstream](~peios-packages/authoring-recipes/tracking-upstream)). The version comes from the build farm, not from the source tree.
+
+## Where to go from here
+
+- [Multi-package recipes](~peios-packages/authoring-recipes/multi-package) — how the staged `$DESTDIR/` tree is partitioned across `[[package]]` stanzas.
+- [Declaring dependencies](~peios-packages/authoring-recipes/dependencies) — what the built package needs at install time.
+- [Recipe format reference](~peios-packages/reference/recipe-format) — the normative `peipkg.toml` schema, field by field.

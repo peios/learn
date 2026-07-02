@@ -1,7 +1,11 @@
 ---
-title: Project Structure
+title: Project structure
 type: concept
 description: How Cairn organises data on disk — the .cairn/ directory, task directories, milestones, and configuration.
+related:
+  - cairn/configuration/data-model
+  - cairn/reference/meta-toml
+  - cairn/getting-started/quick-start
 ---
 
 Cairn stores everything in a `.cairn/` directory at the root of your project. There is no database — every piece of data is a file you can read, edit, or version control.

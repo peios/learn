@@ -137,3 +137,11 @@ For reference, the size and count limits the kernel enforces at ingestion:
 | Version byte | Must be `0x01` |
 
 A policy exceeding any of these is rejected by `kacs_set_caap` with `-EINVAL`. The limits are generous; a realistic policy will be far below them.
+
+## Where to go next
+
+For how a policy's rules are actually evaluated during AccessCheck — the flow, the no-recursion rule, and the composition — read [Evaluation](~peios/central-access-policies/evaluation).
+
+For the staged DACL and SACL fields and the rollout pattern they enable, read [Staged policies](~peios/central-access-policies/staged-policies).
+
+For the byte-level layout these structures are encoded in, read [CAAP format](~peios/wire-formats-reference/caap-format).

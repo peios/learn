@@ -19,7 +19,7 @@ All numeric fields are **little-endian** on x86_64.
 
 Several structs are versioned by size at the wire level. The pattern:
 
-1. The first field of the struct is the size (in bytes) the caller is using.
+1. The caller declares the size (in bytes) of the struct layout it is using — via the struct's leading `size` field or via a dedicated size parameter of the syscall (the table below says which applies).
 2. The kernel reads `min(declared_size, kernel_known_size)` bytes.
 3. Fields beyond the kernel's known size must be zero (otherwise `-EINVAL`).
 4. New struct versions append fields at the end. Older callers don't write the new fields; their `size` declares the smaller layout; the kernel uses defaults for the unknown fields.

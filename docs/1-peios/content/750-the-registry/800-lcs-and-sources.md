@@ -7,6 +7,7 @@ related:
   - peios/the-registry/layers
   - peios/the-registry/access-control
   - peios/the-registry/backup-and-restore
+  - peios/the-registry/bootstrap-and-self-configuration
   - peios/the-registry/transactions
   - peios/the-registry/private-hives-and-layers
   - peios/the-registry/registry-links
@@ -16,7 +17,7 @@ Every page until now has treated the registry as a single thing, and that was th
 
 ## The split, in one sentence
 
-**The registry is a kernel subsystem (LCS) that is the sole authority for the data model, access control, layer resolution, and change notification — plus one or more userspace *sources* that do nothing but persist and return data; `loregd` is the first source, backing the `Machine` and `Users` hives.**
+**The registry is a kernel subsystem (LCS) that is the sole authority for the data model, access control, layer resolution, and change notification — plus one or more userspace *sources* that do nothing but persist and return data; the base source, `registryd`, is `loregd` by default and backs the `Machine` and `Users` hives.**
 
 ## Who does what
 
@@ -45,7 +46,19 @@ Userspace never talks to a source directly. Every registry operation goes throug
 
 Storage is a separable concern. Putting it in userspace means the backing store can be replaced, or different stores can back different hives, without changing the kernel — and the store can be developed, tested, and hardened as an ordinary (if privileged) service. The kernel keeps the parts that *must* be trusted and uniform — the data model and the security model — and delegates the part that is "just a database".
 
-Hives are how the work is parcelled out: each hive is backed by exactly one source, and a source may back several hives. In practice `loregd` registers `Machine` and `Users`; other sources could register additional hives.
+Hives are how the work is parcelled out: each hive is backed by exactly one source, and a source may back several hives. In practice the base source registers `Machine` and `Users`; other sources could register additional hives.
+
+## The base source: registryd
+
+The standard hives have to exist before anything can read configuration, so one source is always started at boot. **`registryd` is that base source — the registry store [peinit](~peios/peinit/overview) starts in early boot**, and the first thing to register hives with LCS so the rest of startup has configuration to read. Its interface is deliberately minimal: one `HiveName=path` argument per hive, naming the hive and the on-disk database that backs it.
+
+```
+registryd Machine=/var/lib/registry/machine.regdb Users=/var/lib/registry/users.regdb
+```
+
+That is the whole of its configuration — `registryd` *is* the configuration store, so it takes what it needs from its arguments rather than from a config file of its own.
+
+`registryd` is a **role**, not a fixed program. `loregd` — the Local Registry Daemon, which backs each hive with a SQLite database — is the **default** implementation, and the one running on a stock system. But the name is a swappable slot: another source can ship a `registryd` claim, and installing it puts that source in loregd's place with no change to anything that depends on the registry. Whatever holds the role starts the same way and answers to the same name. (Writing an alternative source is a developer task — the [Peios SDK](~peios-sdk/registry-sources/overview) covers the protocol one speaks to the kernel.)
 
 ## The trust boundary
 
@@ -61,7 +74,7 @@ Two registry capabilities are the kernel *orchestrating a source* rather than fe
 
 Because the store is a separate process, it can crash or restart. When a source goes down its hives become unavailable: open key handles stay valid (they hold identity and a granted mask, neither of which needs the store), but operations that need to reach the store return an error until it is back. [Watches](~peios/the-registry/watches) stay armed across the outage, and when the source re-registers, watchers receive an overflow so they re-read and resynchronise. The registry treats a store restart as a disruption to recover from, not a reason to lose state.
 
-## Where to start
+## Where to go next
 
 You have now seen the whole model — data, meaning, layers, security, change notification, and the parts underneath.
 

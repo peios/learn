@@ -66,7 +66,7 @@ The single-byte `AceFlags` field:
 | 0x40 | `SUCCESSFUL_ACCESS_ACE_FLAG` | (Audit/alarm) Fire on success. |
 | 0x80 | `FAILED_ACCESS_ACE_FLAG` | (Audit/alarm) Fire on failure. |
 
-Bits 0x20 and 0x21 are unused.
+Bit 0x20 is unused.
 
 ## Canonical inheritance flag combinations
 
@@ -154,7 +154,7 @@ These access rights are shared across all object types:
 | `ACCESS_SYSTEM_SECURITY` | 0x01000000 | Read/write the SACL. Gated by SeSecurityPrivilege. |
 | `MAXIMUM_ALLOWED` | 0x02000000 | Request flag; not a real right. AccessCheck returns the maximum grantable mask. |
 
-`MAXIMUM_ALLOWED` MUST NOT appear in an ACE — it is a desired-access modifier only.
+`MAXIMUM_ALLOWED` must not appear in an ACE — it is a desired-access modifier only.
 
 ## Mandatory integrity label policy bits
 
@@ -166,16 +166,9 @@ In the mask field of `SYSTEM_MANDATORY_LABEL_ACE`:
 | 0x00000002 | `SYSTEM_MANDATORY_LABEL_NO_WRITE_UP` | Block write-category. (The default for unlabelled objects.) |
 | 0x00000004 | `SYSTEM_MANDATORY_LABEL_NO_EXECUTE_UP` | Block execute-category. |
 
-## Audit ACE flags (extended ACE Flags)
+## Audit ACE flags
 
-The high-bit `AceFlags` values specific to audit and alarm ACEs:
-
-| Bit | Name | Meaning |
-|---|---|---|
-| 0x40 | `SUCCESSFUL_ACCESS_ACE_FLAG` | Fire on successful access. |
-| 0x80 | `FAILED_ACCESS_ACE_FLAG` | Fire on failed access. |
-
-Both can be set in one ACE — fires on both. Neither set — the ACE applies but never fires. Either combination is valid.
+The flags specific to audit and alarm ACEs — `SUCCESSFUL_ACCESS_ACE_FLAG` (0x40) and `FAILED_ACCESS_ACE_FLAG` (0x80) — are the two high bits in the AceFlags table above. Both can be set in one ACE — fires on both. Neither set — the ACE applies but never fires. Either combination is valid.
 
 ## Conditional ACE expression magic
 

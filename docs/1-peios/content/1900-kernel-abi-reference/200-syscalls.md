@@ -27,7 +27,7 @@ For struct layouts (`kacs_open_how`, `kacs_access_check_args`, etc.), see [Struc
 ### kacs_open_self_token (1000)
 
 ```
-int kacs_open_self_token(u32 flags);
+int kacs_open_self_token(u32 flags, u32 access_mask);
 ```
 
 Opens the calling thread's effective token (or its primary token if `KACS_REAL_TOKEN` is set).
@@ -35,12 +35,13 @@ Opens the calling thread's effective token (or its primary token if `KACS_REAL_T
 | Parameter | Meaning |
 |---|---|
 | `flags` | `0` for the effective token; `KACS_REAL_TOKEN` (0x01) for the primary token even when impersonating. |
+| `access_mask` | Desired access for the returned handle (`TOKEN_QUERY`, `TOKEN_DUPLICATE`, etc.). |
 
-**Returns** a token fd on success; -errno on failure. The fd has `TOKEN_QUERY | TOKEN_IMPERSONATE` access.
+**Returns** a token fd on success; -errno on failure. The fd carries the requested access rights.
 
-**Requires** no privilege. Always succeeds for the calling thread.
+**Requires** no privilege. The access mask is checked against the token's own SD.
 
-**Errors**: `-EINVAL` (unknown flags).
+**Errors**: `-EINVAL` (unknown flags; bad access mask); `-EACCES` (the token's SD denies the requested access).
 
 ### kacs_open_process_token (1001)
 
@@ -62,7 +63,7 @@ Opens another process's primary token.
 - The caller must PIP-dominate the target.
 - The target's token SD must grant the requested `desired_access` rights to the caller.
 
-**Errors**: `-EACCES` (any of the three checks failed); `-EPERM` (PIP dominance failed); `-EBADF` (invalid pidfd); `-ESRCH` (target exited).
+**Errors**: `-EACCES` (any of the three checks failed — they are deliberately indistinguishable to the caller); `-EBADF` (invalid pidfd); `-ESRCH` (target exited).
 
 ### kacs_open_thread_token (1002)
 
@@ -140,7 +141,7 @@ Opens a token fd reflecting the peer's identity on a connected Unix stream or se
 
 **Requires** the socket fd to be a connected Unix stream or seqpacket socket that captured a peer token at connect.
 
-**Errors**: `-EACCES` (socket lacks a peer token — datagram socket, socketpair, pre-connected socket); `-EBADF` (invalid fd); `-ENOTCONN` (socket not yet connected).
+**Errors**: `-EACCES` (socket lacks a peer token — datagram socket, socketpair, unconnected or pre-connected socket); `-EBADF` (invalid fd); `-ENOTSOCK` (fd is not a socket).
 
 ## Impersonation
 

@@ -118,3 +118,9 @@ And patterns where PIP is **not** the answer:
 - **Network access control.** PIP does not gate network operations; nftables, the network stack, and the SDs on network endpoints do.
 
 The cleanest mental check: ask "is the policy I want to express about *what kind of program* may do this?". If yes, PIP. If it is about *who* may do this, the DACL is the answer.
+
+## Where to go next
+
+For how a binary comes to carry a PIP level at all — signatures, verification at exec, and pinning — read [Binary signing](~peios/binary-signing/overview).
+
+For the rule that gives PIP its bite on every cross-process operation, read [The two-check rule](~peios/process-integrity-protection/the-two-check-rule).

@@ -80,7 +80,7 @@ The reasoning is deliberate: security is **operational state, not configuration 
 
 The short version: **layers revert what the system is configured to do; they never revert who is allowed to do it.**
 
-## Where to start
+## Where to go next
 
 If you want to see how a process *reacts* to a change instead of polling for it — and how watch events report effective-state changes with the layering invisible — read [Watching for changes](~peios/the-registry/watches).
 

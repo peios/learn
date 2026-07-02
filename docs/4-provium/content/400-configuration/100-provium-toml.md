@@ -2,6 +2,10 @@
 title: provium.toml
 type: reference
 description: Every field in provium.toml — the [provium] section (roots, cache_dir, cache_max_size) and the [profiles.<name>] blocks (kernel, initrd, cmdline, guest_os).
+related:
+  - provium/configuration/profiles
+  - provium/configuration/dynamic-profiles
+  - provium/getting-started/project-structure
 ---
 
 `provium.toml` is the only config file Provium reads. The default location is `./provium.toml`; override with `--config <path>`.
@@ -17,7 +21,7 @@ roots = ["tests"]
 [profiles.peios]
 kernel  = "/path/to/bzImage"
 initrd  = "/path/to/initrd.cpio.gz"
-cmdline = "console=hvc0 quiet"
+cmdline = "console=ttyS0 quiet"
 ```
 
 This declares one test root and one profile. `provium tests/` will scan `tests/` for `*.test.lua`, and tests can call `provium:vm("name", "peios")`.
@@ -145,7 +149,7 @@ When unset, Provium tries (in order): the `PROVIUM_OVERLAY` env var, then `<prov
 
 ```toml
 [profiles.peios]
-cmdline = "console=hvc0 quiet"
+cmdline = "console=ttyS0 quiet"
 ```
 
 | Type | Required | Description |
@@ -230,17 +234,17 @@ When unset, the default base is resolved like the fixture cache — `$PROVIUM_BU
 [profiles.peios]
 kernel  = "/build/peios/bzImage"
 initrd  = "/build/peios/initrd.cpio.gz"
-cmdline = "console=hvc0 quiet"
+cmdline = "console=ttyS0 quiet"
 
 [profiles.peios-debug]
 kernel  = "/build/peios-debug/bzImage"
 initrd  = "/build/peios-debug/initrd.cpio.gz"
-cmdline = "console=hvc0 debug loglevel=7 nokaslr"
+cmdline = "console=ttyS0 debug loglevel=7 nokaslr"
 
 [profiles.peios-stable]
 kernel  = "/build/peios-stable/bzImage"
 initrd  = "/build/peios-stable/initrd.cpio.gz"
-cmdline = "console=hvc0 quiet"
+cmdline = "console=ttyS0 quiet"
 ```
 
 Tests pick:
@@ -284,19 +288,19 @@ cache_max_size = "200G"
 [profiles.peios]
 kernel   = "/srv/peios-builds/latest/bzImage"
 initrd   = "/srv/peios-builds/latest/initrd.cpio.gz"
-cmdline  = "console=hvc0 quiet panic=1"
+cmdline  = "console=ttyS0 quiet panic=1"
 guest_os = "peios"
 
 [profiles.peios-mainline]
 kernel   = "/srv/peios-builds/mainline/bzImage"
 initrd   = "/srv/peios-builds/mainline/initrd.cpio.gz"
-cmdline  = "console=hvc0 quiet panic=1"
+cmdline  = "console=ttyS0 quiet panic=1"
 guest_os = "peios"
 
 [profiles.peios-debug]
 kernel   = "/srv/peios-builds/debug/bzImage"
 initrd   = "/srv/peios-builds/debug/initrd.cpio.gz"
-cmdline  = "console=hvc0 debug loglevel=7 nokaslr panic=1"
+cmdline  = "console=ttyS0 debug loglevel=7 nokaslr panic=1"
 guest_os = "peios"
 ```
 

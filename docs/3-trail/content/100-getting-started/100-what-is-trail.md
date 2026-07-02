@@ -1,7 +1,11 @@
 ---
-title: What Is Trail
+title: What is Trail
 type: concept
 description: Trail is a static site generator purpose-built for documentation. It produces fast, searchable sites with pathway-based navigation, dark mode, and multi-product support.
+related:
+  - trail/getting-started/quick-start
+  - trail/getting-started/project-structure
+  - trail/configuration/trail-toml
 ---
 
 Trail is a static site generator designed specifically for documentation sites. It takes a directory of Markdown files and a `trail.toml` configuration file and produces a complete static website with search, dark mode, pathway navigation, and responsive design.
@@ -44,7 +48,7 @@ Trail takes a different approach. It is a single Go binary with no runtime depen
 Trail reads your project directory and processes it in a single pass:
 
 1. **Parse configuration.** Trail reads `trail.toml` for site metadata, navigation, product definitions, and category ordering.
-2. **Load content.** Trail walks the `content/` directory, parses YAML frontmatter and Markdown bodies, and organizes pages into categories.
+2. **Load content.** Trail walks the `content/` directory, parses YAML frontmatter and Markdown bodies, and organises pages into categories.
 3. **Load pathways.** Trail reads `.toml` files from the `pathways/` directory and resolves page references.
 4. **Build output.** Trail converts Markdown to HTML, applies transforms (admonitions, tabs, mermaid, inter-page links), wraps content in templates, and writes everything to the output directory.
 5. **Generate assets.** Trail writes the search index, sitemap, robots.txt, JavaScript assets, and copies the `static/` directory.

@@ -2,11 +2,20 @@
 title: Bridges and impairments
 type: how-to
 description: How to wire VMs into bridges, partition them symmetrically and directionally, inject latency / drop rate / bandwidth limits, isolate single VMs, capture pcap, and route to the outside world via uplink.
+related:
+  - provium/reference/bridge
+  - provium/reference/nic
+  - provium/reference/streams
+  - provium/writing-tests/labs-and-scope
 ---
 
-Provium's networking is real Linux bridges with TAP attachments. You declare a topology, the harness realizes it as the VMs boot, and you can mutate it (partition, impair, capture) at runtime.
+Provium's networking is real Linux bridges with TAP attachments. You declare a topology, the harness realises it as the VMs boot, and you can mutate it (partition, impair, capture) at runtime.
 
 The exhaustive method reference is on [Bridge](~provium/reference/bridge) and [Nic](~provium/reference/nic).
+
+## Declared vs realised
+
+Provium tracks resources in two layers: the resource graph records what a test has declared (bridges, attachments, partitions, impairments), and the harness separately realises that graph on the host — bridge interfaces, TAPs, `tc` qdiscs, nft rules, QMP calls — once the backing pieces exist, typically when an attached VM boots. A call marked **graph-state only** updates the declared graph without touching the host: it's recorded and visible to inspection methods, but on its own it doesn't change anything real.
 
 ## Wiring up
 
@@ -114,7 +123,7 @@ lan:bandwidth_limit({from = a, to = b, bps = 500000})  -- 500 kbit/s leaving A
 
 The number is **bits per second**, not bytes — matches `tc rate Nbit`. The whole-bridge form installs a TBF qdisc on the bridge interface. The directional form installs an HTB qdisc on the source TAP, with a netem child if latency or drop is set on the same source.
 
-The `to` argument is graph-recorded but the realization shapes **every packet leaving the source TAP** — HTB on a Linux bridge can't reliably select packets by destination MAC. If you set `(from=a, to=b, bps=X)` and `(from=a, to=c, bps=Y)`, the realized rate is `max(X, Y)` so no recorded pair is over-shaped.
+The `to` argument is graph-recorded but the realisation shapes **every packet leaving the source TAP** — HTB on a Linux bridge can't reliably select packets by destination MAC. If you set `(from=a, to=b, bps=X)` and `(from=a, to=c, bps=Y)`, the realised rate is `max(X, Y)` so no recorded pair is over-shaped.
 
 Combine directional bandwidth with directional latency / drop on the same source for a complete profile:
 
@@ -124,7 +133,7 @@ lan:add_latency({from = a, to = b, ms = 25})
 lan:drop_rate({from = a, to = b, p = 1})
 ```
 
-Whole-bridge bandwidth + whole-bridge latency on the same bridge still falls back to bandwidth-only (a known v1 limitation noted in code) — for combined shaping use the directional form on each source.
+Whole-bridge bandwidth and whole-bridge latency/drop don't combine on the same bridge: the latency/drop shaping is what's realised, and the bandwidth cap is recorded in the graph but not enforced. For combined shaping use the directional form on each source.
 
 ### Reset
 

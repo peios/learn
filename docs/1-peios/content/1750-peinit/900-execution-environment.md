@@ -67,6 +67,14 @@ peinit deliberately does **not** set `HOME`, `USER`, `LOGNAME`, `SHELL`, or `TER
 
 peinit also sets `oom_score_adj`: `-1000` (OOM-immune) for `ErrorControl=Critical` services, and the default `0` for everyone else — so the kernel never picks a Critical platform daemon as an out-of-memory victim.
 
+## Runtime directories
+
+`RuntimeDirectories` gives a service private scratch space under `/run` without an `ExecStartPre` that has to `mkdir` it by hand. Each name you list becomes a directory created **directly under `/run`** — `RuntimeDirectories=myapp` yields `/run/myapp` — set up immediately before the main process starts. Each one gets a [security descriptor](~peios/the-registry/access-control) granting full access to SYSTEM, Administrators, and the service's own [SID](~peios/peinit/identity-and-privileges), so the service can write to its directory while other principals cannot. If a directory can't be created, or its descriptor can't be applied, the start fails with `ParentSetupFailure`.
+
+peinit does **not** remove these directories when the service stops. `/run` is a boot-scoped tmpfs, so they simply disappear at the next boot rather than being torn down on each stop — a restarting service finds its runtime directory (though not necessarily its contents) already in place.
+
+For the exact naming rules on each entry and the field's type and default, see the [Registry key reference](~peios/peinit/registry-key-reference).
+
 ## Pre-exec and post-exec hooks
 
 Hooks let a service do work *around* its main process without baking it into the binary.
@@ -110,7 +118,7 @@ Two constraints follow from peinit being single-threaded PID 1, which [must neve
 - **`registry:` checks are cache-only.** A `registry:` check may only name a key peinit already caches (under `Machine\System\Services\` or `Machine\System\Init\`); it is evaluated against the in-memory model, never a live read. Naming any other key is a validation error.
 - **Filesystem checks run off the main loop.** `path:`/`file:`/`directory:` checks are performed by a short-lived forked helper, not a `stat()` on the event loop, because `stat()` can wedge on a hung mount.
 
-A check that cannot complete within its timeout is treated as **not satisfied** — fail-safe — so a Condition skips and an Assert fails rather than the event loop hanging.
+That timeout is the `PreStartCheckTimeout` field, which defaults to **5 seconds**. A filesystem check that does not finish within it — say a `stat()` wedged on a hung mount — is treated as **not satisfied**, fail-safe: peinit kills the helper and treats the check as unmet, so a Condition skips the service and an Assert fails it, rather than letting the event loop hang.
 
 ## The fd store
 

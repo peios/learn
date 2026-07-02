@@ -85,7 +85,7 @@ sudo openssl genpkey -algorithm ed25519 -out /etc/peipkg-manager/farm.ed25519
 sudo chmod 600 /etc/peipkg-manager/farm.ed25519
 ```
 
-The detailed discussion is in [Signing keys](./signing-keys), including how to publish the public-key fingerprint so consumers can add the trust anchor.
+The detailed discussion is in [Signing keys](~peios-packages/running-a-farm/signing-keys), including how to publish the public-key fingerprint so consumers can add the trust anchor.
 
 ## Generate a webhook secret
 
@@ -127,7 +127,7 @@ webhook_secret_file = "/etc/peipkg-manager/webhook-secret"
 default_interval = "1h"
 ```
 
-[Configuration](./configuration) is the field-by-field reference.
+[Configuration](~peios-packages/running-a-farm/configuration) is the field-by-field reference.
 
 ## Configure rclone (R2 example)
 
@@ -141,7 +141,7 @@ sudo rclone config create r2 s3 \
   secret_access_key=<secret>
 ```
 
-[Hosting on R2](./hosting/r2) covers the bucket, custom domain, and access policies in detail. Other backends are documented as siblings.
+[Hosting on R2](~peios-packages/running-a-farm/hosting/r2) covers the bucket, custom domain, and access policies in detail. Other backends are documented as siblings.
 
 ## Install the systemd service
 
@@ -189,7 +189,7 @@ You should see structured logs scrolling past as `peipkg-manager` polls each rec
 
 ## Where to go from here
 
-- [Configuration](./configuration) — the `peipkg-config.toml` reference, field by field.
-- [Signing keys](./signing-keys) — what to do with the key beyond `chmod 600`, and how rotation works.
-- [Hosting](./hosting/r2) — pick the backend that fits your situation: R2 (recommended), GitHub Pages (simple), or VPS (full control).
-- [Monitoring](./monitoring) — what the `/status` endpoint says and what to alert on.
+- [Configuration](~peios-packages/running-a-farm/configuration) — the `peipkg-config.toml` reference, field by field.
+- [Signing keys](~peios-packages/running-a-farm/signing-keys) — what to do with the key beyond `chmod 600`, and how rotation works.
+- [Hosting](~peios-packages/running-a-farm/hosting/r2) — pick the backend that fits your situation: R2 (recommended), GitHub Pages (simple), or VPS (full control).
+- [Monitoring](~peios-packages/running-a-farm/monitoring) — what the `/status` endpoint says and what to alert on.

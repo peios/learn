@@ -3,6 +3,7 @@ title: The registry manual (regman)
 type: concept
 description: "The registry stores a value's type but not its meaning, so the meaning is written down beside the registry — in regman, the manual. regman tells you what a key or value is: its type, default, valid range, when a change takes effect, and what it does. Crucially, it documents what a setting should be, never what it is currently set to."
 related:
+  - peios/the-registry/reg
   - peios/the-registry/configuration-and-meaning
   - peios/the-registry/keys-values-and-types
   - peios/the-registry/lcs-and-sources
@@ -81,14 +82,14 @@ Machine\System\KMES BufferCapacity   Per-CPU ring buffer capacity in bytes.
 
 ## regman documents intent, not current state
 
-This is the boundary that matters most. **`regman` tells you what a setting *should be* — what it means and which values are legal — not what it is currently set to on this machine.** It reads shipped documentation, never the live registry; it does not talk to [LCS](~peios/the-registry/lcs-and-sources) at all. Ask `regman` about `BufferCapacity` and you learn it must be a power of two and defaults to 4 MB; you do *not* learn that this particular box has it set to 8 MB right now. Reading the current value is a separate, live query against the registry.
+This is the boundary that matters most. **`regman` tells you what a setting *should be* — what it means and which values are legal — not what it is currently set to on this machine.** It reads shipped documentation, never the live registry; it does not talk to [LCS](~peios/the-registry/lcs-and-sources) at all. Ask `regman` about `BufferCapacity` and you learn it must be a power of two and defaults to 4 MB; you do *not* learn that this particular box has it set to 8 MB right now. Reading the current value is a separate, live query against the registry — that is [`reg`](~peios/the-registry/reg)'s job. `regman` tells you a knob *should* be a power of two; `reg get` tells you what it is set to, and `reg set` changes it. Reach for `regman` to decide what to write, and `reg` to write it.
 
 Put `regman` next to the other two things from [Configuration, not storage](~peios/the-registry/configuration-and-meaning) and a clean division of labour appears:
 
 | To learn… | Look at… |
 |---|---|
 | What a setting *means*, and what is valid | `regman` — the manual |
-| What the value is *set to* | the live registry |
+| What the value is *set to* | [`reg`](~peios/the-registry/reg) — a live query against the store |
 | What the subsystem is *actually running on* | the [event log](~peios/auditing/overview) |
 
 `regman` is the one you consult first, and the only one that works before you have changed anything — because documentation ships with the software, not with the machine's state. It is the natural complement to [reject-or-keep](~peios/the-registry/configuration-and-meaning): `regman` tells you the valid range up front, so you set a good value the first time instead of writing one the owning subsystem will quietly refuse.
@@ -101,7 +102,7 @@ A consequence worth knowing: `regman` can only describe settings that some insta
 
 (For the people who *write* that documentation, `regman fmt` and `regman lint` prepare and check fragments, and `regman index` keeps lookups fast on large corpora — the lookup is always correct without an index, which is purely an accelerator. These are packaging concerns rather than everyday operator ones.)
 
-## Where to start
+## Where to go next
 
 For the idea `regman` exists to serve — why the registry holds values without holding their meaning, and what reject-or-keep means — read [Configuration, not storage](~peios/the-registry/configuration-and-meaning).
 

@@ -2,6 +2,10 @@
 title: Protocol version
 type: reference
 description: PROTOCOL_VERSION pins the wire shape of the host-agent protocol and the observability event stream. This page explains what it pins, when it bumps, and how the conformance pin tests catch silent breakage.
+related:
+  - provium/reference/events
+  - provium/running-tests/events-and-coverage
+  - provium/reference/cli
 ---
 
 Provium has one wire-version constant: `PROTOCOL_VERSION`, currently `1`.
@@ -31,7 +35,7 @@ It is **not bumped** for changes that don't reach the wire — internal struct r
 
 ## How the pin is enforced
 
-The conformance suite has a dedicated test file (`conformance_protocol_pin.rs`) that locks every wire-facing struct against an explicit byte expectation. Examples of what it locks:
+The conformance suite locks every wire-facing struct against an explicit byte expectation. Examples of what it locks:
 
 - `Hello.protocol_version` is a u32 currently encoded as `1`.
 - `HelloOk` field tags (`agent_version`, `guest_os`, `agent_features`, …).
@@ -43,10 +47,10 @@ Any refactor that changes a tag name, reorders an enum, or shifts a bit fails th
 
 ## How to add a new op or event
 
-1. Add the new variant / payload type in `provium-protocol`.
-2. Add a serialization round-trip test in the same module.
-3. Bump `PROTOCOL_VERSION` in `provium-protocol/src/lib.rs`.
-4. Update the conformance pin test to lock the new shape.
+1. Add the new variant / payload type to the protocol crate.
+2. Add a serialisation round-trip test alongside it.
+3. Bump `PROTOCOL_VERSION`.
+4. Update the conformance pin to lock the new shape.
 5. (Op only) Wire the agent-side handler.
 6. (Op only) Wire the host-side dispatcher and a Lua binding.
 
@@ -56,7 +60,7 @@ Skipping step 4 produces a protocol change without explicit pinning — exactly 
 
 Provium does not commit to backwards compatibility on the host-agent wire. The host and agent are versioned together — they ship in lock-step out of the same workspace. The Hello handshake exchanges versions and `HelloErr`s the connection if they don't match, so a stale agent against a fresh host fails fast at connection time, not silently mid-op.
 
-For the event stream, consumers (`provium-coverage`, dashboards) are versioned against `PROTOCOL_VERSION`. A consumer built against version N reading a stream from version N+1 will fail to deserialize the new fields; the typical recovery is to rebuild the consumer.
+For the event stream, consumers (`provium-coverage`, dashboards) are versioned against `PROTOCOL_VERSION`. A consumer built against version N reading a stream from version N+1 will fail to deserialise the new fields; the typical recovery is to rebuild the consumer.
 
 ## See also
 

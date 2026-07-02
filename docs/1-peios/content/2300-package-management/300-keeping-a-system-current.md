@@ -1,12 +1,13 @@
 ---
 title: Keeping a system current
-type: reference
+type: how-to
 description: refresh updates the metadata peipkg plans against; upgrade moves packages forward to their newest versions; downgrade and undo move them back. Together they are the routine update cycle and the way to walk a bad change off the system.
 related:
   - peios/package-management/installing-and-removing
   - peios/package-management/repositories-and-trust
   - peios/package-management/transactions-and-recovery
   - peios/package-management/dependency-resolution
+  - peios/package-management/named-roots
 ---
 
 Keeping a Peios system current is two commands in sequence — `refresh` to learn what is available, then `upgrade` to move to it. The other two commands here, `downgrade` and `undo`, go the other way: they walk a change back when an upgrade turns out badly.
@@ -56,6 +57,9 @@ proceed? [y/N]
 |---|---|
 | `--dry-run` | Print the plan and stop. A good way to preview what an upgrade would move. |
 | `--yes`, `-y` | Skip the `proceed?` prompt. |
+| `--no-recurse` | Confine the upgrade to the current root only — disable the cascade into nested named roots. |
+
+By default, when named roots are configured, `upgrade` **cascades**: it reconciles the current root and every named root nested under it, each as an independent continue-on-error transaction with its own summary. `--no-recurse` disables that and upgrades the current root alone. See [Named roots](~peios/package-management/named-roots) for the named-roots model.
 
 If there is nothing to do — every package already at its newest version — peipkg says so and exits.
 
@@ -111,3 +115,11 @@ $ peipkg upgrade        # apply it
 ```
 
 `downgrade` and `undo` are the recovery moves — reach for them when a refreshed-and-upgraded system has picked up a change you want gone. Every one of these commands is a [transaction](~peios/package-management/transactions-and-recovery), so every one of them is atomic and itself reversible.
+
+## Exit status
+
+| Code | Meaning |
+|---|---|
+| `0` | The operation succeeded — including a dry run, a plan with nothing to do, and a declined prompt or authorisation (nothing failed). |
+| `1` | The operation failed — a repository could not be refreshed, resolution or a download or verification failed, a root in an upgrade cascade failed, there is no committed transaction to undo, or a command's arguments were wrong (`downgrade` without a package and version, an unparsable version, a malformed option). |
+| `2` | A usage error before any command ran — no command, an unknown command, or a malformed global option (including a `--root` reference that does not resolve). |

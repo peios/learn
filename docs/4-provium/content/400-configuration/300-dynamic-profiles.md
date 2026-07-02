@@ -2,6 +2,10 @@
 title: Dynamic profiles
 type: how-to
 description: Make a profile build its own image before the VM boots — the build command, the {out} token that keeps inputs and outputs from drifting, reading a cmdline from the builder, and the prepare / --no-build controls.
+related:
+  - provium/configuration/provium-toml
+  - provium/configuration/profiles
+  - provium/running-tests/fixtures-and-dependencies
 ---
 
 A static profile points at artifacts that already exist on disk:
@@ -10,12 +14,12 @@ A static profile points at artifacts that already exist on disk:
 [profiles.peios]
 kernel  = "/build/peios/bzImage"
 initrd  = "/build/peios/initrd.cpio.gz"
-cmdline = "console=hvc0 quiet"
+cmdline = "console=ttyS0 quiet"
 ```
 
 That leaves a gap. You build the image with one tool, then run Provium with another, and nothing connects the two — so it's easy to test last week's image because you forgot to rebuild. A *dynamic* profile closes the gap: the profile owns a `build` command, Provium runs it, and the VM boots the fresh result.
 
-This is the same idea as [`cmdline_file`](~provium/configuration/provium-toml#cmdline_file) — let the test consume the authoritative build instead of a hand-copied snapshot — applied to the whole image. This page covers both.
+This is the same idea as [`cmdline_file`](~provium/configuration/provium-toml#cmdline-file) — let the test consume the authoritative build instead of a hand-copied snapshot — applied to the whole image. This page covers both.
 
 ## Cmdline from the builder
 
@@ -67,7 +71,7 @@ Where does `{out}` point? By default, a per-profile directory under the Provium 
 $XDG_CACHE_HOME/provium/builds/<profile>/     # e.g. ~/.cache/provium/builds/peios-full/
 ```
 
-Set [`build_out`](~provium/configuration/provium-toml#build_out) to pin it somewhere specific — but you still only write the path once:
+Set [`build_out`](~provium/configuration/provium-toml#build-out) to pin it somewhere specific — but you still only write the path once:
 
 ```toml
 [profiles.peios-full]

@@ -2,6 +2,11 @@
 title: provium global
 type: reference
 description: The `provium` global is the entry point to every Provium API. It is itself a Lab, so every method documented on Lab is reachable directly off provium.
+related:
+  - provium/reference/lab
+  - provium/reference/test-framework
+  - provium/reference/vm
+  - provium/writing-tests/labs-and-scope
 ---
 
 The `provium` global is installed onto every test file's Lua state. It is the root [Lab](~provium/reference/lab) and the only API surface a test author needs to import — there is no `require`.

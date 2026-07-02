@@ -21,7 +21,7 @@ The map has a stable set of keys per event type, plus an `event_type` discrimina
 
 | Key | Value type | Always present? | Meaning |
 |---|---|---|---|
-| `event_type` | msgpack string | Yes | The event-type name. One of `"access-audit"`, `"continuous-audit"`, `"privilege-use"`, `"logon-session-destroyed"`, etc. |
+| `event_type` | msgpack string | Yes | The event-type name. One of `"access-audit"`, `"continuous-audit"`, `"privilege-use"`, `"caap-policy-diagnostic"`, `"logon-session-destroyed"`, or `"corrupt-sd"`. |
 | `event_time` | msgpack uint | Yes | Timestamp of the event (kernel-internal monotonic units). |
 
 After these, type-specific fields follow. Each event type's specific schema is in [Event schemas](~peios/audit-event-reference/event-schemas).
@@ -62,11 +62,11 @@ The audit events emitted from the kernel fall into a few categories:
 | **Object access** | `access-audit` | AccessCheck completion (one event per matching audit ACE per access; or via token audit_policy). |
 | **Continuous audit** | `continuous-audit` | Per-operation on an open handle whose continuous audit mask matches the operation. |
 | **Privilege use** | `privilege-use` | AccessCheck completion when a privilege contributed bits and the token's audit_policy requests it. |
+| **CAAP diagnostics** | `caap-policy-diagnostic` | CAAP SACL evaluation errors and staged/effective result mismatches during AccessCheck. |
 | **Session lifecycle** | `logon-session-destroyed` | When a logon session's last token reference drops. |
+| **SD corruption** | `corrupt-sd` | Once per inode per cache population, when FACS encounters a structurally invalid SD. |
 
-Plus diagnostic events the kernel may emit for unusual conditions (corrupt SDs, malformed audit input, etc.). These are documented per-event where they exist.
-
-The four primary event types are covered in detail in [Event schemas](~peios/audit-event-reference/event-schemas). The common sub-records that appear inside several event types (`subject`, `process`, `trigger`) are covered in [Common records](~peios/audit-event-reference/common-records).
+These six event types are covered in detail in [Event schemas](~peios/audit-event-reference/event-schemas). The common sub-records that appear inside several event types (`subject`, `process`, `trigger`) are covered in [Common records](~peios/audit-event-reference/common-records).
 
 ## Transport rules
 

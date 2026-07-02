@@ -144,3 +144,9 @@ To pin the entire model on one table:
 | `used` | Set by the kernel when the privilege is exercised. Never clears. |
 
 The asymmetric mutability is the model's spine. Authority can decrease at runtime but not increase. State for auditing accumulates. Defaults are fixed. The "easy" mutation — toggle enabled — is the only one that goes both ways, and it does not affect what the token fundamentally is.
+
+## Where to go next
+
+For the two privileges that require an intent flag on top of being enabled, read [Intent-gated privileges](~peios/privileges/intent-gated).
+
+For bulk privilege removal as part of building a sandbox token, read [Restricted and write-restricted tokens](~peios/tokens/restricted-tokens).

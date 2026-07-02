@@ -96,7 +96,7 @@ For an ordinary logout, this happens naturally: the user's shell exits, child pr
 
 ## Revocation: there is no kernel call
 
-There is **no syscall** to forcibly end a session. No `kacs_destroy_session`, no `kacs_kill_session`. The session model is reference-counted, and the only way to end one is to ensure every reference drops.
+There is **no syscall** to forcibly end a session. No `kacs_destroy_session`, no `kacs_kill_session`. The session model is reference-counted, and the only way to end one is to ensure every reference drops. (The one destroy syscall that exists, `kacs_destroy_empty_session`, is a rollback primitive for *empty* sessions only — it refuses with `-EBUSY` any session that still has live tokens. This is what `logonse destroy` wraps.)
 
 Forced logout — an administrator deciding that user X should not be signed in any more — is therefore a userspace operation. The pattern, implemented by authd:
 
@@ -121,9 +121,15 @@ The cost is that revocation is observable: a thread can detect that its session 
 The kernel exposes the active session list at `/sys/kernel/security/kacs/sessions`. The file is a text listing, one session per line:
 
 ```
-session_id=42 user_sid=s-1-5-21-... logon_type=2 auth_package=Kerberos created_at=...
+session_id=42 user_sid=<hex-encoded SID> logon_type=2 auth_package=<hex-encoded name> created_at=...
 ```
 
 Lines are stable in their leading fields; new fields may be appended to a future version, so consumers must ignore unknown trailing fields. The file's own SD grants read to `BUILTIN\Administrators` and `SYSTEM` only.
 
 This is the canonical way to enumerate sessions. Other tools — `eventd` consumers, `who`-equivalents, session monitors — can read it directly or through helpers that wrap it. See [Inspecting tokens, sessions, and processes](~peios/inspecting/overview).
+
+## Where to go next
+
+For the token-side half of the same story — the references whose rise and fall drive a session's life — read [Token lifecycle](~peios/tokens/lifecycle).
+
+To list, create, and destroy sessions from a shell, read [The logonse command](~peios/logon-sessions/logonse-command).

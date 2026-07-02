@@ -2,6 +2,10 @@
 title: Events
 type: reference
 description: Provium emits a stream of structured msgpack events covering file lifecycle, test outcomes, VM spawns, pool state, claims, and fixture builds. This page documents every event variant and field.
+related:
+  - provium/running-tests/events-and-coverage
+  - provium/reference/protocol-version
+  - provium/reference/cli
 ---
 
 Provium's host-side scheduler and runners emit observability events that drive the human-readable summary, the `--json` output, `provium-coverage`, and any other consumer that wants to follow what the harness is doing.
@@ -220,7 +224,7 @@ Used in pool / claim / reservation events.
 | `Array` | array of MetaValue |
 | `Map` | map of String → MetaValue |
 
-The deserializer dispatches on the input type rather than relying on declaration-order fallthrough, so valid-UTF-8 byte sequences are not mis-classified as strings.
+The deserialiser dispatches on the input type rather than relying on declaration-order fallthrough, so valid-UTF-8 byte sequences are not mis-classified as strings.
 
 ## Event guarantees
 

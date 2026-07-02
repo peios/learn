@@ -47,14 +47,14 @@ That token is attached to the first process of the session, and every child proc
 
 The token is the authoritative carrier. Any other identity values a process can observe — including the numeric IDs that surface through standard Linux system calls — are derived from the token, never the other way around. See [Linux compatibility](~peios/linux-compatibility/overview) for how that projection works.
 
-## Identity vs authorization
+## Identity vs authorisation
 
 An identity by itself grants nothing. A token says **who** a thread is; KACS decides **what** it can do, by comparing the token against each object's security descriptor. The same token will see different rights on different objects, and the same object will grant different rights to different tokens.
 
 This separation is load-bearing across the rest of these docs. Topics that look like they should be one thing are actually two:
 
 - **Identity says "who".** This topic, plus [Tokens](~peios/tokens/overview) and [Logon sessions](~peios/logon-sessions/overview).
-- **Authorization says "what".** [Security descriptors](~peios/security-descriptors/overview) and [Access decisions](~peios/access-decisions/overview).
+- **Authorisation says "what".** [Security descriptors](~peios/security-descriptors/overview) and [Access decisions](~peios/access-decisions/overview).
 
 If a request fails unexpectedly, you almost always need to look at both sides: which identity made the request, and which access rule rejected it. Pages in both halves cross-link where the two meet.
 
@@ -71,6 +71,8 @@ These distinctions matter because they fail in different ways. An "access denied
 ## Where to start
 
 If you want to understand how SIDs are constructed and what the built-in principals are, read [SIDs and well-known principals](~peios/identity/sids).
+
+If you want the typed attributes a token carries beyond identity — the inputs to attribute-based access decisions — read [Claims on a token](~peios/identity/claims).
 
 If you want the runtime mechanics — how a token is composed, how it survives fork and exec, and how it gets adjusted — read [Tokens](~peios/tokens/overview).
 

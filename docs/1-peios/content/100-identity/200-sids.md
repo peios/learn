@@ -10,7 +10,7 @@ related:
 
 A **SID** (Security Identifier) is the unique name for a principal. Every user, group, service, machine, and well-known system actor has exactly one SID, and that SID is how every other part of Peios refers to them: ACEs in a security descriptor name SIDs, tokens carry SIDs, audit events log SIDs.
 
-Two SIDs are equal only if their binary encodings match byte-for-byte. There is no normalization, no case folding, no "this matches that if you squint" rule. A SID is its bytes.
+Two SIDs are equal only if their binary encodings match byte-for-byte. There is no normalisation, no case folding, no "this matches that if you squint" rule. A SID is its bytes.
 
 ## The string form
 
@@ -109,3 +109,11 @@ A SID identifies a principal but says nothing else about them. From a SID alone 
 - Whether the principal is currently logged in (the logon session does that).
 
 A SID is just the name. Everything else about a principal lives somewhere else — usually on the token that carries the SID at runtime.
+
+## Where to go next
+
+For the catalog of SIDs whose values are fixed by the system — Everyone, SYSTEM, the BUILTIN aliases, and the rest — read [Well-known principals](~peios/identity/well-known-principals).
+
+For the typed attributes that travel alongside SIDs on a token, read [Claims on a token](~peios/identity/claims).
+
+For how a SID is carried into every access decision at runtime, read [Tokens](~peios/tokens/overview).

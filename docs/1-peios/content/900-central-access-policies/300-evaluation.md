@@ -116,3 +116,11 @@ For FACS-managed objects (files, directories), the granted mask is cached on the
 For non-FACS objects that re-evaluate AccessCheck on each operation (some IPC endpoints, some token operations), the CAAP update would be visible immediately on the next operation.
 
 The user-visible effect: changing a CAAP changes what new accesses see. It does not change what existing handles can do. Tools that need a CAAP update to be visible immediately need to coordinate session revocation or service restart — see [Distribution and recovery](~peios/central-access-policies/distribution-and-recovery).
+
+## Where to go next
+
+For the parallel evaluation of proposed policy changes and the staging mismatch flag, read [Staged policies](~peios/central-access-policies/staged-policies).
+
+For how policies reach the kernel's cache and what happens when a referenced policy is missing, read [Distribution and recovery](~peios/central-access-policies/distribution-and-recovery).
+
+For how the CAAP intersection composes with the restricted-token and confinement passes, read [Narrowing layers](~peios/access-decisions/narrowing-layers).

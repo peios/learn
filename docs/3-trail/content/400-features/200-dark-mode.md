@@ -1,10 +1,13 @@
 ---
-title: Dark Mode
+title: Dark mode
 type: concept
 description: Trail supports dark mode with system preference detection, a manual toggle, localStorage persistence, and a no-flash script.
+related:
+  - trail/content-authoring/diagrams
+  - trail/content-authoring/code-blocks
 ---
 
-Trail has built-in dark mode support. Every element of the UI -- navigation, content, code blocks, admonitions, search results, and diagrams -- adapts to the selected color scheme.
+Trail has built-in dark mode support. Every element of the UI -- navigation, content, code blocks, admonitions, search results, and diagrams -- adapts to the selected colour scheme.
 
 ## How dark mode is determined
 
@@ -58,28 +61,28 @@ Trail uses Tailwind CSS with the `class` dark mode strategy. Every styled elemen
 
 When the `dark` class is present on the `<html>` element, all `dark:` prefixed utilities take effect.
 
-## Component-specific dark mode behavior
+## Component-specific dark mode behaviour
 
 | Component | Light mode | Dark mode |
 |---|---|---|
-| Page background | White | Near-black (gray-950) |
-| Text | Dark gray | Light gray |
+| Page background | White | Near-black (`gray-950`) |
+| Text | Dark grey | Light grey |
 | Code blocks | Dracula (dark) | Dracula (dark) -- unchanged |
 | Admonitions | Light tinted background | Dark tinted background |
-| Search results | White dropdown | Dark gray dropdown |
+| Search results | White dropdown | Dark grey dropdown |
 | Tables | Light borders, white cells | Dark borders, transparent cells |
-| Sidebar links | Gray text, blue active | Gray text, blue active |
+| Sidebar links | Grey text, blue active | Grey text, blue active |
 | Mermaid diagrams | Default theme | Dark theme |
 
 Code blocks use the Dracula theme in both modes, so they always have a dark background.
 
 ## Mermaid diagram re-rendering
 
-When the color mode changes, Trail re-renders all Mermaid diagrams. Each diagram element stores its original source text in a `data-mermaid-src` attribute. On theme toggle, Trail:
+When the colour mode changes, Trail re-renders all Mermaid diagrams. Each diagram element stores its original source text in a `data-mermaid-src` attribute. On theme toggle, Trail:
 
 1. Restores the original source text from the attribute.
 2. Removes the `data-processed` attribute so Mermaid treats it as new.
-3. Re-initializes Mermaid with the correct theme (`default` or `dark`).
+3. Re-initialises Mermaid with the correct theme (`default` or `dark`).
 4. Runs Mermaid to re-render all diagrams.
 
-This ensures diagrams use appropriate colors for the current mode.
+This ensures diagrams use appropriate colours for the current mode.

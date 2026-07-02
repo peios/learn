@@ -1,7 +1,10 @@
 ---
-title: Dev Server
+title: Dev server
 type: concept
 description: Trail's dev server watches for file changes and reloads the browser automatically via Server-Sent Events.
+related:
+  - trail/reference/cli
+  - trail/getting-started/quick-start
 ---
 
 The `trail serve` command starts a local development server with live reload. It builds the site, serves it over HTTP, and watches for changes.

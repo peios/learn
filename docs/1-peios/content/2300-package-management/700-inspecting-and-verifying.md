@@ -1,6 +1,6 @@
 ---
 title: Inspecting and verifying
-type: reference
+type: how-to
 description: The read-only peipkg commands — list, info, files, and owns to see what is installed, search to find a package in the repositories, verify to check installed files are intact, and clean to tidy the metadata cache.
 related:
   - peios/package-management/overview

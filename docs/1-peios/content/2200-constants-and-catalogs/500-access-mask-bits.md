@@ -1,7 +1,7 @@
 ---
 title: Access mask bits
 type: reference
-description: The 32-bit access mask uses object-specific bits (0–15) whose meaning depends on the object type, plus standard rights, special rights, and generic rights. This page catalogues the per-object-type bits — file, process, token — and the GenericMapping tables that convert generic rights to specific ones.
+description: The 32-bit access mask uses object-specific bits (0–15) whose meaning depends on the object type, plus standard rights, special rights, and generic rights. This page catalogues the per-object-type bits — file, process, token, registry key, and service — and the GenericMapping tables that convert generic rights to specific ones.
 related:
   - peios/constants-and-catalogs/overview
   - peios/constants-and-catalogs/ace-types-and-flags
@@ -11,7 +11,7 @@ related:
 
 The 32-bit access mask is the same shape across every object type — bits 0–15 are object-specific, bits 16–20 are standard rights, bits 24–25 are special, bits 28–31 are generic. The standard, special, and generic rights are uniform; the object-specific bits 0–15 carry different meanings for different object types.
 
-This page catalogues the access mask bits per object type and the GenericMapping tables that expand generic rights at evaluation time.
+This page catalogues the access mask bits per object type — file, process, token, registry key, and service — and the GenericMapping tables that expand generic rights at evaluation time.
 
 The mask layout itself is documented in [ACE types and flags](~peios/constants-and-catalogs/ace-types-and-flags) and [Security descriptors (wire format)](~peios/wire-formats-reference/security-descriptors). This page is the per-type catalog.
 

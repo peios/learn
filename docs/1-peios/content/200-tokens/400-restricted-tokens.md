@@ -123,3 +123,11 @@ A few patterns worth recognising:
 - **Anti-malware quarantine.** Restrict to a narrow set of well-known SIDs (Everyone, Authenticated Users) and remove all privileges. The result is a token that can reach widely-shared resources but cannot exercise any system-level rights.
 
 All of these are FilterToken / KACS_IOC_RESTRICT applied to the appropriate source token, with different inputs. The kernel does not distinguish between them; they are just patterns of use.
+
+## Where to go next
+
+For the linked Full/Limited token pair — the other derived-token pattern this topic covers — read [Elevation and linked tokens](~peios/tokens/elevation).
+
+For the policy-driven counterpart to restricted tokens, read [Confinement](~peios/confinement/overview).
+
+To build a restricted token from a shell, read [The token command](~peios/tokens/token-command).

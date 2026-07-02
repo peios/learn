@@ -1,6 +1,6 @@
 ---
 title: Opening files
-type: concept
+type: reference
 description: Two paths exist for opening a file — kacs_open with an explicit desired access mask, and the legacy openat/open with POSIX flags. Both use FACS, both produce a fd with a cached granted mask, but their semantics around partial grants differ. This page covers both, plus create dispositions, MAXIMUM_ALLOWED, and the SD-at-creation rules.
 related:
   - peios/file-access/overview

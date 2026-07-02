@@ -68,7 +68,7 @@ Domain **Group Policy** is configuration delivered from outside the machine, and
 - **Not access control.** A layer does not decide who may read or change a value; the [security descriptor](~peios/the-registry/access-control) on each key does. And the two do not mix: a security change made while a layer existed is **not** reverted when the layer is deleted. Security is operational state, not configuration overlay — the next page is where that distinction lives.
 - **Not a browsable history.** Layers are not a version-control timeline you can scroll through. You see the effective view — the current winners — not a log of every write that ever competed.
 
-## Where to start
+## Where to go next
 
 If you want what "deleting a key" really does once names are layered — and why there is no recursive delete — read [Deleting keys and values](~peios/the-registry/deleting-keys-and-values).
 

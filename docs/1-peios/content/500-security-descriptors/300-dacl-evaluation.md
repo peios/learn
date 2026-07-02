@@ -77,9 +77,10 @@ The two states look identical to a casual reader but mean opposite things.
 | **NULL DACL** | `SE_DACL_PRESENT` flag is **not set** in the SD's control flags. | Grants every valid right. The walk is skipped. |
 | **Empty DACL** | `SE_DACL_PRESENT` is set, the DACL exists, but contains zero ACEs. | Grants no rights (except owner implicit rights — see [Ownership](~peios/security-descriptors/ownership)). The walk happens, decides nothing, and the result is an empty `granted` mask. |
 
-The NULL case is rare and dangerous. It is how you say "this object has no discretionary access control at all — anyone can do anything". You will see it on a few system objects where no DACL would be the right thing. You will never see it on a file you set permissions on.
+> [!WARNING]
+> The NULL case is rare and dangerous. It is how you say "this object has no discretionary access control at all — anyone can do anything". You will see it on a few system objects where no DACL would be the right thing. You will never see it on a file you set permissions on.
 
-The empty-DACL case is what you get when you explicitly remove every ACE from a DACL but keep the DACL itself. The intent is "no one has any rights to this object", and the access check honors it.
+The empty-DACL case is what you get when you explicitly remove every ACE from a DACL but keep the DACL itself. The intent is "no one has any rights to this object", and the access check honours it.
 
 **Tools that print or parse SDs must distinguish the two.** Saying "the DACL is empty" without distinguishing between absent-DACL and zero-ACE-DACL is a recipe for misreading an object's policy.
 
@@ -132,3 +133,11 @@ A handful of patterns that come up repeatedly:
 - **When an inherited ACE seems to override an explicit one**, check canonical order. Inherited ACEs should sit *after* explicit ones; if you find an inherited deny ahead of an explicit allow, the DACL is out of order.
 - **When testing access**, query the full SD and walk it manually if the answer is surprising. Almost every "why doesn't this work" reduces to either a misordered DACL, a misplaced INHERIT_ONLY_ACE, or a missing flag.
 - **When writing a DACL programmatically**, build it in canonical order from the start. Adding ACEs at the end and "sorting later" is fragile.
+
+## Where to go next
+
+For the implicit rights the owner gets before the walk starts — and how to suppress them — read [Ownership and implicit rights](~peios/security-descriptors/ownership).
+
+For the full pipeline the walk sits inside — MIC, PIP, privileges, narrowing layers — read [Access decisions](~peios/access-decisions/overview).
+
+To test what a DACL would grant from a shell, read [The sd command](~peios/security-descriptors/sd-command).

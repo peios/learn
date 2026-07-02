@@ -2,6 +2,11 @@
 title: Streams
 type: reference
 description: Provium has three stream userdata types — Tail, Capture, and ConsoleStream — that share next/read_until/expect/drain/close/eof. They're returned by tail_file, fd_stream, file:tail_stream, bridge:capture, nic:capture, console:read, and proc stdout/stderr_stream.
+related:
+  - provium/writing-tests/streams-and-tails
+  - provium/reference/console
+  - provium/reference/process
+  - provium/reference/file-handle
 ---
 
 Provium has three concrete stream types. They expose a shared surface, so test code can `:next` / `:read_until` / `:expect` / `:drain` / `:close` / `:eof` / `:creation_site` against any of them without caring which kind it is.
@@ -70,9 +75,11 @@ Returns `{file=string, line=int}` for the test-author frame that opened the stre
 |---|---|
 | `"end"` (default) | Stream only bytes appended after the call. |
 | `"beginning"` or `"start"` | Replay the whole file from byte 0, then continue tailing. |
-| Integer | Start streaming from that exact byte offset. |
+| Non-negative integer | Start streaming from that exact byte offset. |
+| Negative integer | Start N bytes before EOF — Provium stats the file and resolves to an absolute offset. If N exceeds the current file size, the stream starts at byte 0. |
+| Finite float | Truncated toward zero, then treated as the integer cases above (negative floats count back from EOF). |
 
-A Tail closed after EOF returns `nil` from `:next` — the closed stream is semantically EOF. Earlier versions raised `tail closed`; the nil-return behaviour matches Capture and ConsoleStream so `while s:next() do … end` loops terminate cleanly.
+A closed Tail returns `nil` from `:next` — the closed stream is semantically EOF. This matches Capture and ConsoleStream, so `while s:next() do … end` loops terminate cleanly.
 
 Tails carry per-frame metadata visible to scope-end diagnostics: `kind` (e.g. `tail_file`, `fd_stream`, `file_tail_stream`, `proc_stdout_stream`), `detail` (the path or fd), `creation_site`, and `test_name`.
 
@@ -86,7 +93,7 @@ Drop on close prevents `:next` from returning stale tcpdump bytes after the chil
 
 ## ConsoleStream-only notes
 
-ConsoleStream connects via `UnixStream` to the VMM's console chardev path (`vm:console_socket_path()`). Reads come back as raw bytes from the chardev — typically the boot console + login prompt + anything the guest has written to `/dev/hvc0` since the last read.
+ConsoleStream connects via `UnixStream` to the VMM's console chardev path (`vm:console_socket_path()`). Reads come back as raw bytes from the chardev — typically the boot console + login prompt + anything the guest has written to `/dev/ttyS0` since the last read.
 
 The connect-time read timeout is 50 ms. The `:next(timeout)` arg overrides it for the duration of the call and the previous timeout is restored afterwards, so a `next("5s")` followed by a bare `next()` doesn't inherit the 5s deadline forever.
 

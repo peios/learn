@@ -168,8 +168,8 @@ The kernel validates the token spec extensively:
 - Every offset must point within the spec; every length must fit; no overlapping regions.
 - `confinement_sid` and `isolation_boundary`: isolation_boundary cannot be set without confinement_sid.
 - Write-restricted tokens (encoded by the way restricted_sids and user_deny_only combine) must satisfy the user_deny_only constraint.
-- `ALL_APPLICATION_PACKAGES` (S-1-15-2-1) MUST NOT appear in confinement_capabilities.
-- The logon SID MUST NOT be supplied; the kernel injects it from the auth_id.
+- `ALL_APPLICATION_PACKAGES` (S-1-15-2-1) must not appear in confinement_capabilities.
+- The logon SID must not be supplied; the kernel injects it from the auth_id.
 
 A failure at any check returns `-EINVAL`. The token is not created.
 

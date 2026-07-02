@@ -152,3 +152,11 @@ For new code or refactored services, the cleaner pattern is to avoid setuid enti
 - **Cross-identity work happens through IPC.** A service needing to do something as another identity sends an IPC request to a service running with that identity; the latter does the work.
 
 Setuid is the legacy compatibility path. Native Peios code paths look different.
+
+## Where to go next
+
+For the projection behind the cosmetic UID values, read [Credential projection](~peios/linux-compatibility/credential-projection).
+
+For why setuid's Linux-level checks defer to KACS in the first place, read [DAC neutralisation and capabilities](~peios/linux-compatibility/dac-neutralization-and-capabilities).
+
+For acting on another identity without changing your own, read [Peer credentials](~peios/linux-compatibility/peer-credentials).

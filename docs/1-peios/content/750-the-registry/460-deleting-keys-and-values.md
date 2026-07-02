@@ -44,7 +44,7 @@ A value works the same way one level down. Deleting a value withdraws a layer's 
 
 Deleting (or hiding) a key requires delete permission on it — see [Access control on keys](~peios/the-registry/access-control). As everywhere in the registry, the check is against the key you are deleting, decided by its security descriptor, with no check on the keys above it.
 
-## Where to start
+## Where to go next
 
 For the contest that "withdrawing a claim" feeds back into, read [Layers](~peios/the-registry/layers).
 

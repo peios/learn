@@ -131,8 +131,7 @@ The **changing** parts of a process's state:
 The **immutable** parts of a process's state (once set):
 
 - **PIP fields.** Set at exec; never change for the lifetime of the process.
-- **Mitigation flags.** One-way; can be tightened but never relaxed.
-- **`no_child_process` flag.** One-way.
+- **Mitigation flags** (including `NO_CHILD`). One-way; can be tightened but never relaxed.
 - **Token identity fields** (user_sid, groups[].sid, restricted_sids, logon_sid). Set at token creation; the token can be replaced but never have its identity adjusted.
 
 Knowing which fields are immutable helps with monitoring. A monitor that has already read the PIP fields once does not need to re-read them; they will not change. A monitor watching for privilege state changes needs to poll or subscribe to events — they can change at any time.
@@ -143,7 +142,15 @@ A few clarifications:
 
 - **It cannot tell you what access a process has.** Inspection gives you the inputs to AccessCheck (the token, the object's SD); it does not compute the access. To know what a process can do to a specific object, call AccessCheck.
 - **It cannot give you a tamper-evident snapshot.** The kernel may modify state between two reads; there is no "atomic snapshot" surface. Tools that need consistency should use the `modified_id` counter to detect changes.
-- **It cannot reveal contents of memory inspection of the target process needs.** Inspecting the PSB and the process SD shows you the kernel's metadata about the process. To read the process's *memory* you need `PROCESS_VM_READ` on the process SD plus PIP dominance plus a ptrace-like syscall. That is a different topic.
+- **It cannot reveal the contents of the target process's memory.** Inspecting the PSB and the process SD shows you the kernel's metadata about the process. To read the process's *memory* you need `PROCESS_VM_READ` on the process SD plus PIP dominance plus a ptrace-like syscall. That is a different topic.
 - **It cannot show you removed history.** A token whose privileges were once enabled but have since been removed shows the current state, not the history. The `used` bit on a privilege is a sticky record of "this privilege has been exercised at some point", but specific timestamps are an audit-log concern, not an inspection concern.
 
 The inspection surfaces are for the present moment. For historical questions, the audit log is the right source.
+
+## Where to go next
+
+For inspecting the live flow of audit events rather than current state, read [The event stream](~peios/inspecting/the-event-stream).
+
+For the identity half of a process's state — obtaining and querying token fds — read [Inspecting tokens](~peios/inspecting/tokens).
+
+For the dominance rule that gates every cross-process inspection, read [The two-check rule](~peios/process-integrity-protection/the-two-check-rule).

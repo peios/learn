@@ -1,6 +1,6 @@
 ---
 title: Monitoring
-type: how-to
+type: concept
 description: What peipkg-manager exposes through logs and the /status endpoint, and what to alert on.
 related:
   - peios-packages/running-a-farm/configuration
@@ -104,3 +104,9 @@ A failing build is easy to miss in the logs. Two common patterns:
 2. **Log shipper with alerting** on `level=error msg="build failed"`. Most log aggregators (Loki, Elasticsearch, Datadog) support this directly.
 
 Neither is built into `peipkg-manager`. v0 deliberately keeps the surface narrow — observability is the operator's choice of tools.
+
+## Where to go from here
+
+- [Configuration](~peios-packages/running-a-farm/configuration) — enabling the `[http]` server and webhook secret that `/status` depends on.
+- [Tracking upstream versions](~peios-packages/authoring-recipes/tracking-upstream) — the recipe-side `[watch]` settings behind the poll and webhook events.
+- [peipkg-manager CLI](~peios-packages/reference/cli-peipkg-manager) — the flags and modes of the daemon being monitored.

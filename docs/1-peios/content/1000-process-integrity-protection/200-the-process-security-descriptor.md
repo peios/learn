@@ -80,3 +80,9 @@ A few clarifications:
 - **The process SD does not control token operations.** The token has its own SD; opening or duplicating tokens goes through that, not the process SD (although the token operations also check process-level rights as a wrapper — `kacs_open_process_token` requires `PROCESS_QUERY_INFORMATION` on the process AND the appropriate right on the token).
 
 The cleanest mental model: the process SD answers "may I (the caller) signal, debug, or inspect that process?". Everything else about the process's behaviour, identity, and authority lives in other SDs or in the token.
+
+## Where to go next
+
+For how the process SD pairs with PIP dominance on every cross-process operation, read [The two-check rule](~peios/process-integrity-protection/the-two-check-rule).
+
+For the general SD model these fields come from — owner, DACL, SACL, and the modification rules — read [Security descriptors](~peios/security-descriptors/overview).

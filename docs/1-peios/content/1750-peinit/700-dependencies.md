@@ -40,8 +40,8 @@ Wants is best-effort ordering: "start this first if you can, but I work without 
 If A `BindsTo` B:
 
 - **Start.** Identical to Requires — B must satisfy before A starts.
-- **Stop.** If B stops for *any* reason — explicit stop, conflict, crash, shutdown — A is stopped too, transitioning to Stopping with cause `BindsToPropagation`.
-- **Recovery.** When B returns to Active, peinit **automatically restarts** A (cause `BindsToRecovery`). This is reactive — peinit watches B's transitions — and it is **budget-exempt**: A did not fail on its own, so the restart does not count against its [budget](~peios/peinit/supervision).
+- **Stop.** If B stops for *any* reason — explicit stop, conflict, crash, shutdown — A is stopped too, transitioning to Stopping with cause `BindsToPropagation`. When A finishes stopping it comes to rest in **Failed** (carrying `BindsToPropagation`), *not* Inactive — so a `status` query shows the bound service as Failed, making it clear it was taken down by its target rather than shut down cleanly.
+- **Recovery.** When B returns to Active, peinit **automatically restarts** A from that Failed state (cause `BindsToRecovery`). This is reactive — peinit watches B's transitions — and it is **budget-exempt**: A did not fail on its own, so the restart does not count against its [budget](~peios/peinit/supervision). If B never comes back, A stays Failed until you `reset` (or start) it.
 
 BindsTo is Requires plus a runtime leash: "I need this to start, *and* I should not outlive it." It is the right choice for a sidecar that is meaningless without its principal. `BindsTo` implies `Requires`; listing both for the same target is harmless, and BindsTo semantics win.
 
@@ -49,7 +49,7 @@ BindsTo is Requires plus a runtime leash: "I need this to start, *and* I should 
 
 If A `Conflicts` with B:
 
-- **Start.** Starting A while B is Active creates a stop operation for B (source `ConflictResolution`), evicting it (cause `ConflictEviction`) before A starts — and vice versa. If the loser will not stop within its `StopTimeout`, [SIGKILL escalation](~peios/peinit/shutdown) applies.
+- **Start.** Starting A while B is Active creates a stop operation for B (source `ConflictResolution`), evicting it (cause `ConflictEviction`) before A starts — and vice versa. If the loser will not stop within its `StopTimeout`, [SIGKILL escalation](~peios/peinit/shutdown) applies. The evicted loser does **not** land in Inactive: it comes to rest in **Failed** (carrying `ConflictEviction`), so it shows as Failed in `status` and needs a `reset` before it will start again. That is deliberate — an evicted service is not a clean stop, and leaving it Failed stops it from quietly restarting straight back into the conflict.
 - **Symmetry.** Conflicts is two-way. If A declares `Conflicts=["B"]`, starting *either* stops the other; B need not declare it back.
 
 Conflicts is for true mutual exclusion — two services binding the same port, or two implementations of one role where exactly one must run — not for ordinary resource contention.

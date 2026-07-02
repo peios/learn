@@ -2,6 +2,11 @@
 title: Running tests with the CLI
 type: how-to
 description: Patterns for the provium binary — discovery, filtering, the watch loop, --rerun-failed, --since, --tag, --include-slow, JSON output, and exit codes for CI.
+related:
+  - provium/reference/cli
+  - provium/running-tests/events-and-coverage
+  - provium/running-tests/fixtures-and-dependencies
+  - provium/running-tests/pools-and-parallelism
 ---
 
 The `provium` binary is what you run. This page covers the day-to-day patterns. The full flag inventory is on [the CLI reference](~provium/reference/cli).
@@ -229,6 +234,10 @@ provium fixture stale                      # list fixtures whose source doesn't 
 
 See [fixtures and dependencies](~provium/running-tests/fixtures-and-dependencies) for when each is useful.
 
+### `provium prepare [profile]`
+
+Run dynamic profiles' `build` commands without booting anything — one profile by name, or every profile that declares a `build`. Pre-warm images with `provium prepare && provium tests/ --no-build`; see [dynamic profiles](~provium/configuration/dynamic-profiles).
+
 ### `provium list`
 
 List discovered tests / fixtures without running anything:
@@ -237,6 +246,10 @@ List discovered tests / fixtures without running anything:
 provium list                 # tests
 provium list --fixtures      # fixtures
 ```
+
+### `provium lsp-setup [dir]`
+
+Write Lua Language Server stubs and a `.luarc.json` into a test directory so the harness globals resolve in your editor — see [the CLI reference](~provium/reference/cli#provium-lsp-setup-dir---force).
 
 ## Exit codes
 
@@ -298,18 +311,14 @@ provium tests/ --include-slow
 
 ### "Parallel CI sharding"
 
-There's no built-in shard splitter, but `--filter` plus `git ls-files` makes it cheap:
+There's no built-in shard splitter, but `provium` accepts any number of path arguments, so split the file list in your CI script and pass each shard its own files:
 
 ```
-# Shard 1
-provium tests/ --filter "$(git ls-files tests/ | awk 'NR%3==1' | tr '\n' '|')"
-# Shard 2
-provium tests/ --filter "$(git ls-files tests/ | awk 'NR%3==2' | tr '\n' '|')"
-# Shard 3
-provium tests/ --filter "$(git ls-files tests/ | awk 'NR%3==0' | tr '\n' '|')"
+# $SHARDS = total shard count, $INDEX = this shard (0-based).
+git ls-files 'tests/**/*.test.lua' | awk "NR % $SHARDS == $INDEX" | xargs provium
 ```
 
-`--filter` is a substring match against the relative path; if you need precise file lists, drive `provium` with one path argument per shard from your CI script.
+Each shard runs a disjoint subset of files. Don't try to build a shard with `--filter` — it's a single substring match against the relative path, not a pattern list.
 
 ## See also
 

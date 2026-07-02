@@ -55,8 +55,8 @@ A handful of Linux behaviours map cleanly into KACS; others are deliberately red
 | `capget`, `capset` | Returns the kernel's mandatory capability substrate; `capset` cannot clear ALLOW bits. |
 | `prctl(PR_CAPBSET_*)` | Operates on the capability substrate per the same rules. |
 | `setfacl` / POSIX ACL xattrs | Unconditionally denied — KACS replaces POSIX ACLs. |
-| `fchmod`, `chmod` | Denied on FACS-managed fds. Redirect through `kacs_set_sd`. |
-| `fchown`, `chown` | Same. |
+| `fchmod`, `chmod` | Gated on `WRITE_DAC`: `fchmod` needs it in the fd's cached granted mask, `chmod` runs a fresh access check. The mode bits change, but FACS never consults them for access. |
+| `fchown`, `chown` | Same, gated on `WRITE_OWNER`. The Linux uid/gid changes, but the SD's owner SID does not — use `kacs_set_sd` for that. |
 | `setcap` on files (file capabilities) | Denied. Linux file capabilities are dead under KACS. |
 | `SO_PEERCRED`, `SCM_CREDENTIALS` | Returns projected UIDs (compat-only). Services needing real identity use `kacs_open_peer_token`. |
 | `getxattr`/`setxattr` on `security.peios.sd` / `system.ntfs_security` | Denied; use `kacs_get_sd` / `kacs_set_sd`. |
@@ -74,7 +74,7 @@ The cost is the indirection of the projection — every `getuid()` consults the 
 
 The compatibility layer is **not** a translation layer. It does not "convert Linux access control to KACS"; KACS is what runs. The compatibility layer is the set of rules that make Linux APIs return sensible values when called on a system whose actual access control is KACS. Where a Linux behaviour cannot be satisfied without compromising KACS, the layer prefers approximation to special-casing — the Linux call returns something reasonable rather than the kernel making a KACS exception. This is why "best-effort" is the right framing: most things work, some things approximate, a few things require the application to be aware of the underlying model.
 
-## DAC neutralization
+## DAC neutralisation
 
 A specific aspect of the compatibility layer worth flagging: the kernel sets every process up with a mandatory set of Linux capabilities — `CAP_DAC_OVERRIDE`, `CAP_DAC_READ_SEARCH`, `CAP_FOWNER`, `CAP_CHOWN`, `CAP_SETUID`, `CAP_SETGID` — that effectively neutralise the legacy Linux DAC checks.
 
@@ -82,7 +82,7 @@ The reason: Linux's traditional DAC (file mode bits, UID/GID checks) would other
 
 This is why the file's mode bits don't enforce access in Peios — DAC is neutralised. The mode is informational (derived from the SD); KACS is the authority.
 
-The capability story is more nuanced than just "neutralise DAC"; it's covered in detail in [DAC neutralization and capabilities](~peios/linux-compatibility/dac-neutralization-and-capabilities).
+The capability story is more nuanced than just "neutralise DAC"; it's covered in detail in [DAC neutralisation and capabilities](~peios/linux-compatibility/dac-neutralization-and-capabilities).
 
 ## What about the `root` user
 
@@ -100,8 +100,10 @@ The `uid0` mechanism is covered in [setuid and uid0](~peios/linux-compatibility/
 
 If you want the projection mechanism in detail — how the token's identity becomes UID/GID values, how the projection handles impersonation, how the kernel maintains consistency — read [Credential projection](~peios/linux-compatibility/credential-projection).
 
-If you want the capability story — DAC neutralisation, the 41 Linux capabilities classified, why `security_capable()` is authoritative — read [DAC neutralization and capabilities](~peios/linux-compatibility/dac-neutralization-and-capabilities).
+If you want the capability story — DAC neutralisation, the 41 Linux capabilities classified, why `security_capable()` is authoritative — read [DAC neutralisation and capabilities](~peios/linux-compatibility/dac-neutralization-and-capabilities).
 
 If you want setuid semantics and the `uid0` utility, read [setuid and uid0](~peios/linux-compatibility/setuid-and-uid0).
 
 If you want peer credentials — `SO_PEERCRED`, `SCM_CREDENTIALS`, the rules for migrating Linux services to KACS-aware peer-identity APIs — read [Peer credentials](~peios/linux-compatibility/peer-credentials).
+
+If you want the Linux features that survive only as relics — superseded mechanisms that still work but sit outside Peios's recommended surface, and where to look instead — read [Linux relics](~peios/linux-compatibility/linux-relics).

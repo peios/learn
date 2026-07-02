@@ -1,7 +1,11 @@
 ---
-title: Tab Groups
-type: how-to
+title: Tab groups
+type: concept
 description: Group related content into tabbed panels using HTML comment markers to present alternatives side by side.
+related:
+  - trail/content-authoring/code-blocks
+  - trail/content-authoring/admonitions
+  - trail/content-authoring/pages-and-frontmatter
 ---
 
 Tab groups let you present alternative versions of content (different languages, platforms, or approaches) in a compact tabbed interface. Readers click a tab to see the relevant content without scrolling past irrelevant alternatives.
@@ -47,7 +51,7 @@ The rendered output:
 
 - A row of tab buttons at the top with the name from each `<!-- tab:Name -->` marker.
 - One content panel per tab. Only the active panel is visible.
-- The active tab button has a blue bottom border. Inactive buttons are gray.
+- The active tab button has a blue bottom border. Inactive buttons are grey.
 
 ## Complete example
 

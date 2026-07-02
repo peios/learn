@@ -25,8 +25,7 @@ Each process has a **Process Security Block** — the PSB — attached by the ke
 | `pip_type` | The PIP type. One of None, Protected, Isolated. |
 | `pip_trust` | The PIP trust level. A numeric tier within the type. |
 | `security_descriptor` | The process SD — see [The process security descriptor](~peios/process-integrity-protection/the-process-security-descriptor). |
-| Mitigation flags | The process's enabled security mitigations — see [Process mitigations](~peios/process-mitigations/overview). |
-| `no_child_process` | Whether the process is allowed to fork. |
+| Mitigation flags | The process's enabled security mitigations, including `NO_CHILD` (whether the process may fork) — see [Process mitigations](~peios/process-mitigations/overview). |
 
 The PSB is **not** the token. The token says who the process is acting as; the PSB says what kind of process it is. The two have different lifecycles, different fields, and are read by different parts of the access pipeline. A thread impersonating a user changes its effective token but not its process's PSB. The PSB is fixed once the binary execs.
 

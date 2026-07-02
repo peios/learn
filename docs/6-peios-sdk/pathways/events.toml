@@ -1,0 +1,10 @@
+name = "Events with KMES"
+description = "Emit and consume events on Peios's single event path — MessagePack payloads, the trusted metadata the kernel stamps, and draining the per-CPU rings."
+featured = true
+order = 4
+
+pages = [
+  "events/overview",
+  "events/emitting-events",
+  "events/consuming-events",
+]

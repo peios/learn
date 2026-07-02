@@ -133,3 +133,9 @@ A subtle interaction worth knowing: when a creator passes an explicit SD to the 
 If the parent says "deny X" and the creator says "allow X", the creator's allow wins because it sits first. If the canonical order says the parent's inherited deny should win (because explicit ACEs from the creator should not override the parent's policy), the creator needs to either *not* supply a competing ACE or arrange the explicit SD to use the protected-ACL flag.
 
 This is one of the reasons creators usually pass **no** explicit DACL (relying on the default-DACL + parent-inheritance merge) rather than constructing a custom SD. The latter is correct in cases where the creator knows exactly what the child's policy should be; the former is correct in cases where the creator just wants the natural policy of its location.
+
+## Where to go next
+
+For ACEs whose effect is gated by an expression rather than fixed at write time, read [Conditional ACEs](~peios/security-descriptors/conditional-aces).
+
+To sweep a tree and propagate inheritable ACEs from a shell, read [The sd command](~peios/security-descriptors/sd-command).

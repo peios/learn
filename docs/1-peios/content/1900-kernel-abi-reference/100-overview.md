@@ -67,11 +67,11 @@ The exact pointer conventions per syscall are documented per-syscall in [Syscall
 
 ## Forward-compatibility model
 
-Several KACS struct types are versioned by **size**: the struct has a `size` field at offset 0, and the kernel reads only up to whatever size the caller declares (capped at the kernel's known maximum).
+Several KACS struct types are versioned by **size**: the caller declares the struct size it was built against — either in a leading `size` field (`kacs_access_check_args`) or as a separate syscall parameter (`howsize` for `kacs_open_how`, `argsize` for `kacs_mount_policy_args`) — and the kernel reads only up to the declared size (capped at its known maximum).
 
 The pattern:
 
-1. Caller fills out the struct, sets `size` to the size they know about, passes a pointer.
+1. Caller fills out the struct, declares the size they know about (leading field or size parameter), passes a pointer.
 2. Kernel reads `size` bytes (or `min(size, kernel's known size)` bytes).
 3. Unknown trailing bytes (beyond the kernel's known size) must be zero. Non-zero values in unknown regions return `-EINVAL`.
 4. New struct fields appended at the end in future versions get default values when older callers don't fill them.

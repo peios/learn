@@ -9,7 +9,7 @@ related:
 `nice` runs a command at an adjusted **scheduling priority** — making it more, or less, willing to give the processor up to other work.
 
 ```
-nice [option] [command [arg]...]
+nice [options] [command [arg]...]
 ```
 
 ```
@@ -35,4 +35,12 @@ Raising a command's niceness — running it *lower* priority — is always allow
 
 ## Exit status
 
-`nice` exits with the command's own status. If no command is given, it prints the niceness and exits `0`. A `nice`-level failure — a bad adjustment value, or a command that could not be run — exits `125`, `126`, or `127`.
+When `nice` runs a command, it exits with **that command's** status. The exception is a failure in `nice` itself:
+
+| Code | Meaning |
+|---|---|
+| (command's own) | The command ran; this is its exit status. |
+| `0` | No command was given; the niceness was printed. |
+| `125` | `nice` itself failed — for example, a bad adjustment value. |
+| `126` | The command was found but could not be run. |
+| `127` | The command was not found. |

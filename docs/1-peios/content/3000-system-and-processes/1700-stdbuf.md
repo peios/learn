@@ -46,4 +46,9 @@ A program usually does not write each piece of output the instant it is produced
 
 ## Exit status
 
-`stdbuf` exits with the command's own status, or a `stdbuf`-level error code if the command could not be started.
+When `stdbuf` runs a command, it exits with **that command's** status. The exception is a failure in `stdbuf` itself:
+
+| Code | Meaning |
+|---|---|
+| (command's own) | The command ran; this is its exit status. |
+| (a `stdbuf`-level error code) | The command could not be started. |

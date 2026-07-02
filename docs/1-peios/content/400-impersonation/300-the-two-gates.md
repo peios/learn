@@ -36,11 +36,11 @@ The split is deliberate. A service whose job is handling user requests — a fil
 
 The integrity ceiling asks: **does the impersonation token's integrity level exceed the server's own primary token's integrity level?**
 
-If it does — the client has High integrity, the server has Medium — the impersonation token's integrity is silently capped at the server's level. The token still installs, the level granted by the identity gate is preserved, but the token's integrity is now Medium instead of High. Every subsequent access check uses the capped integrity.
+If it does — the client has High integrity, the server has Medium — the effective impersonation level is silently capped at **Identification**. The token still installs, and the client's integrity label may be preserved as inert identity metadata, but the token cannot pass any access check.
 
 The motivation is concrete. Without the ceiling, a Medium-integrity service that captured a High-integrity client's token would suddenly be operating at High integrity for the duration of the request. That breaks the integrity model — a process's effective ceiling should be bounded by what it would have had on its own.
 
-The ceiling is **always** enforced. `SeImpersonatePrivilege` does **not** bypass it. There is no privilege that does. A service that needs to operate at High integrity on behalf of a High-integrity client must itself run at High integrity.
+The ceiling is **always** enforced, and it caps the *level*, not the token's integrity label. `SeImpersonatePrivilege` does **not** bypass it. There is no privilege that does. A service that needs to act on behalf of a High-integrity client must itself run at High integrity.
 
 ## Composition: the minimum permitted
 
@@ -49,9 +49,9 @@ The two gates are independent. Each one decides what level it permits:
 | Identity gate result | Integrity ceiling result | Granted level |
 |---|---|---|
 | Pass at full level | Token's integrity is at or below server's | **The level the client granted on the socket.** |
-| Pass at full level | Token's integrity exceeds server's | The level the client granted, **but integrity is capped at server's level**. |
+| Pass at full level | Token's integrity exceeds server's | **Identification.** The ceiling downgrades the level; the token installs but no AccessCheck will pass. |
 | Fail (no same-SID, no SeImpersonate) | Token's integrity is at or below server's | **Identification.** Token installs, server can inspect, but no AccessCheck will pass. |
-| Fail | Token's integrity exceeds server's | **Identification, with integrity capped.** Same as the above, plus the integrity downgrade. |
+| Fail | Token's integrity exceeds server's | **Identification.** Both gates independently cap to the same level. |
 
 The granted level is the minimum the two gates permit. Neither gate fails the operation; both can downgrade it. The downgrade is silent.
 
@@ -105,3 +105,9 @@ The two-gate model is the kernel's enforcement of one rule: **a thread can never
 The identity gate makes sure the impersonation has authority behind it: either the same user, or the explicit `SeImpersonatePrivilege` that says "this service handles users by design". The integrity ceiling makes sure the impersonation cannot raise the server's effective integrity. Together they bound impersonation to what the server's own primary token would have permitted.
 
 Everything else is a consequence. The silent downgrade exists because the requested level is a maximum, not a promise. The restricted-token hard-deny exists because that one case is the only way a same-user impersonation could increase authority rather than decrease it. The PIP exclusion (covered in [Process integrity protection](~peios/process-integrity-protection/overview)) is the same rule applied to the binary's trust label: PIP is a property of the binary, not of an identity, and impersonation does not change which binary is running.
+
+## Where to go next
+
+For the capture mechanism the gates run against — how a client's identity gets onto a socket and into the server's hands — read [Peer tokens and capture](~peios/impersonation/peer-tokens).
+
+For the restricted tokens behind the one hard-deny case, read [Restricted and write-restricted tokens](~peios/tokens/restricted-tokens).

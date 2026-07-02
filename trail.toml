@@ -1,7 +1,7 @@
 title = "Peios Learn"
 description = "Peios is an operating system designed for secure, manageable infrastructure. Learn how it works — from the security model and identity system to service management, federation, and beyond."
 base_url = "https://learn.peios.org"
-announcement = "These docs are under active development and cover the v0.20 Kobicha security model."
+announcement = "These docs are under active development."
 
 [[nav]]
 label = "Peios"
@@ -16,8 +16,12 @@ label = "Provium"
 url = "/provium/"
 
 [[nav]]
-label = "Cairn"
-url = "/cairn/"
+label = "Peios SDK"
+url = "/peios-sdk/"
+
+[[nav]]
+label = "Pekit"
+url = "/pekit/"
 
 [[nav]]
 label = "Dictionary"

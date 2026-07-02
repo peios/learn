@@ -121,3 +121,9 @@ A token can have these stripped by FilterToken if a sandbox wants to operate wit
 The four-category model on this page is the conceptual structure. The byte-level catalog — every privilege name, its LUID bit position, its one-line effect — lives in [Constants and catalogs](~peios/constants-and-catalogs/overview). Cross-reference between the two when you need to look up a specific privilege.
 
 The naming convention is uniform: every privilege starts with `Se` and ends with `Privilege`. The middle is descriptive: `SeLoadDriver`, `SeBackup`, `SeChangeNotify`. There are no privileges outside this convention.
+
+## Where to go next
+
+For the per-privilege reference — every name, LUID bit position, and one-line effect — see the [Privilege catalog](~peios/constants-and-catalogs/privilege-catalog).
+
+For how the AccessCheck-influencing category actually participates in a check, read [Access decisions](~peios/access-decisions/overview).

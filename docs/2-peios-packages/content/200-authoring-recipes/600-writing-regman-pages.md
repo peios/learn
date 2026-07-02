@@ -1,5 +1,5 @@
 ---
-title: Writing regman Pages
+title: Writing regman pages
 type: how-to
 description: How to document your package's registry keys so regman can explain them. You ship a .regman fragment in /usr/share/regman/; this is its fenced format, the fmt/lint workflow, and the rules the tools won't catch for you.
 related:
@@ -24,7 +24,7 @@ This page is how you write one. The package that *owns* a set of registry keys i
 
 A package documents its whole registry surface in one file. There is no central index to register with and no install-time hook: dropping the file in is the whole act, and removing it on uninstall is the whole undo. A missing directory simply means nothing is documented — not an error.
 
-You ship the fragment the same way you ship any other file: your build script installs it under `$DESTDIR/usr/share/regman/<pkg>.regman`, and you list it in the recipe's `[[package]].files` so it lands in the package. See [Anatomy of a Recipe](~peios-packages/authoring-recipes/anatomy) and [Multi-package recipes](~peios-packages/authoring-recipes/multi-package) for the file-list mechanics.
+You ship the fragment the same way you ship any other file: your build script installs it under `$DESTDIR/usr/share/regman/<pkg>.regman`, and you list it in the recipe's `[[package]].files` so it lands in the package. See [Anatomy of a recipe](~peios-packages/authoring-recipes/anatomy) and [Multi-package recipes](~peios-packages/authoring-recipes/multi-package) for the file-list mechanics.
 
 > [!NOTE]
 > `regman` reads shipped documentation, never the live registry. A `.regman` page describes what a setting *means and should be* — its type, default, valid range — not what some machine currently has it set to. Don't write current-state-specific prose; it won't be true on the next box.
@@ -204,4 +204,4 @@ Lookup is correct with no index at all — `regman` scans the corpus directly, a
 
 - [The registry manual](~peios/the-registry/regman) — the operator's view of `regman`: reading a knob-card, the `-k` search, and the intent-not-state boundary.
 - [Configuration, not storage](~peios/the-registry/configuration-and-meaning) — *why* the registry holds values without their meaning, the idea a `.regman` page exists to serve.
-- [Anatomy of a Recipe](~peios-packages/authoring-recipes/anatomy) and [Multi-package recipes](~peios-packages/authoring-recipes/multi-package) — installing the fragment as part of your package.
+- [Anatomy of a recipe](~peios-packages/authoring-recipes/anatomy) and [Multi-package recipes](~peios-packages/authoring-recipes/multi-package) — installing the fragment as part of your package.

@@ -14,7 +14,7 @@ The work hooks do is the work of getting to the real root: loading the storage d
 
 ## Where hooks live
 
-Hooks are files in `/boot/initramfs/hooks/`. Every regular file directly in that directory is a hook, and prelude runs all of them. The directory is not searched recursively — a subdirectory is not a hook — and the file extension does not matter. A hook is recognised by being a file in `hooks/`, and it is run according to its `#!` shebang line, the same way any script is run. In practice hooks are `#!/bin/sh` scripts, and the initramfs's `/bin/sh` is the one provided by busybox.
+Hooks are files in `/boot/initramfs/hooks/`. Every regular file directly in that directory is a hook, and prelude runs all of them. The directory is not searched recursively — a subdirectory is not a hook — and the file extension does not matter. A hook is recognised by being a file in `hooks/`, and it is run according to its `#!` shebang line, the same way any script is run. In practice hooks are `#!/bin/sh` scripts, and the initramfs's `/bin/sh` is provided by dash.
 
 ## How hooks get there
 
@@ -104,7 +104,7 @@ The build emits a **warning** for a hook with no block — because a hook that m
 
 ## How prelude runs a hook
 
-At boot, prelude runs the hooks one at a time, in the resolved order, each to completion before the next begins. Each hook runs as a separate process with a minimal environment — `PATH=/bin`, so the busybox utilities are found.
+At boot, prelude runs the hooks one at a time, in the resolved order, each to completion before the next begins. Each hook runs as a separate process with a minimal environment — `PATH=/usr/bin:/bin` and `TERM=linux` — so the initramfs's shell and utilities (dash, peiosutils, and any tools a feature package added) are found.
 
 The contract for a hook is simple and strict: **exit zero on success, non-zero on failure.** A hook that exits non-zero **fails the boot** — prelude stops there and halts the machine (see [The initramfs stage](~peios/boot-and-trust-establishment/initramfs-stage)). There is no "continue past a failed hook"; a hook that could not do its job means the boot cannot safely proceed.
 
@@ -152,3 +152,11 @@ A few clarifications:
 - **A boot hook is not a service.** "Hook" here means specifically an initramfs hook. The initramfs stage ends when prelude execs the real init; everything after that — services, supervision, restart policy — is peinit's domain and works nothing like a hook.
 - **The generated order file is not edited by hand.** It is the build's record of the resolved order. The `hooks/` directory is the source; the order is computed from it, every time the image is built.
 - **File names are not the ordering mechanism.** A file name is only the tie-break between hooks that have no capability relationship. Renaming a hook does not change where it runs relative to a hook it shares a capability with — the `provides`/`requires` declarations do that.
+
+## Where to go next
+
+For the stage that runs the hooks, read [The initramfs stage](~peios/boot-and-trust-establishment/initramfs-stage).
+
+For the build that validates hooks and resolves their order, read [mkirf](~peios/boot-and-trust-establishment/mkirf).
+
+For what takes over once a hook has mounted the real root, read [peinit at PID 1](~peios/boot-and-trust-establishment/peinit-pid-1).

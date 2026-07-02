@@ -41,7 +41,7 @@ Sorted by LUID bit position.
 | 7 | `SeTcbPrivilege` | Kernel standalone | Act as part of the TCB. Required for `kacs_create_session`, `kacs_set_caap`, `kacs_set_mount_policy`, and other TCB-only operations. |
 | 8 | `SeSecurityPrivilege` | AccessCheck + Kernel | Grants `ACCESS_SYSTEM_SECURITY` (SACL access). Also gates CAP_AUDIT_CONTROL, CAP_AUDIT_READ, CAP_MAC_ADMIN. |
 | 9 | `SeTakeOwnershipPrivilege` | AccessCheck | Grants `WRITE_OWNER` on any object regardless of DACL. Subject to MIC and PIP. |
-| 10 | `SeLoadDriverPrivilege` | Kernel standalone | Load and unload kernel modules. MUST be stripped from non-peinit tokens via FilterToken. |
+| 10 | `SeLoadDriverPrivilege` | Kernel standalone | Load and unload kernel modules. Must be stripped from non-peinit tokens via FilterToken. |
 | 11 | `SeSystemProfilePrivilege` | Reserved | Folded into `SeProfileSingleProcessPrivilege`. |
 | 12 | `SeSystemtimePrivilege` | Kernel standalone | Set the system clock. |
 | 13 | `SeProfileSingleProcessPrivilege` | Kernel standalone | Use performance monitoring (`perf_event_open`). |

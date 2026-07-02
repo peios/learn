@@ -1,5 +1,5 @@
 ---
-title: Set Up a Build Farm
+title: Set up a build farm
 type: how-to
 description: Install peipkg-manager on a Linux host, point it at a directory of recipes, and let it watch upstreams and publish packages automatically.
 related:
@@ -63,7 +63,7 @@ chmod 600 /etc/peipkg-manager/farm.ed25519
 > [!WARNING]
 > This is the only key signing the entire repository. Compromise of this file means every package the farm publishes can be forged. Store it on disk only — never in environment variables, container images, or shell history. Back it up offline if you want to be able to recover from a wiped host without users having to add a new trust anchor.
 
-[Signing keys](../running-a-farm/signing-keys) covers custody and rotation.
+[Signing keys](~peios-packages/running-a-farm/signing-keys) covers custody and rotation.
 
 ## Drop in some recipes
 
@@ -109,7 +109,7 @@ poll_interval = "1h"
 
 The `[meta]` and `[[package]]` sections are what `peipkg-build` consumes. The `[upstream]` and `[watch]` sections are what `peipkg-manager` reads to know how to detect new versions.
 
-[Anatomy of a recipe](../authoring-recipes/anatomy) covers each section in detail.
+[Anatomy of a recipe](~peios-packages/authoring-recipes/anatomy) covers each section in detail.
 
 ## Write the manager config
 
@@ -141,7 +141,7 @@ default_interval = "1h"
 
 The `[upload]` section is optional. If you set `backend = "none"`, `peipkg-manager` produces a local repo state at `<state_dir>/repo/` and stops there — your own scripts can rsync or git-push it elsewhere.
 
-[Configuration](../running-a-farm/configuration) is the field-by-field reference.
+[Configuration](~peios-packages/running-a-farm/configuration) is the field-by-field reference.
 
 ## Configure rclone (R2 example)
 
@@ -161,7 +161,7 @@ Test it:
 rclone lsd r2:pkgs.example.org
 ```
 
-[Hosting on R2](../running-a-farm/hosting/r2) covers the R2 setup including the custom domain. Other backends are documented under the same section.
+[Hosting on R2](~peios-packages/running-a-farm/hosting/r2) covers the R2 setup including the custom domain. Other backends are documented under the same section.
 
 ## Run the daemon
 
@@ -228,11 +228,11 @@ curl http://localhost:8080/status | jq
 }
 ```
 
-[Monitoring](../running-a-farm/monitoring) covers the `/status` schema and what to alert on.
+[Monitoring](~peios-packages/running-a-farm/monitoring) covers the `/status` schema and what to alert on.
 
 ## Where to go from here
 
 - **Add more packages.** Drop more recipe directories under `recipes_dir`, send the daemon a SIGHUP, and they get picked up.
 - **Set up GitHub webhooks** so new tags trigger builds within seconds instead of waiting for the next poll. The `[http].webhook_secret_file` is what GitHub signs payloads with.
 - **Audit your repository.** `peipkg-repo verify --repo /var/lib/peipkg-manager/repo --mode both --all-packages-dir <dir>` re-hashes every published `.peipkg` and confirms the indexes are intact.
-- **Read [Authoring recipes](../authoring-recipes/anatomy)** if you'll be writing the recipes yourself.
+- **Read [Authoring recipes](~peios-packages/authoring-recipes/anatomy)** if you'll be writing the recipes yourself.

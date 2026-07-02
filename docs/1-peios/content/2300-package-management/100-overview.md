@@ -6,6 +6,9 @@ related:
   - peios/package-management/installing-and-removing
   - peios/package-management/repositories-and-trust
   - peios/package-management/transactions-and-recovery
+  - peios/package-management/claims
+  - peios/package-management/named-roots
+  - peios/package-management/composing-a-root
   - peios/security-descriptors/overview
   - peios/access-decisions/overview
 ---
@@ -24,7 +27,9 @@ This page is the map. It explains what a package is, where packages come from, t
 
 Peios distributes software as **`.peipkg` files**: signed, self-contained archives. Each one carries a **manifest** — a name, a version, a target architecture, the other packages it depends on, the packages it conflicts with — and a **payload**, the files that land on disk when it is installed.
 
-A package is a *low-level primitive*. It is the unit peipkg installs and tracks, and nothing more. The user-facing layers that most operators think in — roles, role features, applications — are built *above* packages and are managed separately. peipkg installs `nginx` the package; it does not know what a "web server role" is. This topic is about the primitive.
+A package is a *low-level primitive*. It is the unit peipkg installs and tracks. The curated, user-facing concepts that most operators think in — bundles of software, "the web-server role", applications — are built *above* packages and are out of peipkg's scope: peipkg installs `nginx` the package; it does not know what a "web server role" is. This topic is about the primitive.
+
+What peipkg *does* coordinate at the package level is [claims](~peios/package-management/claims): a claim is a single shared name that exactly one installed package may hold, so that two packages contesting the same role — `registryd` and `loregd` both offering to be *the* registry, say — resolve to one clear winner rather than silently colliding.
 
 Every installed package is tracked in a private database. peipkg knows, for every package, exactly which files it owns — which is what makes a clean removal, an honest upgrade, and the [`verify`](~peios/package-management/inspecting-and-verifying) check possible.
 
@@ -79,8 +84,10 @@ Every command is invoked as `peipkg <command> [arguments]`.
 | `upgrade` | Move installed packages to their newest available version. |
 | `downgrade` | Move one package to a specific older version. |
 | `undo` | Reverse the most recent transaction. |
+| `claim` | Show or change which package holds a claim — a shared name that exactly one package may own. |
 | `refresh` | Update the cached metadata of the configured repositories. |
 | `repo` | Configure repositories — `add`, `list`, `remove`. |
+| `root` | Manage named roots — `add`, `list`, `remove`, `show`. |
 | `list` | List the installed packages. |
 | `info` | Show one installed package's details. |
 | `files` | List the files a package owns. |
@@ -91,11 +98,13 @@ Every command is invoked as `peipkg <command> [arguments]`.
 | `recover` | Roll back a transaction left pending by an interruption. |
 | `clean` | Delete cached metadata for repositories no longer configured. |
 
-One global option sits before the command: `--root DIR` makes peipkg operate on a Peios installation mounted at `DIR` rather than the running system at `/`. It is for image builders and offline maintenance; day to day you never need it.
+One global option sits before the command: `--root TARGET` makes peipkg operate on a Peios installation other than the running system at `/`. `TARGET` can be a literal path — a Peios installation mounted at `DIR`, the form image builders and offline maintenance reach for — or the name of a [named root](~peios/package-management/named-roots). Named roots are more than a convenience: they are how peipkg keeps things like the initramfs current. See [Named roots](~peios/package-management/named-roots) for the detail.
 
 ## The producer side
 
 peipkg is the **consumer** half of the Peios packaging story — the tool that runs on a deployed system and consumes packages. It has a counterpart it never shares a process with: the **producer** tools (`peipkg-build`, `peipkg-repo`, `peipkg-manager`) that turn source into signed `.peipkg` files and assemble the repositories peipkg fetches from. Building packages and running a repository are a separate job with their own documentation, the *Peios Packages* guide. This topic is for the operator of a Peios system, not the operator of a build farm.
+
+peipkg has one consumer-side companion of its own: **`peipkg-compose`**, a *separate binary* — not a `peipkg` subcommand. Where peipkg mutates a running system in place, `peipkg-compose` builds a fresh, package-owned root directory offline from a declarative manifest, the shape image builders reach for when they assemble a system from nothing. It consumes the same packages peipkg does. See [Composing a root](~peios/package-management/composing-a-root).
 
 ## Where to start
 
@@ -109,4 +118,10 @@ To understand why an interrupted install is always safe, read [Transactions and 
 
 To understand how peipkg decides *which* versions of *which* packages a request implies — and why it sometimes asks for a second, more deliberate yes — read [Dependency resolution](~peios/package-management/dependency-resolution).
 
+To understand how two packages that offer the same shared name settle on a single winner, read [Claims](~peios/package-management/claims).
+
 To inspect what is installed and check that it is intact, read [Inspecting and verifying](~peios/package-management/inspecting-and-verifying).
+
+For the more specialised work of operating on a Peios installation other than the running one — and how peipkg keeps things like the initramfs current — read [Named roots](~peios/package-management/named-roots).
+
+For the specialised work of assembling a fresh root offline from a manifest — the image-builder's path, run with the separate `peipkg-compose` binary — read [Composing a root](~peios/package-management/composing-a-root).

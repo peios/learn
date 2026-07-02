@@ -1,0 +1,12 @@
+name = "Getting Started with the Peios SDK"
+description = "From a clean checkout to a compiled program that speaks to Peios — what the SDK is, how to link it, the conventions every function follows, and a first working program."
+featured = true
+order = 1
+
+pages = [
+  "getting-started/what-is-the-peios-sdk",
+  "getting-started/installing-and-linking",
+  "getting-started/library-conventions",
+  "getting-started/your-first-program",
+  "getting-started/using-the-sdk-from-rust",
+]

@@ -1,0 +1,10 @@
+name = "The Registry (LCS)"
+description = "Read and write Peios's layered configuration store — effective values and precedence, safe updates, live change watches, and atomic transactions."
+featured = true
+order = 3
+
+pages = [
+  "registry/overview",
+  "registry/reading-and-writing",
+  "registry/watching-and-transactions",
+]

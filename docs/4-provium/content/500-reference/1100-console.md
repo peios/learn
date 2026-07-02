@@ -2,9 +2,13 @@
 title: Console
 type: reference
 description: A Console userdata is the host's view of the guest's serial console. Use it to read the boot log, stream the chardev, expect a substring, write input, or close cleanly.
+related:
+  - provium/reference/streams
+  - provium/reference/vm
+  - provium/writing-tests/streams-and-tails
 ---
 
-A Console wraps the guest's serial console — the host writes to and reads from QEMU's chardev that the guest has bound to `/dev/hvc0`.
+A Console wraps the guest's serial console — the host writes to and reads from QEMU's chardev bound to the guest's serial port (`/dev/ttyS0`). Provium appends `console=ttyS0` to the kernel command line if no serial console is present, so kernel output always lands here.
 
 ## Constructing
 

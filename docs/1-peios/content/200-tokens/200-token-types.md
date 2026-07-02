@@ -194,3 +194,11 @@ When a flag is set, AccessCheck emits the corresponding audit event regardless o
 |---|---|
 | `interactive_session_id` | The interactive session number. Zero for services. Adjustable only with `SeTcbPrivilege`. |
 | `elevation_type` | Default / Full / Limited, for linked-pair membership. |
+
+## Where to go next
+
+For how these fields are set, shared, adjusted, and destroyed over a token's life — mint, fork, exec, impersonation, adjustment — read [Token lifecycle](~peios/tokens/lifecycle).
+
+For the full rules around impersonation tokens and their levels, read [Impersonation](~peios/impersonation/overview).
+
+To read these fields off a live token from a shell, read [The token command](~peios/tokens/token-command).

@@ -82,7 +82,7 @@ A key can be created **volatile**, meaning it is stored only in memory and disap
 
 Watch the word, because it collides with a different idea. "Volatile" describes **storage persistence** — does this key survive a reboot. It says nothing about **how quickly a configuration change takes effect** — whether editing a setting applies live, on service restart, or only on reboot. That second property belongs to each individual setting and is recorded in `regman` as its `applies` field. A value can live in a perfectly persistent (non-volatile) key and still only take effect on reboot. Keep the two apart.
 
-## Where to start
+## Where to go next
 
 If you want the idea that the registry stores values it does not understand — what `regman` documents, what "reject-or-keep" means, and why the value the registry shows can differ from the value a subsystem is using — read [Configuration, not storage](~peios/the-registry/configuration-and-meaning).
 

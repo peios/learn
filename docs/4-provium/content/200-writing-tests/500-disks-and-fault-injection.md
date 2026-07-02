@@ -2,6 +2,10 @@
 title: Disks and fault injection
 type: how-to
 description: How to attach disks, read and write sectors directly, and inject EIO and slow I/O faults to exercise guest-side error recovery.
+related:
+  - provium/reference/disk
+  - provium/reference/vm
+  - provium/writing-tests/vms-and-profiles
 ---
 
 Provium's disk support has two goals: give the test direct sector-level access to the backing image, and inject faults that exercise the guest's error-handling paths.
@@ -24,7 +28,7 @@ Opts:
 | Field | Default | Effect |
 |---|---|---|
 | `id` | `attached-<vm_name>` | Disk identifier within the VM. Use this to re-look-up via `vm:disk(id)`. |
-| `size` | 4 GiB | Modeled disk size. Used by `disk:size()` when no image is attached. |
+| `size` | 4 GiB | Modelled disk size. Used by `disk:size()` when no image is attached. |
 | `image` | none | Path to the backing file. Required for `read_sectors` / `write_sectors`. |
 
 ## Reading and writing sectors
@@ -55,7 +59,7 @@ Three modes:
 | `eio_write` | Every `write_sectors` short-circuits to EIO. |
 | `slow` | Every `read_sectors` / `write_sectors` sleeps 50 ms before doing the I/O. |
 
-Modes are activated with `disk:fault_inject(mode)` and cleared with `disk:clear_faults()`. Multiple modes can be active simultaneously — `slow` + `eio_read` delays for 50 ms then errors.
+Modes are activated with `disk:fault_inject(mode)` and cleared with `disk:clear_faults()`. Multiple modes can be active simultaneously — with `slow` + `eio_read` both set, the EIO check wins: the read errors immediately, without the 50 ms delay.
 
 ### Inject EIO
 
@@ -71,16 +75,23 @@ end)
 
 ### Inject slow I/O
 
+`slow` delays each sector op but doesn't change its outcome. Assert both halves: the op took the hit, and it still worked. The guest [Clock](~provium/reference/clock) gives you a sub-millisecond time source (`os.time()` only has 1-second resolution):
+
 ```lua
 test("write completes despite slowness", function(t)
     disk:fault_inject("slow")
-    local started = os.time()
-    disk:write_sectors(0, "data")  -- still succeeds
-    local elapsed_ms = (os.time() - started) * 1000
-    -- The 50 ms sleep is per-call. Tests that need a finer dial can
-    -- patch the SLOW_FAULT_MS constant in the harness source.
+
+    local clock = vm:clock()
+    local before = clock:get_ns()
+    disk:write_sectors(0, "data")            -- sleeps ~50 ms, then writes
+    local elapsed_ms = (clock:get_ns() - before) / 1e6
+
+    t:assert(elapsed_ms >= 50, "slow fault should add at least 50 ms")
+    t:assert_eq(disk:read_sectors(0, 1):sub(1, 4), "data")  -- the write still landed
 end)
 ```
+
+The 50 ms delay is fixed per call; it is not currently configurable from test code.
 
 ### Combine modes
 
@@ -96,25 +107,7 @@ end)
 
 ### Concurrent injection during I/O
 
-The harness re-checks the fault set after the slow-fault sleep AND after the actual I/O completes. So a test thread that flips `eio_read` mid-call still sees the EIO take effect:
-
-```lua
-test("EIO injected during slow read still fires", function(t)
-    disk:fault_inject("slow")
-    -- Spawn a worker that flips EIO while the read is sleeping.
-    local w = vm:spawn_worker()
-    w:run_async("sleep 0.025 && true")  -- placeholder: in a real test
-                                        -- the worker would call
-                                        -- disk:fault_inject via
-                                        -- a parallel control plane
-
-    -- The expectation: regardless of when the EIO injection lands
-    -- (during the 50 ms sleep or during the actual read), the
-    -- post-I/O recheck makes sure the test sees an EIO error.
-end)
-```
-
-In practice, you usually inject up-front and then act, or use a worker for the parallel injection. The post-I/O recheck is mostly insurance against silent races.
+The harness re-checks the fault set after the slow-fault sleep AND after the actual I/O completes, so an EIO fault that lands mid-call still takes effect. There is currently no way to exercise this from a test, though: test code runs on a single thread, and workers run guest processes — they can't call `disk:fault_inject`. Inject faults up-front, act, then clear; the mid-call recheck is defensive insurance in the harness, not a pattern you can drive.
 
 ### Inspecting state
 
@@ -210,7 +203,7 @@ data:fault_inject("slow")
 
 - **Sector size is fixed at 512 bytes.** Tests that need 4 KiB sectors should expect their guest to layer that on top.
 - **`read_sectors` and `write_sectors` go directly to the host file**, not through QEMU's block backend. This means a test that exercises QEMU's block translation (sparse holes, compression, etc.) will not see those layers — the disk userdata is a direct view of the underlying image bytes.
-- **`disk:size()` reports the live image file size when an image is attached.** Test code that resizes the underlying file (`truncate`, `fallocate`) sees the new size, not the modeled `size` from `attach_disk`.
+- **`disk:size()` reports the live image file size when an image is attached.** Test code that resizes the underlying file (`truncate`, `fallocate`) sees the new size, not the modelled `size` from `attach_disk`.
 
 ## See also
 

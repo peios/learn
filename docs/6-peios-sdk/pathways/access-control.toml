@@ -1,0 +1,12 @@
+name = "Access Control with KACS"
+description = "Identities, tokens, and decisions — how to find out who's calling, act on their behalf, make authorization decisions, and secure files from your own code."
+featured = true
+order = 2
+
+pages = [
+  "access-control/overview",
+  "access-control/working-with-tokens",
+  "access-control/checking-access",
+  "access-control/securing-files",
+  "access-control/hardening-a-process",
+]

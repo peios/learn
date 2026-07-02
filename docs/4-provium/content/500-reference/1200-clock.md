@@ -2,6 +2,9 @@
 title: Clock
 type: reference
 description: A Clock userdata reads and manipulates the guest's wall clock. Use it to set, advance, sleep, or query in seconds or nanoseconds — the guest sees a controllable time axis.
+related:
+  - provium/reference/vm
+  - provium/writing-tests/vms-and-profiles
 ---
 
 A Clock wraps the guest's wall clock. Operations dispatch to the agent, which adjusts the kernel's `CLOCK_REALTIME` (and equivalents) under the hood.

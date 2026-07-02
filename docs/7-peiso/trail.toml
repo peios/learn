@@ -1,0 +1,2 @@
+name = "Peiso"
+description = "The Peios image builder — the tool that cuts a release into a bootable artifact. peiso composes a package root with peipkg-compose, then layers the initramfs, sysroot, UKI, and live ISO on top, all driven by a declarative peiso.toml spec."

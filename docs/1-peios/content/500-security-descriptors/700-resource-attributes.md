@@ -108,3 +108,9 @@ A few things resource attributes look like at a glance but are not:
 - **Resource attributes are not ACEs themselves.** They live in `SYSTEM_RESOURCE_ATTRIBUTE_ACE` entries, but the ACE form is structural — the attribute does not grant or deny anything. The access check skips it during the DACL walk and during the SACL audit walk.
 - **Resource attributes do not propagate via inheritance.** They are not inherited from a parent object to a child. A child inherits the parent's inheritable DACL/SACL access-control ACEs; resource attribute ACEs do not have inheritance semantics. If you want the same attribute on every file in a directory, you set it on each one (or use tooling that walks the tree).
 - **Resource attributes are not searchable through the access check.** The access check uses attributes for evaluating expressions, not for filtering objects. There is no "list all objects where `@Resource.Classification == 'Public'`" API. That would be a job for a separate indexing layer.
+
+## Where to go next
+
+For the SACL these attributes live in — and everything else stored alongside them — read [The SACL](~peios/security-descriptors/the-sacl).
+
+For the principal-side counterpart to resource attributes, read [Claims on a token](~peios/identity/claims).

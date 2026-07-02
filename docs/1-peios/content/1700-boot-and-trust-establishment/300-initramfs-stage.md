@@ -7,6 +7,7 @@ related:
   - peios/boot-and-trust-establishment/bootstrap-tokens
   - peios/boot-and-trust-establishment/boot-hooks
   - peios/boot-and-trust-establishment/peinit-pid-1
+  - peios/boot-and-trust-establishment/mkirf
 ---
 
 The kernel cannot reach the real root filesystem on its own. By the time it has finished its own initialisation it can speak to a CPU and some memory, but the disk the system is installed on may sit behind a storage driver that is not yet loaded, a volume manager that has not been assembled, or an encrypted container that has not been unlocked. Mounting that filesystem is work, and it is work that has to be done in userspace — the kernel does not mount real roots by guesswork.
@@ -37,9 +38,13 @@ The layout is straightforward:
 
 ```
 /boot/initramfs/
-    init             the prelude binary — becomes the initramfs PID 1
-    bin/
-        busybox      supplies /bin/sh and the utilities hooks call
+    init                 symlink to the prelude binary — the initramfs PID 1
+    usr/
+        sbin/prelude     the prelude binary itself
+        bin/
+            dash         the shell; sh -> dash provides /bin/sh
+            peiosutils   one multi-call binary backing mount, chroot, ls, … via symlinks
+    bin  -> usr/bin      the initramfs is usr-merged (/bin, /sbin, /lib are symlinks)
     hooks/
         mount-root.sh    the boot hooks
         ...
@@ -49,7 +54,7 @@ It is a normal directory. You can list it, read it, and see exactly what the ini
 
 Most of what lands in the directory is put there by **packages**. A boot feature — disk encryption, an exotic storage backend — is an ordinary peipkg; installing it drops its hook (and any helper binaries) into `/boot/initramfs/`, and removing the package takes them away. There is no separate "initramfs configuration" to edit and no central list of supported features: the directory *is* the configuration, and a package contributes to the boot simply by installing files into it. [Boot hooks](~peios/boot-and-trust-establishment/boot-hooks) covers this in full.
 
-Because hooks are shell scripts, the initramfs has to carry a shell. `bin/busybox` is a single static binary that provides `/bin/sh` along with the standard utilities a hook invokes — `mount`, `modprobe`, `blkid`, and the rest.
+Because hooks are shell scripts, the initramfs has to carry a shell. That shell is **dash**: it provides the `sh` capability prelude depends on and supplies `/bin/sh`. The ordinary utilities a hook invokes — `mount`, `chroot`, `ls`, and the rest — come from **peiosutils**, a single multi-call binary that backs each tool through a symlink (`mount`, `chroot`, and friends are all the one binary, invoked under different names). Driver- or filesystem-specific tools a particular hook needs — `modprobe`, `blkid`, a `mkfs` helper — arrive with the feature package that ships that hook, not with the base initramfs.
 
 ## What prelude does at boot
 
@@ -67,13 +72,25 @@ prelude runs this sequence exactly once. It does not loop, supervise, or stay re
 
 prelude does not limp. If any step fails — a hook exits with an error, no hook mounts the root, the target init cannot be found — prelude **stops and halts the machine**. It does not fall through to a half-configured system, and it does not try to work around a failed hook.
 
-This is the right behaviour for the stage. The initramfs's only job is to deliver a correctly-mounted real root to a real init. A failure there means the system cannot be brought up safely; continuing would only produce a system in an undefined state. Halting makes the failure unambiguous — the console shows which step failed — and leaves the operator with a clean situation to diagnose rather than a subtly-broken running system.
+This is the right behaviour for the stage. The initramfs's only job is to deliver a correctly-mounted real root to a real init. A failure there means the system cannot be brought up safely; continuing would only produce a system in an undefined state. Halting makes the failure unambiguous — the console shows which step failed — and leaves the operator with a clean situation to diagnose rather than a subtly-broken running system. The one way to intervene rather than halt is the debug knobs below.
+
+## Debugging the initramfs stage
+
+Two kernel command-line knobs (familiar from dracut) turn the fixed sequence into something an operator can step through. prelude reads them from `/proc/cmdline`, the same place it reads `init=` — as PID 1 it has no argv, so the command line is its only input. The interactive shell they open is dash, run as `sh -i` on the console.
+
+- **`rd.shell`** — drop to a shell *on failure* instead of halting. If any boot step fails while `rd.shell` is set, prelude opens the shell so you can inspect the half-built initramfs: see what the hooks mounted, read the log, try a mount by hand. The failure still ends the boot — when you exit the shell, prelude halts as it would have anyway. Without `rd.shell`, a failure halts immediately.
+
+- **`rd.break`** — stop *before any hook runs*. Bare `rd.break` pauses just before the first hook and opens the shell; exit the shell and the boot continues normally. This is the point where the kernel virtual filesystems are up but nothing deployment-specific has happened yet.
+
+- **`rd.break=<hook>`** — stop just before a *named* hook. The value is matched against a hook's file name — or its full `/hooks/…` path — as it appears in the [resolved boot sequence](~peios/boot-and-trust-establishment/boot-hooks), so `rd.break=mount-root.sh` breaks immediately before that hook and lets everything ordered before it run first. The value is comma-separated and the flag may be repeated — `rd.break=modules.sh,mount-root.sh` — to break before several hooks.
+
+The `rd.break` shells are true breakpoints, not failures: prelude forks them, so it stays PID 1 and the boot resumes exactly where it paused when the shell exits. Setting any `rd.break` also implies `rd.shell` — so if the boot goes on to fail, you get the failure shell too.
 
 ## Keeping the initramfs current
 
 Because the directory is the source and the initramfs image is a build product, the two have to be kept in step. Whenever `/boot/initramfs/` changes — a feature package is installed or removed, the kernel is updated, an administrator edits a hook — the image has to be rebuilt from the directory.
 
-The tool that does this is **mkirf**. It reads `/boot/initramfs/`, resolves the order the hooks must run in, checks the directory is internally consistent, and writes the compressed initramfs image. Three properties of it matter to an operator:
+The tool that does this is **mkirf** — see [mkirf](~peios/boot-and-trust-establishment/mkirf) for the full command reference. It reads `/boot/initramfs/`, resolves the order the hooks must run in, checks the directory is internally consistent, and writes the compressed initramfs image. Three properties of it matter to an operator:
 
 - **It validates.** mkirf will not produce an image from a directory that cannot boot. A hook set with an impossible ordering, a hook that depends on a capability nothing provides, a missing `init` — each of these stops the build with a clear error. A misconfigured boot is caught when the image is built, on a running system where the message is easy to read, rather than as a mystery failure at the next boot. [Boot hooks](~peios/boot-and-trust-establishment/boot-hooks) covers exactly what is checked.
 - **It is deterministic.** The same directory always compiles to the same image, byte for byte — identities, timestamps, and ordering are all normalised. This is what makes "did anything actually change?" a meaningful question, and it underpins later work such as signed boot artifacts.
@@ -102,3 +119,11 @@ A few clarifications:
 - **prelude does not supervise anything.** It runs the hook sequence once and execs the real init. It has no steady state — contrast peinit, which runs as the system's lifecycle manager for the whole of its uptime.
 - **prelude is not the real init.** It is the initramfs init. peinit is the real-root init. They are separate binaries with separate jobs; prelude's last act is to exec the real init, not to become it.
 - **prelude does not persist anything.** Nothing it does is written to disk. The initramfs is in RAM, used once, and discarded. Persistent state begins on the real root, with peinit.
+
+## Where to go next
+
+For the deployment-specific scripts prelude runs, read [Boot hooks](~peios/boot-and-trust-establishment/boot-hooks).
+
+For the init system prelude hands the machine to, read [peinit at PID 1](~peios/boot-and-trust-establishment/peinit-pid-1).
+
+For the tool that compiles `/boot/initramfs/` into the image, read [mkirf](~peios/boot-and-trust-establishment/mkirf).

@@ -30,4 +30,7 @@ The environment variables `OMP_NUM_THREADS` and `OMP_THREAD_LIMIT`, if set, also
 
 ## Exit status
 
-`nproc` returns `0`, or `1` if given an invalid option value.
+| Code | Meaning |
+|---|---|
+| `0` | The count was printed. |
+| `1` | An option value was invalid. |

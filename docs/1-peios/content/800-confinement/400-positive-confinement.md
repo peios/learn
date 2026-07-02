@@ -143,3 +143,9 @@ The administrator adds a fourth music-handling service. The new service's token 
 If the deployment additionally confines the services for sandboxing, the same capability SID also appears in each service's `confinement_capabilities`. The DACL ACE for `music-library-read` is unchanged. The token now has the SID in two places, and both passes find it. Access still works.
 
 This is the canonical scale pattern. Capabilities are the vocabulary of access; tokens consume capabilities; resources grant capabilities; administrative policy decides who gets what. No DACL rewrites when new services arrive; no proliferation of per-service users in every shared-resource ACL.
+
+## Where to go next
+
+For the intersection that still applies when a confined token carries capabilities in `groups`, read [The confinement pass](~peios/confinement/the-confinement-pass).
+
+For the ordinary DACL walk that consumes capability SIDs placed in `groups`, read [DACL evaluation](~peios/security-descriptors/dacl-evaluation).

@@ -2,13 +2,17 @@
 title: Pathways
 type: concept
 description: Pathways are ordered sequences of pages that guide readers through a topic. They provide their own sidebar navigation and prev/next links.
+related:
+  - trail/getting-started/quick-start
+  - trail/getting-started/project-structure
+  - trail/configuration/multi-product
 ---
 
 A pathway is a curated reading order through existing pages. When a reader follows a pathway, the sidebar is replaced with the pathway's page list, and prev/next links appear at the bottom of each page.
 
 ## What pathways solve
 
-Documentation sites organize pages by topic (categories), but readers often need to learn topics in a specific order. A "Getting Started" guide might span three categories. A security tutorial might touch identity, access control, and auditing.
+Documentation sites organise pages by topic (categories), but readers often need to learn topics in a specific order. A "Getting Started" guide might span three categories. A security tutorial might touch identity, access control, and auditing.
 
 Pathways let you define these cross-cutting reading orders without duplicating content or rearranging your category structure.
 

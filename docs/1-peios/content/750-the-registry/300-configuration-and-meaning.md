@@ -79,7 +79,7 @@ So "is this configuration valid?" is not a question you ask the registry. You as
 
 Briefly, because it is worth knowing the trade rather than dwelling on it: keeping the store meaning-free keeps it small and uniform, lets it hold a value for a subsystem that is not running yet or a key nobody has read, and lets configuration be delivered from outside — a domain Group Policy, say — without the kernel needing a built-in schema for every subsystem on the machine. The price is that the store cannot tell you whether a value is sensible. That price is paid by `regman` (which documents what *should* be there) and the logs (which record what the system actually did).
 
-## Where to start
+## Where to go next
 
 If you want to see how a subsystem *notices* a configuration change so it can re-validate and re-apply, read [Watching for changes](~peios/the-registry/watches).
 

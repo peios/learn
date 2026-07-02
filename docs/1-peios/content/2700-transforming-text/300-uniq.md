@@ -17,6 +17,8 @@ uniq [options] [input [output]]
 $ uniq events.txt
 ```
 
+`input` and `output` may be given as operands; with neither, `uniq` reads standard input and writes standard output.
+
 ## uniq only sees adjacent duplicates
 
 This is the one thing to know about `uniq`: it only compares **each line with the one before it**. It collapses *adjacent* repeats. Duplicate lines scattered through a file, with other lines between them, are not caught.
@@ -55,8 +57,6 @@ By default `uniq` prints every line, with each run of adjacent duplicates reduce
 | Option | Effect |
 |---|---|
 | `-z`, `--zero-terminated` | Treat the NUL character as the line delimiter. |
-
-`input` and `output` may be given as operands; with neither, `uniq` reads standard input and writes standard output.
 
 ## Exit status
 

@@ -1,7 +1,7 @@
 ---
 title: Events and transport
-type: concept
-description: Audit events are msgpack maps with UTF-8 keys, emitted by the kernel through KMES to userspace consumers. This page covers the event schemas — access-audit, continuous-audit, privilege-use, logon-session-destroyed — and how the transport pipeline works.
+type: reference
+description: Audit events are msgpack maps with UTF-8 keys, emitted by the kernel through KMES to userspace consumers. This page covers the event schemas — access-audit, continuous-audit, privilege-use, caap-policy-diagnostic, logon-session-destroyed — and how the transport pipeline works.
 related:
   - peios/auditing/overview
   - peios/auditing/audit-aces
@@ -15,13 +15,14 @@ This page covers the event schemas — what each event type contains — and the
 
 ## The event types
 
-Four event types come out of the access-check layer:
+Five event types come out of the access-check layer and its surroundings:
 
 | Event type | When it fires | Fired by |
 |---|---|---|
 | `access-audit` | An SACL audit ACE matched, or a token audit_policy `OBJECT_ACCESS_*` flag forced it | Step 14 and 14b of AccessCheck |
-| `continuous-audit` | An operation on an open handle matched the handle's continuous audit mask | The enforcement point for the operation (FACS, registryd, etc.) |
+| `continuous-audit` | An operation on an open handle matched the handle's continuous audit mask | The kernel enforcement point for the operation (FACS for file handles; other kernel subsystems such as LCS for their own objects) |
 | `privilege-use` | A privilege contributed bits AND the token's audit_policy `PRIVILEGE_USE_*` requested it | Step 13 of AccessCheck |
+| `caap-policy-diagnostic` | A CAAP SACL evaluation error, or a staged/effective result mismatch | Step 12 of AccessCheck |
 | `logon-session-destroyed` | A logon session lost its last token reference | Session destruction path (independent of access check) |
 
 Each event is a self-describing record. Consumers do not need to know which check produced an event in order to parse it; the event itself carries enough metadata to identify itself and its context.
@@ -156,7 +157,7 @@ The buffers are per-subscriber. A subscriber that falls behind has its own buffe
 
 The audit subsystem typically has at least one subscriber: **`eventd`**, the userspace audit-daemon. `eventd` subscribes to the audit event types, reads them from KMES, and writes them to wherever the deployment's audit pipeline goes (a local file, a remote syslog, a SIEM collector). Other subscribers — debugging tools, real-time monitors — can also exist.
 
-The exact KMES protocol, buffer sizes, flow-control mechanics, and reliability guarantees are outside the scope of this auditing topic; they are defined in the [observability documentation](~peios/observability/overview) where KMES is the core abstraction. For auditing purposes, what matters is:
+The exact KMES protocol, buffer sizes, flow-control mechanics, and reliability guarantees are outside the scope of this auditing topic; they are defined in the [KMES specification](/spec/psd-003/v0.20/) (PSD-003), where KMES is the core abstraction. For auditing purposes, what matters is:
 
 - Events are not retained by the kernel beyond writing them to KMES.
 - A subscriber that falls behind may lose events.

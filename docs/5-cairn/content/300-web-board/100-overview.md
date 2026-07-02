@@ -1,7 +1,11 @@
 ---
-title: Web Board Overview
+title: Web board overview
 type: concept
 description: The Cairn web board is a milestone-centric visual interface for managing tasks — drag-and-drop, inline editing, and live updates.
+related:
+  - cairn/getting-started/quick-start
+  - cairn/cli/commands
+  - cairn/configuration/data-model
 ---
 
 The web board is Cairn's visual interface. It runs as a local HTTP server and provides a milestone-centric view of your project.

@@ -2,6 +2,9 @@
 title: Disk
 type: reference
 description: A Disk userdata represents one virtio-blk disk attached to a VM. Use it to read and write sectors directly, inject I/O faults (EIO read, EIO write, slow I/O), or detach the disk from the live guest.
+related:
+  - provium/writing-tests/disks-and-fault-injection
+  - provium/reference/vm
 ---
 
 A Disk wraps one virtio-blk disk attached to a VM. It exposes block-level operations and a fault-injection surface useful for exercising I/O error paths in the guest.
@@ -18,7 +21,7 @@ A Disk wraps one virtio-blk disk attached to a VM. It exposes block-level operat
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `id` | string | `"attached-<vm_name>"` | Disk identifier within the VM. |
-| `size` | int (bytes) | `4 GiB` | Modeled disk size. Used for `:size()` when no image is attached. |
+| `size` | int (bytes) | `4 GiB` | Modelled disk size. Used for `:size()` when no image is attached. |
 | `image` | string (path) | none | Backing file. Sector ops require an image. |
 
 Disks are 512-byte sectors throughout. The `read_sectors` and `write_sectors` ops express offsets and counts in sectors.
@@ -27,7 +30,7 @@ Disks are 512-byte sectors throughout. The `read_sectors` and `write_sectors` op
 
 ### `disk:size()`
 
-Returns the disk's size in bytes. When a backing image is attached, returns the live `stat()` size of the image file (so a test that resized the underlying file with `truncate` / `fallocate` reads honest output). Without an image, returns the modeled size from `attach_disk`.
+Returns the disk's size in bytes. When a backing image is attached, returns the live `stat()` size of the image file (so a test that resized the underlying file with `truncate` / `fallocate` reads honest output). Without an image, returns the modelled size from `attach_disk`.
 
 ### `disk:read_sectors(offset, n)`
 
@@ -58,7 +61,7 @@ Errors and fault handling mirror `read_sectors`:
 
 Activate a fault. Valid modes: `"eio_read"`, `"eio_write"`, `"slow"`. Unknown modes error with the valid list (`disk:fault_inject: unknown mode \`X\` (valid: eio_read, eio_write, slow)`).
 
-Multiple modes can be active simultaneously. `slow` and `eio_*` compose naturally — a `slow` + `eio_read` combination delays the I/O before erroring.
+Multiple modes can be active simultaneously. When `slow` and the matching `eio_*` are both active at call time, the EIO check runs first — the call errors immediately, without the 50 ms delay. (The post-sleep re-checks only matter for an EIO fault set after the call started.)
 
 ### `disk:clear_faults()`
 

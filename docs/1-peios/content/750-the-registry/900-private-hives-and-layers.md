@@ -31,11 +31,11 @@ This is the lighter-weight tool, for when you want a different *value* here and 
 
 Private layers are **per thread, not per process**: because the attachment rides on a thread's credentials, different threads in the same process can carry different private layers (for instance, a service thread acting on behalf of a particular client). The number a thread can carry is bounded.
 
-## Authorization lives in KACS
+## Authorisation lives in KACS
 
 The registry defines only the *resolution* behaviour — private hives are checked ahead of global ones, and a thread's private layers fold into its contests. The decision about whether a thread may join a scope or attach a layer belongs to KACS's credential model. One constraint is already clear and worth stating: attaching a layer that sits *above* others in precedence must be privileged, or an unprivileged process could attach an existing high-precedence policy layer to itself and gain a window onto configuration it should not see or influence. The isolation is only as strong as the rule that decides who may carry a scope or a private layer.
 
-## Where to start
+## Where to go next
 
 For the resolution model these build on — precedence, recency, and the per-value contest — read [Layers](~peios/the-registry/layers).
 

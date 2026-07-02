@@ -2,6 +2,11 @@
 title: Profiles
 type: how-to
 description: Patterns for using multiple profiles — testing across kernel versions, separating production from debug builds, gating slow tests on the mainline-only profile, and what happens to the fixture cache when profiles change.
+related:
+  - provium/configuration/provium-toml
+  - provium/configuration/dynamic-profiles
+  - provium/writing-tests/vms-and-profiles
+  - provium/running-tests/fixtures-and-dependencies
 ---
 
 A profile is one named `(kernel, initrd, cmdline, guest_os)` tuple in `provium.toml`. Tests pick a profile by name when they create a VM. This page covers the practical patterns.
@@ -23,17 +28,17 @@ For most projects, one profile is enough — `peios`, pointing at the latest bui
 [profiles.peios]
 kernel   = "/build/peios/bzImage"
 initrd   = "/build/peios/initrd.cpio.gz"
-cmdline  = "console=hvc0 quiet"
+cmdline  = "console=ttyS0 quiet"
 
 [profiles.peios-debug]
 kernel   = "/build/peios-debug/bzImage"
 initrd   = "/build/peios-debug/initrd.cpio.gz"
-cmdline  = "console=hvc0 debug loglevel=7 nokaslr"
+cmdline  = "console=ttyS0 debug loglevel=7 nokaslr"
 
 [profiles.peios-stable]
 kernel   = "/build/peios-stable/bzImage"
 initrd   = "/build/peios-stable/initrd.cpio.gz"
-cmdline  = "console=hvc0 quiet"
+cmdline  = "console=ttyS0 quiet"
 ```
 
 Tests pick:
@@ -126,7 +131,7 @@ The profile's `cmdline` is the default; `boot_opts.kernel_cmdline` overrides it 
 
 ```lua
 local vm = provium:vm("v", "peios", {
-    kernel_cmdline = "console=hvc0 quiet maxcpus=1 isolcpus=0",
+    kernel_cmdline = "console=ttyS0 quiet maxcpus=1 isolcpus=0",
 }):boot()
 ```
 

@@ -80,7 +80,7 @@ Two sessions exist before authd is up, created by the kernel during boot:
 | **SYSTEM session** | 0 | The session of the SYSTEM token, attached to init and inherited by every process until authd assigns real tokens. |
 | **Anonymous session** | 998 | The session of the Anonymous token, used as the user SID for Anonymous-level impersonation. |
 
-Both are created by direct kernel initialization — they do not go through `kacs_create_session`. They are also never destroyed during a running system's lifetime: the SYSTEM token always exists somewhere, and the Anonymous token is a singleton.
+Both are created by direct kernel initialisation — they do not go through `kacs_create_session`. They are also never destroyed during a running system's lifetime: the SYSTEM token always exists somewhere, and the Anonymous token is a singleton.
 
 You will see these IDs in audit logs and `/sys/kernel/security/kacs/sessions` listings. They are not bugs.
 
@@ -100,3 +100,5 @@ If you want the catalog of logon types — what Interactive, Network, Service, B
 If you want the creation, destruction, and revocation mechanics — including the `logon-session-destroyed` event and what authd does for forced logout — read [Session lifecycle](~peios/logon-sessions/lifecycle).
 
 If you want to see which sessions are currently active on a running system, read [Inspecting tokens, sessions, and processes](~peios/inspecting/overview).
+
+To work with sessions from a shell — list them, see their processes, create and destroy them — read [The logonse command](~peios/logon-sessions/logonse-command).

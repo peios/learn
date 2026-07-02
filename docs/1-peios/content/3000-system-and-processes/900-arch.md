@@ -24,4 +24,7 @@ That is the whole command. It takes no options and prints a single name.
 
 ## Exit status
 
-`arch` returns `0`, or `1` if the architecture could not be determined.
+| Code | Meaning |
+|---|---|
+| `0` | The architecture was printed. |
+| `1` | The architecture could not be determined. |

@@ -20,6 +20,7 @@ This page is the map. The companion topic, [Transforming text](~peios/transformi
 | [`cat`](~peios/viewing-and-joining-text/cat) | Print one or more files straight through — and join several into one. |
 | [`tac`](~peios/viewing-and-joining-text/tac) | Print a file with its lines in reverse — last line first. |
 | [`more`](~peios/viewing-and-joining-text/more) | Show a file one screen at a time, pausing between screens. |
+| [`od`](~peios/viewing-and-joining-text/od) | Dump a file's raw bytes in octal, hex, decimal, or character form. |
 
 **Viewing part of a file**
 

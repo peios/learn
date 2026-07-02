@@ -155,3 +155,11 @@ For each of these, `kacs_open_peer_token` would produce the correct result becau
 `SO_PEERCRED` and `SCM_CREDENTIALS` are not being removed. They continue to work with sensible semantics for compatibility with Linux software. The recommendation is to migrate security-sensitive code to KACS-aware APIs, not to deprecate the Linux APIs.
 
 For most services this means: keep the Linux API for friendly identification; add KACS-aware logic for access decisions. Both can coexist on the same connection; the security paths use the KACS-aware data, the diagnostic paths use the Linux API.
+
+## Where to go next
+
+For how the projected UID/GID values are computed, read [Credential projection](~peios/linux-compatibility/credential-projection).
+
+For capturing and impersonating a peer's full token, read [Peer tokens and capture](~peios/impersonation/peer-tokens).
+
+For what a token carries that a `struct ucred` cannot, read [Tokens](~peios/tokens/overview).

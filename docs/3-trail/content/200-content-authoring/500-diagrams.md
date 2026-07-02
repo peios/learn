@@ -1,7 +1,11 @@
 ---
 title: Diagrams
-type: how-to
+type: concept
 description: Use Mermaid code blocks to add flowcharts, sequence diagrams, and other diagrams to your documentation.
+related:
+  - trail/content-authoring/code-blocks
+  - trail/features/dark-mode
+  - trail/content-authoring/pages-and-frontmatter
 ---
 
 Trail supports Mermaid diagrams in fenced code blocks. Diagrams are rendered client-side by the Mermaid JavaScript library (loaded from CDN).
@@ -72,7 +76,7 @@ sequenceDiagram
 
 ## Dark mode support
 
-Trail initializes Mermaid with the correct theme based on the current color mode:
+Trail initialises Mermaid with the correct theme based on the current colour mode:
 
 - **Light mode:** Mermaid uses the `default` theme.
 - **Dark mode:** Mermaid uses the `dark` theme.
@@ -83,4 +87,4 @@ When the reader toggles dark mode, Trail re-renders all Mermaid diagrams with th
 
 At build time, Trail's `transformMermaid` function finds code blocks with the `language-mermaid` class and replaces them with `<div class="mermaid">` elements containing the raw diagram text.
 
-At page load, the Mermaid library (loaded from `cdn.jsdelivr.net`) initializes and renders all `.mermaid` elements. Before initialization, Trail saves each element's text content to a `data-mermaid-src` attribute so that diagrams can be re-rendered on theme toggle.
+At page load, the Mermaid library (loaded from `cdn.jsdelivr.net`) initialises and renders all `.mermaid` elements. Before initialisation, Trail saves each element's text content to a `data-mermaid-src` attribute so that diagrams can be re-rendered on theme toggle.

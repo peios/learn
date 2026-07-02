@@ -1,4 +1,4 @@
-name = "Running Provium in Anger"
+name = "Operating the Provium harness"
 description = "Operating the test harness — CLI flags, the event stream, fixtures, the pool, and using it all in CI."
 featured = true
 order = 3

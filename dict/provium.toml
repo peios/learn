@@ -4,13 +4,13 @@
 
 [[terms]]
 term = "Provium"
-definition = "A KVM test harness for Linux kernel modules and system-level code. Tests are written in Lua and run against real QEMU/KVM virtual machines. Written in Go (host) and C (guest agent)."
+definition = "A KVM test harness for Linux kernel modules and system-level code. Tests are written in Lua and run against real QEMU/KVM virtual machines. Written in Rust (both the host tooling and the guest agent)."
 category = "General"
 product = "provium"
 
 [[terms]]
 term = "Guest Agent"
-definition = "The C binary injected into QEMU VMs by Provium. Listens on vsock for commands from the host, executes syscalls, ioctls, and shell commands, and returns results."
+definition = "The Rust binary injected into QEMU VMs by Provium. Runs as PID 2, listens on vsock for commands from the host, executes syscalls, ioctls, and shell commands, and returns results."
 category = "Architecture"
 product = "provium"
 
