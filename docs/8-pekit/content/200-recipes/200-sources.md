@@ -196,7 +196,11 @@ branch or tag.
 4. Materialise the tree at `<out_dir>/url-<hash>/source`: if `extract` is set,
    extract the archive to a temporary directory, then promote the `root`
    subdirectory (which must exist, else `missing_source_root`); otherwise copy
-   the raw artifact into the source directory.
+   the raw artifact into the source directory. Extraction preserves each
+   regular file's archived mtime — release tarballs encode "generated
+   outputs are newer than their inputs" in timestamps, and losing that
+   fires autotools maintainer rebuild rules in environments without the
+   maintainer tools.
 5. Apply the recipe's [patch series](#patches), when one is declared. The
    series' content hash joins the materialisation scope, so an edited patch
    lands in a fresh extraction.
