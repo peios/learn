@@ -1,7 +1,7 @@
 ---
 title: Supporting files and reference tables
 type: reference
-description: "Exact schemas for pekit's non-recipe files (workspace.pekit.toml, env.pekit.toml, *.keyring.pekit.toml) plus reference tables for template variables, source-ref roots, and publish targets."
+description: "Exact schemas for pekit's non-recipe files (workspace, env, keyring, pekit.lock) plus reference tables for template variables, source-ref roots, and publish targets."
 related:
   - pekit/reference/recipe-format
   - pekit/recipes/environments-and-keyrings
@@ -175,6 +175,57 @@ api-key = "REPLACE_ME"
 | Nesting | Sub-tables nest arbitrarily; each nesting level adds a segment to the exported name. |
 | Typed entries | A table containing a `path` or `content` key is a *typed* entry and is **not supported yet** (`unsupported_keyring_entry`). |
 | Collisions | A keyring export that collides with a normal or managed env variable is an error (`env_collision`). |
+
+---
+
+## `pekit.lock`
+
+The machine-written source lockfile, created and updated by pekit in the recipe
+directory beside `pekit.toml`. It pins fetched source inputs trust-on-first-use:
+the first resolve of a version records what was fetched, and every later
+resolve verifies against the record — see
+[Sources](~pekit/recipes/sources#the-lockfile) for the behaviour. Commit it,
+and do not edit it by hand: `pekit lock --repin --version <v>` is the one
+supported way to change an existing entry. Loading is strict — an unknown key
+is `unknown_key` and an unsupported `schema` is `lock_schema`.
+
+### Schema
+
+| Key | Type | Meaning |
+| --- | --- | --- |
+| `schema` | integer | Lockfile schema version. Currently `1`. |
+| `[[source]]` | array of tables | One entry per locked version, kept sorted by version. |
+
+Each `[[source]]` entry carries the keys for its source kind:
+
+| Key | Set for | Meaning |
+| --- | --- | --- |
+| `version` | all | The locked version. Empty for a versionless url fetch. |
+| `url` | url sources | The rendered URL fetched at lock time. Provenance only — the hash, not the address, is the assertion. |
+| `sha256` | url sources | SHA-256 of the fetched artifact. |
+| `ref` | git sources | The rendered ref the version resolved through. |
+| `commit` | git sources | The commit the ref resolved to — the assertion. |
+| `signature_key` | url sources with `[source.url.signature]` | Hex fingerprint of the pinned upstream key that verified the artifact at lock time. |
+| `locked_at` | all | UTC timestamp of the pinning run (RFC 3339). |
+
+### Worked example
+
+```toml
+schema = 1
+
+[[source]]
+  version = "0.5.12"
+  url = "https://example.org/dash-0.5.12.tar.gz"
+  sha256 = "6a474ac46e8b0b32916c4c60df694c82058d3297d8b385b74508030ca4a8f28a"
+  signature_key = "9f0b7ddc1325a3e2c40e5f0a88b1c62f3d94ab07"
+  locked_at = "2026-08-10T11:00:00Z"
+
+[[source]]
+  version = "1.2.0"
+  ref = "v1.2.0"
+  commit = "8f3a1bc99e2f6d41c07b21ac1886d63b7f2e5d10"
+  locked_at = "2026-08-10T11:00:00Z"
+```
 
 ---
 

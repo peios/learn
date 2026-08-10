@@ -33,6 +33,7 @@ For the flags themselves (how they parse, global flags like `--dry-run`), see
 | `clean` | one optional `clean` target | none | no | Runs a clean target and/or removes the managed output directory. |
 | `gen` | `gen` targets | none | yes | Runs gen commands; writes generated source **into the tree**. |
 | `verify` | `gen` targets | none | yes | Runs gen `verify_command`s; a read-only drift check (writes nothing). |
+| `lock` | the recipe's source | multiple | no | Fetches and pins the selected versions in [`pekit.lock`](~pekit/recipes/sources#the-lockfile) without building. With no version flags, reports the current lock instead. |
 | `workspace` | a delegated command across members | (delegated) | (delegated) | Runs one of the above across every workspace member. |
 
 `gen` and `verify` are the source-generating pair — see
@@ -46,8 +47,8 @@ See [Workspaces](~pekit/workspaces/workspaces).
 
 ### Version behaviour
 
-`build`, `package`, and `publish` iterate over **every** version the selector
-resolves to, running the whole plan once per version. `test` and `install`
+`build`, `package`, `publish`, and `lock` iterate over **every** version the
+selector resolves to, running the whole plan once per version. `test` and `install`
 require the selector to resolve to a **single** version; if more than one
 resolves, pekit stops before doing any work:
 
@@ -70,7 +71,8 @@ local-source, `--no-build`, `--no-verify`, and `--refresh-source` groups; `--all
 is `package`/`publish`/`gen`/`verify` only; `--allow-unanchored` is `publish`
 only; `clean` takes only `--env`, `--keyring`, and its own mode flags
 (`--output-only` / `--target-only`); `gen` and `verify` take only `--env`,
-`--keyring`, and `--all`. The full command-by-flag matrix is in the
+`--keyring`, and `--all`; `lock` takes version selection, `--refresh-source`,
+and its own `--repin`. The full command-by-flag matrix is in the
 [command-line reference](~pekit/reference/cli).
 
 Global flags (`--dry-run`, `--quiet`, `--verbose`, `--json`, `--recipe`,

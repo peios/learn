@@ -87,9 +87,18 @@ may instead be a table keyed by version:
 ```
 
 When the table form is used and the selected version has no entry, pekit fails
-with `missing_checksum`. A URL source **without** a checksum is materialised
-**unanchored** — pekit records that the tree is not pinned to a digest, which
-matters for [reproducible packaging](~pekit/recipes/packages).
+with `missing_checksum`. You rarely need `checksum`, though: every fetched
+version is pinned automatically in the recipe's
+[lockfile](#the-lockfile), and a URL source is only materialised
+**unanchored** — not pinned to a digest — when it has neither a checksum nor a
+lock entry, which matters for
+[reproducible packaging](~pekit/recipes/packages).
+
+A URL source can also carry a `[source.url.signature]` table pinning the
+upstream maintainer's release-signing key: pekit fetches the detached
+signature beside the artifact and verifies it before anything is locked or
+built, closing the trust-on-first-use gap for brand-new versions. The full
+schema is in the [recipe format reference](~pekit/reference/recipe-format).
 
 ### `[source.local]`
 
@@ -154,9 +163,12 @@ effect on them.
 1. If the mirror does not exist, `git clone --mirror <url>`; otherwise
    `git fetch --prune --tags` to update it.
 2. Resolve `ref` to an immutable commit (`git rev-parse <ref>^{commit}`).
-3. Clone the mirror into `<out_dir>/git-<hash>/source`, then
+3. When a version is selected, verify the resolved commit against the
+   version's [lockfile entry](#the-lockfile) — or create the entry on first
+   resolve.
+4. Clone the mirror into `<out_dir>/git-<hash>/source`, then
    `git reset --hard <commit>` and `git clean -fdx` to pin the checkout.
-4. Write a `source.pekit.json` manifest recording the URL, ref, resolved
+5. Write a `source.pekit.json` manifest recording the URL, ref, resolved
    commit, and provenance.
 
 Provenance is `git:<url>@<commit>` and the timestamp is the commit's committer
@@ -170,11 +182,14 @@ branch or tag.
    user-agent).
 2. If a `checksum` is set, verify it; on mismatch, re-download once and verify
    again before failing.
-3. Materialise the tree at `<out_dir>/url-<hash>/source`: if `extract` is set,
+3. Verify the artifact against the version's [lockfile entry](#the-lockfile),
+   cache hits included — or create the entry on first resolve, verifying the
+   upstream signature first when `[source.url.signature]` is configured.
+4. Materialise the tree at `<out_dir>/url-<hash>/source`: if `extract` is set,
    extract the archive to a temporary directory, then promote the `root`
    subdirectory (which must exist, else `missing_source_root`); otherwise copy
    the raw artifact into the source directory.
-4. Write a `source.pekit.json` manifest.
+5. Write a `source.pekit.json` manifest.
 
 The **downloaded artifact** is cached regardless. The **extracted tree** is
 re-materialised from that cached artifact on each run when a checksum is set
@@ -193,6 +208,32 @@ discards the cache and rebuilds from scratch:
 - url: removes the cached artifact **and** the materialised scope, forcing a
   re-download and re-extract.
 - local / sourceless: nothing to refresh.
+
+A refresh does not relax the lock: the fresh download is still verified
+against the lockfile, so `--refresh-source` is how you *check* upstream and
+`pekit lock --repin` is how you *accept* a change.
+
+### The lockfile
+
+Fetched inputs are pinned **trust-on-first-use** in a machine-written
+`pekit.lock` beside `pekit.toml`. The first time a source resolves for a
+version, pekit records what it fetched — the artifact's SHA-256 for a url
+source, the resolved commit for a git source — and every later resolve
+verifies against that entry instead, cache hits included. A mismatch is a hard
+`lock_mismatch` stop: upstream's published bytes (or a tag) changed under a
+version that was already pinned. Accepting such a change is an explicit
+ceremony, never automatic:
+
+```text
+pekit lock --repin --version 1.2.0
+```
+
+Commit the lockfile with the recipe. Local sources, dry runs, and git sources
+without a selected version (a bare branch ref is a deliberately moving target)
+are never locked. The file's exact schema is in
+[Supporting files](~pekit/reference/supporting-files#pekitlock); the `lock`
+command — including pre-locking versions without building — is in the
+[command-line reference](~pekit/reference/cli).
 
 ### Archive extraction
 
@@ -245,7 +286,8 @@ materialised:
 | local | `local:<path>` |
 | git | `git:<url>@<commit>` |
 | url (checksummed) | `url:<url>#<checksum>` |
-| url (unchecksummed) | `url:<url>` (marked **unanchored**) |
+| url (locked, no checksum) | `url:<url>#sha256:<hash>` |
+| url (no checksum, no lock entry) | `url:<url>` (marked **unanchored** — reachable only in a dry run, since a real resolve locks) |
 
 For git and url sources the provenance is also written to a `source.pekit.json`
 manifest beside the materialised tree, and pekit emits it as a `source` event

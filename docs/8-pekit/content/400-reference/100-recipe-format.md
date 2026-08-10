@@ -136,7 +136,9 @@ are rejected.
 | `[source.local]` | Use a directory on disk. |
 
 See [Sources](~pekit/recipes/sources) for materialisation, caching, and
-provenance behaviour.
+provenance behaviour. Resolved git and url sources are pinned
+trust-on-first-use in the recipe's machine-written
+[`pekit.lock`](~pekit/reference/supporting-files#pekitlock).
 
 #### `[source.git]`
 
@@ -157,6 +159,23 @@ provenance behaviour.
 | `versions` | string | no | Version **cap**: a constraint string filtering enumerated or requested versions (see [Versions](~pekit/recipes/versions)). |
 | `file_regex` | string | no | Regex extracting version numbers when enumerating from a listing. |
 | `checksum` | string **or** table | no | Expected checksum. A bare string applies to all versions; a table maps version → checksum. |
+| `signature` | table | no | Upstream signature verification — see `[source.url.signature]` below. |
+
+#### `[source.url.signature]`
+
+Optional sub-table of `[source.url]`. Its presence makes upstream signature
+verification **required**: the detached signature is fetched and verified
+against the pinned keys before a version is locked or built. A missing
+signature is `signature_missing`; a failed verification is
+`signature_invalid`; either aborts the run and writes no lock entry.
+Verification is in-process OpenPGP — no host `gpg` is involved.
+
+| Key | Type | Required | Meaning |
+| --- | --- | --- | --- |
+| `key_files` | string array | **yes** | Committed public key files (armoured or binary OpenPGP), resolved relative to the recipe root. Must be non-empty. |
+| `url` | string | no | Signature URL template. `{{source_url}}` expands to the rendered artifact URL; version variables are also available. Default `"{{source_url}}.sig"`. |
+| `of` | string | no | What the signature covers: `"artifact"` (the published file, default) or `"decompressed"` (its decompressed content — kernel.org's `.tar.sign` signs the uncompressed tar). Any other value is `invalid_signature`. |
+| `fingerprints` | string array | no | Allowlist of signer fingerprints (hex; spaces and `0x` ignored, case-insensitive). When set, a valid signature by any other pinned key is `signature_untrusted_key`. |
 
 #### `[source.local]`
 
