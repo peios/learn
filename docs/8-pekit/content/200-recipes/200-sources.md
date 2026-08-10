@@ -253,6 +253,14 @@ distribution meets copyleft source-availability obligations: publishing a
 binary and its source package through the same channel keeps the exact inputs
 of every published build available for as long as the binary is.
 
+Alongside `build.source_package`, every emitted manifest records where the
+build itself came from: `build.recipe_ref` pins the recipe tree's git commit
+(`git:<commit>`, suffixed `+dirty` when the work tree had uncommitted changes
+— including a freshly written, not-yet-committed `pekit.lock`), and
+`build.builder` records the producing pekit's own revision. Together with the
+locked `source_ref` this states the full inputs → recipe → tool provenance of
+the artifact. A recipe outside a git work tree omits `recipe_ref`.
+
 Opt out or rename with the recipe's
 [`[source_package]`](~pekit/reference/recipe-format#source_package) table.
 

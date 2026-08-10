@@ -85,6 +85,8 @@ compatible extension.
 | `farm_id` | string | Identifier of the build farm that produced this package. |
 | `source_ref` | string | Reference to the build inputs sufficient to reproduce the build. |
 | `source_package` | string | OPTIONAL. Name of the corresponding-source package produced from the same recipe and source inputs (see §3.4.1, `/usr/src/dist/`). Absent when the producer declares none; consumers MUST treat an absent field as the empty value. |
+| `recipe_ref` | string | OPTIONAL. VCS identity of the recipe tree the build ran from — for example `git:<commit>`, suffixed `+dirty` when the work tree held uncommitted changes. Absent when the producer records none; consumers MUST treat an absent field as the empty value. |
+| `builder` | string | OPTIONAL. Identity and revision of the producing tool — for example `pekit/<revision>`. Absent when the producer records none; consumers MUST treat an absent field as the empty value. |
 
 The `timestamp` is also the value used for every tar entry's
 modification time (§3.1.4). Producers MUST set both
