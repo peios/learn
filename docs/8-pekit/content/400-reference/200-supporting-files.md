@@ -176,6 +176,19 @@ api-key = "REPLACE_ME"
 | Typed entries | A table containing a `path` or `content` key is a *typed* entry and is **not supported yet** (`unsupported_keyring_entry`). |
 | Collisions | A keyring export that collides with a normal or managed env variable is an error (`env_collision`). |
 
+### Well-known entries
+
+Most keyring values are opaque to pekit — they exist to be exported. The
+entries below are additionally read by pekit itself:
+
+| Leaf path | Meaning |
+| --- | --- |
+| `signing.package_key` | Path to an Ed25519 private key — a raw 32-byte seed, or PKCS#8 PEM as produced by `openssl genpkey -algorithm ed25519`. When present, every peipkg-format artifact the run produces — package members and `-source` packages alike — is packed with an embedded signature naming the key's fingerprint, and each emits a `sign` event. A relative path resolves against the invocation's working directory. A configured key that cannot be loaded is an error (`signing_key`); pekit never silently falls back to unsigned output. |
+
+Without a configured signing key, `package` writes unsigned artifacts, and
+`publish` refuses peipkg-format packages unless `--allow-unsigned` is passed
+(`unsigned_publish`).
+
 ---
 
 ## `pekit.lock`

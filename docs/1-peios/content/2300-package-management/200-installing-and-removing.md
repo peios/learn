@@ -50,6 +50,7 @@ Answer `y` and peipkg carries the plan out as a single [transaction](~peios/pack
 | `--dry-run` | Produce and print the plan, then stop — never prompt, never change anything. |
 | `--yes`, `-y` | Skip the `proceed?` prompt and apply the plan. |
 | `--no-claim` | Install a provider without taking any claim it offers. |
+| `--allow-stale` | Proceed although a repository's trust state exceeds its maximum trusted age. See [Repositories and trust](~peios/package-management/repositories-and-trust). |
 | `--claim <names>` | Comma-separated claims to force-claim, overriding the current holder(s). |
 | `--claim-all` | Force-claim every claim the installed packages provide, overriding incumbents. |
 

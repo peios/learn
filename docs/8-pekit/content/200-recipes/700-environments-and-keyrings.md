@@ -242,6 +242,18 @@ provided for the same exported name. Any resulting `PEKIT_KEYRING_*` name that
 would collide with a managed `PEKIT_*` variable or with a user `[env]` variable is
 an `env_collision` error.
 
+### Package signing
+
+One keyring entry is read by pekit itself rather than merely exported:
+`signing.package_key` names the Ed25519 private key that signs every
+peipkg-format artifact a `package` or `publish` run produces. Because it rides
+the keyring mechanism, the key path stays in a per-developer, gitignored file —
+or arrives inline as `--keyring.signing.package_key=<path>` — and private key
+material never enters a recipe. Without a key, `publish` refuses peipkg
+packages unless you pass `--allow-unsigned`. The exact behaviour and the
+accepted key encodings are in
+[Supporting files](~pekit/reference/supporting-files#well-known-entries).
+
 ### Keyring file format
 
 A `*.keyring.pekit.toml` file is a TOML document whose leaves are strings. Each

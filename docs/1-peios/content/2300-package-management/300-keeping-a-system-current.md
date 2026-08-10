@@ -35,6 +35,8 @@ What "verified" means here — signing keys, freshness floors, the handling of a
 
 Run `refresh` before an upgrade. An upgrade plans against whatever metadata is cached, so an upgrade without a recent refresh moves you to the newest version peipkg last heard about.
 
+Skip it for long enough and peipkg stops waiting for you: an install, upgrade, or downgrade against a repository whose trust state has passed its **maximum trusted age** (30 days by default) refreshes that repository itself, and refuses to proceed against one that stays stale — unreachable, or frozen on an unchanging index — unless you pass `--allow-stale`. The bound and its configuration are covered in [Repositories and trust](~peios/package-management/repositories-and-trust).
+
 ## Upgrading
 
 ```
@@ -58,6 +60,7 @@ proceed? [y/N]
 | `--dry-run` | Print the plan and stop. A good way to preview what an upgrade would move. |
 | `--yes`, `-y` | Skip the `proceed?` prompt. |
 | `--no-recurse` | Confine the upgrade to the current root only — disable the cascade into nested named roots. |
+| `--allow-stale` | Proceed although a repository's trust state exceeds its maximum trusted age. Warned and audited. |
 
 By default, when named roots are configured, `upgrade` **cascades**: it reconciles the current root and every named root nested under it, each as an independent continue-on-error transaction with its own summary. `--no-recurse` disables that and upgrades the current root alone. See [Named roots](~peios/package-management/named-roots) for the named-roots model.
 
@@ -79,7 +82,7 @@ Older versions are not in a repository's active index — that index lists curre
 
 A downgrade is treated as a deliberate move. Going backward — onto a version that may have known issues a newer one fixed — is one of the actions peipkg flags for **explicit authorisation**: beyond the routine `proceed?` prompt, peipkg asks you to authorise the specific downgrade, and `--yes` does not stand in for that answer. See [Elevated authorisation](~peios/package-management/dependency-resolution) for the full set of actions that work this way.
 
-`downgrade` accepts `--dry-run` and `--yes`, `-y` with the same meaning as elsewhere.
+`downgrade` accepts `--dry-run`, `--yes`, `-y`, and `--allow-stale` with the same meaning as elsewhere.
 
 ## Undoing the last change
 
@@ -121,5 +124,5 @@ $ peipkg upgrade        # apply it
 | Code | Meaning |
 |---|---|
 | `0` | The operation succeeded — including a dry run, a plan with nothing to do, and a declined prompt or authorisation (nothing failed). |
-| `1` | The operation failed — a repository could not be refreshed, resolution or a download or verification failed, a root in an upgrade cascade failed, there is no committed transaction to undo, or a command's arguments were wrong (`downgrade` without a package and version, an unparsable version, a malformed option). |
+| `1` | The operation failed — a repository could not be refreshed, a repository's trust state exceeded its maximum age and a forced refresh could not clear it, resolution or a download or verification failed, a root in an upgrade cascade failed, there is no committed transaction to undo, or a command's arguments were wrong (`downgrade` without a package and version, an unparsable version, a malformed option). |
 | `2` | A usage error before any command ran — no command, an unknown command, or a malformed global option (including a `--root` reference that does not resolve). |

@@ -68,7 +68,7 @@ not support is an **error** up front (`unsupported_flag`), unless you pass
 `--allow-unused`, which downgrades it to a suppressed warning. Broadly:
 `build`, `test`, `install`, `package`, and `publish` share the version-selection,
 local-source, `--no-build`, `--no-verify`, and `--refresh-source` groups; `--all`
-is `package`/`publish`/`gen`/`verify` only; `--allow-unanchored` is `publish`
+is `package`/`publish`/`gen`/`verify` only; `--allow-unanchored` and `--allow-unsigned` are `publish`
 only; `clean` takes only `--env`, `--keyring`, and its own mode flags
 (`--output-only` / `--target-only`); `gen` and `verify` take only `--env`,
 `--keyring`, and `--all`; `lock` takes version selection, `--refresh-source`,
