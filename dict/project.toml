@@ -1,0 +1,17 @@
+[[terms]]
+term = "coordinated disclosure"
+definition = "The handling model for security reports: details stay private between the reporter and the project until a fix is available, then both disclose together."
+category = "Project"
+product = "project"
+
+[[terms]]
+term = "corresponding source"
+definition = "The exact source a binary was built from — pristine upstream input, applied patches, and the build recipe — which copyleft licences oblige a distributor to make available. Peios ships it as <name>-source packages."
+category = "Project"
+product = "project"
+
+[[terms]]
+term = "The Peios Authors"
+definition = "The collective copyright holder named in first-party Peios licence notices: the natural persons who have authored Peios code."
+category = "Project"
+product = "project"
