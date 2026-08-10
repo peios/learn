@@ -136,6 +136,12 @@ are rejected.
 | `[source.url]` | Download from a URL (optionally an archive). |
 | `[source.local]` | Use a directory on disk. |
 
+One direct key is accepted alongside the sub-tables:
+
+| Key | Type | Required | Meaning |
+| --- | --- | --- | --- |
+| `patches` | string | no | Name of a recipe-root directory (a single path segment) whose `series` file pekit applies to the materialised source tree before any target runs. Requires a reproducible source (`patches_source` otherwise). See [Patches](~pekit/recipes/sources#patches). |
+
 See [Sources](~pekit/recipes/sources) for materialisation, caching, and
 provenance behaviour. Resolved git and url sources are pinned
 trust-on-first-use in the recipe's machine-written

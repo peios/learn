@@ -1,7 +1,7 @@
 ---
 title: Supporting files and reference tables
 type: reference
-description: "Exact schemas for pekit's non-recipe files (workspace, env, keyring, pekit.lock) plus reference tables for template variables, source-ref roots, and publish targets."
+description: "Exact schemas for pekit's non-recipe files (workspace, env, keyring, pekit.lock, patch series) plus template variables, source-ref roots, and publish targets."
 related:
   - pekit/reference/recipe-format
   - pekit/recipes/environments-and-keyrings
@@ -226,6 +226,55 @@ schema = 1
   commit = "8f3a1bc99e2f6d41c07b21ac1886d63b7f2e5d10"
   locked_at = "2026-08-10T11:00:00Z"
 ```
+
+---
+
+## The patches directory
+
+The directory named by `[source] patches = "<dir>"` in `pekit.toml`
+(conventionally `patches`, and always a single path segment). pekit applies
+its series to the materialised source tree before any target runs — see
+[Sources](~pekit/recipes/sources#patches) for the behaviour — and the whole
+directory ships in the recipe's source package under `patches/`.
+
+### The series file
+
+`<dir>/series` lists the patches in apply order: one slash-separated relative
+path per line. `#` starts a comment, whole-line or trailing; blank lines are
+ignored; entries must not contain whitespace. Subdirectories are allowed
+(`misc/fix.patch`).
+
+Loading is strict:
+
+| Condition | Error |
+| --- | --- |
+| `series` missing or unreadable | `patch_series` |
+| An entry that repeats, contains whitespace, or escapes the directory | `patch_series` |
+| A series entry with no file behind it | `patch_missing` |
+| A `*.patch` file in the directory the series does not list | `unused_patch` (permitted by `--allow-unused`) |
+
+Application is `git apply` per entry, in series order, with no fuzz: a failed
+hunk is `patch_apply` and a patch that matches nothing is `patch_skipped`.
+
+### Worked example
+
+```
+patches/
+  series
+  misc/
+    mke2fs-root-sd.patch
+```
+
+with a `series` of:
+
+```
+# Applied in dependency order:
+misc/mke2fs-root-sd.patch   # stamp the root inode's SD at format time
+```
+
+Give each patch file a short header — what it changes and its upstream status
+(submitted, backport, Peios-specific). The series ships with the
+corresponding source, where that header is a third party's only context.
 
 ---
 

@@ -1,7 +1,7 @@
 ---
 title: Sources
 type: concept
-description: "How a pekit recipe gets its source tree: the git, url, and local source kinds, local overrides, materialisation and caching, archive extraction, version enumeration, provenance, and delegation."
+description: "How a pekit recipe gets its source tree: the git, url, and local source kinds, local overrides, materialisation and caching, patches, version enumeration, provenance, and delegation."
 related:
   - pekit/recipes/anatomy
   - pekit/recipes/versions
@@ -168,7 +168,10 @@ effect on them.
    resolve.
 4. Clone the mirror into `<out_dir>/git-<hash>/source`, then
    `git reset --hard <commit>` and `git clean -fdx` to pin the checkout.
-5. Write a `source.pekit.json` manifest recording the URL, ref, resolved
+5. Apply the recipe's [patch series](#patches), when one is declared. Reset
+   and clean restored the pristine tree, so the series re-applies on every
+   resolve.
+6. Write a `source.pekit.json` manifest recording the URL, ref, resolved
    commit, and provenance.
 
 Provenance is `git:<url>@<commit>` and the timestamp is the commit's committer
@@ -189,7 +192,10 @@ branch or tag.
    extract the archive to a temporary directory, then promote the `root`
    subdirectory (which must exist, else `missing_source_root`); otherwise copy
    the raw artifact into the source directory.
-5. Write a `source.pekit.json` manifest.
+5. Apply the recipe's [patch series](#patches), when one is declared. The
+   series' content hash joins the materialisation scope, so an edited patch
+   lands in a fresh extraction.
+6. Write a `source.pekit.json` manifest.
 
 The **downloaded artifact** is cached regardless. The **extracted tree** is
 re-materialised from that cached artifact on each run when a checksum is set
@@ -268,6 +274,48 @@ Extraction is hardened: entries that escape the extraction root (absolute
 paths, `..`, or traversal through a symlinked parent), unsafe symlink targets,
 NUL bytes, unsupported entry types, and colliding entries are all rejected as
 `unsafe_archive`.
+
+## Patches
+
+A recipe can carry a patch series that pekit applies to the materialised
+tree, declared as a directory name under `[source]`:
+
+```toml
+[source]
+patches = "patches"
+```
+
+The directory's `series` file lists patch files in apply order (one relative
+path per line; `#` starts a comment). pekit applies them with `git apply` —
+strictly, with no fuzz — immediately after the pristine tree is materialised
+and before any target runs, so targets always see the patched tree and
+`@source:` mappings package patched files. How that interacts with caching
+follows the source kind:
+
+- **git** sources re-apply the series on every resolve: the checkout is
+  reset to the pinned commit and cleaned first, so an edited patch takes
+  effect on the next run.
+- **url** sources materialise once per patch-set content: the series' hash
+  joins the materialisation scope, so an edited patch extracts and patches a
+  fresh tree.
+- **local** sources are never patched — a local tree is your own working
+  state, often with the series already applied or mid-rework. pekit emits a
+  warning and continues.
+
+A failed hunk is `patch_apply`; a patch that matches nothing is
+`patch_skipped`; either aborts materialisation and leaves no half-patched
+tree behind. The series grammar and its validation errors are in
+[Supporting files](~pekit/reference/supporting-files#the-patches-directory).
+
+Patches are committed recipe content, so the [lockfile](#the-lockfile) is
+uninvolved: it pins fetched bytes, and the patch series is already under
+version control. The whole directory ships in the recipe's
+[source package](#source-packages) under `patches/` — the shipped series is
+the applied series by construction.
+
+Rebasing on a version bump is deliberately manual: a stale patch fails
+loudly, so materialise the new tree (`pekit lock --version <v>` is enough),
+fix the patch, and run again.
 
 ## Enumeration
 
