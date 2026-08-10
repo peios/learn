@@ -51,6 +51,7 @@ Permitted top-level install destinations:
 | `/usr/share/` | Architecture-independent data |
 | `/usr/include/` | Header files (typically in `-dev` packages) |
 | `/usr/src/debug/` | Debugger source files, mirroring the build's source tree (typically in `-dbgsym`/`-debugsource` packages) |
+| `/usr/src/dist/` | Corresponding source shipped by `-source` packages: the pristine upstream inputs, patch series, and build-controlling recipe for a package the distribution distributes in binary form |
 | `/etc/` | Default configuration files |
 | `/var/` | Runtime variable state directories (typically empty at install time) |
 | `/opt/` | Self-contained third-party software trees |
@@ -134,8 +135,21 @@ references install under `/usr/src/debug/` (§3.4.1), not under
 `/usr/src/debug/` carries neither a triplet nor the `noarch`
 restriction above: it is a plain permitted destination, like
 `/usr/share/`, that both arch-specific and `noarch` packages
-MAY use. Only the `debug/` subtree of `/usr/src/` is a
-permitted destination; the rest of `/usr/src/` is not.
+MAY use. The same applies to `/usr/src/dist/`, the home of
+corresponding-source packages (`build.source_package`,
+§3.3.4). Only the `debug/` and `dist/` subtrees of
+`/usr/src/` are permitted destinations; the rest of
+`/usr/src/` is not — it stays administrator territory.
+
+> [!INFORMATIVE]
+> A corresponding-source package conventionally lays out
+> `/usr/src/dist/<name>-<version>/` with `upstream/` (the
+> pristine source artifact, byte-identical to the producer's
+> pinned input), `patches/` (the applied patch series, when
+> one exists), and `recipe/` (the build-controlling recipe
+> files, including the source lock that makes the shipped
+> upstream artifact verifiable). The layout is a producer
+> convention, not a format rule.
 
 > [!INFORMATIVE]
 > Example: an `x86_64` nginx package installs the binary at
