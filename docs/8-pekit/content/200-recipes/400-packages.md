@@ -8,6 +8,7 @@ related:
   - pekit/recipes/dependencies-and-claims
   - pekit/recipes/sources
   - pekit/reference/recipe-format
+  - pekit/reference/supporting-files
 ---
 
 A package definition answers one question: **which files, from where, go where in
@@ -47,12 +48,11 @@ Each value may also be a table, which adds an `override` flag:
 "@recipe:layout.json" = { path = "usr/share/hello/layout.json", override = true }
 ```
 
-| Field | Meaning |
-|---|---|
-| `path` | The package destination (required; an empty destination is an error). |
-| `override` | Exempt this entry from the package format's layout policy. Defaults to `false`. See [`override`](#override). |
-
-The bare-string form `"src" = "dest"` is exactly `"src" = { path = "dest" }`.
+`path` is the package destination (required; an empty destination is an error),
+and `override` — default `false` — exempts the entry from the package format's
+layout policy (see [`override`](#override)). The bare-string form
+`"src" = "dest"` is exactly `"src" = { path = "dest" }`. The field-by-field
+schema is in the [recipe format reference](~pekit/reference/recipe-format).
 
 ## Source refs
 
@@ -89,6 +89,10 @@ output:
 "@source:LICENSE"      = "usr/share/licenses/hello/LICENSE"
 "@recipe:hello.service" = "usr/lib/systemd/system/hello.service"
 ```
+
+The [reference table of source-ref roots](~pekit/reference/supporting-files)
+gathers every ref form — build refs, the rooted prefixes, and bare paths — in
+one place.
 
 ### Plain paths are owner-relative
 
@@ -134,8 +138,8 @@ invalid_ref: "@recipe:../secrets" escapes its root
 
 ## Globs
 
-A source ref's path may contain glob magic — `*`, `?`, or a `[...]` character
-class — and `**` for recursive matching:
+A source ref's path may contain glob metacharacters — `*`, `?`, or a `[...]`
+character class — and `**` for recursive matching:
 
 ```toml
 [files]
@@ -156,7 +160,7 @@ Rules:
   ```
 
 - Placement is **relative to the non-glob prefix**. Everything up to the first
-  segment containing glob magic is the base; matched paths are re-rooted under
+  segment containing a glob metacharacter is the base; matched paths are re-rooted under
   the destination from there. So `share/icons/*.png` → `usr/share/hello/icons/`
   places `foo.png` at `usr/share/hello/icons/foo.png`, and
   `lib/**/*.so` preserves the sub-directory structure below `lib/` under the
@@ -212,7 +216,7 @@ a directory prefix and matched paths are re-rooted beneath it.
 ### Collisions are errors
 
 Two payload inputs that resolve to the **same** package path is a hard error —
-pekit will not silently let one input clobber another:
+pekit will not silently let one input overwrite another:
 
 ```text
 payload_collision: multiple package inputs map to usr/bin/hello: …

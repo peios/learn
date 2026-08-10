@@ -1,0 +1,147 @@
+# =============================================================================
+# Peios Packages — the peipkg package toolchain
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# General
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "peipkg"
+definition = "The consumer-side package manager — the command that installs, upgrades, downgrades, removes, and queries packages on a running Peios system. It holds no authority of its own: it runs as the calling user, and installs succeed or fail on the ordinary access rules of the directories being written."
+category = "General"
+product = "peios-packages"
+
+# ---------------------------------------------------------------------------
+# Package format
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Package"
+definition = "The unit of software peipkg installs and tracks, distributed as a signed, self-contained .peipkg file carrying a manifest and a payload. A low-level primitive — curated concepts like roles and applications are layered above it, outside peipkg's scope."
+category = "Package Format"
+product = "peios-packages"
+
+[[terms]]
+term = "Manifest"
+definition = "The metadata a .peipkg carries: name, version, target architecture, the packages it depends on, and the packages it conflicts with. peipkg-compose also uses the word for its own input — the declarative TOML file naming a package set and the repositories to draw it from."
+category = "Package Format"
+product = "peios-packages"
+
+[[terms]]
+term = "Payload"
+definition = "The files inside a .peipkg that land on disk when the package is installed."
+category = "Package Format"
+product = "peios-packages"
+
+# ---------------------------------------------------------------------------
+# Repositories and trust
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Repository"
+definition = "An HTTP or HTTPS location that serves .peipkg files alongside a signed descriptor and signed indexes describing them. Each repository is anchored to signing keys the operator has chosen to trust."
+category = "Repositories"
+product = "peios-packages"
+
+[[terms]]
+term = "Descriptor"
+definition = "The signed document that is a repository's identity: the set of signing keys it uses, each with a status (active, transitioning, revoked). The root of trust for the repository's indexes and packages; each refresh verifies the new descriptor against the currently trusted keys, so rotation propagates without re-anchoring."
+category = "Repositories"
+product = "peios-packages"
+
+[[terms]]
+term = "Active Index"
+definition = "A repository's catalogue of the current version of each package — names, versions, dependencies, hashes, and download locations. peipkg resolves installs and upgrades against it."
+category = "Repositories"
+product = "peios-packages"
+
+[[terms]]
+term = "Archive Index"
+definition = "A repository's catalogue of superseded package versions, kept so a downgrade can reach them. Fetched only on demand, never in a routine refresh."
+category = "Repositories"
+product = "peios-packages"
+
+[[terms]]
+term = "Trust Ceremony"
+definition = "The first-contact procedure run by peipkg repo add: peipkg fetches the repository's descriptor and accepts it only if its signing-key fingerprint matches an --anchor fingerprint the operator obtained out of band. After first contact, trust is a chain each refresh extends."
+category = "Repositories"
+product = "peios-packages"
+
+# ---------------------------------------------------------------------------
+# Operations
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Transaction"
+definition = "A single peipkg operation — an install, upgrade, downgrade, or removal — applied atomically: before the commit instant any failure leaves the system exactly as it was; after it the operation is complete. Transactions are recorded in a history and reversible via undo and recover."
+category = "Operations"
+product = "peios-packages"
+
+[[terms]]
+term = "Elevated Authorisation"
+definition = "A second, deliberate confirmation peipkg requires for the few operations a routine yes should not cover — a downgrade, a foreign replaces, a low-trust provides. Not satisfied by --yes; fails closed when unattended."
+category = "Operations"
+product = "peios-packages"
+
+[[terms]]
+term = "Claim"
+definition = "A shared filesystem name that many installed packages can answer but only one — the holder — may hold at a time. Materialises as a peipkg-owned symlink from the claim path to the holder's target; installing an eligible provider auto-claims only claims that are currently unheld. Unrelated to token claims in the security model."
+category = "Operations"
+product = "peios-packages"
+
+[[terms]]
+term = "Named Root"
+definition = "A registered name for a subtree that is itself a peipkg root, recorded in the registry of the root it lives under. Referenced from --root by bare name instead of a path; names compose by dotting (initramfs.subroot). How peipkg keeps nested trees like the initramfs current."
+category = "Operations"
+product = "peios-packages"
+
+# ---------------------------------------------------------------------------
+# Compose
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "peipkg-compose"
+definition = "peipkg's consumer-side companion binary for image builders. Builds a fresh, fully package-owned root directory offline from a declarative manifest — deterministically and reproducibly. Two verbs: lock (resolve the package set and pin it) and build (fetch pinned payloads, verify, lay out the root)."
+category = "Compose"
+product = "peios-packages"
+
+[[terms]]
+term = "Lock File"
+definition = "The pinned output of peipkg-compose's resolve stage, written beside the manifest as <stem>.lock.toml. Records the complete resolved package set with hashes, so build --locked can assemble the root air-gapped, taking integrity from the lock alone."
+category = "Compose"
+product = "peios-packages"
+
+# ---------------------------------------------------------------------------
+# Producer tools
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Recipe"
+definition = "A directory of two files — peipkg.toml (structured facts: meta, package stanzas, upstream tracking, watch settings) and build.sh (the build script) — describing how to turn an upstream source tree into one or more .peipkg files. Deliberately version-agnostic: the build farm derives versions from upstream tags."
+category = "Producer Tools"
+product = "peios-packages"
+
+[[terms]]
+term = "peipkg-build"
+definition = "The producer tool that turns a recipe plus a source tree into signed .peipkg files. A pure function — same input, same output bytes — with no daemon or state, governed by the PSD-009 specification."
+category = "Producer Tools"
+product = "peios-packages"
+
+[[terms]]
+term = "peipkg-repo"
+definition = "The producer tool that turns a directory of .peipkg files into a signed repository state — descriptor plus regenerated active and archive indexes, signed with the operator's Ed25519 key. Deterministic and stateless, governed by PSD-009."
+category = "Producer Tools"
+product = "peios-packages"
+
+[[terms]]
+term = "peipkg-manager"
+definition = "The build-farm daemon that ties the producer tools together: it watches upstreams for new versions (webhooks and periodic polling), drives peipkg-build and peipkg-repo automatically, and syncs the published repository state to its hosting backend (R2, GitHub Pages, or a VPS)."
+category = "Producer Tools"
+product = "peios-packages"
+
+[[terms]]
+term = "Build Farm"
+definition = "A single host running peipkg-manager as a long-lived daemon. Owns the operational state — source caches, build queue, signing key, webhook listener — and shells out to peipkg-build and peipkg-repo when work needs doing."
+category = "Producer Tools"
+product = "peios-packages"

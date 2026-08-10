@@ -98,7 +98,7 @@ never derived from a token field.
 During enforcement (FACS file access, process boundaries) the value is the
 subject process's PSB pip, set at exec from the binary signature (§6.1, §8).
 
-The `kacs_access_check` query (§13.6) MAY instead supply `pip_type`/`pip_trust`
+The `kacs_access_check` query (§13.7) MAY instead supply `pip_type`/`pip_trust`
 through its args, where `0` means the calling process's PSB pip and a non-zero
 value evaluates against the supplied trust context. This lets a userspace
 broker evaluate access under a client's trust level — the same way the query's

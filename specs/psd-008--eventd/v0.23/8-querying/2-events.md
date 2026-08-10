@@ -49,9 +49,18 @@ EVENTS kacs.* SINCE 1h ago SELECT timestamp, event_type, granted_access
 EVENTS SELECT timestamp SELECT event_type    -- same as SELECT timestamp, event_type
 ```
 
-If no SELECT is present, all header fields are included plus all payload fields are extracted and included as top-level keys.
+If no SELECT is present, all header fields are included plus all non-colliding flattened payload fields are extracted and included as top-level keys. Payload fields whose top-level key collides with an event header field, or whose path is not queryable under the flattening rules, are suppressed as described in §8.1.
+
+SELECT is valid only for non-aggregation event queries. A query that combines
+SELECT with `COUNT BY`, `TOP N BY`, `DISTINCT`, or `GROUP` MUST be rejected with
+a parse error. Aggregation queries have fixed output schemas as defined below.
+`DISTINCT ... STREAM` is permitted and uses the distinct-value streaming
+semantics defined in §8.7.
 
 ## Aggregation
+
+Grouping, DISTINCT equality, canonical group-key representatives, and
+deterministic tie ordering are defined in §8.1.
 
 ### COUNT BY
 
@@ -62,6 +71,10 @@ EVENTS SINCE 24h ago COUNT BY event_type
 -- returns: [{event_type: "kacs.access_check", count: 4523}, {event_type: "lcs.key_set", count: 891}, ...]
 ```
 
+The output schema is `{field: representative, count: u64}` where `field` is the
+queried field name and `representative` is the canonical group representative
+defined in §8.1.
+
 ### TOP N BY
 
 Shorthand for COUNT BY with a limit. Returns the N most frequent values.
@@ -71,6 +84,8 @@ EVENTS SINCE 1h ago TOP 10 BY process_guid
 -- returns: [{process_guid: "...", count: 892}, {process_guid: "...", count: 445}, ...] (10 records)
 ```
 
+The output schema is the same as `COUNT BY`.
+
 ### DISTINCT
 
 Returns the distinct values of a field.
@@ -79,6 +94,9 @@ Returns the distinct values of a field.
 EVENTS SINCE 24h ago DISTINCT event_type
 -- returns: [{event_type: "kacs.access_check"}, {event_type: "kacs.token_create"}, ...]
 ```
+
+The output schema is `{field: representative}` where `field` is the queried
+field name.
 
 ### GROUP with aggregation functions
 
@@ -97,6 +115,29 @@ EVENTS SINCE 1h ago GROUP event_type AVG some_numeric_field
 
 For SUM, AVG, MIN, and MAX, records where the field is NULL or non-numeric are excluded from the aggregate. COUNT counts all records regardless of field values. If all records in a group have NULL or non-numeric values for the aggregated field, the group's aggregate value is NULL.
 
+GROUP output schemas are fixed:
+
+- `GROUP a, b COUNT` outputs `{a, b, count}`.
+- `GROUP a, b SUM x` outputs `{a, b, sum}`.
+- `GROUP a, b AVG x` outputs `{a, b, avg}`.
+- `GROUP a, b MIN x` outputs `{a, b, min}`.
+- `GROUP a, b MAX x` outputs `{a, b, max}`.
+
+Group-key fields contain the canonical representatives defined in §8.1.
+
+Aggregation result types are deterministic:
+
+- COUNT returns a msgpack unsigned integer.
+- SUM over all-integer inputs returns an integer if the exact mathematical sum
+  fits in either the signed 64-bit or unsigned 64-bit integer range. If the
+  integer sum does not fit, or if any contributing input is a float, SUM returns
+  a float64. If the float64 result would be non-finite, the query MUST fail with
+  an error.
+- AVG returns a float64 when at least one numeric input contributes.
+- MIN and MAX return the original numeric value that wins under exact numeric
+  comparison. If an integer and a float compare numerically equal, the integer
+  value wins the tie.
+
 ## Sorting
 
 SORT orders results by one or more fields. Default direction is ascending. DESC reverses.
@@ -106,6 +147,7 @@ EVENTS kacs.* SINCE 1h ago SORT timestamp DESC TAKE 100
 ```
 
 If no SORT is present, results are ordered by timestamp descending (most recent first).
+Ties are resolved by the deterministic ordering rules in §8.1.
 
 ## Manual indexing
 
@@ -151,7 +193,7 @@ EVENTS SINCE 1h ago TOP 10 BY process_guid
 
 Events during high CPU:
 ```
-EVENTS kacs.* SINCE 1h ago WHERE METRIC cpu.usage > 80
+EVENTS kacs.* SINCE 1h ago WHERE METRIC cpu.usage[core="0"] > 80
 ```
 
 Live tail of all KACS events:

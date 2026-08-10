@@ -9,6 +9,7 @@ related:
   - pekit/recipes/versions
   - pekit/recipes/packages
   - pekit/reference/recipe-format
+  - pekit/reference/cli
 ---
 
 A **recipe** is not a single file — it is a directory. One file, `pekit.toml`, is the recipe proper; the others beside it describe what to package, which environment to build in, and which secrets to sign with. This page walks through that file set, then focuses on `pekit.toml` itself and the one interface every recipe author leans on: the `PEKIT_*` environment variables that pekit hands to each target command.
@@ -47,7 +48,7 @@ pekit discovers the package, env, and keyring files by their fixed names in the 
 
 The recipe file is a TOML document with a small, fixed set of top-level keys. pekit is strict: any key it does not recognise is an error, caught when the recipe loads. The recognised keys are exactly:
 
-`out_dir`, `env`, `wrap`, `source`, `delegate`, and the four target sections `build`, `test`, `install`, `clean`.
+`out_dir`, `env`, `wrap`, `source`, `delegate`, the four target sections `build`, `test`, `install`, `clean`, and the source-generation section `gen`.
 
 The one pekit itself ships with is deliberately minimal:
 
@@ -156,24 +157,19 @@ This is the key interface between pekit and your build scripts. Before running a
 
 The target command runs with its working directory set to the source root (`$PEKIT_SOURCE_ROOT`) — except `clean`, which runs in the recipe directory.
 
+The variables a recipe author reaches for most are these — a subset of the full contract:
+
 | Variable | Meaning | When set |
 |---|---|---|
 | `PEKIT_OUT` | This target's own staging directory. Write your build output here. | Every target |
 | `PEKIT_RECIPE_ROOT` | Directory containing `pekit.toml`. | Every target |
 | `PEKIT_SOURCE_ROOT` | Root of the source tree the command runs in (its working directory). Equals the recipe root when there is no external source. | Every target |
-| `PEKIT_LITERAL_ROOT` | The literal on-disk root of the fetched source checkout. Normally identical to `PEKIT_SOURCE_ROOT`. | Every target |
-| `PEKIT_ROOT` | Working base for this source under `out_dir` — the parent of the per-target staging dirs. | Every target |
-| `PEKIT_OUT_BASE` | The resolved `out_dir` base directory. | Every target |
-| `PEKIT_COMMAND` | The command being run: `build`, `test`, `install`, or `clean`. | Every target |
-| `PEKIT_TARGET` | The target's name (e.g. `main`). | Every target |
-| `PEKIT_BUILD_TIMESTAMP` | The invocation's start time, as a Unix timestamp. | Every target |
-| `PEKIT_SOURCE_TIMESTAMP` | The source tree's timestamp (e.g. the commit time), as a Unix timestamp. Useful for reproducible builds. | Every target |
-| `PEKIT_WORKSPACE_ROOT` | The workspace root, or empty string when the recipe is not part of a workspace. | Every target (empty if none) |
-| `PEKIT_VERSION` | The full resolved version string being built. | When a version is resolved (`build`/`test`/`install`; absent for `clean`) |
-| `PEKIT_VERSION_MAJOR` `_MINOR` `_PATCH` `_PRERELEASE` `_BUILDMETA` | The parsed components of `PEKIT_VERSION`. | Same as `PEKIT_VERSION` |
+| `PEKIT_VERSION` (and `_MAJOR`, `_MINOR`, `_PATCH`, `_PRERELEASE`, `_BUILDMETA`) | The resolved version string being built, and its parsed components. | When a version is resolved (absent for `clean`, which never resolves one) |
 | `PEKIT_<NAME>_OUT` | The staging directory of build target `<NAME>` named in this target's `needs`. `<NAME>` is upper-cased with `-` and `.` turned into `_`. | Per entry in `needs` |
 
-`env.pekit.toml` and keyring files layer more variables on top (`PEKIT_KEYRING_*`, plus any user env), but the table above is the contract pekit guarantees. User-set `[env]` values never override a `PEKIT_*` variable — that prefix is reserved.
+The full contract — every managed variable, its exact value, and when it is set — is the [environment contract in the command-line reference](~pekit/reference/cli). It also covers the timestamp variables, the other root and output paths, and the `PEKIT_DEPENDENCIES*` variables that carry [build dependencies](~pekit/recipes/dependencies-and-claims) into the command.
+
+`env.pekit.toml` and keyring files layer more variables on top (`PEKIT_KEYRING_*`, plus any user env). User-set `[env]` values never override a `PEKIT_*` variable — that prefix is reserved.
 
 ### Shell variables, not templates
 

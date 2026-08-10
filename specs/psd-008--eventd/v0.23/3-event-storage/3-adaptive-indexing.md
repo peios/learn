@@ -22,7 +22,13 @@ The desired index set is global -- it applies to all shards uniformly. Individua
 
 ## Shard convergence
 
-Each shard independently converges its material indexes toward the global desired set during periods of low write activity. When a shard's writer thread has no pending events and the shard's material indexes do not match the desired set, the writer thread SHOULD create or drop indexes to converge.
+Each shard independently converges its material indexes toward the global desired
+set during periods of low write activity. When a shard's writer thread has no
+pending events and the shard's material indexes do not match the desired set,
+the writer thread MUST attempt one convergence action: create the highest-priority
+missing desired index, or drop the lowest-priority material index that is no
+longer in the desired set. The writer then rechecks write pressure before
+attempting another convergence action.
 
 Index creation uses `CREATE INDEX IF NOT EXISTS`. Index removal uses `DROP INDEX IF EXISTS`. Both operations run on the shard's writer thread.
 
@@ -83,13 +89,29 @@ The `timestamp` column is always indexed and is not subject to adaptive manageme
 
 ### Payload field indexes
 
-Any payload field path that appears in a WHERE predicate is a candidate for an expression index. Expression indexes use SQLite's expression index feature with a registered `msgpack_extract` function:
+Any non-colliding queryable payload field path that appears in a WHERE predicate
+is a candidate for an expression index. Payload paths whose top-level key
+collides with an event header field, whose map keys are not valid path segments,
+or whose path is otherwise suppressed by the query-language flattening rule
+(§8.1) MUST NOT receive expression indexes.
 
-```sql
-CREATE INDEX idx_payload_granted_access ON events(msgpack_extract(payload, '$.granted_access'))
-```
+Payload expression indexes are an implementation optimisation, not a semantic
+authority. An implementation MAY use SQLite expression indexes with deterministic
+payload-extraction functions, generated columns, or an equivalent SQLite-backed
+mechanism. Whatever mechanism is used, it MUST implement the same field
+resolution and flattening rules as §8.1. If an index expression cannot implement
+a predicate's query-language comparison semantics exactly, eventd MUST use the
+index only to narrow candidate rows and MUST apply the final query-language
+predicate evaluation after loading the row. In particular, SQLite's native
+dynamic-type equality and ordering MUST NOT replace the string case-folding,
+numeric, binary, array, NULL, and missing-field semantics defined in §8.1.
 
-The expression index extracts the specified field from the msgpack payload on every INSERT and indexes the result. SQLite's query optimiser uses the expression index automatically when the same extraction expression appears in a WHERE clause.
+The expression index extracts the specified field from the msgpack payload on
+every INSERT and indexes a deterministic private key for that field. The exact
+key bytes are internal to eventd and are not part of the external storage
+contract. Rows where the field is not queryable, is suppressed, or is absent
+from the payload MUST index as NULL or be otherwise excluded in a way that
+preserves query-language semantics.
 
 Payload field indexes follow the same priority ordering, pressure-based shedding, and convergence rules as header column indexes. They are part of the same global desired index set.
 
@@ -97,7 +119,19 @@ The raw `payload` column MUST NOT receive a plain column index -- indexing an op
 
 ## Index naming
 
-Index names MUST follow the convention `idx_events_<column>` for header column indexes (e.g., `idx_events_event_type`, `idx_events_process_guid`). For payload expression indexes, dots in the field path are replaced with underscores: `idx_events_payload_<path>` (e.g., `idx_events_payload_granted_access`, `idx_events_payload_source_name` for the path `source.name`).
+Index names MUST follow the convention `idx_events_<column>` for header column
+indexes (e.g., `idx_events_event_type`, `idx_events_process_guid`). Payload
+expression index names MUST be derived from the payload field GUID (§13) to avoid
+collisions and invalid SQLite identifier characters:
+
+```text
+idx_events_payload_<field_guid_hex>
+```
+
+`field_guid_hex` is the UUID v5 field GUID for the flattened payload path,
+rendered as 32 lowercase hexadecimal digits with braces and hyphens removed. For
+example, the path `source.name` uses
+`idx_events_payload_<uuid_v5(EVENTD_FIELD_NAMESPACE, "source.name") as 32 hex>`.
 
 ## Configuration
 
@@ -110,7 +144,7 @@ Index names MUST follow the convention `idx_events_<column>` for header column i
 
 ## Persistence
 
-The global desired index set, query frequency counters, and adaptive rollup state (§7.4) MUST be persisted to a dedicated metadata database in the event store directory. This database is independent of the shard databases and survives shard reconfiguration.
+The global desired index set, query frequency counters, adaptive rollup state (§7.4), and diagnostic sequence checkpoints MUST be persisted to a dedicated metadata database in the event store directory. This database is independent of the shard databases and survives shard reconfiguration.
 
 ### Metadata database
 
@@ -151,20 +185,43 @@ The database MUST contain the following tables:
 | `function_window` | TEXT PRIMARY KEY | Composite key matching `rollup_counters`. |
 | `priority` | INTEGER NOT NULL | Priority rank. |
 
+**`sequence_checkpoints` table:**
+
+| Column | Type | Description |
+|---|---|---|
+| `boot_id` | BLOB NOT NULL | 16-byte boot ID that the checkpoint applies to. |
+| `cpu_id` | INTEGER NOT NULL | CPU ID. |
+| `sequence` | INTEGER NOT NULL | Last committed KMES sequence number for (`boot_id`, `cpu_id`) when the checkpoint was written. |
+| `updated_at` | INTEGER NOT NULL | Wall clock time when the checkpoint was written, in nanoseconds since Unix epoch. |
+
+The primary key MUST be (`boot_id`, `cpu_id`). `sequence_checkpoints` is diagnostic state only. Startup sequence resumption MUST derive resume points from committed event rows, not from this table.
+
 **`meta` table:**
 
 | Column | Type | Description |
 |---|---|---|
 | `key` | TEXT PRIMARY KEY | Metadata key. |
-| `value` | TEXT NOT NULL | Metadata value. |
+| `value` | BLOB NOT NULL | Metadata value. String values are stored as UTF-8 bytes; binary values are stored as raw bytes. |
 
-Required `meta` entries: `schema_version` (value `1`), `created_at` (ISO 8601), `admin_sd` (self-relative Security Descriptor in binary, controlling who can execute the INDEX command and other administrative operations on the indexing policy).
+Required `meta` entries:
+
+| Key | Value encoding | Description |
+|---|---|---|
+| `schema_version` | UTF-8 string `1` | Metadata database schema version for this specification. |
+| `created_at` | UTF-8 string | UTC creation time formatted as `YYYY-MM-DDTHH:MM:SSZ`. |
+| `admin_sd` | binary | Self-relative Security Descriptor controlling who can execute the INDEX command and other administrative operations on the indexing policy. |
 
 The default `admin_sd` grants access to SYSTEM and Administrators. eventd MUST check the caller's token against this SD when processing an INDEX command via `kacs_access_check` with `EVENTD_READ` as the desired access right.
 
 ### Concurrency
 
-The metadata database has a single writer: the index/rollup policy logic thread. Query handlers write to in-memory counters only; the policy logic flushes counters to the database at each policy interval. Writer threads and query handlers read the desired index/rollup sets from memory, not from the database.
+The metadata database has a single writer connection owned by the index/rollup policy logic thread. Query handlers write to in-memory counters only; the policy logic flushes counters to the database at each policy interval. Writer threads and query handlers read the desired index/rollup sets from memory, not from the database. Graceful shutdown writes `sequence_checkpoints` through the same writer connection after normal policy activity has stopped.
+
+The policy logic thread MUST trigger a WAL checkpoint when the metadata
+database WAL reaches or exceeds `WalCheckpointPages` pages, using
+`SQLITE_CHECKPOINT_PASSIVE` mode. If a passive checkpoint cannot make progress
+because active readers hold pages, the policy logic MUST NOT block -- it retries
+the checkpoint after a later metadata write.
 
 The metadata database is opened read-write by the policy logic thread and is not accessed by any other thread at the database level. No concurrency control beyond SQLite's built-in WAL mode is required.
 
@@ -173,9 +230,13 @@ The metadata database is opened read-write by the policy logic thread and is not
 On startup, eventd MUST:
 
 1. Open `eventd-meta.db` in the event store directory. Create it if it does not exist.
-2. Verify the schema version. If unrecognised, log an error and recreate the database (adaptive state is lost but not critical).
+2. Verify the schema version and required `meta` entries. If the schema version
+   is missing or unrecognised, or if any required table or `meta` entry is
+   missing or malformed, log an error and recreate the database from defaults
+   (adaptive state is lost but not critical).
 3. Load `index_counters` and `rollup_counters` into the in-memory counter structures.
 4. Load `desired_indexes` and `desired_rollups` into the in-memory desired sets.
-5. Discover material indexes from each shard database's schema and compare against the desired sets.
+5. Load `sequence_checkpoints` for diagnostics only. These rows MUST NOT be used for sequence resumption.
+6. Discover material indexes from each shard database's schema and compare against the desired sets.
 
 The set of material indexes in each shard is discovered from the database schema on startup. eventd resumes convergence from whatever state each shard is in -- it does not drop or rebuild indexes on startup.

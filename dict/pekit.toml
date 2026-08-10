@@ -1,0 +1,125 @@
+# =============================================================================
+# Pekit — recipe-driven build and packaging tool
+# =============================================================================
+
+[[terms]]
+term = "Pekit"
+definition = "The recipe-driven build and packaging tool for Peios. Reads declarative recipes, resolves sources and versions, plans every run before any side effect, then builds, tests, installs, packages, and publishes .peipkg files. Supersedes the old peipkg-build recipe system."
+category = "General"
+product = "pekit"
+
+# ---------------------------------------------------------------------------
+# Recipes
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Recipe"
+definition = "A directory holding pekit.toml — the recipe proper: source, build/test/install/clean targets, shared env — plus optional package, env, and keyring files beside it. Only pekit.toml is required. Pekit locates the recipe by walking up from the current working directory."
+category = "Recipes"
+product = "pekit"
+
+[[terms]]
+term = "Target"
+definition = "A shell command plus scheduling metadata (needs, clear_out, and for build targets dependencies) in one of the recipe's build, test, install, or clean sections. A bare section defines a single target named main; sub-tables define named targets. needs edges form a DAG that fixes staging order."
+category = "Recipes"
+product = "pekit"
+
+[[terms]]
+term = "out_dir"
+aliases = ["Managed Output Directory"]
+definition = "The recipe's managed output directory (default \"out\"). Holds fetched sources, per-target staging directories, and written .peipkg files. pekit clean may remove it wholesale, so nothing precious belongs there."
+category = "Recipes"
+product = "pekit"
+
+[[terms]]
+term = "Wrapper"
+definition = "A single command, declared under [wrap], that every target runs inside. The string must contain exactly one {{command}} placeholder, which pekit replaces with the target's script. Used to enter a toolchain shell, a container, or a sandbox."
+category = "Recipes"
+product = "pekit"
+
+[[terms]]
+term = "Delegation"
+definition = "Opting in, via the [delegate] table (or delegate = true), to borrowing build targets, env, wrap, or package definitions from a pekit.toml inside the materialised source tree. The merge is additive with the base recipe winning; it only happens when the source tree is a different directory from the recipe."
+category = "Recipes"
+product = "pekit"
+
+# ---------------------------------------------------------------------------
+# Sources
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Source"
+definition = "Where a recipe's code comes from, declared under [source.*]. Three kinds: git (clone a repository and check out a ref), url (download a file, optionally extracting an archive), and local (an on-disk override directory). A recipe may have at most one reproducible source (git or url); with none, the recipe directory itself is the tree."
+category = "Sources"
+product = "pekit"
+
+[[terms]]
+term = "Source Root"
+aliases = ["Source Tree"]
+definition = "The directory targets execute in and the base that @source: package references resolve against, produced by materialising the recipe's source. Exposed to target commands as PEKIT_SOURCE_ROOT."
+category = "Sources"
+product = "pekit"
+
+[[terms]]
+term = "Provenance Ref"
+definition = "The record of exactly what was materialised for a source: recipe:<recipe-root>, local:<path>, git:<url>@<commit>, or url:<url>#<checksum>. A URL source without a checksum is marked unanchored — its tree is not pinned to a digest."
+category = "Sources"
+product = "pekit"
+
+# ---------------------------------------------------------------------------
+# Versions
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Version Selector"
+definition = "The invocation flags that decide which versions a run covers: --version, --latest, and --all-versions, resolved against the versions the source enumerates upstream. build, package, and publish iterate over every resolved version; test and install require the selector to resolve to exactly one."
+category = "Versions"
+product = "pekit"
+
+# ---------------------------------------------------------------------------
+# Packaging
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Package Member"
+definition = "One package definition in a recipe: the base package.pekit.toml or a named <name>.package.pekit.toml file. The package and publish commands select members the way other commands select targets; --all selects every member."
+category = "Packaging"
+product = "pekit"
+
+[[terms]]
+term = "Source Ref"
+definition = "The left-hand key in a package file's [files] mapping, naming where a file comes from: a build ref (target:path, drawing from that build target's staged output), a rooted ref (@source:, @recipe:, @workspace:), or a plain path resolved against the declaring file's owner."
+category = "Packaging"
+product = "pekit"
+
+[[terms]]
+term = "Staging Directory"
+definition = "The per-target directory, exposed to the target command as PEKIT_OUT, where a build writes its artifacts. Builds a command needs are staged first in dependency order, and staged output is what package files draw from."
+category = "Packaging"
+product = "pekit"
+
+# ---------------------------------------------------------------------------
+# Environment and secrets
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Env File"
+definition = "A supporting file beside the recipe (env.pekit.toml, or <name>.env.pekit.toml for a named profile) carrying an [env] block, a [wrap] wrapper, a dependency_provider, or any combination. Selected with --env; the default profile main loads env.pekit.toml when present."
+category = "Environment"
+product = "pekit"
+
+[[terms]]
+term = "Keyring"
+definition = "A named collection of secrets and keys, from a <name>.keyring.pekit.toml file or --keyring.x.y= literals, exported into the build as PEKIT_KEYRING_* environment variables. A keyring export that collides with a user or managed variable is an error, never a silent override."
+category = "Environment"
+product = "pekit"
+
+# ---------------------------------------------------------------------------
+# Workspaces
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Workspace"
+definition = "A collection of recipes driven as one unit, declared by a workspace.pekit.toml with include/exclude member globs and shared [env], [wrap], and [policy]. pekit workspace delegates a single command across every member — how a distro-scale tree of packages is built in one go."
+category = "Workspaces"
+product = "pekit"

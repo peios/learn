@@ -12,7 +12,7 @@ related:
 
 Every peipkg command runs against a **root** — a subtree it treats as a complete Peios installation. By default that root is `/`, the running system. The [`--root DIR`](~peios/package-management/overview) global option points peipkg at a different one: an image mounted at `DIR`, an offline system under maintenance, a tree being built.
 
-A single bare path is enough when there is exactly one alternate tree and you always spell it out in full. It stops being enough the moment a system is really *several* cooperating trees that are built and kept current together. Peios's **dynamic initramfs** is the case that motivates this page: a real system root at `/` and an initramfs image at `boot/initramfs`, both assembled from ordinary packages, both upgraded by the *same* package manager. Passing `--root boot/initramfs` on every command that touches the image — and remembering that path everywhere — is exactly the friction named roots remove.
+A single bare path is enough when there is exactly one alternate tree and you always spell it out in full. It stops being enough when a system is several cooperating trees that are built and kept current together. Peios's **dynamic initramfs** is the case that motivates this page: a real system root at `/` and an initramfs image at `boot/initramfs`, both assembled from ordinary packages, both upgraded by the same package manager. Passing `--root boot/initramfs` on every command that touches the image — and remembering that path everywhere — is the friction named roots remove.
 
 So `--root` generalises. A root can **register** other roots under it by name, reference them by that name instead of a path, compose those names by dotting, install a dependency into a *different* root than its depender, and upgrade every nested root in one command. The mechanism is deliberately general — the initramfs is one arrangement it expresses, not a special case wired into the tool.
 
@@ -75,7 +75,7 @@ peipkg root show <reference> [--json]
 peipkg root add <name> <path>
 ```
 
-Register a named root in the current root's registry. `<name>` is a **single** root segment — it must match `[a-z0-9][a-z0-9_-]*` and must not contain a dot; you register one name at a time, not a dotted chain. `<path>` is stored relative to the current root. There are no flags.
+Register a named root in the current root's registry. `<name>` is a single root segment — it must match `[a-z0-9][a-z0-9_-]*` and must not contain a dot; you register one name at a time, not a dotted chain. `<path>` is stored relative to the current root. There are no flags.
 
 ```
 $ peipkg root add initramfs boot/initramfs
@@ -87,7 +87,7 @@ $ peipkg root add initramfs boot/initramfs
 peipkg root remove <name> [--purge]
 ```
 
-Unregister a named root. By default this removes only the **registry entry** — the files on disk are left exactly where they are, so the subtree survives and can be re-registered. `--purge` additionally deletes the named root's filesystem tree.
+Unregister a named root. By default this removes only the **registry entry** — the files on disk are left in place, so the subtree survives and can be re-registered. `--purge` additionally deletes the named root's filesystem tree.
 
 | Option | Effect |
 |---|---|
@@ -133,20 +133,20 @@ A package's manifest can declare the root a top-level install of it should land 
 $ peipkg install live-boot
 ```
 
-If `live-boot`'s manifest sets `default_root: initramfs`, this installs into the `initramfs` root even though no `--root` was given. The package knows where it belongs; you do not have to.
+If `live-boot`'s manifest sets `default_root: initramfs`, this installs into the `initramfs` root even though no `--root` was given. The package's manifest records where it belongs, so you do not have to specify it.
 
 Two rules keep this predictable:
 
-- **It applies only when no explicit `--root` was given.** Passing `--root` — to any value, including a named one — is you stating the target outright, and it **suppresses** `default_root` re-rooting entirely. An explicit root always wins.
-- **The packages in one command must agree.** If the packages named in a single install declare **two or more distinct** default roots, peipkg cannot pick one and does not guess — the command is **rejected** as an error. Split it into one command per target.
+- **It applies only when no explicit `--root` was given.** Passing `--root` with any value, including a named one, states the target outright and suppresses `default_root` re-rooting entirely. An explicit root always wins.
+- **The packages in one command must agree.** If the packages named in a single install declare two or more distinct default roots, peipkg cannot pick one and does not guess — the command is rejected as an error. Split it into one command per target.
 
 `default_root` only chooses a target; it does not create or resolve anything the registry could not already reach. The chosen root is resolved through the registries like any other named reference.
 
 ## Cascading upgrade
 
-By default `peipkg upgrade` reconciles the current root **and every named root nested under it, recursively** — the whole tree of roots, in one command. Run it against `/` on a dynamic-initramfs system and both `/` and `boot/initramfs` are brought current together.
+By default `peipkg upgrade` reconciles the current root and every named root nested under it, recursively — the whole tree of roots, in one command. Run it against `/` on a dynamic-initramfs system and both `/` and `boot/initramfs` are brought current together.
 
-Each root is upgraded as an **independent transaction** that **continues on error**: peipkg walks the tree, upgrades each root on its own, and prints a **per-root summary**. One root's failure does not abort the others — a broken upgrade in `initramfs` leaves `/`'s upgrade to complete and report normally, and vice versa. You get one summary per root and a clear picture of which succeeded.
+Each root is upgraded as an independent transaction that continues on error: peipkg walks the tree, upgrades each root on its own, and prints a per-root summary. One root's failure does not abort the others — a broken upgrade in `initramfs` leaves `/`'s upgrade to complete and report normally, and vice versa. You get one summary per root and a clear picture of which succeeded.
 
 Each of those per-root upgrades is an ordinary transaction with the full atomic guarantee of [Transactions and recovery](~peios/package-management/transactions-and-recovery); the cascade runs several of them, it does not weaken any one.
 
@@ -158,32 +158,32 @@ Use `--no-recurse` when you deliberately want to move just one root — for exam
 
 ## Cross-root dependencies
 
-A dependency can be routed into a **different** root than the package that declares it. A manifest writes this with `IN`:
+A dependency can be routed into a different root than the package that declares it. A manifest writes this with `IN`:
 
 ```
 Depends: foo IN initramfs
 ```
 
-This says "I depend on `foo`, and `foo` belongs in the `initramfs` root" — the root name is resolved through the registries from the depending package's root. It is what lets a whole root be **composed out of ordinary packages** through the dependency graph: a single package installed into `/` can pull the pieces of the initramfs into `initramfs` as its dependencies, so the image is built by the same resolver and the same packages as everything else. An image builder starting from nothing can assemble an entire multi-root arrangement like this offline, from a declarative manifest, with the separate `peipkg-compose` binary — see [Composing a root](~peios/package-management/composing-a-root).
+This says "I depend on `foo`, and `foo` belongs in the `initramfs` root" — the root name is resolved through the registries from the depending package's root. It is what lets a whole root be composed out of ordinary packages through the dependency graph: a single package installed into `/` can pull the pieces of the initramfs into `initramfs` as its dependencies, so the image is built by the same resolver and the same packages as everything else. An image builder starting from nothing can assemble an entire multi-root arrangement like this offline, from a declarative manifest, with the separate `peipkg-compose` binary — see [Composing a root](~peios/package-management/composing-a-root).
 
-**`install` is the only verb that crosses roots.** When resolution produces a plan whose changes land in more than one root, that plan is committed as a **two-phase commit** across the participating roots, under a single generated **cross-root transaction id** that ties the per-root pieces together. Either the change lands in every participating root or in none — the multi-root plan is atomic as a whole, not merely per root.
+`install` is the only verb that crosses roots. When resolution produces a plan whose changes land in more than one root, that plan is committed as a **two-phase commit** across the participating roots, under a single generated **cross-root transaction id** that ties the per-root pieces together. Either the change lands in every participating root or in none — the multi-root plan is atomic as a whole, not merely per root.
 
-A plan that reaches beyond the current root says so, loudly, before you approve it:
+A plan that reaches beyond the current root announces it before you approve:
 
-- a prominent **`note: this also changes other roots: ...`** line naming the other roots the plan touches, and
-- a per-line **`-> <root>`** tag on each plan entry that lands outside the current root, so you can see at a glance which change goes where.
+- a `note: this also changes other roots: ...` line naming the other roots the plan touches, and
+- a per-line `-> <root>` tag on each plan entry that lands outside the current root, so you can see at a glance which change goes where.
 
-You are never taken across a root boundary silently; a cross-root plan announces itself and shows its routing.
+You are never taken across a root boundary silently; a cross-root plan always shows its routing.
 
 ## Cross-root undo and recovery
 
 Because a cross-root install commits as a unit, it reverses as a unit.
 
-**`undo`** on a cross-root transaction reverses **all** of its participating roots together. There is no way to walk back only the `/` half of a change that also touched `initramfs` — the cross-root transaction id binds the pieces, and `undo` reverses the whole. See [Keeping a system current](~peios/package-management/keeping-a-system-current) for `undo` in general.
+**`undo`** on a cross-root transaction reverses all of its participating roots together. There is no way to walk back only the `/` half of a change that also touched `initramfs` — the cross-root transaction id binds the pieces, and `undo` reverses the whole. See [Keeping a system current](~peios/package-management/keeping-a-system-current) for `undo` in general.
 
-**`recover`** understands cross-root transactions too. It reconciles them across **every reachable root**, walking the registry outward from the current root to find each participant. A cross-root commit that was torn by an interruption is resolved the same way a single-root one is — with one addition that follows from the two-phase commit: a torn commit is **rolled back** if it was interrupted before its point of no return, or **rolled forward** to completion if it had already passed that point. Either way every participating root ends in the same, consistent state.
+**`recover`** understands cross-root transactions too. It reconciles them across every reachable root, walking the registry outward from the current root to find each participant. A cross-root commit that was torn by an interruption is resolved the same way a single-root one is — with one addition that follows from the two-phase commit: a torn commit is rolled back if it was interrupted before its point of no return, or rolled forward to completion if it had already passed that point. Either way every participating root ends in the same, consistent state.
 
-This is the single-root recovery model of [Transactions and recovery](~peios/package-management/transactions-and-recovery) extended across roots: the same "one instant divides *nothing happened* from *it is done*" guarantee, now applied to a commit that spans several trees at once. Read that page for the underlying transaction model this builds on.
+This is the single-root recovery model of [Transactions and recovery](~peios/package-management/transactions-and-recovery) extended across roots: the same commit-instant guarantee, now applied to a commit that spans several trees at once. Read that page for the underlying transaction model this builds on.
 
 ## Exit status
 

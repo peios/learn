@@ -22,6 +22,8 @@ LOGS                                -- all logs
 
 FROM is syntactic sugar for `WHERE origin == "..."` (single) or `WHERE origin IN ("...", "...")` (multiple).
 
+Origins may be unquoted identifiers when they match the lexical rules in §8.1. Origins containing other characters MUST be quoted strings.
+
 ## ERROR ONLY
 
 Filters to log lines from stderr (is_error == true).
@@ -55,6 +57,12 @@ LOGS WHERE message CONTAINS "error"         -- equivalent to CONTAINING "error"
 > [!INFORMATIVE]
 > CONTAINING performs a substring scan, not a full-text search. When combined with SINCE, the scan is limited to the matching time range (the timestamp index narrows the scan). Full-text indexing (FTS) is a candidate for future versions.
 
+## Projection
+
+SELECT controls which fixed log fields appear in non-aggregation log result
+records. Multiple SELECT clauses are additive, as for event queries. If no
+SELECT is present, all fixed log fields are included.
+
 ## Aggregation
 
 COUNT BY and TOP N BY work the same as for events:
@@ -64,9 +72,17 @@ LOGS SINCE 1h ago COUNT BY origin           -- log volume per service
 LOGS SINCE 1h ago TOP 5 BY origin           -- most verbose services
 ```
 
+Grouping equality and deterministic tie ordering are defined in §8.1.
+Aggregation result types are the same as for event queries (§8.2).
+Aggregation queries have fixed output schemas as defined for event queries.
+SELECT MUST NOT be combined with `COUNT BY`, `TOP N BY`, `DISTINCT`, or `GROUP`.
+`DISTINCT ... STREAM` is permitted and uses the distinct-value streaming
+semantics defined in §8.7.
+
 ## Sorting
 
 If no SORT is present, results are ordered by timestamp descending (most recent first).
+Ties are resolved by the deterministic ordering rules in §8.1.
 
 ## Examples
 
@@ -97,5 +113,5 @@ LOGS FROM loregd STREAM
 
 Loregd logs during high memory usage:
 ```
-LOGS FROM loregd WHERE METRIC mem.usage[service="loregd"] > 90
+LOGS FROM loregd SINCE 1h ago WHERE METRIC mem.usage[service="loregd"] > 90
 ```

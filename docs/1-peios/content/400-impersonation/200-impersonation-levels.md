@@ -14,6 +14,8 @@ There is one rule worth pinning before the catalog: **the level is set by the cl
 
 ## The four levels
 
+The numeric values are also catalogued in [Other constants](~peios/constants-and-catalogs/other-constants).
+
 | Value | Name | What a server may do |
 |---|---|---|
 | 0 | **Anonymous** | Nothing identity-related. The impersonation token has the Anonymous SID as its user; the server learns nothing about the actual client. |

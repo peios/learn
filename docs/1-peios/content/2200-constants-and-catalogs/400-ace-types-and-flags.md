@@ -38,7 +38,7 @@ The full catalog of `AceType` values:
 | 0x13 | `SYSTEM_SCOPED_POLICY_ID_ACE_TYPE` | Single-SID | Reference to a CAAP by policy SID. |
 | 0x14 | `SYSTEM_PROCESS_TRUST_LABEL_ACE_TYPE` | Single-SID | Object's PIP trust label. SID is from `S-1-19-*`. |
 
-ACE type values 0x15 and beyond are unused / reserved.
+Value 0x15 (`SYSTEM_ACCESS_FILTER_ACE_TYPE`) is defined in the uapi header for format parity but has no v0.20 semantics; values beyond it are unused. Unrecognised ACE types are silently skipped during evaluation and preserved on round-trip serialisation.
 
 ## ACE families
 
@@ -115,46 +115,9 @@ The 16-bit `Control` field in an SD header:
 
 Writers should use the minimum revision necessary for the ACEs they include. Parsers accept either. Other values are rejected with `-EINVAL`.
 
-## Standard generic right name → bit mapping
+## Access rights
 
-For reference, the four generic right flags:
-
-| Flag | Value |
-|---|---|
-| `GENERIC_READ` | 0x80000000 |
-| `GENERIC_WRITE` | 0x40000000 |
-| `GENERIC_EXECUTE` | 0x20000000 |
-| `GENERIC_ALL` | 0x10000000 |
-
-These expand to object-specific bits via the object type's GenericMapping table — see [Access mask bits](~peios/constants-and-catalogs/access-mask-bits).
-
-## Standard rights
-
-These access rights are shared across all object types:
-
-| Right | Value |
-|---|---|
-| `DELETE` | 0x00010000 |
-| `READ_CONTROL` | 0x00020000 |
-| `WRITE_DAC` | 0x00040000 |
-| `WRITE_OWNER` | 0x00080000 |
-| `SYNCHRONIZE` | 0x00100000 |
-| `STANDARD_RIGHTS_REQUIRED` | 0x000F0000 (DELETE | READ_CONTROL | WRITE_DAC | WRITE_OWNER) |
-| `STANDARD_RIGHTS_READ` | 0x00020000 (READ_CONTROL) |
-| `STANDARD_RIGHTS_WRITE` | 0x00020000 (READ_CONTROL) |
-| `STANDARD_RIGHTS_EXECUTE` | 0x00020000 (READ_CONTROL) |
-| `STANDARD_RIGHTS_ALL` | 0x001F0000 (all five) |
-
-`STANDARD_RIGHTS_REQUIRED` is the conventional minimum mask included in `*_ALL_ACCESS` constants. The other STANDARD_RIGHTS_* values are aliases.
-
-## Special rights
-
-| Right | Value | Meaning |
-|---|---|---|
-| `ACCESS_SYSTEM_SECURITY` | 0x01000000 | Read/write the SACL. Gated by SeSecurityPrivilege. |
-| `MAXIMUM_ALLOWED` | 0x02000000 | Request flag; not a real right. AccessCheck returns the maximum grantable mask. |
-
-`MAXIMUM_ALLOWED` must not appear in an ACE — it is a desired-access modifier only.
+The value catalogues for generic rights, standard rights (and the `STANDARD_RIGHTS_*` aliases), the special rights (`ACCESS_SYSTEM_SECURITY`, `MAXIMUM_ALLOWED`), and the per-object-type rights are all on [Access mask bits](~peios/constants-and-catalogs/access-mask-bits). The byte layout of the 32-bit mask itself is in [Security descriptors (wire format)](~peios/wire-formats-reference/security-descriptors).
 
 ## Mandatory integrity label policy bits
 
@@ -172,27 +135,23 @@ The flags specific to audit and alarm ACEs — `SUCCESSFUL_ACCESS_ACE_FLAG` (0x4
 
 ## Conditional ACE expression magic
 
-The 4-byte magic at the start of conditional ApplicationData:
-
-| Bytes | ASCII | Meaning |
-|---|---|---|
-| `0x61 0x72 0x74 0x78` | "artx" | Marks the start of a conditional expression. |
-
-Absent or truncated magic causes the expression to evaluate to UNKNOWN.
+Conditional ApplicationData starts with the 4-byte magic `0x61 0x72 0x74 0x78` ("artx"); absent or truncated magic causes the expression to evaluate to UNKNOWN. The bytecode encoding — including the full opcode catalogue — is owned by [Conditional ACE bytecode](~peios/wire-formats-reference/conditional-ace-bytecode).
 
 ## Claim value type values
 
 For claim entries (in resource attribute ACEs and token claims):
 
-| Value | Type | Encoding |
+| Value | Type | Notes |
 |---|---|---|
-| 0x0001 | `INT64` | 8 bytes signed LE |
-| 0x0002 | `UINT64` | 8 bytes unsigned LE |
-| 0x0003 | `STRING` | Length-prefixed UTF-16LE |
+| 0x0001 | `INT64` | Signed 64-bit integer |
+| 0x0002 | `UINT64` | Unsigned 64-bit integer |
+| 0x0003 | `STRING` | UTF-16LE string |
 | 0x0004 | `FQBN` | Reserved (not supported in v0.20) |
-| 0x0005 | `SID` | Length-prefixed binary SID |
-| 0x0006 | `BOOLEAN` | 8 bytes; non-zero is TRUE |
-| 0x0010 | `OCTET` | Length-prefixed bytes |
+| 0x0005 | `SID` | Binary SID |
+| 0x0006 | `BOOLEAN` | Stored as u64; non-zero is TRUE |
+| 0x0010 | `OCTET` | Byte array |
+
+The per-type value-record encodings are part of the claim entry wire format — see [Token and session specs](~peios/wire-formats-reference/token-and-session-specs).
 
 ## Claim flags
 
@@ -207,14 +166,4 @@ For claim entries:
 
 ## Limits
 
-Sizes that apply to ACLs and SDs:
-
-| Limit | Value |
-|---|---|
-| Max SD size | 65,535 bytes |
-| Max ACL size | 64 KB (16-bit AclSize) |
-| ACE AceSize granularity | Multiple of 4 bytes |
-| Min ACL header | 8 bytes |
-| Min ACE header | 4 bytes |
-| Min Single-SID ACE | 12 bytes (header + mask + 8-byte SID minimum) — varies with SID size |
-| Conditional expression recommended max stack depth | 1024 |
+The size limits that apply to ACLs and SDs are catalogued in [Other constants](~peios/constants-and-catalogs/other-constants) under "Size and count limits"; the byte-layout constraints they derive from are in [Security descriptors (wire format)](~peios/wire-formats-reference/security-descriptors).

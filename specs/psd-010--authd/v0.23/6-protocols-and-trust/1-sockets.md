@@ -10,8 +10,8 @@ provides message framing and `SCM_RIGHTS` fd passing.
 | Socket | Owner / listener | Purpose | Connect access |
 |---|---|---|---|
 | `/run/authd.sock` | authd | Client door: Logon and source-transparent requests (§6.3) | Authenticated Users + SYSTEM/services |
-| `/run/authd/sources/<source>.sock` | the source (e.g. lpsd → `…/lpsd.sock`) | Verify/resolve interface (§4, §5.1) | authd only |
-| `/run/lpsd.sock` | lpsd | Administration interface (§7.2) | Administrators + SYSTEM (+ Authenticated Users for self-service) |
+| `/run/authd/sources/<source>.sock` | the source (e.g. lpsd → `…/lpsd.sock`) | Source interface: verify/resolve + forwarded self-service ChangePassword (§4, §5.1, §7.2) | authd only |
+| `/run/lpsd.sock` | lpsd | Administration and setup-control interface (§7.1, §7.2) | Administrators + SYSTEM |
 
 The connect-access column lists the allow-ACE SIDs; the exact security
 descriptor for each socket — allow-ACEs by SID, deny by absence — and for
@@ -29,14 +29,15 @@ identities they resolve (§5.2), this channel MUST be protected in **both
 directions**:
 
 - The directory's own SD (defined in §9) MUST restrict entry creation to
-  the specific trusted source identities (e.g. only lpsd's service SID may
-  create `lpsd.sock`), and socket creation MUST be exclusive so an
-  impostor cannot pre-create or recreate a source's socket (e.g. in the
-  window before the source starts or after it crashes).
-- authd MUST authenticate every source it connects to: obtain the source
-  socket's owner identity and verify it against an expected-identity
-  allowlist (the mirror of the source checking the peer is authd), and
-  refuse any source socket not owned by its expected identity.
+  the specific trusted source identities (for v0.23, lpsd's SYSTEM service
+  token carrying the per-service SID for `lpsd`), and socket creation MUST
+  be exclusive so an impostor cannot pre-create or recreate a source's
+  socket (e.g. in the window before the source starts or after it crashes).
+- authd MUST authenticate every source it connects to: obtain the connected
+  peer token with `kacs_open_peer_token`, verify it against the static
+  source allowlist of §9 (the mirror of the source checking the peer is
+  authd), and refuse any source socket whose peer token lacks the expected
+  source identity.
 
 Without the second control, a rogue process that won the race to create a
 source socket would *become* a source — minting arbitrary identities and

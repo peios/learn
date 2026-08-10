@@ -14,6 +14,8 @@ There are six types in v0.20.
 
 ## The six types
 
+The numeric values are also catalogued in [Other constants](~peios/constants-and-catalogs/other-constants).
+
 | Value | Name | What it means |
 |---|---|---|
 | 2 | **Interactive** | The user signed in at the console, an SSH session, or some other interactive channel. The most common type for human users. |

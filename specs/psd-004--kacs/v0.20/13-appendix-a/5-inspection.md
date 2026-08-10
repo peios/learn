@@ -12,9 +12,9 @@ title: Inspection Interfaces
 
 **`/sys/kernel/security/kacs/self`** — opens a query-only inspection handle bound to the calling thread's effective token. It follows the same fixed-`TOKEN_QUERY`, query-only rules as the procfs token inspection nodes. It is exposed as a world-readable securityfs node rather than as a KACS-SD-protected object, because it can return only the caller's own effective token through a fixed query-only handle. Opening the node MUST fail closed if the caller has no effective token.
 
-**`/sys/kernel/security/kacs/sessions`** — lists active logon sessions with session ID, user SID, logon type, auth package, and logon time. Protected by an SD granting BUILTIN\Administrators and SYSTEM FILE_READ_DATA. Access is enforced via normal AccessCheck against this SD — no special privilege check.
+**`/sys/kernel/security/kacs/sessions`** — lists active LogonSessions with LogonSession ID, user SID, logon type, auth package, and logon time. Protected by an SD granting BUILTIN\Administrators and SYSTEM FILE_READ_DATA. Access is enforced via normal AccessCheck against this SD — no special privilege check.
 
-The sessions listing is a UTF-8 text ABI. Each active published session is
+The sessions listing is a UTF-8 text ABI. Each active published LogonSession is
 reported as one line:
 
 ```text

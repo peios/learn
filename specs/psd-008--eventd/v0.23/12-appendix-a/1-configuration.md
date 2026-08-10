@@ -17,6 +17,12 @@ These keys MUST exist for eventd to start. There are no compiled-in defaults.
 | LogSocketPath | REG_SZ | Unix socket path for log ingestion. |
 | MetricSocketPath | REG_SZ | Unix socket path for metric ingestion. |
 
+## SQLite storage
+
+| Key | Type | Default | Valid range | Description |
+|---|---|---|---|---|
+| WalCheckpointPages | REG_DWORD | 1000 | 100--100000 | SQLite WAL page threshold that triggers a passive checkpoint on event shard, log, metric, and metadata databases. |
+
 ## Event ingestion
 
 | Key | Type | Default | Valid range | Description |
@@ -31,6 +37,7 @@ These keys MUST exist for eventd to start. There are no compiled-in defaults.
 |---|---|---|---|---|
 | LogMaxBatchSize | REG_DWORD | 5000 | 100--100000 | Maximum log records per transaction. |
 | LogMaxBatchLatencyMs | REG_DWORD | 500 | 10--5000 | Maximum ms before a log batch is committed. |
+| MaxLogDatagramBytes | REG_DWORD | 262144 | 4096--1048576 | Maximum accepted log ingestion datagram size in bytes. |
 
 ## Metric ingestion
 
@@ -38,6 +45,7 @@ These keys MUST exist for eventd to start. There are no compiled-in defaults.
 |---|---|---|---|---|
 | MetricMaxBatchSize | REG_DWORD | 5000 | 100--100000 | Maximum metric samples per transaction. |
 | MetricMaxBatchLatencyMs | REG_DWORD | 1000 | 10--5000 | Maximum ms before a metric batch is committed. |
+| MaxMetricDatagramBytes | REG_DWORD | 262144 | 4096--1048576 | Maximum accepted metric ingestion datagram size in bytes. |
 
 ## Adaptive indexing (events)
 
@@ -61,6 +69,7 @@ These keys MUST exist for eventd to start. There are no compiled-in defaults.
 | Key | Type | Default | Valid range | Description |
 |---|---|---|---|---|
 | AdaptiveRollupWindowHours | REG_DWORD | 48 | 1--168 | Rolling window for rollup query frequency measurement. |
+| AdaptiveRollupScalarWindowSeconds | REG_DWORD | 300 | 60--86400 | Base rollup window used when scalar AVG/MIN/MAX/SUM range queries trigger rollup creation. |
 | AdaptiveRollupCreateThreshold | REG_DWORD | 50 | 10--10000 | Queries required to trigger rollup computation. |
 | AdaptiveRollupDropThreshold | REG_DWORD | 5 | 1--1000 | Queries below which a rollup pair is removed. MUST be less than create threshold. |
 
@@ -75,12 +84,13 @@ These keys MUST exist for eventd to start. There are no compiled-in defaults.
 | Key | Type | Default | Valid range | Description |
 |---|---|---|---|---|
 | EventRetentionDays | REG_DWORD | 30 | 1--3650 | Maximum age of events in days. |
-| EventRetentionMaxBytes | REG_QWORD | 0 | 0--2^64-1 | Maximum total size of event shard databases. 0 = no limit. |
+| EventRetentionMaxBytes | REG_QWORD | 0 | 0--2^64-1 | Maximum total logical live size of event shard databases. 0 = no limit. |
 | LogRetentionDays | REG_DWORD | 14 | 1--3650 | Maximum age of log entries in days. |
-| LogRetentionMaxBytes | REG_QWORD | 0 | 0--2^64-1 | Maximum size of log store database. 0 = no limit. |
+| LogRetentionMaxBytes | REG_QWORD | 0 | 0--2^64-1 | Maximum logical live size of log store database. 0 = no limit. |
 | MetricRetentionDays | REG_DWORD | 90 | 1--3650 | Maximum age of metric samples in days. |
-| MetricRetentionMaxBytes | REG_QWORD | 0 | 0--2^64-1 | Maximum size of metric store database. 0 = no limit. |
+| MetricRetentionMaxBytes | REG_QWORD | 0 | 0--2^64-1 | Maximum logical live size of metric store database. 0 = no limit. |
 | RetentionCheckIntervalMinutes | REG_DWORD | 60 | 1--1440 | How often the retention process runs. |
+| RetentionDeleteBatchRows | REG_DWORD | 10000 | 100--100000 | Maximum rows deleted in one retention transaction. |
 
 ## Querying
 
@@ -89,7 +99,8 @@ These keys MUST exist for eventd to start. There are no compiled-in defaults.
 | QueryTimeoutMs | REG_DWORD | 30000 | 1000--300000 | Maximum query execution time in ms. |
 | MaxConcurrentQueries | REG_DWORD | 128 | 1--4096 | Maximum concurrent queries (streaming and non-streaming) globally. |
 | MaxStreamingQueries | REG_DWORD | 64 | 1--1024 | Maximum concurrent streaming queries globally. |
-| MaxQueryMessageBytes | REG_DWORD | 65536 | 1024--16777216 | Maximum query message size in bytes. |
+| MaxDistinctStreamValues | REG_DWORD | 100000 | 1000--10000000 | Maximum values tracked by one DISTINCT streaming query. |
+| MaxQueryMessageBytes | REG_DWORD | 65536 | 1024--16777216 | Maximum query request or response msgpack payload size in bytes. |
 
 ## Cross-type filtering
 
@@ -117,7 +128,7 @@ See §9.1 for SD structure and default values.
 
 | Change | Effect |
 |---|---|
-| Tuning parameters (batch sizes, latencies, retention, adaptive thresholds, query timeout, cross-type window) | Applied immediately. |
+| Tuning parameters (batch sizes, latencies, retention, adaptive index and rollup thresholds, adaptive scalar rollup window, WAL checkpoint threshold, query timeout, cross-type window, streaming/query limits) | Applied immediately. |
 | Socket paths | Requires restart. |
 | Store paths | Requires restart. |
 | StorageShards | Requires restart. |

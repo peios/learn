@@ -39,17 +39,23 @@ empty). On acceptance, lpsd records the new
 verifier, appends the previous one to `pw_history` (evicting entries
 beyond the depth), and stamps `pw_last_set`.
 
-**At verify time** (the logon path — §5.1). lpsd MUST:
+**At verify time** — the logon path (§5.1) **and** the old-password check
+of a self-service ChangePassword (§7.2), which verifies the same verifier
+and MUST share this accounting so it cannot be used to bypass lockout.
+lpsd MUST:
 
 - treat a password older than the maximum age as expired and return
-  `must_change_password` (§5.1) rather than `ok`;
+  `must_change_password` (§5.1) rather than `ok` — on the **logon** path;
+  on the **ChangePassword** path an expired password is not refused, since
+  the change is precisely what clears it (a locked or disabled account,
+  however, is refused on both paths);
 - refuse verification for an account whose `lockout_until` is in the
-  future, returning `denied` (§5.1); and
-- maintain the **lockout accounting**: on a failed verification,
-  increment `bad_pw_count` and stamp `last_bad_pw_time`; when
-  `bad_pw_count` reaches the lockout threshold, set `lockout_until` to
-  the current time plus the lockout duration; on a successful
-  verification, reset `bad_pw_count` and clear `lockout_until`.
+  future, returning `denied` (§5.1) — on both paths; and
+- maintain the **lockout accounting**: on a failed verification (a wrong
+  password on either path), increment `bad_pw_count` and stamp
+  `last_bad_pw_time`; when `bad_pw_count` reaches the lockout threshold,
+  set `lockout_until` to the current time plus the lockout duration; on a
+  successful verification, reset `bad_pw_count` and clear `lockout_until`.
 
 The built-in Administrator (RID 500) and any account on the recovery path
 MUST be exempt from **remote-induced** lockout, so an attacker cannot deny

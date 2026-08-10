@@ -55,11 +55,11 @@ Mints a new token from a wire-format specification.
 | `spec_len` | Length in bytes. |
 | Returns | Token fd on success, `-errno` on failure. |
 
-Requires SeCreateTokenPrivilege. The kernel validates: all SIDs well-formed, owner/primary_group indices valid, `auth_id` references an existing session, Primary tokens have `impersonation_level` = Anonymous, `write_restricted` = true requires `user_deny_only` = true, `isolation_boundary` = true requires `confinement_sid` present, wire format `_reserved1` (elevation_type) must be 0, and any LCS registry credential extension is structurally valid. See §4.4 for the full validation list.
+Requires SeCreateTokenPrivilege. The kernel validates: all SIDs well-formed, owner/primary_group indices valid, `auth_id` references an existing LogonSession, Primary tokens have `impersonation_level` = Anonymous, `write_restricted` = true requires `user_deny_only` = true, `isolation_boundary` = true requires `confinement_sid` present, wire format `_reserved1` (elevation_type) must be 0, and any LCS registry credential extension is structurally valid. See §4.4 for the full validation list.
 
 The kernel MUST NOT authenticate the user, look up SIDs, or resolve mappings.
 
-The kernel generates: `token_id`, `token_guid`, `modified_id` (= token_id), `created_at` (current time), `elevation_type` (always Default), and the token's own SD (default template). The kernel derives the logon SID from `session_id` (`S-1-5-5-{high}-{low}`) and appends it to the groups array with SE_GROUP_LOGON_ID. Callers MUST NOT include the logon SID in the supplied groups. `owner_sid_index` and `primary_group_index` are relative to the caller-supplied groups (0 = user SID, 1..N = caller's groups), not including the injected logon SID. See §13.6 for the wire format.
+The kernel generates: `token_id`, `token_guid`, `modified_id` (= token_id), `created_at` (current time), `elevation_type` (always Default), and the token's own SD (default template). The kernel derives the logon SID from `logon_session_id` (`S-1-5-5-{high}-{low}`) and appends it to the groups array with SE_GROUP_LOGON_ID. Callers MUST NOT include the logon SID in the supplied groups. `owner_sid_index` and `primary_group_index` are relative to the caller-supplied groups (0 = user SID, 1..N = caller's groups), not including the injected logon SID. See §13.7 for the wire format.
 
 Because this syscall does not take a desired-access parameter, the returned
 token fd always carries the fixed cached access mask `TOKEN_ALL_ACCESS`.
@@ -130,35 +130,35 @@ Sets the maximum impersonation level a server MAY use. Called by the client befo
 
 Default is IMPERSONATION.
 
-## Session management
+## LogonSession management
 
-### kacs_create_session
+### kacs_create_logon_session
 
-Creates a new logon session.
+Creates a new LogonSession.
 
 | Parameter | Description |
 |---|---|
-| `spec` | Wire-format session specification (logon type, auth package, user SID). |
+| `spec` | Wire-format LogonSession specification (logon type, auth package, user SID). |
 | `spec_len` | Length in bytes. |
-| Returns | Session ID (>= 0) on success, `-errno` on failure. |
+| Returns | LogonSession ID (>= 0) on success, `-errno` on failure. |
 
-Requires SeTcbPrivilege. The session receives an auto-generated logon SID (`S-1-5-5-X-Y`).
+Requires SeTcbPrivilege. The LogonSession receives an auto-generated logon SID (`S-1-5-5-X-Y`).
 
-### kacs_destroy_empty_session
+### kacs_destroy_empty_logon_session
 
-Destroys a logon session that has not acquired any live token.
+Destroys a LogonSession that has not acquired any live token.
 
 | Parameter | Description |
 |---|---|
-| `session_id` | Session ID (LUID) to destroy. |
+| `auth_id` | LogonSession ID (LUID) to destroy. |
 | Returns | 0 on success, `-errno` on failure. |
 
-Requires SeTcbPrivilege. The call succeeds only when the session exists, has
-zero live tokens, has no linked-token state, and has no other in-flight kernel
-references. On success, the kernel emits the normal
-`logon-session-destroyed` KMES event. A nonexistent session returns `-ENOENT`.
-A session with any live token, linked-token state, or other in-flight kernel
-reference returns `-EBUSY`.
+Requires SeTcbPrivilege. The call succeeds only when the LogonSession exists,
+has zero live tokens, has no linked-token state, and has no other in-flight
+kernel references. On success, the kernel emits the normal
+`logon-session-destroyed` KMES event. A nonexistent LogonSession returns
+`-ENOENT`. A LogonSession with any live token, linked-token state, or other
+in-flight kernel reference returns `-EBUSY`.
 
 ## File operations
 
@@ -322,7 +322,7 @@ Evaluates AccessCheck for a userspace object manager.
 | `args` | Pointer to a versioned struct (extensible via size field). |
 | Returns | Granted access mask (>= 0) on success, `-EACCES` if any requested right denied, `-errno` for other errors. |
 
-The args struct contains: token fd, SD pointer, desired access, GenericMapping (4 fields), optional self_sid, privilege_intent, optional object type list, optional local claims, pip_type, pip_trust, optional object_audit_context (opaque blob for audit event identification), granted_out pointer (optional — 0 = not used), continuous_audit_out pointer (optional), and staging_mismatch_out pointer (optional). `local_claims` uses the same length-prefixed claim-array wrapper described in §3.9. `object_tree_ptr` points to a flat preorder array of `struct kacs_object_type_entry` values defined in §13.6. `pip_type`/`pip_trust` default to the calling process's PSB values when zero. `object_audit_context` is optional — when null, audit events are still emitted but carry no object identification. The return value carries the granted mask directly; when granted_out_ptr is non-null, the granted mask is also written there (even on -EACCES, so the caller can see what was granted). `staging_mismatch_out` is written as 1 if the staged CAAP result differs from the effective result. In scalar mode this includes scalar grant deltas and audit deltas. When an object type list is present, it is also set if any node's staged granted mask differs from that node's effective granted mask.
+The args struct contains: token fd, SD pointer, desired access, GenericMapping (4 fields), optional self_sid, privilege_intent, optional object type list, optional local claims, pip_type, pip_trust, optional object_audit_context (opaque blob for audit event identification), granted_out pointer (optional — 0 = not used), continuous_audit_out pointer (optional), and staging_mismatch_out pointer (optional). `local_claims` uses the same length-prefixed claim-array wrapper described in §3.9. `object_tree_ptr` points to a flat preorder array of `struct kacs_object_type_entry` values defined in §13.7. `pip_type`/`pip_trust` default to the calling process's PSB values when zero. `object_audit_context` is optional — when null, audit events are still emitted but carry no object identification. The return value carries the granted mask directly; when granted_out_ptr is non-null, the granted mask is also written there (even on -EACCES, so the caller can see what was granted). `staging_mismatch_out` is written as 1 if the staged CAAP result differs from the effective result. In scalar mode this includes scalar grant deltas and audit deltas. When an object type list is present, it is also set if any node's staged granted mask differs from that node's effective granted mask.
 
 This is the same AccessCheck pipeline used by FACS. It exists for userspace daemons that manage non-file objects (loregd, lpsd, eventd). The kernel runs the full pipeline including privilege-use tracking and the SACL audit walk. Audit events are emitted directly by the kernel through KMES — the caller provides `object_audit_context` (an opaque blob identifying the object being accessed, e.g., a registry key path) which is included in emitted audit events so the audit trail identifies which object the access decision was about. Exact AccessCheck audit event types and payload schemas are defined in Appendix A: Audit Event Schemas.
 

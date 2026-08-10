@@ -8,12 +8,15 @@ When peinit signals eventd to stop, eventd MUST perform a graceful shutdown. The
 
 ### Shutdown sequence
 
-1. **Stop accepting new connections.** Close the query, log, and metric ingestion sockets. Existing streaming queries are terminated with an error.
-2. **Drain remaining log and metric data.** Read any pending datagrams from the log and metric socket buffers and process them. This is bounded by the socket buffer size and completes quickly.
+1. **Stop accepting new connections.** Unlink the query, log, and metric socket paths so no new clients can reach them. Stop accepting new query connections. Existing streaming queries are terminated with an error. The log and metric socket file descriptors remain open until their receive queues are drained.
+2. **Drain remaining log and metric data.** Read any pending datagrams from the log and metric socket buffers and process them. This is bounded by the socket buffer size and completes quickly. After this drain completes, close the log and metric socket file descriptors.
 3. **Final event drain.** Each drain thread performs one final drain cycle from its KMES ring buffer, reading all available events.
 4. **Final batch commit.** Each writer thread commits its current batch immediately, regardless of batch size. The log and metric writers do the same.
-5. **Persist sequence state.** Write the last persisted sequence number per CPU to the event store metadata. This enables correct sequence resumption on restart.
-6. **Emit shutdown event.** Write a synthetic `synthetic.shutdown` event recording the per-CPU last persisted sequence numbers. This event is written directly to shard 0's database. If shard 0 is unavailable (corrupted or excluded during this session), the event is written to the lowest-numbered available shard. If no shard is available, the shutdown event is skipped.
+5. **Record sequence state.** Derive the last committed sequence number per CPU from committed event rows, using the same rule as startup sequence resumption, and write those values to `eventd-meta.db` `sequence_checkpoints` for diagnostics. Restart sequence resumption is derived from committed event rows during startup, not from this metadata.
+6. **Emit shutdown event.** Write a synthetic `synthetic.shutdown` event recording
+   the per-CPU last committed sequence numbers. This event uses the daemon-wide
+   synthetic event shard assignment rule in §2.6. If no shard is writable, the
+   shutdown event is skipped after logging the failure to stderr.
 7. **Close databases.** Close all SQLite connections (writer and reader connections). SQLite WAL checkpointing occurs automatically on connection close.
 8. **Unmap ring buffers.** Unmap all KMES ring buffer mappings and close the per-CPU file descriptors.
 9. **Exit.**
@@ -26,7 +29,7 @@ If shutdown is aborted:
 
 - In-flight event batches that have not been committed are lost. These events remain in the KMES ring buffers and will be available when eventd restarts (if they have not been overwritten).
 - In-flight log and metric batches are lost (acceptable given log/metric loss tolerance).
-- Per-CPU sequence numbers may not be persisted. On restart, eventd will detect a gap between the last persisted sequence and the current ring buffer state.
+- The diagnostic per-CPU sequence metadata may not be updated. On restart, eventd derives resume points from committed event rows and will detect a gap between those rows and the current ring buffer state.
 
 ## Crash recovery
 
@@ -34,7 +37,7 @@ If eventd crashes (SIGSEGV, SIGKILL, OOM, or any ungraceful termination):
 
 - **KMES ring buffers are unaffected.** KMES continues writing events regardless of consumer state. Events emitted while eventd is down accumulate in the ring buffers.
 - **SQLite databases are consistent.** WAL mode guarantees that committed transactions survive a crash. Uncommitted transactions (the in-flight batch at crash time) are rolled back automatically by SQLite on the next open.
-- **Sequence gap.** Events emitted between the last committed batch and the crash are not persisted. On restart, eventd detects this as a sequence gap and records it as a synthetic gap record.
+- **Sequence gap.** Events emitted between the last committed batch and the crash are not persisted. On restart, eventd derives per-CPU resume points from committed event rows, detects this as a sequence gap, and records it as a synthetic gap record.
 - **Log and metric data in socket buffers is lost.** The kernel discards the socket receive buffer on process exit. This is acceptable given log/metric loss tolerance.
 
 No manual recovery action is required. eventd restarts, re-attaches to KMES, resumes draining from the ring buffers, and continues normal operation. The gap between the last persisted event and the first event available in the ring buffer is recorded as a gap.
@@ -47,7 +50,15 @@ eventd MUST handle the following signals:
 |---|---|
 | SIGTERM | Initiate graceful shutdown. |
 | SIGINT | Initiate graceful shutdown. |
-| SIGQUIT | Initiate graceful shutdown with a diagnostic dump (implementation-defined). |
+| SIGQUIT | Write a diagnostic dump to stderr, then initiate graceful shutdown. |
 | SIGHUP | Re-read configuration from the registry (equivalent to a configuration watch notification). |
 
 All other signals use default behavior.
+
+The SIGQUIT diagnostic dump is human-readable text written to stderr before
+step 1 of the graceful shutdown sequence. It MUST include at least: current
+boot ID, active shard count, readable historical shard count, per-CPU last
+committed sequence numbers derived from committed event rows, current
+non-streaming query count, current streaming query count, metric series cache
+occupancy, and the last observed write error for each store if one exists. The
+format is not a stable machine interface.

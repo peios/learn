@@ -20,7 +20,9 @@ Linux's 41 capabilities are classified into three categories:
 
 **ALLOW** — DAC-bypass capabilities. These exist to override UID-based permission checks on operations that KACS enforces via LSM hooks. Allowing them ensures DAC never blocks an operation that KACS will evaluate independently.
 
-**PRIVILEGE** — capabilities that gate operations not covered by other KACS hooks. These are mapped to specific KACS privileges. The `security_capable()` hook checks whether the calling thread's token holds the corresponding privilege. If not, the capability check fails. This is **fail-closed**: an unmapped or unknown capability is denied by default.
+**PRIVILEGE** — capabilities that gate operations not covered by other KACS hooks. Most are mapped to a single KACS privilege. A small number — capabilities that genuinely span multiple Peios privilege tiers, where no single privilege covers all the operations the Linux capability gates — use **OR-mapping**: `security_capable()` succeeds if the caller holds *any* of the listed privileges. The actual per-operation enforcement happens at the relevant syscall hook (e.g. `perf_event_open`, `security_bpf`), which checks the *specific* privilege required for the *specific* operation. OR-mapping prevents the cap_capable ceiling from creating false denials when a Linux capability spans multiple Peios privileges; it does not grant any authority that the holder does not already have via the listed privileges.
+
+If none of the listed privileges are held, the capability check fails. This is **fail-closed**: an unmapped or unknown capability is denied by default.
 
 **DENY** — capabilities that are dead under KACS or MUST NOT be granted. Denied unconditionally.
 
@@ -68,7 +70,7 @@ Linux's 41 capabilities are classified into three categories:
 | 35 | CAP_WAKE_ALARM | SeTcbPrivilege |
 | 36 | CAP_BLOCK_SUSPEND | SeTcbPrivilege |
 | 37 | CAP_AUDIT_READ | SeSecurityPrivilege |
-| 38 | CAP_PERFMON | SeProfileSingleProcessPrivilege |
+| 38 | CAP_PERFMON | SeSystemProfilePrivilege OR SeProfileSingleProcessPrivilege OR SeLoadDriverPrivilege |
 | 39 | CAP_BPF | SeTcbPrivilege |
 | 40 | CAP_CHECKPOINT_RESTORE | SeTcbPrivilege |
 

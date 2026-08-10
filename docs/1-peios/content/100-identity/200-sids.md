@@ -60,12 +60,7 @@ On the wire (in security descriptors, in tokens, in audit events), a SID is a pa
 +----+----+----+----+----+----+----+----+
 ```
 
-| Bytes | Field | Encoding |
-|---|---|---|
-| 0 | Revision | `0x01` |
-| 1 | SubAuthorityCount | 0–15 |
-| 2–7 | IdentifierAuthority | 6 bytes, **big-endian** |
-| 8 onward | SubAuthorities | 4 bytes each, **little-endian** |
+The first byte is the revision (`0x01`), the second the sub-authority count, then the six-byte authority, then the sub-authorities. The canonical byte-level layout is in the [wire formats reference](~peios/wire-formats-reference/overview), under "SIDs in wire format".
 
 The mixed endianness — big-endian for the authority, little-endian for the sub-authorities — is the one detail worth memorising. The rest of KACS is uniformly little-endian; the SID authority is the exception, for compatibility with the way SIDs travel across federation boundaries.
 

@@ -75,11 +75,11 @@ The SYSTEM token (`S-1-5-18`) is created by PKM during kernel initialization, be
 - Elevation type: Default (no linked token)
 - Token source: `PeiosKrn`
 - Projected UID: 0
+- auth_id: SYSTEM_LUID (0x000003E7 = 999)
 
 The SYSTEM token is assigned to the kernel's init task and inherited by PID 1 on exec. No syscall is involved — the kernel allocates the token object directly during initialization.
 
-The Anonymous token (`S-1-5-7`) is also created by PKM during kernel
-initialization as the canonical socket-impersonation Anonymous shape:
+The Anonymous token (`S-1-5-7`) is also created by PKM during kernel initialization. It is a global singleton:
 
 - User SID: `S-1-5-7` (Anonymous)
 - Groups: Everyone (`S-1-1-0`) only
@@ -90,10 +90,18 @@ initialization as the canonical socket-impersonation Anonymous shape:
 - Impersonation level: Anonymous
 - Elevation type: Default
 - Token source: `PeiosKrn`
-- auth_id: `ANONYMOUS_LOGON_LUID` (998 / `0x3E6`)
+- auth_id: ANONYMOUS_LOGON_LUID (0x000003E6 = 998)
 
-Socket-based Anonymous capture MUST produce this minimal identity shape rather
-than preserving any part of the caller's real token.
+The Anonymous token is effectively immutable (no privileges to adjust, no groups to adjust). `kacs_impersonate_peer` at Anonymous level references this global token. `KACS_IOC_DUPLICATE` with target level=Anonymous creates a fresh independent token matching this shape (the DuplicateToken contract requires a new token object).
+
+### Well-known LogonSession LUIDs
+
+| LUID | Value | Description |
+|---|---|---|
+| SYSTEM_LUID | 999 (0x3E7) | The SYSTEM LogonSession. Created at kernel init. |
+| ANONYMOUS_LOGON_LUID | 998 (0x3E6) | The Anonymous LogonSession. Created at kernel init for Anonymous impersonation tokens. |
+
+Dynamically created LogonSessions (by authd via `kacs_create_logon_session`) receive auto-generated LUIDs starting at 1000. The kernel MUST NOT assign 999 or 998 to dynamic LogonSessions.
 
 > [!INFORMATIVE]
 > The SYSTEM token carries SeBackupPrivilege and SeRestorePrivilege (present and enabled at boot). FACS passes backup/restore intent flags to AccessCheck, which grants read and write access regardless of file DACLs — subject to PIP enforcement. Once peinit has launched TCB services and early boot is complete, peinit disables these privileges on child service tokens via FilterToken.
@@ -107,7 +115,15 @@ A privileged process (peinit) MAY replace the primary token on a running process
 
 The mechanism uses `task_work_add()` to queue a credential swap on each task in the target thread group. Each task executes the swap in its own context, preserving RCU safety. If a thread is impersonating, the replacement affects `real_cred` (primary token) only — the impersonation state is left intact.
 
-This operation is gated by `SeAssignPrimaryTokenPrivilege`.
+### Requirements
+
+- SeAssignPrimaryTokenPrivilege on the caller's real token.
+- TOKEN_ASSIGN_PRIMARY (0x0001) on the token fd.
+- PROCESS_SET_INFORMATION on the target process's SD.
+- The new token's user SID MUST match the target's current primary token's user SID, unless the caller has SeTcbPrivilege.
+- The new token MUST belong to the same LogonSession (matching `auth_id`) as the target's current primary token, unless the caller has SeTcbPrivilege.
+
+The process SD gate ensures the target process's owner controls who can change its identity. The SID and LogonSession constraints prevent a non-TCB holder of SeAssignPrimaryTokenPrivilege from assigning an arbitrary token to a process it can reach. SeTcbPrivilege bypasses the SID and LogonSession constraints — this is how peinit assigns tokens with different user SIDs and LogonSessions to child services.
 
 > [!INFORMATIVE]
 > The per-thread queuing creates a brief transition window where some threads have the new token while others still have the old one. This is acceptable because replacement is always a privilege downgrade. There is no completion barrier — the caller cannot determine when all threads have executed the swap.

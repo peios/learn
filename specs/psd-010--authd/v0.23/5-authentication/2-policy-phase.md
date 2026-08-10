@@ -17,9 +17,9 @@ how an assignment becomes a token property:
 
 - **Privileges accumulate by union.** A token's *present* privileges are
   the union of the privileges assigned to **every SID in the token** —
-  the user SID plus all group SIDs after the merge of step 2 below. There
-  is no "deny privilege": a privilege is present iff it is assigned to
-  some SID present, otherwise absent.
+  the user SID plus all group SIDs after the group-construction step below.
+  There is no "deny privilege": a privilege is present iff it is assigned
+  to some SID present, otherwise absent.
 - **Logon rights are allow/deny, deny overriding.** Each logon type has
   an allow right and a deny right. A principal may perform a logon type
   iff some SID in its set holds the allow right **and no** SID in its set
@@ -54,35 +54,77 @@ resolved principal (§4):
   is a well-known or built-in SID (SYSTEM `S-1-5-18`, any `S-1-5-32`
   alias, …) or belongs to a different source. A source can thus never
   assert SYSTEM or Administrators *as the principal it authenticated*.
-- The source's group SIDs are accepted only as **memberships**. authd
+- The source's group SIDs are accepted only as **memberships**, and only
+  those the source is **authoritative to assert**. authd MUST validate
+  that every group SID in the resolved principal lies within the
+  **answering source's authority** — for lpsd, a `machine_sid`-relative
+  SID or one of the local `S-1-5-32` BUILTIN aliases it hosts (§3.1); for
+  a domain source, a SID relative to that domain. authd MUST reject (and
+  audit) a resolved principal that asserts any group SID outside that set
+  — in particular a **domain** source asserting a local BUILTIN alias
+  (e.g. `S-1-5-32-544`), any source asserting a well-known privileged SID
+  (SYSTEM `S-1-5-18`, the `S-1-5-*` identity/logon SIDs), or a
+  foreign-namespace SID. This is the group analogue of the `user_sid`
+  check above: a domain principal's local-group membership is authd's to
+  resolve via the group-construction step, **never** the domain source's to
+  assert.
+- Privilege is never itself a field of the resolved principal. authd
   derives privileges **solely** from its own rights-assignment table
-  keyed by SID (the union rule above), **never** from any field of the
-  resolved principal — so a malicious membership cannot inject a reserved
-  (or any) privilege.
+  keyed by the **post-merge SID set** (the union rule above), so a
+  membership can influence privilege only by naming a SID the source was
+  authoritative to assert (validated above) or a local group authd itself
+  merged in (step 1) — a source cannot inject a reserved (or any)
+  privilege by naming a SID it does not own.
+- The `primary_group_sid` MUST be a group SID the source is authoritative
+  to assert under the same rule as the `groups` array, and it MUST be
+  present in the post-merge group set before the token spec is assembled.
+  If not, authd MUST reject the resolved principal and audit the source
+  contract violation.
 - authd SHOULD bound the group count a source returns; the kernel's 1024
   limit is the hard ceiling (§5.3).
+- authd MUST validate every projected POSIX id the source returns before
+  using it in the token spec. A non-sentinel id MUST be below 2^31, must lie
+  in the band assigned to that SID family (§3.6, §9), and must reverse-map
+  to the same SID. For lpsd, a `machine_sid`-relative SID with RID `r` maps
+  to `5,000,000 + r`; a local BUILTIN alias `S-1-5-32-N` maps to `1000 + N`.
+  `0xFFFFFFFF` is allowed only as the wire sentinel meaning "the source
+  assigns no id"; authd MUST resolve it through the idmap before minting, and
+  MUST fail the logon if no stable, non-colliding mapping can be produced.
+  `0xFFFFFFFF` MUST NOT appear in a KACS token spec.
 
 This validation is what contains a compromised source: it can mis-state
-its *own* principals, but cannot mint SYSTEM, cross namespaces, or inject
-privileges.
+membership among the principals and groups it is genuinely
+**authoritative** for — equivalently, it could already achieve that by
+editing its own store — but it cannot mint SYSTEM, cross namespaces,
+assert a local BUILTIN or well-known privileged SID it does not own, or
+otherwise inject privileged membership outside its authority. (Because
+lpsd hosts the local `S-1-5-32` aliases, a *compromised lpsd* asserting
+local-Administrators membership is within this envelope and gains nothing
+over editing its `members` table; the check's bite is on a source
+asserting membership **outside** its namespace — the cross-source /
+domain vector.)
 
 ## Steps
 
 authd MUST perform these steps in order:
 
-1. **Logon-type rights gate.** Evaluate the allow/deny logon rights
-   (above, per the table in §9) for the principal's SID set against this
+1. **Construct the full SID set.** Query lpsd for the local groups that
+   contain any of the principal's SIDs (including a domain principal's SIDs
+   — §3.2) and merge them into the group set. Then add the **implicit
+   groups** for this logon type per §9 (Everyone, Authenticated Users,
+   Local, the logon-type SID such as Interactive `S-1-5-4`, This
+   Organization `S-1-5-15`), each with the `SE_GROUP_*` attributes given
+   there. The kernel does NOT add these; authd MUST (PSD-004 §4.4). This
+   post-merge SID set is the input to the logon-rights gate, privilege
+   assignment, integrity-level predicate, and token assembly below.
+2. **Logon-type rights gate.** Evaluate the allow/deny logon rights
+   (above, per the table in §9) for the post-merge SID set against this
    logon type. If not permitted, the logon fails with
    `LOGON_TYPE_DENIED` (§6.4) — distinct from a credential failure,
    because it occurs only after the credential is already valid — and
-   authd emits a denied audit event.
-2. **Merge groups.** Query lpsd for the local groups that contain any of
-   the principal's SIDs (including a domain principal's SIDs — §3.2) and
-   merge them into the group set. Then add the **implicit groups** for
-   this logon type per §9 (Everyone, Authenticated Users, Local, the
-   logon-type SID such as Interactive `S-1-5-4`, This Organization
-   `S-1-5-15`), each with the `SE_GROUP_*` attributes given there. The
-   kernel does NOT add these; authd MUST (PSD-004 §4.4).
+   authd emits a denied audit event. For the credential-less Service logon
+   path of §5.4, this gate is satisfied by the vouching TCB caller until
+   the per-service rights-assignment store lands (§8).
 3. **Privilege assignment.** Compute the token's present privileges as
    the union over the full SID set, per the default assignment table
    (§9). Set each present privilege's enabled-state per §9 (only

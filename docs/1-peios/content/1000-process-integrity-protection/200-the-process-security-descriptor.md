@@ -19,19 +19,19 @@ This page covers what the process SD contains, the access rights it uses, how it
 
 The process SD has the same shape as any other SD — owner, primary group, DACL, optional SACL. The fields mean the same things they mean elsewhere (see [Security descriptors](~peios/security-descriptors/overview)). What differs is the **access rights** the DACL grants.
 
-The DACL on a process SD uses the **process access rights** — a set of 16-bit object-specific rights tailored to what one might do to a process. The full list:
+The DACL on a process SD uses the **process access rights** — a set of 16-bit object-specific rights tailored to what one might do to a process. The full catalogue with bit values is in [Access mask bits](~peios/constants-and-catalogs/access-mask-bits); in summary:
 
-| Right | Value | What it gates |
-|---|---|---|
-| `PROCESS_TERMINATE` | 0x0001 | Send terminating signals (SIGKILL, SIGTERM, SIGABRT, etc.). |
-| `PROCESS_SIGNAL` | 0x0002 | Send non-terminating informational signals (SIGCHLD, SIGURG, SIGWINCH, etc.). |
-| `PROCESS_VM_READ` | 0x0010 | Read the process's memory. Required by `ptrace(PTRACE_PEEK*)`, `process_vm_readv`, `/proc/<pid>/mem` reads. |
-| `PROCESS_VM_WRITE` | 0x0020 | Write the process's memory. Required by `ptrace(PTRACE_POKE*, PTRACE_ATTACH)`, `process_vm_writev`, `/proc/<pid>/mem` writes. |
-| `PROCESS_DUP_HANDLE` | 0x0040 | Duplicate file descriptors out of the process via `pidfd_getfd`. |
-| `PROCESS_SET_INFORMATION` | 0x0200 | Change process attributes — scheduling priority, CPU affinity, rlimits, certain `/proc/<pid>/*` writes. |
-| `PROCESS_QUERY_INFORMATION` | 0x0400 | Read detailed process information — token, full `/proc/<pid>/*` reads (cmdline, status, io, limits, sched, mounts). |
-| `PROCESS_SUSPEND_RESUME` | 0x0800 | Send stop/continue signals (SIGSTOP, SIGCONT). |
-| `PROCESS_QUERY_LIMITED` | 0x1000 | Read limited process information (PID, image name, basic state). Required by `pidfd_open`. |
+| Right | What it gates |
+|---|---|
+| `PROCESS_TERMINATE` | Send terminating signals (SIGKILL, SIGTERM, SIGABRT, etc.). |
+| `PROCESS_SIGNAL` | Send non-terminating informational signals (SIGCHLD, SIGURG, SIGWINCH, etc.). |
+| `PROCESS_VM_READ` | Read the process's memory. Required by `ptrace(PTRACE_PEEK*)`, `process_vm_readv`, `/proc/<pid>/mem` reads. |
+| `PROCESS_VM_WRITE` | Write the process's memory. Required by `ptrace(PTRACE_POKE*, PTRACE_ATTACH)`, `process_vm_writev`, `/proc/<pid>/mem` writes. |
+| `PROCESS_DUP_HANDLE` | Duplicate file descriptors out of the process via `pidfd_getfd`. |
+| `PROCESS_SET_INFORMATION` | Change process attributes — scheduling priority, CPU affinity, rlimits, certain `/proc/<pid>/*` writes. |
+| `PROCESS_QUERY_INFORMATION` | Read detailed process information — token, full `/proc/<pid>/*` reads (cmdline, status, io, limits, sched, mounts). |
+| `PROCESS_SUSPEND_RESUME` | Send stop/continue signals (SIGSTOP, SIGCONT). |
+| `PROCESS_QUERY_LIMITED` | Read limited process information (PID, image name, basic state). Required by `pidfd_open`. |
 
 Plus the standard rights — `DELETE`, `READ_CONTROL`, `WRITE_DAC`, `WRITE_OWNER`, `SYNCHRONIZE` — and the special rights `ACCESS_SYSTEM_SECURITY` and `MAXIMUM_ALLOWED`. These mean the same things on a process as on any other object.
 
@@ -39,14 +39,7 @@ Plus the standard rights — `DELETE`, `READ_CONTROL`, `WRITE_DAC`, `WRITE_OWNER
 
 ## Generic mapping
 
-The standard generic rights (`GENERIC_READ`, `GENERIC_WRITE`, `GENERIC_EXECUTE`, `GENERIC_ALL`) map to combinations of process-specific rights:
-
-| Generic right | Process-specific equivalent |
-|---|---|
-| `GENERIC_READ` | `PROCESS_QUERY_INFORMATION | PROCESS_VM_READ | READ_CONTROL` |
-| `GENERIC_WRITE` | `PROCESS_SET_INFORMATION | PROCESS_VM_WRITE | WRITE_DAC` |
-| `GENERIC_EXECUTE` | `PROCESS_TERMINATE | PROCESS_SUSPEND_RESUME | PROCESS_QUERY_LIMITED` |
-| `GENERIC_ALL` | All process-specific rights plus all standard rights. |
+The standard generic rights (`GENERIC_READ`, `GENERIC_WRITE`, `GENERIC_EXECUTE`, `GENERIC_ALL`) map to combinations of process-specific rights via the process GenericMapping table, catalogued in [Access mask bits](~peios/constants-and-catalogs/access-mask-bits).
 
 A DACL ACE that grants `GENERIC_READ` to some principal effectively grants them the right to read the process's memory, query its detailed information, and read the SD itself. A DACL granting `GENERIC_EXECUTE` lets them terminate or suspend the process. These are the abstractions tools use when they say "grant read access to this process" without enumerating every specific right.
 

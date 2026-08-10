@@ -47,10 +47,13 @@ accordingly.
 
 lpsd exposes two interfaces on two sockets (§6.1):
 
-- a **verify/resolve** interface, callable only by authd, that
-  authenticates a principal and returns a resolved principal (§4); and
-- an **administration** interface, gated by an account-admin privilege,
-  for the source-shaped account operations (§7.2).
+- a **source** interface, callable only by authd, carrying the
+  source-transparent operations authd brokers: verify/resolve, which
+  authenticates a principal and returns a resolved principal (§4), and the
+  forwarded self-service ChangePassword (§7.2); and
+- an **administration** interface, gated per-object by a KACS AccessCheck
+  against each principal's (or the domain object's) security descriptor
+  (§7.2), for the source-shaped account operations.
 
 ## Principal sources and the structural role
 

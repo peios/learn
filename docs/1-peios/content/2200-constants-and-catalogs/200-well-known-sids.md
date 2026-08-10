@@ -126,7 +126,7 @@ These are labels, not principals. The integer RID encodes the integrity level.
 | `S-1-16-12288` | 12288 | High |
 | `S-1-16-16384` | 16384 | System |
 
-The values are spaced by 4096 to leave room for additional levels.
+The values are spaced by 4096 to leave room for additional levels. The level is really the SID's single sub-authority read as an unsigned integer and compared numerically — any `S-1-16-<n>` with exactly one sub-authority is a valid level. These five are the standard, well-known ones; non-standard values appear for Windows interop, notably `medium-plus` (`S-1-16-8448`) and `protected` (`S-1-16-20480`).
 
 ## Process integrity protection labels (authority 19)
 

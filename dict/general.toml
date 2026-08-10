@@ -70,7 +70,7 @@ category = "Subsystems"
 
 [[terms]]
 term = "KMES"
-aliases = ["Kernel Mediated Event Subsystem"]
+aliases = ["Kernel Message Event Stream"]
 definition = "The PKM subsystem providing the sole event emission path in Peios. Buffers events, stamps them with trusted metadata, assigns per-CPU sequence numbers, and delivers via shared memory ring buffers."
 category = "Kernel"
 

@@ -4,7 +4,7 @@ title: Boot Partitioning
 
 ## Boot ID
 
-Every record stored by eventd -- events, logs, and metrics -- carries a `boot_id`: a 16-byte GUID that uniquely identifies the boot during which the record was produced. The boot ID is assigned by peinit at each boot and communicated to eventd at startup.
+Every observability record stored by eventd -- events, logs, and raw metric samples -- carries a `boot_id`: a 16-byte GUID that uniquely identifies the boot during which the record was produced. The boot ID is assigned by peinit at each boot and communicated to eventd at startup. Derived metric rollups are boot-agnostic and do not carry a `boot_id`.
 
 The boot ID serves two purposes:
 
@@ -17,10 +17,10 @@ Boot ID is written to the `boot_id` column in all three stores:
 
 - **Event store:** every row in the `events` table.
 - **Log store:** every row in the `logs` table.
-- **Metric store:** metrics do not carry boot_id per sample. The boot boundary is less meaningful for metrics because time series are continuous across restarts -- a gauge value is valid regardless of which boot produced it.
+- **Metric store:** every row in the `samples` table. The boot ID is not part of the metric series identity and is not stored on rollup rows.
 
 > [!INFORMATIVE]
-> The log store includes boot_id because log output may have different meaning across boots (a service may emit different logs depending on boot-time configuration). The metric store omits per-sample boot_id because metric time series are inherently continuous -- a CPU usage reading at 42% is equally valid regardless of boot context. If boot-scoped metric queries are needed, the timestamp can be correlated with the boot ID from the event store's synthetic startup/shutdown events.
+> The log store includes boot_id because log output may have different meaning across boots (a service may emit different logs depending on boot-time configuration). The metric store records boot_id per sample for tracking and filtering while keeping time series continuous across restarts. Rollups remain boot-agnostic scalar aggregates; boot-filtered metric queries use raw samples.
 
 ## Sequence uniqueness (events only)
 
@@ -28,16 +28,18 @@ Within a single boot, an event is uniquely identified by the tuple (`boot_id`, `
 
 ## Boot boundary detection
 
-When eventd starts, it reads the current boot ID from peinit. If the boot ID differs from the boot ID of the most recently stored events (read from the shard databases), eventd has started in a new boot.
+When eventd starts, it reads the current boot ID from peinit. It then searches all readable event shard databases for committed rows with that `boot_id`. If no committed rows exist for the current boot ID, eventd treats this as the first eventd start for this boot. If committed rows exist for the current boot ID, eventd treats this as a restart within the same boot.
 
 On a new boot, eventd MUST:
 
 1. Reset all per-CPU sequence trackers to 0.
-2. Record the new boot ID for all subsequent writes to the event and log stores.
+2. Record the new boot ID for all subsequent writes to the event store, log store, and metric samples.
 3. Emit a synthetic `synthetic.startup` event with the new boot ID.
 
-On a restart within the same boot (eventd crashed and was restarted by peinit), the boot ID matches and eventd MUST:
+On a restart within the same boot (eventd crashed and was restarted by peinit), eventd MUST:
 
-1. Restore per-CPU sequence trackers from the last persisted sequence numbers.
+1. Restore per-CPU sequence trackers from committed event rows in all readable event shard databases. For each CPU, the resume point is the maximum non-NULL `sequence` value for (`boot_id`, `cpu_id`) in the `events` table. CPUs with no committed rows for the current boot resume from 0.
 2. Continue writing with the existing boot ID.
 3. Emit a synthetic `synthetic.startup` event noting the restart.
+
+Committed event rows are the authoritative source for sequence resumption. Metadata entries and synthetic shutdown payloads MAY record the same resume points for diagnostics, but eventd MUST NOT rely on them instead of scanning committed event rows during startup.

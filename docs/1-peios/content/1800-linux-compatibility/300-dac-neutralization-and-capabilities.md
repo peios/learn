@@ -91,6 +91,9 @@ Many Linux capabilities map cleanly to a KACS privilege. Examples:
 | `CAP_SYS_RESOURCE` | `SeIncreaseQuotaPrivilege` |
 | `CAP_NET_BIND_SERVICE` | `SeBindPrivilegedPortPrivilege` (Peios-custom) |
 | `CAP_AUDIT_CONTROL`, `CAP_AUDIT_READ`, `CAP_MAC_ADMIN` | `SeSecurityPrivilege` |
+| `CAP_PERFMON` | `SeSystemProfilePrivilege` **OR** `SeProfileSingleProcessPrivilege` **OR** `SeLoadDriverPrivilege` (OR-mapped — see below) |
+
+**OR-mapping.** Most capabilities map to a single KACS privilege. A small number span multiple Peios privilege tiers, where no single privilege covers everything the Linux capability gates — these **OR-map**: `security_capable()` returns granted if the token holds *any* of the listed privileges. `CAP_PERFMON` is the current example. The `cap_capable()` answer is only a ceiling that prevents false denials; the *specific* privilege for the *specific* operation is enforced at the relevant syscall hook. For perf, the `perf_event_open` path distinguishes own-task profiling (no privilege), cross-task profiling (`SeProfileSingleProcessPrivilege` + PIP dominance), and system-wide profiling (`SeSystemProfilePrivilege`). OR-mapping never grants authority the holder does not already have via one of the listed privileges.
 
 When the kernel asks "does this caller have CAP_X?", the answer is computed by consulting the token's privileges. The kernel's `security_capable()` hook is what does this lookup — Peios's PKM module overrides the default capability check to consult KACS privileges instead of (or in addition to) the credential's capability set.
 

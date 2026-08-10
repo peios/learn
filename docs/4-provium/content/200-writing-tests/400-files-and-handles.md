@@ -62,14 +62,11 @@ Returns a table:
 ```lua
 local m = vm:stat("/etc/test.conf")
 print(m.size)        -- 10
-print(m.mtime)       -- float: seconds since epoch
-print(m.mtime_ns)    -- int: nanoseconds since epoch
-print(m.perm)        -- POSIX mode bits (≤ 4095, i.e. 0o7777)
-print(m.entry_type)  -- "file" / "directory" / "symlink" / "fifo" / "socket" /
-                     -- "block_device" / "char_device" / "other"
+print(m.perm)        -- POSIX mode bits
+print(m.entry_type)  -- "file", "directory", "symlink", …
 ```
 
-`mtime` carries seconds; `mtime_ns` carries the same time at full precision. Use `mtime_ns` for exact comparisons; use `mtime` when "around what o'clock" is enough.
+The full field table (including the complete `entry_type` value list) is in the [VM reference](~provium/reference/vm#vmstatpath). Two fields carry the modification time: use `mtime_ns` for exact comparisons; use `mtime` (float seconds) when "around what o'clock" is enough.
 
 `perm` is in the POSIX range. Lua 5.4 doesn't accept `0o…` literals — use decimal or hex (`0x180` for 0o600). `4095` is `0o7777`, the upper bound.
 
@@ -115,22 +112,14 @@ h:close()
 
 ### Mode table
 
-At least one of `read`, `write`, `append` must be true; an empty mode table errors at open time.
-
-| Key | Effect |
-|---|---|
-| `read` | Open for reading. |
-| `write` | Open for writing. |
-| `create` | Create if absent. |
-| `truncate` | Truncate to zero bytes on open. |
-| `append` | Append-only writes. |
-| `exclusive` | Combine with `create=true` for `O_EXCL`. |
-| `perm` | POSIX mode for newly-created files. |
+At least one of `read`, `write`, `append` must be true; an empty mode table errors at open time. The flags you'll combine most often are `read` / `write`, `create` (create if absent), `truncate`, and `perm` (POSIX mode for newly-created files):
 
 ```lua
 -- Write-only, create, truncate, mode 0o600.
 local h = vm:open_file("/etc/secret", {write=true, create=true, truncate=true, perm=0x180})
 ```
+
+The full mode-table reference (including `append` and `exclusive` / `O_EXCL`) is on [vm:open_file](~provium/reference/vm#vmopen-filepath-mode-table).
 
 ### Reading
 
@@ -142,17 +131,7 @@ local rest  = h:read_all()       -- drain to EOF
 h:close()
 ```
 
-`h:read(n)` returns up to `n` bytes. At EOF, returns the empty string `""` — POSIX semantics. Loops:
-
-```lua
-while true do
-    local chunk = h:read(4096)
-    if chunk == "" then break end
-    -- process chunk
-end
-```
-
-`h:read_all()` chunks at 64 KiB internally and returns the concatenated bytes.
+`h:read(n)` returns up to `n` bytes; at EOF it returns the empty string `""`, never an error — so a read loop terminates on `chunk == ""`. `h:read_all()` drains from the cursor to EOF in one call. See [EOF semantics](~provium/reference/file-handle#eof-semantics) in the File reference.
 
 ### Writing
 
@@ -173,7 +152,7 @@ h:seek(-1, "end")             -- 1 byte before EOF
 h:tell()                      -- current offset
 ```
 
-`tell()` re-reads the position from the agent (a no-op `Seek(Cur, 0)`) rather than trusting the host-side cache. This stays honest when a previous read or write returned mid-flight.
+`tell()` reports the authoritative agent-side position, not a host-side cache — the [File reference](~provium/reference/file-handle#filetell) explains how.
 
 ### Closing
 
@@ -209,13 +188,7 @@ local line = stream:read_until("\n", "5s")
 t:assert(line:find("hello"))
 ```
 
-`opts.start` controls the starting position:
-
-| Value | Effect |
-|---|---|
-| `"end"` (default) | Only bytes appended after the call. |
-| `"beginning"` / `"start"` | Replay from byte 0, then continue tailing. |
-| Integer | Start from that exact byte offset. |
+`opts.start` controls the starting position — `"end"` (the default: only bytes appended after the call), `"beginning"` (replay from byte 0, then continue tailing), or a byte offset. Negative-offset and float handling are in the [VM reference](~provium/reference/vm#vmtail-filepath-opts).
 
 ### `file:tail_stream()`
 

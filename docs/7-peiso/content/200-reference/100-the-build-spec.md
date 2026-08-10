@@ -18,9 +18,9 @@ sudo peiso build [spec.toml]
 
 Three properties hold across the whole file:
 
-- **TOML, parsed strictly.** An **unknown key anywhere in the spec is a hard error**, not a warning — peiso rejects the first undecoded key by name. A typo'd field fails the build rather than being silently ignored.
+- **TOML, parsed strictly.** An **unknown key anywhere in the spec is a hard error**, not a warning — peiso rejects the first undecoded key by name. A mistyped field fails the build rather than being silently ignored.
 - **`schema` is checked first.** The spec must declare `schema = 1`; any other value (or a missing `schema`, which reads as `0`) fails with `unsupported schema`.
-- **Relative paths resolve against the spec file's own directory** — never the current working directory. So a build behaves the same wherever you invoke it from. There are two flavours of path handling, and it matters which a field uses:
+- **Relative paths resolve against the spec file's own directory** — never the current working directory. So a build behaves the same wherever you invoke it from. There are two kinds of path handling, and each field uses one of them:
   - **Spec-relative paths** (`root.manifest`, `root.out`, `initramfs.manifest`, `squashfs.out`, `uki.cmdline_file`, `iso.source`, `iso.out`, `inject.src`) are made **absolute** against the spec's directory. An already-absolute value is kept as given.
   - **Root-relative paths** (`initramfs.dir`, `initramfs.cpio`, `uki.out`, `iso.efi_boot`, `inject.dest`) are **cleaned and kept relative** (any leading `/` is stripped). These double as chroot-absolute paths inside the composed root, so they are validated to **not escape** with `..` (see [Validation](#validation)).
 
@@ -172,4 +172,4 @@ peiso loads, decodes and validates the spec before running anything. The rules, 
 - **Feature-name grammar.** Each `features.enable` entry must be non-empty, must not be `.` or `..`, and must consist only of **ASCII alphanumerics plus `-`, `_` and `.`**. This mirrors feat's own name grammar and doubles as a guard against shell metacharacters, since the name is embedded in a generated `feat add` line.
 - **Inject mode.** `inject.mode`, when set, must parse as an octal integer; a malformed value fails the build.
 
-A spec that passes all of these is what peiso hands to [the build pipeline](~peiso/building-images/the-build-pipeline).
+A spec that passes all of these checks is what [the build pipeline](~peiso/building-images/the-build-pipeline) runs.

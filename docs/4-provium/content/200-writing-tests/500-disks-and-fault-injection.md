@@ -23,13 +23,7 @@ local vm = provium:vm("v", "peios"):boot()
 local disk = vm:attach_disk({id = "vda", size = 1024 * 1024, image = img})
 ```
 
-Opts:
-
-| Field | Default | Effect |
-|---|---|---|
-| `id` | `attached-<vm_name>` | Disk identifier within the VM. Use this to re-look-up via `vm:disk(id)`. |
-| `size` | 4 GiB | Modelled disk size. Used by `disk:size()` when no image is attached. |
-| `image` | none | Path to the backing file. Required for `read_sectors` / `write_sectors`. |
+The two opts that matter for fault-injection work are `id` (names the disk so you can re-look it up via `vm:disk(id)`) and `image` (the backing file — required for `read_sectors` / `write_sectors`). The full opts table, types, and defaults are in the [Disk reference](~provium/reference/disk#constructing).
 
 ## Reading and writing sectors
 
@@ -131,7 +125,7 @@ local ok = pcall(function() disk:read_sectors(0, 1) end)
 assert(not ok)  -- "disk is detached"
 ```
 
-`disk:detach()` issues a best-effort QMP `device_del` against the parent VM and marks the local handle detached. If the disk was never QMP-added (host-bookkeeping-only attach), `device_del` silently surfaces "Device not found" but the local detached flag is still set.
+`disk:detach()` issues a best-effort QMP `device_del` against the parent VM and marks the local handle detached; after that, sector ops error. The exact behaviour for disks that were never QMP-added is in the [Disk reference](~provium/reference/disk#diskdetach).
 
 ## Common patterns
 

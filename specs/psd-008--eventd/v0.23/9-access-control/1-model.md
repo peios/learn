@@ -57,7 +57,9 @@ Level 0: Root (pattern GUID -- e.g., GUID for "kacs")
   Level 1: effective_token_guid field GUID
   Level 1: true_token_guid field GUID
   Level 1: process_guid field GUID
-  Level 1: payload field GUID (covers all payload fields)
+  Level 1: granted_access field GUID
+  Level 1: target_sid field GUID
+  Level 1: source.name field GUID
 ```
 
 The access check is performed using `kacs_access_check_list` (syscall 1024), which returns separate verdicts for each node in the tree. eventd uses the per-node results to include or exclude fields from the result record.
@@ -92,7 +94,7 @@ A field's GUID is computed as:
 field_guid = uuid_v5(EVENTD_FIELD_NAMESPACE, field_name)
 ```
 
-Where `field_name` is the field's query-language name as a UTF-8 string. For header fields, this is the column name (e.g., `"timestamp"`, `"event_type"`, `"cpu_id"`). For payload fields, this is the dot-separated path (e.g., `"granted_access"`, `"target_sid"`, `"source.name"`). For log fields, this is the column name (e.g., `"origin"`, `"message"`, `"is_error"`). For metric labels, this is the label key (e.g., `"core"`, `"device"`).
+Where `field_name` is the field's query-language name as a UTF-8 string. For header fields, this is the column name (e.g., `"timestamp"`, `"event_type"`, `"cpu_id"`). For payload fields, this is the flattened dot-separated path defined by §8.1 (e.g., `"granted_access"`, `"target_sid"`, `"source.name"`). Payload fields suppressed by the query-language flattening or collision rules are not query-language fields and do not receive field GUIDs. For log fields, this is the column name (e.g., `"origin"`, `"message"`, `"is_error"`). For fixed metric fields, this is the fixed field name (`"timestamp"`, `"boot_id"`, `"name"`, `"type"`, or `"value"`). For metric labels, this is the label key (e.g., `"core"`, `"device"`); metric ingestion rejects label keys that collide with fixed metric fields.
 
 The computation is deterministic: the same field name always produces the same GUID. No central registry is required. An SD author computes the GUID from the field name using the same algorithm when constructing object ACEs.
 
@@ -105,11 +107,11 @@ When performing an access check, eventd constructs the object type list dynamica
 1. The root node (level 0) uses a fixed GUID for the security pattern's data type (one GUID for events, one for logs, one for metrics).
 2. For each field in the record, a level-1 node is added with the field's deterministically computed GUID.
 
-For event records, the object type list includes nodes for all header fields plus all payload fields present in that specific event's payload. Different event types produce different object type lists because they have different payload fields. The access check result is cached per (token, pattern, field set) tuple.
+For event records, the object type list includes nodes for all header fields plus all non-colliding flattened payload fields present in that specific event's payload. Payload fields suppressed by the flattening or collision rules in §8.1 are not included. Different event types produce different object type lists because they have different payload fields. The access check result is cached per (token, pattern, field set) tuple.
 
-For log records, the field set is fixed (timestamp, origin, is_error, message, boot_id) and the object type list is the same for all log records.
+For log records, the field set is fixed (timestamp, origin, is_error, message, job_id, boot_id) and the object type list is the same for all log records.
 
-For metric records, the field set includes the fixed metric fields (timestamp, name, type, value) plus label keys, which vary per series.
+For metric records, the field set includes the fixed metric fields (timestamp, boot_id, name, type, value) plus label keys, which vary per series. Label keys cannot collide with fixed metric fields because such records are rejected during ingestion.
 
 ## Pattern resolution
 
@@ -152,6 +154,9 @@ On first boot, eventd MUST create the default security keys if they do not exist
 
 ## Conditional ACEs
 
-SDs on eventd security objects MAY contain conditional ACEs (PSD-004 §3.8). eventd SHOULD pass relevant contextual information as local claims via the `local_claims_ptr` parameter of the access check syscall. This enables attribute-based policies such as "allow read if the caller's department claim equals 'security'".
-
-The specific local claims passed by eventd are implementation-defined in v0.23.
+SDs on eventd security objects MAY contain conditional ACEs (PSD-004 §3.8).
+For v0.23, eventd passes no eventd-specific local claims to AccessCheck:
+`local_claims_ptr` MUST be null and `local_claims_len` MUST be zero. Conditional
+ACEs may still evaluate token claims supplied by KACS itself, but conditions
+that reference eventd-local claims observe those claims as absent. A future PSD
+may define a stable set of eventd-local claims.

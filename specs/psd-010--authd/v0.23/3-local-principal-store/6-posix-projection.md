@@ -60,6 +60,25 @@ rebuild from the directories, and a lost ephemeral assignment only causes
 a service's files to show a *different cosmetic uid* (the SID-native owner
 is unchanged). It holds no accounts and no secrets (§2.1).
 
+## Validating source-provided ids
+
+A source-provided projected id is accepted only if it matches this allocation
+contract. During the policy phase (§5.2), authd MUST validate the
+`projected_uid` and every group `gid` returned in a resolved principal (§6.4):
+
+- `0xFFFFFFFF` is a wire sentinel meaning "the source assigns no id"; authd
+  MUST resolve it to a stable id through the idmap before minting, and MUST
+  fail the logon if it cannot.
+- A non-sentinel id MUST be below 2^31, lie in the band assigned to that SID
+  family, and reverse-map to the same SID. If the idmap already binds the id to
+  a different SID, the resolved principal is invalid.
+- For lpsd, a `machine_sid`-relative SID with RID `r` MUST project to
+  `5,000,000 + r`. A local BUILTIN alias `S-1-5-32-N` uses the computed
+  `1000 + N` mapping. A source MUST NOT return a local-band id for a SID it is
+  not authoritative to assert.
+
+No sentinel or invalid id may reach `kacs_create_token`.
+
 Reverse-resolution is **not** cosmetic on the setuid-bit transition path
 (PSD-004 — a setuid binary's `id → SID` lookup decides which principal it
 becomes): for any id that can be a setuid target, the mapping MUST be

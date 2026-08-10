@@ -118,6 +118,22 @@ under-specified evaluation behavior.
 
 ## Clarifications
 
+- §5.3, §8.2, §14.B — signal delivery gains an explicit **structural
+  same-process exemption**: delivery within the same process security state is
+  not a process-boundary operation, and the exemption MUST NOT depend on the
+  default SD's self-ACE (restricted/confined tokens fail AccessCheck against
+  their own SD; `raise()`/`abort()`/`pthread_kill()` MUST still work). v0.20
+  as originally published specified self-bypass language for the neighboring
+  enforcement points but was silent for `task_kill`, and the reference
+  implementation enforced the full two-check path on self-signals — a defect
+  fixed alongside this clarification. The clarification is also mirrored into
+  the v0.20 text as an erratum.
+  Additionally specified: per-target evaluation with partial delivery for
+  multi-target sends (`kill(0/-pgid/-1)`); POSIX's same-session `SIGCONT`
+  exception is intentionally not implemented; terminal-generated job-control
+  signals are kernel-originated and bypass the gate (authorization for them is
+  possession of the controlling terminal); `si_pid`/`si_uid` are projected,
+  informational-only values.
 - §3.1 — an object MUST carry exactly one Security Descriptor (no semantic
   change). `SE_DACL_TRUSTED` description trimmed to "Reserved" (no semantic
   change).

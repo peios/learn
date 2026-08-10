@@ -284,12 +284,6 @@ At evaluation:
 
 ## Size limits
 
-Per-expression:
-
-| Limit | Value |
-|---|---|
-| Stack depth (recommended max) | 1024 |
-| Bytecode length | Bounded by the containing structure (ACE size for ACEs, 64 KB for CAAP applies-to) |
-| Stack-element size | Bounded by individual literal sizes (no aggregate limit) |
+Per-expression: the recommended maximum stack depth is 1024 (see above); bytecode length is bounded by the containing structure (the ACE size for ACE-embedded expressions, 64 KB for a CAAP applies-to); stack-element size is bounded by the individual literal sizes. The consolidated limits catalogue is in [Other constants](~peios/constants-and-catalogs/other-constants).
 
 A pathological expression that approaches these limits will be rejected at ingestion or yield UNKNOWN at evaluation.

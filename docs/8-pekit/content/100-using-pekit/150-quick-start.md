@@ -141,6 +141,6 @@ That file is a real package: [peipkg](~peios/package-management/overview) can in
 ## Where to go next
 
 - [Anatomy of a recipe](~pekit/recipes/anatomy) — every file in the recipe directory, all of `pekit.toml`'s sections, and the full `PEKIT_*` environment contract.
-- [Commands and targets](~pekit/using-pekit/commands-and-targets) — the seven commands, named targets, `needs` ordering, and target selection.
+- [Commands and targets](~pekit/using-pekit/commands-and-targets) — the commands, named targets, `needs` ordering, target selection, and the `gen`/`verify` source-generation pair.
 - [Invocation and flags](~pekit/using-pekit/invocation) — the command line: `--dry-run`, `--json`, and how recipes are located.
 - [Recipe format reference](~pekit/reference/recipe-format) — the exhaustive schema for `pekit.toml` and package files.

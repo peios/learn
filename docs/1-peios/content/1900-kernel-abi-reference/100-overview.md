@@ -84,17 +84,24 @@ The structs that use this pattern (and their v1 minimum sizes) are catalogued in
 
 KACS syscalls and ioctls use the standard Linux `errno` convention: return -1 (or -errno on syscalls that don't go through libc) and set the appropriate error code.
 
-The error codes you will see most often:
+This table is the canonical errno reference for the KACS surface:
 
 | Code | Meaning in KACS context |
 |---|---|
 | `-EACCES` | The access check denied the operation. The most common error from KACS. |
 | `-EPERM` | A privilege required for the operation is not present, or a special restriction was triggered (e.g., restricted→unrestricted same-user impersonation). |
-| `-EINVAL` | A parameter is malformed — bad SD, unknown enum value, non-zero reserved fields, etc. |
+| `-EINVAL` | A parameter is malformed — bad SD, unknown enum value, non-zero reserved fields, malformed wire format. |
 | `-EFAULT` | A pointer parameter is invalid. |
 | `-ERANGE` | A buffer is too small. Often paired with the kernel writing the required size to the size parameter. |
 | `-ENOENT` | A target principal/object does not exist. |
 | `-EBADF` | A file descriptor is invalid. |
+| `-ENOSYS` | Syscall not implemented. |
+| `-EEXIST` | Object already exists (typically for CREATE dispositions). |
+| `-ENOTDIR` | Target is not a directory when one is required. |
+| `-ELOOP` | Symlink encountered when NOFOLLOW was set. |
+| `-EOPNOTSUPP` | Operation not supported on this filesystem / object. |
+| `-ESRCH` | Target process / thread does not exist. |
+| `-ENOMEM` | Allocation failed. |
 | `-EBUSY` | A resource is in use (rare; specific syscalls document their cases). |
 
 Per-syscall details about which errors are possible and what each indicates are in [Syscalls](~peios/kernel-abi-reference/syscalls).

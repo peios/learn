@@ -97,15 +97,9 @@ EnforceMIC(ace, token, mapping, &decided):
     if token_dominates:
         return
 
-    // Non-dominant: start with read + execute + standard read rights,
-    // strip based on label policy. READ_CONTROL and SYNCHRONIZE are
-    // always in the allowed set regardless of the object type's
-    // GenericMapping — a non-dominant caller can always read the SD
-    // and synchronize on an object.
+    // Non-dominant: start with read + execute, strip based on label policy.
     allowed = MapGenericBits(GENERIC_READ, mapping)
             | MapGenericBits(GENERIC_EXECUTE, mapping)
-            | READ_CONTROL
-            | SYNCHRONIZE
 
     if ace.mask & SYSTEM_MANDATORY_LABEL_NO_READ_UP:
         allowed &= ~MapGenericBits(GENERIC_READ, mapping)
@@ -113,6 +107,13 @@ EnforceMIC(ace, token, mapping, &decided):
         allowed &= ~MapGenericBits(GENERIC_WRITE, mapping)
     if ace.mask & SYSTEM_MANDATORY_LABEL_NO_EXECUTE_UP:
         allowed &= ~MapGenericBits(GENERIC_EXECUTE, mapping)
+
+    // READ_CONTROL and SYNCHRONIZE are always in the allowed set regardless of
+    // the object type's GenericMapping and the label's up-strip policy — a
+    // non-dominant caller can always read the SD and synchronize on an object.
+    // Applied after the strips because a file GENERIC_READ mapping folds these
+    // bits in, so NO_READ_UP would otherwise remove them.
+    allowed |= READ_CONTROL | SYNCHRONIZE
 
     // SeRelabelPrivilege: allow WRITE_OWNER through MIC.
     if token.privilege_enabled(SeRelabelPrivilege):

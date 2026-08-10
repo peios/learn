@@ -76,22 +76,9 @@ The cleanup is robust: SIGINT / SIGTERM handlers and an `atexit` hook clear the 
 
 ## What's in the stream
 
-| Event | Emitted when |
-|---|---|
-| `file_discovered` | Each `*.test.lua` found in pre-run scan. Includes `fixture_refs`. |
-| `file_dispatched` | A runner thread picks up a file. Includes `reservation`. |
-| `file_blocked` | A file is waiting on the pool or PSI pressure. |
-| `file_completed` | A file finishes (`passed` / `failed` / `timed_out` / `crashed`). |
-| `test_started` | A `test()` block begins. |
-| `test_passed` / `test_failed` / `test_skipped` | A `test()` block ends. `test_failed` includes `console_excerpt`. |
-| `vm_spawned` / `vm_shutdown` | VM lifecycle. Includes CID, profile, memory. |
-| `pool_state` | Periodic 1 Hz snapshot of pool usage. |
-| `claim_acquired` / `claim_released` | A file's `provium:claim(...)` lifecycle. |
-| `fixture_build_started` / `fixture_build_done` | A fixture's build lifecycle. |
-| `fixture_build_waiting` | A second file is queued behind a peer's build. |
-| `fixture_cache_hit` | A fixture was resumed from cache. |
+The stream covers five areas: file lifecycle (`file_discovered` → `file_dispatched` → `file_completed`, with `file_blocked` when a file waits on the pool), test outcomes (`test_started` then one of `test_passed` / `test_failed` / `test_skipped`), VM lifecycle (`vm_spawned` / `vm_shutdown`), pool and claim activity, and fixture builds (`fixture_build_started` / `_done` / `_waiting` and `fixture_cache_hit`).
 
-Every frame is `{ts, kind, payload}` — see [events reference](~provium/reference/events) for the full wire shape.
+Every frame is `{ts, kind, payload}`. The full variant list and every payload field are in the [events reference](~provium/reference/events).
 
 ## Replay and analysis
 
@@ -157,16 +144,7 @@ For non-dashboard pipelines (CI feeding a coverage tool), prefer `--events-stdou
 
 ## Observability event guarantees
 
-The harness ensures:
-
-- `file_discovered` for every file, before any dispatching.
-- For each file: at most one `file_dispatched`, optional `file_blocked`(s) before it, exactly one `file_completed` after.
-- For each test: exactly one `test_started`, then exactly one of `test_passed` / `test_failed` / `test_skipped`.
-- `claim_acquired` and `claim_released` are paired per file.
-- `fixture_build_started` / `fixture_build_done` are paired per build.
-- `fixture_cache_hit` fires AFTER successful restore — never on a corrupt entry that turns into a rebuild.
-
-Consumers can rely on these to track in-flight state — e.g. counting "in-flight files" as `file_dispatched - file_completed`.
+The harness guarantees ordering and pairing invariants (exactly one `file_completed` per dispatched file, exactly one terminal event per started test, paired claim and fixture-build events) — the full list is in [events reference — Event guarantees](~provium/reference/events#event-guarantees). Consumers can rely on these to track in-flight state, e.g. counting "in-flight files" as `file_dispatched - file_completed`.
 
 ## Practical patterns
 

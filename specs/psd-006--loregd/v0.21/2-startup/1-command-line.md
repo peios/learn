@@ -49,14 +49,11 @@ All operational behaviour is determined by:
    database file at the declared path. Enable WAL mode. Run
    `PRAGMA journal_mode=wal` and `PRAGMA foreign_keys=ON`.
 
-3. **Attach volatile stores.** For each hive, create a shared
-   in-memory database for volatile key storage using SQLite's
-   shared-cache URI:
-   `ATTACH 'file:<hivename>_volatile?mode=memory&cache=shared' AS volatile`.
-   This URI MUST be identical across all connections (read and
-   write) for the same hive, ensuring all connections share the
-   same volatile store. Each hive has its own volatile store
-   (distinct URI per hive).
+3. **Create volatile stores.** For each hive, initialise an empty
+   in-process volatile store (§3.1.6): the four in-memory maps
+   that hold that hive's volatile keys. The volatile store is not
+   a SQLite database and has no on-disk presence; it starts empty
+   on every boot.
 
 4. **Run schema migrations.** Ensure the database schema matches
    the current loregd version. Create tables if the database is
@@ -78,7 +75,8 @@ All operational behaviour is determined by:
 
 7. **Compute max sequence.** For each hive, query the maximum
    sequence number across all tables (path_entries, values,
-   blanket_tombstones). Report the global maximum across all
+   blanket_tombstones). Volatile stores are empty at startup and
+   contribute no sequences. Report the global maximum across all
    hives in the registration handshake.
 
 8. **Open /dev/pkm_registry.** Requires SeTcbPrivilege in the
@@ -100,6 +98,6 @@ loregd exits when:
 - peinit sends a termination signal
 
 On exit, loregd closes all database connections. SQLite finalises
-any open WAL transactions. The volatile stores (in-memory
-databases) are destroyed — volatile keys are gone. LCS detects
+any open WAL transactions. The volatile stores (in-process
+memory) are discarded — volatile keys are gone. LCS detects
 the source disconnect and marks all hives as unavailable.

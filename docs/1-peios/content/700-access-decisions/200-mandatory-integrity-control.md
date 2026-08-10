@@ -18,7 +18,7 @@ MIC fires in step 5 of the access check pipeline — pre-DACL. Its decisions are
 
 ## The integrity levels
 
-There are five standard integrity levels, with strictly ordered SIDs:
+In practice there are five standard integrity levels, strictly ordered — treat integrity as an enum even though, technically, it is not one (see below). These five are the levels anyone normally works with (canonical value catalogue: [Other constants](~peios/constants-and-catalogs/other-constants)):
 
 | Level | SID | RID | Typical use |
 |---|---|---|---|
@@ -28,15 +28,15 @@ There are five standard integrity levels, with strictly ordered SIDs:
 | **High** | `S-1-16-12288` | 12288 | Elevated administrative sessions. The Full token in a UAC-style linked pair. |
 | **System** | `S-1-16-16384` | 16384 | The kernel, peinit, authd, and the rest of the TCB. |
 
-The numeric RIDs are spaced by 4096 to leave room for future levels without disturbing the existing ordering. A SID's level is determined by its RID; the kernel does not check the SID against a hardcoded list, so an integrity SID with an unusual RID would be interpreted by its position in the ordering.
-
 The comparison is the obvious one: Untrusted < Low < Medium < High < System. A caller **dominates** an object if the caller's integrity level is at least the object's level. Otherwise the caller is non-dominant and MIC's policy bits decide what they cannot do.
+
+Technically, though, the level is not an enum. An integrity level is simply the single sub-authority of an `S-1-16` mandatory-label SID, read as an unsigned integer, and levels are compared numerically. Any `S-1-16-<n>` SID with exactly one sub-authority is a valid level; only a SID with the wrong identifier authority (not `S-1-16`) or more than one sub-authority is malformed and rejected. The kernel does not check a label SID against a hardcoded list — an unusual value is interpreted purely by its numeric position, and the five standard RIDs are spaced by 4096 to leave room between them. This mostly matters for Windows interop, where non-standard levels appear: `medium-plus` (`S-1-16-8448`) sits just above Medium, and `protected` (`S-1-16-20480`) sits above System. Treat the five named levels as the working model; just don't assume they are the only values a label can carry.
 
 ## Where the object's label lives
 
 An object's mandatory integrity label is in its SACL, as a `SYSTEM_MANDATORY_LABEL_ACE`. The ACE has:
 
-- A **SID** from the integrity namespace (an `S-1-16` SID, normally one of the five above).
+- A **SID** from the integrity namespace (an `S-1-16` SID with one sub-authority — normally one of the five above, occasionally a non-standard level such as `medium-plus` or `protected`).
 - A **mask** containing the MIC policy bits.
 
 When the access check looks at an SD, it scans the SACL for `SYSTEM_MANDATORY_LABEL_ACE` entries that are not inherit-only. The first such ACE is the object's effective label. If there is none, the object's effective label is **Medium with `NO_WRITE_UP`** — that is the default for an unlabelled object.
@@ -47,7 +47,7 @@ The SACL ACE also lives there for a reason: changing the integrity label is a pr
 
 ## The MIC policy bits
 
-The mask of a `SYSTEM_MANDATORY_LABEL_ACE` contains MIC policy bits that say what non-dominant callers cannot do:
+The mask of a `SYSTEM_MANDATORY_LABEL_ACE` contains MIC policy bits that say what non-dominant callers cannot do (canonical values: [ACE types and flags](~peios/constants-and-catalogs/ace-types-and-flags)):
 
 | Bit | Value | Effect on non-dominant callers |
 |---|---|---|

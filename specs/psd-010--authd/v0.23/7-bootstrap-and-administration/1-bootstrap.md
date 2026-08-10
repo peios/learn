@@ -24,12 +24,19 @@ clones of one image.
 
 ## First-boot setup
 
-On first boot, in setup mode, on the SYSTEM token:
+On first boot, peinit starts lpsd with a SYSTEM platform-service token
+(PSD-007) and sends `ENTER_SETUP_MODE` (§6.4) over `/run/lpsd.sock` before
+authd is started. lpsd accepts that request only from the peinit bootstrap
+authority defined below. With setup mode armed:
 
 1. lpsd opens its database; finding it uninitialised **and** setup mode
    in effect, lpsd initialises the template:
    - generate the `machine_sid` (`S-1-5-21-X-Y-Z`);
    - initialise `rid_counter` and the password/lockout policy;
+   - stamp the **domain object's SD** with the default of §9 (SYSTEM full
+     control; Administrators create/manage; the inheritable ACEs that seed
+     new principals), and give each seeded built-in its default principal
+     SD (§7.2);
    - seed the built-ins: Administrator (RID 500, **disabled**), Guest
      (RID 501, disabled), and the `S-1-5-32` BUILTIN alias groups;
    - create the database file with the tight SD of §3.5.
@@ -40,9 +47,14 @@ On first boot, in setup mode, on the SYSTEM token:
    out-of-box (OOBE) setup rather than normal login. A SYSTEM setup
    agent uses lpsd's administration interface (§7.2) to create the first
    administrator as a **new user (RID ≥ 1000)** added to
-   `Administrators`, and sets its password. The agent obtains the
-   first-admin details interactively, or non-interactively from an
-   unattended answer file — one agent, two input modes.
+   `Administrators`, and sets its password. The agent's authority is
+   grounded by AccessCheck, not asserted: the domain object's default SD
+   grants SYSTEM full control (§7.2, §9), so the SYSTEM-token agent passes
+   the create-child and Reset-Password checks with no principal yet in
+   existence — this is what dissolves the bootstrap paradox without a
+   special-cased gate. The agent obtains the first-admin details
+   interactively, or non-interactively from an unattended answer file —
+   one agent, two input modes.
 4. Setup mode ends; login frontends are enabled; normal multi-user login
    begins.
 
@@ -54,13 +66,27 @@ if the real database were later restored.
 
 ## Setup mode and "usable administrator"
 
-**Setup mode** is signalled to lpsd by peinit via a **kernel-attested
-capability** — peinit's `SeTcbPrivilege`-bearing token, which lpsd
-verifies by checking the signaller's peer token (§6.2) is peinit — never a
-forgeable flag/file/env, and never inferred from the database being absent
-or empty. lpsd MUST generate the machine SID and seed the template only
-when this attested signal is present, and only once. On a normal boot (no setup signal), an uninitialised or
-missing database is a hard error that routes to recovery (§7.3).
+**Setup mode** is signalled to lpsd by peinit with the `ENTER_SETUP_MODE`
+request (§6.4) on `/run/lpsd.sock`. lpsd MUST obtain the peer token with
+`kacs_open_peer_token` (§6.2) and accept the request only if all of the
+following are true:
+
+- the database is absent or uninitialised;
+- the request body is empty and no file descriptors are attached;
+- the peer token holds `SeTcbPrivilege`;
+- the peer token's user SID is SYSTEM (`S-1-5-18`); and
+- the peer token matches the peinit bootstrap identity in §9: the per-service
+  SID for `peinit` when present, otherwise the PSD-007 PID 1 bootstrap
+  authority.
+
+The request arms setup mode for this boot and is one-shot: after lpsd has
+initialised the store, any later `ENTER_SETUP_MODE` request is
+`INVALID_REQUEST`. lpsd MUST generate the machine SID and seed the template
+only while this attested setup mode is armed, and only once. Setup mode is
+never signalled by a flag, file, environment variable, command-line switch, or
+by the database being absent or empty. On a normal boot (no setup request), an
+uninitialised or missing database is a hard error that routes to recovery
+(§7.3).
 
 A **usable administrator** is at least one *enabled* principal that is a
 member of `Administrators` (`S-1-5-32-544`) and holds a `password`

@@ -1,0 +1,2 @@
+name = "Wispist"
+description = "A lightweight, browser-facing data engine for simple sites. Wispist gives static HTML and JavaScript persistent JSON documents, safe mutations, and live updates without a connection step or a dedicated application server."

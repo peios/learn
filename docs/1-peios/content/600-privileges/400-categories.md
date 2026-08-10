@@ -45,7 +45,8 @@ Representative members:
 | `SeIncreaseQuotaPrivilege` | Overriding resource limits for a process. |
 | `SeLockMemoryPrivilege` | Locking pages in physical memory (`mlock`/`mlockall`). |
 | `SeAuditPrivilege` | Writing entries to the audit log. |
-| `SeProfileSingleProcessPrivilege` | Using performance monitoring tools (`perf_event_open`). |
+| `SeProfileSingleProcessPrivilege` | Cross-task profiling of a specific other process (`perf_event_open`). Own-task profiling needs no privilege. |
+| `SeSystemProfilePrivilege` | System-wide profiling (`perf_event_open` with `pid == -1`): per-CPU, all-task, kernel-mode events. |
 | `SeBindPrivilegedPortPrivilege` | Binding to TCP/UDP ports below 1024. A Peios-specific privilege. |
 | `SeChangeNotifyPrivilege` | Bypassing traverse checks during path resolution. Granted to every principal by default; rarely the answer to a question. |
 | `SeCreateSymbolicLinkPrivilege` | Creating symbolic links. Granted to every principal by default. |
@@ -102,7 +103,6 @@ A handful of privileges appear in the catalog for binary compatibility with the 
 | `SeManageVolumePrivilege` | Folded into `SeTcbPrivilege`. |
 | `SeTrustedCredManAccessPrivilege` | Reserved for future secrets infrastructure. |
 | `SeSystemEnvironmentPrivilege` | Replaced by SDs on EFI variable files under FACS. |
-| `SeSystemProfilePrivilege` | Folded into `SeProfileSingleProcessPrivilege`. |
 | `SeTimeZonePrivilege` | Linux does not gate timezone changes. |
 | `SeUndockPrivilege` | Server OS; not applicable. |
 

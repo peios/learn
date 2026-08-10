@@ -237,30 +237,7 @@ The deserialiser dispatches on the input type rather than relying on declaration
 
 ## Consuming the stream
 
-### From a file (replay or post-hoc)
-
-```
-provium tests/ --save-events events.msgpack
-provium-coverage --from events.msgpack
-```
-
-### From stdout (live)
-
-```
-provium tests/ --events-stdout | provium-coverage --from -
-```
-
-The human-readable renderer redirects to stderr automatically.
-
-### Over a Unix socket (multi-consumer dashboard)
-
-```
-provium tests/ --events-socket /tmp/provium.sock --watch
-# in another terminal:
-provium-coverage --from-socket /tmp/provium.sock
-```
-
-The socket persists across `--watch` iterations so connected clients stay connected.
+The three output channels — `--save-events <path>` (file), `--events-stdout` (pipe), and `--events-socket <path>` (multi-consumer Unix socket) — and the patterns for choosing between them are covered in [events and coverage](~provium/running-tests/events-and-coverage#output-channels).
 
 ## See also
 

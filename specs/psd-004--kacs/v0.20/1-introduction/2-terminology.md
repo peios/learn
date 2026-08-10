@@ -34,7 +34,7 @@ The following terms are used throughout this specification with the precise mean
 
 **Impersonation level**: Controls how far a token's identity can travel. Four levels: Anonymous, Identification, Impersonation, Delegation.
 
-**Integrity level**: A vertical trust classification on tokens and objects. Five levels forming a strict total order: Untrusted < Low < Medium < High < System.
+**Integrity level**: A vertical trust classification on tokens and objects. Numerically it is the mandatory-label SID's single sub-authority, compared as an unsigned integer — any `S-1-16-<n>` with exactly one sub-authority is a valid level. In practice the five standard levels are treated as an enum forming a strict total order: Untrusted (0) < Low (4096) < Medium (8192) < High (12288) < System (16384). Non-standard values (e.g. `S-1-16-8448`, "medium-plus") appear only in Windows-interop SDs.
 
 **MIC** (Mandatory Integrity Control): A mandatory access constraint evaluated before the DACL. Blocks write access (and optionally read/execute) when the caller's integrity level is below the object's mandatory label.
 
@@ -52,4 +52,4 @@ The following terms are used throughout this specification with the precise mean
 
 **LSM** (Linux Security Module): The kernel framework that KACS builds on. LSM provides hook points throughout the kernel where security modules interpose access control decisions.
 
-**LogonSession**: A kernel object representing a single authentication event. Contains: session ID, logon type, user SID, authentication package, logon time, and a logon SID. Tokens reference their LogonSession by ID.
+**LogonSession**: A kernel object representing a single authentication event. Contains: LogonSession ID, logon type, user SID, authentication package, logon time, and a logon SID. Tokens reference their LogonSession by ID.

@@ -19,22 +19,33 @@ Regardless of clause order in the query string, execution follows a fixed sequen
 
 1. **Cross-type conditions** -- WHERE METRIC / WHERE EVENT / WHERE LOG conditions are evaluated first to produce time range filters.
 2. **Primary selector** -- type pattern (events), FROM (logs), or metric name/labels (metrics) narrows the data source.
-3. **SINCE / UNTIL** -- time range filter applied.
-4. **WHERE** -- all WHERE predicates are ANDed and evaluated. Cross-type time ranges from step 1 are included as additional timestamp filters.
-5. **ERROR ONLY / CONTAINING** -- log-specific filters (evaluated as WHERE predicates internally).
-6. **Value functions** -- RATE, DELTA, P95, etc. for metrics.
-7. **GROUP** -- grouping for aggregation.
-8. **Aggregation** -- COUNT BY, TOP N BY, COUNT, SUM, AVG, MIN, MAX, DISTINCT.
-9. **Window functions** -- AVG_OVER, MIN_OVER, MAX_OVER for metrics.
-10. **SORT** -- ordering.
-11. **SKIP / TAKE** -- pagination and limiting.
-12. **SELECT** -- result records narrowed to specified fields.
+3. **Access control** -- root-pattern access is applied to the primary data source and cross-type data sources. Unauthorized records are removed from the logical row set before predicates, metric transforms, aggregation, sorting, pagination, or result formatting that could reveal them.
+4. **SINCE / UNTIL** -- time range filter applied.
+5. **WHERE** -- all WHERE predicates are ANDed and evaluated. Cross-type time ranges from step 1 are included as additional timestamp filters. Predicates that reference fields the caller is not authorized to read are rejected as described in §9.2.
+6. **ERROR ONLY / CONTAINING** -- log-specific filters (evaluated as WHERE predicates internally).
+7. **Metric transforms** -- RATE, DELTA, P50/P95/P99 for metrics.
+8. **GROUP** -- grouping for aggregation.
+9. **Aggregation** -- COUNT BY, TOP N BY, COUNT, SUM, AVG, MIN, MAX, DISTINCT.
+10. **Metric window aggregations** -- AVG_OVER, MIN_OVER, MAX_OVER, SUM_OVER for metrics.
+11. **SORT** -- ordering.
+12. **SKIP / TAKE** -- pagination and limiting.
+13. **SELECT** -- non-aggregation event/log result records narrowed to specified fields.
 
-SELECT is applied last -- it controls the shape of output, not the visibility of fields to other clauses.
+SELECT is applied last for queries where it is valid -- it controls the shape of
+output, not the visibility of fields to other clauses. Event and log aggregation
+queries have fixed output schemas and reject SELECT during parsing. Metric
+queries also have fixed output schemas and reject SELECT during parsing.
 
 ## SQL translation
 
-For events and logs, the query is translated to SQL internally. Header field predicates translate to SQL WHERE clauses. Payload field predicates (events) translate to `msgpack_extract` function calls. Log fields translate directly to column references.
+For events and logs, the query is translated to SQL internally. Header field
+predicates translate to SQL WHERE clauses. Payload field predicates (events)
+translate to eventd-internal payload extraction predicates and may use adaptive
+payload indexes (§3.3). Log fields translate directly to column references.
+Payload SQL translation MUST preserve the query-language field resolution and
+comparison semantics defined in §8.1; when SQLite is used only to narrow
+candidate rows, eventd MUST apply the final query-language predicate evaluation
+after loading the row.
 
 For metrics, the query is translated to SQL against the metric store's series and samples tables. The series table is used for name and label resolution (cached in memory). The samples table is queried for the time range.
 
@@ -44,7 +55,13 @@ The SQL translation is an implementation detail. Clients never see SQL.
 
 Event queries execute against all databases in the event store directory. Results from individual shards are merged depending on the query type:
 
-- **Non-aggregation queries** (with SORT and TAKE): each shard returns up to `SKIP + TAKE` rows sorted by the sort key (or TAKE rows if no SKIP is present). The merge is an N-way merge of sorted streams. SKIP and TAKE are applied after the merge by the coordinator. Total rows read: at most `(SKIP + TAKE) × shard_count`.
+- **Non-aggregation queries**: each shard produces rows sorted by the effective
+  sort key, including deterministic tiebreakers. The coordinator performs an
+  N-way merge of sorted shard streams. If `TAKE` is present, each shard returns
+  at most `SKIP + TAKE` rows (or `TAKE` rows if no `SKIP` is present), and
+  `SKIP`/`TAKE` are applied after the merge by the coordinator. Total rows read
+  with `TAKE`: at most `(SKIP + TAKE) × shard_count`. If `TAKE` is absent, each
+  shard streams all matching rows until the query completes or times out.
 - **COUNT**: each shard returns its local count. The final result is the sum across all shards.
 - **COUNT BY / TOP N BY / GROUP with COUNT**: each shard returns per-group counts. The merge sums counts for the same group key across shards, then sorts by count descending and applies TAKE if present.
 - **GROUP with SUM**: each shard returns per-group sums. The merge sums per-group values across shards.
@@ -71,11 +88,11 @@ This applies to event queries only. Log and metric stores have fixed indexes.
 ## Payload extraction
 
 > [!INFORMATIVE]
-> Constructing flat-map results from event records requires decoding the msgpack payload for each returned row. At high result counts (thousands of events), this becomes the dominant query-path cost. Implementations SHOULD use partial/lazy extraction: when SELECT is present, only decode the named payload fields rather than the entire payload. When no SELECT is present, a streaming msgpack decoder that emits key-value pairs without building a full in-memory representation reduces allocation pressure.
+> Constructing flat-map results from event records requires decoding the msgpack payload for each returned row and applying the flattening rules in §8.1. At high result counts (thousands of events), this becomes the dominant query-path cost. Implementations SHOULD use partial/lazy extraction: when SELECT is present, only decode the named payload paths rather than the entire payload. When no SELECT is present, a streaming msgpack decoder that emits flattened key-value pairs without building a full in-memory representation reduces allocation pressure.
 
 ## Read connections
 
-Query execution uses read-only SQLite connections. Read-only connections in WAL mode do not block writer threads. eventd SHOULD support multiple concurrent queries.
+Query execution uses read-only SQLite connections. Read-only connections in WAL mode do not block writer threads. eventd MUST support concurrent query execution up to the configured `MaxConcurrentQueries` admission-control limit, subject to OS resource availability. If eventd cannot allocate the resources needed for an admitted query, it MUST return an error for that query rather than blocking writers or exceeding the configured limit.
 
 ## Concurrency limits
 
@@ -94,3 +111,22 @@ Queries MUST have a maximum execution time.
 | Key | Type | Default | Valid range | Description |
 |---|---|---|---|---|
 | QueryTimeoutMs | REG_DWORD | 30000 | 1000--300000 | Maximum query execution time in milliseconds. |
+
+The timeout clock starts after the request message has been fully decoded and
+the caller token has been obtained. It covers parsing, planning, access checks,
+cross-type pre-computation, SQL execution, result merging, aggregation,
+pagination, projection, and transmission of the initial result set. For
+non-streaming queries, eventd MUST send the `end` message before the timeout
+expires. For streaming queries, eventd MUST send the `watch` message before the
+timeout expires. `QueryTimeoutMs` applies only to the initial result set; the
+streaming watch phase is not time-limited by `QueryTimeoutMs` and is instead
+bounded by `MaxStreamingQueries`, `MaxDistinctStreamValues`, and backpressure
+handling.
+
+If the timeout expires before the relevant phase completes, eventd MUST cancel
+the query and send an error response. If any `ok` result messages were already
+sent for that query and no `end` or `watch` message was sent, the client MUST
+discard those partial results as specified in §8.8. SQLite work MUST be interrupted using
+`sqlite3_interrupt()` or an equivalent progress-handler cancellation mechanism,
+and non-SQL CPU work such as msgpack flattening or cross-shard merging MUST
+check the same deadline periodically.

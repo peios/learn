@@ -28,7 +28,7 @@ This is the complete set of Peios privileges. Each privilege is listed with a de
 | SeBackupPrivilege | Read any object regardless of DACL, for backup. Intent-gated: only evaluated when the caller passes BACKUP_INTENT. | AccessCheck |
 | SeRestorePrivilege | Write any object, modify permissions, change ownership, access SACL -- everything needed to restore an object. Intent-gated: only evaluated when the caller passes RESTORE_INTENT. | AccessCheck |
 | SeRelabelPrivilege | Change an object's integrity label. Punches WRITE_OWNER through MIC for non-dominant callers. Removes the "only at or below own level" restriction at label-write time in kacs_set_sd. | AccessCheck + kernel standalone |
-| SeChangeNotifyPrivilege | Bypass traverse checking. Without this privilege, accessing a file requires execute permission on every intermediate directory. Granted to all principals by default. | Kernel standalone |
+| SeChangeNotifyPrivilege | Bypass traverse checking. Without this privilege, accessing a file requires FILE_TRAVERSE on every intermediate directory. Granted to all principals by default. Implementations SHOULD cache the privilege status as a boolean flag on the token (e.g., `has_traverse_privilege`) and check the flag in the `security_inode_permission` hot path rather than scanning the privilege array on every intermediate directory. This privilege is checked O(depth) times per path resolution. | Kernel standalone |
 | SeCreateSymbolicLinkPrivilege | Create symbolic links. Required in addition to FILE_ADD_FILE on the parent directory. Granted to all principals by default. | Kernel standalone |
 
 ## System operations
@@ -45,7 +45,8 @@ This is the complete set of Peios privileges. Each privilege is listed with a de
 | SeIncreaseQuotaPrivilege | Override resource limits (ulimits) for a process. | Kernel standalone |
 | SeLockMemoryPrivilege | Lock pages in physical memory (mlock/mlockall). | Kernel standalone |
 | SeAuditPrivilege | Write events to the audit log. | Kernel standalone |
-| SeProfileSingleProcessPrivilege | Use performance monitoring tools (perf_event_open). | Kernel standalone |
+| SeProfileSingleProcessPrivilege | Attach `perf_event_open()` to a specific other process (cross-task profiling). PIP-respecting — does not bypass dominance. Own-task profiling does not require this privilege. | Kernel standalone |
+| SeSystemProfilePrivilege | Use system-wide performance profiling: per-CPU events, all-task sampling, kernel-mode events, and the cross-paranoid-level capabilities of `perf_event_open()`. Does not respect PIP at the per-sample level — system-wide samples include PIP-protected tasks. Operator-class privilege. | Kernel standalone |
 | SeCreateJobPrivilege | Submit supervised jobs via JFS. Custom Peios privilege. Not enforced in v0.20 (JFS is out of scope). Defined for ABI stability. | Kernel standalone (future) |
 
 ## Network
@@ -68,14 +69,13 @@ The following privileges are allocated for format compatibility. The positions e
 
 | Privilege | Reservation rationale |
 |---|---|
-| SeCreateGlobalPrivilege | Peios has no per-session object namespaces. |
+| SeCreateGlobalPrivilege | Peios has no per-LogonSession object namespaces. |
 | SeCreatePagefilePrivilege | Absorbed in SeTcbPrivilege. |
 | SeCreatePermanentPrivilege | No Linux equivalent. |
 | SeIncreaseWorkingSetPrivilege | Linux does not gate memory residency hints. |
 | SeManageVolumePrivilege | Absorbed in SeTcbPrivilege. |
 | SeTrustedCredManAccessPrivilege | Reserved for future secrets infrastructure. |
 | SeSystemEnvironmentPrivilege | Gated by SDs on efivar files under FACS. |
-| SeSystemProfilePrivilege | Absorbed in SeProfileSingleProcessPrivilege. |
 | SeTimeZonePrivilege | Linux does not gate timezone changes. |
 | SeUndockPrivilege | Server operating system. |
 

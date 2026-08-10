@@ -9,24 +9,24 @@ related:
   - peios/package-management/composing-a-root
 ---
 
-**`peiso`** is the Peios image builder. Given a declarative spec, it **builds a bootable Peios image tree from nothing** — it takes a release's worth of packages and cuts them into an artifact that a machine can actually boot.
+**`peiso`** is the Peios image builder. Given a declarative spec, it builds a bootable Peios image tree from scratch: it takes a release's worth of packages and produces an artifact that a machine can boot.
 
-It is a young **v1** tool, and it is deliberately narrow. It does not resolve packages, fetch payloads, or lay out a root — that is [`peipkg-compose`](~peios/package-management/composing-a-root)'s job, and peiso calls it to do exactly that. What peiso owns is everything *above* a package root: the boot machinery that turns a directory of installed software into something bootable.
+It is a **v1** tool with a deliberately narrow scope. It does not resolve packages, fetch payloads, or lay out a root — that is [`peipkg-compose`](~peios/package-management/composing-a-root)'s job, and peiso calls it for exactly that work. peiso owns everything above the package root: the boot machinery that turns a directory of installed software into something bootable.
 
-This page is the map. It explains what a package root is versus what a bootable image is, the chain of artifacts peiso emits between the two, how you invoke it, and where its v1 scope honestly stops.
+This page explains what a package root is versus what a bootable image is, the chain of artifacts peiso emits between the two, how you invoke it, and the limits of its v1 scope.
 
 ## Where peiso sits — above compose
 
-The two tools split the work at a clean seam.
+The two tools split the work at a well-defined boundary.
 
-`peipkg-compose` builds the **package root**: a directory tree with every package's payload laid out at its installed paths, a seeded peipkg state database, and each repository written back as a `.repo` file. It is a legitimate, self-managing peipkg system — but it is *only* that. Compose's contract stops precisely at *here is a valid peipkg root*: no bootloader, no packed initramfs, no kernel image, no live-boot wiring. Those belong to whatever assembles the image around it. See [Composing a root](~peios/package-management/composing-a-root) for the full contract.
+`peipkg-compose` builds the **package root**: a directory tree with every package's payload laid out at its installed paths, a seeded peipkg state database, and each repository written back as a `.repo` file. The result is a valid peipkg system that can manage itself — but it is only that. Compose's contract stops at delivering a valid peipkg root: no bootloader, no packed initramfs, no kernel image, no live-boot wiring. Those belong to whatever assembles the image around it. See [Composing a root](~peios/package-management/composing-a-root) for the full contract.
 
-peiso is that outer assembler. It **shells out to `peipkg-compose build`** to produce the root, then layers boot machinery on top of it. The division is worth holding onto:
+peiso is that outer assembler. It **shells out to `peipkg-compose build`** to produce the root, then layers boot machinery on top of it. The division of responsibility is:
 
 - **compose = the package stage.** Resolve, verify, and lay out software into a root directory. Offline, deterministic, no boot concerns.
 - **peiso = the bootable-image stage.** Take that root and produce an initramfs, a squashable rootfs, a kernel image, and a bootable medium.
 
-Because the boot stage runs Peios' own applets — and runs them *inside* the composed root — peiso needs privilege where compose needs none. More on that below.
+Because the boot stage runs Peios' own applets — and runs them inside the composed root — peiso needs privilege where compose needs none. This requirement is covered below.
 
 ## The output chain
 
@@ -41,11 +41,11 @@ flowchart LR
     D --> E
 ```
 
-1. **Package root.** peiso calls `peipkg-compose build` on the spec's manifest. A single multi-root manifest can compose both the main system root and a nested initramfs root in one pass. (An older spec form gave the initramfs root its own separate manifest to compose; that is a transitional shape — prefer the one multi-root manifest.)
+1. **Package root.** peiso calls `peipkg-compose build` on the spec's manifest. A single multi-root manifest can compose both the main system root and a nested initramfs root in one pass. (An older spec form gave the initramfs root its own separate manifest to compose; that form is transitional — prefer the single multi-root manifest.)
 
-2. **Initramfs cpio.** peiso chroots into the composed root and runs the root's own **[`mkirf`](~peios/boot-and-trust-establishment/mkirf)** applet to pack the initramfs root into a cpio archive. Running the *shipped* mkirf in its native environment means the tool that builds the initramfs is the same one the running system uses — no divergence between what is tested and what runs. (Before this step, extra files may be dropped straight into the initramfs root via the spec's file `inject` list — a temporary bypass of packaging, used for things like the live-boot hook until they are properly packaged.)
+2. **Initramfs cpio.** peiso chroots into the composed root and runs the root's own **[`mkirf`](~peios/boot-and-trust-establishment/mkirf)** applet to pack the initramfs root into a cpio archive. Running the shipped mkirf in its native environment means the tool that builds the initramfs is the same one the running system uses — no divergence between what is tested and what runs. (Before this step, extra files may be dropped straight into the initramfs root via the spec's file `inject` list — a temporary bypass of packaging, used for things like the live-boot hook until they are properly packaged.)
 
-3. **Squashfs sysroot (optional).** peiso squashes the *whole* composed root into a read-only `sysroot.squashfs` image. squashfs **preserves existing extended attributes** — where [KACS security descriptors](~peios/security-descriptors/overview) ride — so the live rootfs is byte-identical to an installed system. The image is written *outside* the root tree so it can never contain itself.
+3. **Squashfs sysroot (optional).** peiso squashes the whole composed root into a read-only `sysroot.squashfs` image. squashfs **preserves existing extended attributes** — where [KACS security descriptors](~peios/security-descriptors/overview) ride — so the live rootfs is byte-identical to an installed system. The image is written outside the root tree so it can never contain itself.
 
 4. **UKI (optional).** peiso chroots in again and runs the root's **[`mkuki`](~peios/boot-and-trust-establishment/mkuki)** applet to bundle the kernel, the initramfs cpio, and the kernel command line into a **Unified Kernel Image** — one EFI binary that UEFI firmware boots directly, with no separate bootloader.
 
@@ -78,18 +78,18 @@ See [Running a build](~peiso/building-images/running-a-build) for the command in
 
 ## Scope and v1 caveats
 
-peiso is at **v1**, and this page describes what it does *today* — not a frozen surface.
+peiso is at **v1**, and this page describes its current behaviour; the surface is not frozen and may change.
 
-- **Distribution / live-image focused.** The chain above is built around cutting a bootable live image (UKI + off-RAM squashfs on a UEFI-bootable ISO). That is the path v1 serves well.
+- **Distribution / live-image focused.** The chain above is built around producing a bootable live image (UKI + off-RAM squashfs on a UEFI-bootable ISO). This is the path v1 supports.
 - **A single spec schema.** One `schema = 1` spec shape, parsed strictly.
 - **Optional stages.** squashfs, UKI, ISO, registry seeds, and feature enablement are each opt-in through their spec sections; a minimal build composes the root and packs the initramfs and stops.
-- **Transitional mechanisms exist.** The file-`inject` packaging bypass and the older separate-compose initramfs manifest are both temporary shapes on the way to fully-packaged inputs. They are documented where they are used, and labelled as temporary.
+- **Transitional mechanisms exist.** The file-`inject` packaging bypass and the older separate-compose initramfs manifest are both temporary mechanisms on the way to fully-packaged inputs. They are documented where they are used, and labelled as temporary.
 
-Note that v1 does **no signing**: peiso layers boot machinery, it does not mint keys or sign binaries. Where security matters, it comes from the packages and their preserved security descriptors, not from anything peiso stamps on.
+Note that v1 does **no signing**: peiso layers boot machinery; it does not create keys or sign binaries. Security properties come from the packages and their preserved security descriptors, not from anything peiso adds.
 
 ## Where to go next
 
 - To understand each stage in order — the composes, the chroot, the layering that lets the squashfs embed the initramfs and the ISO carry both the UKI and the squashfs — read [The build pipeline](~peiso/building-images/the-build-pipeline).
-- To actually run a build — the command, root requirement, and how peiso finds `peipkg-compose` — read [Running a build](~peiso/building-images/running-a-build).
+- To run a build — the command, root requirement, and how peiso finds `peipkg-compose` — read [Running a build](~peiso/building-images/running-a-build).
 - For every field of `peiso.toml`, section by section, read [The build spec](~peiso/reference/the-build-spec).
 - For the package stage beneath peiso — how the root is resolved, verified, and laid out — read [Composing a root](~peios/package-management/composing-a-root).

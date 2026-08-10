@@ -8,9 +8,9 @@ related:
   - peios/logon-sessions/overview
 ---
 
-A process is never quite on its own. Every process is related to others in two
-different ways: by **descent** — who started whom — and by **grouping** — which
-processes are handled together when they are controlled at a terminal.
+Every process is related to others in two different ways: by **descent** — who
+started whom — and by **grouping** — which processes are handled together when
+they are controlled at a terminal.
 
 ## The family tree
 
@@ -37,10 +37,10 @@ a process listing as the system's own work rather than as programs loaded from d
 
 ## Process groups
 
-Often several processes are really doing one job together. When you join a few
-commands into a pipeline — the output of one feeding into the next — each is its
-own process, but they belong together: you want to stop, pause, or resume the
-whole job at once, not a piece at a time.
+Several processes often do one job together. In a pipeline — the output of one
+command feeding into the next — each command is its own process, but they form
+one job: you stop, pause, or resume the whole job at once, not a piece at a
+time.
 
 To make that possible, related processes are collected into a **process group**.
 A process group is a set of processes treated as a unit, so that an action — most
@@ -49,26 +49,25 @@ together instead of one by one.
 
 ## Sessions and the terminal
 
-Process groups are themselves collected into a larger unit: a **session**, tied to
-the **terminal** the work is running at — the screen and keyboard where commands
-are typed.
+Process groups are themselves collected into a larger unit: a **session**, tied
+to the **terminal** the work is running at.
 
 A terminal can only take input for one job at a time, so within the session one
 process group is the **foreground** group: the one connected to the keyboard, the
-one your typing reaches, the one a stop-or-interrupt keystroke acts on. Any other
+one typing reaches, the one a stop-or-interrupt keystroke acts on. Any other
 groups are in the **background**, running without holding the keyboard. Moving a
 job between foreground and background — and starting, stopping, and resuming jobs
-— is what's meant by **job control**.
+— is **job control**.
 
 ## A different kind of "session"
 
-The word "session" is now doing double duty, and the two meanings are unrelated:
+The word "session" has two meanings here, and they are unrelated:
 
-- A **job-control session**, described above, is about *organising processes at a
-  terminal* — which groups share a terminal, which one is in the foreground. It
-  says nothing about who anyone is.
-- A **logon session** is about *a sign-in* — it records one authentication event
-  and ties together every identity token that came from it. It is part of the
+- A **job-control session**, described above, organises processes at a terminal
+  — which groups share a terminal, which one is in the foreground. It says
+  nothing about who anyone is.
+- A **logon session** records one sign-in — a single authentication event — and
+  ties together every identity token that came from it. It is part of the
   identity model, covered in [Logon sessions](~peios/logon-sessions/overview).
 
 They often line up in practice — signing in at a terminal creates a logon session,
@@ -79,5 +78,5 @@ things answering separate questions: "which processes share this terminal?" vers
 ## Where to go next
 
 Beyond its place in the tree and its groups, every process carries a bundle of its
-security-related settings — its Process Security Block. That's
+security-related settings — its Process Security Block. That is
 [The Process Security Block](~peios/threads-and-processes/the-process-security-block).

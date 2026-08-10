@@ -42,9 +42,9 @@ Sorted by LUID bit position.
 | 8 | `SeSecurityPrivilege` | AccessCheck + Kernel | Grants `ACCESS_SYSTEM_SECURITY` (SACL access). Also gates CAP_AUDIT_CONTROL, CAP_AUDIT_READ, CAP_MAC_ADMIN. |
 | 9 | `SeTakeOwnershipPrivilege` | AccessCheck | Grants `WRITE_OWNER` on any object regardless of DACL. Subject to MIC and PIP. |
 | 10 | `SeLoadDriverPrivilege` | Kernel standalone | Load and unload kernel modules. Must be stripped from non-peinit tokens via FilterToken. |
-| 11 | `SeSystemProfilePrivilege` | Reserved | Folded into `SeProfileSingleProcessPrivilege`. |
+| 11 | `SeSystemProfilePrivilege` | Kernel standalone | System-wide performance profiling (`perf_event_open` with `pid == -1`): per-CPU, all-task, and kernel-mode events. Does not respect PIP at the per-sample level. Operator-class. |
 | 12 | `SeSystemtimePrivilege` | Kernel standalone | Set the system clock. |
-| 13 | `SeProfileSingleProcessPrivilege` | Kernel standalone | Use performance monitoring (`perf_event_open`). |
+| 13 | `SeProfileSingleProcessPrivilege` | Kernel standalone | Attach `perf_event_open()` to a specific **other** process (cross-task profiling). PIP-respecting — does not bypass dominance. Own-task profiling requires no privilege. |
 | 14 | `SeIncreaseBasePriorityPrivilege` | Kernel standalone | Raise scheduling priority; set CPU affinity for other processes. |
 | 15 | `SeCreatePagefilePrivilege` | Reserved | Folded into `SeTcbPrivilege`. |
 | 16 | `SeCreatePermanentPrivilege` | Reserved | No Linux equivalent. |
@@ -54,7 +54,7 @@ Sorted by LUID bit position.
 | 20 | `SeDebugPrivilege` | Kernel standalone | Bypass process SD checks for cross-process inspection. **Does not** bypass PIP. |
 | 21 | `SeAuditPrivilege` | Kernel standalone | Write events to the audit log. |
 | 22 | `SeSystemEnvironmentPrivilege` | Reserved | Replaced by SDs on EFI variable files. |
-| 23 | `SeChangeNotifyPrivilege` | Kernel standalone | Bypass traverse-checking during path resolution. **Granted to all principals by default.** |
+| 23 | `SeChangeNotifyPrivilege` | Kernel standalone | Bypass traverse-checking (`FILE_TRAVERSE` on every intermediate directory) during path resolution. **Granted to all principals by default.** |
 | 24 | `SeRemoteShutdownPrivilege` | Kernel standalone | Shut down from a remote connection. Requires SeShutdown as well. |
 | 25 | `SeUndockPrivilege` | Reserved | Server OS; not applicable. |
 | 26 | `SeSyncAgentPrivilege` | Application | Read all directory objects regardless of per-object permissions. For AD replication agents. |

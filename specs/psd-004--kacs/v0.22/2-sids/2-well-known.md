@@ -90,7 +90,7 @@ Domain-specific SIDs follow the pattern `S-1-5-21-{DA1}-{DA2}-{DA3}-{RID}`, wher
 | S-1-16-12288 | High | 12288 | Elevated administrative logons. |
 | S-1-16-16384 | System | 16384 | The kernel, peinit, and TCB services. |
 
-Integrity levels form a strict total order: System > High > Medium > Low > Untrusted. MIC compares the caller's level against the object's label using this ordering.
+The five levels above are the standard, well-known integrity levels; in practice they behave like an enum. Technically the level is the SID's single sub-authority as an unsigned integer: any `S-1-16-<n>` with exactly one sub-authority is a valid level, and MIC compares levels numerically. Non-standard values occur in Windows-interop SDs — e.g. `S-1-16-8448` (medium-plus) or `S-1-16-20480` (protected). A mandatory-label SID with a different identifier authority or more than one sub-authority is malformed and rejected. The standard order is System > High > Medium > Low > Untrusted.
 
 ## Process trust labels (S-1-19)
 

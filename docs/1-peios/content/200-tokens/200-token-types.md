@@ -105,7 +105,7 @@ The fields that say who the token represents.
 |---|---|
 | `token_type` | Primary or Impersonation. |
 | `impersonation_level` | One of the four levels listed above (only meaningful for Impersonation tokens). |
-| `integrity_level` | One of Untrusted / Low / Medium / High / System. |
+| `integrity_level` | Normally one of Untrusted / Low / Medium / High / System; technically any numeric `S-1-16` level (see [MIC](~peios/access-decisions/mandatory-integrity-control)). |
 | `mandatory_policy` | The token's MIC enforcement flags (`NO_WRITE_UP`, `NEW_PROCESS_MIN`). |
 
 ### Defaults

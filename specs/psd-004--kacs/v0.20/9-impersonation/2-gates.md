@@ -21,7 +21,7 @@ If neither condition holds, the impersonation level is **silently capped to Iden
 The identity gate is checked against the server's **primary token** (`real_cred`), not the effective token. If the server is already impersonating another client, that impersonation MUST NOT affect the gate evaluation.
 
 > [!INFORMATIVE]
-> The reference model includes a third condition: an origin session check that allows the logon session which created a token to impersonate it without the privilege. KACS drops this check. If a service needs to impersonate a different user, it MUST hold SeImpersonatePrivilege. No hidden paths.
+> The reference model includes a third condition: an origin LogonSession check that allows the LogonSession which created a token to impersonate it without the privilege. KACS drops this check. If a service needs to impersonate a different user, it MUST hold SeImpersonatePrivilege. No hidden paths.
 
 ## The integrity ceiling
 

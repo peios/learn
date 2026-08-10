@@ -9,7 +9,7 @@ related:
   - peios/package-management/transactions-and-recovery
 ---
 
-The commands on this page change nothing. They report what is installed, look up a package in the repositories, check that installed files are still intact, and tidy the metadata cache. They are the tools for answering "what is on this system?" and "is it still as it should be?".
+The commands on this page change nothing. They report what is installed, look up a package in the repositories, check that installed files are still intact, and tidy the metadata cache. Use them to see what is on a system and to check that it is still as it should be.
 
 ## Listing what is installed
 
@@ -84,7 +84,7 @@ If no installed package owns the path, `owns` says so and exits non-zero. A path
 peipkg search <term>
 ```
 
-`search` looks through the configured repositories' active indexes for packages whose **name or description** contains the term, case-insensitively. It searches what is *available*, not what is installed — it is how you find a package before installing it.
+`search` looks through the configured repositories' active indexes for packages whose name or description contains the term, case-insensitively. It searches what is available, not what is installed — it is how you find a package before installing it.
 
 ```
 $ peipkg search proxy
@@ -114,7 +114,7 @@ nginx: /etc/nginx/nginx.conf has been modified since install
 verify: 1 problem(s) found
 ```
 
-A reported file is not necessarily a fault. A configuration file you edited on purpose will show up — that is `verify` doing its job, telling you the file diverged from the package's version. `verify` reports; it does not judge intent and it does not change anything.
+A reported file is not necessarily a fault. A configuration file you edited on purpose will show up — `verify` is telling you the file diverged from the package's version. `verify` reports; it does not judge intent and it does not change anything.
 
 If every checked file is intact, `verify` says so and exits `0`. If anything diverged, it lists each problem and exits non-zero — which makes it usable as a check in a monitoring script.
 
@@ -124,14 +124,14 @@ If every checked file is intact, `verify` says so and exits `0`. If anything div
 peipkg clean
 ```
 
-peipkg keeps a verified copy of each repository's metadata in a local cache. When you remove a repository, its cached metadata is no longer needed. `clean` deletes exactly those orphaned cache files — the ones belonging to repositories that are no longer configured.
+peipkg keeps a verified copy of each repository's metadata in a local cache. When you remove a repository, its cached metadata is no longer needed. `clean` deletes only those orphaned cache files — the ones belonging to repositories that are no longer configured.
 
 ```
 $ peipkg clean
 removed 2 orphaned cache file(s)
 ```
 
-`clean` never touches the metadata of a repository that is still configured, so it cannot leave you needing a refresh. It is pure housekeeping; run it whenever you like, or never.
+`clean` never touches the metadata of a repository that is still configured, so it cannot leave you needing a refresh. It is pure housekeeping, and it is optional; run it whenever you like.
 
 ## Exit status
 

@@ -51,13 +51,13 @@ The caller receives a report of the previous enabled state of every group as a
 of word `i / 64` corresponding to group index `i`. Because token group arrays
 are capped at 1024 entries, this bitmask is complete for every valid token.
 
-## AdjustSessionID
+## AdjustInteractivityScope
 
-**Requires:** `TOKEN_ADJUST_SESSIONID` on the token and `SeTcbPrivilege` on the
+**Requires:** `TOKEN_ADJUST_INTERACTIVITY_SCOPE` on the token and `SeTcbPrivilege` on the
 caller's real token.
 
-AdjustSessionID changes only the token's `interactive_session_id`. The new value
-is a `u32` interactive session identifier. The field is metadata: changing it
+AdjustInteractivityScope changes only the token's `interactivity_scope`. The new value
+is a `u32` interactivity scope. The field is metadata: changing it
 MUST NOT grant or remove privileges, groups, access rights, labels, claims,
 default owner, default primary group, default DACL, or any other authorization
 state.

@@ -18,8 +18,8 @@ seam (credentials and raw memberships) and bookkeeping.
 | `sam_account_name` | Login name; unique; matched case-insensitively (folded form per §3.5) |
 | `display_name` | Human-readable name |
 | `upn` | Optional user principal name (meaningful once domain-capable) |
-| `account_flags` | Account-control flags (disabled, password-never-expires, password-not-required, smartcard-required, …) |
-| `primary_group_rid` | The primary group |
+| `account_flags` | Account-control flags (disabled, password-never-expires, password-not-required, smartcard-required, service-account, …). A **service-account** record is a purpose-made service principal (§5.4): non-interactive, holds no credential, minted only via the TCB `LOGON_ON_BEHALF` path |
+| `primary_group_sid` | The primary group SID |
 | `credentials` | The typed credential set (§3.3) |
 | `pw_last_set` | Timestamp of last password change |
 | `last_logon` | Timestamp of last successful logon, written on the logon path (§5.1) |
@@ -28,11 +28,18 @@ seam (credentials and raw memberships) and bookkeeping.
 | `bad_pw_count`, `last_bad_pw_time`, `lockout_until` | Lockout state, mutated on the logon path (§5.1) |
 | `claims` | Typed attributes for conditional ACEs |
 | `posix_uid`, `posix_gid` | POSIX projection (uid if a user, gid if a group); derived and stored per §3.6. Supplementary gids are not stored — they are projected from the expanded group set at mint time (§3.6) |
+| `security_descriptor` | The principal's KACS SD (PSD-004 §3, `ACL_REVISION_DS`) governing administrative access to this object — Reset Password, property writes, membership, delete (§7.2). Defaulted at creation by inheritance from the domain object's SD (§7.2); never crosses the seam (§2.2) |
 | `created_at`, `modified_at`, `version` | Bookkeeping; `version` is an optimistic-concurrency counter |
 
 The user SID, `object_guid`, and `rid` are immutable once assigned. The
 `sam_account_name` MAY be changed; `object_guid` is the stable handle
 that makes such a change safe.
+
+On `CreateUser`, lpsd MUST set `primary_group_sid` to the BUILTIN Users
+alias (`S-1-5-32-545`) and MUST add an explicit membership edge from
+`BUILTIN\Users` to the new user. This default applies to ordinary users and
+to purpose-made service accounts (§5.4). Later versions MAY add a separate
+primary-group mutation verb, but v0.23 does not expose one.
 
 ## The group record
 
@@ -44,6 +51,7 @@ that makes such a change safe.
 | `group_type` | Security vs distribution, and scope. Retained for AD symmetry; for a standalone store a group is a domain-local security group |
 | `member` | Forward membership links (§3.2 below) |
 | `posix_gid` | POSIX projection |
+| `security_descriptor` | The group's KACS SD (as for users; §7.2). For a group, the **Membership** property write is the add/remove-member gate |
 | `created_at`, `modified_at`, `version` | Bookkeeping |
 
 ## Membership

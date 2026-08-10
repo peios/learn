@@ -150,7 +150,7 @@ To make the default predictable, name your most common profile so it sorts first
 
 ## What happens to the cache when profiles change
 
-The fixture cache key folds in the kernel and initrd identifiers of **every profile** in `provium.toml`, sorted by name for determinism. Practical consequences:
+The fixture cache key folds in the kernel and initrd identifiers of **every profile** in `provium.toml`, sorted by name for determinism (the full key model is on [fixtures and dependencies](~provium/running-tests/fixtures-and-dependencies#what-ends-up-in-the-cache-key)). Practical consequences for profile changes specifically:
 
 | Action | Cache effect |
 |---|---|

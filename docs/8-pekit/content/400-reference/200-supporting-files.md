@@ -219,8 +219,8 @@ Alongside these, the managed environment also exports `PEKIT_RECIPE_ROOT`,
 `PEKIT_OUT`, `PEKIT_COMMAND`, `PEKIT_TARGET`, `PEKIT_WORKSPACE_ROOT`,
 `PEKIT_BUILD_TIMESTAMP`, `PEKIT_SOURCE_TIMESTAMP`, a `PEKIT_<DEP>_OUT` per
 declared `needs` dependency, and any `PEKIT_KEYRING_*` from active keyrings. The
-full environment contract is documented in
-[recipe-format](~pekit/reference/recipe-format).
+full environment contract is documented in the
+[command-line reference](~pekit/reference/cli).
 
 ---
 

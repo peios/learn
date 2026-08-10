@@ -65,11 +65,13 @@ Different components need different rights:
 
 | Requested component (via `security_info` flag) | Required right |
 |---|---|
-| `OWNER_SECURITY_INFORMATION` (0x01) | `READ_CONTROL` |
-| `GROUP_SECURITY_INFORMATION` (0x02) | `READ_CONTROL` |
-| `DACL_SECURITY_INFORMATION` (0x04) | `READ_CONTROL` |
-| `SACL_SECURITY_INFORMATION` (0x08) | `ACCESS_SYSTEM_SECURITY` |
-| `LABEL_SECURITY_INFORMATION` (0x10) | `READ_CONTROL` (the integrity label is in the SACL but its read is gated by READ_CONTROL, not ACCESS_SYSTEM_SECURITY) |
+| `OWNER_SECURITY_INFORMATION` | `READ_CONTROL` |
+| `GROUP_SECURITY_INFORMATION` | `READ_CONTROL` |
+| `DACL_SECURITY_INFORMATION` | `READ_CONTROL` |
+| `SACL_SECURITY_INFORMATION` | `ACCESS_SYSTEM_SECURITY` |
+| `LABEL_SECURITY_INFORMATION` | `READ_CONTROL` (the integrity label is in the SACL but its read is gated by READ_CONTROL, not ACCESS_SYSTEM_SECURITY) |
+
+(The numeric flag values are catalogued in [Other constants](~peios/constants-and-catalogs/other-constants).)
 
 `READ_CONTROL` is the standard "read SD" right and is implicitly granted to the owner. `ACCESS_SYSTEM_SECURITY` is gated by `SeSecurityPrivilege` — the SACL is read-restricted to administrators with the privilege.
 

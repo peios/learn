@@ -9,7 +9,7 @@ related:
   - peios/package-management/composing-a-root
 ---
 
-`peiso build` takes a declarative spec and produces a bootable Peios image tree from it — it composes the package root, packs the initramfs, and layers on the optional squashfs, UKI, and ISO stages. This page is about *running* that command: its one argument, why it needs root, what it needs on the host, and how the `dist/` workflow invokes it. For what each stage does, see [The build pipeline](~peiso/building-images/the-build-pipeline); for the spec it reads, see [The build spec](~peiso/reference/the-build-spec).
+`peiso build` takes a declarative spec and produces a bootable Peios image tree from it — it composes the package root, packs the initramfs, and layers on the optional squashfs, UKI, and ISO stages. This page covers running that command: its one argument, why it needs root, what it needs on the host, and how the `dist/` workflow invokes it. For what each stage does, see [The build pipeline](~peiso/building-images/the-build-pipeline); for the spec it reads, see [The build spec](~peiso/reference/the-build-spec).
 
 ## Synopsis
 
@@ -19,7 +19,7 @@ peiso build [spec.toml]
 peiso -h | --help | help
 ```
 
-`build` is peiso's only working verb. It takes **one optional positional argument** — the path to the build spec — and defines **no flags**. The spec path is the only input to the command; everything else about the build is declared *inside* the spec.
+`build` is peiso's only working verb. It takes **one optional positional argument** — the path to the build spec — and defines **no flags**. The spec path is the only input to the command; everything else about the build is declared inside the spec.
 
 When the positional is omitted, the spec path **defaults to `peiso.toml`** in the current directory:
 
@@ -35,7 +35,7 @@ $ sudo peiso build peiso.toml   # the same, spelled out
 
 The build **chroots into the composed root** to run Peios' own applets — `mkirf` to pack the initramfs, and `mkuki` to bundle the UKI — in their native environment. `chroot` is privileged, so peiso requires an effective UID of `0`.
 
-peiso checks this **first**, before it composes anything, and fails fast with a message that tells you exactly what to do rather than composing for minutes and dying at the chroot:
+peiso checks this **first**, before it composes anything, and fails fast with a message that tells you what to do, rather than composing for minutes and then failing at the chroot:
 
 ```
 peiso: build chroots into the composed root and must run as root (try: sudo peiso build)
@@ -47,7 +47,7 @@ Run it under `sudo` (or as root):
 sudo peiso build peiso.toml
 ```
 
-This root requirement is the one operational difference from [`peipkg-compose`](~peios/package-management/composing-a-root), which never touches privilege because it only ever writes inside its output directory. peiso needs privilege precisely because the boot stage runs the shipped applets *inside* the root.
+This root requirement is the one operational difference from [`peipkg-compose`](~peios/package-management/composing-a-root), which needs no privilege because it only ever writes inside its output directory. peiso needs privilege precisely because the boot stage runs the shipped applets inside the root.
 
 ## Exit status
 
@@ -59,7 +59,7 @@ This root requirement is the one operational difference from [`peipkg-compose`](
 
 ## Prerequisites
 
-A build reaches for two distinct sets of tools: programs peiso runs **on the host**, and applets it runs **inside the composed root** by way of `chroot`. Which stages use each are covered in [The build pipeline](~peiso/building-images/the-build-pipeline); this is the checklist.
+A build uses two distinct sets of tools: programs peiso runs **on the host**, and applets it runs **inside the composed root** by way of `chroot`. Which stages use each are covered in [The build pipeline](~peiso/building-images/the-build-pipeline); this section is the checklist.
 
 ### Host tools
 
@@ -84,7 +84,7 @@ Two applets are run **inside the composed root** via `chroot`, so they are not h
 | `mkirf` | `/usr/bin/mkirf` | Packing the initramfs root into a cpio archive. Always run. |
 | `mkuki` | `/usr/bin/mkuki` | Bundling the Unified Kernel Image (the UKI stage). |
 
-Running the *shipped* applets in their own environment is deliberate: the tool that builds the initramfs is the same one the running system carries, so there is no divergence between what is tested and what runs. If `mkirf` is missing from the composed root, the build fails with a hint that the applet package (peiosutils) was not composed in.
+Running the shipped applets in their own environment is deliberate: the tool that builds the initramfs is the same one the running system carries, so there is no divergence between what is tested and what runs. If `mkirf` is missing from the composed root, the build fails with a hint that the applet package (peiosutils) was not composed in.
 
 ## Environment
 
@@ -97,7 +97,7 @@ peiso reads a **single** environment variable:
 When `PEISO_COMPOSE` is unset, peiso finds `peipkg-compose` by:
 
 1. looking it up on `PATH`; then
-2. falling back to a **sibling of the peiso binary itself** — the two are installed together (`go install` drops both in `GOBIN`), and `sudo`'s `secure_path` routinely drops `GOBIN` from `PATH`, hiding the sibling that is sitting right next to peiso.
+2. falling back to a **sibling of the peiso binary itself** — the two are installed together (`go install` drops both in `GOBIN`), and `sudo`'s `secure_path` routinely drops `GOBIN` from `PATH`, hiding the sibling installed next to peiso.
 
 If it is found by none of these, the build fails:
 
@@ -118,7 +118,7 @@ Everything else — the initramfs cpio, the squashfs, the UKI, the ISO — is pr
 
 ## The dist workflow
 
-The reference workflow lives in the repository's `dist/` directory, driven by its `Makefile`. The `root:` target is the canonical way to run a build, and it handles the two operational wrinkles for you — locating peiso and elevating to root:
+The reference workflow lives in the repository's `dist/` directory, driven by its `Makefile`. The `root:` target is the canonical way to run a build, and it handles two operational details for you — locating peiso and elevating to root:
 
 ```make
 PEISO := $(shell command -v peiso)
@@ -130,7 +130,7 @@ root: peiso.toml manifest.toml
 
 The target resolves `peiso` **as the invoking user**, while `PATH` is still intact, and then `sudo`-runs it by **absolute path**. That indirection matters: `sudo`'s `secure_path` drops `~/go/bin`, so a bare `sudo peiso` would not find peiso (nor the `peipkg-compose` it calls). Resolving the absolute path first sidesteps that entirely.
 
-So the whole build is just:
+The whole build is then:
 
 ```
 cd dist
@@ -144,7 +144,7 @@ which expands to `sudo /abs/path/to/peiso build peiso.toml` against the `dist/pe
 A full build (all stages enabled) produces the chain of artifacts described in [The build pipeline](~peiso/building-images/the-build-pipeline). In brief:
 
 - the composed **`root/`** tree — the package root with the packed initramfs cpio inside it;
-- **`sysroot.squashfs`** — the read-only rootfs image, written *beside* `root/`, not inside it;
+- **`sysroot.squashfs`** — the read-only rootfs image, written beside `root/`, not inside it;
 - the **UKI** at its ESP fallback path, e.g. `boot/efi/EFI/BOOT/BOOTX64.EFI`;
 - **`peios.iso`** — the bootable UEFI live medium.
 

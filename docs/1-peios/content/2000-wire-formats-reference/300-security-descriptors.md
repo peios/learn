@@ -1,7 +1,7 @@
 ---
 title: Security descriptors
 type: reference
-description: The self-relative binary format used to encode security descriptors everywhere they cross the kernel boundary. This page covers the SD header, the control flags, ACL and ACE binary layouts, and the access mask byte layout.
+description: The self-relative binary format used to encode security descriptors everywhere they cross the kernel boundary. This page covers the SD header, the layout-relevant control-flag interactions, ACL and ACE binary layouts, and the access mask byte layout.
 related:
   - peios/wire-formats-reference/overview
   - peios/wire-formats-reference/conditional-ace-bytecode
@@ -34,31 +34,14 @@ Total: 20 bytes. Variable-length component data follows.
 
 ### Control flags (16 bits)
 
-The `Control` field is a bitmask:
+The `Control` field is a bitmask of 16 `SE_*` flags. The canonical bit-by-bit catalogue is in [ACE types and flags](~peios/constants-and-catalogs/ace-types-and-flags) — this page does not re-tabulate it.
 
-| Bit | Name | Meaning |
-|---|---|---|
-| 0x0001 | `SE_OWNER_DEFAULTED` | The owner SID was defaulted (not explicitly set by user). |
-| 0x0002 | `SE_GROUP_DEFAULTED` | Same for primary group. |
-| 0x0004 | `SE_DACL_PRESENT` | The DACL is present. If clear, the SD has a **NULL DACL** (grants all). |
-| 0x0008 | `SE_DACL_DEFAULTED` | The DACL was defaulted. |
-| 0x0010 | `SE_SACL_PRESENT` | The SACL is present. |
-| 0x0020 | `SE_SACL_DEFAULTED` | The SACL was defaulted. |
-| 0x0040 | `SE_DACL_TRUSTED` | (Informational; KACS doesn't act on this.) |
-| 0x0080 | `SE_SERVER_SECURITY` | Server-security mode. **Fail-closed in v0.20** — SDs with this set are rejected. |
-| 0x0100 | `SE_DACL_AUTO_INHERIT_REQ` | Auto-inheritance was requested for the DACL. |
-| 0x0200 | `SE_SACL_AUTO_INHERIT_REQ` | Same for SACL. |
-| 0x0400 | `SE_DACL_AUTO_INHERITED` | The DACL was auto-inherited. |
-| 0x0800 | `SE_SACL_AUTO_INHERITED` | Same. |
-| 0x1000 | `SE_DACL_PROTECTED` | The DACL is protected — does not accept inherited ACEs from parent. |
-| 0x2000 | `SE_SACL_PROTECTED` | Same for SACL. |
-| 0x4000 | `SE_RM_CONTROL_VALID` | The `Sbz1` byte is a resource-manager control byte. |
-| 0x8000 | `SE_SELF_RELATIVE` | The SD is in self-relative format. Always set on the wire. |
+Bit interactions worth noting for the parser/encoder:
 
-Bit interactions worth noting:
-
-- `SE_DACL_PRESENT = 0` means NULL DACL (grant all). `SE_DACL_PRESENT = 1` with zero ACEs in the DACL means empty DACL (grant none).
-- `SE_SELF_RELATIVE` must be set on any SD passed across the kernel boundary. An SD without it would be in absolute (pointer-based) format, which is not valid on the wire.
+- `SE_DACL_PRESENT` (0x0004) = 0 means NULL DACL (grant all). `SE_DACL_PRESENT` = 1 with zero ACEs in the DACL means empty DACL (grant none).
+- `SE_SELF_RELATIVE` (0x8000) must be set on any SD passed across the kernel boundary. An SD without it would be in absolute (pointer-based) format, which is not valid on the wire.
+- `SE_RM_CONTROL_VALID` (0x4000) changes the meaning of the `Sbz1` header byte — it becomes the resource-manager control byte instead of a must-be-zero reserved byte.
+- `SE_SERVER_SECURITY` (0x0080) is fail-closed in v0.20 — SDs with this flag set are rejected.
 
 ### Offsets
 
@@ -75,18 +58,7 @@ Components are typically laid out in a stable order (header, owner SID, group SI
 
 ## SID encoding
 
-A SID in the SD (and elsewhere):
-
-| Bytes | Field | Encoding |
-|---|---|---|
-| 0 | `Revision` | `0x01` |
-| 1 | `SubAuthorityCount` | 0–15 |
-| 2–7 | `IdentifierAuthority` | 6 bytes, **big-endian** |
-| 8 onward | `SubAuthorities` | 4 bytes each, **little-endian** |
-
-Total size: 8 + 4 × SubAuthorityCount bytes (8 minimum, 68 maximum).
-
-The big-endian authority is the SID format's one exception to the little-endian rule. Sub-authorities revert to little-endian.
+SIDs in the SD (owner, group, ACE SIDs) use the standard binary SID form — 8 + 4 × SubAuthorityCount bytes, big-endian authority, little-endian sub-authorities. The canonical layout is in the [wire formats overview](~peios/wire-formats-reference/overview), under "SIDs in wire format".
 
 ## ACL encoding
 
@@ -114,45 +86,20 @@ Every ACE starts with a 4-byte header:
 
 The body's shape depends on `AceType`.
 
-### AceType values
+### AceType values and AceFlags
 
-| Value | Name | Body shape |
-|---|---|---|
-| 0x00 | `ACCESS_ALLOWED` | Single-SID |
-| 0x01 | `ACCESS_DENIED` | Single-SID |
-| 0x02 | `SYSTEM_AUDIT` | Single-SID |
-| 0x03 | `SYSTEM_ALARM` | Single-SID |
-| 0x04 | (reserved) | — |
-| 0x05 | `ACCESS_ALLOWED_OBJECT` | Object |
-| 0x06 | `ACCESS_DENIED_OBJECT` | Object |
-| 0x07 | `SYSTEM_AUDIT_OBJECT` | Object |
-| 0x08 | `SYSTEM_ALARM_OBJECT` | Object |
-| 0x09 | `ACCESS_ALLOWED_CALLBACK` | Callback (single-SID + expression) |
-| 0x0A | `ACCESS_DENIED_CALLBACK` | Callback |
-| 0x0B | `ACCESS_ALLOWED_CALLBACK_OBJECT` | Callback object |
-| 0x0C | `ACCESS_DENIED_CALLBACK_OBJECT` | Callback object |
-| 0x0D | `SYSTEM_AUDIT_CALLBACK` | Callback |
-| 0x0E | `SYSTEM_ALARM_CALLBACK` | Callback |
-| 0x0F | `SYSTEM_AUDIT_CALLBACK_OBJECT` | Callback object |
-| 0x10 | `SYSTEM_ALARM_CALLBACK_OBJECT` | Callback object |
-| 0x11 | `SYSTEM_MANDATORY_LABEL` | Single-SID |
-| 0x12 | `SYSTEM_RESOURCE_ATTRIBUTE` | Single-SID + claim entry |
-| 0x13 | `SYSTEM_SCOPED_POLICY_ID` | Single-SID |
-| 0x14 | `SYSTEM_PROCESS_TRUST_LABEL` | Single-SID |
+The full catalogue of `AceType` values and `AceFlags` bits is in [ACE types and flags](~peios/constants-and-catalogs/ace-types-and-flags) — this page does not re-tabulate the values. For parsing, only the mapping from type to **body shape** matters:
 
-### AceFlags
+| Body shape | AceType values |
+|---|---|
+| Single-SID | 0x00–0x03, 0x11, 0x13, 0x14 |
+| Single-SID + claim entry | 0x12 |
+| Object | 0x05–0x08 |
+| Callback (single-SID + expression) | 0x09, 0x0A, 0x0D, 0x0E |
+| Callback object | 0x0B, 0x0C, 0x0F, 0x10 |
+| (reserved) | 0x04 |
 
-The `AceFlags` byte:
-
-| Bit | Name | Meaning |
-|---|---|---|
-| 0x01 | `OBJECT_INHERIT_ACE` | Inherits to non-container children. |
-| 0x02 | `CONTAINER_INHERIT_ACE` | Inherits to container children. |
-| 0x04 | `NO_PROPAGATE_INHERIT_ACE` | Inherits one level only. |
-| 0x08 | `INHERIT_ONLY_ACE` | Applies to children only, not this object. |
-| 0x10 | `INHERITED_ACE` | This ACE was created by inheritance. |
-| 0x40 | `SUCCESSFUL_ACCESS_ACE_FLAG` | (Audit/alarm) Fire on success. |
-| 0x80 | `FAILED_ACCESS_ACE_FLAG` | (Audit/alarm) Fire on failure. |
+The `AceFlags` byte carries inheritance and audit-firing flags; it does not affect the body layout.
 
 ### Single-SID ACE body
 
@@ -212,22 +159,13 @@ The 32-bit access mask used in every ACE:
 | 26–27 | Reserved | Must be 0 |
 | 28–31 | Generic rights | `GENERIC_ALL` (0x10000000), `GENERIC_EXECUTE` (0x20000000), `GENERIC_WRITE` (0x40000000), `GENERIC_READ` (0x80000000) |
 
-The object-specific bits (0–15) have meaning that depends on the type of object the SD is on. The full per-object-type bit catalogs are in [Constants and catalogs](~peios/constants-and-catalogs/overview).
+This region layout is canonical here; the *values* of the named rights, and the per-object-type catalogues for bits 0–15, are in [Access mask bits](~peios/constants-and-catalogs/access-mask-bits).
 
 The generic bits are expanded at evaluation time via the object type's GenericMapping table. They never appear in stored SDs as final rights; the kernel maps them before walking.
 
 ## Limits
 
-| Limit | Value |
-|---|---|
-| Max SD size | 65,535 bytes |
-| Max ACL size | 64 KB (16-bit `AclSize`) |
-| Max ACEs per ACL | Bounded by AclSize and per-ACE size |
-| Min SID size | 8 bytes (revision + count + authority, no sub-authorities) |
-| Max SID size | 68 bytes (15 sub-authorities) |
-| ACE `AceSize` granularity | Multiple of 4 bytes |
-
-The kernel rejects SDs that exceed these limits or have malformed internal sizes with `-EINVAL`.
+The format's own field widths impose the limits: max SD size 65,535 bytes, max ACL size 64 KB (16-bit `AclSize`), SIDs 8–68 bytes, ACE sizes a multiple of 4 bytes. The consolidated limits catalogue is in [Other constants](~peios/constants-and-catalogs/other-constants). The kernel rejects SDs that exceed these limits or have malformed internal sizes with `-EINVAL`.
 
 ## Self-relative round trips
 

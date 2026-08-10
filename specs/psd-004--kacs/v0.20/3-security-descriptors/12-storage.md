@@ -26,24 +26,24 @@ SDs are stored by loregd alongside the key data. The format is the same self-rel
 
 ## Kernel objects
 
-Tokens, processes, and logon sessions store SDs inline on the kernel object. These SDs are typically small (a few ACEs) and are set at object creation time.
+Tokens, processes, and LogonSessions store SDs inline on the kernel object. These SDs are typically small (a few ACEs) and are set at object creation time.
 
-Logon sessions receive a default kernel-object SD at creation time:
+LogonSessions receive a default kernel-object SD at creation time:
 
 ```
-Owner: <session user SID>
+Owner: <LogonSession user SID>
 Group: <creator's effective token primary group SID>
 DACL:
-  ALLOW  <session user SID>       GENERIC_ALL
+  ALLOW  <LogonSession user SID>  GENERIC_ALL
   ALLOW  BUILTIN\Administrators   GENERIC_ALL
   ALLOW  SYSTEM                   GENERIC_ALL
 ```
 
-For kernel-created logon sessions that have no creator token, the group is the
-session user SID. The logon-session SD is stored for object-shape parity and
-future management APIs only. In `v0.20`, no access-control decision depends on
-`auth_id`, AccessCheck MUST NOT consult logon-session SDs, and no separate
-mutation or query path exists for logon-session SDs.
+For kernel-created LogonSessions that have no creator token, the group is the
+LogonSession user SID. The LogonSession SD is stored for object-shape parity
+and future management APIs only. In `v0.20`, no access-control decision depends
+on `auth_id`, AccessCheck MUST NOT consult LogonSession SDs, and no separate
+mutation or query path exists for LogonSession SDs.
 
 ## IPC endpoints
 

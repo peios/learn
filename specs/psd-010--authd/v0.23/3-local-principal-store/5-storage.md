@@ -23,6 +23,7 @@ choice does not affect interoperability with other sources.
 >     machine_sid     BLOB NOT NULL,
 >     rid_counter     INTEGER NOT NULL,
 >     policy          BLOB NOT NULL,        -- password/lockout policy
+>     sd              BLOB NOT NULL,        -- container SD: create/enumerate + inheritable ACEs (§7.2)
 >     created_at      INTEGER NOT NULL
 > );
 > CREATE TABLE users (
@@ -33,7 +34,7 @@ choice does not affect interoperability with other sources.
 >     display_name    TEXT,
 >     upn             TEXT,
 >     account_flags   INTEGER NOT NULL,
->     primary_group_rid INTEGER NOT NULL,
+>     primary_group_sid BLOB NOT NULL,
 >     pw_last_set     INTEGER,
 >     last_logon      INTEGER,
 >     account_expires INTEGER,              -- NULL = never
@@ -42,6 +43,7 @@ choice does not affect interoperability with other sources.
 >     lockout_until   INTEGER,              -- NULL = not locked
 >     posix_uid       INTEGER NOT NULL,
 >     posix_gid       INTEGER NOT NULL,
+>     sd              BLOB NOT NULL,        -- per-principal SD (§7.2)
 >     created_at      INTEGER NOT NULL,
 >     modified_at     INTEGER NOT NULL,
 >     version         INTEGER NOT NULL
@@ -64,6 +66,7 @@ choice does not affect interoperability with other sources.
 >     name_folded     TEXT NOT NULL UNIQUE,
 >     group_type      INTEGER NOT NULL,
 >     posix_gid       INTEGER NOT NULL,
+>     sd              BLOB NOT NULL,        -- per-principal SD (§7.2)
 >     created_at INTEGER, modified_at INTEGER, version INTEGER
 > );
 > CREATE TABLE members ( group_sid BLOB NOT NULL, member_sid BLOB NOT NULL, PRIMARY KEY (group_sid, member_sid) );

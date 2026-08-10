@@ -114,13 +114,7 @@ A failure returns `-EINVAL`. The policy is not added to (or replaced in) the cac
 
 ## Limits
 
-| Limit | Value |
-|---|---|
-| Total spec size | 256 KB |
-| Rules per policy | 256 |
-| Effective/staged DACL or SACL size | 65,535 bytes (matches SD ACL limit) |
-| Applies-to expression bytecode | 64 KB |
-| Version byte | `0x01` |
+The validation rules above are the limits: total spec 256 KB, 256 rules per policy, each DACL/SACL at most 65,535 bytes (the SD ACL limit), each applies-to expression at most 64 KB, version byte `0x01`. The consolidated limits catalogue is in [Other constants](~peios/constants-and-catalogs/other-constants).
 
 ## Encoded example
 

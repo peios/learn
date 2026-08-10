@@ -57,16 +57,16 @@ A `desired_access` of zero is rejected — the kernel does not grant a fd with n
 
 ### create_disposition
 
-Defines what to do depending on whether the file exists:
+Defines what to do depending on whether the file exists (numeric constant values: [Other constants](~peios/constants-and-catalogs/other-constants)):
 
 | Value | If file exists | If file does not exist |
 |---|---|---|
-| `SUPERSEDE` (0) | Delete and recreate. | Create. |
-| `OPEN` (1) | Open. | Fail with ENOENT. |
-| `CREATE` (2) | Fail with EEXIST. | Create. |
-| `OPEN_IF` (3) | Open. | Create. |
-| `OVERWRITE` (4) | Truncate to zero and open. | Fail with ENOENT. |
-| `OVERWRITE_IF` (5) | Truncate to zero and open. | Create. |
+| `SUPERSEDE` | Delete and recreate. | Create. |
+| `OPEN` | Open. | Fail with ENOENT. |
+| `CREATE` | Fail with EEXIST. | Create. |
+| `OPEN_IF` | Open. | Create. |
+| `OVERWRITE` | Truncate to zero and open. | Fail with ENOENT. |
+| `OVERWRITE_IF` | Truncate to zero and open. | Create. |
 
 `OPEN_IF` is the most common ("get me access to this file, creating if necessary"). `SUPERSEDE` removes the inode and creates a new one — useful for atomic-replace patterns.
 
@@ -76,8 +76,8 @@ Modifier flags:
 
 | Flag | Meaning |
 |---|---|
-| `DIRECTORY` (0x0001) | The target must be (or will be created as) a directory. If the disposition would create and this flag is set, a directory is created. If the disposition is open-only and the target is not a directory, fails with ENOTDIR. |
-| `DELETE_ON_CLOSE` (0x0002) | The file should be deleted when the last fd referencing it is closed. Useful for temporary files. |
+| `DIRECTORY` | The target must be (or will be created as) a directory. If the disposition would create and this flag is set, a directory is created. If the disposition is open-only and the target is not a directory, fails with ENOTDIR. |
+| `DELETE_ON_CLOSE` | The file should be deleted when the last fd referencing it is closed. Useful for temporary files. |
 
 ### flags
 
@@ -85,8 +85,8 @@ Path-resolution flags:
 
 | Flag | Meaning |
 |---|---|
-| `AT_EMPTY_PATH` (0x1000) | The path is empty; operate on the directory referenced by `dirfd`. |
-| `AT_SYMLINK_NOFOLLOW` (0x100) | Do not follow a terminal symlink. If the path resolves to a symlink, fails with ELOOP. |
+| `AT_EMPTY_PATH` | The path is empty; operate on the directory referenced by `dirfd`. |
+| `AT_SYMLINK_NOFOLLOW` | Do not follow a terminal symlink. If the path resolves to a symlink, fails with ELOOP. |
 
 ### sd_ptr / sd_len
 

@@ -182,9 +182,7 @@ provium tests/ --cpus 8                  # explicit pool vCPUs
 provium tests/ --cpu-overcommit 1.5      # multiplier on --cpus
 ```
 
-`--cpu-overcommit` is clamped to `[0.5, 8.0]`. Default `1.0` (strict — total declared vCPUs ≤ host cores). `1.5` or `2.0` allows oversubscription if the workload tolerates scheduling jitter.
-
-See [pools and parallelism](~provium/running-tests/pools-and-parallelism) for how the pool, claims, and dispatcher interact.
+See [pools and parallelism](~provium/running-tests/pools-and-parallelism) for how the pool, claims, and dispatcher interact — including when overcommit is safe. Flag defaults and the clamp range are in the [CLI reference](~provium/reference/cli#vmm-and-resources).
 
 ## Dev-mode flags
 
@@ -253,13 +251,7 @@ Write Lua Language Server stubs and a `.luarc.json` into a test directory so the
 
 ## Exit codes
 
-| Code | Meaning |
-|---|---|
-| `0` | Every file passed (or skipped). |
-| `1` | At least one file did not finish cleanly. |
-| `2` | Internal error (config load failure, pre-flight failure, panic in the dispatcher). |
-
-The clamping is intentional — shell scripts don't have to worry about overflow at the 256-file mark or accidentally interpret `failed_count == 2` as the internal-error sentinel.
+For CI, three values: `0` means every file passed (or skipped), `1` means at least one file did not finish cleanly, `2` means an internal error (config, pre-flight, dispatcher). The exit code is deliberately clamped to those three — the precise triggers and the clamping rationale are in the [CLI reference](~provium/reference/cli#exit-codes).
 
 ## CI patterns
 

@@ -8,6 +8,7 @@ related:
   - pekit/recipes/environments-and-keyrings
   - pekit/recipes/packages
   - pekit/reference/cli
+  - pekit/reference/supporting-files
 ---
 
 A **workspace** lets you drive a whole collection of recipes as one unit. Instead
@@ -30,18 +31,15 @@ A workspace does three things:
 
 The workspace file is TOML and lives at the root of the tree it governs. Its
 schema is small — the loader (`LoadWorkspace`) accepts exactly five top-level
-keys and rejects anything else with `unknown_key`:
-
-| Key | Type | Required | Meaning |
-| --- | --- | --- | --- |
-| `include` | array of strings | **yes** | Globs selecting member directories, relative to the workspace root. |
-| `exclude` | array of strings | no | Globs removing directories that `include` would otherwise match. |
-| `env` | table | no | Shared environment variables contributed to every member. |
-| `wrap` | table | no | Shared wrapper command applied to every member's targets. |
-| `policy` | table | no | Distro-wide derivation policy (see [Policy](#policy-symbol-version-floors)). |
+keys and rejects anything else with `unknown_key`: `include` and `exclude`
+(globs selecting and removing member directories, relative to the workspace
+root), `[env]` and `[wrap]` (shared configuration contributed to every member),
+and `[policy]` (distro-wide derivation policy — see
+[Policy](#policy-symbol-version-floors)). The key-by-key schema is in
+[Supporting files](~pekit/reference/supporting-files).
 
 `include` is mandatory: an omitted or empty `include` fails with `missing_key`
-("workspace include is required").
+("workspace include is required"). Everything else is optional.
 
 ```toml
 # workspace.pekit.toml at the distro root
@@ -238,7 +236,7 @@ member that does not recognise one fails in the usual way.
 
 When the delegated command is `publish`, two members could be configured to
 publish an artifact to the **same destination** — a mistake that would have them
-clobber each other. Pekit catches this **before** publishing anything.
+overwrite each other. Pekit catches this **before** publishing anything.
 
 A **preflight** pass runs each member's publish planning in dry-run mode and
 reserves every resolved destination path in a shared `DestinationRegistry`. The

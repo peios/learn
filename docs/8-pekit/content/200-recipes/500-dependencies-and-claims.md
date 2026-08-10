@@ -6,6 +6,7 @@ related:
   - pekit/recipes/packages
   - pekit/recipes/environments-and-keyrings
   - pekit/workspaces/workspaces
+  - pekit/reference/cli
   - peios/package-management/dependency-resolution
   - peios/package-management/claims
 ---
@@ -109,7 +110,7 @@ The **whole soname** is the capability name. ABI-version identity lives in the
 string and is matched by equality, so a dependency on `libfoo.so.3` is never
 satisfied by `libfoo.so.4` — a soname bump is a different capability.
 
-Two refinements keep the result honest:
+Two refinements keep the result accurate:
 
 - **Self-provided sonames are subtracted from the needs.** A package that ships
   both a library and something that links against it does not end up depending
@@ -184,7 +185,8 @@ gcc = "*"
 
 `dependencies` is only valid on **build** targets. Each provider block maps a
 capability name to a non-empty constraint (use `"*"` for any). Names and
-constraints are templated, so `{{version}}` and friends work.
+constraints are templated, so `{{version}}` and the other version variables are
+available.
 
 **Which provider is active** is chosen by the `dependency_provider` key in the
 selected [environment file](~pekit/recipes/environments-and-keyrings):
@@ -205,6 +207,9 @@ payload still carries `all_providers`):
 | `PEKIT_DEPENDENCY_PROVIDER` | the selected provider name |
 | `PEKIT_DEPENDENCIES_FILE` | absolute path to the JSON payload |
 | `PEKIT_DEPENDENCIES` | the selected provider's deps, one `name constraint` per line |
+
+These three are part of pekit's managed environment; the full
+[environment contract](~pekit/reference/cli) lists every exported variable.
 
 The JSON payload carries the `command`, `target`, `provider`, the resolved
 `version`, the selected provider's `dependencies`, and `all_providers` (every

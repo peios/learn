@@ -16,9 +16,9 @@ KMES specification.
 | 1001 | `kacs_open_process_token` | `int pidfd`, `u32 access_mask` | Token fd (>= 0) or `-errno` |
 | 1002 | `kacs_open_thread_token` | `int pidfd`, `int tid`, `u32 access_mask` | Token fd (>= 0) or `-errno` |
 | 1003 | `kacs_create_token` | `const void __user *spec`, `size_t len` | Token fd (>= 0) or `-errno` |
-| 1004 | `kacs_create_session` | `const void __user *spec`, `size_t len` | Session ID (u64, >= 0) or `-errno` |
+| 1004 | `kacs_create_logon_session` | `const void __user *spec`, `size_t len` | LogonSession ID (u64, >= 0) or `-errno` |
 | 1005 | `kacs_set_psb` | `int pidfd`, `u32 mitigations` | 0 or `-errno` |
-| 1006 | `kacs_destroy_empty_session` | `u64 session_id` | 0 or `-errno` |
+| 1006 | `kacs_destroy_empty_logon_session` | `u64 auth_id` | 0 or `-errno` |
 | 1010 | `kacs_open_peer_token` | `int conn_fd` | Token fd (>= 0) or `-errno` |
 | 1011 | `kacs_impersonate_peer` | `int conn_fd` | 0 or `-errno` |
 | 1012 | `kacs_revert` | (none) | 0 |
@@ -129,7 +129,7 @@ All ioctls are issued on a KACS token fd (an anon_inode with `kacs-token` name a
 | `KACS_IOC_ADJUST_GROUPS` | `_IOW` | 7 | `struct kacs_adjust_groups_args` | `KACS_TOKEN_ADJUST_GROUPS` |
 | `KACS_IOC_IMPERSONATE` | `_IO` | 8 | (none) | `KACS_TOKEN_IMPERSONATE` |
 | `KACS_IOC_ADJUST_DEFAULT` | `_IOW` | 9 | `struct kacs_adjust_default_args` | `KACS_TOKEN_ADJUST_DEFAULT` |
-| `KACS_IOC_ADJUST_SESSIONID` | `_IOW` | 10 | `u32` (session ID value) | `KACS_TOKEN_ADJUST_SESSIONID` + `SeTcbPrivilege` |
+| `KACS_IOC_ADJUST_INTERACTIVITY_SCOPE` | `_IOW` | 10 | `u32` (scope value) | `KACS_TOKEN_ADJUST_INTERACTIVITY_SCOPE` + `SeTcbPrivilege` |
 
 ## 3. Token Query Classes
 
@@ -148,7 +148,7 @@ The non-empty output payload range `[buf_ptr, buf_ptr + required_payload_size)` 
 | 5 | `0x05` | `TOKEN_CLASS_INTEGRITY_LEVEL` | Binary integrity SID: `S-1-16-{rid}` in SID binary format |
 | 6 | `0x06` | `TOKEN_CLASS_OWNER` | Binary SID — resolved from `owner_sid_index` (0=user, N=groups[N-1]) |
 | 7 | `0x07` | `TOKEN_CLASS_PRIMARY_GROUP` | Binary SID — resolved from `primary_group_index` (0=user, N=groups[N-1]) |
-| 8 | `0x08` | `TOKEN_CLASS_SESSION_ID` | `[interactive_session_id:u32le]` (4 bytes) |
+| 8 | `0x08` | `TOKEN_CLASS_INTERACTIVITY_SCOPE` | `[interactivity_scope:u32le]` (4 bytes) |
 | 9 | `0x09` | `TOKEN_CLASS_RESTRICTED_SIDS` | Same format as class 2. `[count:u32le]` then per SID: `[sid_len:u32le][sid_bytes][attrs:u32le]`. Count=0 if unrestricted. |
 | 10 | `0x0A` | `TOKEN_CLASS_SOURCE` | `[name:8 bytes][source_id:u64le]` (16 bytes) |
 | 11 | `0x0B` | `TOKEN_CLASS_STATISTICS` | `[token_id:u64le][auth_id:u64le][modified_id:u64le][type:u32le][_pad:u32le][expiration:u64le]` (40 bytes) |
@@ -168,7 +168,7 @@ The non-empty output payload range `[buf_ptr, buf_ptr + required_payload_size)` 
 
 The `TOKEN_CLASS_STATISTICS` payload remains LUID-based in v0.20 for ABI
 compatibility. Kernel-internal consumers that require immutable UUID identity
-MUST use the accessors defined in §13.8 rather than deriving a GUID from
+MUST use the accessors defined in §13.4 rather than deriving a GUID from
 `token_id`.
 
 ## 4. Struct Layouts
@@ -274,7 +274,7 @@ Total size: **16 bytes**.
 |--------|------|-------|------|-------------|
 | 0 | 4 | `elevated_fd` | `s32` | fd to the elevated/full token |
 | 4 | 4 | `filtered_fd` | `s32` | fd to the filtered/limited token |
-| 8 | 8 | `session_id` | `u64` | Logon session to link them on |
+| 8 | 8 | `logon_session_id` | `u64` | LogonSession to link them on |
 
 ### struct kacs_get_linked_token_args
 
@@ -408,7 +408,7 @@ Binary layout passed to syscall 1003 (`kacs_create_token`). Fixed 192-byte heade
 | 4 | 1 | `token_type` | `u8` | 1 = Primary, 2 = Impersonation |
 | 5 | 1 | `impersonation_level` | `u8` | 0 = Anonymous, 1 = Identification, 2 = Impersonation, 3 = Delegation |
 | 6 | 2 | `_reserved0` | `u8[2]` | Must be 0 |
-| 8 | 4 | `integrity_rid` | `u32` | Integrity level RID: 0=Untrusted, 4096=Low, 8192=Medium, 12288=High, 16384=System |
+| 8 | 4 | `integrity_rid` | `u32` | Integrity level: the mandatory-label SID sub-authority as an unsigned integer. Any value is accepted and compared numerically; standard values are 0=Untrusted, 4096=Low, 8192=Medium, 12288=High, 16384=System (non-standard e.g. 8448=medium-plus, 20480=protected). |
 | 12 | 4 | `mandatory_policy` | `u32` | NO_WRITE_UP=0x01, NEW_PROCESS_MIN=0x02 |
 | 16 | 8 | `privs_present` | `u64` | Bitmask of privileges present |
 | 24 | 8 | `privs_enabled` | `u64` | Bitmask of privileges initially enabled. The kernel initializes `enabled_by_default` to this same value — no separate wire field. AdjustPrivileges reset-to-defaults restores `enabled` to this value. |
@@ -417,7 +417,7 @@ Binary layout passed to syscall 1003 (`kacs_create_token`). Fixed 192-byte heade
 | 40 | 4 | `projected_gid` | `u32` | Linux GID for credential projection |
 | 44 | 4 | `audit_policy` | `u32` | Per-token audit flags (OBJECT_ACCESS_SUCCESS=0x01, etc.) |
 | 48 | 8 | `expiration` | `u64` | Expiration timestamp. 0 = no expiry. |
-| 56 | 8 | `session_id` | `u64` | Logon session ID (used as auth_id) |
+| 56 | 8 | `logon_session_id` | `u64` | LogonSession ID (used as auth_id) |
 | 64 | 4 | `owner_sid_index` | `u32` | Owner SID index: 0=user SID, 1..N=group |
 | 68 | 4 | `primary_group_index` | `u32` | Primary group SID index: 0=user SID, 1..N=group |
 | 72 | 8 | `source_name` | `u8[8]` | Token source name (e.g. `"authd\0\0\0"`) |
@@ -447,8 +447,8 @@ Binary layout passed to syscall 1003 (`kacs_create_token`). Fixed 192-byte heade
 | 164 | 4 | `supp_gids_count` | `u32` | Number of supplementary GID entries (0=none) |
 | 168 | 4 | `restricted_device_groups_offset` | `u32` | Byte offset to restricted device groups (0=none) |
 | 172 | 4 | `restricted_device_groups_count` | `u32` | Number of restricted device group entries (0=none) |
-| 176 | 8 | `origin` | `u64` | Originating logon session LUID (0 for non-derived tokens) |
-| 184 | 4 | `interactive_session_id` | `u32` | Interactive session number (0 for services) |
+| 176 | 8 | `origin` | `u64` | Originating LogonSession LUID (0 for non-derived tokens) |
+| 184 | 4 | `interactivity_scope` | `u32` | Interactivity scope number (0 for services) |
 | 188 | 4 | `lcs_credentials_offset` | `u32` | Byte offset to optional LCS registry credentials extension (0=none) |
 
 ### Variable sections
@@ -469,7 +469,7 @@ At `groups_offset`. Repeated `groups_count` times. Each entry:
 | 4 | var | `sid` | `u8[sid_len]` | Binary SID |
 | 4+sid_len | 4 | `attributes` | `u32` | Group attributes (SE_GROUP_* flags) |
 
-The kernel derives the logon SID from `session_id` (`S-1-5-5-{session_id >> 32}-{session_id & 0xFFFFFFFF}`) and appends it to the groups array with `SE_GROUP_MANDATORY | SE_GROUP_ENABLED_BY_DEFAULT | SE_GROUP_ENABLED | SE_GROUP_LOGON_ID`. Callers MUST NOT include the logon SID in the supplied groups. `owner_sid_index` and `primary_group_index` are interpreted relative to the caller-supplied groups only (0 = user SID, 1..N = caller's groups[0..N-1]), not including the injected logon SID.
+The kernel derives the logon SID from `logon_session_id` (`S-1-5-5-{logon_session_id >> 32}-{logon_session_id & 0xFFFFFFFF}`) and appends it to the groups array with `SE_GROUP_MANDATORY | SE_GROUP_ENABLED_BY_DEFAULT | SE_GROUP_ENABLED | SE_GROUP_LOGON_ID`. Callers MUST NOT include the logon SID in the supplied groups. `owner_sid_index` and `primary_group_index` are interpreted relative to the caller-supplied groups only (0 = user SID, 1..N = caller's groups[0..N-1]), not including the injected logon SID.
 
 #### Default DACL (optional)
 
@@ -528,9 +528,9 @@ backslash, forward slash, or NUL, and MUST NOT contain duplicates under LCS
 case-insensitive matching. The section MUST be consumed exactly; trailing bytes
 are malformed.
 
-## 6. Session Wire Format (kacs_create_session spec)
+## 6. LogonSession Wire Format (kacs_create_logon_session spec)
 
-Binary layout passed to syscall 1004 (`kacs_create_session`). Minimum size: 15 bytes (1 + 2 + 0 + 4 + 8 = empty auth_package + minimum SID). Maximum size: 4096 bytes.
+Binary layout passed to syscall 1004 (`kacs_create_logon_session`). Minimum size: 15 bytes (1 + 2 + 0 + 4 + 8 = empty auth_package + minimum SID). Maximum size: 4096 bytes.
 
 | Offset | Size | Field | Type | Description |
 |--------|------|-------|------|-------------|
@@ -555,7 +555,7 @@ The `auth_pkg` byte range MUST be empty or valid UTF-8. Malformed UTF-8 MUST fai
 
 ### Logon SID derivation
 
-The kernel assigns a session ID (u64) and derives the logon SID as: `S-1-5-5-{session_id >> 32}-{session_id & 0xFFFFFFFF}`.
+The kernel assigns a LogonSession ID (u64) and derives the logon SID as: `S-1-5-5-{logon_session_id >> 32}-{logon_session_id & 0xFFFFFFFF}`.
 
 ## 7. Forward Compatibility Rules
 
@@ -673,7 +673,7 @@ Per-handle access rights on a KACS token fd. Specified as the `access_mask` para
 | `KACS_TOKEN_ADJUST_PRIVS` | `0x0020` | 5 | Adjust privileges (IOC_ADJUST_PRIVS) |
 | `KACS_TOKEN_ADJUST_GROUPS` | `0x0040` | 6 | Adjust groups (IOC_ADJUST_GROUPS) |
 | `KACS_TOKEN_ADJUST_DEFAULT` | `0x0080` | 7 | Adjust default DACL/owner/group (IOC_ADJUST_DEFAULT) |
-| `KACS_TOKEN_ADJUST_SESSIONID` | `0x0100` | 8 | Adjust interactive session ID (IOC_ADJUST_SESSIONID) |
+| `KACS_TOKEN_ADJUST_INTERACTIVITY_SCOPE` | `0x0100` | 8 | Adjust interactivity scope (IOC_ADJUST_INTERACTIVITY_SCOPE) |
 | `KACS_TOKEN_ALL_ACCESS` | `0x000F01FF` | 0-8, 16-19 | All token-specific rights (0x01FF, including reserved bit 4 = 0x0010 for TOKEN_QUERY_SOURCE) + STANDARD_RIGHTS_REQUIRED (DELETE \| READ_CONTROL \| WRITE_DAC \| WRITE_OWNER = 0x000F0000) |
 
 ### Privilege attribute constants (for kacs_priv_entry)
@@ -696,9 +696,9 @@ Per-handle access rights on a KACS token fd. Specified as the `access_mask` para
 | `SE_GROUP_INTEGRITY` | `0x00000020` | Identifies an integrity level SID |
 | `SE_GROUP_INTEGRITY_ENABLED` | `0x00000040` | Used with SE_GROUP_INTEGRITY |
 | `SE_GROUP_RESOURCE` | `0x20000000` | Domain-local group from resource domain |
-| `SE_GROUP_LOGON_ID` | `0xC0000000` | Identifies the per-session logon SID |
+| `SE_GROUP_LOGON_ID` | `0xC0000000` | Identifies the per-LogonSession logon SID |
 
-### Logon type values (for session wire format and TOKEN_CLASS_LOGON_TYPE)
+### Logon type values (for LogonSession wire format and TOKEN_CLASS_LOGON_TYPE)
 
 | Type | Value |
 |------|-------|
@@ -711,13 +711,13 @@ Per-handle access rights on a KACS token fd. Specified as the `access_mask` para
 
 ### Logon SID derivation
 
-The logon SID is derived from the session ID (a u64 LUID):
+The logon SID is derived from the LogonSession ID (a u64 LUID):
 
 ```
-S-1-5-5-{session_id >> 32}-{session_id & 0xFFFFFFFF}
+S-1-5-5-{logon_session_id >> 32}-{logon_session_id & 0xFFFFFFFF}
 ```
 
-Authority = 5 (NT Authority), first sub-authority = 5 (Logon SID prefix), second sub-authority = high 32 bits of session ID, third sub-authority = low 32 bits.
+Authority = 5 (NT Authority), first sub-authority = 5 (Logon SID prefix), second sub-authority = high 32 bits of LogonSession ID, third sub-authority = low 32 bits.
 
 ### SID binary format endianness note
 

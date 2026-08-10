@@ -230,32 +230,9 @@ When unset, the default base is resolved like the fixture cache — `$PROVIUM_BU
 
 ## Multiple profiles
 
-```toml
-[profiles.peios]
-kernel  = "/build/peios/bzImage"
-initrd  = "/build/peios/initrd.cpio.gz"
-cmdline = "console=ttyS0 quiet"
+You can declare any number of `[profiles.<name>]` blocks; tests pick one by name per VM. Patterns for multi-profile setups (debug builds, cross-version testing, feature-flag gating) are on [Profiles](~provium/configuration/profiles).
 
-[profiles.peios-debug]
-kernel  = "/build/peios-debug/bzImage"
-initrd  = "/build/peios-debug/initrd.cpio.gz"
-cmdline = "console=ttyS0 debug loglevel=7 nokaslr"
-
-[profiles.peios-stable]
-kernel  = "/build/peios-stable/bzImage"
-initrd  = "/build/peios-stable/initrd.cpio.gz"
-cmdline = "console=ttyS0 quiet"
-```
-
-Tests pick:
-
-```lua
-provium:vm("v",        "peios")          -- production-like
-provium:vm("debug-v",  "peios-debug")    -- verbose, debuggable
-provium:vm("stable-v", "peios-stable")   -- pinned older kernel
-```
-
-**Important:** the fixture cache key folds in EVERY profile's kernel + initrd identifier. Adding a new profile invalidates the entire fixture cache. This is intentional: a new kernel could behave differently, so existing fixtures are no longer trustworthy.
+**Important:** the fixture cache key folds in EVERY profile's kernel + initrd identifier. Adding a new profile invalidates the entire fixture cache. This is intentional: a new kernel could behave differently, so existing fixtures are no longer trustworthy. See [Profiles — What happens to the cache when profiles change](~provium/configuration/profiles#what-happens-to-the-cache-when-profiles-change).
 
 ## Configuration loading
 

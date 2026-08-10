@@ -21,15 +21,19 @@ Mitigations:
 
 When the filesystem containing the event, log, or metric store reaches capacity, SQLite write operations fail.
 
+After any store write failure that is consistent with disk-full or quota
+exhaustion, eventd MUST schedule an immediate retention run for all stores whose
+retention policies are enabled. The retention run follows the normal bounded
+batch rules in §3.4, §5.3, and §7.3.
+
 ### Event store
 
 - SQLite returns an error on INSERT or COMMIT. The writer thread MUST NOT crash.
 - The current batch is lost. Events in the failed batch were already consumed from the KMES ring buffer and cannot be recovered from KMES.
 - The writer thread MUST record the per-CPU sequence ranges of events in the failed batch in an in-memory lost-batch list. On the next successful commit, the writer MUST emit synthetic `synthetic.gap` records for all accumulated lost-batch ranges before writing new events. This ensures that disk-full data loss is recorded in the event store once disk recovers.
-- If eventd crashes before disk recovers, the in-memory lost-batch list is lost. On restart, the gap between the last persisted sequence and the current ring buffer position is detected as a normal restart gap (§3.5), so the loss is still recorded.
+- If eventd crashes before disk recovers, the in-memory lost-batch list is lost. On restart, eventd derives the last committed sequence from committed event rows. The gap between that sequence and the current ring buffer position is detected as a normal restart gap (§3.5), so the loss is still recorded.
 - The writer thread MUST log the commit failure to stderr immediately (peinit captures this), including the CPU IDs and sequence ranges of the lost events. This provides immediate visibility even if the gap record cannot be written yet.
 - Events continue accumulating in the KMES ring buffers. If the disk remains full long enough for the ring buffers to overrun, additional event loss occurs (detected by the drain thread's normal sequence gap mechanism).
-- The retention process SHOULD be triggered immediately to attempt to free space by deleting old data.
 
 ### Log store
 
@@ -46,13 +50,24 @@ When the filesystem containing the event, log, or metric store reaches capacity,
 If a SQLite database becomes corrupt (hardware error, filesystem bug, incomplete write due to kernel crash):
 
 - Corruption is detected at startup by verifying that the required tables and indexes exist (structural check). eventd MUST NOT run `PRAGMA integrity_check` at startup -- it scans the entire database and is O(DB size), which is unacceptable for large event stores. Corruption that does not affect the schema structure (e.g., a single corrupt page) is detected at query or write time when SQLite encounters the corrupt page and returns an error.
-- eventd MUST NOT write to a database that fails the structural check.
-- A corrupt event shard database is excluded from the write path but remains available for read-only queries on the uncorrupted portions. SQLite can often read rows from uncorrupted pages.
-- eventd MUST log the corruption and emit a synthetic `synthetic.storage_error` event (to a healthy shard).
-- If all event shards are corrupt, eventd creates new shard databases and continues writing. Historical data is accessible only from the corrupt databases on a best-effort basis.
-- If the log or metric store is corrupt, eventd creates a new database and continues. Historical data from the corrupt database is available for read-only queries on a best-effort basis.
+- If SQLite reports database corruption while opening a required active store,
+  eventd MUST quarantine the corrupt database files using the lifecycle rules in
+  §3.2, §5.2, or §7.2, create a new empty database at the original active path,
+  and continue startup.
+- eventd MUST log the corruption and emit a synthetic
+  `synthetic.storage_error` event after an event shard is available.
+- If corruption is discovered at write time, eventd MUST stop writing to the
+  affected database, emit `synthetic.storage_error` if possible, quarantine and
+  replace the database, and then resume writes to the replacement database.
+- Query handlers that encounter corruption in a shard or store MUST fail the
+  affected query with an error. eventd MUST NOT return partial data from a
+  database after SQLite has reported corruption for that query.
+- A database with a missing or unrecognised schema version is not treated as
+  corruption and is not automatically repaired or migrated. Required active
+  stores with missing or unrecognised schema versions cause startup failure.
 
-Recovery from corruption is an administrative operation. eventd does not attempt automatic repair.
+Recovery of data from quarantined corrupt database files is an administrative
+operation. eventd does not attempt automatic repair of corrupt historical data.
 
 ## eventd crash
 
@@ -61,7 +76,7 @@ If eventd crashes:
 - KMES is unaffected. Events continue accumulating in ring buffers.
 - SQLite databases are consistent (WAL guarantees). Uncommitted batches are rolled back.
 - peinit restarts eventd per its service restart policy.
-- On restart, eventd detects the gap between its last persisted sequence numbers and the current ring buffer state. The gap is recorded as a synthetic gap record.
+- On restart, eventd derives per-CPU resume points from committed event rows and detects any gap between those rows and the current ring buffer state. The gap is recorded as a synthetic gap record.
 - Log and metric data in socket buffers at crash time is lost.
 
 No manual intervention required. See §10.2 for crash recovery details.
@@ -95,6 +110,10 @@ If a query exceeds `QueryTimeoutMs`:
 - Read-only SQLite connections used by the query are released.
 - No data loss occurs. The query simply did not complete.
 
+For streaming queries, timeout applies only to the initial result set (§8.6).
+Once the stream enters its watch phase, it is not cancelled by
+`QueryTimeoutMs`.
+
 Queries that scan large unindexed datasets are the primary timeout risk. The adaptive indexing system (§3.3) mitigates this over time by creating indexes for frequently queried fields.
 
 ## Log or metric socket backpressure
@@ -120,7 +139,9 @@ If the retention process holds a write lock on a shard database:
 - The shard's writer thread blocks briefly until the retention process releases the lock.
 - Retention operates in small, bounded delete batches to minimise lock hold time.
 - Events accumulate in the KMES ring buffer during the stall.
-- Under sustained write pressure, the retention process SHOULD yield more frequently (smaller batches, longer pauses between batches).
+- Under sustained write pressure, the retention process MUST release its writer
+  coordination primitive between batches and MUST delay the next batch long
+  enough for any waiting writer to make progress.
 
 ## Power loss
 

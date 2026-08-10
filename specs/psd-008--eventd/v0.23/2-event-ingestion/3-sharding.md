@@ -6,20 +6,24 @@ title: Storage Sharding
 
 eventd distributes event writes across one or more independent SQLite databases called shards. Each shard is a self-contained database with its own file, WAL, and writer thread. Shards share no write-path state.
 
-The number of shards is configured via the `StorageShards` registry key under `Machine\System\eventd\`. The valid range is 1 to 256. A value of 0 means the shard count equals the CPU count (as reported by `kmes_attach`). The default is 0.
+The number of shards is configured via the `StorageShards` registry key under `Machine\System\eventd\`. The valid range is 0 to 256. A value of 0 means the shard count equals the CPU count (as reported by `kmes_attach`). The default is 0.
 
 > [!INFORMATIVE]
 > For best performance, the shard count should be a multiple of both the CPU count and 2. A shard count that is a power of two enables the implementation to use bitwise AND instead of modulo for event routing. A shard count that is a multiple of the CPU count ensures even distribution of shards across CPUs.
 
 ## Shard-to-CPU assignment
 
-Each shard is assigned to exactly one drain thread (and thus one CPU) at startup. The assignment is static for the lifetime of the eventd process.
+Each CPU is assigned at least one shard at startup. The assignment is static for the lifetime of the eventd process.
 
-The assignment maps shard `j` to CPU `j % cpu_count`. When the shard count equals the CPU count, each CPU has exactly one shard (the 1:1 case). When the shard count is less than the CPU count, multiple CPUs share a shard. When the shard count exceeds the CPU count, a CPU is assigned multiple shards and round-robins events across them.
+The active shard count is computed from `StorageShards`: if `StorageShards` is 0, the active shard count is the CPU count; otherwise it is the configured value.
+
+For each CPU `c`, eventd first assigns every shard `j` where `j % cpu_count == c`. If this produces an empty assignment because the shard count is less than the CPU count, CPU `c` is assigned shard `c % shard_count`. This ensures every CPU has a write path.
+
+When the shard count equals the CPU count, each CPU has exactly one shard (the 1:1 case). When the shard count is less than the CPU count, multiple CPUs share a shard. When the shard count exceeds the CPU count, a CPU may be assigned multiple shards.
 
 When a drain thread is assigned multiple shards, it distributes events across its shards using round-robin assignment. Each event is routed to the next shard in sequence.
 
-When the shard count does not divide evenly by the CPU count, some CPUs are assigned one more shard than others. The resulting write throughput imbalance is proportional to one shard's worth of throughput and is negligible in practice.
+When the shard count does not divide evenly by the CPU count, some CPUs are assigned one more shard than others (for `shard_count > cpu_count`) or some shards receive events from one more CPU than others (for `shard_count < cpu_count`). The resulting write throughput imbalance is proportional to one shard's worth of throughput and is negligible in practice.
 
 The shard-to-CPU assignment is not persistent across restarts. A shard database may contain events from different sets of CPUs across different eventd lifetimes. Shards are a write-path optimisation only -- the query path MUST NOT assume any relationship between a shard and a specific CPU. Queries that filter by CPU ID MUST scan all shards.
 

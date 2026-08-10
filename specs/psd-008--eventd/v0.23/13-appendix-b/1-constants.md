@@ -64,6 +64,7 @@ Computed from `uuid_v5(EVENTD_FIELD_NAMESPACE, field_name)` for reference. Imple
 | `origin` | Service name. |
 | `is_error` | stderr flag. |
 | `message` | Log text. |
+| `job_id` | Optional job-correlation GUID. |
 | `boot_id` | Boot ID GUID. |
 
 ### Metric fields
@@ -71,11 +72,14 @@ Computed from `uuid_v5(EVENTD_FIELD_NAMESPACE, field_name)` for reference. Imple
 | Field name | Description |
 |---|---|
 | `timestamp` | Sample time. |
+| `boot_id` | Boot ID GUID. |
 | `name` | Metric name. |
 | `type` | Metric type (counter, gauge, histogram). |
 | `value` | Numeric value. |
 
 Metric label keys produce field GUIDs using the same algorithm. Label key `"core"` produces `uuid_v5(EVENTD_FIELD_NAMESPACE, "core")`.
+
+Event payload fields use the flattened dot-path names defined in §8.1 for field GUID computation. Payload fields suppressed by flattening rules or whose top-level key collides with an event header field name are not query-language fields and do not produce field GUIDs. Metric label keys MUST NOT be any of the fixed metric field names listed above: `timestamp`, `boot_id`, `name`, `type`, or `value`.
 
 ## Synthetic event types
 
@@ -105,6 +109,12 @@ Metric label keys produce field GUIDs using the same algorithm. Label key `"core
 | 3 | SUM |
 | 4 | RATE |
 | 5 | DELTA |
+
+These identifiers name per-series rollup functions. Window aggregation keywords
+do not have separate rollup identifiers: `AVG_OVER`, `MIN_OVER`, `MAX_OVER`,
+and `SUM_OVER` map to AVG, MIN, MAX, and SUM when no RATE or DELTA transform is
+present. RATE and DELTA rollups use the `covered_ns` metadata column defined in
+§7.4 for exact composition.
 
 Percentile functions (P50, P95, P99) are not rollup-eligible. They are computed from raw samples only.
 
@@ -139,4 +149,5 @@ Percentile functions (P50, P95, P99) are not rollup-eligible. They are computed 
 |---|---|
 | `"ok"` | Result records follow in the `records` field. |
 | `"end"` | No more results. Query complete. |
+| `"watch"` | Streaming initial result set is complete; live watch phase has started. |
 | `"error"` | Error occurred. Description in the `error` field. |

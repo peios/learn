@@ -10,9 +10,11 @@ Mint a new token from scratch. The caller provides the security-meaningful conte
 
 **Gated by:** `SeCreateTokenPrivilege`.
 
-**Caller-supplied fields:** `user_sid`, `groups` (with attributes), privileges (`privs_present` + `privs_enabled`), `owner_sid_index`, `primary_group_index`, `default_dacl`, `integrity_level`, `mandatory_policy`, `token_type`, `impersonation_level`, `auth_id` (MUST reference an existing logon session), `expiration` (0 = no expiry), `audit_policy`, `source` (name + LUID), `user_claims`, `device_claims`, `lcs_scope_guids`, `lcs_private_layers`, `device_groups`, `restricted_sids`, `restricted_device_groups`, `confinement_sid`, `confinement_capabilities`, `confinement_exempt`, `isolation_boundary`, `write_restricted`, `user_deny_only`, `projected_uid`, `projected_gid`, `projected_supplementary_gids`, `origin`, `interactive_session_id`. See §13.6 for the complete wire format.
+**Caller-supplied fields:** `user_sid`, `groups` (with attributes), privileges (`privs_present` + `privs_enabled`), `owner_sid_index`, `primary_group_index`, `default_dacl`, `integrity_level`, `mandatory_policy`, `token_type`, `impersonation_level`, `auth_id` (MUST reference an existing LogonSession), `expiration` (0 = no expiry), `audit_policy`, `source` (name + LUID), `user_claims`, `device_claims`, `lcs_scope_guids`, `lcs_private_layers`, `device_groups`, `restricted_sids`, `restricted_device_groups`, `confinement_sid`, `confinement_capabilities`, `confinement_exempt`, `isolation_boundary`, `write_restricted`, `user_deny_only`, `projected_uid`, `projected_gid`, `projected_supplementary_gids`, `origin`, `interactivity_scope`. See §13.7 for the complete wire format.
 
-**Kernel-generated fields:** `token_id` (LUID), `token_guid` (UUIDv4), `modified_id` (initialized to `token_id`), `created_at` (current time), `elevation_type` (always Default), `logon_sid` (derived from `session_id` as `S-1-5-5-{session_id >> 32}-{session_id & 0xFFFFFFFF}`), token SD (default SD per §4.8).
+The caller (authd) is responsible for including well-known implicit groups in the `groups` array: Everyone (`S-1-1-0`), Authenticated Users (`S-1-5-11`), and any other groups that the principal's authentication context implies (e.g., `S-1-5-4` Interactive, `S-1-5-6` Service, `S-1-5-15` This Organization). The kernel does NOT inject these — only the logon SID is kernel-generated.
+
+**Kernel-generated fields:** `token_id` (LUID), `token_guid` (UUIDv4), `modified_id` (initialized to `token_id`), `created_at` (current time), `elevation_type` (always Default), `logon_sid` (derived from `logon_session_id` as `S-1-5-5-{logon_session_id >> 32}-{logon_session_id & 0xFFFFFFFF}`), token SD (default SD per §4.8).
 
 The kernel injects the logon SID into the groups array with `SE_GROUP_MANDATORY | SE_GROUP_ENABLED_BY_DEFAULT | SE_GROUP_ENABLED | SE_GROUP_LOGON_ID`. Callers MUST NOT include the logon SID in their supplied groups array — it is always kernel-generated. The injected entry is appended after the caller's groups. `owner_sid_index` and `primary_group_index` are interpreted relative to the caller-supplied groups (0 = user SID, 1..N = caller's groups), not including the kernel-injected logon SID entry.
 
@@ -22,7 +24,7 @@ The kernel validates:
 2. All SIDs are structurally well-formed.
 3. The owner SID is the user SID or a group with SE_GROUP_OWNER. Resolved to `owner_sid_index`.
 4. The primary group SID is the user SID or a group SID on the token. Resolved to `primary_group_index`.
-5. The `auth_id` references an existing logon session object.
+5. The `auth_id` references an existing LogonSession object.
 6. If `token_type` is Primary, `impersonation_level` MUST be Anonymous.
 7. If `write_restricted` is true, `user_deny_only` MUST be true.
 8. If `isolation_boundary` is true, `confinement_sid` MUST be present.
@@ -30,7 +32,7 @@ The kernel validates:
 10. The caller-supplied group count plus the kernel-injected logon SID MUST
     fit the 1024-entry token group limit.
 11. The optional LCS registry credential extension, when present, MUST use the
-    version and layout defined in §13.6, MUST contain at most 256 scope GUIDs,
+    version and layout defined in §13.7, MUST contain at most 256 scope GUIDs,
     MUST contain at most 256 private layer names, MUST NOT contain the nil
     scope GUID, MUST NOT contain duplicate scope GUIDs, MUST NOT contain empty
     or overlong private layer names, and MUST NOT contain duplicate private
@@ -70,7 +72,7 @@ Fields on the new token:
 - `privileges` — present/enabled/enabled_by_default copied from source. `used` copied from source.
 - `integrity_level`, `mandatory_policy` — copied from source.
 - `auth_id`, `origin`, `source`, `created_at`, `expiration`, `audit_policy` — copied from source.
-- `interactive_session_id` — copied from source.
+- `interactivity_scope` — copied from source.
 - `default_dacl`, `owner_sid_index`, `primary_group_index` — copied from source.
 - `user_claims`, `device_claims`, `device_groups`, `restricted_device_groups` — copied from source.
 - `lcs_scope_guids`, `lcs_private_layers` — copied from source.
@@ -114,7 +116,7 @@ FilterToken creates a new token object. The original is untouched. Fields on the
 - `privileges` — present/enabled/enabled_by_default modified per the removal list. `used` reset to 0.
 - `restricted_sids` — set from the provided restricting SID list. If the source was already restricted, the new list is the intersection of source and provided lists.
 - `write_restricted` — set if requested, OR sticky from source (`write_restricted || source.write_restricted`).
-- `user_deny_only` — set to true when write_restricted is enabled, false otherwise.
+- `user_deny_only` — set to true when write_restricted is enabled. Otherwise, copied from source.
 - `auth_id`, `origin`, `source`, `created_at`, `expiration`, `audit_policy` — copied from source.
 - `default_dacl`, `owner_sid_index`, `primary_group_index` — copied from source.
 - `user_claims`, `device_claims`, `device_groups`, `restricted_device_groups` — copied from source.

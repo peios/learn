@@ -53,17 +53,17 @@ Positional selectors may not begin with `-`. A leading-`-` token before `--` is
 read as a flag (and rejected as unknown if it is not one); after `--` it is still
 rejected as a selector with the diagnostic *"use `--` before selector-like
 values"*. Use `--` for selectors that merely *look* option-like (for example a
-path), not to smuggle a leading dash into a selector.
+path), not to pass a selector that begins with a dash.
 
 ## Flag value forms
 
-Flags fall into three shapes, and the shape decides how a value may be written.
+Flags fall into three shapes — **no-value**, **required-value**, and
+**optional-value** — and the shape decides how a value may be written. Which
+shape each flag takes is tabulated per flag in the
+[command-line reference](~pekit/reference/cli); the rules are as follows.
 
-| Shape | Examples | How a value is written |
-|---|---|---|
-| No-value | `--dry-run`, `--quiet`, `--verbose`, `--json`, `--allow-unused` | Never takes a value. `--flag=x` is an error (`unexpected_flag_value`). |
-| Required-value | `--recipe`, `--workspace`, `--version` (`-V`), `--env`, `--keyring` | `--flag value` **or** `--flag=value`. |
-| Optional-value | `--local`, `--prefer-local`, `--no-build` | Value only via `--flag=value`. The bare form is valid and means "empty value". |
+**No-value flags** (`--dry-run`, `--json`, and the like) never take a value:
+`--flag=x` is an error (`unexpected_flag_value`).
 
 **Required-value flags** accept either the separated form (`--recipe path`) or the
 `=` form (`--recipe=path`). With the separated form pekit consumes the next token
@@ -89,36 +89,29 @@ always requires the `=` and a non-empty path.
 
 ## Global flags
 
-Seven flags are parsed in any position regardless of command; six are accepted
-by every command, and the seventh, `--workspace`, is only valid with the
-`workspace` command. The
-rest of pekit's flags (`--version`/`-V`, `--latest`, `--local`, `--env`,
-`--keyring`, `--all`, and so on) are command-specific and are covered on
-[Commands and targets](~pekit/using-pekit/commands-and-targets).
+Seven flags are parsed in any position regardless of command: `--recipe`,
+`--workspace`, `--allow-unused`, `--dry-run`, `--quiet`, `--verbose`, and
+`--json`. Six are accepted by every command; the seventh, `--workspace`, is only
+valid with the `workspace` command. Each is covered in its own section below,
+and the [command-line reference](~pekit/reference/cli) tabulates all seven with
+their value forms. The rest of pekit's flags (`--version`/`-V`, `--latest`,
+`--local`, `--env`, `--keyring`, `--all`, and so on) are command-specific and
+are covered on [Commands and targets](~pekit/using-pekit/commands-and-targets).
 
-| Flag | Effect |
-|---|---|
-| `--recipe <path\|dir>` | Use this recipe instead of searching upward from the cwd. |
-| `--workspace <path\|dir>` | Use this workspace file/root. Only valid with the `workspace` command. |
-| `--allow-unused` | Downgrade "command does not support this recognised flag" from an error to a suppressed notice. |
-| `--dry-run` | Build the plan and stop before any side effect. |
-| `--quiet` | Suppress routine progress; print only warnings and result events. |
-| `--verbose` | Emit extra staging/progress events. |
-| `--json` | Emit machine-readable NDJSON events instead of the human log. |
+`--recipe <path|dir>` selects the recipe directly instead of searching upward
+from the cwd (see [How a recipe is located](#how-a-recipe-is-located));
+`--workspace <path|dir>` does the same for the workspace file.
 
 ### Mutual-exclusion rules
 
-Validation rejects contradictory combinations up front:
-
-| Rejected combination | Diagnostic |
-|---|---|
-| `--quiet` with `--verbose` | `--quiet and --verbose cannot be used together` |
-| `--quiet` with `--json` | `--quiet and --json cannot be used together` |
-| `--recipe` with `--workspace` | `--recipe and --workspace cannot be used together` |
-| `--workspace` without the `workspace` command | `--workspace can only be used with the workspace command` |
-| More than one of `--version` / `--latest` / `--all-versions` | mutually exclusive |
-| `--local` with `--prefer-local` | mutually exclusive |
-| `--output-only` with `--target-only` (clean) | mutually exclusive |
+Validation rejects contradictory combinations up front, before any work runs:
+`--quiet` cannot be combined with `--verbose` or `--json`; `--recipe` cannot be
+combined with `--workspace` (and `--workspace` is rejected outside the
+`workspace` command); the version selectors (`--version` / `--latest` /
+`--all-versions`), the local-source flags (`--local` / `--prefer-local`), and
+the clean modes (`--output-only` / `--target-only`) are each mutually exclusive
+within their group. The complete validation table, with each diagnostic, is in
+the [command-line reference](~pekit/reference/cli).
 
 ## `--allow-unused`
 
@@ -205,16 +198,11 @@ command and `workspace` is whether the run went through the `workspace` command.
 
 ## Exit codes
 
-Pekit uses two exit codes only:
-
-| Code | Meaning |
-|---|---|
-| `0` | Success. |
-| `1` | Any error — bad invocation, missing recipe, failed build, and so on. |
-
-There are no finer-grained codes, and there is **no `--help` or `help` command**:
-this reference and [Commands and targets](~pekit/using-pekit/commands-and-targets)
-are the manual.
+Pekit uses two exit codes only: `0` on success, `1` on any error — bad
+invocation, missing recipe, failed build, and so on. There are no finer-grained
+codes, and there is **no `--help` or `help` command**: this page,
+[Commands and targets](~pekit/using-pekit/commands-and-targets), and the
+[command-line reference](~pekit/reference/cli) are the manual.
 
 ## How a recipe is located
 

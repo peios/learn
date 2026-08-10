@@ -14,21 +14,35 @@ eventd MUST generate synthetic events for the following conditions:
 
 - **Sequence gaps** -- when lost events are detected on any CPU (see §2.5).
 - **eventd startup** -- when eventd starts and successfully attaches to KMES ring buffers.
-- **eventd shutdown** -- when eventd begins a graceful shutdown, recording the last persisted sequence number per CPU.
-- **Storage errors** -- when a write to any store (event, log, or metric) fails (disk full, SQLite error).
+- **eventd shutdown** -- during graceful shutdown, recording the last committed sequence number per CPU.
+- **Storage errors** -- when a write to any store (event, log, metric, or
+  metadata) fails (disk full, SQLite error).
 - **Configuration changes** -- when eventd reads a changed configuration value from the registry.
 
 Additional synthetic event types MAY be defined in future versions.
 
 ## Shard assignment
 
-CPU-specific synthetic events (gap records) MUST be written to the shard assigned to the CPU that generated them. They are handed off to the writer thread alongside regular events from that CPU.
+CPU-specific synthetic events (gap records) MUST be written to the shard assigned
+to the CPU that generated them. They are handed off to the writer thread
+alongside regular events from that CPU.
 
-Daemon-wide synthetic events (startup, shutdown, configuration changes, storage errors) MUST be written to shard 0. A storage error describes a failure on a specific shard but is itself a daemon-wide notification — it MUST NOT be written to the failing shard. These events are infrequent and the minor write imbalance is negligible.
+Daemon-wide synthetic events (startup, shutdown, configuration changes, storage
+errors) MUST be written to shard 0 when shard 0 is writable. If shard 0 is not
+writable during the current run, the event MUST be written to the lowest-numbered
+writable active shard. If no event shard is writable, the synthetic event is
+skipped after logging the failure to stderr. A storage error describes a failure
+on a specific shard but is itself a daemon-wide notification -- it MUST NOT be
+written to the failing shard unless that shard has already been replaced and is
+writable again. These events are infrequent and the minor write imbalance is
+negligible.
 
 ## Storage
 
-Synthetic events are written to the same shard databases as KMES events. They participate in the same batching, retention, and query mechanisms. They are distinguishable from KMES events by their record type in the storage schema.
+Synthetic events are written to the same shard databases as KMES events. They participate in the same batching, retention, and query mechanisms. They are distinguishable from KMES events by their `synthetic.`-prefixed `event_type` value in the storage schema.
+
+The exact msgpack payload schema for each v0.23 synthetic event type is defined
+in §3.1. eventd MUST use those field names and value types.
 
 ## Ordering
 

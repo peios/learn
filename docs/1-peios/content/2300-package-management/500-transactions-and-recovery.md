@@ -1,7 +1,7 @@
 ---
 title: Transactions and recovery
 type: concept
-description: Every peipkg change is an atomic, reversible transaction. This page explains the three phases an operation moves through, the single instant that separates "nothing happened" from "it is done", how backups make rollback free, what an interrupted run leaves behind, and how recover and history work.
+description: Every peipkg change is an atomic, reversible transaction. This page covers the three phases, the commit instant, interrupted runs, and recover and history.
 related:
   - peios/package-management/overview
   - peios/package-management/keeping-a-system-current
@@ -37,16 +37,16 @@ flowchart LR
 
 Within the commit there is a **single instant** — the moment peipkg records the new state in its database — that divides the entire operation in two:
 
-- **Before it:** any failure, any signal, any power loss rolls everything back. The staged files are discarded, any displaced files are put back, and the system is exactly as it was. *Nothing happened.*
-- **After it:** the operation is complete and durable. *It is done.*
+- **Before it:** any failure, any signal, any power loss rolls everything back. The staged files are discarded, any displaced files are put back, and the system is exactly as it was.
+- **After it:** the operation is complete and durable.
 
-There is no third outcome. A transaction is never "partly applied". This is the whole guarantee, and everything below is the machinery that delivers it.
+There is no third outcome. A transaction is never "partly applied". The rest of this page describes the machinery that delivers this guarantee.
 
 ## Backups make rollback free
 
 When peipkg replaces or removes a file, it does not overwrite or delete it. It **renames the old file aside** — to a sibling name in the same directory — and puts the new file in place. The old contents are untouched, just under a different name.
 
-Rolling back is then simply renaming everything back. No data is copied, no contents are reconstructed; the rollback is the same cheap rename operation in reverse. This is why a failed transaction is not merely *recoverable* but recovers to a *byte-exact* prior state.
+Rolling back is then simply renaming everything back. No data is copied, no contents are reconstructed; the rollback is the same cheap rename operation in reverse. This is why a failed transaction recovers to a byte-exact prior state.
 
 Those set-aside files also outlive a successful commit for a while — retained so that an [`undo`](~peios/package-management/keeping-a-system-current) of a recent transaction is fast and needs no network. They are cleaned up automatically as they age out.
 
@@ -59,7 +59,7 @@ If a transaction is interrupted mid-stage or mid-commit, you may find files with
 | `<name>.peipkg-staged-<id>` | An incoming file that had been staged but not yet moved into place. |
 | `<name>.peipkg-backup-<id>` | A file that had been renamed aside to make room — the backup. |
 
-These names are deliberate. They have no leading dot, so they are *visible* — meant to be tripped over and understood, not hidden. The `<id>` is the transaction number; look it up with `peipkg history` to see exactly which operation left it.
+These names are deliberate. They have no leading dot, so they are visible rather than hidden — you are meant to find them and understand them. The `<id>` is the transaction number; look it up with `peipkg history` to see which operation left it.
 
 You do not clean these up by hand. peipkg knows about them and resolves them itself — see `recover`, next.
 
@@ -78,7 +78,7 @@ $ peipkg recover
 recovered: the interrupted transaction was rolled back
 ```
 
-Recovery only ever **rolls back**. A transaction that was interrupted *after* its commit instant is already complete — there is nothing pending and nothing to recover. Recovery deals exclusively with the "before the instant" case, and it always resolves it the same way: back to the prior state.
+Recovery only ever **rolls back**. A transaction that was interrupted after its commit instant is already complete — there is nothing pending and nothing to recover. Recovery deals exclusively with the "before the instant" case, and it always resolves it the same way: back to the prior state.
 
 If there is no pending transaction, `recover` says so and exits cleanly.
 
@@ -113,7 +113,7 @@ The history is what [`undo`](~peios/package-management/keeping-a-system-current)
 Upgrading a package raises a question for any configuration file under `/etc/` that the package owns: the new version ships a new default, but you may have edited the old one. peipkg decides per file, by comparing the file on disk against the hash it recorded at install:
 
 - **Unchanged since install** — peipkg replaces it with the new default. You wanted the package's settings, and you get the current ones.
-- **Edited since install** — peipkg keeps *your* file untouched and writes the new default beside it as `<name>.peipkg-new`. The upgrade report notes it:
+- **Edited since install** — peipkg keeps your file untouched and writes the new default beside it as `<name>.peipkg-new`. The upgrade report notes it:
 
   ```
   peipkg: warning: /etc/nginx/nginx.conf has been modified since install —
@@ -124,9 +124,9 @@ Your edits are never silently discarded, and the new defaults are never silently
 
 ## Side effects run after commit
 
-A few packages need a system-wide step after their files are in place — refreshing the shared-library cache, the kernel-module map, or the manual-page index. peipkg runs those steps **after** the commit instant, once per transaction.
+A few packages need a system-wide step after their files are in place — refreshing the shared-library cache, the kernel-module map, or the manual-page index. peipkg runs those steps after the commit instant, once per transaction.
 
-Because they run after the operation is already complete and durable, a side-effect step that fails is reported as a **warning, not a failure**. The transaction stands; the step is one that corrects itself the next time it runs. An install is never rolled back over a stale cache.
+Because they run after the operation is already complete and durable, a side-effect step that fails is reported as a warning, not a failure. The transaction stands; the step is one that corrects itself the next time it runs. An install is never rolled back over a stale cache.
 
 ## Why this shape
 
@@ -137,4 +137,4 @@ The pay-off of the three-phase model is concrete:
 - Queries and dry-runs never wait on an in-flight transaction, because only staging and commit take the lock.
 - Every transaction is reversible, by `undo` for a recent one or `downgrade` for a specific package.
 
-And it all rests on one idea: do all the fallible work — downloading, verifying, staging — *before* the single instant that commits, so that the commit itself is the only thing that can be said to have "happened".
+The model rests on one principle: all the fallible work — downloading, verifying, staging — happens before the commit instant, so the commit itself is the only point at which the system changes state.

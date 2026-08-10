@@ -11,7 +11,20 @@ eventd MUST run a dedicated log ingestion thread that reads datagrams from the l
 
 ## Batched writes
 
-The log writer uses the same adaptive batch sizing approach as the event writer (§2.4). Log records are accumulated into a transaction and committed when either the batch size or latency threshold is reached.
+The log writer uses the same adaptive batch sizing approach as the event writer
+(§2.4), with the log socket receive queue as its input source. A transaction
+begins when the first valid log record for a batch is available. The writer
+commits the transaction when any of these conditions is true:
+
+- No additional datagram is immediately available in the socket receive queue.
+- The batch contains `LogMaxBatchSize` records.
+- `LogMaxBatchLatencyMs` has elapsed since the first record entered the batch.
+
+If a received datagram contains more valid records than can fit in the remaining
+space in the current transaction, the writer MUST commit the current transaction
+before inserting the next record and then continue processing the same datagram
+in a new transaction. A transaction MUST NOT exceed `LogMaxBatchSize` records or
+remain open past `LogMaxBatchLatencyMs`.
 
 The log writer's batch parameters are configured independently from the event writer:
 
@@ -25,6 +38,10 @@ The log writer's batch parameters are configured independently from the event wr
 
 ## SQLite configuration
 
-The log store database MUST be opened in WAL mode. The `synchronous` pragma SHOULD be set to NORMAL rather than FULL. Per-transaction fsync is not required for logs because log loss on power failure is acceptable. NORMAL mode syncs at checkpoint time, providing durability against process crashes without the per-commit fsync overhead.
+The log store database MUST be opened in WAL mode. The `synchronous` pragma
+MUST be set to NORMAL rather than FULL. Per-transaction fsync is not required
+for logs because log loss on power failure is acceptable. NORMAL mode syncs at
+checkpoint time, providing durability against process crashes without the
+per-commit fsync overhead.
 
 This is a deliberate divergence from the event store, which uses `synchronous = FULL` for per-transaction durability. The different durability requirements of events and logs justify different SQLite configurations.

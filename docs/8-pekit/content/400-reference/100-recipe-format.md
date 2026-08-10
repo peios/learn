@@ -84,6 +84,7 @@ The recipe file accepts exactly these top-level keys. Anything else is an
 | `test` | table | no | Test target(s). |
 | `install` | table | no | Install target(s). |
 | `clean` | table | no | Clean target(s). |
+| `gen` | table | no | Source-generating target(s). See [`[gen]`](#gen). |
 
 ### `[env]`
 
@@ -227,6 +228,33 @@ pesb-dev."pkgconfig(zlib)" = "*"
 Dependency names may be real package names or virtual capabilities (sonames,
 `pkgconfig(...)`, etc.) and are validated against peipkg's capability grammar.
 See [Commands and targets](~pekit/using-pekit/commands-and-targets).
+
+### `[gen]` {#gen}
+
+A `[gen]` section defines **source-generating** targets: they run at the recipe
+root and write generated source *into the tree* rather than producing an
+`out_dir` artifact. Bare/named shapes work exactly as for the target sections
+above (`[gen]` is `gen.main`; `[gen.<name>]` names a target). Gen targets have
+their own fields — they take **no** `needs` or `clear_out`:
+
+| Key | Type | Required | Meaning |
+| --- | --- | --- | --- |
+| `command` | string or array of strings | **yes** | The generator. Runs at the recipe root; writes generated source in place. |
+| `verify_command` | string or array of strings | no | The drift gate: exit 0 = in sync, non-zero = stale. Run by `pekit verify` and by the consuming-command pre-flight. |
+| `verify_on_build` | array of strings | no | Build target names this gate applies to. **Absent** gates every build; **`[]`** gates none; a list gates only those. |
+| `verify_on_test` | array of strings | no | As `verify_on_build`, for the `test` namespace. |
+| `dependencies` | table | no | Build-time dependencies for `command` (and for `verify_command`, unless overridden). Same shape as a build target's `dependencies`. |
+| `verify_dependencies` | table | no | When present, **fully replaces** `dependencies` for the `verify_command` run. |
+
+Any other key is an `unknown target key` error. Setting `verify_on_build`,
+`verify_on_test`, or `verify_dependencies` without a `verify_command` is an
+`invalid_gen` error (there is nothing to gate).
+
+A gen target's `$PEKIT_OUT` is a pekit-managed scratch directory
+(`<out_dir>/.scratch/gen/<name>`) outside the artifact area, cleaned on success
+and retained on failure — a convenient place for `verify_command` to regenerate
+into for comparison. For the command surface, the pre-flight, and `--no-verify`,
+see [Commands and targets](~pekit/using-pekit/commands-and-targets#generating-source-gen-and-verify).
 
 ## `package.pekit.toml`
 

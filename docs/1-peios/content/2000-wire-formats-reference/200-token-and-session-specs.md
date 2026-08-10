@@ -18,7 +18,7 @@ The session spec is small. It identifies who is signing in and how.
 
 | Bytes | Field | Notes |
 |---|---|---|
-| 0 | `logon_type` (u8) | Logon type — Interactive (2), Network (3), Batch (4), Service (5), NetworkCleartext (8), NewCredentials (9). |
+| 0 | `logon_type` (u8) | Logon type — Interactive (2), Network (3), Batch (4), Service (5), NetworkCleartext (8), NewCredentials (9). The full catalogue is in [Other constants](~peios/constants-and-catalogs/other-constants). |
 | 1–2 | `auth_pkg_len` (u16le) | Length of the auth-package string in bytes. |
 | 3+ | `auth_pkg` (string) | UTF-8 bytes naming the auth mechanism (e.g. "Kerberos"). Length = `auth_pkg_len`. |
 | | `user_sid_len` (u32le) | Length of the user SID in bytes. Appears right after `auth_pkg`. |
@@ -43,71 +43,71 @@ The token spec is substantially larger. The fixed header is 192 bytes; variable 
 | Offset | Size | Field | Notes |
 |---|---|---|---|
 | 0 | 4 | `version` | Must be `TOKEN_SPEC_VERSION` = 2. |
-| 4 | 4 | `token_type` | 1 = Primary, 2 = Impersonation. |
-| 8 | 4 | `impersonation_level` | 0–3. For Primary tokens, must be 0 (Anonymous). |
-| 12 | 4 | `integrity_level` | Integrity RID (0, 4096, 8192, 12288, 16384). |
-| 16 | 4 | `mandatory_policy` | Bitmask: `NO_WRITE_UP` (0x01), `NEW_PROCESS_MIN` (0x02). |
-| 20 | 4 | _reserved1 (`elevation_type`) | Must be 0. (Elevation set via `KACS_IOC_LINK_TOKENS` post-creation.) |
-| 24 | 8 | `auth_id` | Session ID this token belongs to. |
-| 32 | 8 | `expiration` | Expiration timestamp; 0 = no expiry. Informational in v0.20. |
-| 40 | 8 | `origin` | Originating session LUID for derived tokens. |
-| 48 | 4 | `audit_policy` | Bitmask of per-token forced-audit flags. |
-| 52 | 4 | `interactive_session_id` | Session number (0 = service, 1+ = interactive). |
-| 56 | 4 | `user_sid_off` | Offset (from spec start) to user SID. |
-| 60 | 4 | `user_sid_len` | Length of user SID in bytes. |
-| 64 | 4 | `groups_off` | Offset to groups list. |
-| 68 | 4 | `groups_len` | Length of groups list in bytes. |
-| 72 | 4 | `restricted_sids_off` | Offset to restricted SIDs list. |
-| 76 | 4 | `restricted_sids_len` | Length. |
-| 80 | 4 | `device_groups_off` | Offset. |
-| 84 | 4 | `device_groups_len` | Length. |
-| 88 | 4 | `restricted_device_groups_off` | Offset. |
-| 92 | 4 | `restricted_device_groups_len` | Length. |
-| 96 | 4 | `user_claims_off` | Offset to user_claims multi-entry buffer. |
-| 100 | 4 | `user_claims_len` | Length. |
-| 104 | 4 | `device_claims_off` | Offset. |
-| 108 | 4 | `device_claims_len` | Length. |
-| 112 | 4 | `default_dacl_off` | Offset to default DACL. |
-| 116 | 4 | `default_dacl_len` | Length. |
-| 120 | 4 | `owner_sid_index` | Index into groups list (where 0 = user_sid). |
-| 124 | 4 | `primary_group_index` | Same. |
-| 128 | 4 | `privileges_present` | 64-bit present-bitmask, low 32 bits. |
-| 132 | 4 | (continued, high 32 bits) | |
-| 136 | 4 | `privileges_enabled` | 64-bit enabled-bitmask, low 32 bits. |
-| 140 | 4 | (continued, high 32 bits) | |
-| 144 | 4 | `privileges_enabled_by_default` | Low 32. |
-| 148 | 4 | (continued) | High 32. |
-| 152 | 4 | `confinement_sid_off` | Offset; 0 if not confined. |
-| 156 | 4 | `confinement_sid_len` | Length; 0 if not confined. |
-| 160 | 4 | `confinement_capabilities_off` | Offset. |
-| 164 | 4 | `confinement_capabilities_len` | Length. |
-| 168 | 4 | `confinement_exempt` | Boolean (0 or 1). |
-| 172 | 4 | `isolation_boundary` | Boolean. Must be 0 unless confinement_sid is set. |
-| 176 | 4 | `projected_uid` | Linux UID projection. `65534` if no mapping. |
-| 180 | 4 | `projected_gid` | Linux GID projection. |
-| 184 | 4 | `supplementary_gids_off` | Offset to supplementary GIDs array (u32 each). |
-| 188 | 4 | `supplementary_gids_len` | Length in bytes (4 × number of GIDs). |
+| 4 | 1 | `token_type` (u8) | 1 = Primary, 2 = Impersonation. |
+| 5 | 1 | `impersonation_level` (u8) | 0–3. For Primary tokens, must be 0 (Anonymous). |
+| 6 | 2 | `_reserved0` | Must be 0. |
+| 8 | 4 | `integrity_rid` | Integrity RID (0, 4096, 8192, 12288, 16384). |
+| 12 | 4 | `mandatory_policy` | Bitmask: `NO_WRITE_UP` (0x01), `NEW_PROCESS_MIN` (0x02). |
+| 16 | 8 | `privs_present` | 64-bit bitmask of privileges present on the token. |
+| 24 | 8 | `privs_enabled` | 64-bit bitmask of privileges initially enabled (subset of present). The kernel initialises `enabled_by_default` to this same value — there is no separate wire field. |
+| 32 | 4 | `_reserved1` | Must be 0. (Elevation type is set only via `KACS_IOC_LINK_TOKENS` post-creation.) |
+| 36 | 4 | `projected_uid` | Linux UID projection. `65534` if no mapping. |
+| 40 | 4 | `projected_gid` | Linux GID projection. |
+| 44 | 4 | `audit_policy` | Bitmask of per-token forced-audit flags. |
+| 48 | 8 | `expiration` | Expiration timestamp; 0 = no expiry. Informational in v0.20. |
+| 56 | 8 | `session_id` | Logon session ID this token belongs to (used as the token's `auth_id`). |
+| 64 | 4 | `owner_sid_index` | 0 = user_sid, 1..N = caller-supplied group at that index. |
+| 68 | 4 | `primary_group_index` | Same. |
+| 72 | 8 | `source_name` (u8[8]) | Token source name (e.g. `"authd\0\0\0"`). |
+| 80 | 8 | `source_id` | Token source identifier (LUID). |
+| 88 | 4 | `user_sid_offset` | Offset (from spec start) to the user SID. |
+| 92 | 4 | `groups_offset` | Offset to the groups array. |
+| 96 | 4 | `groups_count` | Number of group entries. |
+| 100 | 4 | `default_dacl_offset` | Offset to the default DACL. 0 = none. |
+| 104 | 4 | `default_dacl_len` | Length. 0 = none. |
+| 108 | 4 | `user_claims_offset` | Offset to the user_claims multi-entry buffer. |
+| 112 | 4 | `user_claims_len` | Total byte length. |
+| 116 | 4 | `device_claims_offset` | Offset. |
+| 120 | 4 | `device_claims_len` | Length. |
+| 124 | 4 | `device_groups_offset` | Offset. |
+| 128 | 4 | `device_groups_count` | Entry count. |
+| 132 | 4 | `restricted_sids_offset` | Offset. |
+| 136 | 4 | `restricted_sids_count` | Entry count. |
+| 140 | 4 | `confinement_sid_offset` | Offset; 0 if not confined. |
+| 144 | 4 | `confinement_sid_len` | Length; 0 if not confined. |
+| 148 | 4 | `confinement_caps_offset` | Offset. |
+| 152 | 4 | `confinement_caps_count` | Entry count. |
+| 156 | 1 | `confinement_exempt` (u8) | 1 = exempt from confinement. |
+| 157 | 1 | `write_restricted` (u8) | 1 = write-restricted mode. |
+| 158 | 1 | `user_deny_only` (u8) | 1 = user SID matches deny ACEs only. |
+| 159 | 1 | `isolation_boundary` (u8) | 1 = enable namespace filtering (not enforced in v0.20). Must be 0 unless confinement_sid is set. |
+| 160 | 4 | `supp_gids_offset` | Offset to the projected supplementary GIDs array (u32le each). |
+| 164 | 4 | `supp_gids_count` | Entry count. |
+| 168 | 4 | `restricted_device_groups_offset` | Offset. |
+| 172 | 4 | `restricted_device_groups_count` | Entry count. |
+| 176 | 8 | `origin` | Originating logon-session LUID for derived tokens; 0 for non-derived. |
+| 184 | 4 | `interactive_session_id` | Session number (0 = service, 1+ = interactive). |
+| 188 | 4 | `lcs_credentials_offset` | Offset to the optional LCS registry-credentials extension. 0 = none. |
 
-Each offset points into the variable section that follows. Length zero with offset zero means "absent". Offsets must point within the spec; the kernel rejects out-of-bounds offsets.
+Each offset points into the variable section that follows. An offset/length (or offset/count) pair that is both zero means the section is absent. Offsets must point within the spec; the kernel rejects out-of-bounds offsets. Sections may appear in any order.
 
 ### Variable sections
 
 After the 192-byte header, variable-length data follows. The offsets in the header point to records in this region. Each variable section has its own internal format:
 
-#### Groups list (and the related restricted/device variants)
+#### Groups array (and the restricted/device variants)
 
 ```
-[count:u32le]
 [group1: sid_len:u32le, sid bytes, attributes:u32le]
 [group2: same]
 ...
 ```
 
-Each group entry is `sid_len` (u32) + sid bytes + `attributes` (u32). The attributes are the standard `SE_GROUP_*` flags (MANDATORY 0x01, ENABLED_BY_DEFAULT 0x02, ENABLED 0x04, OWNER 0x08, USE_FOR_DENY_ONLY 0x10, etc.).
+The entry count comes from the corresponding `_count` header field — there is no inline count. Each entry is `sid_len` (u32) + sid bytes + `attributes` (u32). The attributes are the standard `SE_GROUP_*` flags — the full flag catalogue is in [Well-known SIDs](~peios/constants-and-catalogs/well-known-sids).
 
 #### Restricted SIDs and confinement capabilities
 
-Same format as groups but typically with `attributes = 0` (the kernel ignores attributes on these).
+Same per-entry format as groups but typically with `attributes = 0` (the kernel ignores attributes on these).
 
 #### User/device claims
 
@@ -127,10 +127,10 @@ Each claim entry has a 16-byte header followed by variable data:
 
 | Offset | Size | Field | Meaning |
 |---|---|---|---|
-| 0 | 4 | `name_offset` | Offset (from entry start) to the name string. |
-| 4 | 2 | `value_type` | INT64 (0x0001), UINT64 (0x0002), STRING (0x0003), SID (0x0005), BOOLEAN (0x0006), OCTET (0x0010). |
-| 6 | 2 | `reserved` | Must be 0. |
-| 8 | 4 | `flags` | Claim flags: CASE_SENSITIVE (0x0002), USE_FOR_DENY_ONLY (0x0004), DISABLED (0x0010), MANDATORY (0x0020). |
+| 0 | 4 | `name_offset` | Offset (from entry start) to the UTF-16LE null-terminated name string. |
+| 4 | 2 | `value_type` | Claim value type. The value catalogue is in [ACE types and flags](~peios/constants-and-catalogs/ace-types-and-flags). |
+| 6 | 2 | `reserved` | Ignored by AccessCheck; producers should set 0. |
+| 8 | 4 | `flags` | Claim flags. The flag catalogue is in [ACE types and flags](~peios/constants-and-catalogs/ace-types-and-flags). |
 | 12 | 4 | `value_count` | Number of values (single attributes have value_count = 1; multi-valued have more). |
 | 16 | 4 × value_count | `value_offsets` | Offsets to each value. |
 
@@ -151,7 +151,11 @@ A binary ACL in the standard format covered in [Security descriptors](~peios/wir
 
 #### Supplementary GIDs
 
-An array of u32 little-endian GIDs.
+An array of u32 little-endian GIDs, `supp_gids_count` entries.
+
+#### LCS registry credentials (optional)
+
+At `lcs_credentials_offset`. A 16-byte header — `version` (u32, must be 1), `_reserved` (u32, must be 0), `scope_count` (u32, max 256), `private_layer_count` (u32, max 256) — followed by `scope_count` raw 16-byte GUIDs, then `private_layer_count` u32le name byte-lengths, then the concatenated UTF-8 private layer names. Scope GUIDs must be non-nil and unique; layer names must be 1–255 bytes, must not contain `\`, `/`, or NUL, and must be unique under case-insensitive matching. The section is consumed exactly; trailing bytes are malformed.
 
 ### Validation
 
@@ -160,16 +164,19 @@ The kernel validates the token spec extensively:
 - `version` must equal `TOKEN_SPEC_VERSION` (2 in v0.20).
 - `token_type` must be 1 or 2.
 - For Primary tokens (`token_type = 1`), `impersonation_level` must be 0 (Anonymous).
-- `integrity_level` must be one of the defined RIDs.
-- `_reserved1` (elevation_type) must be 0.
-- `auth_id` must reference an existing session.
-- `user_sid` must be well-formed and reasonable.
-- `owner_sid_index` and `primary_group_index` must be valid (0 = user_sid, 1+ = group at that index).
-- Every offset must point within the spec; every length must fit; no overlapping regions.
-- `confinement_sid` and `isolation_boundary`: isolation_boundary cannot be set without confinement_sid.
-- Write-restricted tokens (encoded by the way restricted_sids and user_deny_only combine) must satisfy the user_deny_only constraint.
-- `ALL_APPLICATION_PACKAGES` (S-1-15-2-1) must not appear in confinement_capabilities.
-- The logon SID must not be supplied; the kernel injects it from the auth_id.
+- `integrity_rid` must be one of the defined RIDs.
+- All reserved fields must be 0. In particular `_reserved1` must be 0 — the kernel always creates tokens with elevation type Default.
+- `session_id` must reference an existing logon session.
+- All SIDs must be structurally well-formed.
+- `owner_sid_index` and `primary_group_index` must be valid (0 = user_sid, 1..N = caller-supplied group at that index). The owner must be the user SID or a group with `SE_GROUP_OWNER`.
+- Every offset must point within the spec; every length must fit.
+- If `isolation_boundary` is set, `confinement_sid` must be present.
+- If `write_restricted` is set, `user_deny_only` must also be set.
+- The caller-supplied group count plus the kernel-injected logon SID must fit the 1024-entry group limit.
+- The LCS registry-credentials extension, when present, must satisfy the structural rules above (version, counts, uniqueness, name constraints).
+- The logon SID must not be supplied in the groups array; the kernel injects it from the session ID.
+
+Note the kernel never synthesizes `ALL_APPLICATION_PACKAGES` (S-1-15-2-1): a normally-confined token carries it in `confinement_capabilities` because the caller put it there, and strict confinement omits it — see [Confinement](~peios/confinement/overview).
 
 A failure at any check returns `-EINVAL`. The token is not created.
 
@@ -178,29 +185,21 @@ A failure at any check returns `-EINVAL`. The token is not created.
 The kernel sets some fields automatically after validation:
 
 - `token_id`: a fresh LUID.
-- `modified_id`: 0 at creation.
+- `token_guid`: a fresh UUIDv4.
+- `modified_id`: initialised to the new `token_id`.
 - `created_at`: current timestamp.
-- `source`: the calling process's identity (typically "authd " or similar).
-- The logon SID (derived from `auth_id`) is injected into the groups list with `SE_GROUP_LOGON_ID` set.
+- `elevation_type`: always Default. (`source` is caller-supplied — the `source_name`/`source_id` header fields.)
+- The logon SID (derived from `session_id` as `S-1-5-5-{high}-{low}`) is appended to the groups array with `SE_GROUP_MANDATORY | SE_GROUP_ENABLED_BY_DEFAULT | SE_GROUP_ENABLED | SE_GROUP_LOGON_ID`.
 
 After all of this, the kernel returns a token fd with `TOKEN_ALL_ACCESS`.
 
 ## Limits
 
-Per-spec maximums:
-
-| Field | Limit |
-|---|---|
-| Total spec size | 64 KB |
-| Number of groups | bounded by spec size (~thousands in practice) |
-| Number of privileges | 64 (fits in the bitmask) |
-| Number of claim entries | bounded by claim buffer size |
-
-The kernel enforces these at parse time.
+The kernel enforces the per-spec maximums at parse time: total spec size 64 KB (minimum 192 bytes — the bare header), at most 1024 groups including the injected logon SID, 64 privileges (the bitmask width), and claim entries bounded by the claim buffer size. The full cross-format limits catalogue is in [Other constants](~peios/constants-and-catalogs/other-constants).
 
 ## Comparing to runtime token state
 
-A token spec describes what to mint. The minted token's runtime state has the same fields plus a few the kernel adds (token_id, modified_id, created_at, source, the logon SID). The fields the spec sets are the fields visible to `KACS_IOC_QUERY` later — `TokenUser` returns the user SID, `TokenGroups` returns the groups, `TokenPrivileges` returns the privilege bitmasks, etc.
+A token spec describes what to mint. The minted token's runtime state has the same fields plus a few the kernel adds (token_id, token_guid, modified_id, created_at, the logon SID). The fields the spec sets are the fields visible to `KACS_IOC_QUERY` later — `TokenUser` returns the user SID, `TokenGroups` returns the groups, `TokenPrivileges` returns the privilege bitmasks, etc.
 
 The wire format is the input; the runtime token is the output. Both have the same shape; the wire format is just the serialised version.
 

@@ -1,0 +1,84 @@
+# =============================================================================
+# peiso — Peios image builder
+# =============================================================================
+
+[[terms]]
+term = "peiso"
+definition = "The Peios image builder. Turns a declarative peiso.toml spec into a bootable image tree: it shells out to peipkg-compose for the package root, then layers boot machinery — the initramfs cpio and the optional squashfs, UKI, and ISO — on top. Must run as root because it chroots into the composed root."
+category = "General"
+product = "peiso"
+
+# ---------------------------------------------------------------------------
+# Spec
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Build Spec"
+definition = "The declarative TOML file (peiso.toml, schema 1) that describes a whole bootable image: the manifest to compose, how the initramfs is packed, and the optional squashfs, UKI, ISO, registry-seed, and feature stages. Parsed strictly — an unknown key anywhere is a hard error."
+category = "Spec"
+product = "peiso"
+
+[[terms]]
+term = "Inject List"
+definition = "The [initramfs].inject entries in the build spec: files copied straight into the initramfs root before mkirf packs it. A temporary bypass of packaging, expected to fall away as its content moves into packages pulled in by cross-root dependencies."
+category = "Spec"
+product = "peiso"
+
+# ---------------------------------------------------------------------------
+# Artifacts
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Package Root"
+definition = "The directory tree peipkg-compose delivers: every package's payload laid out at its installed paths, a seeded peipkg state database, and each repository written back as a .repo file. A valid peipkg system that can manage itself — but with no bootloader, packed initramfs, kernel image, or live-boot wiring."
+category = "Artifacts"
+product = "peiso"
+
+[[terms]]
+term = "Initramfs Cpio"
+definition = "The gzip cpio archive of the initramfs root — the early-boot environment — packed by running the composed root's own mkirf applet inside a chroot. Packed before the squashfs so the rootfs image contains it, and bundled into the UKI."
+category = "Artifacts"
+product = "peiso"
+
+[[terms]]
+term = "Sysroot Squashfs"
+aliases = ["sysroot.squashfs"]
+definition = "The read-only rootfs image made by squashing the whole composed root with mksquashfs. -xattrs preserves extended attributes — where KACS security descriptors ride — so the live rootfs is byte-identical to an installed system. Written outside the root tree so it can never contain itself."
+category = "Artifacts"
+product = "peiso"
+
+[[terms]]
+term = "Unified Kernel Image"
+abbr = "UKI"
+definition = "A single EFI binary bundling the kernel, the initramfs cpio, and the kernel command line, produced by the composed root's own mkuki applet run in a chroot. UEFI firmware boots it directly, with no separate bootloader."
+category = "Artifacts"
+product = "peiso"
+
+[[terms]]
+term = "EFI System Partition"
+abbr = "ESP"
+definition = "The FAT32 partition firmware boots from. peiso builds an ESP image from the spec's ESP tree (mkfs.vfat plus mcopy — no mount, no loop device) and has xorriso append it to the ISO as a GPT partition of type 0xEF, holding the UKI at the spec's efi_boot path."
+category = "Artifacts"
+product = "peiso"
+
+[[terms]]
+term = "Live ISO"
+definition = "The UEFI-bootable ISO9660 image (peios.iso) peiso authors with xorriso: the UKI on an appended ESP partition and the sysroot squashfs in the data area, so the live system reads the OS off the medium by volume label rather than fitting it in RAM. UEFI and USB/block bootable by design — no BIOS/El-Torito optical path."
+category = "Artifacts"
+product = "peiso"
+
+# ---------------------------------------------------------------------------
+# Pipeline
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Chroot Model"
+definition = "peiso's pattern of chrooting into the composed root to run the Peios boot applets (mkirf, mkuki) that ship inside it at /usr/bin. The tool that builds the initramfs or UKI is exactly the one the running system uses — no divergence between what is tested and what runs. This is why a build is privileged."
+category = "Pipeline"
+product = "peiso"
+
+[[terms]]
+term = "Registry Seed"
+definition = "A registry-seed master shipped by packages into /usr/share/peios/registry.d/ in the composed root. The build spec's [registry].autoapply selects which of them peiso stages into the autoapply queue that peinit drains on first boot — the selection lives in the image, never in a package."
+category = "Pipeline"
+product = "peiso"

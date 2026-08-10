@@ -6,6 +6,15 @@ title: Streaming
 
 The STREAM keyword marks a query as a streaming query. It may appear anywhere in the query string and is treated as a boolean flag. Streaming is supported for EVENTS and LOGS queries. METRIC queries do not support streaming.
 
+Streaming supports raw event/log record queries and DISTINCT event/log queries.
+A STREAM query that uses `COUNT BY`, `TOP N BY`, or `GROUP` MUST be rejected
+with a parse error. `DISTINCT ... STREAM` has distinct-value streaming semantics
+defined below.
+
+`STREAM` MUST NOT be combined with `UNTIL`; this is a parse error. `SINCE` is
+allowed and applies to both the initial result set and later committed records
+using the query evaluation time captured at query start.
+
 > [!INFORMATIVE]
 > Streaming queries are a convenience for interactive tailing and dashboards. Streaming behaviour can feel unintuitive under unusual conditions (cross-type filters evaluated per-batch rather than per-event, high-frequency metric thresholds, backpressure disconnects). Where more predictable results are needed, repeated non-streaming queries with a sliding SINCE window are a more reliable approach. Where minimal latency is critical (security monitoring, anti-virus), direct KMES ring buffer attachment via a dedicated tool (e.g., `revstr`) bypasses eventd entirely and provides sub-millisecond event access.
 
@@ -15,14 +24,60 @@ The STREAM keyword marks a query as a streaming query. It may appear anywhere in
 ## Behavior
 
 1. eventd executes the query normally and delivers the initial result set.
-2. Instead of closing the query, eventd enters a watch state.
-3. When new records are committed to the relevant store(s), eventd evaluates them against the query's filters.
-4. Matching records are delivered to the client.
-5. The loop continues until the client disconnects or the query is cancelled.
+2. eventd sends a streaming `watch` response message to mark that the initial
+   result set is complete.
+3. Instead of closing the query, eventd enters a watch state.
+4. When new records are committed to the relevant store(s), eventd evaluates them against the query's filters.
+5. For raw-record streams, matching records are delivered to the client. For
+   DISTINCT streams, newly seen distinct values are delivered to the client.
+6. The loop continues until the client disconnects or the query is cancelled.
+
+## DISTINCT streaming
+
+A DISTINCT streaming query keeps the fixed DISTINCT output schema defined in
+§8.2 for both the initial result set and the streaming phase:
+
+```
+EVENTS kacs.* DISTINCT process_guid STREAM
+LOGS DISTINCT origin STREAM
+```
+
+The initial result set contains the complete distinct set visible at query
+start, after access control, primary selector filtering, SINCE filtering, WHERE,
+and cross-type filters. eventd then initializes a per-query seen set from that
+initial result set. During the streaming phase, each newly committed record that
+passes access control and filters is reduced to the DISTINCT field value. eventd
+emits `{field: representative}` only if that value is not already present in the
+seen set under the grouping equality rules in §8.1; emitted values are then
+inserted into the seen set.
+
+The DISTINCT stream seen set is bounded by `MaxDistinctStreamValues`. The limit
+applies to the initial distinct values plus values discovered during streaming.
+If initializing the seen set or inserting a newly discovered value would exceed
+the limit, eventd MUST terminate the streaming query with an error. eventd MUST
+NOT evict old seen values, because eviction would make "newly seen" semantics
+incorrect.
+
+| Key | Type | Default | Valid range | Description |
+|---|---|---|---|---|
+| MaxDistinctStreamValues | REG_DWORD | 100000 | 1000--10000000 | Maximum number of values tracked by one DISTINCT streaming query. |
+
+`DISTINCT ... STREAM` MUST NOT be combined with explicit SORT, TAKE, or SKIP.
+Those clauses are rejected with a parse error so that the seen set always
+matches the full initial visible distinct set. SELECT is already invalid with
+DISTINCT queries (§8.2).
 
 ## Notification
 
-Writer threads signal when a batch commit completes. Streaming query handlers wait for this signal rather than polling. The signal mechanism is implementation-defined.
+eventd MUST maintain a monotonic `u64` commit generation counter for each
+streamable store: one counter for the event store as a whole and one counter
+for the log store. After a writer successfully commits a batch, it increments
+the corresponding counter and wakes streaming query handlers waiting on that
+store. A streaming handler records the last generation it processed and waits
+until the counter is greater than that value. The counter is process-local and
+is not persisted. If it wraps, eventd MUST treat the next increment as a wake
+for all handlers and continue; at normal commit rates wraparound is not
+operationally reachable.
 
 ## Latency
 
@@ -51,15 +106,40 @@ Backpressure is detected via the socket send buffer. When eventd attempts to sen
 
 The initial result set uses pre-computed time ranges for cross-type conditions (§8.5). During the streaming phase, pre-computed ranges are stale and MUST NOT be reused.
 
-For each committed batch, eventd MUST re-evaluate cross-type conditions against the current state of the referenced store. For metric conditions (WHERE METRIC), eventd queries the most recent sample for the referenced series using the batch's latest event timestamp and evaluates the condition against that sample. This is a single index seek per cross-type condition per batch.
+For each committed batch, eventd MUST re-evaluate cross-type conditions against
+the current state of the referenced store. For metric conditions (WHERE METRIC),
+the selector must have resolved to exactly one time series as required by §8.5.
+eventd finds the active sample for that series at the batch's latest candidate
+record timestamp using the interval semantics in §8.5, then evaluates the
+condition against that sample. If no sample is active at that timestamp, the
+condition is false. This is a single index seek per cross-type condition per
+batch.
 
-If the condition is not met, the entire batch is filtered out (no records delivered for that batch). If the condition is met, the batch's records are filtered by the remaining WHERE predicates as normal.
+For event and log EXISTS conditions during streaming, eventd applies the
+centered half-open `CrossTypeWindowMs` rule from §8.5 to each streamed candidate
+record's timestamp. These EXISTS conditions are evaluated per record, not once
+per batch, because the matching event/log record may be close to only part of
+the committed batch.
+
+If a metric cross-type condition is not met, the entire batch is filtered out
+(no records delivered for that batch). If the metric condition is met, the
+batch's records are filtered by the remaining WHERE predicates as normal. Event
+and log EXISTS cross-type conditions are evaluated per candidate record and
+filter only records whose centered EXISTS window has no matching referenced
+record.
 
 > [!INFORMATIVE]
 > Evaluating the metric condition once per batch (using the batch's latest timestamp) rather than once per event is an optimisation that produces identical results at typical metric sample intervals (15 seconds). The batch commit interval (default 100ms) is far shorter than the metric sample interval, so all events in a batch map to the same metric sample. At abnormally high metric resolutions (sub-second sampling), this optimisation can produce slightly coarser filtering than per-event evaluation -- events near a metric threshold crossing may be included or excluded as a group rather than individually.
 
 ## Filter restrictions
 
-During the streaming phase, only WHERE predicates (including cross-type conditions) are evaluated against new records. SORT, TAKE, SKIP, COUNT BY, TOP N BY, DISTINCT, and GROUP do not apply to streamed records -- they apply only to the initial result set. Streamed records are delivered in commit order.
+During the streaming phase, access control, the primary selector, the `SINCE`
+lower bound, and WHERE predicates (including cross-type conditions) are evaluated
+against new records. For raw-record streams, SORT, TAKE, and SKIP do not apply to
+streamed records -- they apply only to the initial raw-record result set.
+Streamed raw records are delivered in commit order. For DISTINCT streams, newly
+seen distinct values are emitted in the commit order of the records that first
+introduced them after the initial result set.
 
-SELECT applies to streamed records -- only the specified fields are included.
+SELECT applies to streamed raw records -- only the specified fields are
+included. SELECT is invalid for DISTINCT streams.

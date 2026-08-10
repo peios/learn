@@ -1,0 +1,91 @@
+# =============================================================================
+# Peios SDK — the C-ABI library family (libpeios, librsi)
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Libraries
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Peios SDK"
+definition = "The C-ABI library family your own programs use to talk to Peios — access control (KACS), the registry (LCS), and events (KMES). Two libraries, libpeios and librsi, on a shared substrate. It is a C ABI, not a C-only library: anything that can call C can link it."
+category = "Libraries"
+product = "peios-sdk"
+
+[[terms]]
+term = "libpeios"
+definition = "The userspace C-ABI library for KACS, LCS, and KMES — the registry client and the whole of the access-control and event surface. Link -lpeios, include <peios.h>. Implemented in Rust behind a frozen ABI; callers see peios_* functions, <peios/*.h> headers, and errno."
+category = "Libraries"
+product = "peios-sdk"
+
+[[terms]]
+term = "librsi"
+definition = "The SDK library for implementing a registry source — the provider counterpart to libpeios's registry client. Where libpeios reads and writes the registry, librsi is what a program uses to be the thing that holds the data and answers the kernel. Link -lrsi, include <rsi.h>."
+category = "Libraries"
+product = "peios-sdk"
+
+[[terms]]
+term = "peios-cabi"
+definition = "The internal C-ABI substrate both SDK libraries are built on: the allocator wiring, the errno slot, the syscall/ioctl wrappers, and the getxattr-style buffer helpers. Never linked directly — shared plumbing that sets the conventions."
+category = "Libraries"
+product = "peios-sdk"
+
+# ---------------------------------------------------------------------------
+# Conventions
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Builder"
+definition = "An opaque, heap-backed SDK object for assembling byte buffers — an ACL, a security descriptor, a token specification. Sticky-error: the incremental add/set calls return void. Every _new() pairs with a _free(); _bytes() hands back a borrowed pointer into the builder, valid until the next mutation."
+category = "Conventions"
+product = "peios-sdk"
+
+[[terms]]
+term = "View"
+definition = "A small, caller-allocated, stack-friendly struct that parses a buffer zero-copy — the reading counterpart to builders. The view and every accessor result borrow the original buffer, which must stay alive and unmodified while any of them is in use. Views own nothing and are never freed."
+category = "Conventions"
+product = "peios-sdk"
+
+[[terms]]
+term = "Sticky Error"
+definition = "The builder error model: incremental calls never fail inline. The first problem latches an errno on the builder and every later call becomes a no-op, so a long sequence of add calls needs no per-line checks — check once at the end, via the _error() accessor or when taking the bytes."
+category = "Conventions"
+product = "peios-sdk"
+
+[[terms]]
+term = "Two-Call Buffer Protocol"
+definition = "The getxattr-style convention every variable-length-result function follows: call with cap == 0 (or a NULL buffer) to probe the full length, then call again with a buffer at least that size to retrieve. A non-zero but too-small buffer fails with ERANGE and writes nothing — never a truncated result."
+category = "Conventions"
+product = "peios-sdk"
+
+# ---------------------------------------------------------------------------
+# Registry client
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Change Record"
+definition = "A structured record read from a watch-armed registry key fd, one per change, each starting [total_len][event_type][name_len][name]. A read returns only complete records — they are never split — and a REG_WATCH_OVERFLOW record means events were dropped, so re-read the key's state."
+category = "Registry"
+product = "peios-sdk"
+
+# ---------------------------------------------------------------------------
+# Registry sources
+# ---------------------------------------------------------------------------
+
+[[terms]]
+term = "Registry Source"
+definition = "A storage backend for the LCS registry: the process that holds a hive's keys and values and answers the kernel's RSI requests. The kernel handles security, layer precedence, and transaction coordination; the source handles durable storage. Written with librsi."
+category = "Registry Sources"
+product = "peios-sdk"
+
+[[terms]]
+term = "Source Fd"
+definition = "The file descriptor a registry source receives when it registers the hives it backs (registration needs SeTcbPrivilege). The kernel sends framed RSI requests over it; the source reads them, does the work, and writes framed responses back, until the fd reaches EOF."
+category = "Registry Sources"
+product = "peios-sdk"
+
+[[terms]]
+term = "Serve Loop"
+definition = "The heart of every registry source: read a framed request from the source fd, parse it into header and payload, dispatch on the op code against storage, and send a response — repeated until EOF. Mostly a dispatch table over storage operations."
+category = "Registry Sources"
+product = "peios-sdk"

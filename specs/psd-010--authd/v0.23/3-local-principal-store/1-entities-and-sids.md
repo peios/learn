@@ -23,6 +23,10 @@ namespace. It records:
 - **the password and lockout policy** — minimum length, complexity,
   history depth, maximum age, lockout threshold, and lockout duration
   (§3.4).
+- **a security descriptor** — the domain object is the securable
+  **container** for the store: its SD gates create-child and
+  list-contents (CreateUser/CreateGroup/enumerate) and carries the
+  inheritable ACEs that seed each new principal's SD (§7.2).
 - creation metadata.
 
 The domain object is the analogue of the SAM/AD "domain" object. There

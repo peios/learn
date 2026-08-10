@@ -48,18 +48,29 @@ apply to the current object.
 
 ## Label SID validity
 
-The SID in a `SYSTEM_MANDATORY_LABEL_ACE` MUST be one of the defined integrity
-label SIDs in the `S-1-16-*` namespace:
+The SID in a `SYSTEM_MANDATORY_LABEL_ACE` MUST have the Mandatory Label
+authority (`S-1-16`) and exactly one sub-authority. The sub-authority value is
+the numeric integrity level, compared as an unsigned integer. Any `S-1-16-X`
+SID is valid — the integrity level is the sub-authority value X.
 
-- `S-1-16-0` (Untrusted)
-- `S-1-16-4096` (Low)
-- `S-1-16-8192` (Medium)
-- `S-1-16-12288` (High)
-- `S-1-16-16384` (System)
+A mandatory-label ACE with a SID outside the `S-1-16` authority (wrong
+identifier authority or wrong sub-authority count) is malformed. AccessCheck
+MUST reject the SD.
 
-Any other SID value in a mandatory-label ACE is invalid. AccessCheck MUST treat
-the security descriptor as malformed rather than guessing an integrity level
-from an unrecognized SID.
+### Standard integrity levels
+
+| SID | Level | Name |
+|---|---|---|
+| `S-1-16-0` | 0 | Untrusted |
+| `S-1-16-4096` | 4096 | Low |
+| `S-1-16-8192` | 8192 | Medium |
+| `S-1-16-12288` | 12288 | High |
+| `S-1-16-16384` | 16384 | System |
+
+These are the standard levels. Peios tools and authd SHOULD use these values.
+Intermediate values (e.g., `S-1-16-2048`, `S-1-16-8448`) are valid and
+compared numerically — this ensures interoperability with Windows-originated
+SDs that use non-standard levels.
 
 ## Label policy bits
 
@@ -96,6 +107,13 @@ EnforceMIC(ace, token, mapping, &decided):
         allowed &= ~MapGenericBits(GENERIC_WRITE, mapping)
     if ace.mask & SYSTEM_MANDATORY_LABEL_NO_EXECUTE_UP:
         allowed &= ~MapGenericBits(GENERIC_EXECUTE, mapping)
+
+    // READ_CONTROL and SYNCHRONIZE are always in the allowed set regardless of
+    // the object type's GenericMapping and the label's up-strip policy — a
+    // non-dominant caller can always read the SD and synchronize on an object.
+    // Applied after the strips because a file GENERIC_READ mapping folds these
+    // bits in, so NO_READ_UP would otherwise remove them.
+    allowed |= READ_CONTROL | SYNCHRONIZE
 
     // SeRelabelPrivilege: allow WRITE_OWNER through MIC.
     if token.privilege_enabled(SeRelabelPrivilege):

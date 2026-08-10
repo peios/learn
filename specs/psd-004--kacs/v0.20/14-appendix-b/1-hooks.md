@@ -235,7 +235,7 @@ Mitigation setting is also an enforcement point. `kacs_set_psb` MUST perform the
 |---|---|
 | `security_task_alloc` | Allocate PSB, inherit PIP/mitigations, create process SD. |
 | `security_task_free` | Free PSB and process SD. |
-| `security_task_kill` | Enforce process SD + PIP dominance on signal delivery. |
+| `security_task_kill` | Enforce process SD + PIP dominance on signal delivery. Same-process-security-state delivery bypasses this gate (structural self-exemption — MUST hold even for restricted tokens that fail AccessCheck against their own SD). Kernel-originated signals (including terminal-generated job control) do not fire the gate. |
 | `security_ptrace_access_check` | Enforce process SD + PIP dominance on ptrace, and on patched `pidfd_getfd()` / `pidfd_open()` mode distinctions. |
 | `security_ptrace_traceme` | Enforce process SD `PROCESS_VM_WRITE` + PIP dominance when another process is nominated as tracer by `PTRACE_TRACEME`. |
 | `security_task_setnice` | Enforce process SD (`PROCESS_SET_INFORMATION`) + PIP for changes targeting another process. Self-targeted changes are not process-boundary operations and bypass this gate. |

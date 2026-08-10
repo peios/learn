@@ -8,7 +8,7 @@ related:
   - peios/binary-signing/overview
 ---
 
-There are eight mitigations active in v0.20 plus a reserved slot. This page covers each one. Every mitigation works the same way structurally — a flag on the PSB; the kernel checks the flag at the syscall layer; offending operations are refused — but each gates a different kind of operation. Understanding the catalog is understanding which threats each closes off.
+There are eight mitigations active in v0.20 plus a reserved slot. This page covers each one. Every mitigation works the same way structurally — a flag on the PSB; the kernel checks the flag at the syscall layer; offending operations are refused — but each gates a different kind of operation. Understanding the catalog is understanding which threats each closes off. The numeric `KACS_MIT_*` flag values are catalogued in [Other constants](~peios/constants-and-catalogs/other-constants).
 
 ## LSV — Library Signature Verification
 

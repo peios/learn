@@ -13,7 +13,7 @@ The 32-bit access mask is the same shape across every object type — bits 0–1
 
 This page catalogues the access mask bits per object type — file, process, token, registry key, and service — and the GenericMapping tables that expand generic rights at evaluation time.
 
-The mask layout itself is documented in [ACE types and flags](~peios/constants-and-catalogs/ace-types-and-flags) and [Security descriptors (wire format)](~peios/wire-formats-reference/security-descriptors). This page is the per-type catalog.
+The byte layout of the mask itself is owned by [Security descriptors (wire format)](~peios/wire-formats-reference/security-descriptors). This page is the canonical catalogue of the right *values* — per-object-type, standard, special, and generic.
 
 ## Mask layout reminder
 
@@ -171,7 +171,7 @@ For SDs on service objects (when the service control infrastructure exposes them
 | `SERVICE_INTERROGATE` | 0x0080 | Request status update. |
 | `SERVICE_USER_DEFINED_CONTROL` | 0x0100 | Send service-specific control codes. |
 
-## Generic right values (reminder)
+## Generic right values
 
 | Right | Value |
 |---|---|
@@ -180,7 +180,7 @@ For SDs on service objects (when the service control infrastructure exposes them
 | `GENERIC_EXECUTE` | 0x20000000 |
 | `GENERIC_ALL` | 0x10000000 |
 
-## Standard rights (reminder)
+## Standard rights
 
 | Right | Value |
 |---|---|
@@ -189,15 +189,20 @@ For SDs on service objects (when the service control infrastructure exposes them
 | `WRITE_DAC` | 0x00040000 |
 | `WRITE_OWNER` | 0x00080000 |
 | `SYNCHRONIZE` | 0x00100000 |
-| `STANDARD_RIGHTS_REQUIRED` | 0x000F0000 |
-| `STANDARD_RIGHTS_ALL` | 0x001F0000 |
+| `STANDARD_RIGHTS_REQUIRED` | 0x000F0000 (DELETE \| READ_CONTROL \| WRITE_DAC \| WRITE_OWNER) |
+| `STANDARD_RIGHTS_READ` | 0x00020000 (alias of READ_CONTROL) |
+| `STANDARD_RIGHTS_WRITE` | 0x00020000 (alias of READ_CONTROL) |
+| `STANDARD_RIGHTS_EXECUTE` | 0x00020000 (alias of READ_CONTROL) |
+| `STANDARD_RIGHTS_ALL` | 0x001F0000 (all five) |
+
+`STANDARD_RIGHTS_REQUIRED` is the conventional minimum mask included in `*_ALL_ACCESS` constants. The other `STANDARD_RIGHTS_*` values are aliases.
 
 ## Special rights
 
-| Right | Value |
-|---|---|
-| `ACCESS_SYSTEM_SECURITY` | 0x01000000 |
-| `MAXIMUM_ALLOWED` | 0x02000000 |
+| Right | Value | Meaning |
+|---|---|---|
+| `ACCESS_SYSTEM_SECURITY` | 0x01000000 | Read/write the SACL. Gated by SeSecurityPrivilege. |
+| `MAXIMUM_ALLOWED` | 0x02000000 | Request flag; not a real right. AccessCheck returns the maximum grantable mask. Must not appear in an ACE. |
 
 ## How GenericMapping is consulted
 

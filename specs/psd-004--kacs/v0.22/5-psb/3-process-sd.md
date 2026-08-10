@@ -81,6 +81,10 @@ dominance.
 
 > [!INFORMATIVE]
 > This classification applies only to signals sent by userspace processes (via `kill()`, `tkill()`, `tgkill()`). Kernel-generated signals (hardware faults like SIGSEGV/SIGBUS/SIGFPE, SIGCHLD from child exit, SIGPIPE from broken pipe) are delivered by the kernel and bypass the process SD check entirely — the LSM `task_kill` hook does not fire for kernel-originated signal delivery.
+>
+> Terminal-generated job-control signals (SIGINT/SIGQUIT/SIGTSTP from the tty driver's `isig` handling, SIGHUP on hangup) are kernel-originated under this rule and likewise bypass the check. This is intentional: authorization for keyboard-driven signals is possession of the controlling terminal, gated by the terminal's file SD at open time — so Ctrl-C reaches the foreground process group even when a member is more privileged or more PIP-trusted than the terminal's holder. A process that does not accept this exposure must not attach to an untrusted controlling terminal.
+>
+> The `si_uid` value carried in a delivered signal's `siginfo_t` is the sender's projected UID (per §12), captured at send time. Like every projected credential surface, it is informational only and MUST NOT be used for authorization decisions; `si_pid` is subject to PID reuse and carries the same caveat.
 
 ## Generic mapping
 

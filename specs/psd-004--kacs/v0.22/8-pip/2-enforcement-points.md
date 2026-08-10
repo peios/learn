@@ -48,6 +48,28 @@ Signals can disrupt, terminate, or debug a process. If the caller does not domin
 
 The process SD provides per-signal granularity via three access rights: PROCESS_TERMINATE (lethal signals), PROCESS_SUSPEND_RESUME (stop/continue signals), and PROCESS_SIGNAL (informational signals). See §5.3 for the full mapping.
 
+Signal delivery within the same process security state — a thread signalling
+its own process, or another thread sharing the same process security state —
+is not a process-boundary operation. In that same-process case, the process-SD
+and PIP process-boundary checks do not apply. This exemption is **structural**:
+it MUST NOT depend on the default process SD's self-ACE, and MUST hold for
+restricted and confined tokens whose AccessCheck against their own process SD
+would fail. `raise()`, `abort()`, and `pthread_kill()` MUST succeed regardless
+of the process's SD contents or token restrictions.
+
+Multi-target sends (`kill(0, ...)`, `kill(-pgid, ...)`, `kill(-1, ...)`) are
+evaluated per target: each candidate process is checked independently, the
+signal is delivered to the permitted subset, and the call succeeds if at least
+one delivery occurred. Partial delivery is the specified behavior, matching
+Linux semantics for mixed-permission process groups.
+
+POSIX's same-session `SIGCONT` exception is **not implemented**: `SIGCONT`
+requires `PROCESS_SUSPEND_RESUME` on the target's SD plus PIP dominance like
+every other job-control signal, regardless of session membership. This is an
+intentional divergence; the compatibility cost is limited to resuming a
+stopped same-session process whose identity no longer matches the caller's
+grant, which the default process SD's user-SID ACE covers in the common case.
+
 Userspace signal probes with signal `0` do not deliver a signal, but they do
 query process existence and permission. They require `PROCESS_QUERY_LIMITED`
 on the target process SD plus PIP dominance.
@@ -189,24 +211,23 @@ branch prediction behavior, cache access patterns, and instruction traces.
 Those side channels can reveal cryptographic keys and other protected process
 secrets.
 
-Target-specific `perf_event_open()` requires
-`SeProfileSingleProcessPrivilege`. Cross-process target-specific monitoring
-also requires `PROCESS_QUERY_INFORMATION` on the target process's SD, plus PIP
-dominance. `SeDebugPrivilege` bypasses only the process-SD check and MUST NOT
-bypass PIP or the standalone profile privilege.
+Target-specific `perf_event_open()` of a **different** process requires
+`SeProfileSingleProcessPrivilege`, plus `PROCESS_QUERY_INFORMATION` on the
+target process's SD and PIP dominance. `SeDebugPrivilege` bypasses only the
+process-SD check and MUST NOT bypass PIP or the standalone profile privilege.
 
-Self-directed perf monitoring and perf monitoring of another thread in the
-same process are not process-boundary operations. In that same-process case,
-the process-SD and PIP process-boundary checks do not apply, but
-`SeProfileSingleProcessPrivilege` is still required.
+Own-task profiling — `perf_event_open()` targeting the calling process itself,
+or another thread in the same process — is not a process-boundary operation and
+requires no profiling privilege.
 
 Linux 7.0 resolves the target task after the stock `security_perf_event_open`
 hook has fired, so KACS enforces this rule through a target-resolved syscall
 path patch rather than by relying on that hook alone.
 
-CPU-wide perf and cgroup perf modes are not target-specific process operations
-under this rule. They remain governed by Linux's native perf permission model
-in `v0.22`.
+System-wide profiling (`perf_event_open()` with `pid == -1`) samples every task
+on a CPU, including PIP-protected ones, so it requires the operator-class
+`SeSystemProfilePrivilege`. Cgroup perf mode remains governed by Linux's native
+perf permission model.
 
 ## /dev/mem and /dev/kmem
 

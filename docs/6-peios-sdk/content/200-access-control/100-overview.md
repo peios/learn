@@ -9,7 +9,7 @@ related:
   - peios/identity/overview
 ---
 
-KACS — the Kernel Access Control System — is the heart of Peios's security model, and it is the part of the SDK you are most likely to reach for. This section is the friendly tour: it explains how the pieces fit together and points you at the right guide (and the right reference page) for each task. If you have not yet read the [library conventions](~peios-sdk/getting-started/library-conventions), read those first — everything here assumes the error and buffer rules they describe.
+KACS — the Kernel Access Control Subsystem — is the heart of Peios's security model, and it is the part of the SDK you are most likely to reach for. This section is a tour: it explains how the pieces fit together and points you at the right guide (and the right reference page) for each task. If you have not yet read the [library conventions](~peios-sdk/getting-started/library-conventions), read those first — everything here assumes the error and buffer rules they describe.
 
 ## The four nouns
 

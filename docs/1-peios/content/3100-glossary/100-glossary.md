@@ -51,7 +51,7 @@ For the structural reference (numbers, struct layouts, constants), see [Constant
 
 **CFI / CFIF / CFIB.** Control Flow Integrity mitigations. CFIF (forward) constrains indirect branches to ENDBR-marked targets; CFIB (backward) verifies returns via the shadow stack. CFI is a legacy alias setting both. See [Process mitigations catalog](~peios/process-mitigations/catalog).
 
-**Claim.** A typed key-value attribute on a token (user or device claims) or object (resource attributes). Referenced in conditional ACE expressions. See [Claims on a token](~peios/identity/claims).
+**Claim.** A typed key-value attribute carried on a token (user claims and device claims), populated by authd at token creation. Referenced in conditional ACE expressions; distinct from resource attributes, which live on the object. See [Claims on a token](~peios/identity/claims).
 
 **Claim (package).** A shared filesystem name that many installed packages can answer but only one may hold at a time. Materialises as a peipkg-managed symlink from the claim path to the holder's target. Distinct from the token-attribute sense of the word. See [Claims](~peios/package-management/claims).
 
@@ -119,7 +119,7 @@ For the structural reference (numbers, struct layouts, constants), see [Constant
 
 **Inheritance.** The process by which a new object's SD is computed from inheritable ACEs in the parent's SD plus the creator's defaults. Eager — happens at creation, not at access. See [Inheritance](~peios/security-descriptors/inheritance).
 
-**Integrity level.** A numeric trust rank on tokens and objects: Untrusted, Low, Medium, High, System. Used by MIC. See [Mandatory integrity control](~peios/access-decisions/mandatory-integrity-control).
+**Integrity level.** A numeric trust rank on tokens and objects, carried as the single sub-authority of an `S-1-16` label SID. Practically one of five standard levels — Untrusted, Low, Medium, High, System — but technically any numeric value, compared numerically. Used by MIC. See [Mandatory integrity control](~peios/access-decisions/mandatory-integrity-control).
 
 **Isolation boundary.** A token field reserved for future use; would make out-of-boundary objects invisible rather than just denied. Not enforced in v0.20. See [The confinement pass](~peios/confinement/the-confinement-pass).
 
@@ -157,7 +157,7 @@ For the structural reference (numbers, struct layouts, constants), see [Constant
 
 **MAXIMUM_ALLOWED.** A bit in a requested access mask (0x02000000) signalling "tell me the maximum rights I could be granted". Not a real right; never appears in ACEs. See [DACL evaluation](~peios/security-descriptors/dacl-evaluation).
 
-**MIC (Mandatory Integrity Control).** The pre-DACL check that compares the token's integrity level against the object's mandatory label. Denies write/read/execute up by default. See [Mandatory integrity control](~peios/access-decisions/mandatory-integrity-control).
+**MIC (Mandatory Integrity Control).** The pre-DACL check that compares the token's integrity level against the object's mandatory label. Denies write-up by default; the label's policy bits can also deny read and execute up. See [Mandatory integrity control](~peios/access-decisions/mandatory-integrity-control).
 
 **Mitigation.** A per-process kernel-enforced hardening rule (WXP, LSV, TLP, CFI, PIE, SML, NO_CHILD). One-way; stored on the PSB. See [Process mitigations](~peios/process-mitigations/overview).
 

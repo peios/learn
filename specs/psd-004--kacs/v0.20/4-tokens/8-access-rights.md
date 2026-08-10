@@ -27,7 +27,7 @@ mask. The returned token fd always carries the fixed cached rights
 | TOKEN_ADJUST_PRIVILEGES | 0x0020 | Enable, disable, or permanently remove privileges. |
 | TOKEN_ADJUST_GROUPS | 0x0040 | Enable or disable groups. |
 | TOKEN_ADJUST_DEFAULT | 0x0080 | Change default DACL, owner SID, and primary group SID. |
-| TOKEN_ADJUST_SESSIONID | 0x0100 | Change session ID. Also requires `SeTcbPrivilege`. |
+| TOKEN_ADJUST_INTERACTIVITY_SCOPE | 0x0100 | Change interactivity scope. Also requires `SeTcbPrivilege`. |
 
 Bit 0x0010 (TOKEN_QUERY_SOURCE) is subsumed by TOKEN_QUERY — a holder of TOKEN_QUERY (0x0008) can also query source information. The 0x0010 bit MUST NOT be reused for other purposes (format compatibility with MS-DTYP).
 

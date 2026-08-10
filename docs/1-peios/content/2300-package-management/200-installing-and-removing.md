@@ -26,7 +26,7 @@ peipkg install <package|file.peipkg>...
 
 Each argument is either the **name** of a package to fetch from a configured repository, or the **path** of a local `.peipkg` file (recognised by its `.peipkg` suffix). You can mix the two in one command.
 
-Installing a package rarely means installing just that package. peipkg works out everything the request implies — the dependencies the package needs, and *their* dependencies — and presents the whole set. How that set is computed is the subject of [Dependency resolution](~peios/package-management/dependency-resolution); this page is about the flow around it.
+Installing a package rarely means installing just that package. peipkg works out everything the request implies — the dependencies the package needs, and the dependencies of those in turn — and presents the whole set. How that set is computed is the subject of [Dependency resolution](~peios/package-management/dependency-resolution); this page is about the flow around it.
 
 ### The plan-and-confirm flow
 
@@ -53,7 +53,7 @@ Answer `y` and peipkg carries the plan out as a single [transaction](~peios/pack
 | `--claim <names>` | Comma-separated claims to force-claim, overriding the current holder(s). |
 | `--claim-all` | Force-claim every claim the installed packages provide, overriding incumbents. |
 
-`--dry-run` is the safe way to see what a command *would* do. `--yes` is for scripts and unattended runs — but note that it skips only the *routine* prompt. A plan that contains an action needing deliberate authorisation will still stop and ask; `--yes` does not override that. See [Elevated authorisation](~peios/package-management/dependency-resolution) for which actions those are and why.
+`--dry-run` is the safe way to see what a command would do. `--yes` is for scripts and unattended runs — but note that it skips only the routine prompt. A plan that contains an action needing deliberate authorisation will still stop and ask; `--yes` does not override that. See [Elevated authorisation](~peios/package-management/dependency-resolution) for which actions those are and why.
 
 `--claim-all` cannot be combined with `--claim` or `--no-claim`. Claims — shared names exactly one package may hold — are covered in [Claims](~peios/package-management/claims).
 
@@ -69,9 +69,9 @@ $ peipkg install ./nginx-1.27.4.peipkg
 
 This is a **raw install**, and it differs from a repository install in one specific way: it skips the repository **trust layer**. There is no signed index to check the file against, no signing key to verify it under, and none of the freshness or rollback protection a repository provides. You are vouching for the file yourself.
 
-Everything else still happens. The **package format is fully verified**: the archive structure, the manifest, the integrity manifest, and the hash of every payload file are all checked before anything is staged. A corrupt or truncated `.peipkg` is rejected exactly as it would be from a repository. And the file's **dependencies still resolve normally** against your configured repositories — a locally-installed package can pull in repository packages to satisfy what it needs.
+Everything else still happens. The package format is fully verified: the archive structure, the manifest, the integrity manifest, and the hash of every payload file are all checked before anything is staged. A corrupt or truncated `.peipkg` is rejected in the same way as one from a repository. The file's dependencies still resolve normally against your configured repositories — a locally-installed package can pull in repository packages to satisfy what it needs.
 
-A package supplied as an explicit local file takes precedence over any repository's version of the same package, so `install ./foo.peipkg` installs *that* file even if a repository offers `foo` too. In the plan, a local-file operation is marked so the choice is visible:
+A package supplied as an explicit local file takes precedence over any repository's version of the same package, so `install ./foo.peipkg` installs that file even if a repository offers `foo` too. In the plan, a local-file operation is marked so the choice is visible:
 
 ```
   install    nginx 1.27.4  (local file)
@@ -88,11 +88,11 @@ peipkg uninstall <package>...
 
 `remove` and `uninstall` are the same command. Each argument names an installed package; peipkg plans the removal — the files to take off disk — and runs the plan-and-confirm flow described above.
 
-A removal leaves shared directories in place and removes only the files the package owns. peipkg knows exactly which files those are from its database, so a removal is clean and complete.
+A removal leaves shared directories in place and removes only the files the package owns. peipkg knows which files those are from its database, so a removal is clean and complete.
 
 ### Removing something that is depended on
 
-peipkg will not, by default, leave the system inconsistent. If you ask to remove a package that another installed package depends on, the plan is **refused** — peipkg tells you what still needs it, and stops.
+peipkg will not, by default, leave the system inconsistent. If you ask to remove a package that another installed package depends on, the plan is refused: peipkg tells you what still needs it, and stops.
 
 | Option | Effect |
 |---|---|
@@ -100,7 +100,7 @@ peipkg will not, by default, leave the system inconsistent. If you ask to remove
 | `--dry-run` | Print the plan and stop. |
 | `--yes`, `-y` | Skip the `proceed?` prompt. |
 
-`--cascade` turns that refusal into a wider plan: peipkg computes the full set of packages that would be left with a broken dependency and adds them to the removal. The plan then shows *everything* that will go — review it before approving, because a cascade can reach further than expected.
+`--cascade` turns that refusal into a wider plan: peipkg computes the full set of packages that would be left with a broken dependency and adds them to the removal. The plan then shows everything that will be removed. Review it before approving, because a cascade can reach further than expected.
 
 ```
 $ peipkg remove --cascade libfoo

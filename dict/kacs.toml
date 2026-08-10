@@ -560,7 +560,7 @@ product = "kacs"
 [[terms]]
 term = "Trusted Computing Base"
 abbr = "TCB"
-definition = "The set of components whose correct behaviour is necessary for system security. In Peios: the Linux kernel, PKM, and core trusted userspace daemons (peinit, authd, loregd)."
+definition = "The set of components whose correct behaviour is necessary for system security. In Peios: the Linux kernel, PKM, and the core trusted userspace daemons (peinit, authd, loregd, lpsd, eventd)."
 category = "Infrastructure"
 product = "kacs"
 

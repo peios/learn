@@ -61,7 +61,7 @@ The following attribute flags are defined:
 | SE_GROUP_USE_FOR_DENY_ONLY | 0x00000010 | The group matches deny ACEs but not allow ACEs. Set permanently by FilterToken; cannot be reverted. |
 | SE_GROUP_INTEGRITY | 0x00000020 | Used to identify an integrity level SID. |
 | SE_GROUP_INTEGRITY_ENABLED | 0x00000040 | Used with SE_GROUP_INTEGRITY. |
-| SE_GROUP_LOGON_ID | 0xC0000000 | Identifies the logon SID -- the per-session SID generated at authentication time. Cannot be disabled. |
+| SE_GROUP_LOGON_ID | 0xC0000000 | Identifies the logon SID -- the per-LogonSession SID generated at authentication time. Cannot be disabled. |
 | SE_GROUP_RESOURCE | 0x20000000 | The group is a domain-local group from the resource domain. |
 
 A group participates in allow-ACE matching only if SE_GROUP_ENABLED is set and SE_GROUP_USE_FOR_DENY_ONLY is not set. A group participates in deny-ACE matching if SE_GROUP_ENABLED is set OR SE_GROUP_USE_FOR_DENY_ONLY is set.

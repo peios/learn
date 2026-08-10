@@ -154,16 +154,9 @@ sub:include(v)            -- v is now in sub
 provium:remove(v)         -- and gone from root
 ```
 
-`lab:include` accepts:
-
-- A single VM, Bridge, or sub-Lab userdata.
-- An array of those.
-
-It errors on duplicate names within the lab (`DuplicateVmName`, `DuplicateBridgeName`), reserved names (`pack`, `unpack`, `vm_fixture`, `lab_fixture`), and on shadow conflicts when called from a test scope and the name is already declared at a parent scope.
+`lab:include` accepts a single VM, Bridge, or sub-Lab userdata, or an array of those. It errors on duplicate names, reserved names, and shadow conflicts — the exact error cases are in the [Lab reference](~provium/reference/lab#labincluderesource-or-list).
 
 `lab:remove` is [graph-state only](~provium/writing-tests/bridges-and-impairments#declared-vs-realised) — the underlying VM, bridge, or sub-lab is NOT shut down. It's removed from the lab's child list. Useful when you want to take ownership of a resource somewhere else.
-
-Both forms accept either a name or a userdata.
 
 ## Listing members
 
@@ -217,7 +210,7 @@ test("…", function(t) end)
 test("…", function(t) end)
 ```
 
-The claim sits across the file's lifetime; it's released at file end. A second `:claim` errors with `claim already taken`. When no pool is wired (REPL / single-file ad-hoc runs) the call is still one-shot but otherwise a no-op.
+The claim sits across the file's lifetime; it's released at file end. A second `:claim` errors with `claim already taken`. The accepted field shapes and the no-pool behaviour are in the [Lab reference](~provium/reference/lab#resource-claims).
 
 Why claim? The dispatcher won't oversubscribe — it tracks total RAM and CPU budget across files and only schedules a file when its claim plus the per-file overhead fits. A file that needs 4 VMs at 2 GiB each should claim ~10 GiB so it doesn't get scheduled alongside other heavy files and OOM the host.
 
@@ -226,11 +219,9 @@ Why claim? The dispatcher won't oversubscribe — it tracks total RAM and CPU bu
 provium:claim({memory = "5G", cpus = 7})  -- 3 GiB + per-file overhead, 6 + 1 vCPU
 ```
 
-The claim emits `claim_acquired` and `claim_released` events for observability.
-
 ## Barriers
 
-`lab:barrier(name, count, timeout?)` is an N-arrival rendezvous: it blocks the caller until `count` callers have hit the same `name`-keyed barrier, then returns `true` for all of them. On timeout it returns `false` — it does not raise. Default timeout: 60 seconds. The count is locked in by the first arrival; a later call with a different count for the same name returns `false` with a warning. Barriers are reusable — after a round releases, the same name starts a fresh round.
+`lab:barrier(name, count, timeout?)` is an N-arrival rendezvous: it blocks the caller until `count` callers have hit the same `name`-keyed barrier, then returns `true` for all of them. On timeout it returns `false` — it does not raise. The default timeout, count lock-in, and round-reuse semantics are in the [Lab reference](~provium/reference/lab#labbarriername-count-timeout).
 
 ```lua
 -- count = 1 is satisfied immediately: a labelled checkpoint.
@@ -254,14 +245,12 @@ local snap = provium:snapshot()           -- to a tempdir, returns LabSnapshot
 local snap = provium:snapshot("/tmp/x")   -- to that path, returns the path string
 ```
 
-The `LabSnapshot` userdata gives you `snap:path()`, `snap:size()`, `snap:delete()`. Restore with:
+The `LabSnapshot` userdata's accessors are in the [Snapshot reference](~provium/reference/snapshot). Restore with:
 
 ```lua
 provium:restore(snap)             -- from LabSnapshot userdata
 provium:restore("/tmp/x")         -- from path
 ```
-
-The restore reads `lab.json` from the snapshot directory, then per-VM `.snap` files.
 
 The same precondition that blocks `vm:snapshot()` blocks `lab:snapshot()` — open streams cause the snapshot to refuse with the offending stream's creation site.
 
@@ -286,9 +275,7 @@ test("cluster has both VMs reachable", function(t)
 end)
 ```
 
-`provium:lab_fixture(path)` returns a Lab userdata wrapping a fresh sub-lab with the fixture restored. The cache key folds source bytes + transitive fixture refs + helper requires + every profile's kernel and initrd identifier.
-
-For single-VM fixtures, use `provium:vm_fixture(path)` — same cache mechanism, returns a VM directly.
+`provium:lab_fixture(path)` returns a Lab userdata wrapping a fresh sub-lab with the fixture restored. For single-VM fixtures, use `provium:vm_fixture(path)` — same cache mechanism, returns a VM directly. What goes into the cache key (and therefore what triggers a rebuild) is covered in [fixtures and dependencies](~provium/running-tests/fixtures-and-dependencies).
 
 ## Common patterns
 

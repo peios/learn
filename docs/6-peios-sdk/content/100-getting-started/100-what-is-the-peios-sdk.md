@@ -26,7 +26,7 @@ Peios's kernel boundary has three subsystems, and the SDK mirrors them one-to-on
 
 | Subsystem | What it is | SDK headers |
 |---|---|---|
-| **KACS** — Kernel Access Control System | Identities, tokens, access decisions, file security, and process security. The heart of the model. | `<peios/security.h>`, `<peios/token.h>`, `<peios/access.h>`, `<peios/file.h>`, `<peios/process.h>` |
+| **KACS** — Kernel Access Control Subsystem | Identities, tokens, access decisions, file security, and process security. The heart of the model. | `<peios/security.h>`, `<peios/token.h>`, `<peios/access.h>`, `<peios/file.h>`, `<peios/process.h>` |
 | **LCS** — the registry | A hierarchical, transactional, secured key/value store — Peios's system configuration database. | `<peios/registry.h>` |
 | **KMES** — the event system | The msgpack-framed audit and event stream: emit events, consume them. | `<peios/msgpack.h>`, `<peios/event.h>` |
 

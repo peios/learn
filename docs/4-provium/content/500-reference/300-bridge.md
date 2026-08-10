@@ -92,6 +92,8 @@ Whole-bridge: `bridge:bandwidth_limit(1_000_000)` caps the bridge to 1 Mbit/s vi
 
 Directional: `bridge:bandwidth_limit({from=A, to=B, bps=500_000})` installs an HTB-root + one rate-limited class on `A`'s source TAP, with a `netem` child when latency/drop is also set for the same source. Bits per second, not bytes. The `to` is graph-recorded but the realisation shapes every packet leaving the source TAP — HTB at the bridge layer can't select by destination MAC. Multiple `(from=A, to=*)` pairs collapse to `max(bps)` on `A`'s TAP so no pair is over-shaped.
 
+Whole-bridge bandwidth does **not** combine with whole-bridge latency/drop on the same bridge: when netem is also configured, the latency/drop shaping is what's realised and the bandwidth cap is recorded in the graph but not enforced (combined netem+tbf needs class-based HTB — out of scope for v1). For combined shaping use the directional form on each source.
+
 ### `bridge:add_directional_latency({from=A, to=B, ms=N})`
 
 Explicit directional form of `:add_latency`. Same effect as the table form above.

@@ -18,7 +18,7 @@ Keeping a Peios system current is two commands in sequence — `refresh` to lear
 peipkg refresh [repository]...
 ```
 
-peipkg plans against a **local, verified copy** of each repository's metadata. That copy does not update itself. `peipkg refresh` is what updates it: for every configured repository — or just the ones you name — peipkg fetches the current signed descriptor and index, verifies them, and replaces the cached copy.
+peipkg plans against a local, verified copy of each repository's metadata. That copy does not update itself. `peipkg refresh` is what updates it: for every configured repository — or just the ones you name — peipkg fetches the current signed descriptor and index, verifies them, and replaces the cached copy.
 
 ```
 $ peipkg refresh
@@ -33,7 +33,7 @@ Refresh has two properties worth knowing:
 
 What "verified" means here — signing keys, freshness floors, the handling of an unsigned repository — is the subject of [Repositories and trust](~peios/package-management/repositories-and-trust).
 
-Run `refresh` before an upgrade. An upgrade plans against whatever metadata is cached, so an upgrade without a recent refresh simply moves you to the newest version peipkg *last heard about*.
+Run `refresh` before an upgrade. An upgrade plans against whatever metadata is cached, so an upgrade without a recent refresh moves you to the newest version peipkg last heard about.
 
 ## Upgrading
 
@@ -41,7 +41,7 @@ Run `refresh` before an upgrade. An upgrade plans against whatever metadata is c
 peipkg upgrade [package]...
 ```
 
-With no arguments, `upgrade` considers **every installed package** and moves each one that has a newer available version forward to it. With one or more package names, it upgrades only those — and still pulls in any new dependencies they need.
+With no arguments, `upgrade` considers every installed package and moves each one that has a newer available version forward to it. With one or more package names, it upgrades only those — and still pulls in any new dependencies they need.
 
 ```
 $ peipkg refresh && peipkg upgrade
@@ -69,15 +69,15 @@ If there is nothing to do — every package already at its newest version — pe
 peipkg downgrade <package> <version>
 ```
 
-`downgrade` moves one package to a **specific older version**. You name the package and the exact version you want:
+`downgrade` moves one package to a specific older version. You name the package and the exact version you want:
 
 ```
 $ peipkg downgrade nginx 1.27.4
 ```
 
-Older versions are not in a repository's *active* index — that index lists current versions only. They live in its **archive index**, which peipkg fetches on demand when you ask for a version that is not current. The package must still exist in some configured repository's archive for the downgrade to be possible.
+Older versions are not in a repository's active index — that index lists current versions only. They live in its **archive index**, which peipkg fetches on demand when you ask for a version that is not current. The package must still exist in some configured repository's archive for the downgrade to be possible.
 
-A downgrade is treated as a deliberate move. Going *backward* — onto a version that may have known issues a newer one fixed — is one of the actions peipkg flags for **explicit authorisation**: beyond the routine `proceed?` prompt, peipkg asks you to authorise the specific downgrade, and `--yes` does not stand in for that answer. See [Elevated authorisation](~peios/package-management/dependency-resolution) for the full set of actions that work this way.
+A downgrade is treated as a deliberate move. Going backward — onto a version that may have known issues a newer one fixed — is one of the actions peipkg flags for **explicit authorisation**: beyond the routine `proceed?` prompt, peipkg asks you to authorise the specific downgrade, and `--yes` does not stand in for that answer. See [Elevated authorisation](~peios/package-management/dependency-resolution) for the full set of actions that work this way.
 
 `downgrade` accepts `--dry-run` and `--yes`, `-y` with the same meaning as elsewhere.
 
@@ -87,7 +87,7 @@ A downgrade is treated as a deliberate move. Going *backward* — onto a version
 peipkg undo
 ```
 
-`undo` reverses the **most recent committed transaction**. If that transaction installed a package, `undo` removes it; if it upgraded, downgraded, or removed packages, `undo` restores each one to the version it had before.
+`undo` reverses the most recent committed transaction. If that transaction installed a package, `undo` removes it; if it upgraded, downgraded, or removed packages, `undo` restores each one to the version it had before.
 
 ```
 $ peipkg undo
@@ -98,11 +98,11 @@ the following changes will be made:
 proceed? [y/N]
 ```
 
-It is worth being precise about what `undo` is. It is **not** a rollback of committed state — the previous transaction really did happen and stays in the history. `undo` computes the *inverse* of that transaction and applies it as a brand-new transaction of its own. The history grows; it does not rewind. That new transaction can itself be undone, and so on.
+Be precise about what `undo` is. It is not a rollback of committed state — the previous transaction happened and stays in the history. `undo` computes the inverse of that transaction and applies it as a new transaction of its own. The history grows; it does not rewind. That new transaction can itself be undone, and so on.
 
 Because restoring an older version is a backward move, `undo` carries the same explicit-authorisation requirement as `downgrade` for any package it walks back. It accepts `--dry-run` and `--yes`, `-y`.
 
-To undo something *other* than the most recent transaction, or to see the history `undo` works against, use [`peipkg history`](~peios/package-management/transactions-and-recovery) — and revert a specific package directly with `downgrade`.
+To undo something other than the most recent transaction, or to see the history `undo` works against, use [`peipkg history`](~peios/package-management/transactions-and-recovery) — and revert a specific package directly with `downgrade`.
 
 ## The routine cycle
 
@@ -114,7 +114,7 @@ $ peipkg upgrade --dry-run   # preview the move
 $ peipkg upgrade        # apply it
 ```
 
-`downgrade` and `undo` are the recovery moves — reach for them when a refreshed-and-upgraded system has picked up a change you want gone. Every one of these commands is a [transaction](~peios/package-management/transactions-and-recovery), so every one of them is atomic and itself reversible.
+`downgrade` and `undo` are the recovery commands — use them when an upgrade has brought in a change you want to remove. Every one of these commands is a [transaction](~peios/package-management/transactions-and-recovery), so every one of them is atomic and itself reversible.
 
 ## Exit status
 

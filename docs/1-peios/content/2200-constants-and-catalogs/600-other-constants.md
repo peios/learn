@@ -13,7 +13,7 @@ This page catalogues the remaining numeric constants — values that don't fit t
 
 ## Process mitigation flags
 
-In the PSB's mitigation bitfield (settable via `kacs_set_psb`):
+In the PSB's mitigation bitfield, settable via `kacs_set_psb` (what each mitigation does is covered in the [mitigation catalog](~peios/process-mitigations/catalog)):
 
 | Flag | Value | Meaning |
 |---|---|---|
@@ -46,7 +46,7 @@ Setting `UNMANAGED` via `kacs_set_mount_policy` returns `-EINVAL`.
 
 ## Integrity levels
 
-The RIDs used in `S-1-16-*` SIDs and in token `integrity_level` fields:
+The RIDs used in `S-1-16-*` SIDs and in token `integrity_level` fields (the corresponding SID strings are catalogued in [Well-known SIDs](~peios/constants-and-catalogs/well-known-sids); the conceptual model is in [Mandatory integrity control](~peios/access-decisions/mandatory-integrity-control)):
 
 | Constant | RID | Name |
 |---|---|---|
@@ -56,7 +56,7 @@ The RIDs used in `S-1-16-*` SIDs and in token `integrity_level` fields:
 | `INTEGRITY_LEVEL_HIGH` | 12288 | High |
 | `INTEGRITY_LEVEL_SYSTEM` | 16384 | System |
 
-Spaced by 4096; future levels can be inserted between existing ones.
+Spaced by 4096; future levels can be inserted between existing ones. These are the standard named levels, but the integrity level is really the `S-1-16` SID's single sub-authority as an unsigned integer, compared numerically — any such value is a valid level, and non-standard ones appear for Windows interop (`medium-plus` = 8448, `protected` = 20480).
 
 ## Mandatory policy flags
 
@@ -71,7 +71,7 @@ Both flags are immutable after token creation.
 
 ## Impersonation levels
 
-In a token's `impersonation_level` field:
+In a token's `impersonation_level` field (conceptual model: [Impersonation levels](~peios/impersonation/impersonation-levels)):
 
 | Constant | Value | Meaning |
 |---|---|---|
@@ -86,13 +86,13 @@ In a token's `elevation_type` field:
 
 | Constant | Value | Meaning |
 |---|---|---|
-| `KACS_ELEVATION_DEFAULT` | 0 | Not part of a linked pair. |
-| `KACS_ELEVATION_FULL` | 1 | The elevated half of a linked pair. |
-| `KACS_ELEVATION_LIMITED` | 2 | The non-elevated half. |
+| `KACS_ELEVATION_DEFAULT` | 1 | Not part of a linked pair. |
+| `KACS_ELEVATION_FULL` | 2 | The elevated half of a linked pair. |
+| `KACS_ELEVATION_LIMITED` | 3 | The non-elevated half. |
 
 ## Logon types
 
-In a session's `logon_type` field:
+In a session's `logon_type` field (conceptual model: [Logon types](~peios/logon-sessions/logon-types)):
 
 | Constant | Value | Meaning |
 |---|---|---|
@@ -185,26 +185,9 @@ Used in many syscalls that take a dirfd + path:
 | `AT_SYMLINK_NOFOLLOW` | 0x100 | Do not follow a terminal symlink. |
 | `AT_FDCWD` | -100 | Special dirfd value meaning "current working directory". |
 
-## Privilege intent flags
+## Privilege intent and attribute flags
 
-For AccessCheck:
-
-| Flag | Value | Activates |
-|---|---|---|
-| `BACKUP_INTENT` | 0x01 | `SeBackupPrivilege` |
-| `RESTORE_INTENT` | 0x02 | `SeRestorePrivilege` |
-
-## Privilege attribute flags
-
-For `kacs_priv_entry` records:
-
-| Flag | Value | Meaning |
-|---|---|---|
-| `SE_PRIVILEGE_ENABLED` | 0x02 | Enable. |
-| `SE_PRIVILEGE_REMOVED` | 0x04 | Permanently remove. |
-| `KACS_PRIV_RESET_ALL_DEFAULTS` | 0x80000000 | Reset all privileges to defaults (with luid=0). |
-
-A value of `0` disables.
+The AccessCheck intent flags (`BACKUP_INTENT`, `RESTORE_INTENT`) and the `kacs_priv_entry` attribute flags (`SE_PRIVILEGE_ENABLED`, `SE_PRIVILEGE_REMOVED`, `KACS_PRIV_RESET_ALL_DEFAULTS`) are catalogued with the privileges themselves in the [Privilege catalog](~peios/constants-and-catalogs/privilege-catalog).
 
 ## Restrict flags
 
@@ -221,59 +204,9 @@ For `KACS_IOC_RESTRICT`:
 | `TOKEN_SPEC_VERSION` | 2 | Required value of the `version` field in token specs. |
 | `KACS_ACCESS_CHECK_ARGS_V1_SIZE` | 40 | Minimum size of `kacs_access_check_args` the kernel accepts. |
 
-## Conditional ACE bytecode magic
+## Conditional ACE bytecode
 
-| Bytes | ASCII | Meaning |
-|---|---|---|
-| `0x61 0x72 0x74 0x78` | "artx" | Start of conditional expression. Absent → expression evaluates UNKNOWN. |
-
-## Conditional ACE opcodes
-
-Operator opcodes (from [Conditional ACE bytecode](~peios/wire-formats-reference/conditional-ace-bytecode)):
-
-| Opcode | Operator |
-|---|---|
-| 0x01–0x04 | Integer literals (INT8/16/32/64) |
-| 0x10 | Unicode string literal |
-| 0x18 | Octet string literal |
-| 0x50 | Composite literal |
-| 0x51 | SID literal |
-| 0x80 | == |
-| 0x81 | != |
-| 0x82 | < |
-| 0x83 | <= |
-| 0x84 | > |
-| 0x85 | >= |
-| 0x86 | Contains |
-| 0x87 | Exists |
-| 0x88 | Any_of |
-| 0x89 | Member_of |
-| 0x8A | Device_Member_of |
-| 0x8B | Member_of_Any |
-| 0x8C | Device_Member_of_Any |
-| 0x8D | Not_Exists |
-| 0x8E | Not_Contains |
-| 0x8F | Not_Any_of |
-| 0x90 | Not_Member_of |
-| 0x91 | Not_Device_Member_of |
-| 0x92 | Not_Member_of_Any |
-| 0x93 | Not_Device_Member_of_Any |
-| 0xA0 | AND |
-| 0xA1 | OR |
-| 0xA2 | NOT |
-| 0xF8 | @Local. |
-| 0xF9 | @User. |
-| 0xFA | @Resource. |
-| 0xFB | @Device. |
-
-## CAAP wire format
-
-| Constant | Value | Meaning |
-|---|---|---|
-| CAAP version byte | `0x01` | Required at offset 0 of every CAAP spec in v0.20. |
-| CAAP rule count maximum | 256 | Max rules per policy. |
-| CAAP spec maximum size | 256 KB | Max total spec size. |
-| Applies-to expression maximum | 64 KB | Max bytecode size per rule. |
+The bytecode encoding — the "artx" magic and the full opcode catalogue (literals, attribute references, relational, set-membership, and logical operators) — is owned by [Conditional ACE bytecode](~peios/wire-formats-reference/conditional-ace-bytecode). This page does not re-tabulate the opcodes.
 
 ## Size and count limits
 
@@ -314,25 +247,6 @@ A summary of the limits the kernel enforces:
 | `no_change` index for AdjustDefault | 0xFFFF | `owner_index` / `group_index` value meaning "no change". |
 | Linux "nobody" UID/GID | 65534 | Standard fallback for unmapped principals. |
 
-## Error code summary
+## Error codes
 
-The errno values most often returned by KACS syscalls:
-
-| Code | Typical cause |
-|---|---|
-| `-EACCES` | Access check denied; some required right was not granted. |
-| `-EPERM` | Privilege required for the operation is missing, or a special restriction (e.g., restricted→unrestricted same-user impersonation). |
-| `-EINVAL` | Parameter malformed — bad SD, unknown enum value, non-zero reserved fields, malformed wire format. |
-| `-EFAULT` | Bad pointer parameter. |
-| `-ERANGE` | Buffer too small; required size written. |
-| `-ENOENT` | Target object/principal does not exist. |
-| `-EBADF` | Invalid file descriptor. |
-| `-ENOSYS` | Syscall not implemented. |
-| `-EEXIST` | Object already exists (typically for CREATE dispositions). |
-| `-ENOTDIR` | Target is not a directory when required. |
-| `-ELOOP` | Symlink encountered when NOFOLLOW was set. |
-| `-EOPNOTSUPP` | Operation not supported on this filesystem / object. |
-| `-ESRCH` | Target process / thread does not exist. |
-| `-ENOMEM` | Allocation failed. |
-
-For per-syscall lists of which errors are possible, see [Syscalls](~peios/kernel-abi-reference/syscalls) and [Token ioctls](~peios/kernel-abi-reference/token-ioctls).
+The errno table is owned by the [Kernel ABI reference](~peios/kernel-abi-reference/overview); per-syscall error lists are in [Syscalls](~peios/kernel-abi-reference/syscalls) and [Token ioctls](~peios/kernel-abi-reference/token-ioctls).

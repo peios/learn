@@ -71,7 +71,9 @@ that is not valid for the socket it arrived on with `INVALID_REQUEST`.
 | | | `QUERY` | 3 |
 | | | `LOGON_ON_BEHALF` | 4 |
 | | | `SESSION_MANAGE` | 5 |
-| 16–31 | source verify/resolve (`…/sources/*.sock`) | `VERIFY_RESOLVE` | 16 |
+| 16–31 | source (`…/sources/*.sock`) | `VERIFY_RESOLVE` | 16 |
+| | | `CHANGE_PASSWORD` (forwarded self-service) | 17 |
+| | | `RESOLVE` (credential-less resolve) | 18 |
 | 32–63 | administration (`/run/lpsd.sock`) | `CREATE_USER` | 32 |
 | | | `SET_PASSWORD` | 33 |
 | | | `CREATE_GROUP` | 34 |
@@ -79,7 +81,7 @@ that is not valid for the socket it arrived on with `INVALID_REQUEST`.
 | | | `REMOVE_MEMBER` | 36 |
 | | | `ENABLE_ACCOUNT` | 37 |
 | | | `DISABLE_ACCOUNT` | 38 |
-| | | `CHANGE_PASSWORD_SS` (self-service) | 39 |
+| | | `ENTER_SETUP_MODE` | 39 |
 
 ## Status and reason codes
 
@@ -131,26 +133,67 @@ i64  pw_expiry_warning     // -1 if none; else nanoseconds until expiry
 and the minted token fd is attached via `SCM_RIGHTS`. On any non-`OK`
 status the body is empty and no fd is attached.
 
-**`CHANGE_PASSWORD` request** (forwarded by authd to the source —
-§2.2, §7.2):
+**`CHANGE_PASSWORD` request** — self-service; authd routes it by the
+principal's namespace (§2.2, exactly as for `LOGON`) and forwards it,
+unmodified, to the resolved source's registered socket as the source-side
+`CHANGE_PASSWORD` (type 17) below:
 ```
 str  principal
 u16  old_len
-u8[] old_password          // old_len bytes; may be 0 if caller holds account-admin privilege
+u8[] old_password          // old_len bytes; MUST be > 0 (knowledge of the old password is the authorization — §6.3)
 u16  new_len
 u8[] new_password
 ```
-Response: `OK`, or `POLICY_VIOLATION` (rejected by §3.4), or `DENIED`
-(old password wrong), or `NOT_AUTHORIZED`. Body empty.
+This verb is **self-service only**: the authorization is knowledge of the
+old password, which rides in the body and so survives the forward.
+Administrative reset (no old password, gated by the **Reset Password**
+control-access right on the target's SD — §7.2) is **not** this message —
+it is `SET_PASSWORD` (type 33), which is source-shaped and goes
+**directly** to the admin socket where the source captures the caller's
+own peer token and AccessChecks it (§2.2, §7.2). An `old_len` of
+0 here is `INVALID_REQUEST`.
+Response: `OK`, `POLICY_VIOLATION` (rejected by §3.4), `DENIED` (uniform —
+old password wrong, no such principal, or account locked/disabled; §3.3),
+`RATE_LIMITED` (throttled before forwarding — §6.3), or
+`SOURCE_UNAVAILABLE`. Body empty.
 
-**`LOGON_ON_BEHALF`, `QUERY`, `SESSION_MANAGE`:** the request bodies for
-these are defined when their features land; for this version a server
-MUST accept the type, enforce the gate of §6.3, and — for
-`LOGON_ON_BEHALF` and `SESSION_MANAGE` beyond service-token mint — MAY
-return `INVALID_REQUEST` for unimplemented sub-operations. The gates
-themselves (§6.3) are normative now.
+**`LOGON_ON_BEHALF` request** — the credential-less service logon (§5.4),
+gated on the peer holding `SeTcbPrivilege` (§6.3):
+```
+u8   logon_type              // MUST be Service (5) this version; any other value is INVALID_REQUEST
+sid  target                  // the identity to mint: a base service identity (SYSTEM S-1-5-18, LocalService S-1-5-19, NetworkService S-1-5-20) or a machine_sid-relative service-account SID
+u32  service_sid_count
+sid[service_sid_count] service_sids   // S-1-5-80-… service SIDs to add to the token as groups (may be 0)
+```
+authd resolves `target` per §5.4: a base service identity is built from
+the static catalogue + idmap with no source contacted; a
+`machine_sid`-relative `target` MUST bear the service-account flag (§9)
+and is resolved through the source's `RESOLVE` (below). A `target` that is
+an ordinary user, a domain principal, a pseudo-principal, or an
+`S-1-5-80` service SID (which is a group, never an identity) is
+`INVALID_REQUEST`. Each `service_sids` entry MUST be an `S-1-5-80-…` SID
+and is added to the token as a group (§5.4).
 
-## Source verify/resolve body
+**`LOGON_ON_BEHALF` response:** mirrors the `LOGON` response — on `OK`,
+body = `u64 session_id; i64 pw_expiry_warning` (`-1`), with the minted
+token fd attached via `SCM_RIGHTS`. Non-`OK` (`DENIED` for a
+disabled/expired service account, `INVALID_REQUEST`, `LOGON_TYPE_DENIED`,
+`SOURCE_UNAVAILABLE`, `INTERNAL_ERROR`) carries an empty body and no fd.
+
+**`QUERY`, `SESSION_MANAGE`:** the request bodies for these are defined
+when their features land; for this version a server MUST accept the type,
+enforce the gate of §6.3, and MAY return `INVALID_REQUEST` for
+unimplemented sub-operations. The gates themselves (§6.3) are normative
+now.
+
+## Source bodies
+
+The source socket carries the source-transparent operations authd brokers
+on the caller's behalf: `VERIFY_RESOLVE` (type 16) and the forwarded
+self-service `CHANGE_PASSWORD` (type 17). Both are authd→source and gated
+by the peer being authd (§6.3); the source-shaped write operations
+(`SET_PASSWORD` and the rest) are a separate interface on the admin socket
+below.
 
 **`VERIFY_RESOLVE` request** (authd → source) has the same field layout
 as the `LOGON` request body above.
@@ -167,7 +210,7 @@ the change flow) the body is the **resolved-principal record**:
 ```
 sid   user_sid
 u32   projected_uid          // the principal's id (§3.6); 0xFFFFFFFF if the source assigns none
-u32   primary_group_rid
+sid   primary_group_sid
 str   account_name
 str   display_name         // empty string if none
 str   upn                  // empty string if none
@@ -184,14 +227,59 @@ str   logon_domain_name
 sid   logon_domain_sid
 ```
 
-The record carries no credential material and no signature (§4). The
-`groups` array MUST be sorted in ascending **binary-SID order** — the
+The record carries no credential material and no signature (§4), and
+every group SID MUST be one the source is authoritative to assert (§4,
+§5.2) — authd rejects a resolved principal that asserts a SID outside the
+source's authority. authd also validates every projected id before minting:
+non-sentinel ids MUST be below 2^31, lie in the correct §3.6/§9 band, and
+reverse-map to the same SID; `0xFFFFFFFF` MUST be resolved through the idmap
+and MUST NOT reach the token spec. The `groups` array MUST be sorted in ascending
+**binary-SID order** — the
 unsigned byte-wise `memcmp` of the binary SID encoding (PSD-004 §2) with
 the `[len]` prefix excluded, the shorter encoding sorting first on a prefix
 tie — and the `claims` array in ascending order of the UTF-8 bytes of
 `name`, so the encoding is byte-identical across implementations. For this version
 `claim_count` MUST be 0 (claims are deferred — §8); the `value_type` enum
 is defined when claims land.
+
+**`CHANGE_PASSWORD` request** (type 17; authd → source) has the same field
+layout as the client `CHANGE_PASSWORD` body above (`str principal; u16
+old_len; u8[] old_password; u16 new_len; u8[] new_password`), forwarded
+unmodified. The source verifies the old password (the authorization — the
+source captures authd as its peer, so the gate MUST be knowledge-based,
+not peer-identity-based), applies the password policy of §3.4, and on
+acceptance records the new verifier. That old-password verification runs
+the **same lockout accounting, account-state gating, and dummy-verifier /
+constant-time / uniform-`DENIED` enumeration resistance as a logon
+verify** (§3.3, §3.4) — a wrong old password counts toward lockout, a
+locked/disabled account or an unknown principal returns an indistinguishable
+`DENIED`, and an expired password is still accepted (it is what the change
+clears). An `old_len` of 0 MUST be rejected `INVALID_REQUEST` —
+administrative reset is `SET_PASSWORD` on the admin socket, never this
+verb.
+
+**`CHANGE_PASSWORD` response:** `status` is one of `OK`,
+`POLICY_VIOLATION` (§3.4), `DENIED` (uniform — old password wrong, no such
+principal, or account locked/disabled; §3.3), `SOURCE_UNAVAILABLE`, or
+`INTERNAL_ERROR`. Body empty. authd relays the status to the client
+unchanged (and may itself return `RATE_LIMITED` before forwarding — §6.3).
+
+**`RESOLVE` request** (type 18; authd → source) — the credential-less
+resolve used by the service-logon path (§5.4) for a stored
+service-account target. It carries **no credential**:
+```
+sid  principal                // the stored principal to resolve
+```
+The source checks account state (disabled/expired — §3.4) and, if the
+account may be used, returns the resolved principal. It performs **no**
+credential verification and **no** lockout/timing accounting.
+
+**`RESOLVE` response:** `status` is `OK`, `DENIED` (account
+disabled/expired; trailing `u16 reason` as for `VERIFY_RESOLVE`),
+`SOURCE_UNAVAILABLE`, or `INTERNAL_ERROR`. On `OK` the body is the
+**resolved-principal record** (identical layout to the `VERIFY_RESOLVE`
+`OK` body above). There is no `MUST_CHANGE_PASSWORD` — no credential is in
+play.
 
 ## Administration bodies
 
@@ -200,16 +288,18 @@ bodies are:
 
 | Type | Body |
 |---|---|
-| `CREATE_USER` | `str account_name; str display_name; u32 account_flags;` then **optionally** `u16 new_len; u8[] new_password` (the initial password) — present iff bytes remain after `account_flags`, in which case they MUST form exactly that `u16 new_len; u8[new_len]` pair with no leftover (any other residue is `INVALID_REQUEST`); if absent the account is created with no password factor (a present `new_len = 0` decodes successfully but is rejected with `POLICY_VIOLATION` per §3.4, not `INVALID_REQUEST`) |
-| `SET_PASSWORD` | `str principal; u16 new_len; u8[] new_password` (administrative reset; gated by account-admin privilege) |
+| `CREATE_USER` | `str account_name; str display_name; u32 account_flags;` then **optionally** `u16 new_len; u8[] new_password` (the initial password) — present iff bytes remain after `account_flags`, in which case they MUST form exactly that `u16 new_len; u8[new_len]` pair with no leftover (any other residue is `INVALID_REQUEST`); if absent the account is created with no password factor (a present `new_len = 0` decodes successfully but is rejected with `POLICY_VIOLATION` per §3.4, not `INVALID_REQUEST`). lpsd sets `primary_group_sid` to `S-1-5-32-545` and adds the new user to `BUILTIN\Users` (§3.2). |
+| `SET_PASSWORD` | `str principal; u16 new_len; u8[] new_password` (administrative reset — no old password; gated by the **Reset Password** control-access right on the target's SD, AccessChecked against the caller's own peer token — §7.2. The direct, source-shaped counterpart to the forwarded self-service `CHANGE_PASSWORD`) |
 | `CREATE_GROUP` | `str name; str display_name; u32 group_type` |
 | `ADD_MEMBER` / `REMOVE_MEMBER` | `sid group_sid; sid member_sid` |
 | `ENABLE_ACCOUNT` / `DISABLE_ACCOUNT` | `sid principal_sid` |
-| `CHANGE_PASSWORD_SS` | identical to the client `CHANGE_PASSWORD` body |
+| `ENTER_SETUP_MODE` | Empty body. Accepted only before lpsd initialises a database, and only from the peinit bootstrap authority: a peer token holding `SeTcbPrivilege`, with user SID `S-1-5-18`, carrying the per-service SID for `peinit` when that SID is present (§7.1, §9). The request arms setup mode for this boot and causes lpsd to initialise the store exactly once; any repeat, any initialised database, any non-empty body, or any unauthorized peer is rejected. |
 
 `CREATE_USER` and `CREATE_GROUP` responses return, on `OK`, the assigned
 `sid` of the new principal in the body. All administration responses use
 the status codes of §6.4.4; a privilege-gate failure is `NOT_AUTHORIZED`.
+`ENTER_SETUP_MODE` returns `OK`, `NOT_AUTHORIZED`, `INVALID_REQUEST`, or
+`INTERNAL_ERROR`, with an empty body.
 
 ## Versioning
 

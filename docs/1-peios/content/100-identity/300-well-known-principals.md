@@ -104,6 +104,8 @@ These are not principals. They are labels carried in a token's integrity level f
 | `S-1-16-12288` | High |
 | `S-1-16-16384` | System |
 
+These five are the standard, well-known levels. The level is really the SID's single sub-authority as an unsigned integer, compared numerically, so any `S-1-16-<n>` with exactly one sub-authority is valid — non-standard values such as `medium-plus` (`S-1-16-8448`) and `protected` (`S-1-16-20480`) appear for Windows interop.
+
 Integrity levels are a vertical axis on top of identity. A user at Medium integrity and the same user at High integrity have the same SID but different integrity labels. See [Mandatory integrity control](~peios/access-decisions/mandatory-integrity-control) for how the levels interact with access checks.
 
 ## Process trust labels (`S-1-19`)

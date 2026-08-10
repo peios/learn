@@ -97,63 +97,33 @@ Multi-profile fixtures invalidate every cached fixture when any profile's kernel
 
 ## Lifecycle methods
 
-```
-Created ──:boot()──> Booted ──:pause()──> Paused
-                       │                    │
-                       ├─:reset()→Booted    ├─:resume()→Booted
-                       ├─:power_button()──> Shutdown
-                       └─:shutdown()─────> Shutdown
-```
+A VM moves between four states: `:boot()` takes it from `Created` to `Booted`; `:pause()` / `:resume()` toggle between `Booted` and `Paused`; `:reset()` warm-reboots (still `Booted`); and `:shutdown()` or `:power_button()` end in `Shutdown`. The full state machine and per-method semantics are in the [VM reference](~provium/reference/vm#state-machine).
 
-| Method | What it does |
-|---|---|
-| `vm:boot(opts?)` | `Created → Booted`. |
-| `vm:pause()` | `Booted → Paused`. |
-| `vm:resume()` | `Paused → Booted`. |
-| `vm:shutdown()` | Anything → `Shutdown`. |
-| `vm:reset()` | `Booted → Booted` (warm reboot). |
-| `vm:power_button()` | `Booted → Shutdown` (graceful ACPI). |
-
-Operations against a VM in the wrong state error cleanly with the offending state in the message — `vm:reset() on Created VM must error`. The harness's auto-close walker uses `vm:close()`, which is a no-op idempotent shutdown.
+Operations against a VM in the wrong state error cleanly with the offending state in the message — `vm:reset() on Created VM must error`.
 
 You typically don't call `:shutdown()` explicitly. The harness's resource-graph walker tears every VM down at the appropriate scope boundary: test-scope VMs at the end of their `test()` body, file-scope VMs at file end. (`reset_between_tests = true` snapshots and restores instead — see [labs and scope](~provium/writing-tests/labs-and-scope).)
 
 ## Boot opts in detail
 
-| Key | Type | Effect |
-|---|---|---|
-| `memory` | int (bytes) or `"512M"`/`"2G"` | VM memory cap. Hands to QEMU as `-m <size>`. |
-| `cpus` | int | vCPU count. Hands to QEMU as `-smp <n>`. |
-| `kernel_cmdline` | string | Replaces the profile's `cmdline`. Useful for per-VM `loglevel`, `nokaslr`, etc. |
-| `rng_seed` | int (u64) | Seeds `virtio-rng`. Use for determinism in randomised tests. |
-| `initial_time` | int or float (sec since epoch) | Sets the guest's wall clock at boot. Float for sub-second precision. |
-| `files` | array of `{path, content}` | Files to inject into the guest's filesystem before init runs. The agent injects them by appending to the initramfs cpio. |
+The opts you'll reach for most often are `memory` and `cpus` (sizing), `kernel_cmdline` (per-VM `loglevel`, `nokaslr`, etc. — replaces the profile's `cmdline`), and `files` (inject config before init runs):
 
 ```lua
 local vm = provium:vm("v", "peios", {
     memory = "1G",
     cpus = 2,
-    rng_seed = 42,
-    initial_time = 1700000000.5,
     files = {
         {path = "/etc/test.conf", content = "key=value\n"},
     },
 }):boot()
 ```
 
+This is a subset — the full boot-opts table (types, defaults, `rng_seed`, `initial_time`) is in the [VM reference](~provium/reference/vm#boot-opts).
+
 ## Querying VM state
 
-```lua
-vm:name()              -- "v"
-vm:profile()           -- "peios"
-vm:state()             -- "created" | "booted" | "paused" | "shutdown" | "dead"
-vm:cid()               -- assigned vsock CID, or nil before boot
-vm:is_quiescent()      -- true if no in-flight ops, no open files, no open streams
-vm:open_file_count()   -- count of open files via the agent
-vm:open_stream_count() -- count of active streams (tails, captures, console-reads)
-```
+The accessors you'll use most are `vm:state()` (returns `"created"`, `"booted"`, `"paused"`, `"shutdown"`, or `"dead"`) and `vm:is_quiescent()` (true when there are no in-flight ops, open files, or open streams). The full accessor list — `name`, `profile`, `cid`, `open_file_count`, `open_stream_count` — is in the [VM reference](~provium/reference/vm#accessors).
 
-`is_quiescent` and the count accessors are useful for snapshot precondition asserts:
+`is_quiescent` and the open-count accessors are useful for snapshot precondition asserts:
 
 ```lua
 test("snapshot is taken at quiescence", function(t)

@@ -99,21 +99,17 @@ end
 
 ## RunResult fields and helpers
 
+Most tests only need three things from a RunResult:
+
 ```lua
 local r = vm:run("…")
 
-r.exit_code   -- integer; -1 for signalled, -2 for timed_out
-r.stdout      -- bytes
-r.stderr      -- bytes
-r.status      -- "exited" | "signalled" | "timed_out"
-r.signal      -- signal number when signalled, else nil
-r.timed_out   -- bool
+r:assert_ok() -- raise if not ok; message includes status, stdout, stderr
+r.stdout      -- captured stdout (bytes)
 r:ok()        -- shorthand for exit_code == 0
-r:assert_ok() -- raise if not ok; message includes status, stdout, stderr,
-              -- and the signal name when signalled.
 ```
 
-The `signal` field disambiguates. A process killed by SIGTERM has `exit_code = -1`, `status = "signalled"`, `signal = 15`. A process that returns -1 cleanly (rare) has `exit_code = -1`, `status = "exited"`, `signal = nil`.
+When a command can fail in more than one way, check `r.status` (`"exited"` / `"signalled"` / `"timed_out"`) rather than pattern-matching `exit_code` — the sentinel exit codes and the `signal` field are documented in the [RunResult reference](~provium/reference/vm#runresult).
 
 ## Async exec: `vm:run_async`
 
@@ -160,7 +156,7 @@ proc:kill("usr1")            -- SIGUSR1
 proc:signal("usr2")          -- alias for kill(); reads better for non-fatal signals
 ```
 
-Recognised signal names: `term`, `kill`, `int`, `hup`, `quit`, `stop`, `cont`, `usr1`, `usr2`, `alrm`, `pipe`, `chld`, `winch`. Each accepts `sig` prefix (`sigterm`) and the bare integer.
+Signals are accepted by friendly name (`term`, `kill`, `usr1`, …), with a `sig` prefix (`sigterm`), or as a bare integer. The full recognised-name list is in the [Process reference](~provium/reference/process#prockillsig).
 
 ### Inspecting the process
 
@@ -180,7 +176,7 @@ proc:wait("5s")          -- wait at most 5 seconds
 proc:wait(0.5)           -- 500 ms
 ```
 
-Don't pass `0` — the harness rejects it with a pointer to use `:status()` for polling. A literal-zero timeout would tell the agent "wait_with_timeout(0)", which sees the deadline already past and SIGKILLs the process.
+Don't pass `0` — the harness rejects it and points you at `proc:status()` for non-blocking polling. The [Process reference](~provium/reference/process#procwaittimeout) explains why a literal-zero timeout is a footgun.
 
 ## Workers: parallel commands in the same VM
 

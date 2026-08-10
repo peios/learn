@@ -409,7 +409,7 @@ Binary layout passed to syscall 1003 (`kacs_create_token`). Fixed 192-byte heade
 | 4 | 1 | `token_type` | `u8` | 1 = Primary, 2 = Impersonation |
 | 5 | 1 | `impersonation_level` | `u8` | 0 = Anonymous, 1 = Identification, 2 = Impersonation, 3 = Delegation |
 | 6 | 2 | `_reserved0` | `u8[2]` | Must be 0 |
-| 8 | 4 | `integrity_rid` | `u32` | Integrity level RID: 0=Untrusted, 4096=Low, 8192=Medium, 12288=High, 16384=System |
+| 8 | 4 | `integrity_rid` | `u32` | Integrity level: the mandatory-label SID sub-authority as an unsigned integer. Any value is accepted and compared numerically; standard values are 0=Untrusted, 4096=Low, 8192=Medium, 12288=High, 16384=System (non-standard e.g. 8448=medium-plus, 20480=protected). |
 | 12 | 4 | `mandatory_policy` | `u32` | NO_WRITE_UP=0x01, NEW_PROCESS_MIN=0x02 |
 | 16 | 8 | `privs_present` | `u64` | Bitmask of privileges present |
 | 24 | 8 | `privs_enabled` | `u64` | Bitmask of privileges initially enabled. The kernel initializes `enabled_by_default` to this same value — no separate wire field. AdjustPrivileges reset-to-defaults restores `enabled` to this value. |

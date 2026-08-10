@@ -22,20 +22,22 @@ This page covers each type of SACL entry, how the access check consumes it, and 
 
 A SACL is an ACL — same on-wire structure as a DACL, the same `AceCount`/`AclSize` header and the same ACE format. But the ACE types it holds are different. While a DACL is dominated by access-control types (`ACCESS_ALLOWED`, `ACCESS_DENIED`, callbacks), a SACL holds the system-policy types:
 
-| ACE type | Value | Purpose |
-|---|---|---|
-| `SYSTEM_AUDIT` | 0x02 | Fire an audit event when access matches. One-shot at handle creation. |
-| `SYSTEM_AUDIT_OBJECT` | 0x07 | Same, GUID-scoped. |
-| `SYSTEM_AUDIT_CALLBACK` | 0x0D | Same, with a conditional expression gating when the audit fires. |
-| `SYSTEM_AUDIT_CALLBACK_OBJECT` | 0x0F | Same, GUID-scoped and conditional. |
-| `SYSTEM_ALARM` | 0x03 | Configure per-operation continuous audit on an open handle. |
-| `SYSTEM_ALARM_OBJECT` | 0x08 | Same, GUID-scoped. |
-| `SYSTEM_ALARM_CALLBACK` | 0x0E | Same, conditional. |
-| `SYSTEM_ALARM_CALLBACK_OBJECT` | 0x10 | Same, GUID-scoped and conditional. |
-| `SYSTEM_MANDATORY_LABEL` | 0x11 | The object's mandatory integrity label and policy bits (MIC). |
-| `SYSTEM_RESOURCE_ATTRIBUTE` | 0x12 | A typed key-value attribute on the object (covered separately under [Resource attributes](~peios/security-descriptors/resource-attributes)). |
-| `SYSTEM_SCOPED_POLICY_ID` | 0x13 | A reference to a central access policy (CAAP). |
-| `SYSTEM_PROCESS_TRUST_LABEL` | 0x14 | The object's PIP trust label and the explicit allowed mask for non-dominant callers. |
+| ACE type | Purpose |
+|---|---|
+| `SYSTEM_AUDIT` | Fire an audit event when access matches. One-shot at handle creation. |
+| `SYSTEM_AUDIT_OBJECT` | Same, GUID-scoped. |
+| `SYSTEM_AUDIT_CALLBACK` | Same, with a conditional expression gating when the audit fires. |
+| `SYSTEM_AUDIT_CALLBACK_OBJECT` | Same, GUID-scoped and conditional. |
+| `SYSTEM_ALARM` | Configure per-operation continuous audit on an open handle. |
+| `SYSTEM_ALARM_OBJECT` | Same, GUID-scoped. |
+| `SYSTEM_ALARM_CALLBACK` | Same, conditional. |
+| `SYSTEM_ALARM_CALLBACK_OBJECT` | Same, GUID-scoped and conditional. |
+| `SYSTEM_MANDATORY_LABEL` | The object's mandatory integrity label and policy bits (MIC). |
+| `SYSTEM_RESOURCE_ATTRIBUTE` | A typed key-value attribute on the object (covered separately under [Resource attributes](~peios/security-descriptors/resource-attributes)). |
+| `SYSTEM_SCOPED_POLICY_ID` | A reference to a central access policy (CAAP). |
+| `SYSTEM_PROCESS_TRUST_LABEL` | The object's PIP trust label and the explicit allowed mask for non-dominant callers. |
+
+The numeric type values are in the canonical catalogue, [ACE types and flags](~peios/constants-and-catalogs/ace-types-and-flags).
 
 A SACL can mix these in any combination. Most SACLs in practice are small — a few audit ACEs, perhaps a mandatory label, sometimes a resource attribute or two. SACLs with every type populated are rare and exist only on the most highly-protected objects.
 
@@ -63,7 +65,7 @@ ALARM is the right tool for objects where post-open behaviour is what matters: a
 
 A `SYSTEM_MANDATORY_LABEL` ACE sets the object's mandatory integrity level. The ACE has two parts:
 
-- A **SID** from the `S-1-16-*` integrity namespace (`S-1-16-8192` for Medium, `S-1-16-12288` for High, etc.).
+- A **SID** from the `S-1-16-*` integrity namespace, whose single sub-authority is the numeric level (`S-1-16-8192` for Medium, `S-1-16-12288` for High, and so on — any single-sub-authority `S-1-16` value is a valid level, compared numerically).
 - A **mask** containing the MIC policy bits: `SYSTEM_MANDATORY_LABEL_NO_READ_UP` (0x01), `SYSTEM_MANDATORY_LABEL_NO_WRITE_UP` (0x02), `SYSTEM_MANDATORY_LABEL_NO_EXECUTE_UP` (0x04).
 
 When the access check evaluates the SD, it scans for a `SYSTEM_MANDATORY_LABEL` ACE. The first non-inherit-only one is the object's effective label. If none is present, the object's effective integrity is **Medium with `NO_WRITE_UP`** (the default).

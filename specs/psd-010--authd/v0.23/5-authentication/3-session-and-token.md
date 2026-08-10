@@ -43,14 +43,14 @@ then `Administrators`** — the last only when the token carries
 `S-1-5-32-544` — each granting `GENERIC_ALL`; the DACL sets only
 `SE_DACL_PRESENT` (no other control flags, notably not
 `SE_DACL_PROTECTED`); `owner` = the user SID;
-`primary_group` from the principal's `primary_group_rid`; and
+`primary_group` from the principal's `primary_group_sid`; and
 `mandatory_policy` = `NO_WRITE_UP`. The privilege set and its
 enabled-states come from §5.2, the integrity level from §5.2/§9, and the
 POSIX projection from the idmap (§3.6): `projected_uid` = the principal's
 id; `projected_gid` = the **primary group's** id; and
 `projected_supplementary_gids` = the projection to ids of the token's
 **group** SIDs only — the primary group, the resolved principal's groups,
-and the local and implicit groups authd added in §5.2 step 2 — and
+and the local and implicit groups authd added in §5.2 step 1 — and
 **never** the user SID. That
 list is **de-duplicated, sorted ascending by id, includes the primary
 group's id, and omits any SID on the no-id list (§9)** (no-id SIDs never
@@ -73,8 +73,8 @@ boundary.
 
 The **requester**, not authd, installs the token and launches: a login
 frontend installs the returned token as the primary token of the user's
-first process and execs it; peinit installs a service's token on the
-service it launches. authd MUST NOT launch processes itself. After
+first process and execs it; peinit installs a service's token (minted via
+the credential-less service logon of §5.4) on the service it launches. authd MUST NOT launch processes itself. After
 handing off the fd, authd drops its own reference; the running process's
 attachment is what keeps the session alive.
 

@@ -13,9 +13,15 @@ Additional terms specific to loregd:
   hive registered by loregd has its own database file. The file
   path is provided on the command line.
 
-- **Volatile store**: A SQLite in-memory database (`:memory:`)
-  ATTACHed to a hive database connection. Volatile keys are stored
-  here. The volatile store is lost when loregd exits.
+- **Volatile store**: A per-hive, in-process, in-memory structure
+  holding volatile keys: four ordered maps mirroring the hive
+  database's tables (§3.1.6). Not a SQLite database. The volatile
+  store is lost when loregd exits.
+
+- **Transaction overlay**: A private copy of a hive's volatile
+  store, created on the first volatile mutation inside a read-write
+  transaction. It replaces the shared volatile store when the
+  transaction commits and is discarded when it aborts (§5.1).
 
 - **Folded name**: The Unicode Simple Case Folded form of a key
   name, value name, or child name. Stored alongside the canonical
@@ -27,4 +33,9 @@ Additional terms specific to loregd:
 
 - **Write connection**: A SQLite connection used for mutating
   operations. Only one write connection exists per hive database.
-  All writes are serialised through this connection.
+  All persistent writes are serialised through this connection.
+
+- **Write path**: The per-hive executor that owns the write
+  connection and is the sole mutator of the hive's volatile store.
+  All mutating operations — persistent and volatile — are
+  serialised through it (§4.1).

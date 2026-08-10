@@ -215,7 +215,7 @@ Sets one-way mitigation flags on a process's PSB. Can target the caller's own pr
 
 **Errors**: `-EACCES` (target SD denied); `-EPERM` (PIP dominance failed); `-EINVAL` (unknown flag bits); `-EBADF`; `-ESRCH`.
 
-The full mitigation-flag catalog is in [Process mitigations](~peios/process-mitigations/catalog).
+The `KACS_MIT_*` flag values are catalogued in [Other constants](~peios/constants-and-catalogs/other-constants); what each mitigation does is in [Process mitigations](~peios/process-mitigations/catalog).
 
 ## File access
 

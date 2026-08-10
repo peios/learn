@@ -16,20 +16,26 @@ Throughput is always the top priority. eventd MUST NOT fall behind the ingestion
 
 The adaptive algorithm operates as follows:
 
-1. The writer thread begins a transaction.
-2. The writer thread reads available events from its assigned drain threads.
-3. If no events are available and the current batch is non-empty, the writer SHOULD commit immediately. There is no throughput pressure, so committing minimises the power-loss window.
-4. If no events are available and the current batch is empty, the writer thread waits for events (the drain threads will wake it via the handoff mechanism when events arrive).
-5. If events are available, they are added to the current transaction (INSERT statements executed).
-6. After each INSERT (or group of INSERTs), the writer evaluates whether to commit now or continue batching. The decision is based on the observed ratio between event arrival rate and commit throughput: if arrivals are slow relative to commit cost, commit now (resilience). If arrivals are fast relative to commit cost, continue batching (throughput).
-7. The batch MUST NOT exceed `MaxBatchSize` events. When the limit is reached, the writer MUST commit regardless of throughput conditions.
+1. When the first event for a batch is available, the writer thread begins a
+   transaction and records the batch start time.
+2. The writer thread reads available events from its assigned drain threads and
+   inserts them into the transaction.
+3. After each insert group, the writer commits the transaction if any of these
+   conditions is true:
+   - No assigned drain thread currently has an event available for this writer.
+   - The batch contains `MaxBatchSize` events.
+   - `MaxBatchLatencyMs` has elapsed since the first event entered the batch.
+4. If none of those conditions is true, the writer continues reading and
+   inserting available events.
+5. If no events are available and the current batch is empty, the writer thread
+   waits for producers to wake it.
 
-The specific heuristics for step 6 are implementation-defined. The normative requirements are:
-
-- Under low load, the writer MUST commit within `MaxBatchLatencyMs` of the first event in the batch.
-- Under high load, the writer MUST NOT produce batches larger than `MaxBatchSize`.
-- The writer MUST NOT hold an open transaction indefinitely.
-- The adaptive algorithm SHOULD NOT oscillate between extreme batch sizes under bursty workloads. Rapid alternation between very small commits (high fsync overhead) and very large commits (high latency) degrades both throughput and power-loss resilience. The implementation SHOULD apply smoothing or hysteresis to the arrival rate estimate.
+The writer MAY choose any internal insert-group size, but the group size MUST
+NOT allow a batch to exceed `MaxBatchSize` or stay open past
+`MaxBatchLatencyMs`. A batch with fewer than `MaxBatchSize` events is committed
+immediately when the input queues are drained, which minimises the power-loss
+window under low load. Under sustained load, batches naturally grow to
+`MaxBatchSize` or the latency cap, whichever comes first.
 
 ## Configuration
 
@@ -44,9 +50,16 @@ These parameters bound the adaptive algorithm. `MaxBatchSize` caps the throughpu
 
 WAL mode accumulates write-ahead log data until a checkpoint copies it back to the main database file. Under sustained write load, the WAL can grow large.
 
-Each writer thread MUST trigger a WAL checkpoint when the WAL exceeds a size threshold. The checkpoint SHOULD use `SQLITE_CHECKPOINT_PASSIVE` mode, which checkpoints as much as possible without blocking readers. If a passive checkpoint cannot make progress (active readers hold pages), the writer MUST NOT block -- it continues writing and retries the checkpoint later.
+Each writer thread MUST trigger a WAL checkpoint when the WAL reaches or
+exceeds `WalCheckpointPages` pages. The checkpoint MUST use
+`SQLITE_CHECKPOINT_PASSIVE` mode, which checkpoints as much as possible without
+blocking readers. If a passive checkpoint cannot make progress (active readers
+hold pages), the writer MUST NOT block -- it continues writing and retries the
+checkpoint after later commits.
 
-The checkpoint threshold is implementation-defined. A reasonable default is 1000 pages (4 MB with the default 4 KB page size).
+| Key | Type | Default | Valid range | Description |
+|---|---|---|---|---|
+| WalCheckpointPages | REG_DWORD | 1000 | 100--100000 | SQLite WAL page threshold that triggers a passive checkpoint. |
 
 > [!INFORMATIVE]
 > PASSIVE checkpointing runs on the writer thread and briefly serialises with INSERT work. This is inherent to SQLite's architecture -- checkpointing and writing cannot run concurrently on the same database. PASSIVE mode is the lightest option (it yields immediately if readers hold pages) and the per-checkpoint cost is bounded by the threshold size. No alternative design avoids this cost within SQLite's concurrency model.

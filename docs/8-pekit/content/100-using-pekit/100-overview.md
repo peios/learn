@@ -1,7 +1,7 @@
 ---
 title: What pekit is
 type: concept
-description: Pekit is the recipe-driven build and packaging tool for Peios. It reads declarative recipes, resolves sources and versions, plans the work before touching anything, then builds, tests, installs, packages, and publishes. This page is the map — what pekit does, the shape of a recipe, and where pekit sits in the toolchain that produces a Peios system.
+description: Pekit is the recipe-driven build and packaging tool for Peios. It reads declarative recipes, resolves sources and versions, plans the work, then builds, tests, installs, packages, and publishes.
 related:
   - pekit/using-pekit/commands-and-targets
   - pekit/using-pekit/invocation
@@ -85,7 +85,7 @@ Pekit produces packages in the [peipkg format](~peios/package-management/overvie
 
 A few facts about the tool as it ships today:
 
-- **No `--help` yet.** Pekit does not currently print usage text. This page and the [invocation reference](~pekit/using-pekit/invocation) are the manual; the command and flag surface is documented in full there.
+- **No `--help` yet.** Pekit does not currently print usage text. This page and the [invocation reference](~pekit/using-pekit/invocation) are the manual; the complete flag surface is tabulated in the [command-line reference](~pekit/reference/cli).
 - **Exit status is 0 or 1.** Pekit exits `0` on success and `1` on any error. It does not use finer exit codes.
 - **Diagnostics go to stderr.** Target output streams live to its normal streams; pekit's own events are timestamped on stderr, or structured when you pass [`--json`](~pekit/using-pekit/invocation).
 

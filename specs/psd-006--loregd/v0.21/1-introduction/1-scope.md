@@ -18,7 +18,7 @@ This specification covers:
 
 - The command-line interface and startup sequence
 - The SQLite database schema (one database per hive)
-- Volatile key storage via attached in-memory databases
+- Volatile key storage via per-hive in-process volatile stores
 - Connection pool model and concurrency
 - Transaction handling and write serialisation
 - Crash recovery (orphaned GUID cleanup)

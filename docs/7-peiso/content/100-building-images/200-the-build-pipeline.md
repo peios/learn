@@ -10,15 +10,15 @@ related:
   - peios/boot-and-trust-establishment/mkuki
 ---
 
-A single `sudo peiso build <spec>` turns one declarative [build spec](~peiso/reference/the-build-spec) into a bootable image. It does this by running a fixed, ordered sequence of **stages** — compose the root, pack the initramfs, stage first-boot state, squash the rootfs, bundle a UKI, author an ISO. This page walks each stage in the order peiso runs them and explains why that order is what it is.
+A single `sudo peiso build <spec>` turns one declarative [build spec](~peiso/reference/the-build-spec) into a bootable image. It does this by running a fixed, ordered sequence of **stages** — compose the root, pack the initramfs, stage first-boot state, squash the rootfs, bundle a UKI, author an ISO. This page walks each stage in the order peiso runs them and explains why the order matters.
 
 ## Two core ideas
 
-Everything here rests on two ideas that are worth holding in mind before the stage-by-stage walk.
+Two ideas underpin every stage that follows.
 
-**Compose does the packages; peiso does the boot machinery.** peiso does not know how to resolve a package set or lay out a root — that is [`peipkg-compose`](~peios/package-management/composing-a-root)'s job, and peiso simply shells out to it. What peiso adds is everything compose [deliberately does not do](~peios/package-management/composing-a-root): pack the initramfs, seed first-boot registry and feature state, produce a rootfs image, bundle a Unified Kernel Image, and author a bootable ISO. The line is clean: compose stops at *here is a valid peipkg root*, and peiso begins there.
+**Compose does the packages; peiso does the boot machinery.** peiso does not resolve a package set or lay out a root itself — that is [`peipkg-compose`](~peios/package-management/composing-a-root)'s job, and peiso shells out to it. What peiso adds is everything compose [deliberately does not do](~peios/package-management/composing-a-root): pack the initramfs, seed first-boot registry and feature state, produce a rootfs image, bundle a Unified Kernel Image, and author a bootable ISO. Compose stops at delivering a valid peipkg root; peiso begins there.
 
-**The chroot model lets peiso run Peios-native applets against the composed root.** Several stages are not host tools at all — they are Peios boot applets (`mkirf`, `mkuki`) that ship *inside* the composed root, at `/usr/bin/mkirf` and `/usr/bin/mkuki`. peiso `chroot`s into the composed root and runs them there, so they operate on the tree exactly as they would on a live, booted system. This is why the build is privileged, and why the applets take root-relative paths. peiso never carries its own copy of these tools; it uses the ones the image was composed with.
+**The chroot model lets peiso run Peios-native applets against the composed root.** Several stages are not host tools at all — they are Peios boot applets (`mkirf`, `mkuki`) that ship inside the composed root, at `/usr/bin/mkirf` and `/usr/bin/mkuki`. peiso `chroot`s into the composed root and runs them there, so they operate on the tree exactly as they would on a live, booted system. This is why the build is privileged, and why the applets take root-relative paths. peiso never carries its own copy of these tools; it uses the ones the image was composed with.
 
 Determinism runs through the whole pipeline. The spec's `source_date` is threaded into every build-stamped timestamp — compose derives its output stamps from it, and peiso pins the squashfs timestamps from it — so the same spec, manifest, lock, and packages yield a byte-reproducible image.
 
@@ -35,7 +35,7 @@ It then locates the `peipkg-compose` binary. The search order is: the `PEISO_COM
 ### 2. Clean the output root
 
 > [!WARNING]
-> peiso `RemoveAll`s the prior `[root].out` directory — a recursive delete running as root. This is necessary because `peipkg-compose` **refuses to write into an existing directory** — its build is atomic, so the output is either absent or a complete root. peiso owns `root/` as a rebuildable artifact, so it clears it for a clean rebuild. Because a stray recursive delete running as root is costly, the clean is guarded: it refuses obviously unsafe targets (empty, `.`, the filesystem root, or any path whose parent is itself). This single clean also clears the nested initramfs root underneath.
+> peiso `RemoveAll`s the prior `[root].out` directory — a recursive delete running as root. This is necessary because `peipkg-compose` **refuses to write into an existing directory** — its build is atomic, so the output is either absent or a complete root. peiso owns `root/` as a rebuildable artifact, so it clears it for a clean rebuild. Because a stray recursive delete running as root is dangerous, the clean is guarded: it refuses obviously unsafe targets (empty, `.`, the filesystem root, or any path whose parent is itself). This single clean also clears the nested initramfs root underneath.
 
 ### 3. Compose the main root
 
@@ -51,7 +51,7 @@ In the normal v1 setup the manifest is **multi-root**: one compose produces both
 
 ### 4. Compose a separate initramfs root — legacy, normally skipped
 
-peiso composes the initramfs root as its *own* root **only if `[initramfs].manifest` is set**:
+peiso composes the initramfs root as its own root **only if `[initramfs].manifest` is set**:
 
 ```
 peipkg-compose build <[initramfs].manifest> --update --out <[root].out>/<[initramfs].dir>
@@ -75,7 +75,7 @@ chroot <[root].out> /usr/bin/mkirf [--exclude <GLOB>]... /<[initramfs].dir> /<[i
 
 This produces the gzip cpio (in the example spec, at `root/system/boot/initramfs.cpio.gz`) — the early-boot environment. The source and output paths are root-relative in the spec, so inside the chroot they are simply `/<dir>` and `/<cpio>`. `--exclude` globs keep things the early boot does not need out of the cpio (the peipkg database, for example). See [mkirf](~peios/boot-and-trust-establishment/mkirf) for what goes into the image and how it is assembled.
 
-This runs **before** the squashfs (stage 9) deliberately, so the rootfs image contains this cpio — exactly as an installed system stores its initramfs under `/system/boot`. peiso does not mint that destination directory; the `fsbase` package, composed into the main root, owns it.
+This runs **before** the squashfs (stage 9) deliberately, so the rootfs image contains this cpio — exactly as an installed system stores its initramfs under `/system/boot`. peiso does not create that destination directory; the `fsbase` package, composed into the main root, owns it.
 
 ### 7. Stage registry seeds
 
@@ -87,7 +87,7 @@ The point of the two directories is curation: packages may drop seed *masters* i
 
 If `[features].enable` lists any features, peiso writes a self-removing first-boot autorun script (`20-features.sh`, ordered after the seed-apply script) containing a `feat add <name>` line per entry. peinit runs it after [`registryd`](~peios/the-registry/lcs-and-sources) is up and **before** [Phase 2](~peios/peinit/boot-and-boot-modes) enumerates services, so the services a feature creates start the same boot.
 
-The script removes itself after running (`rm -- "$0"`). On a persistent install that whiteout is durable, so it runs once. On the live read-only image the removal is an ephemeral tmpfs-overlay whiteout, so the script reappears and re-runs each boot — re-creating the services the fresh tmpfs registry would otherwise lose. As with the seeds, the *selection* lives in the image spec, not in any package: a package ships a feature's lifecycle scripts, but only the image turns it on.
+The script removes itself after running (`rm -- "$0"`). On a persistent install that whiteout is durable, so it runs once. On the live read-only image the removal is an ephemeral tmpfs-overlay whiteout, so the script reappears and re-runs each boot — re-creating the services the fresh tmpfs registry would otherwise lose. As with the seeds, the selection lives in the image spec, not in any package: a package ships a feature's lifecycle scripts, but only the image turns it on.
 
 ### 9. Squashfs — optional
 
@@ -115,11 +115,11 @@ This bundles the kernel (resolved from `/boot/vmlinuz-*` inside the root), the i
 
 If `[iso]` is present, peiso authors a UEFI, USB/block-bootable ISO. This stage runs **on the host, not in the chroot** — `xorriso` is a build-host tool and the ISO is a host-side artifact, not a Peios boot tool.
 
-peiso builds a FAT32 ESP image from the ESP tree at `[iso].source` (sizing a zero-filled file, formatting it with `mkfs.vfat -F 32`, and populating it with `mcopy` — no mount, no loop device), then has `xorriso` **append** that image as a GPT ESP partition (type `0xEF`). Firmware treats the `.iso` as a disk, reads the GPT, and boots the ESP's UKI at `[iso].efi_boot`. If a squashfs was built, it is placed into the ISO9660 data area (hard-linked when it shares a filesystem, so a multi-GB image is never duplicated) as a file the live system's mount-root hook reads off the medium by volume label — keeping the whole OS off RAM. The path is UEFI-only and USB/block by design; there is no BIOS/isolinux/El-Torito optical path relied on.
+peiso builds a FAT32 ESP image from the ESP tree at `[iso].source` (sizing a zero-filled file, formatting it with `mkfs.vfat -F 32`, and populating it with `mcopy` — no mount, no loop device), then has `xorriso` **append** that image as a GPT ESP partition (type `0xEF`). Firmware treats the `.iso` as a disk, reads the GPT, and boots the ESP's UKI at `[iso].efi_boot`. If a squashfs was built, it is placed into the ISO9660 data area (hard-linked when it shares a filesystem, so a multi-GB image is never duplicated) as a file the live system's mount-root hook reads off the medium by volume label — keeping the whole OS off RAM. The path is UEFI-only and USB/block by design; the image does not rely on a BIOS/isolinux/El-Torito optical path.
 
 ## External tools
 
-peiso is an orchestrator: the heavy lifting is done by tools it shells out to. Some run on the build host; the Peios boot applets run *inside* the chroot against the composed root.
+peiso is an orchestrator: most of the work is done by tools it shells out to. Some run on the build host; the Peios boot applets run inside the chroot against the composed root.
 
 | Tool | Where it runs | Stage | Role |
 |---|---|---|---|
@@ -133,8 +133,8 @@ peiso is an orchestrator: the heavy lifting is done by tools it shells out to. S
 
 The `mkirf` and `mkuki` invocations are `chroot` calls into the composed root; every other tool runs directly on the host.
 
-## The shape of the order
+## Why the stages run in this order
 
-The dependencies fix the order. Compose must produce the tree before anything can operate on it. The initramfs is packed before the squashfs so the rootfs image contains it. Registry seeds and feature scripts are staged before the squashfs so they ride into the rootfs image. The UKI needs the packed initramfs cpio, so it follows stage 6 (and follows the squashfs in sequence). The ISO needs the UKI. Read top to bottom, each stage consumes what the stages above it produced.
+The dependencies fix the order. Compose must produce the tree before anything can operate on it. The initramfs is packed before the squashfs so the rootfs image contains it. Registry seeds and feature scripts are staged before the squashfs so they ride into the rootfs image. The UKI needs the packed initramfs cpio, so it follows stage 6 (and follows the squashfs in sequence). The ISO needs the UKI. Read top to bottom: each stage consumes what the stages above it produced.
 
-For the full field-by-field reference of every spec section named here, see [The build spec](~peiso/reference/the-build-spec). For how to actually invoke a build and what it prints, see [Running a build](~peiso/building-images/running-a-build).
+For the full field-by-field reference of every spec section named here, see [The build spec](~peiso/reference/the-build-spec). For how to invoke a build and what it prints, see [Running a build](~peiso/building-images/running-a-build).

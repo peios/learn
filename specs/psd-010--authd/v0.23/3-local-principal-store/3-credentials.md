@@ -67,6 +67,20 @@ deployment explicitly opts in — loudly audits).
 The transient credential MUST be zeroized in lpsd immediately after the
 comparison and MUST NOT be logged or persisted.
 
+These rules govern **any** verification of a stored password, not only the
+logon verify: the **old-password check of a self-service ChangePassword**
+(§7.2) compares the same presented material against the same verifier and
+MUST run the same constant-time comparison, the same lockout accounting
+(step 4, §3.4), the same account-state gating (§3.4 — a **locked** or
+**disabled** account is refused with the uniform `denied`, so the change
+door cannot bypass lockout; an *expired* password is the one state
+ChangePassword must still serve, since that is the `must_change_password`
+flow of §5.1), and the enumeration resistance below. Only the on-success
+action differs: a logon resolves the principal, a ChangePassword replaces
+the verifier. Without this, ChangePassword would be an unthrottled,
+lockout-free brute-force oracle against the same verifier whose winning
+guess also seizes the account.
+
 ## Resistance to user enumeration
 
 When the named principal does not exist, lpsd MUST still perform an
@@ -75,7 +89,8 @@ precomputed dummy verifier** that uses the current policy parameters
 (recomputed whenever those parameters change) — before returning failure,
 so that the response time of "no such principal" is indistinguishable from
 "wrong password." The failure returned to the broker MUST be the same in
-both cases (§5.1).
+both cases, on the logon verify (§5.1) and on the ChangePassword
+old-password check (§7.2) alike.
 
 > [!INFORMATIVE]
 > Timing and the response are equalized, but lockout *state* remains a

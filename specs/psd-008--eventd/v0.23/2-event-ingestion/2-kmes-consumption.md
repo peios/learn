@@ -44,6 +44,15 @@ Events MUST NOT be lost or duplicated during a generation change.
 
 Each drain thread MUST maintain the last seen sequence number for its CPU. This value is used for gap detection (§2.3) and for resumption after generation changes or restarts.
 
-On startup, if eventd has previously persisted data for this boot (identified by boot ID), it MUST read the last persisted sequence number per CPU from the event store and initialise the drain thread's sequence tracking from that value. This allows eventd to detect gaps that span a restart.
+On startup, if eventd has previously persisted data for this boot (identified by boot ID), it MUST derive the last committed sequence number per CPU from committed event rows in all readable event shard databases. For each CPU, the resume point is:
+
+```sql
+MAX(sequence)
+WHERE boot_id = current_boot_id
+  AND cpu_id = cpu
+  AND sequence IS NOT NULL
+```
+
+The drain thread for that CPU MUST initialise its sequence tracking from this derived value. This allows eventd to detect gaps that span a restart. Cached metadata or synthetic shutdown payloads MAY record the same values for diagnostics, but they are not authoritative for restart sequencing.
 
 If no prior data exists for the current boot, the drain thread initialises its sequence tracker to 0 (no events seen). The first event on each CPU has sequence number 1 (PSD-003 §2.1).

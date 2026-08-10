@@ -40,19 +40,15 @@ PIP's trust is encoded as two numbers, deliberately not collapsed into a single 
 
 The 2D model exists because trust is not a single line. A signed application from a third-party developer is trusted *for what it is* — its publisher attested to it — but is not at the same trust as a Peios TCB binary that has been signed by the OS itself. They have different *types* of trust, and within each type, there can be tiers.
 
-In v0.20 the catalogue is small:
+In v0.20 the catalogue is small — the full list of `S-1-19-T-L` label SIDs is in [Well-known SIDs](~peios/constants-and-catalogs/well-known-sids). The shape of the ladder, by example:
 
 | SID | type | trust | What it represents |
 |---|---|---|---|
 | `S-1-19-0-0` | None (0) | 0 | Unprotected. Default for unsigned processes. |
-| `S-1-19-512-1024` | Protected (512) | 1024 | Authenticode-style third-party signed. |
-| `S-1-19-512-1536` | Protected (512) | 1536 | Antimalware tooling. |
 | `S-1-19-512-2048` | Protected (512) | 2048 | Peios-distributed applications. |
-| `S-1-19-512-4096` | Protected (512) | 4096 | Core Peios components. |
 | `S-1-19-512-8192` | Protected (512) | 8192 | Peios TCB (peinit, authd, loregd, lpsd, eventd). |
-| `S-1-19-1024-8192` | Isolated (1024) | 8192 | Reserved — no v0.20 signing key targets this type. |
 
-The Isolated type exists for a future where some processes need to be protected from even the rest of the TCB. In v0.20 it is documented for forward compatibility; no binary will receive this type.
+The Isolated type (1024) exists for a future where some processes need to be protected from even the rest of the TCB. In v0.20 it is documented for forward compatibility; no binary will receive this type.
 
 Most processes on a running system have `pip_type = None`. PIP protection is opt-in via signing — most user-mode applications run unsigned and unprotected. The PIP-protected processes are the kernel's specifically-signed daemons.
 

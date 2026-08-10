@@ -8,6 +8,7 @@ related:
   - pekit/recipes/packages
   - pekit/using-pekit/invocation
   - pekit/reference/cli
+  - pekit/reference/supporting-files
 ---
 
 A pekit build is almost always **about a version** of some upstream software. The
@@ -48,7 +49,10 @@ ties.
 Six variables expose the parsed components of the selected version. They render
 anywhere pekit expands `{{...}}` templates in a recipe — most importantly in
 [source](~pekit/recipes/sources) refs and URLs, and in
-[package](~pekit/recipes/packages) version and metadata fields.
+[package](~pekit/recipes/packages) version and metadata fields. (These six are
+the version-derived subset of the template engine; the complete variable table,
+including the multi-package-only `{{multipack}}`, is in
+[Supporting files](~pekit/reference/supporting-files).)
 
 | Variable          | Expands to                       |
 | ----------------- | -------------------------------- |
@@ -206,10 +210,10 @@ from real releases.
 
 ## Single-version commands
 
-`build`, `package`, and `publish` are happy to run across many versions — pass
+`build`, `package`, and `publish` operate on many versions at once — pass
 `--all-versions` and pekit plans one build per version.
 
-`test` and `install` are not. They require the selector to resolve to **exactly
+`test` and `install` do not. They require the selector to resolve to **exactly
 one** version; if it resolves to more, the command fails with `test requires a
 single resolved version` (or `install requires ...`). Use an exact `--version` or
 `--latest` for these commands.

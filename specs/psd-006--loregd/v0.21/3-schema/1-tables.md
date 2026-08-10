@@ -43,7 +43,7 @@ CREATE TABLE keys (
 - **parent_guid:** GUID of the parent key. NULL for hive root.
 - **sd:** Security Descriptor in PSD-004 binary format.
 - **volatile:** 1 if volatile, 0 if persistent. Volatile keys are
-  stored in the attached in-memory database, not this table. This
+  stored in the in-process volatile store, not this table. This
   column exists only for persistent keys and is always 0 in the
   on-disk database. See §3.1.6.
 - **symlink:** 1 if this key is a symbolic link, 0 otherwise.
@@ -122,41 +122,67 @@ CREATE TABLE blanket_tombstones (
 - **layer:** Layer name.
 - **sequence:** Monotonic sequence number.
 
-## Volatile key schema
+## Volatile store
 
-Volatile keys are stored in the ATTACHed shared in-memory database
-(`volatile`). The volatile store uses SQLite's shared-cache URI
-(`file:<hivename>_volatile?mode=memory&cache=shared`) so all
-connections (read and write) for the same hive share the same
-volatile data. The volatile database has identical table
-structures:
+Volatile keys are not stored in SQLite. Each hive has a volatile
+store: an in-process, in-memory structure owned by loregd, created
+empty at startup and discarded at exit. The volatile store consists
+of four ordered maps mirroring the on-disk tables:
 
-```sql
--- In the 'volatile' attached database:
-CREATE TABLE volatile.keys          (...same columns as main.keys...);
-CREATE TABLE volatile.path_entries  (...same columns as main.path_entries...);
-CREATE TABLE volatile.values        (...same columns as main.values...);
-CREATE TABLE volatile.blanket_tombstones (...same columns...);
-
-CREATE INDEX volatile.idx_path_entries_target
-    ON path_entries (target_guid)
-    WHERE target_type = 0;
+```
+keys:                guid
+                       → (name, name_folded, parent_guid, sd,
+                          symlink, last_write_time)
+path_entries:        (parent_guid, child_name_folded, layer)
+                       → (child_name, target_type, target_guid,
+                          sequence)
+values:              (key_guid, name_folded, layer)
+                       → (name, type, data, sequence)
+blanket_tombstones:  (key_guid, layer)
+                       → (sequence)
 ```
 
+The maps MUST be ordered maps (B-tree or equivalent: any structure
+supporting point lookup and in-order range scans over a key
+prefix). Map keys are the same as the corresponding tables' primary
+keys, giving the same uniqueness guarantees. Composite keys order
+componentwise with bytewise comparison per component (GUIDs as
+16-byte values, folded names and layer names as binary strings),
+matching the binary comparisons the SQL schema performs. This makes
+every enumeration a contiguous range scan: all path entries under a
+parent_guid, all layer entries for one (parent_guid,
+child_name_folded), and all values or blanket tombstones for one
+key_guid.
+
+Field semantics are identical to the corresponding on-disk columns.
+The volatile record has no `volatile` field — every record in the
+volatile store is volatile by definition, and loregd reports
+volatile=1 for these keys in RSI responses.
+
+No secondary index is prescribed. Reverse lookups by target_guid
+(RSI_DROP_KEY, orphan capture in RSI_DELETE_LAYER) scan the
+path_entries map. Volatile stores hold transient runtime state and
+stay small; a scan is acceptable where the on-disk schema uses
+idx_path_entries_target.
+
 When processing RSI operations, loregd checks the volatile flag
-on the target key to determine which database to query/write:
-- volatile=1 → query/write `volatile.*` tables
-- volatile=0 → query/write `main.*` tables
+on the target key to determine which store to query/write:
+- volatile=1 → the volatile store's maps
+- volatile=0 → the `main.*` tables
 
 For RSI_LOOKUP and RSI_ENUM_CHILDREN, loregd MUST query both the
-main and volatile tables and merge the results, since a parent key
-may be persistent while a child is volatile (or vice versa, though
-a non-volatile child under a volatile parent is forbidden by
-PSD-005 §2.1).
+main tables and the volatile store and merge the results, since a
+parent key may be persistent while a child is volatile (or vice
+versa, though a non-volatile child under a volatile parent is
+forbidden by PSD-005 §2.1).
 
-For RSI_CREATE_KEY, loregd stores the key in the volatile database
+For RSI_CREATE_KEY, loregd stores the key in the volatile store
 if the volatile flag is set in the request, otherwise in the main
 database.
+
+Concurrency (readers–writer lock, single-writer discipline) is
+specified in §4.1; transactional behaviour (the transaction
+overlay) in §5.1.
 
 ## Case folding
 

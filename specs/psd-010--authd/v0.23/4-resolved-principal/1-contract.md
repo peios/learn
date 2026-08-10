@@ -27,9 +27,9 @@ A source MUST populate the following on success.
 |---|---|---|
 | `status` | `ok`, `denied(reason)`, or `must_change_password` (§5.1) | — |
 | `user_sid` | The principal's SID (`domain/machine SID` + RID) | `LogonDomainId` + `UserId` |
-| `primary_group_rid` | Primary group RID | `PrimaryGroupId` |
+| `primary_group_sid` | Primary group SID | `LogonDomainId` + `PrimaryGroupId`, or another source-authoritative group SID |
 | `account_name`, `display_name`, `upn` | Names | `EffectiveName`, `FullName`, UPN |
-| `groups` | Full group SIDs with `SE_GROUP_*` attributes, **already expanded within the source's namespace** | `GroupIds` + `ExtraSids` + `ResourceGroupIds` |
+| `groups` | Group SIDs with `SE_GROUP_*` attributes, expanded within — and **limited to** — the source's own authority (for lpsd, `machine_sid`-relative SIDs and the local `S-1-5-32` BUILTIN aliases it hosts; for a domain source, that domain's SIDs). authd validates this (§5.2). | `GroupIds` + `ExtraSids` + `ResourceGroupIds` |
 | `claims` | User and device claims, typed | `*_CLAIMS_INFO` |
 | `account_flags` | Account-control flags | `UserAccountControl` |
 | `pw_last_set`, `pw_must_change`, `account_expires` | Advisory policy instants (already *enforced* by the source) | `PasswordLastSet`, `PasswordMustChange`, `KickOffTime` |
@@ -38,7 +38,14 @@ A source MUST populate the following on success.
 
 A source MUST NOT include credential material or any verifier in the
 resolved principal. A source MUST NOT include the logon SID: the kernel
-injects it at mint (§5.3). The on-wire encoding of the resolved-principal
+injects it at mint (§5.3). A source MUST NOT include a group SID it is
+not authoritative to assert: no well-known SID (SYSTEM `S-1-5-18` and the
+`S-1-5-*` identity/logon SIDs — authd adds the implicit ones in the
+policy phase, §5.2 step 1), and, for a **domain** source, no local
+`S-1-5-32` BUILTIN alias, since a domain principal's local-group
+membership is authd's to resolve via the merge of §5.2 step 1. lpsd,
+which hosts the `S-1-5-32` aliases (§3.1), MAY assert membership in them.
+authd MUST reject a resolved principal that violates this (§5.2). The on-wire encoding of the resolved-principal
 record — field order, widths, and how `denied(reason)` carries its
 audit-only reason — is defined normatively in §6.4.
 

@@ -26,16 +26,42 @@ When a shard database file does not exist at startup, eventd MUST create it with
 
 ## Database opening
 
-When a shard database file exists at startup, eventd MUST:
+When an active shard database file exists at startup, eventd MUST:
 
 1. Open the database in WAL mode.
 2. Set synchronous mode to FULL.
-3. Read and verify the `schema_version` metadata entry. If the version is unrecognised, eventd MUST log an error and MUST NOT write to that database. The database remains available for read-only queries.
-4. Verify structural integrity (the required tables exist). If verification fails, eventd MUST log an error and MUST NOT write to that database.
+3. Read and verify the `schema_version` metadata entry. If the version is
+   missing or unrecognised, eventd MUST fail startup. Automatic schema
+   migration is out of scope for v0.23 and MUST NOT be attempted.
+4. Verify structural integrity (the required tables and write-time indexes
+   exist). If verification fails without SQLite reporting database corruption,
+   eventd MUST fail startup.
+5. If SQLite reports database corruption while opening or verifying the active
+   shard, eventd MUST quarantine the corrupt database files by renaming the
+   main database file, and any matching `-wal` and `-shm` files, to names with
+   the suffix `.corrupt.<timestamp_ns>`, then create a new empty active shard
+   database at the original `shard-NNNN.db` path.
+
+If a quarantine target name already exists, eventd MUST append `.N` where `N` is
+the lowest positive decimal integer that makes the target name unique. The main
+database, `-wal`, and `-shm` files from the same quarantine operation MUST use
+the same suffix.
+
+Historical shard databases from previous configurations are never required for
+startup. If a historical shard has a missing/unrecognised schema version, fails
+structural verification, or cannot be opened read-only, eventd MUST log the
+error and exclude that database from the query path for this run.
 
 ## Query path discovery
 
-The query path MUST discover all `.db` files in the event store directory and open them for reading. This includes active shard databases, historical shard databases from previous configurations, and any archive databases created by the retention mechanism. The query path MUST NOT assume a fixed number of databases.
+The query path MUST discover all files in the event store directory whose names
+match the active shard naming pattern (`shard-NNNN.db`) and open them for
+reading when they have a recognised schema and pass structural verification.
+This includes active shard databases and historical shard databases from
+previous configurations. The query path MUST NOT assume a fixed number of shard
+databases.
+
+The query path MUST NOT treat every `.db` file in the event store directory as an event shard. In particular, it MUST exclude `eventd-meta.db` and any other non-shard database file.
 
 Each database is opened with a read-only connection. Read-only connections do not contend with the writer thread's connection.
 

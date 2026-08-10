@@ -4,12 +4,13 @@ title: Prior Art
 
 ## SQLite
 
-loregd uses SQLite as its storage engine. SQLite provides the
-transactional semantics, WAL-mode concurrency, and crash recovery
-that loregd relies on. loregd is specified against SQLite directly
-— the schema, concurrency model, and operational behaviour all name
-SQLite features (WAL mode, ATTACH, SAVEPOINT, shared-cache URIs,
-PRAGMA).
+loregd uses SQLite as its persistent storage engine. SQLite
+provides the transactional semantics, WAL-mode concurrency, and
+crash recovery that loregd relies on. loregd is specified against
+SQLite directly — the schema, concurrency model, and operational
+behaviour all name SQLite features (WAL mode, SAVEPOINT, PRAGMA).
+Volatile keys never touch SQLite: they are held in an in-process
+volatile store (§3.1.6) and do not survive loregd's exit.
 
 An alternative storage engine would need to provide equivalent
 semantics but is not the target of this specification.

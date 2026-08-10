@@ -29,6 +29,10 @@ All three types support the same operations. The differences are in the underlyi
 
 ## Operations
 
+Four reading operations cover almost every test. Their exact semantics — frame shapes per type, default timeouts, error strings, and the pending-bytes buffer — are in the [Streams reference](~provium/reference/streams#common-methods); this section shows how each is used.
+
+One shared property matters for correctness: bytes past an `expect`/`read_until` match are kept and replayed on the next call, so a sequence of reads never silently loses data.
+
 ### `:next(timeout?)` — pull the next chunk
 
 Returns the next chunk of bytes as a Lua string, or `nil` at EOF / timeout.
@@ -40,23 +44,13 @@ local frame = stream:next("5s")
 print(frame)  -- "Jan  1 00:00:00 v: event\n"
 ```
 
-Frame shape per type:
-
-- **Tail**: one frame per agent-side write — usually one log line, possibly a multi-line write.
-- **Capture**: chunks of pcap bytes from tcpdump's pipe (variable size, up to 64 KiB).
-- **ConsoleStream**: chunks of console bytes from the chardev socket (variable size, up to 64 KiB).
-
-Default timeout: 10 seconds.
-
 ### `:read_until(pattern, timeout?)` — read until a substring
 
 ```lua
 local line = stream:read_until("\n", "5s")
 ```
 
-Pulls frames until `pattern` (a Lua string of bytes) appears in the accumulated buffer. Returns the prefix up to AND including the matched bytes. Errors with the pattern in the message on timeout.
-
-Bytes past the matched suffix are kept as `pending` and replayed on the next call. Important: this means a sequence of `read_until` calls never silently loses data.
+Pulls frames until `pattern` (a Lua string of bytes) appears. Returns the prefix up to AND including the matched bytes. Errors with the pattern in the message on timeout.
 
 ### `:expect(pattern, timeout?)` — assert and discard
 
@@ -75,41 +69,11 @@ local chunks = stream:drain("2s")
 local body = table.concat(chunks)
 ```
 
-Read frames until the stream is quiet for the timeout, EOF, or the timeout lapses. Useful for "what did the stream produce in this window?"
+Read frames until the stream goes quiet, hits EOF, or the timeout lapses. Useful for "what did the stream produce in this window?" Note its default timeout is deliberately short (0.5 s vs 10 s for the other ops).
 
-Default timeout: 0.5 seconds (much shorter than `next` because drain's intent is "snapshot what's available").
+### Housekeeping: `:close()`, `:eof()`, `:creation_site()`
 
-Pending bytes from a prior `expect`/`read_until` come out as the first entry, so drain doesn't silently lose them.
-
-### `:close()` — drop the underlying transport
-
-```lua
-stream:close()
-stream:next()    -- returns nil (closed stream is semantically EOF)
-stream:expect("…")  -- raises "stream closed"
-```
-
-Idempotent. Pending bytes are dropped on close so a `:next` after close can't drain stale data.
-
-### `:eof()` — has the stream reported EOF?
-
-```lua
-while not stream:eof() do
-    local chunk = stream:next("100ms")
-    if chunk then process(chunk) end
-end
-```
-
-Returns `true` once the underlying transport reported EOF AND no `pending` bytes remain. Pending bytes mean `eof` returns `false` until they've been consumed.
-
-### `:creation_site()` — where was this stream opened?
-
-```lua
-local site = stream:creation_site()
--- {file = "tests/x.test.lua", line = 42}
-```
-
-Returns `{file=string, line=int}` for the test-author frame at creation time, or `nil` if the stream was opened from a frame that doesn't look like `*.test.lua` / `*.fixture.lua`. Mostly useful for snapshot diagnostics — when a snapshot fails because of a live stream, the error names the offending stream's creation site.
+`stream:close()` drops the underlying transport (idempotent; a closed stream reads as EOF). `stream:eof()` tells you the stream is finished and fully consumed. `stream:creation_site()` reports where the stream was opened — you'll mostly meet it in snapshot-refusal errors. Exact semantics for all three are in the [Streams reference](~provium/reference/streams#common-methods).
 
 ## Choosing between next, read_until, expect, drain
 
@@ -147,13 +111,11 @@ For Tail specifically, the closed-stream-returns-nil behaviour mirrors Capture a
 
 ```lua
 vm:tail_file("/var/log/messages")                    -- start at end (default)
-vm:tail_file("/var/log/messages", {start = "end"})   -- explicit
 vm:tail_file("/var/log/messages", {start = "beginning"})  -- replay from byte 0
-vm:tail_file("/var/log/messages", {start = 1024})    -- start at byte 1024
 vm:tail_file("/var/log/messages", {start = -512})    -- last 512 bytes then follow
 ```
 
-`"end"` is the most common — only bytes appended after the call are streamed. `"beginning"` is useful for tests that need to assert on the whole file. Non-negative integer offsets are useful when you've previously seek'd to a known position. **Negative integers** mean "N bytes before EOF" — provium stats the file and resolves to an absolute offset. If N is larger than the current size, the stream starts at byte 0. Floats are accepted and truncated toward zero.
+`"end"` is the most common — only bytes appended after the call are streamed. `"beginning"` is useful for tests that need to assert on the whole file. Negative integers mean "N bytes before EOF". The full `start` value table (exact offsets, clamping, float handling) is in the [Streams reference](~provium/reference/streams#tail-only-behaviour).
 
 ## Capture: pcap bytes
 
@@ -171,7 +133,7 @@ local r = vm:run("tcpdump -r /tmp/test.pcap -n")
 print(r.stdout)
 ```
 
-Capture pins the bridge's `active_captures` counter — the snapshot precondition checks this counter before allowing `vm:snapshot()`. So a live capture blocks snapshots; this is on purpose, not a bug. Close the capture before snapshotting.
+A live capture blocks `vm:snapshot()` on purpose — no half-captured pcaps. Close the capture before snapshotting. (The mechanism is described in the [Streams reference](~provium/reference/streams#capture-only-notes).)
 
 ## ConsoleStream: bytes from the chardev
 
@@ -186,11 +148,7 @@ console:write("toor\n")
 stream:expect("# ", "5s")
 ```
 
-ConsoleStream wraps a `UnixStream` to QEMU's chardev socket. Reads come back as raw bytes from the chardev — typically the boot log, login prompt, and anything the guest has written to `/dev/ttyS0` since the last read.
-
-Mid-stream `ConnectionReset` and `BrokenPipe` are mapped to "console EOF" — they happen on VM reset / shutdown, where they're semantically EOF rather than I/O errors.
-
-The connect-time read timeout is 50 ms. The `:next(timeout)` arg overrides it for the duration of the call and the previous timeout is restored afterwards, so a `next("5s")` followed by a bare `next()` doesn't inherit the 5s deadline.
+ConsoleStream reads raw bytes from QEMU's console chardev — typically the boot log, login prompt, and anything the guest has written to `/dev/ttyS0` since the last read. A VM reset or shutdown reads as console EOF, not an error. Transport details (socket, timeouts, error mapping) are in the [Streams reference](~provium/reference/streams#consolestream-only-notes).
 
 ## Process streams
 

@@ -29,11 +29,7 @@ lan:attach({a, b})  -- atomic; either all attach or none do
 a:run("ping -c 1 -W 1 b.lan"):assert_ok()
 ```
 
-`bridge:attach(vm_or_list)`:
-
-- Single VM: `lan:attach(a)`.
-- Bare string (graph-state only — no QMP wiring): `lan:attach("a")`.
-- Array: `lan:attach({a, b, c})`. Validated atomically before any element is recorded — a bad type at index N fails before any commit.
+`bridge:attach` takes a single VM or an array (validated atomically — a bad element fails before anything is recorded). The bare-string form and its graph-state-only caveat are in the [Bridge reference](~provium/reference/bridge#membership).
 
 The host-side bridge interface and per-VM TAPs come up the first time any attached VM boots.
 
@@ -75,9 +71,7 @@ lan:partition({from = a, to = b})    -- only A→B dropped; B→A still flows
 lan:unpartition({from = a, to = b})
 ```
 
-Directional partitions install per-TAP nft rules and require **both endpoints to be already attached and booted**. Otherwise they error with a "call bridge:attach first" pointer (the rule would otherwise install onto a non-existent TAP and silently do nothing).
-
-The directional `unpartition` is more lenient — it doesn't require the endpoints to still be attached, so a `detach()` followed by an `unpartition` is a clean no-op rather than an error.
+Directional partitions install per-TAP nft rules and require **both endpoints to be already attached and booted** — otherwise they error with a "call bridge:attach first" pointer. The (more lenient) `unpartition` semantics are in the [Bridge reference](~provium/reference/bridge#partitions).
 
 ### Whole-bridge
 
@@ -121,9 +115,7 @@ lan:bandwidth_limit(1024 * 1024)                       -- 1 Mbit/s, both ways
 lan:bandwidth_limit({from = a, to = b, bps = 500000})  -- 500 kbit/s leaving A
 ```
 
-The number is **bits per second**, not bytes — matches `tc rate Nbit`. The whole-bridge form installs a TBF qdisc on the bridge interface. The directional form installs an HTB qdisc on the source TAP, with a netem child if latency or drop is set on the same source.
-
-The `to` argument is graph-recorded but the realisation shapes **every packet leaving the source TAP** — HTB on a Linux bridge can't reliably select packets by destination MAC. If you set `(from=a, to=b, bps=X)` and `(from=a, to=c, bps=Y)`, the realised rate is `max(X, Y)` so no recorded pair is over-shaped.
+The number is **bits per second**, not bytes — matches `tc rate Nbit`. Two realisation caveats matter when you design a test: the directional form shapes every packet leaving the source TAP (not just traffic to the named `to`), and whole-bridge bandwidth is not enforced while whole-bridge latency/drop is also set — for combined shaping use the directional form on each source. The full realisation details (TBF vs HTB, `max(bps)` collapse across pairs) are in the [Bridge reference](~provium/reference/bridge#bridgebandwidth-limitbps-or-table).
 
 Combine directional bandwidth with directional latency / drop on the same source for a complete profile:
 
@@ -132,8 +124,6 @@ lan:bandwidth_limit({from = a, to = b, bps = 1_000_000})
 lan:add_latency({from = a, to = b, ms = 25})
 lan:drop_rate({from = a, to = b, p = 1})
 ```
-
-Whole-bridge bandwidth and whole-bridge latency/drop don't combine on the same bridge: the latency/drop shaping is what's realised, and the bandwidth cap is recorded in the graph but not enforced. For combined shaping use the directional form on each source.
 
 ### Reset
 
@@ -176,20 +166,15 @@ local nic = a:nic("eth0")             -- by guest-name index
 local nic = lan:nic(a)                -- equivalent
 ```
 
-The Nic gives you per-NIC capabilities the bridge can't:
+The Nic gives you per-NIC capabilities the bridge can't. The ones you'll use most:
 
 ```lua
-nic:counters()         -- {rx_bytes, tx_bytes, rx_packets, tx_packets, errors}
+nic:counters()         -- per-NIC traffic counters, guest's perspective
 nic:disconnect()       -- link-down via QMP set_link(false)
 nic:reconnect()        -- link-up
-nic:capture()          -- pcap on this NIC's TAP
-nic:vm_name()          -- "a"
-nic:bridge()           -- "lan"
 ```
 
-`counters` are presented from the **guest's perspective** — `rx_bytes` is bytes the guest received (host TAP's `tx_bytes`).
-
-`disconnect` / `reconnect` drive QMP `set_link` so the guest sees a real link-down event. With a bare-string Nic (`bridge:nic("name")` — no VM userdata), the QMP step is skipped and the call is graph-state only.
+`disconnect` / `reconnect` drive QMP `set_link` so the guest sees a real link-down event. The full method list, the counter field table (and its guest-perspective mapping), and the graph-state-only bare-string case are in the [Nic reference](~provium/reference/nic).
 
 ## Packet capture
 
@@ -205,9 +190,7 @@ local pcap = table.concat(frames)
 -- pcap is now standard pcap-format bytes, parseable by tshark, etc.
 ```
 
-`bridge:capture()` spawns `tcpdump -i <bridge> -U -w -` and returns a [Capture](~provium/reference/streams) stream. Reads pcap bytes off tcpdump's stdout.
-
-Requires `tcpdump` on `PATH` and `CAP_NET_RAW`. The capture pins the bridge's `active_captures` counter so a `vm:snapshot()` while the capture is live errors instead of silently producing a half-captured pcap.
+`bridge:capture()` returns a [Capture](~provium/reference/streams) stream of pcap-format bytes. It requires `tcpdump` on `PATH`, and a live capture blocks `vm:snapshot()` (no half-captured pcap) — capability requirements and the mechanism are in the [Bridge reference](~provium/reference/bridge#bridgecapture).
 
 ### Per-NIC capture
 
@@ -238,12 +221,9 @@ lan:disable_uplink()
 
 ```lua
 lan:route(other_bridge)
--- prints once: "bridge:route on `lan` is graph-state only in v1
--- (no nft forward rules installed). Cross-bridge IP traffic will
--- not actually flow until the L3 routing slice lands."
 ```
 
-`bridge:route` records the routing intent in the graph but installs no nft forward rules in v1. `bridge:routes()` returns the recorded routes. Plan tests around the limitation.
+`bridge:route` records the routing intent in the graph but installs no nft forward rules in v1 — cross-bridge IP traffic does not actually flow yet, and the first call per bridge prints a one-shot warning saying so. `bridge:routes()` returns the recorded routes. Plan tests around the limitation. See the [Bridge reference](~provium/reference/bridge#l3-routing-preview).
 
 ## Common patterns
 

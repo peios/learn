@@ -98,7 +98,7 @@ The two-check rule fires on every cross-process operation. The full list of kern
 
 | Operation | Process right needed | Notes |
 |---|---|---|
-| `kill`, signal delivery | `PROCESS_TERMINATE` or `PROCESS_SIGNAL` (depending on signal class) | PIP dominance also required. SIGTERM, SIGKILL, etc. need TERMINATE; SIGCHLD, SIGURG need SIGNAL. |
+| `kill`, signal delivery | `PROCESS_TERMINATE`, `PROCESS_SUSPEND_RESUME`, or `PROCESS_SIGNAL` (by signal class) | PIP dominance also required. Classified by default disposition — see [Signals in detail](#signals-in-detail) for the full rules, the self-exemption, and the kernel-originated bypass. |
 | `kill -STOP`, `kill -CONT` | `PROCESS_SUSPEND_RESUME` | PIP dominance required. |
 | `ptrace(PTRACE_ATTACH)`, `ptrace(PTRACE_POKE*)` | `PROCESS_VM_WRITE` | PIP dominance required. SeDebug bypasses the SD; not PIP. |
 | `ptrace(PTRACE_PEEK*)` | `PROCESS_VM_READ` | Same. |
@@ -137,6 +137,22 @@ When the two-check rule denies an operation, the failure mode depends on the ope
 - **kacs_open_process_token** returns `-EACCES`.
 
 The kernel deliberately does not always distinguish "you do not have the right" from "this process does not exist" — for some sensitive operations, returning the same error in both cases prevents a low-trust caller from learning about the presence of high-trust processes.
+
+## Signals in detail
+
+Signal delivery is the two-check operation with the most edge cases, so the rules deserve spelling out.
+
+**Which right a signal needs is decided by its default disposition.** Signals whose default action terminates the target — SIGTERM and SIGKILL, but also SIGHUP, SIGINT, SIGUSR1/2, SIGPIPE, and every realtime signal — require `PROCESS_TERMINATE`. The job-control set (SIGSTOP, SIGTSTP, SIGTTIN, SIGTTOU, SIGCONT) requires `PROCESS_SUSPEND_RESUME`. Signals ignored by default (SIGCHLD, SIGURG, SIGWINCH) require `PROCESS_SIGNAL`. The `kill(pid, 0)` existence probe delivers nothing and requires `PROCESS_QUERY_LIMITED` — it is a query, and it is treated as one.
+
+**Self-signaling is exempt, structurally.** A thread signaling its own process — `raise()`, `abort()`, `pthread_kill()` to a sibling thread — never runs either check. This does not rely on the default process SD granting the process access to itself: it holds even for restricted or confined tokens that would fail an access check against their own SD. A sandboxed process can always abort itself.
+
+**Kernel-originated signals bypass the checks entirely** — there is no sending process to check. This covers hardware faults (SIGSEGV, SIGBUS), kernel notifications (SIGCHLD on child exit, SIGPIPE on broken pipe), and — the case worth pausing on — **terminal-generated job control**. When you press Ctrl-C, the tty driver signals the foreground process group; no permission check runs, and the interrupt reaches the foreground processes *even if they are more privileged or more PIP-trusted than you*. This is deliberate: authorization for keyboard signals is possession of the controlling terminal (gated by the terminal's file SD when it was opened), and a privileged process that attaches to your terminal has chosen to take input from you. Note the limit: this path only carries the terminal's own signals — nobody can use it to deliver an arbitrary `kill()`.
+
+**Group kills are checked per target.** `kill(-pgid, ...)`, `kill(0, ...)`, and `kill(-1, ...)` evaluate each candidate process independently, deliver to the subset the caller may signal, and succeed if at least one delivery happened. A mixed-privilege process group (an elevated member in your pipeline) gets partial delivery — the same behavior Linux exhibits for mixed-uid groups.
+
+**There is no same-session SIGCONT exception.** POSIX carves out "any process may SIGCONT members of its own session"; Peios does not implement it — SIGCONT needs `PROCESS_SUSPEND_RESUME` like the rest of the job-control set. In practice the default process SD's user-SID entry covers resuming your own stopped jobs; the divergence only surfaces when resuming a same-session process whose identity no longer matches yours.
+
+**`si_pid` and `si_uid` are informational.** The sender identity carried in `siginfo_t` is the sender's [projected UID](~peios/linux-compatibility/credential-projection) captured at send time, plus a PID that may have been recycled by the time you read it. Like `SO_PEERCRED`, these are for logging and display, never for authorization.
 
 ## Why both checks exist
 

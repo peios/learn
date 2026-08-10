@@ -19,8 +19,9 @@ how they compose and override, how `[wrap]` wrappers change the way the command 
 launched, and how keyrings resolve and inject values.
 
 For the exhaustive list of managed `PEKIT_*` variables and what each one means, see
-[Recipe anatomy](~pekit/recipes/anatomy). This page covers everything you add on
-top of that contract.
+the [environment contract in the command-line reference](~pekit/reference/cli);
+[Recipe anatomy](~pekit/recipes/anatomy) walks through the ones you will use most.
+This page covers everything you add on top of that contract.
 
 ## The three layers
 
@@ -41,8 +42,8 @@ namespaces are kept disjoint by hard rules:
 - A keyring export that collides with a user `[env]` variable or with a managed
   variable is an `env_collision` error, not a silent override.
 
-So the layers never actually fight: managed owns `PEKIT_*`, keyrings own
-`PEKIT_KEYRING_*`, and everything else is yours.
+So the layers never actually collide: managed owns `PEKIT_*`, keyrings own
+`PEKIT_KEYRING_*`, and the user layer owns everything else.
 
 ## The `[env]` block
 
@@ -107,18 +108,11 @@ the three. It lets you keep environment- or profile-specific settings out of the
 recipe proper. An env file must declare at least one of those keys; the only
 recognised top-level keys are `env`, `wrap`, and `dependency_provider`.
 
-Which env file is loaded is controlled by `--env <name>`:
-
-| `--env` value | File loaded | Must exist? |
-| --- | --- | --- |
-| *(omitted)* / `main` | `env.pekit.toml` | No — silently skipped if absent |
-| `none` | *(none)* | — |
-| `<name>` | `<name>.env.pekit.toml` | Yes — missing file is an error |
-
-The default is `main`, so `env.pekit.toml` is picked up automatically when present.
-Passing `--env none` disables env-file loading entirely. Any other name selects a
-named profile such as `release.env.pekit.toml` (`--env release`), which **must**
-exist.
+Which env file is loaded is controlled by `--env <name>`. The default is `main`,
+so `env.pekit.toml` is picked up automatically when present and silently skipped
+when absent. Passing `--env none` disables env-file loading entirely. Any other
+name selects a named profile such as `release.env.pekit.toml` (`--env release`),
+which **must** exist — a missing named file is an error.
 
 ```toml
 # release.env.pekit.toml
@@ -128,7 +122,7 @@ dependency_provider = "peipkg"
 CFLAGS = "-O3 -DNDEBUG"
 ```
 
-For the exact env-file schema, see
+For the exact env-file schema and the selection table, see
 [Supporting files](~pekit/reference/supporting-files).
 
 ## `[wrap]` wrappers
@@ -222,9 +216,9 @@ the same key.
 ### `--keyring.<dotted.path>=<value>` (literals)
 
 To inject a single value without a file, use `--keyring.<dotted.path>=<value>`. The
-dotted path is sanitised into an exported variable name: it is upper-cased, every
-run of non-alphanumeric characters collapses to a single `_`, and the result is
-prefixed with `PEKIT_KEYRING_`.
+dotted path is sanitised into an exported variable name — upper-cased, prefixed
+with `PEKIT_KEYRING_`; the exact sanitisation rules are in
+[Supporting files](~pekit/reference/supporting-files).
 
 ```bash
 pekit build --keyring.tcb.priv=<value>

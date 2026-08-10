@@ -34,14 +34,13 @@ source table is allowed").
 
 ### `[source.git]`
 
-Clones a git repository and checks out a ref.
-
-| Field | Required | Default | Meaning |
-| --- | --- | --- | --- |
-| `url` | yes | — | Repository URL passed to `git clone --mirror`. |
-| `ref` | no | `{{version}}` | Ref to check out. Templated with the [selected version](~pekit/recipes/versions) (`{{version}}`, `{{major}}`, …). Must render non-empty. |
-| `versions` | no | — | Version **cap**: a constraint that filters enumerated or requested versions. See [Versions](~pekit/recipes/versions). |
-| `tag_regex` | no | — | Regex used when enumerating tags (see [Enumeration](#enumeration)). |
+Clones a git repository and checks out a ref. It takes exactly four fields —
+a required `url` (passed to `git clone --mirror`), a `ref` to check out
+(templated with the [selected version](~pekit/recipes/versions); defaults to
+`{{version}}` and must render non-empty), a `versions` **cap** that filters
+enumerated or requested versions, and a `tag_regex` used when enumerating tags
+(see [Enumeration](#enumeration)). The field-by-field schema is in the
+[recipe format reference](~pekit/reference/recipe-format).
 
 ```toml
 [source.git]
@@ -60,16 +59,14 @@ non-templated `ref`.
 
 ### `[source.url]`
 
-Downloads a file over HTTP(S), optionally extracting it as an archive.
-
-| Field | Required | Default | Meaning |
-| --- | --- | --- | --- |
-| `url` | yes | — | Download URL. Templated with the selected version. |
-| `extract` | no | `false` | If true, treat the download as an archive and extract it. |
-| `root` | no | `"."` | Subdirectory **inside the archive** to promote as the source tree. Templated; only meaningful when `extract = true`. |
-| `versions` | no | — | Version cap (as for git). |
-| `file_regex` | no | — | Regex used when enumerating a URL listing. |
-| `checksum` | no | — | Expected digest, or a per-version table (see below). |
+Downloads a file over HTTP(S), optionally extracting it as an archive. The
+required `url` is templated with the selected version; `extract` (default
+`false`) treats the download as an archive, with `root` naming the subdirectory
+**inside the archive** to promote as the source tree; `versions` is a version
+cap (as for git); `file_regex` is used when enumerating a URL listing; and
+`checksum` pins the download to an expected digest — a single string or a
+per-version table (see below). The full schema is in the
+[recipe format reference](~pekit/reference/recipe-format).
 
 ```toml
 [source.url]
@@ -96,11 +93,9 @@ matters for [reproducible packaging](~pekit/recipes/packages).
 
 ### `[source.local]`
 
-Points at a directory already on disk.
-
-| Field | Required | Meaning |
-| --- | --- | --- |
-| `path` | yes | Directory to use as the source tree. Resolved relative to the recipe directory. |
+Points at a directory already on disk. Its single field is a required `path` —
+the directory to use as the source tree, resolved relative to the recipe
+directory.
 
 ```toml
 [source.local]
@@ -273,15 +268,11 @@ wrap     = true
 packages = true
 ```
 
-`[delegate]` has four surfaces plus `all`:
-
-| Key | Borrows |
-| --- | --- |
-| `all` | all of the below |
-| `build` | build/test/install/clean **targets** from the source's recipe |
-| `env` | environment variables from the source's env file |
-| `wrap` | the command wrapper from the source's env file |
-| `packages` | package definitions discovered in the source tree |
+`[delegate]` has four surfaces plus `all`: `build` borrows the
+build/test/install/clean **targets** from the source's recipe, `env` its
+environment variables, `wrap` its command wrapper, and `packages` the package
+definitions discovered in the source tree; `all` enables all four. (The key
+table is in the [recipe format reference](~pekit/reference/recipe-format).)
 
 Delegation only happens when the source tree is a **different** directory from
 the recipe (so a sourceless or in-place local recipe never delegates), and, for

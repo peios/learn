@@ -4,6 +4,8 @@ title: Token Ioctls
 
 Token fds support the following ioctls. Each fd carries a per-handle access mask that gates which ioctls the holder can call.
 
+All token fds are created with `O_CLOEXEC` set. Token fds MUST NOT be inherited across `execve()` by default. A process that needs to pass a token fd to a child across exec MUST explicitly clear `FD_CLOEXEC` via `fcntl(F_SETFD)`. This matches the Windows model where handles are not inherited by default.
+
 ## KACS_IOC_QUERY
 
 Queries token information. Takes a query class and output buffer. Uses the two-call pattern: call with `buf_len=0` to get the needed size, then call again.
@@ -21,15 +23,15 @@ Requires TOKEN_QUERY (0x0008).
 | TokenSource | 8-byte name + source ID. |
 | TokenType | Primary (1) or Impersonation (2). |
 | TokenImpersonationLevel | Anonymous / Identification / Impersonation / Delegation. Primary tokens return Anonymous. |
-| TokenStatistics | Token ID, logon session ID, modified ID, token type, expiration. |
+| TokenStatistics | Token ID, LogonSession ID, modified ID, token type, expiration. |
 | TokenRestrictedSids | Restricting SID array. |
-| TokenSessionId | Interactive session ID. |
-| TokenOrigin | Originating logon session ID. |
+| TokenInteractivityScope | Interactivity scope number. |
+| TokenOrigin | Originating LogonSession ID. |
 | TokenElevationType | Default (1) / Full (2) / Limited (3). |
 | TokenIntegrityLevel | Mandatory integrity SID. |
 | TokenMandatoryPolicy | NO_WRITE_UP, NEW_PROCESS_MIN flags. |
-| TokenLogonType | Logon type from the token's logon session (looked up via `auth_id` in the session table). |
-| TokenLogonSid | The session's logon SID (`S-1-5-5-X-Y`). |
+| TokenLogonType | Logon type from the token's LogonSession (looked up via `auth_id` in the LogonSession table). |
+| TokenLogonSid | The LogonSession's logon SID (`S-1-5-5-X-Y`). |
 | TokenDeviceGroups | Device group SIDs. |
 | TokenAppContainerSid | Confinement SID (empty if not confined). |
 | TokenCapabilities | Confinement capability SIDs. |
@@ -72,11 +74,20 @@ process SD is automatically regenerated using the default template with the new
 token's user SID as owner. If the user SID does not change, the existing
 process SD is preserved.
 
-Requires TOKEN_ASSIGN_PRIMARY (0x0001) on the handle and SeAssignPrimaryTokenPrivilege on the caller's real token.
+### Requirements
+
+- TOKEN_ASSIGN_PRIMARY (0x0001) on the handle.
+- SeAssignPrimaryTokenPrivilege on the caller's real token.
+- The new token's user SID MUST match the caller's current primary token's user SID, unless the caller has SeTcbPrivilege.
+- The new token MUST belong to the same LogonSession (matching `auth_id`) as the caller's current primary token, unless the caller has SeTcbPrivilege.
+
+The SID and LogonSession constraints prevent a non-TCB holder of SeAssignPrimaryTokenPrivilege from installing an arbitrary high-privilege token on itself. SeTcbPrivilege bypasses the SID and LogonSession-matching constraints — this is the mechanism peinit uses when installing service tokens with different user SIDs.
 
 ## KACS_IOC_DUPLICATE
 
 Deep-clones the token into a new token fd. Takes: target token type, target impersonation level, and desired access mask for the new handle. Impersonation level escalation is forbidden only when the source token is already an impersonation token (new level MUST be <= source level in that case). A primary token duplicated to Impersonation MAY use any caller-selected impersonation level. When duplicating to Primary, impersonation_level is set to Anonymous. The duplicate's `elevation_type` is reset to Default. The `modified_id` is initialized to the new `token_id`.
+
+When the target impersonation level is Anonymous, the duplicate is stripped to a minimal Anonymous token: user SID = `S-1-5-7`, no groups (except Everyone per system policy), no privileges, integrity = Untrusted. The source token's identity is not carried forward. See §9.3 for the full Anonymous semantics.
 
 The desired access mask for the new handle is checked against the new token's SD (which is a freshly generated default SD). The caller's effective token is the subject for this AccessCheck.
 
@@ -121,11 +132,11 @@ Reset does NOT undo deny-only status set by FilterToken —
 
 Requires TOKEN_ADJUST_GROUPS (0x0040).
 
-## KACS_IOC_ADJUST_SESSIONID
+## KACS_IOC_ADJUST_INTERACTIVITY_SCOPE
 
-Changes the token's interactive session ID. Takes a `u32` session ID value.
+Changes the token's interactivity scope. Takes a `u32` scope value.
 
-Requires TOKEN_ADJUST_SESSIONID (0x0100) on the handle and SeTcbPrivilege on the caller's real token. Bumps `modified_id`.
+Requires TOKEN_ADJUST_INTERACTIVITY_SCOPE (0x0100) on the handle and SeTcbPrivilege on the caller's real token. Bumps `modified_id`.
 
 ## KACS_IOC_ADJUST_DEFAULT
 
@@ -141,9 +152,9 @@ Requires TOKEN_DUPLICATE (0x0002).
 
 ## KACS_IOC_LINK_TOKENS
 
-Associates an elevated/filtered token pair on a logon session. Takes a struct with two token fds: `elevated_fd` (first) and `filtered_fd` (second), plus a `session_id`. Both tokens MUST belong to the specified logon session, MUST be primary tokens, and MUST carry the same user SID. The pair is registered at the session level. Upon successful linking, the elevated token's `elevation_type` is set to Full and the filtered token's `elevation_type` is set to Limited. This is the only mechanism that sets elevation_type to a non-Default value.
+Associates an elevated/filtered token pair on a LogonSession. Takes a struct with two token fds: `elevated_fd` (first) and `filtered_fd` (second), plus a `logon_session_id`. Both tokens MUST belong to the specified LogonSession, MUST be primary tokens, and MUST carry the same user SID. The pair is registered at the LogonSession level. Upon successful linking, the elevated token's `elevation_type` is set to Full and the filtered token's `elevation_type` is set to Limited. This is the only mechanism that sets elevation_type to a non-Default value.
 
-Requires SeTcbPrivilege. Both token fds require TOKEN_DUPLICATE access. "Belongs to" means the token's `auth_id` equals the specified `session_id` (LUID comparison). The `session_id` parameter is a `u64` LUID. Linking tokens that are already part of a pair replaces the existing pair on that session. Linking a token to itself returns `-EINVAL`. If a token already has `elevation_type = Full`, it MAY be relinked only in the `elevated_fd` role. If a token already has `elevation_type = Limited`, it MAY be relinked only in the `filtered_fd` role. Role changes fail with `-EINVAL`.
+Requires SeTcbPrivilege. Both token fds require TOKEN_DUPLICATE access. "Belongs to" means the token's `auth_id` equals the specified `logon_session_id` (LUID comparison). The `logon_session_id` parameter is a `u64` LUID. Linking tokens that are already part of a pair replaces the existing pair on that session. Linking a token to itself returns `-EINVAL`. If a token already has `elevation_type = Full`, it MAY be relinked only in the `elevated_fd` role. If a token already has `elevation_type = Limited`, it MAY be relinked only in the `filtered_fd` role. Role changes fail with `-EINVAL`.
 
 ## KACS_IOC_GET_LINKED_TOKEN
 
@@ -152,7 +163,7 @@ Retrieves the partner token from a linked pair. Behavior depends on privilege:
 - **Without SeTcbPrivilege:** returns a deep clone at Identification impersonation level with TOKEN_QUERY access only. The clone follows DuplicateToken semantics for independent object creation (new token object, new `token_id`, `modified_id` initialized to the new `token_id`, fresh default token SD), except that it preserves the partner token's `elevation_type`. The caller can inspect the partner's identity but MUST NOT impersonate it or use it for access decisions.
 - **With SeTcbPrivilege:** returns a full primary token handle to the actual linked token. The caller receives full usability — this is required for system daemons (authd) that manage linked pairs.
 
-Requires TOKEN_QUERY (0x0008). If the token is not part of a linked pair (elevation_type is Default, or the pair was destroyed by session termination), returns `-ENOENT`.
+Requires TOKEN_QUERY (0x0008). If the token is not part of a linked pair (elevation_type is Default, or the pair was destroyed by LogonSession termination), returns `-ENOENT`.
 
 > [!INFORMATIVE]
 > Returning TOKEN_QUERY via TOKEN_QUERY (rather than requiring TOKEN_DUPLICATE) is an intentional exception to the normal handle model. This matches the Windows `TokenLinkedToken` query behavior.
