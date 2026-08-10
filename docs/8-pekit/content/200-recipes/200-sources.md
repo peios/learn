@@ -161,7 +161,12 @@ effect on them.
 `<out_dir>/_source_cache/git/<hash>/repo.git`:
 
 1. If the mirror does not exist, `git clone --mirror <url>`; otherwise
-   `git fetch --prune --tags` to update it.
+   `git fetch --prune --tags` to update it. A **failed refresh** is fatal
+   only when nothing pins what the ref means: if the selected version is
+   locked, the entry matches the rendered ref, and the pinned commit is
+   already in the mirror, pekit warns and builds from the locked commit
+   instead — so a rate-limited or unreachable upstream cannot block a
+   locked build. Unlocked resolves still fail hard.
 2. Resolve `ref` to an immutable commit (`git rev-parse <ref>^{commit}`).
 3. When a version is selected, verify the resolved commit against the
    version's [lockfile entry](#the-lockfile) — or create the entry on first
