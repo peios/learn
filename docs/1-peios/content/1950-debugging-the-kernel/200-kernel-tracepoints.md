@@ -1,7 +1,7 @@
 ---
 title: Kernel tracepoints
 type: how-to
-description: How to enable and read PKM's static tracepoints — the kacs:, kmes:, and lcs: trace systems — at runtime through tracefs and at boot through the kernel command line, and how to decode the reason and verdict fields they emit.
+description: "How to enable and read PKM's static tracepoints — the kacs:, kmes:, and lcs: trace systems — at runtime through tracefs and at boot through the kernel command line, and how to decode the reason and verdict fields they emit."
 related:
   - peios/debugging-the-kernel/overview
   - peios/access-decisions/debugging-a-denial
