@@ -80,6 +80,7 @@ The recipe file accepts exactly these top-level keys. Anything else is an
 | `wrap` | table | no | Command wrapper applied to every target. See [`[wrap]`](#wrap). |
 | `source` | table | no | Where the recipe's source tree comes from. See [`[source]`](#source). |
 | `delegate` | bool or table | no | Borrow build/env/wrap/package definitions from the source tree. See [`[delegate]`](#delegate). |
+| `source_package` | table | no | Corresponding-source package emission control. See [`[source_package]`](#source_package). |
 | `build` | table | no | Build target(s). See [`[build]` / `[test]` / `[install]` / `[clean]`](#targets). |
 | `test` | table | no | Test target(s). |
 | `install` | table | no | Install target(s). |
@@ -199,6 +200,39 @@ rather than in the recipe directory. May be written as a bare boolean
 
 Any other key is an `unknown delegate key` error. A category is delegated when
 either its own flag or `all` is set.
+
+### `[source_package]`
+
+Controls the **corresponding-source package** a recipe emits alongside its
+binary packages. Emission is automatic — the table exists only to opt out or
+rename. A recipe emits one when both of these hold: it has a reproducible
+`[source]` (`git` or `url`; local overrides and bare branch refs never
+qualify), and it produces at least one `peipkg`-format package.
+
+| Key | Type | Required | Meaning |
+| --- | --- | --- | --- |
+| `name` | string | no | Package name. Default `<recipe-dir>-source`. |
+| `enabled` | bool | no | Set `false` to emit no source package. Default `true`. |
+
+Any other key is an `unknown source_package key` error.
+
+The emitted package is `noarch`, versioned identically to the recipe's package
+members (members that disagree on version are a
+`source_package_version_conflict` error), licensed as the conjunction of the
+members' licenses, and installs under `/usr/src/dist/<name>-<version>/`
+(with any `-source` suffix stripped from `<name>`):
+
+- `upstream/` — the pristine source input: a url source's downloaded artifact
+  byte-for-byte, so its hash matches the committed `pekit.lock`, or a
+  `git archive` export of the locked commit.
+- `patches/` — the recipe's patch series, when a `patches/` directory exists.
+- `recipe/` — the build-controlling files from the recipe directory:
+  `pekit.toml`, package definitions (including `packages.pekit/`), env files,
+  `pekit.lock`, and `keys/`. `*.keyring.pekit.toml` files are never included.
+
+Every `peipkg`-format member the recipe emits carries the source package's
+name in its manifest's `build.source_package` field, linking each binary to
+its corresponding source.
 
 ### `[build]` / `[test]` / `[install]` / `[clean]` {#targets}
 

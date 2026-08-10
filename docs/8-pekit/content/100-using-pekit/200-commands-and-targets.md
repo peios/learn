@@ -28,7 +28,7 @@ For the flags themselves (how they parse, global flags like `--dry-run`), see
 | `build` | `build` targets + their `needs` | multiple | no | Runs build targets; stages their output under `out_dir`. |
 | `test` | `test` targets + the builds they need | **single resolved** | no | Stages needed builds, then runs the selected test targets. |
 | `install` | `install` targets + the builds they need | **single resolved** | no | Stages needed builds, then runs the selected install targets. |
-| `package` | package members + the builds they list | multiple | yes | Stages builds and writes `.peipkg` artifacts under `out_dir`. |
+| `package` | package members + the builds they list | multiple | yes | Stages builds and writes `.peipkg` artifacts under `out_dir`. Recipes with a reproducible source also emit a [corresponding-source package](~pekit/recipes/sources#source-packages). |
 | `publish` | package members (as `package`) | multiple | yes | Packages, then publishes to a configured `localdir` destination. |
 | `clean` | one optional `clean` target | none | no | Runs a clean target and/or removes the managed output directory. |
 | `gen` | `gen` targets | none | yes | Runs gen commands; writes generated source **into the tree**. |

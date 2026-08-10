@@ -235,6 +235,21 @@ are never locked. The file's exact schema is in
 command — including pre-locking versions without building — is in the
 [command-line reference](~pekit/reference/cli).
 
+### Source packages
+
+A recipe with a reproducible source automatically emits a
+**corresponding-source package** — `<recipe-dir>-source` — whenever it
+packages `peipkg`-format members. It carries the pristine upstream artifact
+(verifiable against the committed `pekit.lock`), the patch series, and the
+recipe files themselves under `/usr/src/dist/<name>-<version>/`, and each
+binary member's manifest names it in `build.source_package`. This is how the
+distribution meets copyleft source-availability obligations: publishing a
+binary and its source package through the same channel keeps the exact inputs
+of every published build available for as long as the binary is.
+
+Opt out or rename with the recipe's
+[`[source_package]`](~pekit/reference/recipe-format#source_package) table.
+
 ### Archive extraction
 
 Extraction is chosen by the artifact's **filename suffix**. Only these formats
