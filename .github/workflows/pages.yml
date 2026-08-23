@@ -39,9 +39,18 @@ jobs:
       # --strict fails the build on an article with no description:, which
       # is what search engines and chat apps show for the page. Every
       # article has one; this is what keeps that true.
+      #
+      # --cbpath publishes a second copy of the whole site under the
+      # commit's short hash, with every link inside it rewritten to stay
+      # there. Pages sets its own cache headers and we cannot override
+      # them, so learn.peios.org/<sha>/ is the only URL guaranteed to be
+      # this build — which is what an agent's web fetcher needs. The copy
+      # is noindex and out of the sitemap; /cb in the search box reaches
+      # it. On a push GITHUB_SHA is the commit checkout just built, so
+      # the path and the content cannot disagree.
       - name: Build site
         run: |
-          "$RUNNER_TEMP/trail" build --strict
+          "$RUNNER_TEMP/trail" build --strict --cbpath "${GITHUB_SHA::8}"
 
       - uses: actions/configure-pages@v5
 
