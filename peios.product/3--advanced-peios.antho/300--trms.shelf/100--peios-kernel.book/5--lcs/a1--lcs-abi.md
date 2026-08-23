@@ -9,6 +9,10 @@ encodings and struct layouts measured by compiling a probe against the
 real header. Regenerate it whenever the ABI changes; do not edit it by
 hand. The names here are the ones a program actually compiles against.
 
+What a compiler cannot measure -- which properties belong with their
+operations rather than here, and the kernel configuration -- is in the
+notes appendix, §5.B, which this generator does not touch.
+
 ## Syscall numbers
 
 Signatures are read from the `SYSCALL_DEFINE` sites in `pkm/lcs/`.
@@ -564,30 +568,3 @@ Grouped as the header groups them.
 | `REG_BACKUP_BLANKET_TOMBSTONE` | `0x06` |
 | `REG_BACKUP_TRAILER` | `0xFF` |
 | `REG_BACKUP_MAGIC` | `"PEIOSREG"` |
-
-## What is not here
-
-The header carries names, numbers and layouts. Everything else about the
-interface is a property of the implementation rather than of the ABI, and
-is documented with the operation it belongs to: the required access right
-for each ioctl and the two-pass output buffer convention in §5.6, the
-error vocabulary in §5.6.4, the RSI payload shapes in the Registry Source
-Interface specification, and the backup stream's record payloads in the
-Registry Backup Format specification.
-
-`REG_BACKUP_MAGIC` above is the eight-byte header magic; the record type
-codes are the framing, not the payloads.
-
-## Build configuration
-
-LCS is built by `CONFIG_SECURITY_PKM`, a boolean option, so it is linked
-into `vmlinux` rather than loaded. `CONFIG_RUST=y` is required: the
-resolution core, the RSI codec, the backup serialiser and the transaction
-log are Rust, staged into the kernel tree as `security/pkm/lcs/lcs_core`.
-`CONFIG_SECURITY_PKM_KUNIT` compiles in the in-kernel test harness.
-
-The three syscall numbers are added to the syscall table by
-`kernel/patches/arch/syscall-table-pkm.patch`, which patches both
-`arch/x86/entry/syscalls/syscall_64.tbl` and the copy of it that ships
-under `tools/perf/`. They are registered `common`, so they are reachable
-from the x32 ABI as well as from x86-64.
