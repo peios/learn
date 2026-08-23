@@ -36,7 +36,8 @@ jobs:
       # site config lists as passthrough — are copied in by the build
       # itself, so there is no post-build step to keep in sync.
       - name: Build site
-        run: "$RUNNER_TEMP/trail" build
+        run: |
+          "$RUNNER_TEMP/trail" build
 
       - uses: actions/configure-pages@v5
 
