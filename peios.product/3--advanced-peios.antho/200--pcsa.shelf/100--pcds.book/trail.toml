@@ -1,0 +1,3 @@
+title = "Peios Common Data Structures"
+short = "PCDS"
+description = "The common binary data structures shared across Peios subsystems: the GUID, LUID, and SID identifier types, and the security descriptor family."

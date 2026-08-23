@@ -1,0 +1,61 @@
+---
+title: Sender Authentication
+description: A datagram claims to be a service talking about itself; the steps by which a manager establishes that it is, and what it must never use.
+---
+
+A datagram on this channel claims to be a service talking about itself.
+The manager MUST establish that it is.
+
+## The requirements
+
+The manager MUST enable `SO_PASSCRED` on the socket, and MUST reject any
+datagram arriving without a kernel-attested credentials control message.
+
+It MUST then establish all of the following, and MUST drop the datagram
+if any fails:
+
+1. **The sender is a service's current main job.** The manager MUST
+   match the attested PID against the main jobs it is supervising. A
+   hook process, a health check, or a child a service forked MUST NOT be
+   able to notify on the service's behalf.
+2. **That job has exec'd and is running.** A job still in setup has not
+   become the service yet.
+3. **That job has a kernel handle on the process** — a pidfd, or an
+   equivalent that refers to one specific process rather than to a
+   number.
+4. **The handle still refers to the attested PID.** The manager MUST
+   verify the PID against the handle rather than trusting the PID alone.
+5. **The job's activation generation is the service's current one.**
+
+## Why steps 3 and 4 exist
+
+A PID identifies a process only until that process exits. Between a
+service writing a datagram and the manager reading it, the service can
+die and its PID be recycled onto something else — and PID matching alone
+would then attribute the unrelated process's message to the service, or
+attribute the service's message to whatever now holds the number.
+
+A handle obtained atomically at fork does not have that property.
+Verifying the attested PID against the handle is what turns a probable
+match into a certain one.
+
+## Why step 5 exists
+
+A datagram sent by an incarnation of a service that has since been
+restarted MUST NOT be applied to its replacement. Without the generation
+check, a `READY=1` written by a process moments before it crashed could
+mark the process that replaced it ready — declaring a service healthy on
+the strength of a message from the one that just failed.
+
+Readiness is per activation generation, and so is everything else on
+this channel.
+
+## What the manager MUST NOT use
+
+The manager MUST NOT use the sender's UID or GID as an authorisation
+input, and MUST NOT accept any identity a service asserts in the
+datagram's content.
+
+Identity on this channel is *which supervised process this is*, and only
+the kernel can attest that. A service does not have a name here that it
+gets to state.

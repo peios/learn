@@ -1,0 +1,5 @@
+title = "Wispist"
+monogram = "Wi"
+color = "#a855f7"
+
+description = "Persistent JSON documents and live updates for simple browser sites — no connection step, no application server."

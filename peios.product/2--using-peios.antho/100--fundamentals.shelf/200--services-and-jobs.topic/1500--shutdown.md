@@ -1,0 +1,91 @@
+---
+title: Shutdown
+type: concept
+description: Shutdown is boot in reverse — SIGTERM to SIGKILL in reverse dependency order, bounded by a global timeout, then seed, unmount, sync, and power off.
+related:
+  - peios/services-and-jobs/dependencies
+  - peios/services-and-jobs/supervision
+  - peios/services-and-jobs/the-service-lifecycle
+  - peios/services-and-jobs/boot-and-boot-modes
+---
+
+Shutdown is [boot](~peios/services-and-jobs/boot-and-boot-modes) run in reverse. peinit stops services in **reverse [dependency](~peios/services-and-jobs/dependencies) order** — dependents before the things they depend on — escalating from a polite SIGTERM to a forced SIGKILL, all bounded by a global timeout, and then unmounts, syncs, and performs the final power action. This page covers how it is triggered and how it runs.
+
+## How shutdown is triggered
+
+There are four paths into shutdown, and they are not equal — three are graceful, one is not.
+
+**A control command.** An administrator with `SYSTEM_SHUTDOWN` runs `peiosctl shutdown <type>`:
+
+| Type | Result |
+|---|---|
+| `poweroff` | Stop everything, unmount, power off. |
+| `reboot` | Stop everything, unmount, reboot. |
+| `halt` | Stop everything, unmount, halt (CPU stopped, power stays on). |
+
+**Signals.** As PID 1, peinit treats a handful of signals as shutdown requests:
+
+| Signal | Meaning |
+|---|---|
+| SIGINT | Reboot — the kernel sends this on Ctrl-Alt-Del. |
+| SIGTERM | Poweroff. |
+| SIGPWR | Poweroff — a compatibility path for environments that surface power failure or power-button policy as a signal. |
+
+**The power button.** On Linux, a physical power-button press is a graceful `poweroff` — peinit watches the machine's input devices under `/dev/input` and treats a `KEY_POWER` press (the key going down, not its release or auto-repeat) as a shutdown request. This path is deliberately minimal and **fail-soft**: if `/dev/input` is missing, an input device cannot be opened, or a device stops responding, peinit just keeps running and drops that device — the button quietly stops working, but the machine stays up and you can still shut down over the control socket or with a signal. It is not a full power-management policy engine; a future acpid/logind-style daemon can layer richer policy on top by sending control-socket commands.
+
+**A Critical service failure** — the ungraceful path. When an `ErrorControl=Critical` service exhausts its [restart budget](~peios/services-and-jobs/supervision), peinit **syncs and reboots immediately**. There is no service-stop ordering: the system is in an undefined state and the fastest route to a known one is a reboot. This is what feeds the [boot-attempt counter](~peios/services-and-jobs/boot-and-boot-modes), and a Critical service that fails identically every boot becomes a reboot loop that the counter eventually breaks by escalating to Recovery.
+
+## The graceful sequence
+
+For a `poweroff`, `reboot`, or `halt`, peinit runs an ordered sequence:
+
+1. **Enter the shutdown state.** A flag is set, and while it holds: **no new services may start**, timer triggers are disarmed, and new control commands are rejected with `INVALID_STATE` — *except* `status` queries, which keep working so you can watch progress.
+2. **Suspend Critical-failure semantics.** If a Critical service fails *during* shutdown, it is logged but does **not** trigger a reboot — the system is already going down, and rebooting would loop.
+3. **Clear Completed services.** Oneshot services sitting in [Completed](~peios/services-and-jobs/the-service-lifecycle) (with `RemainAfterExit`) have no process; peinit moves them to Inactive so their dependents can be stopped cleanly.
+4. **Stop services in reverse dependency order**, in waves. Each graceful-stop-eligible service (those in Active or Reloading) gets SIGTERM and `StopTimeout` seconds to exit; if it does not, peinit SIGKILLs its whole cgroup. A service is never stopped until everything that `Requires` or `BindsTo` it has already stopped. Services that are Starting are not stopped gracefully — their startup is cancelled and the cgroup SIGKILLed.
+5. **Enforce the global timeout.** The whole sequence is bounded by `ShutdownTimeout` (default 90 s). When it expires, all remaining services are SIGKILLed; any whose cgroups do not empty within the post-kill timeout (default 5 s) become [Abandoned](~peios/services-and-jobs/the-service-lifecycle) (leaked), and shutdown continues regardless.
+6. **Save the random seed.** With every service stopped and before any filesystem is touched, peinit writes a fresh seed drawn from the kernel's CSPRNG to `/var/state/peinit/random-seed` — this is the entropy the *next* boot starts from. The write is crash-conscious (written to a temporary file, flushed, then atomically swapped in), and it is best-effort: if it fails, peinit logs it and carries on. Shutdown never stalls on it, and the forced and Critical-reboot paths skip it entirely in favour of getting the machine down fast.
+7. **Unmount filesystems.** peinit snapshots the mount table and tries to unmount **every** remaining non-root mount in its namespace — not just the ones it mounted itself — working from the deepest mount points outward. That includes the Phase 1 set (`/proc`, `/sys`, `/dev`, `/dev/pts`, `/dev/shm`, `/run`, `/sys/fs/cgroup`) wherever those are still mounted. A mount that is already gone counts as done. If one won't unmount because it is busy, peinit falls back to remounting it read-only; anything it still can't clean up is logged and left for the final `sync()` and the kernel, never blocking shutdown. The root filesystem (`/`) is never unmounted — once the rest are handled, peinit remounts root read-only.
+8. **Sync and finish.** `sync()` to flush pending writes, then the final action — power off, reboot, or halt.
+
+The reverse ordering falls straight out of the [dependency graph](~peios/services-and-jobs/dependencies); there is no separate stop-order configuration. The last services to stop are the TCB daemons everything rests on — `eventd`, then `authd`, then `lpsd`, then `registryd` dead last, mirroring its position as the first ever started.
+
+## STOPPING=1 and timeout extension
+
+A service that begins shutting down on its own — say, in response to an internal error — can tell peinit by sending `STOPPING=1` via [sd_notify](~peios/services-and-jobs/service-types). peinit acknowledges it and, importantly, **stops sending SIGTERM** to that service: it is already on its way down, and a redundant signal could interfere.
+
+`STOPPING=1` is a courtesy, **not** a timeout extension. The `StopTimeout` keeps running; if the process has not exited when it expires, peinit escalates to SIGKILL regardless. A service that genuinely needs longer must say so with `EXTEND_TIMEOUT_USEC` (see [Keeping services running](~peios/services-and-jobs/supervision)) — and during shutdown those extensions are capped not only by the per-service `StopTimeout` × 4 but also by the remaining global `ShutdownTimeout`, whichever is smaller.
+
+## Forced shutdown
+
+When something is wedged and you need the machine down *now*, **repeated SIGINT** forces it: three Ctrl-Alt-Del presses within five seconds skip the graceful sequence entirely — SIGKILL everything, sync, reboot. It is the escape hatch for a graceful shutdown that is itself stuck behind an unresponsive service.
+
+## Shutdown during boot
+
+A shutdown requested while peinit is still in Phase 2 boot takes effect immediately: services still Starting are SIGKILLed (they never reached Active, so there is nothing to stop gracefully), services that did reach Active are stopped per the normal sequence, and the boot is abandoned.
+
+## How peinit handles signals
+
+peinit handles **all** signals through a `signalfd` read from its event loop — every signal is blocked and read as data, so there are no async signal handlers and no async-safety hazards. PID 1 cannot be killed by any signal; the kernel protects it.
+
+| Signal | Behaviour |
+|---|---|
+| SIGCHLD | Reap children; match exits to services and jobs. Also reaps orphaned processes the system reparented to PID 1. |
+| SIGINT | Reboot request. Repeated within the window → forced reboot. |
+| SIGTERM | Poweroff request. |
+| SIGPWR | Poweroff request — compatibility path for power-button/power-failure policy. |
+| SIGHUP | Ignored — PID 1 has no controlling terminal. |
+| SIGPIPE | Ignored — a broken control-socket pipe must never crash PID 1. |
+
+All other signals are ignored.
+
+> [!NOTE]
+> Reaping orphans matters: when any process anywhere on the system dies leaving children, those children are reparented to PID 1. peinit reaps them so they do not accumulate as zombies — even though they were never its services. This is part of the job of being PID 1, distinct from supervising services.
+
+## Where to start
+
+To understand the reverse ordering and which relationships gate it, read [Dependencies and ordering](~peios/services-and-jobs/dependencies).
+
+To understand the Critical-failure path that bypasses graceful shutdown, read [Keeping services running](~peios/services-and-jobs/supervision).
+
+For the boot side of the lifecycle and the reboot/recovery escalation, read [Boot and boot modes](~peios/services-and-jobs/boot-and-boot-modes).

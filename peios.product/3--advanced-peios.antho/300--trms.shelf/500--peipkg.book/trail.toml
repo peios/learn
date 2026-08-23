@@ -1,0 +1,3 @@
+title = "peipkg"
+short = "peipkg"
+description = "Technical Reference Manual — the package manager: repositories and trust, dependency resolution, installation, transactions and rollback, roles and claims, and package production."

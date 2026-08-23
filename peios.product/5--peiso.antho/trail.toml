@@ -1,0 +1,2 @@
+title = "Peiso"
+description = "The Peios image builder — from a declarative peiso.toml to a composed root, packed initramfs, UKI, and bootable live ISO."

@@ -1,0 +1,5 @@
+title = "pekit"
+monogram = "pk"
+color = "#22c55e"
+
+description = "The recipe-driven build and packaging tool — declarative recipes in; built, tested, packaged software out."

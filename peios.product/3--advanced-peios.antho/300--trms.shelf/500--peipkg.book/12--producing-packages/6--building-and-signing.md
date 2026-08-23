@@ -1,0 +1,61 @@
+---
+title: Building and Signing
+description: Fetching, patching, building into stage directories, packing the result, signing it, and recording the corresponding source.
+---
+
+## The build
+
+pekit fetches or updates the source, applies the patch series, and runs
+the targets a package's `builds` list names, each into its own stage
+directory, honouring the dependency edges between them.
+
+Every command runs with the assembled environment: the workspace layer,
+the source layer, the recipe layer, the selected environment file, and
+the keyring, in that order, wrapped by the recipe's wrapper if it
+declares one.
+
+Generation targets run their verification where the gating keys direct,
+so a build fails if a committed generated artifact is stale.
+
+## Packing
+
+Packing collects the file map's matches from the stage directories, adds
+the symlinks, subtracts the excludes, applies templating, merges derived
+capabilities over declared ones, and hands the result to the packing
+library.
+
+That library builds the manifest, the files manifest, and the archive
+according to PSPU §5, and then **decodes its own output through the
+consumer's validators**. A package that packs has already satisfied the
+rules a consumer applies on the way in — which is why a recipe error
+often surfaces as a manifest error at pack time.
+
+The layout check runs here, over the whole file map minus any entry
+marked as an override.
+
+## Signing
+
+The signing key is supplied through the keyring, under a well-known key
+name. The signature is computed over the uncompressed tar bytes
+preceding the signature entry and written as the archive's last entry,
+before compression.
+
+A package built with no signing key configured is a conformant unsigned
+package, installable only from a repository whose policy permits
+unsigned content.
+
+Private keys are read as raw key bytes or in a standard encrypted-key
+container. Neither encoding is specified by the format, which cares only
+about the resulting signature — but both are a real interface, since the
+keyring names a file that some other tool may have produced.
+
+## Corresponding source
+
+For any recipe with a reproducible source producing packages in the
+package format, pekit emits a **corresponding-source package** by
+default: the pristine upstream artifact, the applied patch series, and
+the build-controlling recipe files, laid out under the source
+destination.
+
+The emitted package's name is recorded in the built package's manifest,
+so a consumer holding a binary can find the source that produced it.

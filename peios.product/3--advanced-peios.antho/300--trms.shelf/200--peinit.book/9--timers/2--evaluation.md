@@ -1,0 +1,67 @@
+---
+title: Evaluation and Arming
+description: A timer is a trigger rather than a service type — how one is armed, how it fires, and what multiple triggers do.
+---
+
+A timer is a trigger, not a service type. A service with a
+`timer:<schedule>` trigger is an ordinary Simple or Oneshot service that
+peinit starts on a schedule.
+
+## Arming
+
+At boot, once the service graph is loaded, and whenever timer
+configuration changes, peinit computes the next firing time for every
+active trigger and arms a timerfd for it. Each trigger gets its own
+descriptor and its own computation.
+
+A disabled service gets neither a registration nor a firing.
+
+A schedule that fails to parse, or whose next occurrence cannot be
+computed, aborts the registration of every timer. At boot that means
+recovery mode; on a reload it ends the runtime loop.
+
+## Firing
+
+```
+handle_timer(service, trigger):
+    // 1. Decide what the firing means, from the service's state.
+    match (service.type, service.state):
+        (Oneshot, Active | Starting):
+            service.pending_timer = true      // at most one
+        (Simple,  Active | Starting):
+            record the firing; no action
+        (_, Inactive | Completed | Failed):
+            create_operation(Start, service, source = Timer)
+
+    // 2. Record when it fired.
+    write the last-run timestamp to the registry   // asynchronously
+
+    // 3. Re-arm.
+    next = next_occurrence(trigger.schedule, now) + random(0, TimerJitter)
+    arm an absolute CLOCK_REALTIME timerfd for next
+```
+
+Every other state — Backoff, Stopping, Reloading, Abandoned, Skipped —
+records the firing and does nothing.
+
+The last-run write happens in a forked child so that the event loop
+never waits on the registry. The parent returns immediately, and the
+child is reaped as an untracked orphan; a failed write is visible only
+as that child's exit status.
+
+## Oneshot pending runs
+
+A Oneshot that fires while it is already running sets a flag rather than
+queueing an operation. When it next reaches Inactive or Completed,
+peinit immediately creates a start operation and clears the flag.
+
+Multiple firings during one run collapse into a single pending run.
+There is no queue, and the flag is per service rather than per trigger —
+a service with three timers that all fire during one long run still gets
+exactly one catch-up.
+
+## Multiple triggers
+
+Triggers on one service are independent: each has its own timerfd, its
+own next-firing computation, and its own last-run history. Only the
+Oneshot pending flag is shared.

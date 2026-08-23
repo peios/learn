@@ -1,0 +1,3 @@
+title = "Peios Kernel"
+short = "PKM"
+description = "The Peios kernel as it is built: the KMES event subsystem, the KACS access control system, the stratafs layered filesystem, and the LCS registry."
