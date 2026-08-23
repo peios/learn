@@ -37,7 +37,7 @@ Representative members:
 | `SeImpersonatePrivilege` | Impersonating any user (when not running as the same user). Held by every service that handles user requests. |
 | `SeTcbPrivilege` | "Act as part of the TCB" — a catch-all for operations that should only happen in trusted code. Required for `KACS_IOC_LINK_TOKENS`, `kacs_set_caap`, **mount-policy changes** (`policy=synth-*`, which author security descriptors), and a handful of other system operations. It also satisfies every check `SeManageVolumePrivilege` satisfies, since the TCB may do anything a volume manager may. |
 | `SeLoadDriverPrivilege` | Loading and unloading kernel modules. Held only by peinit on its primary token; explicitly stripped via FilterToken from every other service. |
-| `SeManageVolumePrivilege` | Mounting, unmounting and reshaping the mount tree. Granted to Administrators. Does **not** currently cover mount-*policy* options (`policy=synth-*`), which remain `SeTcbPrivilege`'s — see the warning below. |
+| `SeManageVolumePrivilege` | Mounting, unmounting and reshaping the mount tree, including mount policy (`policy=synth-*`). Granted to Administrators. **The most powerful privilege routinely granted outside the TCB** — see the warning below. |
 | `SeShutdownPrivilege` | Local shutdown and reboot. |
 | `SeRemoteShutdownPrivilege` | Shutdown from a remote connection. Requires SeShutdown as well. |
 | `SeDebugPrivilege` | Inspecting another process regardless of its SD. Crucially, it does not bypass PIP dominance — a SeDebug holder can bypass an unrelated process's SD but still cannot cross a PIP boundary. |
@@ -119,14 +119,12 @@ mounted `synth-ephemeral` for an installation to work at all.
 Treat `SeManageVolumePrivilege` as sitting beside `SeLoadDriverPrivilege` in
 sensitivity, not beside `SeChangeNotifyPrivilege`.
 
-**Current state, which is narrower than the above describes.** The two VFS
-gates — `may_mount()` and `mount_capable()` — honour the privilege, so an
-administrator can mount. The KACS mount-*policy* path does not: setting
-`policy=synth-*` still requires `SeTcbPrivilege`. So today the privilege
-permits mounting a filesystem that carries its own descriptors, and refuses
-one whose descriptors would have to be synthesised. Closing that gap is
-tracked; until it closes, the escalation reach described above is not yet
-reachable in practice.
+Mounting passes three separate checks, and the privilege covers all
+three: `may_mount()` (may I reshape my namespace), `mount_capable()` (may
+this context create a superblock), and KACS's `set_mount_policy` (may I
+choose how descriptors are synthesised). They were found one at a time by
+driving a real image — each fix moved the failure to the next gate — which
+is worth knowing if a fourth ever appears.
 
 ## Reserved privileges
 
