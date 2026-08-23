@@ -24,6 +24,18 @@ Search is powered by a [Pagefind](https://pagefind.app) index built at build tim
 
 What is indexed is the article body. Chrome — breadcrumbs, the meta line, Related Content, the pager, the edit link — is excluded, and so is the front page and every [alias page](~trail/structuring-a-site/link-aliases).
 
+## Commands
+
+A query beginning with `/` is a command rather than a search. Typing `/` on its own lists the ones this page has; typing more narrows the list, and <kbd>Enter</kbd> runs the highlighted one.
+
+| Command | |
+|---|---|
+| `/theme` | Cycles **system → light → dark**, exactly as the header button does. |
+| `/theme <name>` | Goes straight to `system`, `light` or `dark`. |
+| `/cachebust`, `/cb` | Opens the page you are on in [the cache-busting copy](~trail/building/the-cache-busting-copy) — a URL nothing has cached. From inside the copy it takes you back out to the real page. Offered only when the build published a copy. |
+
+Nothing needs enabling. The commands a page offers are the ones that can do something there, which is why `/cb` appears on a site built with `--cbpath` and nowhere else.
+
 ## Light, dark and system
 
 The header's theme button cycles **system → light → dark**, and its icon shows which state is active. The choice is remembered in the reader's browser and applied before first paint, so there is no flash of the wrong theme.

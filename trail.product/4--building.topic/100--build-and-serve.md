@@ -14,7 +14,7 @@ Trail has two commands. `build` writes the site; `serve` writes it and then serv
 ## trail build
 
 ```console
-$ trail build [ROOT] [--out DIR] [--strict] [--allow-dangling-links] [--render-llms-full]
+$ trail build [ROOT] [--out DIR] [--strict] [--allow-dangling-links] [--render-llms-full] [--cbpath PATH]
 ```
 
 `ROOT` is the directory containing `trail.toml`, defaulting to the current directory. Output goes to `ROOT/dist` unless `--out` says otherwise.
@@ -86,6 +86,10 @@ Use it in CI; leave it off while drafting.
 
 Writes an extra copy of each unit's `print.md` as `llms-full.txt` beside it. Purely a discovery fallback for agents that probe for that filename instead of reading `llms.txt`, which always points at `print.md` anyway. Off by default, because it doubles a large part of the output for no new information.
 
+### `--cbpath PATH`
+
+Publishes a second copy of the whole site under `PATH`, with every link inside it rewritten to stay inside it. Name it after something that changes on every deploy — a commit hash — and you have a URL nothing can have cached, so what comes back is necessarily this build. See [The cache-busting copy](~trail/building/the-cache-busting-copy).
+
 ### `--out DIR`
 
 Writes the site somewhere other than `ROOT/dist`. The chosen directory is excluded from the site scan, so a build into a directory inside the site root does not turn the previous build into content.
@@ -132,3 +136,5 @@ Two things to configure on the host:
 - **Directory indexes.** Pages are written as `<path>/index.html`, so the URL `/pekit/reference/cli` needs to serve `/pekit/reference/cli/index.html`. Nearly every static host does this by default.
 
 Set `url` in the root `trail.toml` before deploying: without it there is no `sitemap.xml`, no `Sitemap:` line in `robots.txt`, and canonical and `og:url` tags stay relative. See [Configuring the site](~trail/building/configuring-the-site).
+
+If the host's caching is aggressive enough that you cannot tell a fresh deploy from a stale one — and on GitHub Pages you cannot, because the headers are not yours to set — build with `--cbpath "${GITHUB_SHA::8}"` and you get a URL per deploy that nothing has ever cached. See [The cache-busting copy](~trail/building/the-cache-busting-copy).

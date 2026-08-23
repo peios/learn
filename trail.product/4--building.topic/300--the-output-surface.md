@@ -188,6 +188,10 @@ The front page is not indexed. Neither are [alias pages](~trail/structuring-a-si
 
 Images are published at the URL of the directory they were found in — but only the ones some article actually references. See [Images](~trail/writing/images).
 
+## The cache-busting copy
+
+`--cbpath <PATH>` adds one more entry to the output: `dist/<PATH>/`, holding everything above a second time, with every link inside it rewritten to stay inside it. It is how you get a URL that no cache can have seen. See [The cache-busting copy](~trail/building/the-cache-busting-copy).
+
 ## Passthrough files
 
 Anything named by the root config's [`passthrough`](~trail/building/configuring-the-site) is copied in verbatim — a `CNAME`, a `.well-known/` directory, a verification file — keeping its path relative to the site root. It is written after everything else, so a passthrough named for a generated file (`robots.txt`) replaces it.
