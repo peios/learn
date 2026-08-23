@@ -70,6 +70,15 @@ Rank 0 sorts lowest. Rank lookup MUST be case-insensitive: `Alpha`,
 
 ## Comparing two segments
 
+The pre-release flag is compared first, before the kinds. If exactly one
+of the two segments is a pre-release segment, **that segment is the
+lesser**, whatever either segment contains. A pre-release segment sits at
+or after the point where the version was marked as preceding a release,
+and that is a property of position rather than of content.
+
+When both segments carry the same flag — both pre-release, or neither —
+their kinds decide:
+
 1. **Both numeric** — compare as integers. Leading zeros are
    insignificant.
 2. **Both alphabetic** — compare by pre-release rank. When the ranks are
@@ -79,9 +88,10 @@ Rank 0 sorts lowest. Rank lookup MUST be case-insensitive: `Alpha`,
      the same recognised rank sort equal whichever alias appears.
    - at rank 5, the segments tiebreak by ASCII byte order against other
      rank-5 tokens.
-3. **One numeric, one alphabetic** — if the alphabetic segment is a
-   pre-release segment, it is the lesser. If it is not, the numeric
-   segment is the lesser.
+3. **One numeric, one alphabetic** — the alphabetic segment is the
+   lesser if the pair is a pre-release pair, and the greater if it is
+   not. (Where only one of them is a pre-release segment, the rule above
+   has already decided.)
 
 > [!NOTE]
 > ```
@@ -99,18 +109,27 @@ Rank 0 sorts lowest. Rank lookup MUST be case-insensitive: `Alpha`,
 ## Unequal lengths
 
 When the segments of one version run out and every common segment
-compared equal, the next segment of the longer sequence decides:
+compared equal, the next segment of the longer sequence decides. Its
+pre-release flag decides it, and its kind is irrelevant:
 
 | Next segment in the longer | Result |
 |---|---|
-| numeric | the shorter is less |
-| alphabetic, pre-release | the shorter is **greater** |
-| alphabetic, not pre-release | the shorter is less |
+| a pre-release segment | the shorter is **greater** |
+| anything else | the shorter is less |
+
+| Example tail | | Result |
+|---|---|---|
+| `~1` | numeric, pre-release | the shorter is **greater** |
+| `~rc` | alphabetic, pre-release | the shorter is **greater** |
+| `.1` | numeric | the shorter is less |
+| `-foo` | alphabetic, rank 5 | the shorter is less |
 
 ## Worked examples
 
 | A | B | Result | Why |
 |---|---|---|---|
+| `1.0~2` | `1.0-2` | A < B | the pre-release flag decides before the kinds |
+| `1.0~foo` | `1.0-foo` | A < B | the same, for two rank-5 tokens |
 | `1.0` | `1.0` | A = B | identical |
 | `1.0` | `2.0` | A < B | numeric segment differs |
 | `1.10` | `1.9` | A > B | numeric, not lexical |
@@ -122,6 +141,8 @@ compared equal, the next segment of the longer sequence decides:
 | `1.0a1` | `1.0a2` | A < B | numeric within a concatenated tail |
 | `1.0a1` | `1.0b1` | A < B | rank 1 < rank 2 |
 | `1.0~rc1` | `1.0` | A < B | the tilde forces a pre-release |
+| `1.0~1` | `1.0` | A < B | the tilde forces a pre-release, numeric or not |
+| `5.2~20240101` | `5.2` | A < B | a dated snapshot precedes its release |
 | `0:1.0` | `1:0.5` | A < B | epoch dominates |
 | `1.0-1` | `1.0-2` | A < B | peios revision differs |
 | `1.0-foo-1` | `1.0-1` | A > B | `foo` is rank 5, sorting after a number |
