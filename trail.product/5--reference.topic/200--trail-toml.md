@@ -78,6 +78,11 @@ Passthrough entries are copied **last**, after everything trail generates, so an
 
 References here are resolved **strictly at load time** — a broken nav link fails the build even under `--allow-dangling-links`, because site chrome appears on every page.
 
+> [!IMPORTANT]
+> `[[nav]]` blocks must come **last in the file**. TOML gives every key after a table header to that table, so a `footer =` written below them is read as a nav item's field and fails with `unknown field 'footer', expected 'label' or 'url'`. Put every plain key above the first `[[nav]]`.
+
+A shelf is not a link target, so a nav entry cannot point at one — aim at the anthology above it, or a page inside it.
+
 ### What `url` unlocks
 
 Without it: no `sitemap.xml`, no `Sitemap:` line in `robots.txt`, no `og:url`, relative canonical URLs, and relative outward links in `/print` bundles. Set it before deploying.

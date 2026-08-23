@@ -79,6 +79,8 @@ url = "https://github.com/peios/peios"
 
 Each `[[nav]]` block adds a link to the header, beside the products menu. On narrow screens they move inside that menu.
 
+Keep the `[[nav]]` blocks at the **end of the file**: in TOML every key after a table header belongs to that table, so an ordinary key written below them becomes a nav field and fails the build.
+
 `url` may be an external URL, a root-relative path, or a [`~` page reference](~trail/writing/links-and-references). References are resolved **strictly, at load time** — even with `--allow-dangling-links`, a broken nav link fails the build. Site chrome appears on every page; it must never dangle.
 
 ## Favicon
