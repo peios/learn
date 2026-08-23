@@ -78,8 +78,9 @@ requested right by name and the access bits requested and granted;
 findings; `notify.rejected` for an unauthenticated notification;
 `fd_store.rejected` for a refused descriptor; `notify.status`,
 `notify.errno` and `notify.exit_status` for the three event-emitting
-notification fields; and `graph.operation_terminal` for a graph member's
-terminal outcome.
+notification fields; `cgroup.leaked` the first time a sub-cgroup is found
+still populated after its post-kill deadline (§5.7); and
+`graph.operation_terminal` for a graph member's terminal outcome.
 
 Audit records are events rather than logs, and that distinction is the
 point: the ring buffer persists from the moment PKM loads, so an access

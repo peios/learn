@@ -46,8 +46,8 @@ skips the service and an assert fails it. peinit then kills the helper's
 cgroup and unregisters the result descriptor.
 
 A helper that survives the kill, stuck in uninterruptible sleep, has its
-cgroup abandoned. Unlike a leaked hook or health cgroup it is not
-recorded as a service warning.
+cgroup abandoned and recorded exactly as a leaked hook or health cgroup
+is (§5.7).
 
 ## Caching
 

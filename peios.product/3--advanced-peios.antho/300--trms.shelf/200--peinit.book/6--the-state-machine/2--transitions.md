@@ -88,9 +88,8 @@ reset -- cgroup remains leaked; underlying D-state process requires
 investigation
 ```
 
-The warning is in the acknowledgement only. It is not logged and not
-emitted as an event, so a reset issued without reading the response
-leaves no trace of the still-leaked cgroup.
+The warning is also written to the console, so a reset issued without
+reading the response still leaves a trace of the still-leaked cgroup.
 
 The re-check targets `main/`. Note that the two paths into Abandoned
 probe different cgroups: an explicit stop checks `main/`, while the

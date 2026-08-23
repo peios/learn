@@ -34,8 +34,8 @@ dependents, and every lifecycle command against it is invalid except
 A `reset` re-checks `main/`. If it has finally emptied — the I/O that
 was hung completed, or the device came back — peinit cleans up the whole
 tree and the service returns to Inactive. If it is still populated, the
-service returns to Inactive anyway, the cgroup stays leaked, and the
-acknowledgement carries a warning saying so.
+service returns to Inactive anyway, the cgroup stays leaked, and both the
+acknowledgement and the console carry a warning saying so.
 
 ## The generational escape
 
