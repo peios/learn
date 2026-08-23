@@ -18,7 +18,7 @@ On this site, `pekit`, `provium` and `trail` are products. So is `peios` itself 
 A product is a directory named `<slug>.product` at the site root. It has no order prefix.
 
 ```text
-learn2/
+learn/
 ├── trail.toml
 ├── pekit.product/          →  /pekit
 └── trail.product/          →  /trail
@@ -103,7 +103,7 @@ Every product gets a landing page at `/<slug>`, built from the config and its ch
 Products have no order prefix. They sort by the root `trail.toml`'s `featured` list — in that list's order — and then everything not listed, by title.
 
 ```toml
-# learn2/trail.toml
+# learn/trail.toml
 featured = ["peios", "pekit", "provium", "universal-directory", "trail"]
 ```
 

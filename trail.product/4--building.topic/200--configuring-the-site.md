@@ -96,7 +96,7 @@ Naming a file here is also what makes it *legal* to keep in the site root, which
 ## Edit links
 
 ```toml
-edit_url = "https://github.com/peios/peios/edit/main/learn2/{path}"
+edit_url = "https://github.com/peios/learn/edit/main/{path}"
 ```
 
 Adds an "Edit this page" link to the foot of every article. `{path}` is replaced with the article's source file path relative to the site root — the placeholder is required, and a template without it is a build error.

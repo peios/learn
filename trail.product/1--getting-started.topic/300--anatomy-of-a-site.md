@@ -14,7 +14,7 @@ A trail site is a directory tree in which every name means something. This page 
 ## The whole shape
 
 ```text
-learn2/                                  the site root
+learn/                                  the site root
 ├── trail.toml                           the site config — required
 ├── dist/                                the build output — trail's to manage
 │

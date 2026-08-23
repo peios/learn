@@ -18,7 +18,7 @@ This site is built with it. Everything you are reading, including this page, com
 Trail has no table-of-contents file, no `sidebar.json`, no list of pages to keep in sync with the pages themselves. **The directory tree is the navigation.** A folder named `2--writing.topic` is a topic called "Writing" that sorts second; the `.md` files inside it are its articles, in the order their own numeric prefixes give them.
 
 ```text
-learn2/
+learn/
 ├── trail.toml                        # the site
 └── trail.product/                    # a product
     ├── trail.toml
