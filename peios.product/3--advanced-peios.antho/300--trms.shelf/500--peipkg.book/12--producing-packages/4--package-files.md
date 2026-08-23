@@ -35,8 +35,8 @@ stricter than the format's, which treats the license field as optional.
 license, homepage, `default_root`, and `special_system_package`.
 
 `default_root` is validated against the named-root grammar.
-`special_system_package` waives the layout check at pack time and grants
-nothing at install or compose time.
+`special_system_package` waives the layout check at pack time — but not
+the side-effect check — and grants nothing at install or compose time.
 
 ## Relationships
 
@@ -56,8 +56,10 @@ Conflicts deliberately carry no root: a conflict is root-local by
 construction, and the consumer rejects a root on a conflicts entry
 outright.
 
-`side_effects` is a list of strings passed through verbatim. pekit does
-not check it against the recognised set; the consumer does.
+`side_effects` is a list of strings passed through verbatim: pekit does
+not check membership of the recognised set, the consumer does. What
+pekit *does* check is agreement with the payload, at pack time and in
+both directions — see [Building and signing](~peios/producing-packages/building-and-signing).
 
 ## Files
 

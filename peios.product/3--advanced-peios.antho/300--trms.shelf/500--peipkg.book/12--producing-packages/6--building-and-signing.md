@@ -33,6 +33,41 @@ often surfaces as a manifest error at pack time.
 The layout check runs here, over the whole file map minus any entry
 marked as an override.
 
+The **side-effect check** runs here too, over the whole file map
+*including* overrides: an override escapes the layout rules, but a
+kernel module still needs indexing wherever it was declared. It enforces
+§5.24 in both directions for the effects whose trigger is a payload file
+pattern.
+
+| Payload | Declaration | Result |
+|---|---|---|
+| A `.ko` or `.ko.*` under `usr/lib/modules/` | no `depmod` | Error |
+| No kernel module | `depmod` declared | Error |
+| A file under `usr/share/man/` | no `man-db` | Warning |
+| No man page | `man-db` declared | Warning |
+
+`depmod` is an error because §5.24 makes it a MUST and the failure it
+prevents is silent: a stale `modules.dep` makes `modprobe` resolve a
+dependency chain and then fail on a file that is not there, far from the
+package that caused it. `man-db` is a warning because §5.24 makes it a
+SHOULD — lookup falls back to a filesystem scan, which is suboptimal
+rather than broken.
+
+Warnings are reported even when an error is also raised, so one run
+tells the author everything.
+
+A side effect whose trigger is not a payload pattern is simply not in
+the checkable set. The rule is *where the trigger is mechanical, pack
+enforces it*, which leaves room for a future effect that depends on what
+a package means rather than on what it contains — the declaration stays
+the author's, and pack validates it rather than deriving it.
+
+`special_system_package` does **not** waive this check, unlike the
+layout one. Special packages stage exotic layouts, which is why those
+rules let them through; what maintenance a payload needs afterwards is a
+separate question, and the kernel's module tree is exactly the payload
+that most needs `depmod`.
+
 ## Signing
 
 The signing key is supplied through the keyring, under a well-known key
