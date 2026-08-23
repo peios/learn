@@ -51,7 +51,6 @@ Defined in §5.7.
 
 | Identifier | Declared when | Invoked as |
 |---|---|---|
-| `ldconfig` | the payload contains shared libraries (MUST) | the tool, with no operand |
 | `depmod` | the payload contains kernel modules (MUST) | once per affected kernel release, naming it |
 | `man-db` | the payload contains man pages (SHOULD) | the tool, in quiet mode |
 

@@ -1,13 +1,12 @@
 ---
 title: Side-Effect Declarations
-description: The closed set of maintenance operations a package may request after install or removal — ldconfig, depmod and man-db — and how they are hardened.
+description: The closed set of maintenance operations a package may request after install or removal — depmod and man-db — and how they are hardened, plus why Peios needs no shared-library cache.
 ---
 
 Some standard maintenance operations must run after files are installed
-or removed for a system to function: rebuilding the shared library cache
-when a library is added, rebuilding the kernel module dependency cache
-when modules change, rebuilding the man page index when man pages are
-added.
+or removed for a system to function: rebuilding the kernel module
+dependency cache when modules change, rebuilding the man page index when
+man pages are added.
 
 These are not install scripts. **The format does not permit a package to
 specify its own install script.** A package instead declares which of a
@@ -19,7 +18,7 @@ consumer invokes them.
 `side_effects` is an array of strings:
 
 ```json
-"side_effects": ["ldconfig", "man-db"]
+"side_effects": ["depmod", "man-db"]
 ```
 
 Each string MUST be drawn from the set below. An unknown value is
@@ -28,15 +27,6 @@ contain duplicates. It MAY be empty, or omitted entirely, for a package
 requiring no maintenance operation.
 
 ## The recognised set
-
-### `ldconfig`
-
-Rebuilds the shared library cache and updates shared library symlinks.
-
-A package MUST declare `ldconfig` if its payload contains any shared
-library file (`.so`, `.so.*`) or any file installed under a directory on
-the loader's configured search path. A package MUST NOT declare it if
-its payload contains neither.
 
 ### `depmod`
 
@@ -81,12 +71,40 @@ A consumer MUST invoke each declared side effect **once per
 transaction**, after every file operation in that transaction is in
 place and after the transaction has committed. Side effects MUST be
 deduplicated across the packages in a transaction: several packages each
-declaring `ldconfig` cause one invocation, not several.
+declaring `man-db` cause one invocation, not several.
 
 A consumer MUST also invoke a side effect when a transaction *removes*
-files whose absence affects that effect's target — removing a shared
-library requires `ldconfig`, removing a kernel module requires `depmod`
-— whether or not any package in the transaction declared it.
+files whose absence affects that effect's target — removing a kernel
+module requires `depmod`, removing a man page requires `man-db` —
+whether or not any package in the transaction declared it.
+
+## Why there is no shared-library cache
+
+Other systems carry an `ldconfig` side effect to rebuild
+`/etc/ld.so.cache`. Peios has no such cache and no such side effect, and
+this is a property of the layout rather than an omission.
+
+A cache exists to do two things: make lookup fast when the loader must
+search many directories, and let it find libraries in directories it
+would not otherwise search. Peios has neither problem. The C library is
+configured with its library directory, its system library directory and
+its runtime-loader directory all set to `/usr/lib/<triplet>`, and the
+loader carries that path compiled in as its default. **There is exactly
+one shared-library directory, and it is the one the loader already
+searches.**
+
+So the rule that replaces the declaration is a layout rule, and it is
+normative: a package shipping a shared library MUST install it into
+`/usr/lib/<triplet>`. A library installed anywhere else will not be
+found, and no maintenance operation exists to make it findable.
+
+Reintroducing a cache would mean reintroducing everything a cache brings
+with it — a file to keep coherent with the filesystem, a tool in the
+base to regenerate it, and a failure mode where the two disagree. That
+trade is only worth making if Peios ever needs more than one library
+directory.
+
+## Ordering
 
 Side effects are invoked in an implementation-defined order. The
 recognised set is chosen so that order between distinct effects is not
