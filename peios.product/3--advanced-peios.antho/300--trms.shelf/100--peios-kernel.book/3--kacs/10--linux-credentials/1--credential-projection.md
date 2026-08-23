@@ -10,12 +10,30 @@ those numbers determine their access. KACS projects token identity
 onto standard Linux credentials so unmodified applications work.
 
 When a token is installed on a process, the process's Linux
-credentials are set to match. The token's user SID maps to a UID
-through the directory's `uidNumber` attribute, defaulting to 65534 —
-nobody — where none is set. The primary group SID maps to a GID the
-same way, with the same fallback. Group SIDs map to supplementary GIDs
-wherever `gidNumber` attributes exist. There is no algorithmic
-mapping anywhere in this: every value is looked up or defaulted.
+credentials are set to match. The numbers themselves are **already on
+the token**: the user SID's projected uid, the primary group SID's
+projected gid, and a projected supplementary gid per group SID are all
+computed by authd when the token is minted, and KACS copies them.
+
+**KACS never resolves a SID to a number itself.** It holds no directory
+handle and consults nothing at install time — which is what makes
+projection cheap enough to do on every credential change, and what
+keeps a name-service outage from being able to change what a running
+process may do.
+
+How a SID becomes a number is therefore not KACS's rule to state, and
+this chapter deliberately does not restate it. The authority is the
+principal source interface's numeric scope (PSPU §2): identifiers are
+**computed** — an authority grants a source a band `(base, count)` and
+derives `base + r` from a relative identifier — rather than looked up
+per principal, and a source's assertion outside its band is refused
+rather than clamped.
+
+`65534` does appear in KACS, but not as a "no attribute was set"
+fallback: it is `ANONYMOUS_PROJECTED_ID`, what the projected-id
+accessors return for the anonymous identity and for an invalid token
+pointer. It is a sentinel for *no identity*, not a default for an
+identity whose number could not be found.
 
 The consequences are mostly convenient ones. No process runs as UID 0
 unless it holds the SYSTEM token — enforced, not merely expected: a
@@ -64,6 +82,8 @@ resolves a SID-to-UID mapping at runtime; the accessors are pure field
 reads.
 
 Because SIDs are one namespace while Linux UIDs and GIDs are two,
-authd allocates `uidNumber` and `gidNumber` from a single unified
-counter across all principal types, so every SID projects to a unique
-number whichever Linux namespace it lands in.
+authd allocates from a **single unified counter** across all principal
+types rather than a separate one per namespace, so every SID projects
+to a unique number whichever Linux namespace it lands in. A user and a
+group can never collide on a number, which is what lets one SID answer
+both `getuid()` and `getgid()` questions without ambiguity.

@@ -206,9 +206,9 @@ impersonation are audited under B's identity. The creation default is
 
 | Field | Description |
 |---|---|
-| `projected_uid` | Linux UID precomputed from the user SID's directory `uidNumber` attribute; 65534 when unmapped. |
-| `projected_gid` | Precomputed Linux primary GID; 65534 when unmapped. |
-| `projected_supplementary_gids` | Precomputed Linux supplementary GIDs from group SIDs carrying `gidNumber` attributes. |
+| `projected_uid` | Linux UID for the user SID, precomputed by authd when the token is minted (PSPU §2); 65534 for the anonymous identity. |
+| `projected_gid` | Linux primary GID, precomputed the same way; 65534 for the anonymous identity. |
+| `projected_supplementary_gids` | Linux supplementary GIDs, one per group SID, precomputed the same way. |
 
 authd computes these at token creation and they are stored on the
 token; KACS never resolves a SID-to-UID mapping at runtime. Projection
