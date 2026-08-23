@@ -35,9 +35,13 @@ jobs:
       # Files trail does not build — .well-known, and anything else the
       # site config lists as passthrough — are copied in by the build
       # itself, so there is no post-build step to keep in sync.
+      #
+      # --strict fails the build on an article with no description:, which
+      # is what search engines and chat apps show for the page. Every
+      # article has one; this is what keeps that true.
       - name: Build site
         run: |
-          "$RUNNER_TEMP/trail" build
+          "$RUNNER_TEMP/trail" build --strict
 
       - uses: actions/configure-pages@v5
 
