@@ -13,6 +13,7 @@ behaviour, and what an administrator is told.
 | Cause | Leads to | Meaning |
 |---|---|---|
 | `ExplicitStart` | Starting | An administrator, an `OnFailure` handler, or a boot plan started it. |
+| `ExplicitStart` | Inactive | An explicit start on a Skipped service, clearing it so the conditions are re-evaluated. |
 | `DependencyStart` | Starting | Started to satisfy another service's dependency. |
 | `RestartPolicy` | Starting | An automatic restart after a backoff delay. |
 | `BindsToRecovery` | Starting | A bound dependency returned to Active. |

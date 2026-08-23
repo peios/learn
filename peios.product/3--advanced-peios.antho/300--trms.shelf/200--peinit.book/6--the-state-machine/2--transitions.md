@@ -39,7 +39,7 @@ performed.
 | Failed | Inactive | A reset command clearing the state. |
 | Failed | Abandoned | A service SIGKILLed by the shutdown wave whose cgroup stayed populated past the post-kill deadline. |
 | Abandoned | Inactive | A reset command. |
-| Skipped | Inactive | A reset command. |
+| Skipped | Inactive | A reset command, or an explicit start clearing Skipped before it re-evaluates the conditions. |
 
 ## Things the table settles
 

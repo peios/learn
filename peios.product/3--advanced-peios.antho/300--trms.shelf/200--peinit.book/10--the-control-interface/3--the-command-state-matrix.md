@@ -56,6 +56,21 @@ automatic restart already pending.
 - `reload` and `reset` are invalid: there is no process to reload, and
   no terminal state to clear.
 
+## The Skipped column
+
+`start` and `restart` clear Skipped before they run. A Skipped service
+is not in a state a start can proceed from — the state machine permits
+`Skipped -> Inactive` and nothing else — so the activation performs that
+transition first, then re-evaluates the conditions from scratch. Both
+outcomes are possible: the precondition that was missing at boot may now
+hold, in which case the service starts; or it may still not, in which
+case the service is skipped again, for whatever reason applies now.
+
+The clear is reported like any other transition, so a console watching
+the service sees it leave Skipped rather than appearing to jump.
+
+`reset` also clears Skipped, and differs only in stopping there.
+
 ## The Abandoned column
 
 Every lifecycle command is invalid on an Abandoned service except
