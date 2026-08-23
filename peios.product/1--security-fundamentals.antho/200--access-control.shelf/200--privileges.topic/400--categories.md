@@ -35,9 +35,9 @@ Representative members:
 | `SeCreateTokenPrivilege` | `kacs_create_token`. Token minting. Held only by authd and peinit. |
 | `SeAssignPrimaryTokenPrivilege` | Installing a token as another process's primary. Used by peinit. |
 | `SeImpersonatePrivilege` | Impersonating any user (when not running as the same user). Held by every service that handles user requests. |
-| `SeTcbPrivilege` | "Act as part of the TCB" — a catch-all for operations that should only happen in trusted code. Required for `KACS_IOC_LINK_TOKENS`, `kacs_set_caap`, and a handful of other system operations. It also satisfies every check `SeManageVolumePrivilege` satisfies, since the TCB may do anything a volume manager may. |
+| `SeTcbPrivilege` | "Act as part of the TCB" — a catch-all for operations that should only happen in trusted code. Required for `KACS_IOC_LINK_TOKENS`, `kacs_set_caap`, **mount-policy changes** (`policy=synth-*`, which author security descriptors), and a handful of other system operations. It also satisfies every check `SeManageVolumePrivilege` satisfies, since the TCB may do anything a volume manager may. |
 | `SeLoadDriverPrivilege` | Loading and unloading kernel modules. Held only by peinit on its primary token; explicitly stripped via FilterToken from every other service. |
-| `SeManageVolumePrivilege` | Mounting, unmounting and reshaping the mount tree (`may_mount`). Granted to Administrators. **The most powerful privilege routinely granted outside the TCB** — see the warning below. |
+| `SeManageVolumePrivilege` | Mounting, unmounting and reshaping the mount tree. Granted to Administrators. Does **not** currently cover mount-*policy* options (`policy=synth-*`), which remain `SeTcbPrivilege`'s — see the warning below. |
 | `SeShutdownPrivilege` | Local shutdown and reboot. |
 | `SeRemoteShutdownPrivilege` | Shutdown from a remote connection. Requires SeShutdown as well. |
 | `SeDebugPrivilege` | Inspecting another process regardless of its SD. Crucially, it does not bypass PIP dominance — a SeDebug holder can bypass an unrelated process's SD but still cannot cross a PIP boundary. |
@@ -118,6 +118,15 @@ mounted `synth-ephemeral` for an installation to work at all.
 
 Treat `SeManageVolumePrivilege` as sitting beside `SeLoadDriverPrivilege` in
 sensitivity, not beside `SeChangeNotifyPrivilege`.
+
+**Current state, which is narrower than the above describes.** The two VFS
+gates — `may_mount()` and `mount_capable()` — honour the privilege, so an
+administrator can mount. The KACS mount-*policy* path does not: setting
+`policy=synth-*` still requires `SeTcbPrivilege`. So today the privilege
+permits mounting a filesystem that carries its own descriptors, and refuses
+one whose descriptors would have to be synthesised. Closing that gap is
+tracked; until it closes, the escalation reach described above is not yet
+reachable in practice.
 
 ## Reserved privileges
 
