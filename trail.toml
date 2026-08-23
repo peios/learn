@@ -6,7 +6,9 @@ description = "Concepts, guides, and reference for the Peios operating system an
 
 featured = ["peios", "pekit", "provium", "universal-directory", "trail"]
 
-passthrough = [".well-known"]
+edit_url = "https://github.com/peios/learn/edit/main/{path}"
+
+passthrough = ["CNAME", ".well-known"]
 
 footer = "Peios Learn — documentation for the Peios project."
 built_by_trail = true # Defaults to true can be set to false.
