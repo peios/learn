@@ -55,11 +55,14 @@ evaluated alongside the DACL, not separately. Reading or modifying a
 SACL requires `ACCESS_SYSTEM_SECURITY`, which is itself gated by
 `SeSecurityPrivilege`.
 
-There is one case in which a key open with a matching SACL produces no
-event. AccessCheck's SACL walk tests each audit ACE's mask against the
-mapped desired access, and a request of `MAXIMUM_ALLOWED` **alone**
-maps to a desired mask of zero. No ACE matches zero, so no audit event
-is produced, and LCS emits nothing.
+A request of `MAXIMUM_ALLOWED` **alone** maps to a desired mask of zero,
+so AccessCheck's SACL walk matches each audit ACE against the *granted*
+mask instead. An audit ACE says "audit when someone gets this right",
+and with `MAXIMUM_ALLOWED` they did get it. Such an open therefore
+always audits as a success, which is correct: `MAXIMUM_ALLOWED` returns
+whatever is available and never fails, so a failure ACE has nothing to
+record. An ACE naming a right the caller did not receive still does not
+match.
 
 ## Source validation failures
 
