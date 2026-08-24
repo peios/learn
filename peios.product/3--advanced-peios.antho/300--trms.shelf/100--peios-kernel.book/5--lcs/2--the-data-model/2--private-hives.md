@@ -59,12 +59,12 @@ Registration enforces more than the route-identity uniqueness of
 - A hive's root GUID may not be nil, and the root GUIDs within one
   registration request must be distinct.
 - A hive without the `RSI_HIVE_PRIVATE` flag may not carry a non-nil
-  scope GUID.
+  scope GUID, and a hive **with** it may not carry a nil one. No token
+  can carry a nil scope GUID, so such a hive would be registrable and
+  then permanently unroutable — holding its name against other sources
+  in that scope while every lookup returned `ENOENT`.
 - Unknown flag bits are rejected.
 - Opening `/dev/pkm_registry` at all requires an **enabled**
   `SeTcbPrivilege`, checked in the device's `open()` handler
   (§5.8.2).
 
-A private hive registered with an all-zero scope GUID is accepted. No
-token can carry a nil scope GUID, so such a hive is registrable and
-then permanently unroutable.
