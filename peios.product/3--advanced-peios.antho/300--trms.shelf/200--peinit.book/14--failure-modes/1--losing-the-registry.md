@@ -44,11 +44,13 @@ because the system reboots first.
 
 ## A definition that will not decode
 
-One definition that fails to decode takes down the whole read (§3.2).
-At boot that is recovery mode; on a reload it is a rejected reload with
-the previous generation left in place.
+One definition that fails to decode fails that definition (§3.2). At
+boot the key is marked Failed with cause `ValidationError` and every
+other service starts normally; on a reload the whole reload is rejected
+and the previous generation is left in place.
 
-The reload behaviour is the safe one — nothing changes and the caller is
-told why. The boot behaviour is less forgiving: a single malformed
-service key is enough to prevent the system booting, even though every
-other definition is fine.
+Both are the safe answer for their caller. A reload is atomic and has a
+working configuration behind it, so refusing the change costs nothing. A
+boot has no previous generation to fall back to, so refusing everything
+would mean not booting at all over a single malformed key — which is
+what it used to do.

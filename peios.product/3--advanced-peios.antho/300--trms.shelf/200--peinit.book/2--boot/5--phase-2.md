@@ -12,12 +12,13 @@ peinit reads every key under `Machine\System\Services\`. The reads are
 bounded by LCS's request timeout: if registryd hangs mid-read, peinit
 receives `ETIMEDOUT` and enters recovery.
 
-Decoding is all-or-nothing. A definition that fails to decode — an
-invalid service name, a malformed trigger, an unclosed quote in a
-command, a `registry:` check naming an uncacheable key, a duplicate
-known field, an unrecognised value for an enumerated dword — aborts the
-whole read and sends peinit to recovery rather than failing that one
-service.
+Decoding is per key. A definition that fails to decode — an invalid
+service name, a malformed trigger, an unclosed quote in a command, a
+`registry:` check naming an uncacheable key, a duplicate known field, an
+unrecognised value for an enumerated dword — fails that service, which
+is marked Failed with cause `ValidationError`. The boot proceeds with
+every other definition, and anything that depended on the failed service
+fails in turn through the ordinary dependency propagation.
 
 Only services carrying a `boot` trigger are root candidates. A service
 with no triggers is demand-only and is not a root, though it can still

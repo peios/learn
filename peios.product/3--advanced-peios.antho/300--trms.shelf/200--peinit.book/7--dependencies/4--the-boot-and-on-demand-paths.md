@@ -25,8 +25,8 @@ which one catches it depends on what kind of wrong it is:
 - **Decoding.** A definition that does not parse — an invalid name, a
   malformed trigger, an unclosed quote, a `registry:` check naming an
   uncacheable key, a duplicate field — is caught when the registry is
-  read. It aborts the whole read: recovery mode at boot, a rejected
-  reload otherwise (§3.2).
+  read. At boot it fails that service with `ValidationError` and the
+  rest continue; on a reload it rejects the whole reload (§3.2).
 - **Graph validation.** A definition that parses but does not fit —
   a cycle, a missing target, a flap-constraint violation, an invalid
   calendar expression — is caught here, and fails that service at boot

@@ -17,8 +17,17 @@ descriptor and its own computation.
 A disabled service gets neither a registration nor a firing.
 
 A schedule that fails to parse, or whose next occurrence cannot be
-computed, aborts the registration of every timer. At boot that means
-recovery mode; on a reload it ends the runtime loop.
+computed, fails that trigger. Every other timer arms normally, and what
+did not arm is reported to the console. This matches how graph
+validation already treats an invalid schedule (§7.4), so the outcome no
+longer depends on which of the two caught it.
+
+The next-occurrence search looks ten years ahead and then gives up. A
+schedule can parse and still match nothing — `*-02-30`, or a fixed year
+already past — and the horizon turns that into a prompt error against
+the one service rather than a very long walk. Ten years clears the
+sparsest schedule that is genuinely meaningful: `*-02-29` skips a
+century year not divisible by 400, so it can run eight years dry.
 
 ## Firing
 

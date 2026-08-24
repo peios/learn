@@ -90,9 +90,18 @@ because a definition that says two different things about the same field
 has no defensible reading. Since names match case-insensitively, this
 catches `ImagePath` and `imagepath` in the same key.
 
-## Decoding is all-or-nothing
+## What a decode failure costs
 
-A definition that fails to decode does not fail that one service. It
-aborts the whole read: at boot, into recovery mode (§2.5); on
-reload-config, by rejecting the reload and leaving the previous
-generation in place (§10.4).
+A definition that fails to decode fails that one service, and the answer
+differs by caller.
+
+At boot the key is marked Failed with cause `ValidationError` and the
+boot proceeds with every other definition. Anything that depended on the
+failed service fails in turn through the ordinary dependency propagation
+(§7.4), so the cost is bounded by what actually needed it.
+
+On reload-config the whole read is rejected and the previous generation
+stays in place (§10.4). That is not an inconsistency: a reload is atomic
+and has a working configuration to fall back to, where a boot has none.
+Refusing everything is the safe answer only when there is something to
+keep.
