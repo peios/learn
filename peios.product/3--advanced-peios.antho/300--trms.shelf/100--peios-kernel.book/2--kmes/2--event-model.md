@@ -69,16 +69,12 @@ the ring buffer write, not at syscall entry.
   `CLONE_THREAD` share the process state, and no exec path writes the
   field, so the GUID is stable for the process's lifetime.
 
-The token accessors return the null GUID when there is no task context
-(`!current` or not `in_task()`) or when the token cannot be resolved.
-The process GUID accessor checks only that `current` carries KACS
-security state: in interrupt or softirq context that borrowed a task,
-it returns the interrupted task's process GUID while the two token
-GUIDs stamp null. A fully null identity triple therefore indicates
-emission before KACS initialisation or from a kernel thread; a null
-token pair with a non-null process GUID indicates interrupt-context
-emission over an arbitrary interrupted task, and the process GUID in
-that case does not attribute the event.
+All three accessors return the null GUID when there is no task context
+(`!current` or not `in_task()`), and the token accessors also return it
+when the token cannot be resolved. A fully null identity triple
+therefore indicates emission before KACS initialisation, from a kernel
+thread, or from interrupt or softirq context. No event is ever stamped
+with the identity of a task that merely happened to be interrupted.
 
 For batch emission, the timestamp and the three identity GUIDs are
 captured once, before the per-event loop, and shared by every event in
