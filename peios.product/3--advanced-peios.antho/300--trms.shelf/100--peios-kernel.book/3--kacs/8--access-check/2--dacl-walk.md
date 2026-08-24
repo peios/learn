@@ -70,14 +70,15 @@ access-control ACE in the DACL targets the `OWNER RIGHTS` SID
 `EvaluateDACL`, before the main loop, and it checks only for the SID's
 presence — it does not evaluate any conditional expression on the ACE.
 
-During the walk proper, `S-1-3-4` matches whenever the object's owner
-SID equals the token's user SID or any of its group SIDs. That is a
-presence test: it consults neither `SE_GROUP_ENABLED` nor
-`SE_GROUP_USE_FOR_DENY_ONLY` nor `user_deny_only`, and it returns the
-same answer for allow and deny ACEs alike. A group marked deny-only,
-or a user SID on a `user_deny_only` token, therefore still matches an
-`OWNER RIGHTS` ACE where it would not match an ordinary one naming the
-same SID.
+During the walk proper, `S-1-3-4` is treated as an ordinary SID
+matching the owner, at both allow and deny polarity. It obeys the same
+rules as any other SID: an allow ACE matches only through an enabled,
+non-deny-only group, and not through the user SID of a
+`user_deny_only` token; a deny ACE matches through a group that is
+enabled or deny-only, and through the user SID unconditionally.
+
+Note that the *implicit* grant above is a separate rule and remains
+presence-based. It is bounded by the pre-scan rather than by polarity.
 
 The implicit grant is also bounded twice over: by the object type's
 valid rights, and by what has already been decided. A pre-decision

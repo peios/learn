@@ -314,11 +314,10 @@ naming several generics maps every one of them.
 modified token. `S-1-3-4` and `S-1-5-10` are resolved at each lookup
 instead, in the DACL walk, the SACL walk and conditional membership
 alike. `S-1-5-10` resolves through the ordinary polarity rules against
-`self_sid`. `S-1-3-4` resolves by testing whether the owner SID equals
-the token's user SID or any group SID — a **presence** test that does
-not consult `SE_GROUP_ENABLED`, `SE_GROUP_USE_FOR_DENY_ONLY`, or
-`user_deny_only`, and that returns the same answer for allow and deny
-polarity.
+`self_sid`, and `S-1-3-4` through the ordinary polarity rules against
+the object's owner SID. Both are computed once per walk — the owner is
+fixed while the polarity is per ACE — so each carries its allow and
+deny answers together.
 
 **`EvaluateSACL`** walks in a fixed order per ACE: SID match with deny
 polarity, then object-type scoping against the tree, then the
