@@ -44,8 +44,17 @@ LCS limit is applied later, when LCS acquires a thread's private
 credentials for an operation.
 
 The consequence is that a token carrying seventeen private layers is
-accepted by KACS and then fails every LCS operation with `EACCES`,
-rather than being refused when it was built.
+accepted by KACS and then fails every LCS operation, rather than being
+refused when it was built. Reading LCS's configured limits from KACS
+would invert the dependency between the two, so the cap stays where it
+can be read.
+
+The failure is `E2BIG`. It was `EACCES`, which read as an access-control
+denial and sent anyone debugging it towards descriptors and privileges
+rather than towards a count that was fixed when the token was assembled,
+possibly in another process. `MaxScopeGUIDsPerToken` shares the check
+and the errno. A missing token is still `EACCES`, because that one is an
+access decision.
 
 KACS also deduplicates private layer names using ASCII case-insensitive
 comparison, where LCS matches them with Unicode Simple Case Folding.

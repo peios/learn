@@ -51,8 +51,8 @@ then layer creation fails `ENOSPC` at 1023 regardless. Values below
 
 `MaxPrivateLayersPerToken` is described as an attachment-time limit but
 is not enforced at attachment. KACS applies its own hard cap of 256 and
-LCS applies the configured value later, at use, with `EACCES`
-(§5.3.5).
+LCS applies the configured value later, at use, with `E2BIG` (§5.3.5).
+`MaxScopeGUIDsPerToken` behaves the same way.
 
 `SymlinkDepthLimit` is honoured on most of the walk but two call sites
 use the compiled-in default of 16 instead of the configured value.
