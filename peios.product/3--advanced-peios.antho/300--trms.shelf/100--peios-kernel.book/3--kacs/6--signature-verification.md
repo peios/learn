@@ -105,11 +105,52 @@ algorithm. That API exposes no context parameter, so the empty FIPS
 204 context is structurally guaranteed rather than checked — a
 signature made under a non-empty context simply fails to verify.
 
-A failure to allocate the transform is currently reported the same way
-as a signature mismatch. On the exec path that means a kernel lacking
-the ML-DSA implementation treats every binary as unsigned rather than
-failing loudly, which removes PIP system-wide. On the LSV path the
-same condition denies the mapping, which fails closed.
+### When verification cannot be performed
+
+"Did not verify" and "could not be verified" are different answers and
+are kept apart. The per-key verifier is tri-state: verified, did not
+verify, or a negative errno meaning the check could not be made — an
+unavailable ML-DSA transform, or a key the transform will not accept.
+
+A negative stops the search rather than trying the remaining keys: the
+failure is in the machinery, and every remaining key would meet the same
+one. It then propagates out of the exec path, which **refuses the exec**
+with `EACCES`.
+
+That asymmetry with the ordinary unsigned path is the point. An unsigned
+binary runs with no integrity label, which is legitimate. Treating an
+unverifiable one the same way removes PIP from every process the system
+executes, and the result is indistinguishable from a correctly working
+system that has no signed binaries — so nothing surfaces it until
+signing is deployed, at which point it looks like the signing rollout
+broke something.
+
+On the LSV path the same condition denies the mapping, which already
+fails closed.
+
+### The boot-time probe
+
+A `late_initcall` allocates the transform once and, if it cannot,
+emits `pr_err` and a `KACS_SIGNING_CRYPTO_UNAVAILABLE` KMES event
+carrying the errno. The condition is then visible at boot rather than
+inferred from every process running without an integrity label.
+
+It cannot refuse to start, and two things rule that out rather than one:
+
+- At LSM init the algorithm is not yet registered, so `crypto_alloc_sig`
+  returns `ENOENT` on every boot. A probe there would fire always.
+- A non-zero return from an LSM's init function is only `WARN`'d
+  (`security/lsm_init.c`, `lsm_init_single`). The hooks are never added,
+  so "refuse to initialise" means running with no KACS at all — worse
+  than the failure it would be preventing.
+
+Enforcement therefore lives at exec, where refusing one exec is
+recoverable in a way losing the integrity boundary is not.
+
+The probe is not `IS_ENABLED(CONFIG_CRYPTO_MLDSA)`. That option is an
+unconditional `select` under `SECURITY_PKM`, which is a `bool`, so a
+config test would always pass and catch nothing. Only calling the
+allocator sees the ordering failure.
 
 ## PIP determination at exec
 
@@ -118,8 +159,12 @@ A verified binary takes `pip_type` and `pip_trust` from the matched
 key; no signature, an invalid or unstable one, a bad signature, or no
 matching key all yield None/0.
 
-**Exec proceeds in every case.** PIP is additive protection, not an
-execution gate: it determines trust level, not permission to run. An
+**Exec proceeds in every case where the question could be answered.**
+PIP is additive protection, not an execution gate: it determines trust
+level, not permission to run. The one exception is a signature that
+could not be verified at all, described above, which refuses the exec —
+because there the question was not answered, so there is no basis on
+which to assign a trust level. An
 attacker who replaces a signed binary's signature with garbage costs
 it PIP protection but can still execute it, subject to FACS. The
 asymmetry with LSV — which *does* block unsigned libraries — is

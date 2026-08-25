@@ -1081,6 +1081,7 @@ lookup failures, and the two commit-time transitions. Verdict is the
 | `KACS_EXEC_IMPERSONATION_REVERT_FAIL` | `13` | bprm impersonation revert failed |
 | `KACS_EXEC_PIP_COMMITTED` | `14` | pending exec PIP committed at commit |
 | `KACS_EXEC_UMH_NOT_TCB` | `15` | usermodehelper exec below PeiosTcb trust |
+| `KACS_EXEC_SIGNATURE_UNVERIFIABLE` | `16` | exec refused: signature could not be verified |
 
 kacs_signing reason — code-signature verification outcomes and the
 distinct reject reasons of the signing-material probe. Only source enum,
