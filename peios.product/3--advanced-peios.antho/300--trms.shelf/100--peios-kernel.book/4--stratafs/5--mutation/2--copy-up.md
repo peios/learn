@@ -160,13 +160,19 @@ cleanup would have each new mount destroy the other's copy-up in
 flight.
 
 The scan runs in batches of 128 names, with resume, and is triggered
-from four places: mounting, opening a directory, looking up a name
-beginning with the staging prefix, and copying up into a directory. An
-orphan in a directory that is never opened, looked up, or copied into
-is never removed — and because the emptiness test of §4.5.4 does not
-filter staging entries the way enumeration does, such an orphan makes
-`rmdir` of its parent fail with `ENOTEMPTY` on a directory that looks
-empty through the mount. This is tracked as a defect.
+from five places: mounting, opening a directory, looking up a name
+beginning with the staging prefix, copying up into a directory, and the
+emptiness test of §4.5.4 where it finds a directory empty but saw
+staging entries in it.
+
+The fifth exists because the other four only reach directories somebody
+visits. An orphan in a directory that is never opened, looked up, or
+copied into would otherwise never be removed, and the emptiness test —
+which filters staging entries — would report its parent empty and let
+an `rmdir` proceed that then failed at the provider. Recovering on that
+path costs nothing until someone actually meets the case, and reaches
+directories that a recursive walk of the create stratum at mount would
+have to visit every one of to find.
 
 The marker is removed after publication. A failure to remove it is only
 warned about, leaving the marker on the published copy until a later

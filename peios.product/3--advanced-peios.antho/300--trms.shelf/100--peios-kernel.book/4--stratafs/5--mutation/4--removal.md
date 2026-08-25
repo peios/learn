@@ -58,10 +58,19 @@ a disclosure channel: a caller who may not enumerate a protected
 participant could learn whether it contains anything by attempting
 `rmdir` and distinguishing `ENOTEMPTY` from success.
 
-The emptiness scan does not filter staging entries, though enumeration
-does. An in-flight or leaked copy-up staging file in the create stratum
-therefore makes `rmdir` fail with `ENOTEMPTY` on a directory that looks
-empty through the mount (§4.5.2).
+The emptiness scan filters staging entries, as enumeration does, so an
+in-flight copy-up in the create stratum does not make `rmdir` fail on a
+directory that looks empty through the mount.
+
+Because it filters them, a directory holding nothing but orphaned
+staging entries reports empty — and the removal would then fail at the
+provider, on entries the caller cannot see and has no way to remove. So
+a scan that finds the directory empty but saw staging entries runs
+orphan recovery on the create stratum's copy of it before returning
+(§4.5.2). Only entries belonging to no live mount are removed; one owned
+by a live mount survives, and the provider's `rmdir` then fails
+`ENOTEMPTY`, which is the right answer while another mount is copying up
+there.
 
 Where the directory is removed and lower strata hold the same name as a
 directory, the name remains visible as a merged directory of the
