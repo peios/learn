@@ -13,14 +13,32 @@ The caller MUST hold SeSecurityPrivilege, enabled; the call fails with
 `EPERM` otherwise.
 
 The CPU index uses the same numbering as the `cpu_id` field in the
-ring buffer metadata and in event headers. The set of buffers is fixed
-when KMES initialises and does not change while the system runs. An
-index outside that set fails with `EINVAL`.
+ring buffer metadata and in event headers. Indexes run from 0 to one
+below the *slot count*, and the set of buffers is fixed when KMES
+initialises and does not change while the system runs.
 
-A consumer discovers the buffer set by calling `kmes_attach` with
-indexes counting up from 0 until it receives `EINVAL`. A consumer
-SHOULD attach to every buffer in the set: a buffer with no consumer
-still receives events, and those events are lost when it wraps.
+The slot count is not the number of buffers. Slots are indexed by
+logical CPU id, so a slot within the range holds no buffer when that
+CPU is not possible, and the two quantities differ on any system whose
+possible-CPU mask is sparse. An index at or beyond the slot count fails
+with `EINVAL`, and so does an index inside it whose slot holds no
+buffer; the two are not distinguishable from the return value.
+
+A consumer discovers the slot count by calling `kmes_attach` with the
+CPU index `KMES_ATTACH_QUERY_SLOTS`. The call writes the slot count
+through the capacity pointer, returns 0, and opens no descriptor. It is
+gated on SeSecurityPrivilege exactly as an attach is.
+
+A consumer MUST enumerate by walking every index from 0 to one below
+the slot count, and MUST treat `EINVAL` as "this slot holds no buffer"
+and continue. A consumer MUST NOT treat the first `EINVAL` as the end
+of the set: doing so silently abandons every buffer above the first
+hole, whose events then accumulate and are overwritten with no consumer
+able to reach them.
+
+A consumer SHOULD attach to every buffer in the set: a buffer with no
+consumer still receives events, and those events are lost when it
+wraps.
 
 A consumer MAY call `kmes_attach` more than once for the same CPU and
 receives a distinct file descriptor each time. All descriptors for one

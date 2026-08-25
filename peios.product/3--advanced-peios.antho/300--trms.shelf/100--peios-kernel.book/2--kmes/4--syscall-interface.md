@@ -151,14 +151,29 @@ event stream chapter; the TRM side of the mechanics is §2.5.
 The caller's effective token has to hold SeSecurityPrivilege, enabled
 — `EPERM` otherwise — and a successful gate records SeSecurityPrivilege
 as used. `cpu_id` is a logical CPU index using the same numbering as
-the ring metadata and event headers. The valid range is fixed at KMES
-initialisation from the kernel's possible-CPU set: an index at or
-beyond the count of rings created at init fails with `EINVAL`, and
-consumers discover the CPU count by attaching with incrementing
-indexes until `EINVAL`. An index whose slot holds no live ring also
-fails with `EINVAL`. CPUs that were possible but offline at
-initialisation have rings and are attachable; hotplug beyond the
-initial set is not handled (§2.7).
+the ring metadata and event headers.
+
+The slot array is allocated at KMES initialisation and sized by
+`nr_cpu_ids`, then filled by walking `for_each_possible_cpu`. Those two
+quantities are not the same thing: the array size bounds a valid
+`cpu_id`, while the ring count is however many of those slots got a
+ring. They agree only when the possible-CPU mask is dense. An index at
+or beyond the array size fails with `EINVAL`; so does an index inside
+it whose slot holds no live ring.
+
+A consumer learns the array size by calling `kmes_attach` with
+`cpu_id` set to `KMES_ATTACH_QUERY_SLOTS` (`0xFFFFFFFF`). The call
+takes the same privilege gate, writes the slot count through
+`capacity`, returns 0, and opens no descriptor. Enumeration then walks
+0 to slots-1 and skips the indexes that answer `EINVAL`.
+
+Counting up until the first `EINVAL` — which is what this interface
+used to ask for — is wrong on a sparse mask: it stops at the first
+hole, and every ring above it becomes permanently unreachable, filling
+and overwriting with no consumer able to attach.
+
+CPUs that were possible but offline at initialisation have rings and
+are attachable; hotplug beyond the initial set is not handled (§2.7).
 
 On success the current ring capacity is written to `*capacity` — the
 consumer computes its mmap size as `8192 + 2 × capacity` — and the fd
