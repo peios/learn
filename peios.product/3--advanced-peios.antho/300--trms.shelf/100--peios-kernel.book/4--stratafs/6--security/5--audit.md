@@ -40,6 +40,8 @@ the required fields are all present, under a different name.
 A mutation refused because of how the mount is arranged emits a record
 with six keys: the path, the operation name, the provider index, the
 provider stratum path, the errno, and whether the refusal was deferred.
+The provider stratum is a string where a provider is known and msgpack
+nil where none is; see below.
 
 What counts as an arrangement refusal is one explicit list — `EROFS`,
 `EXDEV`, `ENOTDIR`, `EISDIR`, `ENOTEMPTY`, `EEXIST`, `EINVAL` — which
@@ -65,12 +67,13 @@ a create or link whose outer bookkeeping failed and whose lower object
 could not be removed again, and a failed publication rollback after a
 copy-up.
 
-### Two gaps
-
 A refusal raised before a provider is known — creation, tmpfile, the
-heads of link and rename — passes a provider index of `-1`, so the
-provider stratum is emitted as an empty string. The specification asks
-for the provider stratum in every refusal record.
+heads of link and rename — has no stratum to name. It reports a provider
+index of `-1` and a `provider_stratum` of msgpack **nil**, so a reader
+can tell "no provider was involved" from "the provider's path is empty".
+The two fields agree: an index of `-1` always accompanies a nil stratum.
+
+### One exception
 
 A refused **deferred deletion** is audited on *any* non-zero result, not
 only the arrangement errors, so one refused by an access check does get
