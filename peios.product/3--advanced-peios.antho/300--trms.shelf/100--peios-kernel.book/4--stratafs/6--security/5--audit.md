@@ -23,13 +23,17 @@ of six keys:
 | `create_stratum` | That stratum's path |
 | `result_errno` | Zero on success, the failure otherwise |
 
-The caller's identity is required because §4.6.3 preserves the source's
-descriptor, so nothing about the resulting object records who caused it
-to exist. It is present — but as an **envelope** field rather than a
-payload one. KMES stamps the effective, true and process token GUIDs
-onto the event header at ring-write time, and because copy-up runs in
-the caller's own context those are the caller's. Nothing in the payload
-names a token.
+The caller's identity is not in this payload. It does not need to be:
+KMES stamps the effective, true and process token GUIDs onto every event
+header at ring-write time, and because copy-up runs in the caller's own
+context those are the caller's. The identity is carried in the
+**envelope**, once, for every event — duplicating it into the payload
+would give a reader a second copy that could disagree with the first.
+
+Recording it matters because §4.6.3 preserves the source's descriptor,
+so nothing about the resulting object records who caused it to exist.
+A reader of these records must take the identity from the event header,
+not look for it among the keys.
 
 The `ENOTDIR` of parent materialisation is reported through this event
 with its `result_errno` rather than through the refusal event below;
@@ -44,8 +48,8 @@ The provider stratum is a string where a provider is known and msgpack
 nil where none is; see below.
 
 What counts as an arrangement refusal is one explicit list — `EROFS`,
-`EXDEV`, `ENOTDIR`, `EISDIR`, `ENOTEMPTY`, `EEXIST`, `EINVAL` — which
-matches the specification's enumeration one for one. Call sites cover
+`EXDEV`, `ENOTDIR`, `EISDIR`, `ENOTEMPTY`, `EEXIST`, `EINVAL`. Call
+sites cover
 every mutating path: writes, mappings, truncation, `fallocate`, splice,
 `copy_file_range`, `remap_file_range`, `setattr`, `setxattr` and
 `removexattr`, creation, tmpfile, unlink and rmdir, link, supersede,

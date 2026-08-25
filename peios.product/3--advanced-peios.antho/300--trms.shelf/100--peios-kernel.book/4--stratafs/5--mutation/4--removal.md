@@ -32,12 +32,14 @@ the original, which remained untouched in its own stratum throughout.
 Callers expecting POSIX removal will find the name still present
 afterwards; §4.8 records this as an intended divergence.
 
-One case reports a different error from the specified one. Where the
-provider does not accept modification because its inode is immutable,
-the outer inode carries the provider's inode flags, so the VFS refuses
-the removal with `EPERM` before stratafs's own `EROFS` test is reached.
-The `ro` flag and a read-only provider mount both still produce
-`EROFS`. This is tracked as a defect.
+Refusal because the provider does not accept modification is `EROFS`,
+with one exception: where the provider's inode is immutable it is
+`EPERM`. The outer inode carries the provider's inode flags, so the VFS
+refuses the removal before stratafs's own `EROFS` test is reached — and
+`EPERM` is what every filesystem returns for an immutable file, so the
+distinction is the useful one rather than an accident worth papering
+over. The `ro` flag and a read-only provider mount both still produce
+`EROFS`.
 
 ## Removing directories
 

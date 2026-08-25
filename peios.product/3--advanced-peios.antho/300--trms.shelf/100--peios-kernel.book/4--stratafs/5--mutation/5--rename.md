@@ -101,18 +101,20 @@ strata rather than from what the names hold.
 
 ### The `RENAME_NOREPLACE` ordering
 
-The specification requires conditions 1, 3 and 4 to be evaluated before
-the `EEXIST`, so their `EROFS`, `EXDEV` and `EACCES` take precedence.
-stratafs orders them that way deliberately, and the code says so.
-
-The ordering is nevertheless unobservable through `renameat2`. For
+A `RENAME_NOREPLACE` whose destination is held by any participating
+stratum fails with `EEXIST`, and that `EEXIST` takes precedence over
+conditions 1, 3 and 4. It is not stratafs that decides this. For
 `RENAME_NOREPLACE` the VFS looks the destination up with `LOOKUP_EXCL`
 and returns `EEXIST` for a positive dentry before `vfs_rename` runs at
-all — and stratafs's merged lookup makes the dentry positive whenever
-any stratum holds the name. A `RENAME_NOREPLACE` that should have
-reported `EROFS`, `EXDEV` or `EACCES` reports `EEXIST` instead, and
-stratafs's own check is reachable only as a race backstop. This is
-tracked as a defect.
+all, and stratafs's merged lookup makes the dentry positive whenever any
+stratum holds the name. `namei.c` is unpatched, so there is no point
+inside `->rename` from which the order could be changed.
+
+stratafs nonetheless evaluates conditions 1, 3 and 4 first, and the code
+says so. That ordering is reachable only as a race backstop — where the
+destination appeared between the VFS lookup and the rename — so a caller
+should not expect `EROFS`, `EXDEV` or `EACCES` from a `RENAME_NOREPLACE`
+whose destination already existed.
 
 ## Other behaviour
 

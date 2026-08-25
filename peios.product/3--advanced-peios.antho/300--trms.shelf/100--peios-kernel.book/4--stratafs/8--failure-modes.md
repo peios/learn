@@ -54,7 +54,7 @@ is not achieved.
 | Create stratum holds a path component as a non-directory | `ENOTDIR` |
 | Exclusive creation where any stratum holds the name | `EEXIST` |
 | Copy-up cannot preserve an extended attribute | `EIO` |
-| Copy-up cannot preserve the descriptor | `EACCES`, `EOPNOTSUPP`, `EINVAL`, `ESTALE` or `ENOMEM` — not `EIO` |
+| Copy-up cannot preserve the descriptor | `EACCES`, `EOPNOTSUPP`, `EINVAL`, `ESTALE` or `ENOMEM`, as KACS reported it |
 | Copy-up for a descriptor whose object is no longer the provider, or whose target name is taken at publication | `ESTALE` |
 | Copy-up of a device node, FIFO or socket | `EROFS` |
 | Unlink where the provider will not accept modification | `EROFS`, or `EPERM` where the provider inode is immutable |
