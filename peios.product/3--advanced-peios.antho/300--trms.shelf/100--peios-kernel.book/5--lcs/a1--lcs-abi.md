@@ -49,7 +49,7 @@ number and argument size.
 | `REG_IOC_QUERY_VALUES_BATCH` | 4 | _IOWR | `struct reg_query_values_batch_args` | 24 | `0xC0185204` |
 | `REG_IOC_ENUM_VALUES` | 5 | _IOWR | `struct reg_enum_value_args` | 40 | `0xC0285205` |
 | `REG_IOC_ENUM_SUBKEYS` | 6 | _IOWR | `struct reg_enum_subkey_args` | 40 | `0xC0285206` |
-| `REG_IOC_QUERY_KEY_INFO` | 7 | _IOR | `struct reg_query_key_info_args` | 64 | `0x80405207` |
+| `REG_IOC_QUERY_KEY_INFO` | 7 | _IOWR | `struct reg_query_key_info_args` | 64 | `0xC0405207` |
 | `REG_IOC_DELETE_KEY` | 8 | _IOW | `struct reg_delete_key_args` | 24 | `0x40185208` |
 | `REG_IOC_HIDE_KEY` | 9 | _IOW | `struct reg_hide_key_args` | 24 | `0x40185209` |
 | `REG_IOC_GET_SECURITY` | 10 | _IOWR | `struct reg_get_security_args` | 16 | `0xC010520A` |
@@ -350,6 +350,20 @@ Grouped as the header groups them.
 | `REG_TXN_STATUS_ARGS_SIZE` | `8` |
 | `REG_SRC_REGISTER_ARGS_SIZE` | `24` |
 | `REG_SRC_HIVE_ENTRY_SIZE` | `56` |
+
+*_IOWR, not _IOR: the kernel reads the caller's name_len and name_ptr out of the argument struct before it writes the result back, so the argument crosses in both directions. It was declared _IOR, which put the wrong direction bits in the encoded number -- and since the kernel dispatches on the whole encoded value, correcting it is a wire break, not a relabelling.*
+
+| Constant | Value |
+|---|---|
+| `REG_IOC_QUERY_KEY_INFO` | `0xC0405207` |
+| `REG_IOC_DELETE_KEY` | `0x40185208` |
+| `REG_IOC_HIDE_KEY` | `0x40185209` |
+| `REG_IOC_GET_SECURITY` | `0xC010520A` |
+| `REG_IOC_SET_SECURITY` | `0x4018520B` |
+| `REG_IOC_NOTIFY` | `0x4008520C` |
+| `REG_IOC_FLUSH` | `0x0000520D` |
+| `REG_IOC_BACKUP` | `0x4004520E` |
+| `REG_IOC_RESTORE` | `0x4004520F` |
 
 *Transaction state codes.*
 

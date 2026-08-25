@@ -26,14 +26,16 @@ computed there and reused for all three legs: waiting for a slot,
 waiting for the source to read the queued request, and waiting for the
 response.
 
-If the deadline expires while contending for a slot, the caller gets
+If the deadline expires before a slot is reserved, the caller gets
 `ETIMEDOUT` and **no request is sent**. If it expires after dispatch,
 the caller gets `ETIMEDOUT` and late-response handling applies
 (§5.8.5).
 
-Expiry is only noticed while contending. A request that finds a slot
-immediately available is dispatched even if its deadline has already
-passed, and the caller then times out waiting for the answer.
+The deadline is checked before admission is attempted, not only after a
+contention round is lost. It used to be the latter, which meant a request
+finding a slot immediately free was dispatched with an already-expired
+deadline and timed out in the wait leg instead — so the rule above held
+only under contention, the one case where it is hardest to observe.
 
 ## Timed-out requests keep their slot
 

@@ -63,9 +63,13 @@ name length and maximum value data size, the descriptor size, the
 volatile and symlink flags, and the hive generation number. It requires
 `READ_CONTROL`.
 
-It is declared `_IOR`, but it reads the caller's output-buffer fields
-out of the argument structure before writing it back, so it is
-read-write in practice.
+It is declared `_IOWR`, which is what it does: it reads the caller's
+output-buffer fields out of the argument structure before writing it
+back. It was declared `_IOR`, and because the direction bits are part of
+the encoded ioctl number and the kernel dispatches on the whole encoded
+value, correcting that was an ABI break rather than a relabelling. A
+binary built against the old constant gets `ENOTTY` from a kernel
+carrying the new one.
 
 ### The hive generation number
 
