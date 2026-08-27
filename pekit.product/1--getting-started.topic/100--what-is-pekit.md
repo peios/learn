@@ -82,7 +82,7 @@ Pekit is the **producer-side build tool**. It stops at the `.peipkg` file. What 
 
 Pekit produces packages in the [peipkg format](~peios/package-management/overview) and understands peipkg concepts directly: recipes declare package **dependencies**, automatic **ELF dependencies** are scanned from built binaries, and packages can declare the shared-name **claims** they participate in. See [Dependencies and claims](~pekit/recipes/dependencies-and-claims).
 
-Pekit also carries the supply-chain half of producing packages: fetched sources are pinned trust-on-first-use in a lockfile, upstream release signatures can be verified against committed keys, artifacts are Ed25519-signed, and every manifest records the provenance of its inputs, recipe, and builder. See [Signing and provenance](~pekit/running/signing-and-provenance).
+Pekit also carries the supply-chain half of producing packages: fetched sources are pinned trust-on-first-use in a lockfile, upstream release signatures can be verified against committed keys, artifacts are Ed25519-signed, binaries can be PIP-signed for the kernel, and every manifest records the provenance of its inputs, recipe, and builder. See [Signing and provenance](~pekit/running/signing-and-provenance).
 
 > [!IMPORTANT]
 > **Pekit supersedes the old `peipkg-build` recipe system.** Earlier Peios used a `peipkg.toml` + `build.sh` recipe built by a separate `peipkg-build` binary. Pekit replaces that entirely; a pekit recipe (`pekit.toml` + package files) is the current and only supported way to build a package. Documentation describing `peipkg-build` and its `build.sh` recipes is legacy.

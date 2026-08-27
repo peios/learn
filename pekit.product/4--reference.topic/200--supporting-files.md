@@ -194,6 +194,11 @@ Without a configured signing key, `package` writes unsigned artifacts, and
 `publish` refuses peipkg-format packages unless `--allow-unsigned` is passed
 (`unsigned_publish`).
 
+A build target's [`sign` table](~pekit/reference/recipe-format#target-sign)
+reads further entries, but which ones is the recipe's choice: each `sign.pip`
+value is the dotted path of a leaf holding the path to an ML-DSA-65 private
+key. Those entries are still exported to the target like any other.
+
 ---
 
 ## `pekit.lock`

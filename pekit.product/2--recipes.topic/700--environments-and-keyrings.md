@@ -257,6 +257,15 @@ packages unless you pass `--allow-unsigned`. The exact behaviour and the
 accepted key encodings are in
 [Supporting files](~pekit/reference/supporting-files#well-known-entries).
 
+### Binary signing
+
+A build target's [`sign` table](~pekit/reference/recipe-format#target-sign)
+also reads the keyring, but through entries the recipe names rather than a
+fixed one: `"bin/peinit" = "tcb.priv"` signs that output file with the key
+whose path the `tcb.priv` leaf holds. Any leaf will do; the convention in
+Peios' own recipes is `[tcb] priv = "<path>"`. See
+[Signing binaries for PIP](~pekit/running/signing-and-provenance#signing-binaries-for-pip).
+
 ### Keyring file format
 
 A `*.keyring.pekit.toml` file is a TOML document whose leaves are strings. Each

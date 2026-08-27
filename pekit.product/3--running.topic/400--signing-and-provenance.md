@@ -1,7 +1,7 @@
 ---
 title: Signing and provenance
 type: concept
-description: "How pekit signs .peipkg artifacts, the provenance every manifest records, corresponding-source packages, and the gates publish enforces."
+description: "How pekit signs .peipkg artifacts and PIP-signs binaries, the provenance every manifest records, corresponding-source packages, and the gates publish enforces."
 related:
   - pekit/recipes/sources
   - pekit/recipes/environments-and-keyrings
@@ -9,6 +9,7 @@ related:
   - pekit/reference/supporting-files
   - pekit/reference/cli
   - peios/package-management/repositories-and-trust
+  - peios/binary-signing-and-pip/scope
 ---
 
 A published package is a claim: *these bytes were built from these inputs, by
@@ -52,6 +53,83 @@ Two failure behaviours are deliberate:
 - Without a key, `package` writes unsigned artifacts (fine for local
   development), but `publish` refuses peipkg-format packages with
   `unsigned_publish` unless you pass `--allow-unsigned`.
+
+## Signing binaries for PIP
+
+Package signing protects the artifact in transit; it says nothing to the
+kernel about the programs inside. The Peios kernel derives a process's
+[Process Integrity Protection](~peios/binary-signing-and-pip/process-integrity-protection)
+tier from a second, separate signature carried by the binary itself, and
+pekit produces that signature too — as a step of the **build target**, not of
+packaging.
+
+A build target lists the files to sign in a `sign` table, keyed by signature
+kind. The `pip` kind maps paths or globs relative to the target's `$PEKIT_OUT`
+to the keyring entry that holds the signing key:
+
+```toml
+[build.main]
+command = "make && make install DESTDIR=$PEKIT_OUT"
+
+[build.main.sign.pip]
+"usr/bin/peinit"  = "tcb.priv"
+"usr/lib/*.so.*"  = "tcb.priv"
+```
+
+```toml
+# dev.keyring.pekit.toml — per-developer, gitignored
+[tcb]
+priv = "kacs-tcb-dev.key"     # openssl genpkey -algorithm ML-DSA-65
+```
+
+The value names any keyring leaf; there is no fixed entry name. It holds the
+path to an ML-DSA-65 private key — PKCS#8 PEM, or a raw 32-byte seed —
+resolved against the invocation's working directory when relative. The kind
+decides only the format and the storage location: for `pip` that is the
+[fixed 3310-byte blob](~peios/binary-signing-and-pip/signature-format) in an
+ELF section named `.peios.sig`.
+
+Signing runs after the target's command exits 0 and before any dependent
+target or package sees the output, so it is the last thing to touch the
+binary. That ordering is why this is a build step: the signature covers the
+whole file, so every strip, debug split or `patchelf` a recipe performs has to
+come first, and those all live in build commands. It also means `pekit test`
+exercises the signed binary rather than an unsigned stand-in.
+
+For each matched file, pekit:
+
+1. Adds a zero-filled `.peios.sig` section, or reuses one the build already
+   reserved (it must be `SHT_PROGBITS` and exactly 3310 bytes). Adding a
+   section appends to the file and never moves existing bytes, so program
+   headers and loadable segments are unaffected.
+2. Hashes the file with the section contents zeroed, signs the hash with pure
+   ML-DSA-65 (deterministic, empty context) and writes the blob into the
+   reserved bytes.
+3. Verifies the finished file the way the kernel will before returning, and
+   emits a `sign` event naming the keyring entry and the key's fingerprint —
+   the SHA-256 of the raw public key, the same bytes a kernel key table
+   carries.
+
+Two properties are deliberate:
+
+- **Every failure is fatal.** A keyring entry that is missing or does not
+  load, a pattern that matches nothing, a file that is not a 64-bit
+  little-endian ELF, a reserved section of the wrong size, and two patterns
+  naming different keys for one file all abort the target. There is no
+  `--allow-unsigned` equivalent, because an unsigned binary is not a weaker
+  binary: it runs with no tier and no diagnostic, and build time is the only
+  place the mistake is visible.
+- **Only the ELF section form is produced.** The specification also allows
+  the signature in an extended attribute, but package payloads
+  [carry no extended attributes](~peios/package-format-and-repository-protocol/determinism),
+  so nothing pekit ships could use it. Scripts and other non-ELF files take
+  their interpreter's tier and cannot be usefully signed.
+
+Which tier a signature confers is a property of the key, not of anything in
+the recipe: the kernel looks the verifying key up in its compiled-in table.
+Getting a key into that table is a kernel-build question — see the `tcb.pub`
+entry the pkm recipe consumes — and a binary signed with a key the kernel does
+not carry is simply unsigned there.
 
 ## What the manifest records
 

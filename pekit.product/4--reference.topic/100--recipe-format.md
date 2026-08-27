@@ -265,10 +265,11 @@ Fields of a single target:
 | `needs` | array of strings | no | Names of other targets in the same section that must run first. |
 | `clear_out` | bool | no | Wipe this target's output directory before running. Default `true`. |
 | `dependencies` | table | no | **Build targets only.** Build-time dependencies the target needs provisioned. See below. |
+| `sign` | table | no | **Build targets only.** Files in the target's output to sign after the command succeeds, by signature kind. See [`sign`](#target-sign) below. |
 
 Any other key in a target table is an `unknown target key` error. `dependencies`
-is accepted only in `[build]` targets; using it in `test`/`install`/`clean` is
-an unknown key.
+and `sign` are accepted only in `[build]` targets; using either in
+`test`/`install`/`clean` is an unknown key.
 
 The `dependencies` table is keyed by **provider** (a selector), each mapping
 dependency names to version constraints:
@@ -287,6 +288,37 @@ pesb-dev."pkgconfig(zlib)" = "*"
 Dependency names may be real package names or virtual capabilities (sonames,
 `pkgconfig(...)`, etc.) and are validated against peipkg's capability grammar.
 See [Commands and targets](~pekit/running/commands-and-targets).
+
+#### `[build.<name>.sign]` {#target-sign}
+
+The `sign` table is keyed by **signature kind**. Each kind is a table mapping
+a path or glob, relative to the target's `$PEKIT_OUT`, to the dotted path of
+the keyring entry holding the signing key:
+
+```toml
+[build.main.sign.pip]
+"bin/peinit"  = "tcb.priv"
+"lib/*.so.*"  = "tcb.priv"
+```
+
+The kind decides the signature format and where it is stored; the keyring
+entry is resolved through the ordinary [keyring mechanism](~pekit/recipes/environments-and-keyrings#keyrings)
+when the target runs. Signing happens after the target's command exits 0 and
+before any dependent target or package sees the output.
+
+| Level | Type | Meaning |
+| --- | --- | --- |
+| kind | table | A signature kind. The only kind is `pip` — the Peios binary signature that confers a [Process Integrity Protection](~peios/binary-signing-and-pip/process-integrity-protection) tier. Any other name is `unknown_key`. |
+| kind.*&lt;pattern&gt;* | string | A relative path or glob (the same glob syntax as `[files]`). The value is a keyring leaf path such as `tcb.priv` whose value is the path to the private key. Must be non-empty. |
+
+For `pip`, the key is an ML-DSA-65 private key — PKCS#8 PEM as produced by
+`openssl genpkey -algorithm ML-DSA-65`, or a raw 32-byte seed — and every
+matched file must be a 64-bit little-endian ELF. A pattern that matches
+nothing (`sign_target_missing`), a keyring entry that is absent or does not
+load (`signing_key`), a file that cannot carry the signature (`sign_failed`),
+and two patterns naming different keys for one file (`sign_conflict`) are all
+errors; pekit never leaves a listed file unsigned. The mechanism is described
+in [Signing and provenance](~pekit/running/signing-and-provenance#signing-binaries-for-pip).
 
 ### `[gen]` {#gen}
 
