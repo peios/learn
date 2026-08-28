@@ -105,13 +105,20 @@ Isolated. A program reasoning about tiers compares the numbers
 
 Peer identity on AF_UNIX sockets is read and bounded through socket
 options rather than syscalls. `uapi/pkm/socket.h` defines the option
-level `SOL_KACS` (4096) and its options, `KACS_SO_PEER_TOKEN` and
-`KACS_SO_IMPERSONATION_LEVEL` (§3.A). The kernel dispatches the level
+level `SOL_KACS` (4096), its options `KACS_SO_PEER_TOKEN`,
+`KACS_SO_IMPERSONATION_LEVEL` and `KACS_SO_PASS_TOKEN`, and the
+ancillary message type `KACS_SCM_TOKEN`, which travels at
+`cmsg_level SOL_KACS` (§3.A). The kernel dispatches the option level
 in `net/socket.c` ahead of the protocol's own handlers (patch
 `net/socket-sol-kacs-dispatch.patch`), so the options reach KACS on
-every socket family and KACS decides which it supports: the
-connection-oriented Unix types answer, everything else fails with
-`EOPNOTSUPP`. The semantics and error codes are in §3.5.3.
+every socket family and KACS decides which it supports. The ancillary
+message is carried per skb on AF_UNIX: `net/scm-kacs-token.patch`
+gives `struct scm_cookie` a counted token reference and parses
+`SOL_KACS` control messages; `net/af_unix-kacs-token.patch` carries
+the reference on `struct unix_skb_parms`, stops a stream read at an
+identity boundary, and advances the register at the point of
+consumption. Everything KACS-specific behind those hooks lives in
+`kacs/socket.c`. The semantics and error codes are in §3.5.3.
 
 Three syscall numbers are retired and left as permanent holes:
 1010 (`kacs_open_peer_token`), 1011 (`kacs_impersonate_peer`) and

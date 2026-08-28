@@ -132,7 +132,7 @@ A handful of guidelines:
 | Make an access decision based on peer identity | `KACS_SO_PEER_TOKEN` then KACS-aware logic |
 | Act on the peer's behalf (impersonate) | `peios_token_impersonate_peer`, or `KACS_SO_PEER_TOKEN` + `KACS_IOC_IMPERSONATE` |
 | Capture peer identity at connect for later use | `KACS_SO_PEER_TOKEN` (store the fd) |
-| Send a credential along a datagram message | `SCM_CREDENTIALS` for compat; for security, pass the token fd via `SCM_RIGHTS` |
+| Send an identity along a message | `SCM_CREDENTIALS` for compat; for security, `KACS_SCM_TOKEN` — the kernel-verified, token-grade equivalent (or `KACS_SO_PASS_TOKEN` to attach it automatically) |
 
 The pattern: compatibility-grade peer ID uses the Linux APIs; security-grade peer ID uses the KACS APIs. The distinction matters most for services that handle untrusted callers — a public-facing daemon should use `KACS_SO_PEER_TOKEN`; an internal diagnostic tool can use `SO_PEERCRED`.
 

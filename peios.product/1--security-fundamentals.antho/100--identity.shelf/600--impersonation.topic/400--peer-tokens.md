@@ -28,13 +28,38 @@ flowchart LR
 When the client calls `connect()` on a Unix stream or seqpacket socket, the kernel:
 
 1. Reads the client's effective token (impersonation if set, primary otherwise).
-2. Reads the impersonation level the client requested on the socket with `KACS_SO_IMPERSONATION_LEVEL` (default Impersonation; the option is refused with `EISCONN` once the socket is connected).
+2. Reads the impersonation level the client requested on the socket with `KACS_SO_IMPERSONATION_LEVEL` (default Impersonation). The option can be changed at any time; it bounds every capture made from then on.
 3. Constructs a peer token derived from the client's token, at the requested level.
 4. Attaches the peer token to the server-side socket.
 
 The peer token is held by the kernel for the life of the socket. The client's identity travels into the kernel at connect, not at impersonate. By the time the server reads the peer token, the work of capturing identity is already done.
 
-This timing matters in one specific way: **the captured identity is the client's identity at the moment of connect**. If the client changes identity afterwards (impersonates a third party, drops privileges, anything), the change does not affect the peer token on the existing connection. The peer token is a snapshot. Servers that want to track changing client identity across a long-lived connection need to renegotiate (typically by having the client reconnect).
+What the server reads is the connection's **conveyed-identity register**: the peer identity that goes with the data the server has consumed so far. The connect-time capture is its first value, and it stays that unless the client conveys a new identity with the data itself (next section). Whatever it holds, it is always an immutable snapshot — each read of `KACS_SO_PEER_TOKEN` returns a fresh fd, two reads may name different tokens, but no token ever changes under you.
+
+## Identity that travels with the data
+
+A single identity per connection is the right model for a client that connects, acts as itself, and disconnects. It is the wrong model for two things real systems do constantly:
+
+- **Connection pooling.** A service keeps a few long-lived connections to a downstream service and reuses them for many requests, on behalf of many different users. The identity at connect time is the pool's; the identity that matters is whoever is writing *this* request.
+- **Proxies and routers.** One process accepts from many clients and forwards their messages over its own connections. Its outbound connection carries one connect-time identity, but it is speaking for many.
+
+Both are solved by letting identity travel in-band, attached to the bytes it describes, as a `KACS_SCM_TOKEN` ancillary message under the `SOL_KACS` level. It arrives ordered with the data — the kernel never coalesces bytes conveyed under different identities into one read — and as the server's reads pass each one, the register moves to it. There is nothing to listen for: the server reads a request, then asks `KACS_SO_PEER_TOKEN` who sent it.
+
+There are two ways to send it, and the receiver cannot tell them apart, because the kernel guarantees the same thing for both: *the sender could be this identity when it sent these bytes*.
+
+- **Automatically**, by setting `KACS_SO_PASS_TOKEN` on the sending socket (`peios_socket_set_pass_token`). From then on every send carries the sender's effective identity, derived at the socket's impersonation level. This is the fix for pooling: a service that impersonates user A and writes through an off-the-shelf client library conveys A, because the capture happens at the `sendmsg` the library was already calling. Nothing in the library changes.
+- **Explicitly**, by attaching a token fd in a `KACS_SCM_TOKEN` cmsg on `sendmsg`. This is the fix for proxies: the router holds each client's token fd (read from its own inbound connection) and attaches it to the messages it forwards downstream. The kernel gates the attach as if the sender were impersonating that token — the fd needs `TOKEN_IMPERSONATE`, and if the two-gate model would cap the token below its own level the send fails with `EPERM` rather than quietly downgrading. Attaching is never more than impersonating, sending, and reverting; it just skips the install.
+
+On the receiving side, a `KACS_SCM_TOKEN` cmsg (carrying a fresh `TOKEN_QUERY | TOKEN_IMPERSONATE` fd) is delivered with a read when the call supplied control-buffer space and the read's identity differs from what the register held. A server that never touches ancillary data loses nothing — the register is kept by the kernel regardless — which makes the simple loop the right default:
+
+```c
+n = recvmsg(conn, &msg, 0);              /* just the data */
+tok = peios_token_open_peer(conn);       /* who sent what I just read */
+```
+
+Parsing the cmsg is the path for pipelined or concurrent consumers that need each token bound to a specific message. `SOCK_SEQPACKET` keeps that association exact by construction (one send, one message, one identity), which is why it is the recommended socket type for Peios-native protocols; on `SOCK_STREAM` a read simply stops at each identity boundary.
+
+Datagram sockets have no register (many senders share one socket), so on `SOCK_DGRAM` per-message identity is the only kind: each datagram carrying a token delivers it.
 
 ## Two ways to use a peer token
 
@@ -66,10 +91,10 @@ Peer token capture works on Unix sockets that have a real **connect** step. Spec
 
 | Transport | Peer token? |
 |---|---|
-| `SOCK_STREAM` Unix socket | **Yes.** Captured at connect. |
-| `SOCK_SEQPACKET` Unix socket | **Yes.** Captured at connect. |
-| `SOCK_DGRAM` Unix socket | **No.** No connect step; no point at which to capture. `KACS_SO_PEER_TOKEN` fails with `EOPNOTSUPP`. |
-| `socketpair(2)` | **No.** The two ends share an origin; there is no "client" and "server". Connected but empty: `ENODATA`. |
+| `SOCK_STREAM` Unix socket | **Yes.** Captured at connect; register follows conveyed identity. |
+| `SOCK_SEQPACKET` Unix socket | **Yes.** Captured at connect; register follows conveyed identity. |
+| `SOCK_DGRAM` Unix socket | **Per message only.** No connect step, so nothing to capture and no register (`KACS_SO_PEER_TOKEN` fails with `EOPNOTSUPP`), but `KACS_SO_PASS_TOKEN` and `KACS_SCM_TOKEN` work on every datagram. |
+| `socketpair(2)` | **Per message only, with a register.** The two ends share an origin, so nothing is captured (`ENODATA` at first) — but the moment one end conveys an identity, the other's register holds it. The way a broker's private channels get identity. |
 | Pipes (`pipe(2)`, named FIFOs) | **No.** Not sockets at all: `ENOTSOCK`. |
 | TCP sockets | **No.** Peer is potentially remote; KACS does not capture network identities. `EOPNOTSUPP`. |
 

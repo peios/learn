@@ -37,8 +37,10 @@ Errors, per call:
 int peios_token_impersonate_peer(int conn_fd);
 int peios_socket_set_impersonation_level(int sock_fd, uint32_t level);
 int peios_socket_get_impersonation_level(int sock_fd, uint32_t *level);
+int peios_socket_set_pass_token(int sock_fd, bool on);
 ```
 
 - `peios_token_impersonate_peer` is `peios_token_open_peer` followed by `peios_token_impersonate` and a `close` — the one-call form for a handler that impersonates, works, and reverts on a single thread. It returns 0 or -1; the errno is whichever step failed.
-- `peios_socket_set_impersonation_level` is the **client's** side of the exchange: it sets the `KACS_SO_IMPERSONATION_LEVEL` socket option (`KACS_IMLEVEL_*`) on an unconnected stream/seqpacket socket, bounding the level at which the server may impersonate — Identification to be known but not acted as, Anonymous to withhold identity entirely. The default is `KACS_IMLEVEL_IMPERSONATION`. Errors: `EISCONN` (already connected), `EINVAL` (unknown level), `EOPNOTSUPP` (a datagram or non-Unix socket).
+- `peios_socket_set_impersonation_level` is the **client's** side of the exchange: it sets the `KACS_SO_IMPERSONATION_LEVEL` socket option (`KACS_IMLEVEL_*`), bounding the level at which the peer may capture this socket's identity — Identification to be known but not acted as, Anonymous to withhold identity entirely. Usually set before `connect()`; it may change at any time and bounds every capture from then on. The default is `KACS_IMLEVEL_IMPERSONATION`. Errors: `EINVAL` (unknown level), `EOPNOTSUPP` (a non-Unix socket).
 - `peios_socket_get_impersonation_level` reads the level back into `*level`.
+- `peios_socket_set_pass_token` turns on per-message identity for a sending socket (`KACS_SO_PASS_TOKEN`): every send then carries the sender's effective identity as a `KACS_SCM_TOKEN` ancillary message, and the peer's `peios_token_open_peer` follows whoever was impersonating at each send. This is what makes a pooled or multiplexed connection convey the right identity per request without the client library knowing. To attach a *specific* token to one message instead — a router forwarding for many clients — send a `KACS_SCM_TOKEN` cmsg (level `SOL_KACS`, data: the token fd) on `sendmsg`; the kernel gates it as if you were impersonating that token and fails with `EPERM` rather than downgrading.

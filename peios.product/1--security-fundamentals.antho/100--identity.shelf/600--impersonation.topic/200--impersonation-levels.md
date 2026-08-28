@@ -78,9 +78,9 @@ The split — KACS records the flag, authd acts on it — keeps the kernel out o
 
 Three things determine the level a server actually ends up with:
 
-1. **The client's request**, set on the socket before connect with the `KACS_SO_IMPERSONATION_LEVEL` socket option (`peios_socket_set_impersonation_level`). Default is Impersonation if the client says nothing.
+1. **The client's request**, set on the socket with the `KACS_SO_IMPERSONATION_LEVEL` socket option (`peios_socket_set_impersonation_level`) — usually before connect, though it can change at any time and bounds every capture made from then on. Default is Impersonation if the client says nothing.
 2. **The two-gate model**, applied at impersonation time: the identity gate and the integrity ceiling. Either can cause the granted level to be silently downgraded. See [The two-gate model](~peios/impersonation/the-two-gates).
-3. **The transport.** Some Unix-socket variants — SOCK_DGRAM, socketpair, pre-existing pipes — do not carry a peer token. Servers using these transports cannot use `peios_token_impersonate_peer` and must use the explicit-fd ioctl instead. See [Peer tokens and capture](~peios/impersonation/peer-tokens).
+3. **The transport.** Datagram and socketpair sockets capture nothing at connect, so identity on them travels per message (`KACS_SO_PASS_TOKEN` or a `KACS_SCM_TOKEN` cmsg); pipes carry no identity at all, and a server on a pipe must obtain a token some other way and use the explicit-fd ioctl. See [Peer tokens and capture](~peios/impersonation/peer-tokens).
 
 The first sets the maximum. The second can lower it. The third is about the mechanism for getting the token at all.
 

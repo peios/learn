@@ -65,7 +65,7 @@ Always pair `peios_token_impersonate` with [`peios_token_revert`](~peios/sdk-tok
 
 The full flow for a request handler is: `accept` → `peios_token_open_peer` → `peios_token_impersonate` → serve the request → `peios_token_revert` → `close`. When the handler runs start to finish on one thread and has no other use for the token, `peios_token_impersonate_peer(conn)` collapses the open, impersonate and close into one call.
 
-A client decides how far its identity travels before it connects: `peios_socket_set_impersonation_level(sock, KACS_IMLEVEL_IDENTIFICATION)` lets the server learn who it is without being able to act as it.
+A client decides how far its identity travels: `peios_socket_set_impersonation_level(sock, KACS_IMLEVEL_IDENTIFICATION)` lets the server learn who it is without being able to act as it. And a client that writes on behalf of many identities over one connection — a service impersonating its callers through a connection pool — turns on `peios_socket_set_pass_token(sock, true)`, after which every send carries whoever is impersonating at that moment and the server's `peios_token_open_peer` tracks it request by request.
 
 ## Dropping power
 
