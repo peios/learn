@@ -28,8 +28,8 @@ what gets installed is not additive.
 - Adding a value to a closed enumeration: the side-effect identifiers of
   §5.24, the architecture identifiers of §5.8, the hash algorithms of
   §5.25, the signature algorithms of §5.28, the key statuses of §5.32,
-  the index kinds, the constraint operators of §5.7, or the signature
-  policies of §5.37. A conforming implementation of this version MUST
+  the index kinds, the constraint operators of §5.7, the licence classes
+  of §5.18, or the signature policies of §5.37. A conforming implementation of this version MUST
   reject a value outside each of those sets, so a new value is not
   ignorable.
 - Any change to the version comparison algorithm of §5.6, which is

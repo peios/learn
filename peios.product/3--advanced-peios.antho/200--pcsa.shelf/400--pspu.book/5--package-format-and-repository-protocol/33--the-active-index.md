@@ -61,6 +61,7 @@ in place of an active one MUST be rejected.
   "architecture": "<string>",
   "description": "<string>",
   "license": "<string>",
+  "license_class": "<string>",
   "homepage": "<string>",
   "default_root": "<root reference>",
   "dependencies": [<dependency>...],
@@ -90,6 +91,11 @@ flow into URL construction and into the consumer's own records.
 
 `size_compressed` and `size_installed` are required because they are the
 input to the decompression bound of §5.27.
+
+`license_class`, when present, MUST be validated against the closed set
+of §5.18 on parse; absent means `unknown`, as in the manifest. It is
+carried so a consumer can apply a licence policy at planning time,
+before fetching anything.
 
 `hash` carries `algorithm`, which MUST be `sha256` in this version, and
 `value`, the lowercase hexadecimal SHA-256 of the `.peipkg` file in its

@@ -17,6 +17,7 @@ provenance. It is a JSON document at `.peipkg/manifest.json`.
   "architecture": "<string>",
   "description": "<string>",
   "license": "<string>",
+  "license_class": "<string>",
   "homepage": "<string>",
   "default_root": "<root reference>",
   "special_system_package": <bool>,
@@ -53,6 +54,7 @@ A manifest missing any required field MUST be rejected.
 |---|---|---|---|
 | `description` | string | One-line human-readable description. | empty string |
 | `license` | string | SPDX identifier or expression. | empty string |
+| `license_class` | string | Which of the closed set of licence classes (§5.a2) the package's terms fall into: `unknown`, `free`, `firmware` or `proprietary`. | `unknown` |
 | `homepage` | string | URL of the upstream project. | empty string |
 | `default_root` | string | The root a *top-level* install of this package lands in when the operator names none (§5.19). | the operator's current root |
 | `special_system_package` | boolean | Declares the package exempt from the §5.14 layout rules at production time (§5.14). | `false` |
@@ -119,7 +121,30 @@ descriptions belong in upstream documentation.
 
 `license`, when present, SHOULD be a valid SPDX expression. A producer
 MAY use another form; this specification does not validate license
-strings.
+strings. A `LicenseRef-` term names a licence with no SPDX identifier;
+a producer using one SHOULD ship the licence text under
+`/usr/share/licenses/<name>/` in the same package.
+
+`license_class`, when present, MUST be one of `unknown`, `free`,
+`firmware`, or `proprietary`; any other value MUST cause the package to
+be rejected. Absent means `unknown`, and a consumer MUST treat the two
+identically. A producer SHOULD declare a class other than `unknown`
+whenever `license` contains a `LicenseRef-` term, since that is
+precisely the case in which the expression alone cannot say.
+
+> [!NOTE]
+> A licence expression cannot be read by a machine for what an operator
+> actually wants to know — whether the package is free software, a
+> redistributable device firmware blob, or proprietary code — and the
+> `LicenseRef-` escape hatch makes every non-SPDX licence opaque. The
+> class carries that one fact so a consumer can answer "what non-free is
+> installed" or apply an image policy without parsing licences.
+> `firmware` is a class of its own rather than a kind of `proprietary`
+> because it is a different bargain: no source, executes on a device
+> rather than the CPU, and needed to use hardware the user owns — the
+> distinction Debian's `non-free-firmware` and Fedora's firmware
+> exception both draw. `unknown` exists so every package that predates
+> the field stays valid and honest: nothing has been asserted.
 
 `homepage`, when present, MUST be a syntactically valid URL per RFC 3986
 and MUST use the `https` or `http` scheme. Any other scheme MUST cause

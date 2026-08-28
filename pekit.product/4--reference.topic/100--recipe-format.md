@@ -225,7 +225,9 @@ Any other key is an `unknown source_package key` error.
 The emitted package is `noarch`, versioned identically to the recipe's package
 members (members that disagree on version are a
 `source_package_version_conflict` error), licensed as the conjunction of the
-members' licenses, and installs under `/usr/src/dist/<name>-<version>/`
+members' licenses (and classed as the most encumbered member's class —
+`proprietary` over `firmware` over `unknown` over `free`, with an
+undeclared member counting as `unknown`), and installs under `/usr/src/dist/<name>-<version>/`
 (with any `-source` suffix stripped from `<name>`):
 
 - `upstream/` — the pristine source input: a url source's downloaded artifact
@@ -427,7 +429,7 @@ The package file accepts exactly these top-level keys; anything else is an
 > [!IMPORTANT]
 > The `tar` format carries payload only: it **cannot express manifest
 > metadata**. If a `tar` package sets `version`, `architecture`,
-> `description`, `license`, `homepage`, or any of `dependencies`,
+> `description`, `license`, `license_class`, `homepage`, or any of `dependencies`,
 > `optional_dependencies`, `conflicts`, `provides`, `replaces`,
 > `side_effects`, or `sd_overrides`, the build fails with
 > `unsupported_manifest_field`. The `peipkg` format requires
@@ -454,6 +456,7 @@ Package metadata. Accepts exactly these keys; any other is an
 | `architecture` | string | no | Target architecture. Required for `peipkg`. |
 | `description` | string | no | Human-readable description. |
 | `license` | string | no | License identifier. Required for `peipkg`. |
+| `license_class` | string | no | Licence class: `unknown`, `free`, `firmware` or `proprietary` (PSPU book 5 §18). Any other value is an `invalid_license_class` error. Absent means `unknown`; set it whenever `license` carries a `LicenseRef-` term, which is exactly when the expression alone cannot say. |
 | `homepage` | string | no | Project homepage URL. |
 | `default_root` | string | no | Preferred [named root](~peios/package-management/claims) for a top-level install. Must be a dotted named reference matching `[a-z0-9][a-z0-9_-]*` per segment, never a filesystem path (a `/` is rejected). |
 | `special_system_package` | boolean | no | Declares the package exempt from the payload layout rules, for the rare package whose job is to lay down the structure those rules protect — the base-filesystem package that mints the mountpoint tree is the archetype. Setting it disables pekit's layout validation for this package. It grants nothing at install time: whoever installs or composes the result must *also* pass `--dangerously-bypass-path-restrictions`, so a recipe can propose its own exemption but never grant one. Defaults to `false`. |

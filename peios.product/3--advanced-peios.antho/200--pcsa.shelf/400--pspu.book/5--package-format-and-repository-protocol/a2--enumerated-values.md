@@ -56,6 +56,17 @@ Defined in §5.7.
 
 Defined in §5.24.
 
+## Licence classes
+
+| Class | Meaning |
+|---|---|
+| `unknown` | Nothing asserted. The meaning of an absent `license_class`. |
+| `free` | Free and open-source software. |
+| `firmware` | Redistributable device firmware: no source, executes on a device rather than the CPU, needed to use hardware the user owns. |
+| `proprietary` | Non-free software that runs on the CPU. |
+
+Defined in §5.18.
+
 ## Hash algorithms
 
 | Algorithm | Identifier | Status |
