@@ -72,6 +72,29 @@ on the final directory, and the privilege bypass does not apply
 (§3.4.2). An ordinary `fchdir()` checks the descriptor's cached mask;
 an `O_PATH` `fchdir()` runs live.
 
+## Watch placement
+
+Placing a watch — `inotify_add_watch()`, `fanotify_mark()` on an
+inode, `F_NOTIFY` — is a read of the object by other means: a watch on
+a directory reveals the names of its children as they come and go, a
+watch on a file reports its activity. Linux gates it on read
+permission, but under KACS a bare `MAY_READ` never reaches a
+descriptor (read rights are decided at open), so the `path_notify`
+hook checks the read-class right live against the object's own
+descriptor: `FILE_LIST_DIRECTORY` for a directory, `FILE_READ_DATA`
+for anything else. A denial is `EACCES`, and `SeChangeNotifyPrivilege`
+does not bypass it — that privilege covers traversal, not reading.
+
+Mount, filesystem and mount-namespace marks are not object watches and
+have no single descriptor to check. Linux requires `CAP_SYS_ADMIN` for
+them, and for the fanotify permission classes (`FAN_CLASS_CONTENT`,
+`FAN_CLASS_PRE_CONTENT` — the ones whose holder can veto or delay
+opens and reads system-wide); the capability switchboard (§3.10.2)
+resolves that to `SeTcbPrivilege`, so these are TCB-only. PIP
+dominance is not part of the decision: a permission-event holder
+intercepts opens of the *object*, never the opening process, and a
+holder that is by construction TCB dominates every process anyway.
+
 ## Append-only enforcement
 
 A handle carrying `FILE_APPEND_DATA` but not `FILE_WRITE_DATA` allows
