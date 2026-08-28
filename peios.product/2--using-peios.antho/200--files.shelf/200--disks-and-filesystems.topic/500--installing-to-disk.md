@@ -84,7 +84,7 @@ Step 4 records the root by UUID, and the reason is worth understanding rather th
 
 The disk that is `/dev/vdb` while you install — second device, behind the install medium — is `/dev/vda` when you boot it with the medium removed. A device name baked into the command line is a name for *where a disk was plugged in*, not for the disk, and it stops being true the moment the arrangement changes.
 
-The initramfs resolves the UUID by probing block devices directly rather than reading `/dev/disk/by-uuid`, because the initramfs runs no udev and those directories are empty there.
+The initramfs resolves the UUID by probing block devices directly rather than reading `/dev/disk/by-uuid`, because no device manager runs in the initramfs and those directories do not exist there — see [Stable device names](~peios/disks-and-filesystems/stable-device-names).
 
 ## How the installed system boots
 

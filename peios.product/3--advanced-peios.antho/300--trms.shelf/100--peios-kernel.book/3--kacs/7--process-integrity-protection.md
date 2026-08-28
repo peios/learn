@@ -249,9 +249,12 @@ to all memory and kernel structures. PIP is enforced by the kernel, so
 a compromised kernel voids it, and `SeLoadDriverPrivilege` is the
 ceiling of every guarantee here. `CONFIG_MODULE_SIG_FORCE` is
 hard-required as noted above, and module signing is itself ML-DSA-65.
-Stripping `SeLoadDriverPrivilege` from every token but peinit's is the
-other half of that defence, and is policy rather than kernel
-behaviour — nothing in the kernel strips it.
+Stripping `SeLoadDriverPrivilege` from every token but peinit's and the
+device manager's is the other half of that defence, and is policy
+rather than kernel behaviour — nothing in the kernel strips it. The
+device manager holds it because loading drivers for the hardware that
+appears is its job; module signature enforcement is what keeps the
+privilege from meaning more than "load a module Peios built".
 
 **Hardware access.** DMA-capable devices read and write physical
 memory directly, bypassing the CPU's virtual memory system. An IOMMU

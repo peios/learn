@@ -24,7 +24,7 @@ Each column is sourced from one of four places, and any that cannot be read degr
 - **sysfs** (`/sys/block`) — the device tree, sizes, and the topology/hardware columns. Peios leaves `/sys/block` unpatched, so this is the standard no-udev path.
 - **libblkid** — filesystem identity: `FSTYPE`, `FSVER`, `UUID`, `LABEL`, and the partition-table columns. libblkid is opened at runtime.
 - **The device node's security descriptor** — `OWNER` and `MODE`, read the same way [`ls -l`](~peios/listing-and-paths/ls) reads them.
-- **The `/dev/disk/by-*` symlink farm** — `ID-LINK`. There is deliberately no `/run/udev/data` parser, so this column is empty until a device manager populates the farm.
+- **The `/dev/disk/by-*` symlink farm** — `ID-LINK`. Populated by the device manager once it has run; there is deliberately no `/run/udev/data` parser, so the column reads the links themselves and is empty in the initramfs, where no device manager runs.
 
 ## Output modes
 

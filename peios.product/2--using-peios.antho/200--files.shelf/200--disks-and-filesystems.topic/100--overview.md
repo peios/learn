@@ -109,4 +109,6 @@ For the exact command surface, including the extended options and the Peios defa
 
 For how these tools are put to work copying a live system onto a disk that then boots itself, read [Installing to disk](~peios/disks-and-filesystems/installing-to-disk).
 
+For the names a disk keeps across reboots — `/dev/disk/by-uuid` and its siblings, and the device manager that maintains them — read [Stable device names](~peios/disks-and-filesystems/stable-device-names).
+
 For what happens to a filesystem once it is attached to the mount tree, read [Mount policies](~peios/mount-policies/overview).
