@@ -64,6 +64,7 @@ in place of an active one MUST be rejected.
   "license_class": "<string>",
   "homepage": "<string>",
   "default_root": "<root reference>",
+  "alternate_upgrade": {<alternate_upgrade>},
   "dependencies": [<dependency>...],
   "optional_dependencies": [<dependency>...],
   "conflicts": [<dependency>...],
@@ -96,6 +97,12 @@ input to the decompression bound of §5.27.
 of §5.18 on parse; absent means `unknown`, as in the manifest. It is
 carried so a consumer can apply a licence policy at planning time,
 before fetching anything.
+
+`alternate_upgrade`, when present, MUST be validated exactly as the
+manifest's (§5.18). It is carried so a consumer can refuse or hold back
+a package (§5.18 rules 1 and 2) at planning time, before fetching
+anything, and so an every-package upgrade can report what it held back
+without downloading it.
 
 `hash` carries `algorithm`, which MUST be `sha256` in this version, and
 `value`, the lowercase hexadecimal SHA-256 of the `.peipkg` file in its

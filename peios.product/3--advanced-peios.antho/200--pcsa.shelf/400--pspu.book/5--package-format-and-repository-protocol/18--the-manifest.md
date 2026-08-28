@@ -21,6 +21,7 @@ provenance. It is a JSON document at `.peipkg/manifest.json`.
   "homepage": "<string>",
   "default_root": "<root reference>",
   "special_system_package": <bool>,
+  "alternate_upgrade": {<alternate_upgrade>},
   "dependencies": [<dependency>...],
   "optional_dependencies": [<dependency>...],
   "conflicts": [<dependency>...],
@@ -58,6 +59,7 @@ A manifest missing any required field MUST be rejected.
 | `homepage` | string | URL of the upstream project. | empty string |
 | `default_root` | string | The root a *top-level* install of this package lands in when the operator names none (§5.19). | the operator's current root |
 | `special_system_package` | boolean | Declares the package exempt from the §5.14 layout rules at production time (§5.14). | `false` |
+| `alternate_upgrade` | object | Declares that the package is meant to be installed and upgraded through a path outside the package manager (see "The alternate_upgrade object" below). | none |
 | `optional_dependencies` | array | Dependencies that enhance but are not required. | empty array |
 | `provides` | array | Virtual names this package satisfies. | empty array |
 | `replaces` | array | Packages this one supersedes. | empty array |
@@ -66,6 +68,58 @@ A manifest missing any required field MUST be rejected.
 
 A manifest carrying an unknown field MUST NOT be rejected; the unknown
 field MUST be ignored (§5.9).
+
+## The alternate_upgrade object
+
+```json
+{
+  "message": "<string>"
+}
+```
+
+| Field | Required | Description |
+|---|---|---|
+| `message` | yes | Text shown to the operator in place of proceeding. Non-empty UTF-8, at most 1024 bytes; MAY contain newlines and MUST NOT contain other control characters. |
+
+A package that sets `alternate_upgrade` states that it is meant to be
+installed and upgraded by some means other than a routine package
+operation — an operating-system edition moved by a dedicated tool that
+also reconciles what the package manager deliberately does not touch,
+for example. The package manager grants nothing on the declaration's
+behalf. Its whole effect is on the consumer:
+
+1. A request that names the package — `install` or `upgrade` with the
+   package as an argument — or any install or named-upgrade plan whose
+   operations would install or upgrade the package as a dependency,
+   MUST be refused: nothing is applied, and the consumer MUST report
+   the package's name, its `message` verbatim, and this warning:
+
+   > Alternate upgrade paths may bypass normal peipkg protections;
+   > ensure you fully trust the authors of the package before running.
+
+2. An upgrade of every installed package MUST hold the package back at
+   its installed version, report it as in rule 1, and proceed with the
+   rest of the upgrade. Holding back is not a failure.
+3. A consumer MUST provide a deliberate, per-invocation override
+   (`--bypass-alternate-upgrade` in the reference implementation) under
+   which rules 1 and 2 do not apply. The override is the intended way
+   for the out-of-band tool to drive the package manager; it is never a
+   default and is never persisted.
+
+Composing a root from nothing — an image builder populating an empty
+tree, rather than a consumer changing an installed system — is not an
+install or upgrade in the sense above, and an image builder MUST ignore
+the field.
+
+> [!NOTE]
+> This is the one place the format lets a package say "not through
+> peipkg", and it is deliberately the weakest possible form of that:
+> a message, and a refusal. A package cannot name a command for the
+> consumer to run, cannot run anything itself, and cannot make the
+> consumer do more than stop. The message may tell the operator what
+> to run; the operator, not the package, runs it. The warning is
+> mandatory precisely because whatever the message names sits outside
+> every protection the package manager provides.
 
 ## The build object
 
