@@ -23,7 +23,7 @@ When a process creates a queue, segment or semaphore array, KACS stamps it with 
 
 ## Reading and changing the descriptor
 
-A SysV object has no path and no descriptor number, so the SD calls address it by kind and id: pass `KACS_SD_AT_SYSV_SHM`, `KACS_SD_AT_SYSV_MSG` or `KACS_SD_AT_SYSV_SEM` in the flags of `kacs_get_sd` / `kacs_set_sd` (`peios_file_get_sd` / `peios_file_set_sd` in libpeios), the object id where a directory fd would go, and no path. The rights are in Peios Kernel TRM §3.11; the descriptor format is the ordinary one.
+A SysV object has no path and no descriptor number, so the SD calls address it by kind and id: pass `KACS_SD_AT_SYSV_SHM`, `KACS_SD_AT_SYSV_MSG` or `KACS_SD_AT_SYSV_SEM` in the flags of `kacs_get_sd` / `kacs_set_sd` (`peios_sysv_get_sd` / `peios_sysv_set_sd` in libpeios, `file::sysv_get_sd` / `sysv_set_sd` in the Rust crate), the object id where a directory fd would go, and no path. The rights are in Peios Kernel TRM §3.11; the descriptor format is the ordinary one.
 
 ## The key is not protected
 

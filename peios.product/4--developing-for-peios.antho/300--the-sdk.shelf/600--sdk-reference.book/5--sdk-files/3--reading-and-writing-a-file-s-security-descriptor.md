@@ -38,3 +38,14 @@ int     peios_fd_set_sd(int fd, uint32_t secinfo, const void *sd, size_t len);
 The same operations against the object `fd` already refers to. The access check they perform depends on the fd type: a normal file fd is checked against its **cached granted mask** (the one baked in at open), while an `O_PATH`, pidfd, or token fd triggers a **live** check. That distinction — cached for the fixed-grant file fd, live for the others — is documented in the Peios Kernel TRM §3.9, FACS; the practical upshot is that a file fd already opened with the right access can get/set its SD without a second path resolution.
 
 The required rights and errors match the by-path calls, minus the path-resolution failures (`ENOENT`/`ELOOP`), plus `EBADF` (bad fd).
+
+### By System V IPC kind and id
+
+```c
+ssize_t peios_sysv_get_sd(uint32_t kind, int id, uint32_t secinfo,
+                          void *buf, size_t cap);
+int     peios_sysv_set_sd(uint32_t kind, int id, uint32_t secinfo,
+                          const void *sd, size_t len);
+```
+
+System V message queues, shared memory segments and semaphore arrays carry security descriptors too (Peios Kernel TRM §3.11), but have neither a path nor an fd. `kind` is one of `KACS_SD_AT_SYSV_SHM`, `KACS_SD_AT_SYSV_MSG` or `KACS_SD_AT_SYSV_SEM` from `<pkm/ipc.h>`, and `id` is what `shmget`, `msgget` or `semget` returned. The object is looked up in the caller's IPC namespace and the check is always live against its descriptor: `READ_CONTROL` (or `ACCESS_SYSTEM_SECURITY` for the SACL) to read, `WRITE_DAC` / `WRITE_OWNER` to write, with the same preserve-unselected-components merge as the file calls. Errors as for the by-fd calls, with `EINVAL` for an id that names nothing and `EIDRM` for an object that has been removed. The Rust crate exposes the same pair as `file::sysv_get_sd` / `file::sysv_set_sd` with a `SysvKind` enum.
