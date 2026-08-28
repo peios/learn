@@ -107,6 +107,8 @@ If you want setuid semantics and the `uid0` utility, read [setuid and uid0](~pei
 
 If you want peer credentials — `SO_PEERCRED`, `SCM_CREDENTIALS`, the rules for migrating Linux services to KACS-aware peer-identity APIs — read [Peer credentials](~peios/linux-compatibility/peer-credentials).
 
+If you want the map of every Linux IPC mechanism — which carry identity, what protects each object, and the three rules that fall out — read [IPC on Peios](~peios/linux-compatibility/ipc-on-peios).
+
 If you want the Linux features that survive only as relics — superseded mechanisms that still work but sit outside Peios's recommended surface, and where to look instead — read [Linux relics](~peios/linux-compatibility/linux-relics).
 
 For the merged filesystem used to combine packaged and local directory trees —

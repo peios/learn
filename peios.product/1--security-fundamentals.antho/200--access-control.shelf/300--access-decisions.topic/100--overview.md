@@ -116,6 +116,26 @@ The tree itself is provided by the caller as a preorder-flat array of `kacs_obje
 
 The full mechanics of object ACEs and the object type list are in [ACLs, ACEs, and access masks](~peios/security-descriptors/acls-and-aces). Most code never builds an object type list — they exist for the directory-object case specifically.
 
+## The decision is made at open, and it stays made
+
+AccessCheck runs when a handle is *created* — at open, at connect, at
+attach — and stamps the granted mask on the handle. Later operations
+check that mask, not the descriptor. So changing a descriptor narrows
+what future opens get; it does not reach into handles that already
+exist, and it never reaches into memory. A `mmap(MAP_SHARED)` mapping
+consumes its rights from the descriptor it was made from, and once the
+pages are mapped, no descriptor edit, `kacs_set_sd` or token change
+can take them back: **revocation does not extend to established
+mappings**. If a file must become unreadable to a process that already
+mapped it, the only remedies are the ones that end the mapping — the
+process exits, or the file is replaced rather than edited in place.
+
+The same holds for every handle-shaped object: a token handle, a
+process handle, a socket. Peios is deliberately NT-like here. The
+alternative — re-checking on every read — would make access control a
+per-page cost and would still be racy against memory that has already
+been copied.
+
 ## Where to start
 
 If you want MIC in depth — what an integrity level actually does to access, how the policy bits work, how the SD's mandatory label drives it — read [Mandatory integrity control](~peios/access-decisions/mandatory-integrity-control).
