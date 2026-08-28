@@ -59,12 +59,13 @@ token cannot be obtained is closed the same way.
 
 ## The peer token
 
-The token is captured **once**, when the connection is accepted, using
-`kacs_open_peer_token`. It is the peer thread's *effective* token at
-that moment, so a peer that was impersonating is captured as the
-impersonated identity — which is what makes access decisions reflect the
-identity a client is actually operating under rather than its underlying
-service identity.
+The token is read **once**, when the connection is accepted, through
+the kernel's peer-token socket option (`getsockopt(SOL_KACS,
+KACS_SO_PEER_TOKEN)`; the Peios Kernel TRM §3.5). It is the identity the
+peer thread was acting under when it connected, so a peer that was
+impersonating is captured as the impersonated identity — which is what
+makes access decisions reflect the identity a client is actually
+operating under rather than its underlying service identity.
 
 Because it is captured once, a peer that changes identity mid-connection
 is still evaluated against the identity it connected with.

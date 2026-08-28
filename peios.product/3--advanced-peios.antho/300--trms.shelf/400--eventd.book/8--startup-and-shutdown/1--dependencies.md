@@ -9,7 +9,7 @@ eventd needs four subsystems before it can do anything.
 |---|---|
 | KMES | Event ingestion. Available as soon as PKM is loaded. |
 | LCS and loregd | Configuration. eventd reads every setting from the registry. |
-| KACS | Access control — the AccessCheck API for query authorization, and `kacs_open_peer_token` for caller identification. |
+| KACS | Access control — the AccessCheck API for query authorization, and the peer-token socket option (`KACS_SO_PEER_TOKEN`) for caller identification. |
 | peinit | The boot ID, and lifecycle management. |
 
 eventd is a peinit-managed service, started after loregd is available —

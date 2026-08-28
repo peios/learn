@@ -28,10 +28,7 @@ Signatures are read from the `SYSCALL_DEFINE` sites in `pkm/kacs/`.
 | 1004 | `SYS_KACS_CREATE_LOGON_SESSION` | `kacs_create_logon_session(const void __user *spec, size_t spec_len)` |
 | 1005 | `SYS_KACS_SET_PSB` | `kacs_set_psb(int pidfd, u32 mitigations)` |
 | 1006 | `SYS_KACS_DESTROY_EMPTY_LOGON_SESSION` | `kacs_destroy_empty_logon_session(u64 auth_id)` |
-| 1010 | `SYS_KACS_OPEN_PEER_TOKEN` | `kacs_open_peer_token(int sock_fd)` |
-| 1011 | `SYS_KACS_IMPERSONATE_PEER` | `kacs_impersonate_peer(int sock_fd)` |
 | 1012 | `SYS_KACS_REVERT` | `kacs_revert(void)` |
-| 1013 | `SYS_KACS_SET_IMPERSONATION_LEVEL` | `kacs_set_impersonation_level(int sock_fd, u32 level)` |
 | 1020 | `SYS_KACS_OPEN` | `kacs_open(int dirfd, const char __user *path, struct kacs_open_how __user *uhow, size_t howsize, u32 __user *status_out)` |
 | 1021 | `SYS_KACS_GET_SD` | `kacs_get_sd(int dirfd, const char __user *path, u32 security_info, void __user *buf, u32 buf_len, u32 flags)` |
 | 1022 | `SYS_KACS_SET_SD` | `kacs_set_sd(int dirfd, const char __user *path, u32 security_info, const void __user *sd_buf, u32 sd_len, u32 flags)` |
@@ -606,6 +603,52 @@ Named for the Windows privilege identifiers (SeTcbPrivilege, …).
 | `KACS_SE_CREATE_SYMBOLIC_LINK_PRIVILEGE` | `0x800000000` (34359738368) |
 | `KACS_SE_BIND_PRIVILEGED_PORT_PRIVILEGE` | `0x8000000000000000` (9223372036854775808) |
 
+## socket.h
+
+From `uapi/pkm/socket.h`.
+
+*KACS socket options — peer identity on local sockets.*
+
+KACS captures a connecting client's identity onto the accepted end of an
+AF_UNIX SOCK_STREAM / SOCK_SEQPACKET connection at connect(). This
+header is the setsockopt(2)/getsockopt(2) surface through which that
+identity is bounded and read back. Every option lives under one option
+level, SOL_KACS, which the kernel dispatches ahead of the protocol's own
+setsockopt/getsockopt (net/socket.c), so the options behave identically
+on every socket family that supports them. SOL_KACS is 4096: far above
+the upstream SOL_* range, which grows by one per new protocol, so it
+cannot collide with a future Linux level. Errors: -ENOPROTOOPT for an
+option this level does not define (or a get-only option passed to
+setsockopt); -EOPNOTSUPP on a socket family or type KACS does not
+capture identity for; -EINVAL for a short optlen or an out-of-range
+value; -EFAULT for an unreadable/unwritable optval.
+
+| Constant | Value |
+|---|---|
+| `SOL_KACS` | `4096` |
+
+*getsockopt only.*
+
+optval: int — a new token fd for the peer identity captured at
+connect(), carrying fixed TOKEN_QUERY | TOKEN_IMPERSONATE access. The fd
+is opened O_CLOEXEC. -ENOTCONN if the socket is not connected; -ENODATA
+if it is connected but carries no captured identity.
+
+| Constant | Value |
+|---|---|
+| `KACS_SO_PEER_TOKEN` | `1` |
+
+*getsockopt / setsockopt.*
+
+optval: __u32 KACS_IMLEVEL_* — the maximum impersonation level at which
+this end's identity may be captured by the peer. Set by the client
+before connect(); the default is KACS_IMLEVEL_IMPERSONATION. -EISCONN
+once the socket is connected.
+
+| Constant | Value |
+|---|---|
+| `KACS_SO_IMPERSONATION_LEVEL` | `2` |
+
 ## AccessCheck constants
 
 From `uapi/pkm/access.h`.
@@ -1139,7 +1182,6 @@ otherwise collapse into an indistinguishable -EACCES. Verdict is the
 | `KACS_SOCK_CONNECT` | `13` | unix_stream_connect result |
 | `KACS_SOCK_LEVEL_SET` | `14` | impersonation level updated |
 | `KACS_SOCK_OPEN_TOKEN` | `15` | open peer-token fd result |
-| `KACS_SOCK_IMPERSONATE` | `16` | impersonate peer result |
 
 *kacs_namespace stage — which sub-decision of a namespace-mutation hook a record describes.*
 

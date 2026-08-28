@@ -59,11 +59,11 @@ The granted level is the minimum the two gates permit. Neither gate fails the op
 
 This is the consequence worth memorising: impersonation never errors on policy failure. It silently downgrades.
 
-A server that calls `kacs_impersonate_peer(fd)` and gets a successful return does not know whether the resulting token has the level it expected. Both an Impersonation-level token and an Identification-level token can come out of the same call, with no error in either case. The only way to tell is to query the token after install.
+A server that calls `peios_token_impersonate_peer(fd)` and gets a successful return does not know whether the resulting token has the level it expected. Both an Impersonation-level token and an Identification-level token can come out of the same call, with no error in either case. The only way to tell is to query the token after install.
 
 Code that wants to detect a downgrade has to do something like:
 
-1. Call `kacs_impersonate_peer(fd)` (or the explicit-fd variant).
+1. Call `peios_token_impersonate_peer(fd)` (or the explicit-fd variant).
 2. Open the thread's effective token.
 3. Read `impersonation_level` via `KACS_IOC_QUERY`.
 4. Branch on the result: proceed if Impersonation or Delegation, log-and-skip if Identification or Anonymous.
@@ -93,7 +93,7 @@ The gates are evaluated against the **primary token**, not the current impersona
 The gates fire on impersonation install. They do not fire on:
 
 - **Reverting.** `kacs_revert` always succeeds and does not consult the gates.
-- **Reading a token.** `kacs_open_peer_token` or `kacs_open_thread_token` returns a token fd without impersonating; the gates only run when the token is actually installed on a thread.
+- **Reading a token.** `peios_token_open_peer` or `kacs_open_thread_token` returns a token fd without impersonating; the gates only run when the token is actually installed on a thread.
 - **Process token operations.** Opening another process's primary token (`kacs_open_process_token`) is governed by the process SD and PIP dominance, not the impersonation gates.
 
 The gates are specifically about installing a foreign identity on a thread. Reading information about a token is a different operation governed by different checks.

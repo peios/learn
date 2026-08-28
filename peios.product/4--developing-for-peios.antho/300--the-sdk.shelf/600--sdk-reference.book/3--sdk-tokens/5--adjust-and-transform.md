@@ -51,7 +51,7 @@ int peios_token_revert(void);
 - `peios_token_impersonate` makes this **impersonation** token the calling thread's effective identity — subsequent access checks on that thread run as the impersonated identity. Errors: `EACCES` (handle lacks `IMPERSONATE`), `EINVAL` (not an impersonation token), `EPERM` (restricted→unrestricted same-user — the one hard deny), `ENOMEM` (allocation failed).
 - `peios_token_revert` undoes it: it clears the thread's impersonation token so checks run as the thread's real (primary) identity again. It takes no argument and is a no-op (reported as success) if the thread was not impersonating. This is the inverse of `peios_token_impersonate` — always pair them, ideally with `revert` in the cleanup path. Errors: none in normal operation.
 
-The archetypal server flow: `peios_token_open_peer` the caller → `peios_token_impersonate` it → do the work as them → `peios_token_revert`.
+The archetypal server flow: `peios_token_open_peer` the caller → `peios_token_impersonate` it → do the work as them → `peios_token_revert`. `peios_token_impersonate_peer` (see [Opening and creating tokens](~peios/sdk-tokens/opening-and-creating-tokens)) fuses the first two steps and the close.
 
 ### Linked tokens and defaults
 

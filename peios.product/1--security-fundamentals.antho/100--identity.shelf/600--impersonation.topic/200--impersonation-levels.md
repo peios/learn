@@ -10,7 +10,7 @@ related:
 
 Every impersonation token carries an **impersonation level** — one of four values, ordered from least to most permissive. The level is the answer to "how much may a server do with this identity?". Each level admits all the operations of the levels below it and additionally allows specific extra things.
 
-There is one rule worth pinning before the catalog: **the level is set by the client, not the server.** A client calls `kacs_set_impersonation_level` on the socket before `connect()` to declare the maximum level a server may use. The kernel records the level on the socket. When the server later impersonates the peer, the level cannot exceed what the client set. A server cannot ask for a higher level; it can only end up at the level the client granted or lower.
+There is one rule worth pinning before the catalog: **the level is set by the client, not the server.** A client sets `KACS_SO_IMPERSONATION_LEVEL` on the socket (`setsockopt` under the `SOL_KACS` level, or `peios_socket_set_impersonation_level`) before `connect()` to declare the maximum level a server may use. The kernel records the level on the socket. When the server later impersonates the peer, the level cannot exceed what the client set. A server cannot ask for a higher level; it can only end up at the level the client granted or lower.
 
 ## The four levels
 
@@ -38,7 +38,7 @@ A server impersonating an Anonymous client effectively has no identity at all. I
 
 You will mostly see Anonymous in two cases:
 
-- **A client explicitly opted out of identity disclosure.** Some protocols want the server to act on a request without knowing who issued it. The client calls `kacs_set_impersonation_level(ANONYMOUS)` on its socket; the server impersonates and gets Anonymous.
+- **A client explicitly opted out of identity disclosure.** Some protocols want the server to act on a request without knowing who issued it. The client sets its socket's level to Anonymous; the server impersonates and gets Anonymous.
 - **A connection that was never authenticated.** A network peer that connected without going through any auth step is, from the server's point of view, Anonymous. The token reflects this honestly.
 
 ## Identification
@@ -78,9 +78,9 @@ The split — KACS records the flag, authd acts on it — keeps the kernel out o
 
 Three things determine the level a server actually ends up with:
 
-1. **The client's request**, set on the socket before connect via `kacs_set_impersonation_level`. Default is Impersonation if the client says nothing.
+1. **The client's request**, set on the socket before connect with the `KACS_SO_IMPERSONATION_LEVEL` socket option (`peios_socket_set_impersonation_level`). Default is Impersonation if the client says nothing.
 2. **The two-gate model**, applied at impersonation time: the identity gate and the integrity ceiling. Either can cause the granted level to be silently downgraded. See [The two-gate model](~peios/impersonation/the-two-gates).
-3. **The transport.** Some Unix-socket variants — SOCK_DGRAM, socketpair, pre-existing pipes — do not carry a peer token. Servers using these transports cannot use `kacs_impersonate_peer` and must use the explicit-fd ioctl instead. See [Peer tokens and capture](~peios/impersonation/peer-tokens).
+3. **The transport.** Some Unix-socket variants — SOCK_DGRAM, socketpair, pre-existing pipes — do not carry a peer token. Servers using these transports cannot use `peios_token_impersonate_peer` and must use the explicit-fd ioctl instead. See [Peer tokens and capture](~peios/impersonation/peer-tokens).
 
 The first sets the maximum. The second can lower it. The third is about the mechanism for getting the token at all.
 

@@ -69,7 +69,7 @@ Impersonation is **always reverted at exec**. A thread that execs while imperson
 
 A thread becomes an impersonator by installing an impersonation token. The two ways to do it:
 
-- **`kacs_impersonate_peer(fd)`** — extract the peer's identity from a connected Unix socket and install it at the appropriate level. The most common path for services accepting client connections.
+- **`peios_token_impersonate_peer(fd)`** — read the peer's identity from a connected Unix socket (the `KACS_SO_PEER_TOKEN` socket option) and install it at the appropriate level. The most common path for services accepting client connections.
 - **`KACS_IOC_IMPERSONATE`** on a token fd — install a specific token (for transports that do not carry a peer token, or when the server has obtained a token by some other means).
 
 Either operation has the same effect: the thread now has a primary token (unchanged) and an impersonation token (newly installed). AccessCheck reads the impersonation token from this point.

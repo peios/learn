@@ -23,7 +23,7 @@ Token fds come from a handful of syscalls and pseudo-files:
 | `kacs_open_self_token` | The calling thread's effective token (or primary, with `KACS_REAL_TOKEN` flag) | None — always succeeds |
 | `kacs_open_process_token(pidfd)` | A target process's primary token | `PROCESS_QUERY_INFORMATION` + PIP dominance + token SD rights |
 | `kacs_open_thread_token(tid)` | A specific thread's effective token | Same as above |
-| `kacs_open_peer_token(sock_fd)` | The peer's captured identity on a connected Unix socket | None beyond the connection itself |
+| `getsockopt(sock_fd, SOL_KACS, KACS_SO_PEER_TOKEN)` | The peer's captured identity on a connected Unix socket | None beyond the connection itself |
 | `/proc/<pid>/token` | The primary token of process `<pid>` | `PROCESS_QUERY_INFORMATION` + PIP dominance |
 | `/proc/<pid>/task/<tid>/token` | The effective token of thread `<tid>` in process `<pid>` | Same |
 | `/sys/kernel/security/kacs/self` | The calling thread's effective token | None — always readable |

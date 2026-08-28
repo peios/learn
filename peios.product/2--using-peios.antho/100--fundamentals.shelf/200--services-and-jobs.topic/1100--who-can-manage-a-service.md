@@ -54,7 +54,7 @@ When peinit evaluates the descriptor it maps the generic rights as follows, so a
 
 Every control command runs the same gate:
 
-1. peinit captures the caller's [token](~peios/services-and-jobs/identity-and-privileges) from the kernel (`kacs_open_peer_token`) — the caller's *effective* identity at connection time, so if the caller is [impersonating](~peios/impersonation/overview), the impersonated identity is what is checked.
+1. peinit captures the caller's [token](~peios/services-and-jobs/identity-and-privileges) from the kernel (the `KACS_SO_PEER_TOKEN` socket option) — the caller's *effective* identity at connection time, so if the caller is [impersonating](~peios/impersonation/overview), the impersonated identity is what is checked.
 2. peinit resolves the target service and its ServiceSecurity descriptor.
 3. peinit runs [AccessCheck](~peios/access-decisions/overview): the caller's token against the descriptor, for the right the command needs.
 4. **Denied** → return `ACCESS_DENIED` and **log the attempt** (caller SID, target service, requested right).

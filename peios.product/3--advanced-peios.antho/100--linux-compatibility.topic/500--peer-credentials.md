@@ -1,7 +1,7 @@
 ---
 title: Peer credentials
 type: concept
-description: SO_PEERCRED and SCM_CREDENTIALS return projected UIDs — fine for logging, insufficient for security. kacs_open_peer_token is the real tool.
+description: SO_PEERCRED and SCM_CREDENTIALS return projected UIDs — fine for logging, insufficient for security. The KACS peer-token socket option is the real tool.
 related:
   - peios/linux-compatibility/overview
   - peios/linux-compatibility/credential-projection
@@ -11,7 +11,7 @@ related:
 
 When one process connects to another over a Unix socket, the recipient often wants to know who is connecting. Linux provides two mechanisms for this — `SO_PEERCRED` (a socket option) and `SCM_CREDENTIALS` (a control message). Both return basic credential information about the peer.
 
-On Peios, both continue to work and return projected UID/GID values — useful for compatibility with Linux applications, but **insufficient for making security decisions**. For services that need to authenticate the connecting peer's identity to decide access, the right tool is `kacs_open_peer_token`, which returns a full KACS token reflecting the peer's complete identity.
+On Peios, both continue to work and return projected UID/GID values — useful for compatibility with Linux applications, but **insufficient for making security decisions**. For services that need to authenticate the connecting peer's identity to decide access, the right tool is the KACS peer-token socket option, `getsockopt(SOL_KACS, KACS_SO_PEER_TOKEN)`, which returns a full KACS token reflecting the peer's complete identity.
 
 This page covers the two Linux mechanisms and the right replacement.
 
@@ -87,13 +87,17 @@ In practice, this leads to two classes of issue:
 
 For services that need to be secure, neither `SO_PEERCRED` nor `SCM_CREDENTIALS` is the right tool. The right tool is the KACS-aware peer-token mechanism.
 
-## The replacement: kacs_open_peer_token
+## The replacement: the peer-token socket option
 
-`kacs_open_peer_token` is the KACS-native equivalent. The call:
+The KACS-native equivalent is a socket option on the same connection, under the `SOL_KACS` option level:
 
 ```
-token_fd = kacs_open_peer_token(socket_fd)
+int token_fd;
+socklen_t len = sizeof token_fd;
+getsockopt(socket_fd, SOL_KACS, KACS_SO_PEER_TOKEN, &token_fd, &len);
 ```
+
+libpeios wraps it as `peios_token_open_peer(socket_fd)`, which returns the fd directly. The call
 
 Returns a token fd reflecting the peer's complete identity at connect time. The fd carries `TOKEN_QUERY | TOKEN_IMPERSONATE` access — enough to inspect the token's full state and to install it as an impersonation token.
 
@@ -113,7 +117,7 @@ Everything. The full identity, atomic, captured at connect time. From the receiv
 The service can:
 
 - **Inspect** the token (via `KACS_IOC_QUERY`) to make authorisation decisions on real identity, not projected UID.
-- **Impersonate** the peer (via `KACS_IOC_IMPERSONATE` or `kacs_impersonate_peer`) to perform operations on their behalf — with the just-in-time pattern from [Peer tokens and capture](~peios/impersonation/peer-tokens).
+- **Impersonate** the peer (via `KACS_IOC_IMPERSONATE` on the fd, or the fused `peios_token_impersonate_peer`) to perform operations on their behalf — with the just-in-time pattern from [Peer tokens and capture](~peios/impersonation/peer-tokens).
 
 This is the security-grade peer-identity API. For services that need real access control on connecting peers, this is the tool.
 
@@ -125,12 +129,12 @@ A handful of guidelines:
 |---|---|
 | Log who connected for diagnostic purposes | `SO_PEERCRED` or projected UID-style API |
 | Display a "connected as user X" indicator | Same |
-| Make an access decision based on peer identity | `kacs_open_peer_token` then KACS-aware logic |
-| Act on the peer's behalf (impersonate) | `kacs_impersonate_peer` or `kacs_open_peer_token` + `KACS_IOC_IMPERSONATE` |
-| Capture peer identity at connect for later use | `kacs_open_peer_token` (store the fd) |
+| Make an access decision based on peer identity | `KACS_SO_PEER_TOKEN` then KACS-aware logic |
+| Act on the peer's behalf (impersonate) | `peios_token_impersonate_peer`, or `KACS_SO_PEER_TOKEN` + `KACS_IOC_IMPERSONATE` |
+| Capture peer identity at connect for later use | `KACS_SO_PEER_TOKEN` (store the fd) |
 | Send a credential along a datagram message | `SCM_CREDENTIALS` for compat; for security, pass the token fd via `SCM_RIGHTS` |
 
-The pattern: compatibility-grade peer ID uses the Linux APIs; security-grade peer ID uses the KACS APIs. The distinction matters most for services that handle untrusted callers — a public-facing daemon should use `kacs_open_peer_token`; an internal diagnostic tool can use `SO_PEERCRED`.
+The pattern: compatibility-grade peer ID uses the Linux APIs; security-grade peer ID uses the KACS APIs. The distinction matters most for services that handle untrusted callers — a public-facing daemon should use `KACS_SO_PEER_TOKEN`; an internal diagnostic tool can use `SO_PEERCRED`.
 
 ## What about TCP sockets
 
@@ -148,7 +152,7 @@ A few concrete failure modes from using `SO_PEERCRED` for security:
 - **Impersonation confusion.** A service that connects to another service while impersonating a client should appear (to the receiver) as the client. With `SO_PEERCRED`, the receiver sees the client's projected UID — correct in this case. But if the impersonation changed mid-session (the service reverted, then made another call), `SO_PEERCRED` still shows the original peer's UID. The receiver can be confused about who they're actually serving.
 - **Identity not present in projection.** A service that wants to make decisions based on the peer's integrity level cannot — there's no projection for it. A `SO_PEERCRED`-using service sees nothing about integrity; the call effectively ignores that axis of access control.
 
-For each of these, `kacs_open_peer_token` would produce the correct result because the token carries the full identity. The migration path for an existing service is: replace `SO_PEERCRED` calls with `kacs_open_peer_token`, use the token to make decisions instead of the projected UID. The code surface changes; the semantic is more accurate.
+For each of these, the peer token would produce the correct result because it carries the full identity. The migration path for an existing service is: replace `SO_PEERCRED` with `KACS_SO_PEER_TOKEN` on the same socket, use the token to make decisions instead of the projected UID. The code surface changes; the semantic is more accurate.
 
 ## Compatibility, not removal
 

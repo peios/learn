@@ -16,7 +16,8 @@ A separate variant opens a thread's impersonation token. Opening
 another process's token additionally requires
 `PROCESS_QUERY_INFORMATION` on the target process's descriptor.
 
-`kacs_open_peer_token` is the exception: it takes no desired-access
+The peer-token socket option (`getsockopt(SOL_KACS,
+KACS_SO_PEER_TOKEN)`) is the exception: it takes no desired-access
 mask, and the fd it returns always carries the fixed rights
 `TOKEN_QUERY | TOKEN_IMPERSONATE`.
 

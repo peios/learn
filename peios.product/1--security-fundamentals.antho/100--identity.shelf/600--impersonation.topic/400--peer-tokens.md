@@ -1,24 +1,26 @@
 ---
 title: Peer tokens and capture
 type: concept
-description: How the kernel captures a client's identity onto a socket at connect, the two syscalls that use it, which transports carry peer tokens, and identity cascading.
+description: How the kernel captures a client's identity onto a socket at connect, the socket option and libpeios calls that use it, which transports carry peer tokens, and identity cascading.
 related:
   - peios/impersonation/overview
   - peios/impersonation/impersonation-levels
   - peios/impersonation/the-two-gates
 ---
 
-When a client connects to a server over a connected Unix socket, the kernel captures the client's identity onto the socket at connect time. The server can later impersonate that identity by calling `kacs_impersonate_peer(fd)` on the connection — no further negotiation, no credential exchange, no token transfer in the message stream. The token is held by the kernel and tagged to the socket from the moment of connect.
+When a client connects to a server over a connected Unix socket, the kernel captures the client's identity onto the socket at connect time. The server can later impersonate that identity by calling `peios_token_impersonate_peer(fd)` on the connection — no further negotiation, no credential exchange, no token transfer in the message stream. The token is held by the kernel and tagged to the socket from the moment of connect.
 
-This is the primary way servers acquire impersonation tokens. Almost every local IPC in Peios — registry access, service-to-service calls, user-to-daemon requests — goes through it. The model is simple enough that most services need to know only one syscall (`kacs_impersonate_peer`) and one cleanup call (`kacs_revert`).
+This is the primary way servers acquire impersonation tokens. Almost every local IPC in Peios — registry access, service-to-service calls, user-to-daemon requests — goes through it. The model is simple enough that most services need to know only one call (`peios_token_impersonate_peer`) and one cleanup call (`kacs_revert`).
 
-This page covers the capture mechanism, the two different syscalls for using a captured peer token, the transports that do and do not carry peer tokens, and how identity cascades when a service that is itself impersonating connects to a third service.
+The kernel surface behind it is a socket option. Every KACS socket option lives under one option level, `SOL_KACS`, and the peer token is `getsockopt(fd, SOL_KACS, KACS_SO_PEER_TOKEN, &token_fd, &len)` on the accepted connection: the kernel writes a new token fd into the option value. libpeios wraps that as `peios_token_open_peer(fd)`, and `peios_token_impersonate_peer(fd)` is the same call followed by an install and a close.
+
+This page covers the capture mechanism, the two ways of using a captured peer token, the transports that do and do not carry peer tokens, and how identity cascades when a service that is itself impersonating connects to a third service.
 
 ## Capture at connect time
 
 ```mermaid
 flowchart LR
-    A["Client thread, primary token T_C"] -->|"kacs_set_impersonation_level (optional)"| B["Socket"]
+    A["Client thread, primary token T_C"] -->|"KACS_SO_IMPERSONATION_LEVEL (optional)"| B["Socket"]
     A -->|connect| C["Server socket"]
     B -.->|captured at connect| D["Peer token on server side, derived from T_C at the client-requested level"]
 ```
@@ -26,27 +28,27 @@ flowchart LR
 When the client calls `connect()` on a Unix stream or seqpacket socket, the kernel:
 
 1. Reads the client's effective token (impersonation if set, primary otherwise).
-2. Reads the impersonation level the client requested on the socket (default Impersonation).
+2. Reads the impersonation level the client requested on the socket with `KACS_SO_IMPERSONATION_LEVEL` (default Impersonation; the option is refused with `EISCONN` once the socket is connected).
 3. Constructs a peer token derived from the client's token, at the requested level.
 4. Attaches the peer token to the server-side socket.
 
-The peer token is held by the kernel for the life of the socket. The client's identity travels into the kernel at connect, not at impersonate. By the time the server calls `kacs_impersonate_peer`, the work of capturing identity is already done.
+The peer token is held by the kernel for the life of the socket. The client's identity travels into the kernel at connect, not at impersonate. By the time the server reads the peer token, the work of capturing identity is already done.
 
 This timing matters in one specific way: **the captured identity is the client's identity at the moment of connect**. If the client changes identity afterwards (impersonates a third party, drops privileges, anything), the change does not affect the peer token on the existing connection. The peer token is a snapshot. Servers that want to track changing client identity across a long-lived connection need to renegotiate (typically by having the client reconnect).
 
 ## Two ways to use a peer token
 
-The kernel exposes two operations on a peer token:
+libpeios exposes two operations on a peer token:
 
-- **`kacs_impersonate_peer(fd)`** — the combined operation. Captures the peer's identity from the socket and installs it on the calling thread, at the level the two-gate model permits. The most common path.
-- **`kacs_open_peer_token(fd)`** — the inspect-and-store operation. Returns a token fd to the peer's identity without installing it. The fd carries `TOKEN_QUERY | TOKEN_IMPERSONATE` access — enough to read the token and to install it later via `KACS_IOC_IMPERSONATE`, but not enough to duplicate or adjust it.
+- **`peios_token_impersonate_peer(fd)`** — the combined operation. Reads the peer's identity from the socket and installs it on the calling thread, at the level the two-gate model permits, then closes the token fd. The most common path.
+- **`peios_token_open_peer(fd)`** — the inspect-and-store operation: `getsockopt(SOL_KACS, KACS_SO_PEER_TOKEN)`. Returns a token fd to the peer's identity without installing it. The fd carries `TOKEN_QUERY | TOKEN_IMPERSONATE` access — enough to read the token and to install it later via `KACS_IOC_IMPERSONATE`, but not enough to duplicate or adjust it.
 
 The two operations exist because servers have different needs:
 
-- **Direct request handling.** A request thread that wants to impersonate, do work, and revert all in one tight synchronous block calls `kacs_impersonate_peer` and then `kacs_revert`. There is no reason to hold the token fd around.
-- **Just-in-time impersonation.** A server that wants to keep the client's identity available across a request but only install it at the moment of each access-requiring action — the [just-in-time pattern](~peios/impersonation/overview) covered on the overview page — calls `kacs_open_peer_token` to capture the token fd at request start, stores it in the request context, and installs it on the current OS thread (`KACS_IOC_IMPERSONATE`) just before each action that needs the client's identity, reverting immediately after. This is the right pattern for any server using a multiplexed runtime (Go, Rust async, Java virtual threads, Node), and is the recommended default for new services.
-- **Deferred work across threads.** A request handler that hands off work to a thread pool cannot reasonably keep its own thread impersonating while another thread does the work — impersonation is per-thread. The same `kacs_open_peer_token` mechanism lets it capture the token fd, pass it to the worker, and have the worker install it before doing the access-requiring operation.
-- **Inspection without action.** A logging or audit thread that wants to record the client's identity without doing any work as them calls `kacs_open_peer_token`, queries the token via `KACS_IOC_QUERY`, and closes the fd. No impersonation is ever installed.
+- **Direct request handling.** A request thread that wants to impersonate, do work, and revert all in one tight synchronous block calls `peios_token_impersonate_peer` and then `kacs_revert`. There is no reason to hold the token fd around.
+- **Just-in-time impersonation.** A server that wants to keep the client's identity available across a request but only install it at the moment of each access-requiring action — the [just-in-time pattern](~peios/impersonation/overview) covered on the overview page — calls `peios_token_open_peer` to capture the token fd at request start, stores it in the request context, and installs it on the current OS thread (`KACS_IOC_IMPERSONATE`) just before each action that needs the client's identity, reverting immediately after. This is the right pattern for any server using a multiplexed runtime (Go, Rust async, Java virtual threads, Node), and is the recommended default for new services.
+- **Deferred work across threads.** A request handler that hands off work to a thread pool cannot reasonably keep its own thread impersonating while another thread does the work — impersonation is per-thread. The same `peios_token_open_peer` mechanism lets it capture the token fd, pass it to the worker, and have the worker install it before doing the access-requiring operation.
+- **Inspection without action.** A logging or audit thread that wants to record the client's identity without doing any work as them calls `peios_token_open_peer`, queries the token via `KACS_IOC_QUERY`, and closes the fd. No impersonation is ever installed.
 
 The "capture once, install per action" pattern is the main reason for separating the two operations. It is what makes safe impersonation possible under M:N threading and what bounds the time a thread is actually impersonated to the smallest window that does the work.
 
@@ -54,9 +56,9 @@ The "capture once, install per action" pattern is the main reason for separating
 
 A thread reverts impersonation with `kacs_revert()`. It always succeeds. It drops the impersonation token reference and restores the primary as the effective identity.
 
-There is also `KACS_IOC_IMPERSONATE` — an ioctl on a token fd, not on a socket. This is the explicit-fd variant. The caller passes the fd of a token they have obtained by some other means (DuplicateToken, `kacs_open_peer_token`, etc.) and the kernel installs it on the calling thread, running the two-gate model as usual.
+There is also `KACS_IOC_IMPERSONATE` — an ioctl on a token fd, not on a socket. This is the explicit-fd variant. The caller passes the fd of a token they have obtained by some other means (DuplicateToken, the peer-token option, etc.) and the kernel installs it on the calling thread, running the two-gate model as usual.
 
-`kacs_impersonate_peer` is essentially `kacs_open_peer_token` followed by `KACS_IOC_IMPERSONATE`, fused for the common case where you do not need the token fd to outlive the impersonate-and-revert cycle.
+`peios_token_impersonate_peer` is exactly `peios_token_open_peer` followed by `KACS_IOC_IMPERSONATE` and a close, fused for the common case where you do not need the token fd to outlive the impersonate-and-revert cycle. It is a library convenience: the kernel's only impersonation entry is the ioctl.
 
 ## Transports that carry peer tokens
 
@@ -66,12 +68,12 @@ Peer token capture works on Unix sockets that have a real **connect** step. Spec
 |---|---|
 | `SOCK_STREAM` Unix socket | **Yes.** Captured at connect. |
 | `SOCK_SEQPACKET` Unix socket | **Yes.** Captured at connect. |
-| `SOCK_DGRAM` Unix socket | **No.** No connect step; no point at which to capture. |
-| `socketpair(2)` | **No.** The two ends share an origin; there is no "client" and "server". |
-| Pipes (`pipe(2)`, named FIFOs) | **No.** No socket framework. |
-| TCP sockets | **No.** Peer is potentially remote; KACS does not capture network identities. |
+| `SOCK_DGRAM` Unix socket | **No.** No connect step; no point at which to capture. `KACS_SO_PEER_TOKEN` fails with `EOPNOTSUPP`. |
+| `socketpair(2)` | **No.** The two ends share an origin; there is no "client" and "server". Connected but empty: `ENODATA`. |
+| Pipes (`pipe(2)`, named FIFOs) | **No.** Not sockets at all: `ENOTSOCK`. |
+| TCP sockets | **No.** Peer is potentially remote; KACS does not capture network identities. `EOPNOTSUPP`. |
 
-Servers using a transport that does not carry a peer token cannot use `kacs_impersonate_peer`. They have to obtain a token fd by some other path and use `KACS_IOC_IMPERSONATE` to install it. Common patterns:
+A stream or seqpacket socket that is not yet connected fails with `ENOTCONN`. Servers using a transport that does not carry a peer token cannot use `peios_token_impersonate_peer`. They have to obtain a token fd by some other path and use `KACS_IOC_IMPERSONATE` to install it. Common patterns:
 
 - **Token fd passed over the connection.** A datagram protocol can include a token fd in an `SCM_RIGHTS` message; the receiver gets the fd and impersonates from it. The token fd has whatever access the sender opened it with, bounded by what the sender held.
 - **Out-of-band capture.** A service that knows the peer's PID can call `kacs_open_process_token(pidfd)` to get the peer's primary token (subject to the process SD and PIP dominance checks). Less common; usually only the loopback-like patterns inside the TCB work this way.
@@ -89,7 +91,7 @@ flowchart LR
     C -.->|peer token sees A, not S1| D["S2 can impersonate A"]
 ```
 
-The mechanism: the impersonation token is the thread's effective token, and the effective token is what the kernel reads when capturing peer identity at connect. So when S1, while impersonating A, calls `connect()` on a socket to S2, the kernel captures A's identity onto S2's side of the socket. S2 can then `kacs_impersonate_peer` and get A.
+The mechanism: the impersonation token is the thread's effective token, and the effective token is what the kernel reads when capturing peer identity at connect. So when S1, while impersonating A, calls `connect()` on a socket to S2, the kernel captures A's identity onto S2's side of the socket. S2 can then call `peios_token_impersonate_peer` and get A.
 
 This cascading is automatic and is what makes the local-IPC ecosystem work cleanly. A user makes one request to a service, and that service makes downstream requests to other services on the user's behalf — registry, file system, audit logging — and each of those downstream services sees the user as the peer. No explicit token forwarding is required.
 
@@ -104,7 +106,7 @@ There are two server-side shapes, depending on which pattern (canonical synchron
 **Canonical synchronous flow** (one OS thread, one request, start to finish):
 
 1. **Accept the connection.** Standard `accept()` on the Unix socket. The kernel has already captured the client's peer token onto this socket.
-2. **Impersonate the peer.** Call `kacs_impersonate_peer(fd)`. The kernel runs the two-gate model and installs the resulting token.
+2. **Impersonate the peer.** Call `peios_token_impersonate_peer(fd)`. The kernel runs the two-gate model and installs the resulting token.
 3. **(Optional) Inspect the granted level.** Read the thread's effective token's `impersonation_level`. If it is below what you expected, the client's request, the identity gate, or the integrity ceiling has lowered it.
 4. **Do the work.** Every access check on this thread is now against the impersonation token.
 5. **Revert.** Call `kacs_revert()`. The thread is back to its primary identity.
@@ -113,7 +115,7 @@ There are two server-side shapes, depending on which pattern (canonical synchron
 **Just-in-time flow** (the right shape for any modern runtime — Go, Rust async, etc. — and the recommended default):
 
 1. **Accept the connection.** As above.
-2. **Capture the peer token fd.** Call `kacs_open_peer_token(fd)` and store the returned token fd in the request context. The fd carries `TOKEN_QUERY | TOKEN_IMPERSONATE`.
+2. **Capture the peer token fd.** Call `peios_token_open_peer(fd)` and store the returned token fd in the request context. The fd carries `TOKEN_QUERY | TOKEN_IMPERSONATE`.
 3. **(Optional) Inspect the captured token.** Query the captured fd to verify the identity and level before doing any work.
 4. **Do most of the request as the service.** Decoding, dispatch, internal bookkeeping, response framing — all run as the service's own identity.
 5. **For each access-requiring action**, install the captured token on the current OS thread (`KACS_IOC_IMPERSONATE` on the stored fd), do the single action, call `kacs_revert()` immediately. Keep the impersonation window as tight as possible.

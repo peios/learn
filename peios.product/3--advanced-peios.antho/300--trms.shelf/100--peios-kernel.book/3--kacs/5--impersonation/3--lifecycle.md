@@ -6,8 +6,10 @@ description: Assuming and reverting an identity — the sequence, Anonymous, dou
 ## The sequence
 
 **The client connects.** It optionally sets the maximum impersonation
-level through a syscall — the default is Impersonation — and calls
-`connect()`. The kernel's LSM hook fires on the Unix stream
+level on the socket with `setsockopt(SOL_KACS,
+KACS_SO_IMPERSONATION_LEVEL)` — the default is Impersonation, and the
+option is refused with `EISCONN` once the socket is connected — and
+calls `connect()`. The kernel's LSM hook fires on the Unix stream
 connection.
 
 **Identity is captured.** The hook examines the client thread's
@@ -21,11 +23,15 @@ impersonating, the impersonated identity is what flows through, which
 is how identity cascades across local services. At Identification, the
 effective token is stored but tagged at that level.
 
-**The server impersonates** by calling `kacs_impersonate_peer` with
-the connection fd. The kernel retrieves the stored token, evaluates
-both gates against the server thread's primary token, computes the
-effective level, and constructs a new credential carrying the
-impersonation token at that level.
+**The server reads the peer token** with `getsockopt(SOL_KACS,
+KACS_SO_PEER_TOKEN)` on the accepted connection, which opens a token fd
+for the stored identity carrying `TOKEN_QUERY | TOKEN_IMPERSONATE`.
+**It impersonates** by installing that fd with `KACS_IOC_IMPERSONATE`:
+the kernel evaluates both gates against the server thread's primary
+token, computes the effective level, and constructs a new credential
+carrying the impersonation token at that level. libpeios fuses the
+two steps as `peios_token_impersonate_peer` for the handler that
+impersonates, works and reverts on one thread.
 
 **Access control follows the impersonation token.** Every subsequent
 AccessCheck on the thread evaluates it, and MIC uses its integrity
@@ -49,8 +55,9 @@ identity.
 
 ## Double impersonation
 
-A thread already impersonating that calls `kacs_impersonate_peer`
-again causes the kernel to revert internally and then re-impersonate.
+A thread already impersonating that installs another token with
+`KACS_IOC_IMPERSONATE` causes the kernel to revert internally and then
+re-impersonate.
 Because the gates are evaluated against the primary token, the
 previous impersonation has no bearing on the new one.
 
@@ -99,21 +106,24 @@ awareness: the level is a flag that authd interprets.
 
 ## Supported transports
 
-Socket-based impersonation through `kacs_impersonate_peer` works on
-two socket types. `SOCK_STREAM` is the connection-oriented byte
-stream, and `SOCK_SEQPACKET` is connection-oriented with message
-boundaries and uses the same identity capture model. Both follow the
-same lifecycle: capture at `connect()`, impersonate, revert.
+Peer-token capture works on two AF_UNIX socket types. `SOCK_STREAM`
+is the connection-oriented byte stream, and `SOCK_SEQPACKET` is
+connection-oriented with message boundaries and uses the same identity
+capture model. Both follow the same lifecycle: capture at `connect()`,
+read with `KACS_SO_PEER_TOKEN`, impersonate, revert.
 
-Three transports do not support it. `SOCK_DGRAM` is connectionless, so
-identity would arrive as per-message credentials — a different model
-that is not part of this syscall surface; datagram sockets create no
-KACS peer token. Sockets from `socketpair()` are pre-connected and
-unnamed, and while possession of the fd authorizes use of the channel,
-no peer-token snapshot is installed. Pipes and FIFOs have no peer
-credential mechanism at all.
+Three transports do not carry a peer token, and the option reports
+which case applies. `SOCK_DGRAM` is connectionless, so identity would
+arrive as per-message credentials — a different model that is not part
+of this surface; the option fails with `EOPNOTSUPP` on a datagram
+socket, as it does on any non-Unix family. Sockets from `socketpair()`
+are pre-connected and unnamed, and while possession of the fd
+authorizes use of the channel, no peer-token snapshot is installed: the
+option fails with `ENODATA`. A socket that is not yet connected fails
+with `ENOTCONN`. Pipes and FIFOs are not sockets at all, so
+`getsockopt` itself fails with `ENOTSOCK` before KACS is reached.
 
 For all of these, the universal fallback is explicit token fd
 impersonation through `KACS_IOC_IMPERSONATE`, which works regardless
-of how the token fd was obtained — socket-based capture, an
-`SCM_RIGHTS` transfer, `kacs_open_peer_token`, or any other path.
+of how the token fd was obtained — the peer-token option, an
+`SCM_RIGHTS` transfer, or any other path.

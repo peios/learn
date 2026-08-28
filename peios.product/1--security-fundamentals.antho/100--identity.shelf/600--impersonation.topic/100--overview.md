@@ -38,15 +38,15 @@ The simplest case — one OS thread, one request, start to finish — follows a 
 ```mermaid
 flowchart LR
     A["Client connects"] --> B["Server accepts"]
-    B --> C["Server calls kacs_impersonate_peer(fd)"]
+    B --> C["Server calls peios_token_impersonate_peer(fd)"]
     C --> D["Server does the work"]
     D --> E["Server calls kacs_revert()"]
     E --> F["Server handles next request"]
 ```
 
-1. **Client connects.** Before connect, the client may have called `kacs_set_impersonation_level` on the socket to bound how far its identity may travel (see [Impersonation levels](~peios/impersonation/impersonation-levels)).
+1. **Client connects.** Before connect, the client may have set `KACS_SO_IMPERSONATION_LEVEL` on the socket (`peios_socket_set_impersonation_level`) to bound how far its identity may travel (see [Impersonation levels](~peios/impersonation/impersonation-levels)).
 2. **Server accepts.** The kernel captures the client's identity onto the socket at connect time.
-3. **Server impersonates.** A call to `kacs_impersonate_peer(fd)` installs the captured identity onto the calling thread, at the effective level determined by the two-gate model.
+3. **Server impersonates.** A call to `peios_token_impersonate_peer(fd)` installs the captured identity onto the calling thread, at the effective level determined by the two-gate model.
 4. **Server does the work.** Every access check on this thread now runs against the client's identity. File opens succeed if the client could open the file; registry reads succeed if the client could read; and so on.
 5. **Server reverts.** `kacs_revert()` drops the impersonation token. The thread is back to its primary identity for the next request.
 
@@ -71,7 +71,7 @@ flowchart LR
 
 The sequence:
 
-1. At accept, the server calls `kacs_open_peer_token(fd)` to capture the client's identity as a token fd. The fd is stored in the request context — request struct, goroutine-local, whatever the runtime provides.
+1. At accept, the server calls `peios_token_open_peer(fd)` to capture the client's identity as a token fd. The fd is stored in the request context — request struct, goroutine-local, whatever the runtime provides.
 2. Most of the request is processed as the service's own identity. Decoding, dispatching, internal bookkeeping, response framing — none of these need the client.
 3. When the code reaches the one operation that requires the client — opening a user-controlled file, reading the user's home directory, anything where the access decision must be the client's, not the server's — it installs the impersonation token on the current OS thread (`KACS_IOC_IMPERSONATE`), does the single operation, and calls `kacs_revert` immediately.
 4. The request continues at service identity. Further per-request impersonations follow the same install-do-revert pattern.
@@ -109,4 +109,4 @@ If you want to understand the four impersonation levels — Anonymous, Identific
 
 If you want the rules that decide what level a server actually ends up with — the identity gate, the integrity ceiling, and the silent downgrade behaviour — read [The two-gate model](~peios/impersonation/the-two-gates).
 
-If you want the concrete mechanics — peer token capture from sockets, the difference between `kacs_impersonate_peer` and `kacs_open_peer_token`, and the explicit-fd variant — read [Peer tokens and capture](~peios/impersonation/peer-tokens).
+If you want the concrete mechanics — peer token capture from sockets, the difference between `peios_token_impersonate_peer` and `peios_token_open_peer`, and the explicit-fd variant — read [Peer tokens and capture](~peios/impersonation/peer-tokens).

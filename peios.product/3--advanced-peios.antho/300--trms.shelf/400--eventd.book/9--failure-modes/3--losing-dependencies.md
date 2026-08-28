@@ -35,7 +35,7 @@ in the meantime (§8.3).
 
 If KACS goes away after startup:
 
-- `kacs_open_peer_token` fails on new query connections, so new queries
+- reading the peer token (`KACS_SO_PEER_TOKEN`) fails on new query connections, so new queries
   are denied.
 - `kacs_access_check` and `kacs_access_check_list` fail, so a query in
   progress that needs a fresh check is denied.

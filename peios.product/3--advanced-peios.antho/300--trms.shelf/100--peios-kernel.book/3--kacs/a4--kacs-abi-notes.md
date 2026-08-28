@@ -101,6 +101,27 @@ constants, and nothing in `uapi/pkm/` defines None, Protected or
 Isolated. A program reasoning about tiers compares the numbers
 (§3.7).
 
+## Socket options and retired syscall numbers
+
+Peer identity on AF_UNIX sockets is read and bounded through socket
+options rather than syscalls. `uapi/pkm/socket.h` defines the option
+level `SOL_KACS` (4096) and its options, `KACS_SO_PEER_TOKEN` and
+`KACS_SO_IMPERSONATION_LEVEL` (§3.A). The kernel dispatches the level
+in `net/socket.c` ahead of the protocol's own handlers (patch
+`net/socket-sol-kacs-dispatch.patch`), so the options reach KACS on
+every socket family and KACS decides which it supports: the
+connection-oriented Unix types answer, everything else fails with
+`EOPNOTSUPP`. The semantics and error codes are in §3.5.3.
+
+Three syscall numbers are retired and left as permanent holes:
+1010 (`kacs_open_peer_token`), 1011 (`kacs_impersonate_peer`) and
+1013 (`kacs_set_impersonation_level`). A binary built against them
+gets `ENOSYS`. The first became `getsockopt(SOL_KACS,
+KACS_SO_PEER_TOKEN)`, the third `setsockopt(SOL_KACS,
+KACS_SO_IMPERSONATION_LEVEL)`, and the second was a fusion of the
+first with `KACS_IOC_IMPERSONATE` that now lives in libpeios as
+`peios_token_impersonate_peer`.
+
 ## What is not here
 
 Required rights, error codes and validation rules are properties of

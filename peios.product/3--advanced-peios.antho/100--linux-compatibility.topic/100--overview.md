@@ -59,7 +59,7 @@ A handful of Linux behaviours map cleanly into KACS; others are deliberately red
 | `fchmod`, `chmod` | Gated on `WRITE_DAC`: `fchmod` needs it in the fd's cached granted mask, `chmod` runs a fresh access check. The mode bits change, but FACS never consults them for access. |
 | `fchown`, `chown` | Same, gated on `WRITE_OWNER`. The Linux uid/gid changes, but the SD's owner SID does not — use `kacs_set_sd` for that. |
 | `setcap` on files (file capabilities) | Denied. Linux file capabilities are dead under KACS. |
-| `SO_PEERCRED`, `SCM_CREDENTIALS` | Returns projected UIDs (compat-only). Services needing real identity use `kacs_open_peer_token`. |
+| `SO_PEERCRED`, `SCM_CREDENTIALS` | Returns projected UIDs (compat-only). Services needing real identity read the peer token with `getsockopt(SOL_KACS, KACS_SO_PEER_TOKEN)`. |
 | `getxattr`/`setxattr` on `security.peios.sd` / `system.ntfs_security` | Denied; use `kacs_get_sd` / `kacs_set_sd`. |
 | `auditd` and the Linux audit subsystem | Replaced by KMES and eventd. The legacy audit records projected UIDs only. |
 

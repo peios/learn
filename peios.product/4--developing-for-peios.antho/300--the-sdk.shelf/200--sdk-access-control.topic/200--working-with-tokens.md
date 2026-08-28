@@ -63,7 +63,9 @@ close(caller);
 
 Always pair `peios_token_impersonate` with [`peios_token_revert`](~peios/sdk-tokens/token-h-tokens-and-sessions#impersonation-and-installation), ideally in the cleanup path, so a failure partway through can't leave your thread wearing someone else's identity. `peios_token_revert` is a safe no-op if you weren't impersonating.
 
-The full flow for a request handler is: `accept` → `peios_token_open_peer` → `peios_token_impersonate` → serve the request → `peios_token_revert` → `close`.
+The full flow for a request handler is: `accept` → `peios_token_open_peer` → `peios_token_impersonate` → serve the request → `peios_token_revert` → `close`. When the handler runs start to finish on one thread and has no other use for the token, `peios_token_impersonate_peer(conn)` collapses the open, impersonate and close into one call.
+
+A client decides how far its identity travels before it connects: `peios_socket_set_impersonation_level(sock, KACS_IMLEVEL_IDENTIFICATION)` lets the server learn who it is without being able to act as it.
 
 ## Dropping power
 

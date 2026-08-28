@@ -100,7 +100,7 @@ Everyone (`S-1-1-0`) as its only group; no privileges; integrity level
 Untrusted; logon type Network; token type Impersonation; impersonation
 level Anonymous; elevation type Default; token source `PeiosKrn`; and
 `auth_id` set to `ANONYMOUS_LOGON_LUID`. It is effectively immutable,
-having no privileges and no groups to adjust. `kacs_impersonate_peer`
+having no privileges and no groups to adjust. A peer token captured
 at Anonymous level references this global object, whereas
 `KACS_IOC_DUPLICATE` targeting Anonymous level creates a fresh
 independent token of the same shape, because the DuplicateToken

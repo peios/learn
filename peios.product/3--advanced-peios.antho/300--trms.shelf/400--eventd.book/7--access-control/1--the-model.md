@@ -46,7 +46,8 @@ Three reasons make this the only workable arrangement:
 ## Caller identity
 
 When a client connects to the query socket, eventd obtains its token by
-calling `kacs_open_peer_token` on the connected descriptor. The token
+reading the peer-token socket option (`getsockopt(SOL_KACS,
+KACS_SO_PEER_TOKEN)`) on the connected descriptor. The token
 represents the peer's identity as captured **at connection time**.
 
 If the call fails, eventd denies the query entirely. It has no fallback

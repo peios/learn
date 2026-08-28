@@ -19,7 +19,7 @@ This page covers each.
 
 PIP reads the **PSB**, not the effective token. Impersonation changes the effective token; it does not change the PSB. The consequence: impersonating a high-trust identity does **not** raise a process's PIP level.
 
-A worked example. A user-mode application — `pip_type = None` — accepts a connection from a TCB daemon. The TCB daemon connected at Delegation level. The application calls `kacs_impersonate_peer` and now has the TCB daemon's identity installed as its effective token. The token is at SYSTEM integrity, with TCB-flavoured group memberships, with many privileges enabled.
+A worked example. A user-mode application — `pip_type = None` — accepts a connection from a TCB daemon. The TCB daemon connected at Delegation level. The application calls `peios_token_impersonate_peer` and now has the TCB daemon's identity installed as its effective token. The token is at SYSTEM integrity, with TCB-flavoured group memberships, with many privileges enabled.
 
 What can the application now do?
 

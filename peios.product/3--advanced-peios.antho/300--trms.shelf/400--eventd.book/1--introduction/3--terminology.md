@@ -12,7 +12,7 @@ and layer from the Peios Kernel TRM; producer, client, log record,
 metric sample, time series and concrete identifier from PSPU §3.2.
 
 Syscall numbers and signatures for the kernel interfaces eventd calls —
-`kmes_attach`, `kacs_open_peer_token`, `kacs_access_check` and
+`kmes_attach`, the `SOL_KACS` peer-token option, `kacs_access_check` and
 `kacs_access_check_list` — are in the Peios Kernel TRM's generated ABI
 appendices, §2.A and §3.A. This manual names them and does not repeat
 their numbers.

@@ -52,7 +52,7 @@ stored `origin` or metric `name` as evidence of provenance.
 
 > [!NOTE]
 > Closing this needs a primitive eventd does not have: a way to obtain
-> the peer's token for a **datagram**, as `kacs_open_peer_token` does for
+> the peer's token for a **datagram**, as `KACS_SO_PEER_TOKEN` does for
 > a stream connection. With one, an ingestion socket could carry a
 > descriptor governing which origins a sender may write, checked per
 > datagram — which is the shape the read path already has. Until it

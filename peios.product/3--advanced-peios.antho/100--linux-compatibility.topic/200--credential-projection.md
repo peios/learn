@@ -119,7 +119,7 @@ On Peios, these return the peer's projected UID/GID values. The values are corre
 - They don't carry the token's SIDs, groups, integrity level, or privileges.
 - They don't reflect impersonation correctly in all cases.
 
-For security purposes, the right tool is `kacs_open_peer_token` — it returns a token fd carrying the full identity. See [Peer credentials](~peios/linux-compatibility/peer-credentials).
+For security purposes, the right tool is the peer-token socket option, `getsockopt(SOL_KACS, KACS_SO_PEER_TOKEN)` (`peios_token_open_peer` in libpeios) — it returns a token fd carrying the full identity. See [Peer credentials](~peios/linux-compatibility/peer-credentials).
 
 `SO_PEERCRED` and `SCM_CREDENTIALS` are kept for compatibility with Linux applications that use them for non-security purposes (logging, debugging, friendly identification). Code that needs to make access decisions on peer identity uses the KACS-aware API.
 

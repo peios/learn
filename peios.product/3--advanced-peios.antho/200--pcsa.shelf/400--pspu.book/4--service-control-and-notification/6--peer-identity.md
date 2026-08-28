@@ -1,6 +1,6 @@
 ---
 title: Peer Identity
-description: The manager establishes every client's identity from the kernel, at connect, and a client can never assert who it is.
+description: The manager establishes every client's identity from the kernel, captured once when the connection is accepted, and a client can never assert who it is.
 ---
 
 The manager MUST establish the identity of every client from the kernel.
@@ -9,12 +9,14 @@ be able to assert who it is.
 
 ## Obtaining the identity
 
-On accepting a connection, the manager MUST obtain the peer's token from
-the kernel. On Peios this is `kacs_open_peer_token`, which returns a
-token descriptor for the peer.
+On accepting a connection, the manager MUST obtain the peer's token
+through the kernel's peer-identity facility for connected local sockets
+(the Peios Kernel TRM §3.5). The token is captured by the kernel when
+the client connects; nothing in this protocol carries it, and a client
+has no way to supply one.
 
-The token obtained is the peer **thread's effective token at the moment
-of the call**. A client that is impersonating another principal is
+The token reflects the identity the client was **acting under when it
+connected**. A client that is impersonating another principal is
 therefore captured as the principal it is impersonating, not as its own
 service identity — which is the intended behaviour: access decisions
 reflect the identity a client is actually acting under.
@@ -30,10 +32,12 @@ authorisation. A client that needs to act under a different identity
 MUST open a new connection.
 
 > [!NOTE]
-> Capturing once is what makes the identity meaningful. A per-command
-> capture would evaluate each command against whatever the peer happened
-> to be at the moment the manager got round to reading it, which is a
-> race a client could steer.
+> One identity per connection is what keeps a command sequence coherent.
+> A job started under one identity cannot be steered by a later command
+> issued under another on the same connection, every command on a
+> connection is attributable to a single principal, and the manager
+> never has to decide which of two identities an in-flight operation
+> belongs to. The rule is a property of this protocol.
 
 ## Failure
 
