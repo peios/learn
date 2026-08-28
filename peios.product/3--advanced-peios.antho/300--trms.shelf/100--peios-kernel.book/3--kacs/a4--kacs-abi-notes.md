@@ -121,6 +121,14 @@ identity boundary, and advances the register at the point of
 consumption. Everything KACS-specific behind those hooks lives in
 `kacs/socket.c`. The semantics and error codes are in §3.5.3.
 
+System V IPC objects carry descriptors of their own (§3.11); their
+rights are `uapi/pkm/ipc.h`, and the same header defines the
+`KACS_SD_AT_SYSV_*` flags that let `kacs_get_sd` and `kacs_set_sd`
+address such an object by kind and id (`dirfd` carries the id, the
+path is NULL). The lookup is `ipc_lsm_with_object`, exported from
+`ipc/util.c` by `ipc/util-lsm-with-object.patch`; the hooks themselves
+are the LSM's own IPC hooks and need no patch.
+
 Three syscall numbers are retired and left as permanent holes:
 1010 (`kacs_open_peer_token`), 1011 (`kacs_impersonate_peer`) and
 1013 (`kacs_set_impersonation_level`). A binary built against them

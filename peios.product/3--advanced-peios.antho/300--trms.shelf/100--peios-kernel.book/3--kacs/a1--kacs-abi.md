@@ -619,9 +619,10 @@ on every socket family that supports them. SOL_KACS is 4096: far above
 the upstream SOL_* range, which grows by one per new protocol, so it
 cannot collide with a future Linux level. Errors: -ENOPROTOOPT for an
 option this level does not define (or a get-only option passed to
-setsockopt); -EOPNOTSUPP on a socket family or type KACS does not
-capture identity for; -EINVAL for a short optlen or an out-of-range
-value; -EFAULT for an unreadable/unwritable optval.
+setsockopt); -EOPNOTSUPP on a socket family KACS does not carry identity
+on (and, for the register, on a socket type that has none); -EINVAL for
+a short optlen or an out-of-range value; -EFAULT for an
+unreadable/unwritable optval.
 
 | Constant | Value |
 |---|---|
@@ -632,12 +633,15 @@ value; -EFAULT for an unreadable/unwritable optval.
 optval: int — a new token fd, carrying fixed TOKEN_QUERY |
 TOKEN_IMPERSONATE access and opened O_CLOEXEC, for this end's conveyed-
 identity register: the peer identity associated with the data this end
-has consumed so far. The register is initialised by the identity
-captured at connect() and advanced by each KACS_SCM_TOKEN the reader's
-position passes (a token still queued but unread is not yet visible).
-Every call returns a fresh fd to an immutable snapshot; two calls may
-name different tokens, but no token ever changes. -ENOTCONN if the
-socket is not connected; -ENODATA if nothing has been conveyed yet.
+has consumed so far. The register is initialised at connect() — on the
+accepted end with the client's identity, on the connecting end with the
+listener's identity as captured at listen() (at
+KACS_IMLEVEL_IDENTIFICATION unless the listener set its own level) — and
+advanced by each KACS_SCM_TOKEN the reader's position passes (a token
+still queued but unread is not yet visible). Every call returns a fresh
+fd to an immutable snapshot; two calls may name different tokens, but no
+token ever changes. -ENOTCONN if the socket is not connected; -ENODATA
+if nothing has been conveyed yet.
 
 | Constant | Value |
 |---|---|
@@ -666,6 +670,20 @@ level: the sender can always attest to what it is. Default 0.
 |---|---|
 | `KACS_SO_PASS_TOKEN` | `3` |
 
+*setsockopt only, on a listening socket.*
+
+optval: int, ignored. Replaces the identity the listener conveys to
+connecting clients — captured when listen() was called — with the
+caller's current effective identity, at the listener's level. Self-
+gated: a process can always attest to what it is. For a process that
+receives a listener it did not create (from a descriptor store after a
+restart, or from a broker), so that clients see the process actually
+accepting. -EINVAL if the socket is not listening.
+
+| Constant | Value |
+|---|---|
+| `KACS_SO_RESTAMP` | `4` |
+
 *Ancillary message type, at cmsg_level SOL_KACS.*
 
 Data: one int. Received: a token fd (TOKEN_QUERY | TOKEN_IMPERSONATE,
@@ -685,6 +703,42 @@ for the duration of the send.
 | Constant | Value |
 |---|---|
 | `KACS_SCM_TOKEN` | `1` |
+
+## ipc.h
+
+From `uapi/pkm/ipc.h`.
+
+KACS access rights for System V IPC objects — message queues, shared
+memory segments and semaphore arrays. Every SysV object carries a
+security descriptor, created from the creator's token at *get time and
+enforced through the LSM IPC hooks; the nine-bit ipc_perm mode is never
+consulted (CAP_IPC_OWNER is in KACS's always-allow set). The key
+namespace is claim-on-create: the descriptor protects the object,
+nothing protects the name. Object-specific rights (low 16 bits); the
+standard rights (DELETE, READ_CONTROL, WRITE_DAC, WRITE_OWNER —
+<pkm/access.h>) apply as on every KACS object.
+
+| Constant | Value | Notes |
+|---|---|---|
+| `KACS_IPC_READ` | `0x00000001` (1) | msgrcv, shmat read-only, semop without alter, GETVAL/GETALL |
+| `KACS_IPC_WRITE` | `0x00000002` (2) | msgsnd, shmat read-write, semop with alter, SETVAL/SETALL |
+| `KACS_IPC_QUERY_INFORMATION` | `0x00000004` (4) | IPC_STAT and the *_STAT variants |
+| `KACS_IPC_SET_INFORMATION` | `0x00000008` (8) | SHM_LOCK / SHM_UNLOCK |
+| `KACS_IPC_ALL_ACCESS` | `983055` |  |
+
+ipcctl gates: IPC_RMID needs DELETE; IPC_SET needs WRITE_DAC and
+WRITE_OWNER (one command carries mode, uid and gid); the mode, uid and
+gid it writes are informational (ipcs, IPC_STAT) and never decide
+access. Addressing a SysV object's descriptor with kacs_get_sd /
+kacs_set_sd: pass one of these in `flags`, the object id in `dirfd`, and
+a NULL path. The object is looked up in the caller's IPC namespace.
+
+| Constant | Value |
+|---|---|
+| `KACS_SD_AT_SYSV_SHM` | `0x01000000` |
+| `KACS_SD_AT_SYSV_MSG` | `0x02000000` |
+| `KACS_SD_AT_SYSV_SEM` | `0x04000000` |
+| `KACS_SD_AT_SYSV_MASK` | `117440512` |
 
 ## AccessCheck constants
 
@@ -1228,6 +1282,19 @@ otherwise collapse into an indistinguishable -EACCES. Verdict is the
 | `KACS_SOCK_GATE` | `18` | explicit KACS_SCM_TOKEN send-gate verdict |
 | `KACS_SOCK_REGISTER` | `19` | conveyed-identity register advanced |
 | `KACS_SOCK_DELIVER` | `20` | KACS_SCM_TOKEN delivered to a receiver |
+| `KACS_SOCK_LISTEN` | `21` | listener identity captured at listen() |
+| `KACS_SOCK_RESTAMP` | `22` | listener identity replaced by KACS_SO_RESTAMP |
+
+*kacs_ipc reason — a System V IPC object SD decision (ipc.c).*
+
+| Constant | Value | Notes |
+|---|---|---|
+| `KACS_IPC_ALLOC` | `0` | default SD stamped at *get creation |
+| `KACS_IPC_PERMISSION` | `1` | ipc_permission: read/write access to the object |
+| `KACS_IPC_CTL` | `2` | *ctl command gate (RMID/SET/STAT/...) |
+| `KACS_IPC_SD_QUERY` | `3` | kacs_get_sd on the object |
+| `KACS_IPC_SD_SET` | `4` | kacs_set_sd on the object |
+| `KACS_IPC_NO_SD` | `5` | object carries no SD; fail closed |
 
 *kacs_namespace stage — which sub-decision of a namespace-mutation hook a record describes.*
 
