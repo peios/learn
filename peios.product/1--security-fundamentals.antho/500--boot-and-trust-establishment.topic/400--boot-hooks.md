@@ -93,7 +93,7 @@ Capabilities are just names, and a hook can in principle name its own. But the m
 | `rootfs-ready` | `/mnt/rootfs` is mounted and ready for read/write manipulation. |
 | `rootfs-strata-ready` | The full StrataFS topology exists *inside* `/mnt/rootfs`. |
 
-The vocabulary is deliberately short. Names for things Peios does not yet do — driver loading, device settling, volume assembly — are not reserved in advance: a capability that nothing supplies and nothing consumes is a name with no meaning behind it, and inventing one early only fixes a shape before we know it.
+The vocabulary is deliberately short. Names for things Peios does not yet do — device settling, volume assembly — are not reserved in advance: a capability that nothing supplies and nothing consumes is a name with no meaning behind it, and inventing one early only fixes a shape before we know it. Driver loading, which Peios does do, has no capability of its own for the same reason: the coldplug hook simply contributes to `rootfs-ready`, which is what it means for the root-mount hooks, and nothing has yet needed to order against it more precisely than that.
 
 Once every hook has finished, prelude chroots into `/mnt/rootfs`. There is no "last point at which a hook can run" capability, because that is already every hook's guarantee.
 
