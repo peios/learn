@@ -34,6 +34,8 @@ The names are made by the **device manager**, eudev, which peinit starts first i
 
 That is the same daemon that loads a driver for each device the kernel reports, so a disk behind a modular controller gets its driver, its kernel name and its stable names from one pass. See [Boot and boot modes](~peios/services-and-jobs/boot-and-boot-modes) for where the service sits in the boot order; a service that opens a device by stable name should `Requires` it, because peinit does not release eudev's dependents until the boot-time replay has finished.
 
+The same idea applies to network interfaces. The kernel names them `eth0`, `eth1` in probe order; the device manager renames each one by where it sits — `enp0s3` for the card in PCI slot 3 on bus 0, `eno1` for an onboard port the firmware numbers — so a configuration written against the name survives a second card or a driver that probes faster next time. `net.ifnames=0` on the kernel command line turns the renaming off.
+
 The device manager does not decide who may open a device. That is the security descriptor on the node, seeded on `/dev` before any of this runs — see [SD storage by filesystem](~peios/mount-policies/sd-storage-by-filesystem).
 
 ## Where they are not available
