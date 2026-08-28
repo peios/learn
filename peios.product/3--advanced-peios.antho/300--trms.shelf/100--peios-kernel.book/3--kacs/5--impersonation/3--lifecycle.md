@@ -186,7 +186,9 @@ capture model. Both follow the same lifecycle: capture at `connect()`,
 read with `KACS_SO_PEER_TOKEN`, impersonate, revert — with per-message
 identity layered on top as described above. `SOCK_DGRAM` supports
 per-message identity only: `KACS_SO_PASS_TOKEN` and `KACS_SCM_TOKEN`
-work, since a send needs no connection, but there is no register.
+work, since a send needs no connection, and
+`KACS_SO_IMPERSONATION_LEVEL` bounds them as on any socket, but there
+is no register.
 
 Where the register does not apply, `KACS_SO_PEER_TOKEN` reports which
 case it is. On a datagram socket, or any non-Unix family, the option
