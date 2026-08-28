@@ -48,7 +48,6 @@ Representative members:
 | `SeAuditPrivilege` | Writing entries to the audit log. |
 | `SeProfileSingleProcessPrivilege` | Cross-task profiling of a specific other process (`perf_event_open`). Own-task profiling needs no privilege. |
 | `SeSystemProfilePrivilege` | System-wide profiling (`perf_event_open` with `pid == -1`): per-CPU, all-task, kernel-mode events. |
-| `SeBindPrivilegedPortPrivilege` | Binding to TCP/UDP ports below 1024. A Peios-specific privilege. |
 | `SeChangeNotifyPrivilege` | Bypassing traverse checks during path resolution. Granted to every principal by default; rarely the answer to a question. |
 | `SeCreateSymbolicLinkPrivilege` | Creating symbolic links. Granted to every principal by default. |
 

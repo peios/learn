@@ -146,13 +146,11 @@ tiers.
 
 ## Network
 
-| Privilege | Bit | Mask | Enforcement |
-|---|---:|---|---|
-| `SeBindPrivilegedPortPrivilege` | 63 | 0x8000_0000_0000_0000 | Kernel standalone |
-
-Binds TCP and UDP ports below 1024, mapped through
-`CAP_NET_BIND_SERVICE`. A custom Peios privilege, retaining the Linux
-convention as defence in depth.
+No privilege. Binding a port is an access check against the port's
+reservation — a security descriptor keyed by protocol and port range —
+not a privilege test; see [Port reservations](~peios/network-objects/port-reservations).
+Bit 63 was `SeBindPrivilegedPortPrivilege` until that object existed; the
+bit is retired and not reused.
 
 ## Directory and domain operations
 

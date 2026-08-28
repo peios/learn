@@ -27,7 +27,7 @@ In a standard Linux kernel, an access proceeds through several layers:
 
 KACS is an LSM. It fires at step 4. By the time it runs, DAC has already had its say. If a file has mode `400` (read-only by owner), a non-owner attempting to read it gets `EACCES` from DAC before KACS sees the call. KACS may have a DACL granting the access, but it cannot help — DAC already refused.
 
-The same applies to capabilities. Operations gated by Linux capabilities (`CAP_SYS_ADMIN`, `CAP_NET_BIND_SERVICE`, etc.) check the capability at the relevant point. If the process lacks the capability, the operation fails. KACS's privilege model (`SeBindPrivilegedPortPrivilege`, `SeTcbPrivilege`, etc.) is parallel but separate.
+The same applies to capabilities. Operations gated by Linux capabilities (`CAP_SYS_ADMIN`, `CAP_NET_BIND_SERVICE`, etc.) check the capability at the relevant point. If the process lacks the capability, the operation fails. KACS's privilege model (`SeTcbPrivilege`, `SeDebugPrivilege`, etc.) is parallel but separate.
 
 The naive answer would be to remove DAC from the kernel. But that breaks Linux compatibility — applications expect the kernel to enforce mode bits. Peios's answer is more subtle: keep DAC and capabilities, but neutralise them so they always defer to LSM.
 
@@ -74,6 +74,7 @@ The DAC-neutralisation set is the core of ALLOW:
 | `CAP_CHOWN` | Restriction on `chown()` | Linux normally requires CAP_CHOWN to chown; Peios redirects chown through KACS anyway. |
 | `CAP_SETUID` | Restriction on `setuid()` | `setuid()` is itself reinterpreted by Peios; the cap must be present for the syscall to even get to the LSM hook. |
 | `CAP_SETGID` | Same for `setgid()` | Same. |
+| `CAP_NET_BIND_SERVICE` | The privileged-port floor (`bind()` below 1024) | Binding a port is decided by the port's reservation SD at the `socket_bind` hook, for every port; the Linux floor must never refuse first. See [port reservations](~peios/network-objects/port-reservations). |
 
 These are mandatory. No process can clear them; `capset()` ignores attempts to remove them.
 
@@ -89,7 +90,6 @@ Many Linux capabilities map cleanly to a KACS privilege. Examples:
 | `CAP_SYS_NICE` | `SeIncreaseBasePriorityPrivilege` |
 | `CAP_IPC_LOCK` | `SeLockMemoryPrivilege` |
 | `CAP_SYS_RESOURCE` | `SeIncreaseQuotaPrivilege` |
-| `CAP_NET_BIND_SERVICE` | `SeBindPrivilegedPortPrivilege` (Peios-custom) |
 | `CAP_AUDIT_CONTROL`, `CAP_AUDIT_READ`, `CAP_MAC_ADMIN` | `SeSecurityPrivilege` |
 | `CAP_PERFMON` | `SeSystemProfilePrivilege` **OR** `SeProfileSingleProcessPrivilege` **OR** `SeLoadDriverPrivilege` (OR-mapped — see below) |
 

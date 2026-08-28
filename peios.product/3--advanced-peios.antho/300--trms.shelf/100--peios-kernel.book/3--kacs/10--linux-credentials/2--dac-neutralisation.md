@@ -37,6 +37,7 @@ something KACS will evaluate independently:
 | 11 | `CAP_NET_BROADCAST` | Unused in modern kernels. |
 | 15 | `CAP_IPC_OWNER` | KACS IPC hooks enforce. |
 | 28 | `CAP_LEASE` | KACS file hooks enforce. |
+| 10 | `CAP_NET_BIND_SERVICE` | The port's reservation SD decides at `socket_bind`; the Linux privileged-port floor never refuses. |
 
 **PRIVILEGE** capabilities gate operations no other KACS hook covers,
 and map to a KACS privilege:
@@ -44,7 +45,6 @@ and map to a KACS privilege:
 | CAP | Name | Privilege |
 |---:|---|---|
 | 9 | `CAP_LINUX_IMMUTABLE` | `SeTcbPrivilege` |
-| 10 | `CAP_NET_BIND_SERVICE` | `SeBindPrivilegedPortPrivilege` |
 | 12 | `CAP_NET_ADMIN` | `SeTcbPrivilege` |
 | 13 | `CAP_NET_RAW` | `SeTcbPrivilege` |
 | 14 | `CAP_IPC_LOCK` | `SeLockMemoryPrivilege` |
