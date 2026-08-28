@@ -48,6 +48,8 @@ if (caller < 0) { /* errno */ }
 
 This is local authentication with no passwords and no handshake — the kernel vouches for who is on the other end. The handle comes with fixed `QUERY | IMPERSONATE` rights, which is exactly what a server needs.
 
+It works in the other direction too: right after `connect()`, `peios_token_open_peer(sock)` on the *client's* socket returns the identity of whoever is listening (at Identification level — enough to check, not to act as), so a client can verify it reached the genuine service and not something else that bound the path.
+
 ## Acting as the caller
 
 Once you hold a caller's (impersonation) token, you can **impersonate** them: adopt their identity on your current thread so every subsequent access check runs as *them*, not as your service. This is how you do work on a client's behalf without running privileged and re-implementing their permissions.

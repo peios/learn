@@ -52,6 +52,16 @@ This is the same observable outcome as exceeding the connection limit
 distinguishing them would tell an unauthenticated caller about the
 manager's state.
 
+## The manager's identity
+
+The kernel's facility is symmetric: a client that has connected MAY
+obtain the manager's identity through the same facility and verify it
+before sending a command — that the peer is the principal it expects
+the manager to run as, rather than something else that bound the path.
+A client MUST NOT treat the control socket's path as proof of the
+manager's identity; the path is a rendezvous, and the token is what the
+kernel attests.
+
 ## The identity is not a UID
 
 The manager MUST NOT use the peer's UID or GID as an authorisation

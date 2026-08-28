@@ -12,8 +12,21 @@ option may be changed at any time and bounds every capture made from
 then on — and calls `connect()`. The kernel's LSM hook fires on the
 Unix stream connection.
 
-**Identity is captured.** The hook examines the client thread's
-effective credential together with the socket's maximum level. At
+**Identity is captured, both ways.** The hook examines the client
+thread's effective credential together with the socket's maximum
+level, and stores the result on the accepted end. It also stores, on
+the connecting end, the identity the listener captured when `listen()`
+was called — so a client can read `KACS_SO_PEER_TOKEN` on its own
+socket immediately after `connect()` and verify who it reached, at
+Identification level unless the listener set its own level. The
+listener's identity is what `listen()` saw; a process that inherits a
+listener it did not create (from a descriptor store after a restart,
+or from a broker) replaces it with its own using `setsockopt(SOL_KACS,
+KACS_SO_RESTAMP)`, which is self-gated and fails with `EINVAL` on a
+socket that is not listening. Clients that connect before the restamp
+see the previous holder, which is honest: that is who was listening.
+Squatting a name therefore buys nothing against a client that checks —
+the squatter's own identity is what it conveys. At
 Anonymous, a token whose user SID is `S-1-5-7`, whose enabled groups
 include Everyone, and which does not carry Authenticated Users is
 stored on the socket's LSM blob, and the client's real identity is

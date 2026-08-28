@@ -68,6 +68,13 @@ Both variables are omitted entirely when the store is empty.
 `LISTEN_PID`, which a conforming client checks against its own PID
 before trusting `LISTEN_FDS`, is not set.
 
+A listening socket that comes back this way still conveys the identity
+captured when the previous instance called `listen()` on it. peinit
+does not touch that: a service that wants connecting clients to see the
+instance actually accepting restamps the returned listeners itself
+(`peios_socket_restamp`, the Peios Kernel TRM §3.5) before it starts
+accepting.
+
 Injection happens for the main process only. Hooks and health checks
 never receive stored descriptors.
 

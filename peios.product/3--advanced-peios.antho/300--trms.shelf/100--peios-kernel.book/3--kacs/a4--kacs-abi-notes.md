@@ -106,8 +106,9 @@ Isolated. A program reasoning about tiers compares the numbers
 Peer identity on AF_UNIX sockets is read and bounded through socket
 options rather than syscalls. `uapi/pkm/socket.h` defines the option
 level `SOL_KACS` (4096), its options `KACS_SO_PEER_TOKEN`,
-`KACS_SO_IMPERSONATION_LEVEL` and `KACS_SO_PASS_TOKEN`, and the
-ancillary message type `KACS_SCM_TOKEN`, which travels at
+`KACS_SO_IMPERSONATION_LEVEL`, `KACS_SO_PASS_TOKEN` and
+`KACS_SO_RESTAMP`, and the ancillary message type `KACS_SCM_TOKEN`,
+which travels at
 `cmsg_level SOL_KACS` (§3.A). The kernel dispatches the option level
 in `net/socket.c` ahead of the protocol's own handlers (patch
 `net/socket-sol-kacs-dispatch.patch`), so the options reach KACS on

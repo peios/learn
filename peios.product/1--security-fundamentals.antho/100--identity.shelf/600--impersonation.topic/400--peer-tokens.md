@@ -105,6 +105,17 @@ A stream or seqpacket socket that is not yet connected fails with `ENOTCONN`. Se
 
 The lack of peer tokens on datagram and pipe transports is intentional, not an oversight. Those transports are fundamentally connection-less or pre-existing; capturing a "peer" identity that may not exist is ill-defined.
 
+## Verifying the server
+
+Capture is symmetric. When the client's `connect()` completes, its own socket's register holds the identity of whoever called `listen()` on the name it reached, at Identification level unless the server raised its listener's level — enough to verify, not enough to impersonate. So a client checks the service it is about to trust with one call:
+
+```c
+int server = peios_token_open_peer(sock);   /* who is actually listening */
+/* query its user SID, compare with the principal the service is expected to run as */
+```
+
+This is what makes a socket path safe to connect to even when the path itself could have been bound by someone else: the name is a rendezvous, the token is the proof. A process that ends up holding a listener it did not create — one returned from peinit's descriptor store after a restart, or one handed over by a broker — calls `peios_socket_restamp` on it before accepting, so that clients see the process actually serving them rather than the one that originally called `listen()`.
+
 ## Identity cascading
 
 A service that is impersonating client A may itself need to call a third service. When it does, the connection it opens carries A's identity, not the service's own.

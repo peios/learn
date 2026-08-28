@@ -85,6 +85,13 @@ manager MUST NOT clear it when a start attempt fails before that point —
 the descriptors are still the service's, and the next attempt should get
 them.
 
+A returned listening socket conveys, to every client that connects, the
+identity of the process that called `listen()` on it — the previous
+instance of the service. A service that receives listening sockets from
+the store SHOULD restamp them with its own identity before accepting
+(the Peios Kernel TRM §3.5), so that clients verifying the peer see the
+instance actually serving them.
+
 ## When the store is emptied
 
 The manager MUST clear the store, closing its descriptors, when:
