@@ -90,6 +90,10 @@ KACS-native token operations for privilege management instead.
 **Direct capability manipulation.** Software that manipulates
 capabilities with `capset()` and `capget()`, writes seccomp filters,
 or inspects its own capability set may behave unexpectedly (§3.10.2).
+Seccomp filters themselves install as on Linux — `no_new_privs`, or
+`CAP_SYS_ADMIN` resolved to `SeTcbPrivilege` — and `no_new_privs`
+keeps its Linux meaning for the one Peios gain an exec can confer:
+under it, an exec cannot raise the process's PIP label (§3.7).
 
 **`setfsuid()`** is a no-op for filesystem purposes, since
 `current_fsuid()` ignores `cred->fsuid`; and cosmetic setuid-bit exec

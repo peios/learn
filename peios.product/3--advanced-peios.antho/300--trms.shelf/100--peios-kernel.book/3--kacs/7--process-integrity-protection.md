@@ -222,6 +222,28 @@ second exec; the task exists only to be that helper.
 A refusal emits `kacs_exec` with reason `umh-not-tcb`, so it is
 visible rather than presenting as an unexplained module-load failure.
 
+## Trust raising under a tracer or supervisor
+
+Dominance is tested when a tracer attaches and when a seccomp filter is
+installed, and not again. That leaves one way to end up controlling a
+process one does not dominate: be attached to it, or supervising its
+syscalls through seccomp user notification, when it execs a binary
+whose signature would raise its label. Linux marks exactly these execs
+— `LSM_UNSAFE_PTRACE` when the task is traced, `LSM_UNSAFE_NO_NEW_PRIVS`
+under `no_new_privs`, which every unprivileged seccomp filter requires
+— and uses them to withhold setuid gains. KACS applies the same rule to
+the label: the exec goes ahead, but the staged label is **capped at
+the process's current one** whenever the new label would not be
+dominated by it. The binary runs with the protection it can be given,
+as a setuid binary runs without its setuid under `strace`.
+
+There is no privilege exception. `SeDebugPrivilege` never bypasses
+dominance, and a TCB tracer already dominates every label, so nothing
+is lost by capping. An exec that does not raise the label — the common
+case, and every unsigned binary — is untouched. A cap emits
+`kacs_exec` with reason `pip-capped-unsafe` carrying the label that
+was kept.
+
 ## Raw physical memory
 
 A process able to read `/dev/mem` could map any process's physical
