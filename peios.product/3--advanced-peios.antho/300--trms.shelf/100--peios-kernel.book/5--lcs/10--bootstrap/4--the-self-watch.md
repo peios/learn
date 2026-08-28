@@ -68,6 +68,22 @@ exist, **plus** the `Machine\` root fallback, until a refresh finds
 everything present. It is a superset of what is needed rather than a
 substitute for it.
 
+The same arming covers every key the kernel reads for itself, not only
+LCS's own: KMES configuration and the port reservation table
+(`Machine\System\Network\TcpIp\PortReservations\`, see the KACS
+chapter on network objects) are discovered in the same refresh and get
+the same targeted-or-fallback treatment.
+
+**A refresh that fails still arms the fallback.** A stage can fail
+transiently — a source answering a lookup while a concurrent write has
+half-created a key was the case that found this — and if the refresh
+simply returned, no watch would exist and no kernel-read key would load
+for the life of the boot. So when any stage before arming fails, LCS
+arms the `Machine\` root fallback alone: the next subkey creation under
+the hive re-enters the refresh, which then arms the targeted watches as
+above. The failure and the fallback arm are both traced by
+`lcs:lcs_bootstrap_refresh`.
+
 ## Bootstrap interaction
 
 1. A source registers. LCS reads `Machine\System\Registry\*`; the keys
