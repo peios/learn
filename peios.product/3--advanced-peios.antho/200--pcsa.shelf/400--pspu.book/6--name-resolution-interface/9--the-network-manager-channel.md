@@ -55,4 +55,6 @@ MUST NOT treat the manager's absence as a reason to refuse questions.
 The manager merges the profile's static DNS keys with the lease itself;
 the resolver reads `Profiles\` for nothing. The registry keys the
 resolver reads are exactly `Machine\System\Network\Resolver` and its
-subkeys.
+subkeys; it MAY watch the parent `Machine\System\Network` so that the
+key's creation is seen. When the manager reports no hostname the
+resolver uses the kernel's.
