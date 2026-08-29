@@ -49,8 +49,9 @@ carries a lower integrity label.
    created following DuplicateToken semantics — new `token_id`, new
    `token_guid`, `modified_id` initialised to the new `token_id`,
    `elevation_type` reset to Default — with `integrity_level` set to
-   the file's label. Every other field is copied from the source, and
-   the original token is dropped.
+   the file's label. Every other field — the impersonation level
+   included — is copied from the source, and the original token is
+   dropped.
 3. If the file's level is greater than or equal to the token's,
    nothing happens and the token survives exec unchanged.
 
@@ -91,9 +92,10 @@ The **SYSTEM token** is hardcoded with user SID `S-1-5-18` (Local
 System); groups `S-1-5-32-544` (BUILTIN\Administrators), `S-1-1-0`
 (Everyone), `S-1-5-11` (Authenticated Users) and other well-known
 SIDs; every defined privilege present and enabled; integrity level
-System; token type Primary; elevation type Default; token source
-`PeiosKrn`; projected UID 0; and `auth_id` set to `SYSTEM_LUID`. It is
-assigned to the kernel's init task and inherited by PID 1 at exec.
+System; token type Primary; impersonation level Delegation, the top of
+the ratchet; elevation type Default; token source `PeiosKrn`;
+projected UID 0; and `auth_id` set to `SYSTEM_LUID`. It is assigned to
+the kernel's init task and inherited by PID 1 at exec.
 
 The **Anonymous token** is a global singleton with user SID `S-1-5-7`;
 Everyone (`S-1-1-0`) as its only group; no privileges; integrity level

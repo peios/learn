@@ -50,7 +50,7 @@ There are two ways to send it, and the receiver cannot tell them apart, because 
 - **Automatically**, by setting `KACS_SO_PASS_TOKEN` on the sending socket (`peios_socket_set_pass_token`). From then on every send carries the sender's effective identity, derived at the socket's impersonation level. This is the fix for pooling: a service that impersonates user A and writes through an off-the-shelf client library conveys A, because the capture happens at the `sendmsg` the library was already calling. Nothing in the library changes.
 - **Explicitly**, by attaching a token fd in a `KACS_SCM_TOKEN` cmsg on `sendmsg`. This is the fix for proxies: the router holds each client's token fd (read from its own inbound connection) and attaches it to the messages it forwards downstream. The kernel gates the attach as if the sender were impersonating that token — the fd needs `TOKEN_IMPERSONATE`, and if the two-gate model would cap the token below its own level the send fails with `EPERM` rather than quietly downgrading. Attaching is never more than impersonating, sending, and reverting; it just skips the install.
 
-On the receiving side, a `KACS_SCM_TOKEN` cmsg (carrying a fresh `TOKEN_QUERY | TOKEN_IMPERSONATE` fd) is delivered with a read when the call supplied control-buffer space and the read's identity differs from what the register held. A server that never touches ancillary data loses nothing — the register is kept by the kernel regardless — which makes the simple loop the right default:
+On the receiving side, a `KACS_SCM_TOKEN` cmsg (carrying a fresh `TOKEN_QUERY | TOKEN_IMPERSONATE | TOKEN_DUPLICATE` fd) is delivered with a read when the call supplied control-buffer space and the read's identity differs from what the register held. A server that never touches ancillary data loses nothing — the register is kept by the kernel regardless — which makes the simple loop the right default:
 
 ```c
 n = recvmsg(conn, &msg, 0);              /* just the data */
@@ -66,7 +66,7 @@ Datagram sockets have no register (many senders share one socket), so on `SOCK_D
 libpeios exposes two operations on a peer token:
 
 - **`peios_token_impersonate_peer(fd)`** — the combined operation. Reads the peer's identity from the socket and installs it on the calling thread, at the level the two-gate model permits, then closes the token fd. The most common path.
-- **`peios_token_open_peer(fd)`** — the inspect-and-store operation: `getsockopt(SOL_KACS, KACS_SO_PEER_TOKEN)`. Returns a token fd to the peer's identity without installing it. The fd carries `TOKEN_QUERY | TOKEN_IMPERSONATE` access — enough to read the token and to install it later via `KACS_IOC_IMPERSONATE`, but not enough to duplicate or adjust it.
+- **`peios_token_open_peer(fd)`** — the inspect-and-store operation: `getsockopt(SOL_KACS, KACS_SO_PEER_TOKEN)`. Returns a token fd to the peer's identity without installing it. The fd carries `TOKEN_QUERY | TOKEN_IMPERSONATE | TOKEN_DUPLICATE` access — enough to read the token, to install it later via `KACS_IOC_IMPERSONATE`, and to duplicate it (for instance to a primary token for a process launched as the client), but not enough to adjust it. Duplicating never raises the level: the copy is capped at whatever the client granted.
 
 The two operations exist because servers have different needs:
 
@@ -151,7 +151,7 @@ There are two server-side shapes, depending on which pattern (canonical synchron
 **Just-in-time flow** (the right shape for any modern runtime — Go, Rust async, etc. — and the recommended default):
 
 1. **Accept the connection.** As above.
-2. **Capture the peer token fd.** Call `peios_token_open_peer(fd)` and store the returned token fd in the request context. The fd carries `TOKEN_QUERY | TOKEN_IMPERSONATE`.
+2. **Capture the peer token fd.** Call `peios_token_open_peer(fd)` and store the returned token fd in the request context. The fd carries `TOKEN_QUERY | TOKEN_IMPERSONATE | TOKEN_DUPLICATE`.
 3. **(Optional) Inspect the captured token.** Query the captured fd to verify the identity and level before doing any work.
 4. **Do most of the request as the service.** Decoding, dispatch, internal bookkeeping, response framing — all run as the service's own identity.
 5. **For each access-requiring action**, install the captured token on the current OS thread (`KACS_IOC_IMPERSONATE` on the stored fd), do the single action, call `kacs_revert()` immediately. Keep the impersonation window as tight as possible.

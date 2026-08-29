@@ -38,7 +38,7 @@ logon SID, so CreateToken accepts at most 1023 caller-supplied groups.
 | Field | Type | Description |
 |---|---|---|
 | `token_type` | enum | Primary or Impersonation. |
-| `impersonation_level` | enum | Anonymous, Identification, Impersonation, or Delegation. Primary tokens always carry Anonymous. |
+| `impersonation_level` | enum | Anonymous, Identification, Impersonation, or Delegation. On every token it is the ceiling on what may be derived from it: an impersonation token acts at this level, and a primary token bounds everything captured from, conveyed by, or duplicated out of the process carrying it (§3.5.1). |
 
 ## Integrity (fixed)
 

@@ -38,3 +38,32 @@ level; authd is what acts on it.
 
 The level is set by the client through a KACS syscall on the socket
 before `connect()`, and defaults to Impersonation.
+
+## The level is a ratchet
+
+Every token carries an impersonation level, and on every token it
+means the same thing: *identity derived from this token may act at no
+more than this level*. An impersonation token acts at its level. A
+primary token's level is the ceiling on everything the process
+carrying it can convey — what a peer captures at connect, what
+`KACS_SO_PASS_TOKEN` attaches, what `KACS_IOC_DUPLICATE` produces in
+either direction.
+
+The level only ever goes down. Socket capture and `KACS_SCM_TOKEN`
+attach store the lower of the socket's level and the source token's
+own; DuplicateToken refuses a result above its source, whatever the
+types involved; fork, exec, `NEW_PROCESS_MIN`, FilterToken and primary
+installation copy it unchanged. The one way to a higher level is a
+fresh token from CreateToken, which takes `SeCreateTokenPrivilege`.
+authd mints logon tokens at Delegation and the bootstrap SYSTEM token
+is Delegation, so an identity starts at the top and each hop can only
+lower it.
+
+This is what makes the client's choice hold across any number of
+hops and process boundaries. A client that connects at Impersonation
+is captured at Impersonation; a server that converts that token to a
+primary and launches a process with it (§3.2.4) produces a process
+capped at Impersonation; and nothing that process captures, conveys
+or duplicates can ever be Delegation — so authd, which reads the
+level to decide whether to forward the client's credentials, is never
+shown a Delegation flag the client did not grant.

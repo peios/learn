@@ -29,6 +29,7 @@ the following places.
 | Mandatory policy mutability | `mandatory_policy` is immutable on the token (§3.2.2) | A mutable policy reduces MIC to advisory. |
 | Impersonation integrity ceiling | Enforced unconditionally; `SeImpersonatePrivilege` does not bypass it (§3.5.2) | MIC is a real boundary precisely because the mandatory policy is immutable. |
 | Impersonation origin check | Dropped | Eliminates hidden impersonation paths. |
+| Impersonation level on primaries | Meaningful and queryable: a ratchet every token carries, bounding everything derived from it (§3.5.1). Windows rejects `TokenImpersonationLevel` on a primary. | Delegation here is a flag authd enforces rather than a property of the credential cache, so the flag itself has to be unforgeable across duplication. |
 | PIP determination | Kernel-only, from the binary signature, with no parent input (§3.3.2) | One input, one answer, no ambiguity. |
 | Object type list validation | Duplicate GUIDs and level gaps rejected (§3.8.5) | Prevents node lookup returning the wrong node and propagation becoming undefined. |
 | Composite equality | Element-wise ordered comparison | Never over-grants. |

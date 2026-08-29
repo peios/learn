@@ -19,7 +19,12 @@ another process's token additionally requires
 The peer-token socket option (`getsockopt(SOL_KACS,
 KACS_SO_PEER_TOKEN)`) is the exception: it takes no desired-access
 mask, and the fd it returns always carries the fixed rights
-`TOKEN_QUERY | TOKEN_IMPERSONATE`.
+`TOKEN_QUERY | TOKEN_IMPERSONATE | TOKEN_DUPLICATE`. A token delivered
+in a `KACS_SCM_TOKEN` control message carries the same three.
+`TOKEN_DUPLICATE` is what lets a server turn a client's identity into a
+primary token for a process it launches on the client's behalf
+(§3.2.4); it is safe to hand out because the level ratchet means the
+copy can never act above the level the client chose (§3.5.1).
 
 **Receiving over IPC.** A token fd can be passed over a Unix socket
 with `SCM_RIGHTS`. What the recipient may do is bounded by the mask

@@ -99,7 +99,7 @@ getsockopt(socket_fd, SOL_KACS, KACS_SO_PEER_TOKEN, &token_fd, &len);
 
 libpeios wraps it as `peios_token_open_peer(socket_fd)`, which returns the fd directly. The call
 
-Returns a token fd reflecting the peer's complete identity at connect time. The fd carries `TOKEN_QUERY | TOKEN_IMPERSONATE` access — enough to inspect the token's full state and to install it as an impersonation token.
+Returns a token fd reflecting the peer's complete identity at connect time. The fd carries `TOKEN_QUERY | TOKEN_IMPERSONATE | TOKEN_DUPLICATE` access — enough to inspect the token's full state, to install it as an impersonation token, and to duplicate it.
 
 What the token includes:
 

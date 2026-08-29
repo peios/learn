@@ -688,7 +688,7 @@ accepting. -EINVAL if the socket is not listening.
 
 *Ancillary message type, at cmsg_level SOL_KACS.*
 
-Data: one int. Received: a token fd (TOKEN_QUERY | TOKEN_IMPERSONATE,
+Data: one int. Received: a token fd (TOKEN_QUERY | TOKEN_IMPERSONATE | TOKEN_DUPLICATE,
 O_CLOEXEC) for the identity the kernel attests sent the accompanying
 data. Delivered when the receive buffer has room for it and the conveyed
 identity differs from the reader's register; a receiver that reads no

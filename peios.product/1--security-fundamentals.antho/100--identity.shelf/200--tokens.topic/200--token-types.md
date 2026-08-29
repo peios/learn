@@ -33,7 +33,7 @@ The two types are not interchangeable. Trying to install a primary token as a th
 
 ## impersonation_level — how far an identity may travel
 
-Every token carries an impersonation level. For primary tokens this is set to a conventional value (Anonymous) and ignored. For impersonation tokens it is what bounds what the impersonator may do.
+Every token carries an impersonation level, and it means the same thing on both kinds: nothing derived from this token may act above it. For an impersonation token that is the level the impersonator acts at. For a primary token it is the ceiling on everything the process can convey — what a peer captures when it connects, what gets attached to a message, what a duplicate can be. The level only ever goes down as identity travels; a fresh `CreateToken` is the only way back up. See [Impersonation levels](~peios/impersonation/impersonation-levels).
 
 There are four levels, ordered from least to most permissive:
 

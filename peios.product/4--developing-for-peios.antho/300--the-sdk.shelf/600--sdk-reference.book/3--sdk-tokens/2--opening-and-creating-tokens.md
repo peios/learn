@@ -18,7 +18,7 @@ int peios_token_create_raw(const void *spec, size_t len);
 | `peios_token_open_self` | The calling thread's token. `flags` may be `KACS_TOKEN_OPEN_REAL` to get the **primary** token even while the thread is impersonating; otherwise you get the effective (impersonation-aware) token. `access` is the desired handle rights. |
 | `peios_token_open_process` | The **primary** token of the process named by `pidfd`. Subject to a process-query access check and PIP dominance over the target. |
 | `peios_token_open_thread` | Thread `tid`'s **impersonation** token if it is impersonating, else the process primary token. |
-| `peios_token_open_peer` | The peer-identity token captured at `connect()` on a connected Unix stream/seqpacket socket `conn_fd` — how a server learns *who* is on the other end of a socket. Reads the `KACS_SO_PEER_TOKEN` socket option (level `SOL_KACS`, `<pkm/socket.h>`). The handle carries fixed `QUERY | IMPERSONATE` rights (no `access` argument). |
+| `peios_token_open_peer` | The peer-identity token captured at `connect()` on a connected Unix stream/seqpacket socket `conn_fd` — how a server learns *who* is on the other end of a socket. Reads the `KACS_SO_PEER_TOKEN` socket option (level `SOL_KACS`, `<pkm/socket.h>`). The handle carries fixed `QUERY | IMPERSONATE | DUPLICATE` rights (no `access` argument). |
 | `peios_token_create_raw` | Mints a token from a pre-built token-spec buffer. This is the escape hatch — **prefer the builder below**. Requires `SeCreateTokenPrivilege`. |
 
 Errors, per call:

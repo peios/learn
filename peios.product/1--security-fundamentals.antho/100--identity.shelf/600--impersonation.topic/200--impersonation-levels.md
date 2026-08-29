@@ -8,7 +8,7 @@ related:
   - peios/impersonation/peer-tokens
 ---
 
-Every impersonation token carries an **impersonation level** — one of four values, ordered from least to most permissive. The level is the answer to "how much may a server do with this identity?". Each level admits all the operations of the levels below it and additionally allows specific extra things.
+Every token carries an **impersonation level** — one of four values, ordered from least to most permissive. On an impersonation token it is the answer to "how much may a server do with this identity?". On a primary token it is the ceiling on everything derived from that process's identity. Each level admits all the operations of the levels below it and additionally allows specific extra things.
 
 There is one rule worth pinning before the catalog: **the level is set by the client, not the server.** A client sets `KACS_SO_IMPERSONATION_LEVEL` on the socket (`setsockopt` under the `SOL_KACS` level, or `peios_socket_set_impersonation_level`) before `connect()` to declare the maximum level a server may use. The kernel records the level on the socket. When the server later impersonates the peer, the level cannot exceed what the client set. A server cannot ask for a higher level; it can only end up at the level the client granted or lower.
 
@@ -83,6 +83,8 @@ Three things determine the level a server actually ends up with:
 3. **The transport.** Datagram and socketpair sockets capture nothing at connect, so identity on them travels per message (`KACS_SO_PASS_TOKEN` or a `KACS_SCM_TOKEN` cmsg); pipes carry no identity at all, and a server on a pipe must obtain a token some other way and use the explicit-fd ioctl. See [Peer tokens and capture](~peios/impersonation/peer-tokens).
 
 The first sets the maximum. The second can lower it. The third is about the mechanism for getting the token at all.
+
+There is a fourth input that usually never shows, because it starts at the top: **the client's own token**. The level is a ratchet. A logon token from authd starts at Delegation, and every step identity takes — a capture at connect, a `KACS_SO_PASS_TOKEN` send, a `KACS_IOC_DUPLICATE` in either direction — produces something at or below its source. A process running on a primary that was made from an Impersonation-level token can set Delegation on every socket it opens and still conveys Impersonation. Nothing short of a fresh `CreateToken` (`SeCreateTokenPrivilege`) goes back up, which is what makes the client's original choice hold across any number of services and process launches.
 
 ## Inspecting the granted level
 

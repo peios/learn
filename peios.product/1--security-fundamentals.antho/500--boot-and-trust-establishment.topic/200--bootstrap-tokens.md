@@ -29,7 +29,7 @@ The SYSTEM token is what init runs on. Specifically:
 | `mandatory_policy` | `NO_WRITE_UP` |
 | `privileges` | Every privilege defined in the catalog, all present, all enabled |
 | `token_type` | Primary |
-| `impersonation_level` | Anonymous (conventional for primary tokens) |
+| `impersonation_level` | Delegation — the top of the ratchet, so nothing derived from SYSTEM is capped by it |
 | `auth_id` | 0 (the SYSTEM session) |
 | `default_dacl` | Grants SYSTEM and `BUILTIN\Administrators` `GENERIC_ALL`; denies everyone else by absence |
 

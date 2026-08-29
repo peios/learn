@@ -14,7 +14,9 @@ Unix stream connection.
 
 **Identity is captured, both ways.** The hook examines the client
 thread's effective credential together with the socket's maximum
-level, and stores the result on the accepted end. It also stores, on
+level, derives the identity at the lower of that level and the
+effective token's own (§3.5.1), and stores the result on the accepted
+end. It also stores, on
 the connecting end, the identity the listener captured when `listen()`
 was called — so a client can read `KACS_SO_PEER_TOKEN` on its own
 socket immediately after `connect()` and verify who it reached, at
@@ -38,7 +40,8 @@ effective token is stored but tagged at that level.
 
 **The server reads the peer token** with `getsockopt(SOL_KACS,
 KACS_SO_PEER_TOKEN)` on the accepted connection, which opens a token fd
-carrying `TOKEN_QUERY | TOKEN_IMPERSONATE` for the identity in that
+carrying `TOKEN_QUERY | TOKEN_IMPERSONATE | TOKEN_DUPLICATE` for the
+identity in that
 end's conveyed-identity register — at this point, the identity captured
 at connect (see *Per-message identity* below for how the register
 moves).
@@ -140,7 +143,7 @@ sent these bytes*:
 
 - Automatically, with `KACS_SO_PASS_TOKEN` set on the sending end:
   every send carries the sender's effective token, derived at the
-  end's impersonation level. The derivation is cached against the
+  lower of the end's impersonation level and the token's own. The derivation is cached against the
   effective token it was made from, so a run of sends under one
   identity costs one derivation. A thread that impersonates client A,
   writes to a pooled connection, reverts and writes again conveys A for
@@ -149,7 +152,8 @@ sent these bytes*:
 - Explicitly, by attaching a token fd in a `KACS_SCM_TOKEN` cmsg. The
   kernel gates the attach exactly as it would gate impersonating that
   token: the fd must carry `TOKEN_IMPERSONATE`, a primary token is
-  first derived to an impersonation token at the end's level, and the
+  first derived to an impersonation token at the lower of the end's
+  level and its own, and the
   two-gate model runs with the sender as installer. An attach the gates
   would cap below the token's own level fails with `EPERM` — an
   explicit act fails loudly where an install would silently downgrade.
@@ -176,7 +180,8 @@ identity. `MSG_PEEK` neither advances the register nor consumes; a
 consumption, not where ancillary data is copied out.
 
 A `KACS_SCM_TOKEN` cmsg — carrying a fresh `TOKEN_QUERY |
-TOKEN_IMPERSONATE` fd — is delivered with a read when the receive call
+TOKEN_IMPERSONATE | TOKEN_DUPLICATE` fd — is delivered with a read when
+the receive call
 supplied room for it and the read's identity differs from the register
 the reader had before the read; otherwise nothing is delivered, and
 `MSG_CTRUNC` is set only when a token was due and no room was

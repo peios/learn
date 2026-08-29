@@ -55,7 +55,8 @@ that the owner SID is the user SID or a group carrying
 group SID is the user SID or a group on the token, resolved to
 `primary_group_index`; that `auth_id` references an existing
 LogonSession; that a Primary token carries impersonation level
-Anonymous; that `user_deny_only` is true whenever `write_restricted`
+Impersonation or Delegation (see below); that `user_deny_only` is
+true whenever `write_restricted`
 is; that `confinement_sid` is present whenever `isolation_boundary`
 is; that the wire format's `elevation_type` field is 0, since the
 kernel always sets Default itself; and that the caller's group count
@@ -67,6 +68,17 @@ GUIDs and at most 256 private layer names, with no nil scope GUID, no
 duplicate scope GUIDs, no empty or overlong layer names, and no
 duplicate layer names under LCS case-insensitive matching. Malformed
 LCS credentials fail the whole call closed.
+
+The impersonation level on a primary is the ceiling for everything
+derived from it (§3.5.1), so a minter chooses it deliberately: authd
+mints logon tokens at Delegation and lets each client lower the level
+per connection. A primary at Identification or Anonymous — one that
+peers could identify but never act as, or not identify at all — is a
+coherent shape the ratchet permits in principle, but CreateToken
+currently refuses it: every minter used to pass a conventional
+Anonymous that the kernel ignored, and accepting it would turn an
+un-migrated minter into a source of identities nobody can impersonate.
+The restriction is a migration guard, not a property of the model.
 
 The kernel does not authenticate the user, look up SIDs in the
 directory, resolve SID-to-UID mappings, or check that the principal
@@ -83,12 +95,25 @@ Creates an independent copy of an existing token, requiring
 `TOKEN_DUPLICATE` access on the source.
 
 Two things may change during duplication. The **token type** may go
-from primary to impersonation or the reverse; duplicating to Primary
-forces `impersonation_level` to Anonymous. The **impersonation level**
-may be chosen freely when the source is a Primary token, but when the
-source is itself an impersonation token the new level has to be equal
-to or lower than the source's — an Identification-level token cannot
-be duplicated up to Impersonation or Delegation.
+from primary to impersonation or the reverse. The **impersonation
+level** is chosen by the caller and is a ratchet: whatever the types
+involved, the new level has to be equal to or lower than the source's,
+and asking for more fails with `EINVAL`. A primary minted at
+Delegation can be duplicated to an impersonation token at any level; a
+primary at Impersonation cannot yield a Delegation-level token; an
+Identification-level token cannot be duplicated up to Impersonation or
+Delegation. The level only ever goes down — reaching a higher one
+again means minting a fresh token with CreateToken.
+
+Duplicating **to Primary** is how an impersonated identity becomes a
+process — the server's impersonation token, converted, is what a
+service manager installs on a child it launches as that client. The
+result keeps the identity and the level, so a primary made from a
+client captured at Impersonation is itself capped at Impersonation and
+so is every process and token descended from it. The kernel refuses a
+Primary result below Impersonation: an Identification-level token
+cannot pass AccessCheck and Anonymous is the singleton identity, so a
+process could never be either.
 
 On the new token, `token_id` and `token_guid` are fresh, `modified_id`
 is initialised to the new `token_id`, and `elevation_type` resets to

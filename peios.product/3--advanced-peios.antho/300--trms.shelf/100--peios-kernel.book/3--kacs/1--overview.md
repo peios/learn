@@ -50,7 +50,9 @@ A **privilege** is a system-wide right carried on a token. Some
 influence AccessCheck; others gate a standalone operation.
 
 An **impersonation level** controls how far an identity can travel:
-Anonymous, Identification, Impersonation, or Delegation.
+Anonymous, Identification, Impersonation, or Delegation. It is a
+ratchet carried by every token, primary or impersonation, and only
+ever goes down (§3.5.1).
 
 An **integrity level** is a vertical trust classification on tokens
 and objects. Numerically it is the mandatory label SID's single

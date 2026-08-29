@@ -81,7 +81,7 @@ There are 24 defined query classes. Each returns a structured payload defined fo
 | `TokenDefaultDacl` | The token's default DACL. Variable length. |
 | `TokenSource` | The source name and source-LUID identifying who minted the token. |
 | `TokenType` | Primary or Impersonation. |
-| `TokenImpersonationLevel` | Anonymous / Identification / Impersonation / Delegation (Primary tokens return Anonymous). |
+| `TokenImpersonationLevel` | Anonymous / Identification / Impersonation / Delegation. On a primary token this is the ceiling on everything derived from it — normally Delegation for a logon or service token. |
 | `TokenStatistics` | `token_id`, `auth_id` (the logon-session ID), `modified_id`, token type, and expiry. |
 | `TokenRestrictedSids` | The `restricted_sids` array. Variable length. |
 | `TokenSessionId` | The interactive session ID. |
