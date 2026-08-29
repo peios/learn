@@ -29,7 +29,11 @@ one leaves:
 1. **Find the sender.** Scan for the current *service-main* job whose
    PID equals the sender's. Only a main job is ever a candidate, which
    is what makes `NotifyAccess=Main` the only mode there is — a hook or
-   a health check cannot notify on a service's behalf.
+   a health check cannot notify on a service's behalf. If no service's
+   main job carries the PID, the live submitted jobs (§8.5) are
+   scanned instead. The routing question is asked purely by PID, before
+   either door verifies anything, so that a sender is verified against
+   its pidfd exactly once whichever way it is routed.
 2. **The job is Running.** A job still in pending setup has not exec'd.
 3. **The job has a pidfd.**
 4. **The pidfd still refers to that PID.** This is the step that
@@ -41,7 +45,8 @@ one leaves:
    not the service's current one is a previous incarnation, and its
    notifications are rejected. This is invariant 5 of §6.1 in force: a
    `READY=1` from the process that just crashed cannot mark its
-   replacement ready.
+   replacement ready. A submitted job has no generation and no
+   replacement, so for it the check stops at step 4.
 
 Anything that fails is dropped and recorded as a `notify.rejected` event
 carrying the sender's PID and the reason.
@@ -67,7 +72,10 @@ service where one could be established.
 
 Most are handled elsewhere: `READY=1` and `RELOADING=1` in §6.5,
 `WATCHDOG=1` and `WATCHDOG_USEC` and `EXTEND_TIMEOUT_USEC` in §6.6,
-`STOPPING=1` in §12.2, and the fd store fields in §10.6.
+`STOPPING=1` in §12.2, and the fd store fields in §10.6. What each does
+to a submitted job — and which are ignored for one, since a job has no
+reload, watchdog or store — is in §8.5, along with `PROGRESS=` and
+`PROGRESS_UNIT=`, which only a submitted job retains.
 
 Three are event-emitting. `STATUS=`, `ERRNO=` and `EXIT_STATUS=` are
 authenticated and then emitted as KMES events — `notify.status`,

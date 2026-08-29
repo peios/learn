@@ -35,6 +35,10 @@ referenced.
 | `Machine\System\Init\MaxControlConnections` | dword | 32 | Concurrent control socket connections. | §10.1 |
 | `Machine\System\Init\MaxRequestSize` | dword | 65536 | Maximum control request size, in bytes. | §10.1 |
 | `Machine\System\Init\ConnectionTimeout` | dword | 30 | Seconds before an idle control connection is closed. | §10.1 |
+| `Machine\System\Init\MaxJobsConnections` | dword | 64 | Concurrent jobs socket connections. | §10.7 |
+| `Machine\System\Init\MaxJobMessageSize` | dword | 65536 | Maximum jobs socket message content, in bytes. | §10.7 |
+| `Machine\System\Init\JobsConnectionTimeout` | dword | 30 | Seconds before an idle jobs connection is closed. | §10.7 |
+| `Machine\System\Init\MaxJobsPerSubmitter` | dword | 64 | Live submitted jobs one submitter SID may hold. SYSTEM is exempt. | §8.5 |
 | `Machine\System\Init\MaxLogLineLength` | dword | 8192 | Bytes per output line before truncation. Minimum 256; below that the default is used and a warning logged. | §11.3 |
 | `Machine\System\Init\MaxLogBufferPerService` | dword | 65536 | Pipe capacity per service, applied with `F_SETPIPE_SZ`. Minimum 4096 (one page, the kernel's own floor). | §11.3 |
 | `Machine\System\Init\LogReadBytesPerEvent` | dword | 16384 | Bytes drained from one output pipe per readable event. Minimum 512. | §11.3 |

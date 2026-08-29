@@ -11,12 +11,14 @@ operations, timers, output handling, shutdown, and the security model.
 
 ## What is a contract and what is not
 
-Two of peinit's interfaces are specified separately, in PSPU §4: the
-**control socket**, spoken by administrative tools and by any program
-that manages services, and the **notification socket**, spoken by every
-service that reports readiness, keepalives, or a stored descriptor.
-Those are contracts. A third party implements one side of each, and what
-is written there binds both.
+Three of peinit's interfaces are specified separately. PSPU §4 gives
+the **control socket**, spoken by administrative tools and by any
+program that manages services or observes jobs, and the **notification
+socket**, spoken by every service and every submitted job that reports
+readiness, status, keepalives, or a stored descriptor. PSPU §7 gives
+the **jobs socket**, spoken by any process that asks peinit to run and
+supervise a program on its behalf. Those are contracts. A third party
+implements one side of each, and what is written there binds both.
 
 This manual covers the other side of that boundary — how peinit fulfils
 them, and everything that is not a contract at all:
@@ -25,6 +27,8 @@ them, and everything that is not a contract at all:
   collide (§8.2, §8.3)
 - what a command does to a service in each state (§10.3)
 - how a notification is authenticated and applied (§10.5, §10.6)
+- how a submission becomes a running job, and what it is checked
+  against afterwards (§8.5, §10.7)
 
 Where a chapter touches the contract it references PSPU §4 rather than
 restating it.
@@ -47,10 +51,13 @@ specified as a wire format. §3.2 is the reference.
 - **eventd** — where the logs and events go. Its own manual.
 - **authd** — token minting and identity routing. peinit's requirements
   of it are described in §4.3; its interface is authd's own.
-- **JFS** — the kernel side of ad-hoc job submission. §8.5 describes
-  what peinit does with what JFS hands it.
+- **How a token is conveyed on a socket, and what the kernel checks
+  when it is** — peer-token capture, `KACS_SCM_TOKEN`, the
+  impersonation gates and the level ratchet that job submission relies
+  on. Peios Kernel TRM §3.5.
 - **Using peinit** — writing service definitions, the `svctl` command
-  surface, and everyday administration are covered in Using Peios.
+  surface including `svctl job`, and everyday administration are
+  covered in Using Peios.
 
 ## Constants and keys
 

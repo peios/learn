@@ -14,9 +14,22 @@ the thing dependencies are expressed between.
 
 **Job.** One supervised process execution. Every fork peinit performs
 is a job — a service's main binary, a pre-exec hook, a health check
-invocation, an ad-hoc submission — with a GUID, a lifecycle, a token
+invocation, a submitted job — with a GUID, a lifecycle, a token
 summary and a log correlation key. Jobs are the observable unit of what
 actually ran.
+
+**Submitted job.** A job whose definition arrived on the jobs socket
+rather than from a service definition. It has no service, no operation
+and no policy; it belongs to its submitter and is managed under its
+own Security Descriptor. §8.5.
+
+**Submitter.** The identity a jobs socket connection carried when a
+`submit` was read: recorded on the job, counted for the quota, and the
+owner of the job's descriptor.
+
+**Job identity.** The identity a submitted job's process runs as —
+the submitter's own primary token, or a token the kernel attached to
+the `submit` message. Never named by a field. §8.5.
 
 **Operation.** A first-class object representing a requested state
 machine action on a service. Control commands do not mutate state
@@ -47,10 +60,11 @@ sole identity mechanism: peinit sets no UIDs, GIDs, or Linux
 capabilities on service processes. Peios Kernel TRM §3.2.
 
 **Security Descriptor** (SD). The KACS structure controlling access to
-a securable object. peinit uses two: a **ServiceSecurity** descriptor
-per service, controlling who may manage it, and its own **control**
-descriptor, controlling system-level operations. Peios Kernel TRM §3
-and PCDS §5.
+a securable object. peinit evaluates three kinds: a **ServiceSecurity**
+descriptor per service, controlling who may manage it; its own
+**control** descriptor, controlling system-level operations; and a
+descriptor per submitted job, controlling who may observe, stop or
+signal it. Peios Kernel TRM §3 and PCDS §5.
 
 **AccessCheck.** The KACS function that evaluates a token against a
 descriptor to produce a decision. peinit calls it for every control
@@ -77,10 +91,6 @@ structured events — job and operation lifecycle, audit records — into
 its ring buffer, where they survive eventd restarts and reboots. Peios
 Kernel TRM §2.
 
-**JFS.** The Job Forwarding Subsystem: the kernel bridge that captures a
-caller's effective token and delivers it, with a job definition, to
-whatever holds `/dev/jfs` open. peinit is the consumer. §8.5.
-
 **pidfd.** A descriptor referring to one specific process, obtained
 atomically at fork through `clone3(CLONE_PIDFD)`. Every process peinit
 supervises is tracked by one, which is what makes supervision immune to
@@ -88,11 +98,13 @@ PID reuse.
 
 **cgroup.** peinit uses cgroups v2 for process tracking and clean kill
 only — not for resource accounting or limits. Every service gets its own
-tree under `/sys/fs/cgroup/peinit/`. §5.1.
+tree under `/sys/fs/cgroup/peinit/`, and every submitted job one under
+`/sys/fs/cgroup/peinit/jobs/`. §5.1.
 
-**sd_notify.** The datagram protocol services use to report readiness,
-status, keepalives and stored descriptors, over the socket named by
-`NOTIFY_SOCKET`. Specified in PSPU §4.
+**sd_notify.** The datagram protocol services and submitted jobs use
+to report readiness, status, progress, keepalives and stored
+descriptors, over the socket named by `NOTIFY_SOCKET`. Specified in
+PSPU §4.
 
 **TCB.** The Trusted Computing Base: the kernel, KACS, LCS, KMES,
 peinit, registryd, authd, lpsd and eventd. A compromise of any of them

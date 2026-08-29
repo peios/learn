@@ -187,8 +187,11 @@ defined in the kernel and none has an enforcement point.
 
 ## Unallocated and unnamed bits
 
-`SeCreateJobPrivilege` is allocated bit 62 for submitting supervised
-jobs through JFS. No kernel definition exists for it. The bit is
+`SeCreateJobPrivilege` is allocated bit 62 and is unused: no kernel
+definition exists for it and nothing consults it. Submitting a
+supervised job is not a privilege at all — it is governed by the file
+Security Descriptor on the service manager's jobs socket, checked by
+the kernel when a process connects (the Peinit TRM). The bit is
 nevertheless included in the boot SYSTEM token's privilege set, which
 covers bits 2–35 together with 62 and 63, so the SYSTEM token holds
 bit 62 present and enabled with no name attached to it and no gate

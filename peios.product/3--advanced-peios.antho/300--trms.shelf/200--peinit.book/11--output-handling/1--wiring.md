@@ -45,10 +45,32 @@ peinit reads output line by line and tags each line with:
 The origin is the service name for a main process. For a hook it is the
 service name, the hook kind and its index — `jellyfin/ExecStartPre[0]`.
 Reload commands are `<service>/ExecReload` and health checks
-`<service>/HealthCheck`.
+`<service>/HealthCheck`. A submitted job, which has no service, is
+`jobs/<guid>`.
 
 Health check output is captured, which is usually the only way to find
 out why a health check failed.
+
+## The output sink
+
+A submitted job's output is recorded like any other's; that is
+unconditional, and eventd is always the primary destination. A
+submitter may additionally ask for a copy by attaching a descriptor
+with `output: true` (§8.5). When the job's pipes are registered, the
+runtime adopts that descriptor as the job's **sink**: it is put in
+non-blocking mode, and every line read from either pipe is written to
+it as the line followed by a newline, untagged, in the order the lines
+were read. The two streams interleave; the sink gets what the job
+wrote and nothing else.
+
+The copy is best-effort and the record is not. A write that would
+block drops the line for the sink only, counts it, and on the first
+drop for that job emits one `output.dropped` event — one per job,
+however many lines follow — so a submitter that sees a gap can learn
+it caused one. Any other write failure closes the sink at once. The
+sink is otherwise closed when the job's last pipe closes, after the
+last line has gone to it, and a sink attached to a job that never got
+pipes is closed without a write.
 
 ## Terminal-attached services
 

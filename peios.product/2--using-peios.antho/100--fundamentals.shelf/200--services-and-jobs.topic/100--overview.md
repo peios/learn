@@ -31,7 +31,7 @@ peinit is easiest to understand through the three first-class objects it works w
 | Object | What it is | Lifetime |
 |---|---|---|
 | **Service** | A *definition* — a named unit of execution with identity, policy, and configuration, stored in the registry. It has a runtime state (the [state machine](~peios/services-and-jobs/the-service-lifecycle)) and, when running, a process. | Long-lived. Persists across restarts and reboots. |
-| **Job** | A single *process execution*. Every time peinit forks — a service's main process, a hook, a health check, an ad-hoc run — that is one job, with its own GUID and exit result. | Short-lived. A restart creates a *new* job. |
+| **Job** | A single *process execution*. Every time peinit forks — a service's main process, a hook, a health check, a submitted job — that is one job, with its own GUID and exit result. | Short-lived. A restart creates a *new* job. |
 | **Operation** | A *requested action* on a service — start, stop, restart, reload, reset. Control commands create operations that are validated, queued, and executed. | Short-lived. Resolves to a terminal state, then is dropped. |
 
 A service is the *what*; a job is *what actually ran*; an operation is *what someone asked for*. A single `restart` command, for example, is one **operation**, which stops the current **job** and starts a new one, all against one **service**. Jobs and operations both carry GUIDs and are emitted to [eventd](~peios/auditing/overview) as they complete, which is how the history of a service is reconstructed after the fact. They get their own page: [Jobs and operations](~peios/services-and-jobs/jobs-and-operations).
@@ -72,7 +72,7 @@ peinit is part of the [Trusted Computing Base](~peios/boot-and-trust-establishme
 | **registryd** | The registry *source* daemon — the first service peinit starts. peinit treats it as an opaque dependency. (`registryd` is an interface; the default implementation is `loregd` — see [Boot and boot modes](~peios/services-and-jobs/boot-and-boot-modes).) |
 | **authd** | Minting tokens for non-platform services. peinit requests; authd mints. |
 | **eventd** | Service logs (forwarded over a socket) and job/operation/audit events (emitted through KMES). |
-| **JFS** | Delivering ad-hoc job submissions — a service asking peinit to run a process on a client's behalf. |
+| **KACS, again** | Conveying a job identity: when a process submits a job over peinit's jobs socket and attaches a token, the kernel gates the attach — so peinit can run a program as a service's client without ever judging the identity itself. See [Jobs and operations](~peios/services-and-jobs/jobs-and-operations). |
 
 The bootstrapping puzzle — authd needs the registry, the registry needs to be started by *something*, and that something is peinit running before any of them exist — is resolved by the boot model in [Boot and boot modes](~peios/services-and-jobs/boot-and-boot-modes).
 

@@ -21,7 +21,7 @@ When peinit forks a service it creates pipes for `stdout` and `stderr`, redirect
 - a **timestamp**,
 - the **[job](~peios/services-and-jobs/jobs-and-operations) GUID**.
 
-The job GUID is the important one: it is what lets a later query return exactly one execution's output, never interleaved with the run before or after it. Hook output is captured too, labelled with the hook (e.g. `jellyfin/ExecStartPre[0]`), and so is health-check output — invaluable for diagnosing *why* a check failed.
+The job GUID is the important one: it is what lets a later query return exactly one execution's output, never interleaved with the run before or after it. Hook output is captured too, labelled with the hook (e.g. `jellyfin/ExecStartPre[0]`), and so is health-check output — invaluable for diagnosing *why* a check failed. A [submitted job](~peios/services-and-jobs/jobs-and-operations)'s output is captured the same way, labelled `jobs/<id>`; its submitter cannot opt out of that, but can ask for a **copy** by attaching an output sink, to which peinit writes each line as it reads it. The copy is best-effort — lines the sink cannot take are dropped for the sink only, still recorded, and reported once per job as an `output.dropped` event — and the sink never slows the job or peinit.
 
 ## Logs are best-effort; audit events are not
 

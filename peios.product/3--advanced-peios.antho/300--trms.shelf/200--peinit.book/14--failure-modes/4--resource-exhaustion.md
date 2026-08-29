@@ -9,9 +9,13 @@ a failure at a syscall rather than as slowness.
 ## Descriptors
 
 peinit holds a descriptor per supervised process (a pidfd), two per
-service for output pipes, one per armed timer, one per control
-connection, plus the sockets, the epoll instance, the signalfd and the
-JFS device.
+supervised process for output pipes, one per armed timer, one per
+control connection, two per jobs connection (the socket and the peer's
+pidfd), one per submitted job's output sink, plus the sockets, the
+epoll instance and the signalfd. A submission also holds its prepared
+token and attached descriptors from acceptance until the launch takes
+them, which is bounded by `MaxJobsPerSubmitter` times the descriptor
+cap per message.
 
 `EMFILE` or `ENFILE` from `pipe2` or `clone3` fails the start with
 `ParentSetupFailure` — a restart-eligible cause, so a service that

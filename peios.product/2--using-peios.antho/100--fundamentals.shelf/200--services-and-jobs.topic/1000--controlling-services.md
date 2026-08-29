@@ -1,7 +1,7 @@
 ---
 title: Controlling services
 type: reference
-description: peiosctl and the control socket — the verbs and their rights, wait semantics, the command-by-state matrix, status output, and error codes.
+description: peiosctl and the control socket — the verbs and their rights, wait semantics, the command-by-state matrix, status output, error codes, and the job commands on both sockets.
 related:
   - peios/services-and-jobs/the-service-lifecycle
   - peios/services-and-jobs/who-can-manage-a-service
@@ -70,6 +70,35 @@ $ peiosctl shutdown poweroff
 $ peiosctl reload-config
 $ peiosctl operation-status a1b2c3d4-...
 ```
+
+## Job commands
+
+[Submitted jobs](~peios/services-and-jobs/jobs-and-operations) are reachable from two places, and `peiosctl job` covers both. Querying and stopping a job is *administration* and goes over the control socket; submitting a job, waiting on it, and signalling it belong to its submitter and go over the **jobs socket** at `/run/services/peinit/jobs.sock` (`--jobs-socket` overrides the path). Every job command is checked against the **job's own** descriptor, which by default admits the submitter, SYSTEM, and Administrators.
+
+| Command | Socket | Does | Required right |
+|---|---|---|---|
+| `job list [filters]` | control | List the jobs you can query. Filters: `--submitter SID`, `--identity SID`, `--logon-session N`, `--state created\|running\|completed\|failed\|abandoned`; all given filters must match. | per-job `JOB_QUERY` (others omitted) |
+| `job status JOB_ID` | control | The job view. | `JOB_QUERY` |
+| `job stop JOB_ID` | control | SIGTERM, then SIGKILL of the job's cgroup after its `stop_timeout`. Waits for the job to end by default; `--no-wait` returns the view as it then is. | `JOB_STOP` |
+| `job submit [options] IMAGE [ARG...]` | jobs | Submit `IMAGE` as a job running as **your own primary token**, and print its view once it is running (or has failed to start). With `--wait`, wait for it to end too. | connect to the jobs socket |
+| `job wait [--for ready\|terminal] JOB_ID` | jobs | Block until the job is terminal (default) or has sent `READY=1`, then print the view. `--for ready` on a job without a readiness protocol is `INVALID_STATE`. | `JOB_QUERY` |
+| `job signal JOB_ID SIGNAL` | jobs | Send one signal (a number, or a name like `SIGUSR1`) to the job's main process. Only the main process, only while `running`. | `JOB_SIGNAL` |
+
+```
+$ peiosctl job list --state running
+JOB       STATE    SUBMITTER              IDENTITY               PROGRESS   DESCRIPTION
+5f2a...   running  S-1-5-21-...-1001      S-1-5-21-...-1001      3/5 items  nightly backup
+$ peiosctl job status 5f2a...
+$ peiosctl job stop 5f2a...
+$ peiosctl job submit --description "nightly backup" --timeout 3600 -- /usr/bin/backup --full
+$ peiosctl --wait job submit --env MODE=full /usr/bin/backup   # exits 0 only if the job completed
+$ peiosctl job wait --for ready 5f2a...
+$ peiosctl job signal 5f2a... SIGHUP
+```
+
+`job submit` takes the definition fields as options: `--description TEXT`, `--cwd DIR`, `--env NAME=VALUE` (repeatable), `--timeout SECS`, `--stop-timeout SECS`, `--readiness none|notify`, `--readiness-timeout SECS`, `--success-exit-code N` (repeatable), `--security-descriptor SDDL`. Two hand the job something of yours: `--fd NAME=FD` passes a descriptor of the `peiosctl` process to the job under `NAME` (from descriptor 3, with `LISTEN_FDS`/`LISTEN_FDNAMES` set), and `--output` attaches `peiosctl`'s standard output as the job's output sink, so the job's lines appear on your terminal as well as in eventd. Everything after `IMAGE` belongs to the job, options included; use `--` before an image path that starts with a dash.
+
+The CLI has no way to attach a token, so a `peiosctl`-submitted job always runs as the caller. Running a job as *someone else* is a programmatic act — a service attaching the token of the client it is impersonating — and is described in [Jobs and operations](~peios/services-and-jobs/jobs-and-operations).
 
 ## Wait semantics
 
@@ -159,6 +188,21 @@ The [Backoff](~peios/services-and-jobs/the-service-lifecycle) column is the subt
 
 `operation-status` returns one operation by GUID; an unknown or expired GUID is the `UNKNOWN_OPERATION` error. (Operations are dropped after a short retention grace once terminal — long enough for a polling client to read the result, not forever.)
 
+`job status` returns one submitted job's view under `"job"`, and `job list` returns the views you can query under `"jobs"`:
+
+```json
+{"status": "ok", "job": {
+    "id": "5f2a...", "type": "submitted", "state": "running", "cause": null,
+    "submitter": "S-1-5-21-...-1001", "identity": "S-1-5-21-...-1001", "logon_session": 999,
+    "description": "nightly backup", "image_path": "/usr/bin/backup", "pid": 4521, "ready": null,
+    "exit_code": null, "exit_signal": null,
+    "status_text": "Backing up /data/media", "progress": {"current": 3, "total": 5, "bounded": true, "unit": "items"},
+    "created_at": "...", "started_at": "...", "ended_at": null
+}}
+```
+
+The fields are explained in [Jobs and operations](~peios/services-and-jobs/jobs-and-operations). A job is retained for 60 seconds after it ends; after that its GUID is the `UNKNOWN_JOB` error. Like `list`, `job list` **omits** the jobs you lack `JOB_QUERY` on rather than denying them.
+
 ## Error codes
 
 An error response is `{"status": "error", "code": "...", "message": "..."}`. The `code` is one of:
@@ -168,6 +212,7 @@ An error response is `{"status": "error", "code": "...", "message": "..."}`. The
 | `ACCESS_DENIED` | AccessCheck denied the command against the target descriptor. |
 | `UNKNOWN_SERVICE` | No such service definition (also returned for `start`/`restart`/`reload` on a [definition-removed](~peios/services-and-jobs/defining-a-service) service). |
 | `UNKNOWN_OPERATION` | No such operation GUID — never existed, or dropped after its retention grace. |
+| `UNKNOWN_JOB` | No such job GUID — never existed, dropped after its retention grace, or one you cannot query. |
 | `MALFORMED_REQUEST` | The request line is not a single valid JSON object. |
 | `REQUEST_TOO_LARGE` | The request exceeds `MaxRequestSize`. |
 | `INVALID_COMMAND` | The `command` field is missing or unknown. |
@@ -175,6 +220,13 @@ An error response is `{"status": "error", "code": "...", "message": "..."}`. The
 | `INVALID_STATE` | Not valid for the service's current state (an `ERROR` cell above), or rejected because the system is already shutting down. |
 | `OPERATION_TIMEOUT` | A `--wait` operation did not reach a terminal state within its timeout. |
 | `INTERNAL_ERROR` | peinit hit an internal failure executing the command. |
+
+The jobs socket uses the same envelope and codes, plus two of its own:
+
+| Code | Meaning |
+|---|---|
+| `QUOTA_EXCEEDED` | The submission would exceed `MaxJobsPerSubmitter` live jobs for your SID. Nothing was created. |
+| `BAD_TOKEN` | The token attached to a submission cannot be a job identity — more than one was attached, its impersonation level is below Impersonation, or it could not be duplicated. |
 
 The `message` is human-readable and non-normative — read it for context, key off the `code`.
 
@@ -188,13 +240,24 @@ peinit enforces hard limits on the control socket, all tunable under `Machine\Sy
 | `MaxRequestSize` | 65536 | Bytes per request. |
 | `ConnectionTimeout` | 30 | Seconds an *idle* connection may sit before it is closed. |
 
+The jobs socket has its own set, under the same key:
+
+| Key | Default | Limits |
+|---|---|---|
+| `MaxJobsConnections` | 64 | Concurrent jobs-socket connections (excess are closed at connect, with no response). |
+| `MaxJobMessageSize` | 65536 | Bytes per message — which bounds a submission's whole definition. |
+| `JobsConnectionTimeout` | 30 | Seconds an *idle* jobs connection may sit before it is closed. A connection blocked on a `wait` or a pending `submit` is not idle. |
+| `MaxJobsPerSubmitter` | 64 | Live jobs one submitting SID may hold. SYSTEM is exempt. |
+
 ## Exit status
 
 | Code | Meaning |
 |---|---|
-| `0` | The command succeeded. |
-| `1` | A usage error. |
-| non-zero | The command failed — an access denial, unknown service, invalid state, or timeout. |
+| `0` | The command succeeded. For `job submit --wait`, the job also `completed`. |
+| `1` | peinit refused the command — an access denial, unknown service or job, invalid state, or timeout — or a `job submit --wait` job ended other than `completed`. |
+| `64` | A usage error. |
+| `69` | peinit could not be reached — the socket is missing or refused the connection. |
+| `70` | A protocol error — peinit answered with something the client could not read. |
 
 ## Where to start
 

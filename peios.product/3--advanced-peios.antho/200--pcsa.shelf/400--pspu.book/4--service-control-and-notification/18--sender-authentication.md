@@ -3,8 +3,9 @@ title: Sender Authentication
 description: A datagram claims to be a service talking about itself; the steps by which a manager establishes that it is, and what it must never use.
 ---
 
-A datagram on this channel claims to be a service talking about itself.
-The manager MUST establish that it is.
+A datagram on this channel claims to be a supervised process — a
+service, or a submitted job (§7) — talking about itself. The manager
+MUST establish that it is.
 
 ## The requirements
 
@@ -14,10 +15,11 @@ datagram arriving without a kernel-attested credentials control message.
 It MUST then establish all of the following, and MUST drop the datagram
 if any fails:
 
-1. **The sender is a service's current main job.** The manager MUST
-   match the attested PID against the main jobs it is supervising. A
-   hook process, a health check, or a child a service forked MUST NOT be
-   able to notify on the service's behalf.
+1. **The sender is a service's current main job, or a submitted job.**
+   The manager MUST match the attested PID against the main jobs and
+   the submitted jobs it is supervising. A hook process, a health check,
+   or a child a service or a job forked MUST NOT be able to notify on
+   its behalf.
 2. **That job has exec'd and is running.** A job still in setup has not
    become the service yet.
 3. **That job has a kernel handle on the process** — a pidfd, or an
@@ -25,7 +27,9 @@ if any fails:
    number.
 4. **The handle still refers to the attested PID.** The manager MUST
    verify the PID against the handle rather than trusting the PID alone.
-5. **The job's activation generation is the service's current one.**
+5. **For a service's job, its activation generation is the service's
+   current one.** A submitted job has no generation and no replacement;
+   the step does not apply to it.
 
 ## Why steps 3 and 4 exist
 
@@ -58,4 +62,14 @@ datagram's content.
 
 Identity on this channel is *which supervised process this is*, and only
 the kernel can attest that. A service does not have a name here that it
-gets to state.
+gets to state, and a job does not have an identifier.
+
+## What a job may send
+
+A submitted job may send every field in §4.19. Those that address a
+service transition it is not in — `RELOADING`, `EXTEND_TIMEOUT_USEC`
+outside a readiness wait, the descriptor-store fields, which a job has
+no store for — MUST be applied as §4.19 says for the case where they do
+not apply: ignored, or closed and recorded. `READY=1` from a
+`readiness: none` job is ignored. A job's `STATUS` and `PROGRESS` are
+retained and exposed in its job view (§7.7).

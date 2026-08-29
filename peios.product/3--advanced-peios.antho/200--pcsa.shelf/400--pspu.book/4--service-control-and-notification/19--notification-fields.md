@@ -72,17 +72,59 @@ ignored. There is no deadline to extend.
 | Field | Value | Meaning |
 |---|---|---|
 | `STATUS` | free text | A human-readable statement of what the service is doing. |
+| `PROGRESS` | see below | How far the service has got. |
+| `PROGRESS_UNIT` | `bytes`, `items` or `percent` | What `PROGRESS` counts. |
 | `ERRNO` | free text | An errno-style error number. |
 | `EXIT_STATUS` | free text | An exit status, informationally. |
 
-All three MUST be authenticated like any other field and MUST be
+All five MUST be authenticated like any other field and MUST be
 recorded by the manager as structured events. They MUST NOT be forwarded
 to a log sink as though they were the service's output — they are the
 service speaking to the manager.
 
-`STATUS` MUST additionally be retained and exposed as `status_text` in
-the status shape (§4.14). `ERRNO` and `EXIT_STATUS` MUST NOT be
-retained.
+`STATUS`, `PROGRESS` and `PROGRESS_UNIT` MUST additionally be retained
+and exposed — as `status_text` and `progress` in the status shape
+(§4.14), and in a submitted job's view (§7.7). `ERRNO` and
+`EXIT_STATUS` MUST NOT be retained.
+
+### Progress
+
+`PROGRESS` takes one of three forms, each of two unsigned decimal
+integers at most, separated by `/`:
+
+| Form | Meaning | A viewer shows |
+|---|---|---|
+| `N` | Counting, with no end. | A rising count. |
+| `N/` | Counting towards an end that exists but is not yet known. | A rising count, and expects a bound to arrive. |
+| `N/T` | `N` of `T`. | A bar. |
+
+`T` MUST be at least 1, and `N` MUST NOT exceed `T` when `T` is given.
+A value outside these forms, or violating either rule, is an
+**unexpected value** under §4.17: the line is ignored and the datagram
+is otherwise applied. A manager MUST NOT clamp or repair a progress
+value.
+
+The manager retains the most recent accepted value and exposes it as a
+`progress` object: `current` is `N`; `total` is `T` or null; `bounded`
+is true for the second and third forms and false for the first; `unit`
+is the most recent accepted `PROGRESS_UNIT` or null. A `PROGRESS_UNIT`
+outside its three values is an unexpected value and is ignored. Each
+field is replaced only by a datagram that carries it: a `STATUS` alone
+leaves `progress` as it was.
+
+`T` MAY change from one datagram to the next — a job that rescans has
+learned something — and `N` MAY fall. A viewer renders the latest
+value; it MUST NOT infer motion from the difference between two.
+
+A service that sends progress with no end in sight MUST send the
+first form and not a guessed `T`. A service that has not started
+counting sends nothing: absence means *no progress concept*, and a
+viewer shows an indeterminate indicator.
+
+The manager MUST bound how often a change of progress becomes an event
+on its event stream, so that a sender updating a thousand times a
+second cannot produce a thousand events; the retained value is the
+latest regardless. The bound a Peios service manager uses is §4.A.
 
 A service MUST NOT include a newline or carriage return in a `STATUS`
 value: it would frame as two lines, the second of which is almost

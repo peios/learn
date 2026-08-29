@@ -21,8 +21,9 @@ Values compiled into peinit, which no registry key changes.
 | `/lcl/policy/autorun.d` | Phase 1 autorun scripts. |
 | `/run/services/peinit/control.sock` | The control socket. |
 | `/run/services/peinit/notify.sock` | The notification socket, by default. |
+| `/run/services/peinit/jobs.sock` | The jobs socket. |
 | `/sys/fs/cgroup/peinit/` | The root of every service cgroup tree. |
-| `/dev/jfs` | The job forwarding device. |
+| `/sys/fs/cgroup/peinit/jobs/<guid>` | A submitted job's cgroup. |
 | `/dev/rtc`, `/dev/rtc0` | The hardware clock, in that order of preference. |
 | `/dev/console` | Where peinit writes its own messages. |
 | `/bin/recsh`, `/bin/sh` | The recovery shell, in that order of preference. |
@@ -37,6 +38,11 @@ Values compiled into peinit, which no registry key changes.
 | Restart delay cap | 60 s | The ceiling on exponential backoff. |
 | Timeout extension cap | ×4 | The multiple of a phase's base timeout an extension may reach. |
 | Operation retention | 60 s | How long a terminal operation is kept before being dropped. |
+| Submitted job retention | 60 s | How long a terminal submitted job's entry answers `status` before being dropped. |
+| `job.status` event interval | 1 s | The least spacing between two `job.status` events for one job. |
+| Submitted job `stop_timeout` | 10 s | The default, per submission. |
+| Submitted job `readiness_timeout` | 30 s | The default, per submission. |
+| Submitted job argv and environment | 2 MiB | The bound on a definition's `arguments` and `environment` together. |
 | Boot attempt threshold | 3 | The default, overridden by `peios.bootattempts=`. |
 | `OnFailure` chain depth | 16 | The maximum handler chain from one originating failure. |
 | Pre-eventd buffer | 1 MiB | The compiled-in buffer capacity. |
@@ -44,6 +50,9 @@ Values compiled into peinit, which no registry key changes.
 | Descriptors per datagram | 64 | The control message buffer capacity. |
 | Random seed | 512 bytes | Written at shutdown. Restoring accepts 1–4096 bytes. |
 | Control listen backlog | 32 | |
+| Jobs listen backlog | 32 | |
+| Descriptors per jobs message | 64 | Including an output sink. |
+| Tokens per jobs message | 1 | |
 | First injected descriptor | 3 | Where stored descriptors are placed. |
 | Final action retry | 1 s | The minimum interval between `reboot(2)` retries. |
 
@@ -76,6 +85,9 @@ The recovery shell additionally receives `TERM=linux` and `HOME=/`.
 | The random seed file | `O:SYG:SYD:(A;;GA;;;SY)` |
 | The default ServiceSecurity | `O:SYG:SYD:(A;;GA;;;SY)(A;;0x0005;;;BA)` |
 | The default ControlSecurity | `O:SYG:BAD:(A;;0x0003;;;SY)(A;;0x0003;;;BA)` |
+| The control socket inode | `O:SYG:SYD:(A;;GA;;;SY)(A;;GA;;;BA)` |
+| The jobs socket inode | `O:SYG:SYD:(A;;GA;;;SY)(A;;GA;;;BA)(A;;FW;;;AU)` |
+| A submitted job with no `security_descriptor` | Owner and group the submitter; `(A;;0x0007;;;<submitter>)(A;;0x0007;;;SY)(A;;0x0007;;;BA)` |
 
 ## Access rights
 
@@ -88,6 +100,10 @@ The recovery shell additionally receives `TERM=linux` and `HOME=/`.
 | `SERVICE_ALL_ACCESS` | 0x000F |
 | `SYSTEM_SHUTDOWN` | 0x0001 |
 | `SYSTEM_RELOAD_CONFIG` | 0x0002 |
+| `JOB_QUERY` | 0x0001 |
+| `JOB_STOP` | 0x0002 |
+| `JOB_SIGNAL` | 0x0004 |
+| `JOB_ALL_ACCESS` | 0x0007 |
 
 ## Identifiers
 

@@ -81,7 +81,29 @@ A control command returns `ACCESS_DENIED`. peinit ran [AccessCheck](~peios/acces
 Every denial is logged with the caller SID, target, and requested right. Walk it through [Debugging a denial](~peios/access-decisions/debugging-a-denial).
 
 > [!NOTE]
-> If `list` shows fewer services than you expect, that is not a bug — `list` **omits** services you lack `SERVICE_QUERY_STATUS` on rather than denying them. You are seeing exactly what your token can see.
+> If `list` shows fewer services than you expect, that is not a bug — `list` **omits** services you lack `SERVICE_QUERY_STATUS` on rather than denying them. You are seeing exactly what your token can see. `job list` does the same with `JOB_QUERY`.
+
+## A job submission is refused
+
+A `job submit` — from `peiosctl` or from a service — comes back with an error rather than a job. The code says which door it hit:
+
+| Code | What happened | What to do |
+|---|---|---|
+| connection refused, or an immediate close | You cannot reach `/run/services/peinit/jobs.sock` — its file descriptor does not grant you write, or peinit is at `MaxJobsConnections`. peinit itself performs no check on who may submit; the socket's descriptor is the whole policy. | Check the socket's descriptor (by default Authenticated Users may connect) and the connection count. |
+| `QUOTA_EXCEEDED` | Your SID already holds `MaxJobsPerSubmitter` live jobs (default 64). | `job list --submitter <your SID>` to find them; stop what should not be running, or raise the key. SYSTEM is exempt. |
+| `BAD_TOKEN` | The token you attached cannot become a job identity: more than one was attached, it is below Impersonation level, or peinit could not duplicate it. | Attach exactly one token obtained by impersonating the client; an Identification-level token is never enough. If the job needs Delegation, set the jobs connection to Delegation *before* attaching. |
+| `INVALID_ARGUMENTS` | The definition is malformed — a relative `image_path`, a `descriptors` list that does not match what you attached, a `security_descriptor` without an owner and DACL. | The message names the field. |
+| `INVALID_STATE` | The system is shutting down; submissions are refused. | — |
+
+A job that was *accepted* but never ran is not an error response: it is an `ok` response whose view is `failed` with a `cause` — `parent_setup_failure` (peinit could not prepare the launch) or `pre_exec_failure` (the program could not be executed as that identity, which is where "no such file" and "permission denied" land, because peinit does not check the image before accepting a submission).
+
+## A job's output has gaps
+
+If a submitter attached an output sink and sees gaps, look for an `output.dropped` event for the job in [eventd](~peios/auditing/overview): the sink was not being drained fast enough, and peinit dropped lines *for the sink only* rather than let it slow the job. The full output is still in eventd under the job's GUID — the sink is a convenience copy, the record is not.
+
+## UNKNOWN_JOB
+
+The GUID was real once. A job is retained for 60 seconds after it ends and then dropped, so a client that asks later gets `UNKNOWN_JOB`; the durable record is in eventd. You also get `UNKNOWN_JOB` for a job you lack `JOB_QUERY` on — a job you cannot see is indistinguishable from one that does not exist.
 
 ## A dependent never started
 

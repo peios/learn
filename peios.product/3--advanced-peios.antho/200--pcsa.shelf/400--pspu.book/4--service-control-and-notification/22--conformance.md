@@ -26,9 +26,11 @@ Descriptor with the mappings in §4.7, records every denial, filters
 distinguish an operation the caller may not see from one that does not
 exist.
 
-**Commands.** Implements all ten, with the outcomes in §4.12 for every
-command-and-state pair, the response shapes in §4.9, §4.14 and §4.15,
-and only the error codes in §4.10.
+**Commands.** Implements all thirteen, with the outcomes in §4.12 for
+every command-and-state pair, the response shapes in §4.9, §4.14 and
+§4.15, and only the error codes in §4.10. Filters `job-list` by
+`JOB_QUERY` as it filters `list`, and answers `job-status` and
+`job-stop` against the job's own descriptor (§4.7, §4.14).
 
 **Operations.** Returns an identifier from every lifecycle command that
 produced one and none where it did not; merges same-type requests and
@@ -42,9 +44,11 @@ reload response (§4.13).
 
 **Notification.** Authenticates every datagram through all five steps of
 §4.18, including verifying the attested PID against a kernel handle and
-checking the activation generation. Applies all lines of an accepted
-datagram and none of a rejected one. Rejects a truncated datagram rather
-than processing it. Implements every field in §4.19.
+checking the activation generation for a service's job. Applies all
+lines of an accepted datagram and none of a rejected one. Rejects a
+truncated datagram rather than processing it. Implements every field in
+§4.19, retaining `STATUS`, `PROGRESS` and `PROGRESS_UNIT` and bounding
+how often a progress change becomes an event.
 
 **The descriptor store.** Closes rather than keeps what it refuses;
 returns descriptors from 3 upward with `LISTEN_FDS`, `LISTEN_FDNAMES`
@@ -71,8 +75,8 @@ under a different identity.
 
 Reads `NOTIFY_SOCKET` from its environment and hardcodes no path. Sends
 `READY=1` when it can genuinely serve, not when its process exists.
-Sends no recognised key with an undefined value, and no newline inside a
-`STATUS` value. Sends no datagram exceeding the bounds in §4.A. Expects
+Sends no recognised key with an undefined value, no newline inside a
+`STATUS` value, and no `PROGRESS` outside its three forms. Sends no datagram exceeding the bounds in §4.A. Expects
 no reply, and no acknowledgement that a field was applied. Treats
 `EXTEND_TIMEOUT_USEC` as replacing a deadline rather than adding to one.
 Checks `LISTEN_PID` against its own PID before adopting any descriptor.

@@ -8,7 +8,8 @@ names are opaque to this chapter except for the character restriction in
 §4.8.
 
 **Job.** One process execution. A service that has been restarted has
-had more than one job.
+had more than one job. A job submitted on the jobs channel (§7) has no
+service; it belongs to its submitter.
 
 **Operation.** A requested state machine action on a service, with an
 identity and a lifecycle of its own. Lifecycle commands do not act

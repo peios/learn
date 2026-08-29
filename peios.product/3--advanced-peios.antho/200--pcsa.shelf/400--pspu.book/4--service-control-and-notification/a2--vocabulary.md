@@ -57,9 +57,10 @@ and has not produced a result yet.
 ## Job type
 
 `service_main`, `pre_exec_hook`, `post_exec_hook`, `reload_hook`,
-`health_check`, `ad_hoc`
+`health_check`, `submitted`
 
-Only `service_main` appears in `current_job`.
+Only `service_main` appears in `current_job`. Only `submitted` appears
+in a job view (§7.7); a job's state and cause vocabularies are §7.B's.
 
 ## Operation type
 

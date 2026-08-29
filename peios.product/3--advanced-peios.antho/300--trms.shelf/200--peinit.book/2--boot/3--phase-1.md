@@ -68,9 +68,9 @@ full control and is marked inheritable by both containers and objects:
 O:SY G:SY D:(A;OICI;GA;;;SY)(A;OICI;GA;;;BA)
 ```
 
-Everything created underneath — the control socket, the notify socket,
-per-service runtime directories, the cgroup hierarchy — inherits from
-it. This is why peinit never sets mode bits on the sockets it creates;
+Everything created underneath — the notify socket, per-service runtime
+directories, the cgroup hierarchy — inherits from it; the two sockets
+that need a different population are stamped explicitly in step 9. This is why peinit never sets mode bits on the sockets it creates;
 under KACS they would mean nothing, and the descriptor is the thing that
 does the work. It is the same descriptor the initramfs seeds onto the
 root filesystem, and the two are kept identical on purpose: this one
@@ -270,16 +270,19 @@ Covered in §2.4.
 Three things, before Phase 2 begins:
 
 1. **The control socket** at `/run/services/peinit/control.sock`, which
-   serves every runtime command for the lifetime of the system.
-2. **The JFS device**: peinit opens `/dev/jfs` and adds the descriptor
-   to its event loop, enabling ad-hoc job submission once Phase 2 runs.
+   serves every runtime command for the lifetime of the system, stamped
+   for SYSTEM and Administrators (§10.1).
+2. **The jobs socket** at `/run/services/peinit/jobs.sock`, on which
+   any authenticated principal may submit a job once Phase 2 runs,
+   stamped so that connecting is the submission permission (§10.7).
 3. **Loopback**: peinit brings up `lo` over netlink, because services
    that bind `127.0.0.1` need it.
 
-Control socket creation failing sends peinit to recovery — without it
-there is no way to administer the system. The other two are warnings:
-a JFS open failure, a JFS event-loop registration failure and a loopback
-bring-up failure all let Phase 2 proceed.
+Either socket failing to bind or to take its descriptor sends peinit to
+recovery — without the first there is no way to administer the system,
+and a jobs socket with the wrong descriptor is either unreachable or
+open to everything. A loopback bring-up failure is a warning that lets
+Phase 2 proceed.
 
 ## Failure summary
 
@@ -305,6 +308,6 @@ bring-up failure all let Phase 2 proceed.
 | A provisioning entry is malformed | Warning; entry skipped |
 | An optional provisioned path fails | Warning; boot continues |
 | A required provisioned path fails | Recovery |
-| Control socket creation fails | Recovery |
-| JFS open or registration fails | Warning; boot continues |
+| Control socket creation or stamping fails | Recovery |
+| Jobs socket creation or stamping fails | Recovery |
 | Loopback bring-up fails | Warning; boot continues |

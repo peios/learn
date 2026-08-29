@@ -94,6 +94,10 @@ Its generic mapping deliberately gives `GENERIC_READ` *nothing* — there is no 
 
 The default grants **SYSTEM** full access and **Administrators** both rights. peinit loads this descriptor at boot and hot-reloads it on registry change, exactly like ServiceSecurity.
 
+## Jobs have descriptors too
+
+A [submitted job](~peios/services-and-jobs/jobs-and-operations) is a securable object in the same way. It carries its own descriptor from the moment it exists — by default owned by the submitter and granting `JOB_QUERY`, `JOB_STOP`, and `JOB_SIGNAL` to the submitter, SYSTEM, and Administrators, and *nothing* to the identity the job runs as — and every job command, on either socket, is checked against it. The one thing no descriptor inside peinit governs is who may *submit*: that is the file descriptor on the jobs socket, checked by the kernel when a process connects.
+
 ## The list command filters, it does not deny
 
 `list` is access-control-aware in a quieter way: it returns only the services the caller has `SERVICE_QUERY_STATUS` on, and simply **omits** the rest. A caller with no query rights gets an empty list, not a denial. This means a low-privilege principal cannot even enumerate the services it cannot see — the existence of a service is itself information the descriptor controls.
@@ -104,7 +108,7 @@ A few invariants are worth stating outright, because they are what make this tru
 
 - **peinit never bypasses AccessCheck for a control operation.** No backdoor, no override flag, no "trust localhost."
 - **The descriptors are the only policy inputs.** peinit consults the ServiceSecurity and ControlSecurity descriptors and nothing else — not config files, not environment variables, not hardcoded lists.
-- **One service's state is never exposed to another without a check.** `status` is per-service access-controlled; `list` filters.
+- **One service's state is never exposed to another without a check.** `status` is per-service access-controlled; `list` filters. The same holds for jobs: `job status` is checked, `job list` filters.
 
 ## Where to start
 

@@ -64,9 +64,15 @@ the child's pre-exec path (§5.4):
    same order as the descriptor numbers.
 4. The store is cleared. peinit no longer holds them.
 
-Both variables are omitted entirely when the store is empty.
+All three variables are omitted entirely when the store is empty.
 `LISTEN_PID`, which a conforming client checks against its own PID
-before trusting `LISTEN_FDS`, is not set.
+before trusting `LISTEN_FDS`, is appended by the child itself after the
+clone, since only then is the PID known; a value for it from either
+configurable environment layer is discarded so that it cannot shadow
+the real one (§5.5).
+
+A submitted job receives its attached descriptors by exactly this path
+(§8.5).
 
 A listening socket that comes back this way still conveys the identity
 captured when the previous instance called `listen()` on it. peinit

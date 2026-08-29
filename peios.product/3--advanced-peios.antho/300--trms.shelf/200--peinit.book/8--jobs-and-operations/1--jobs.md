@@ -5,7 +5,7 @@ description: A job is one supervised process execution, and every fork peinit pe
 
 A job is one supervised process execution. Every fork peinit performs is
 a job: a service's main binary, a pre-exec hook, a post-exec hook, a
-reload command, a health check invocation, an ad-hoc submission.
+reload command, a health check invocation, a submitted job (§8.5).
 
 Jobs are the observable unit of *what actually ran*. Services are
 definitions carrying identity, policy and configuration; jobs are
@@ -40,9 +40,9 @@ or it is stuck.
 ```
 Job {
     id:                 GUID       // UUIDv7
-    service:            string?    // null for ad-hoc
+    service:            string?    // null for a submitted job
     job_type:           enum       // ServiceMain, PreExecHook, PostExecHook,
-                                   // ReloadHook, HealthCheck, AdHoc
+                                   // ReloadHook, HealthCheck, Submitted
     state:              enum
     pid:                u32?
     pidfd:              fd?
@@ -59,7 +59,7 @@ Job {
     cgroup_id:          string
     cgroup_generation:  u32
     activation_generation: u32
-    operation_id:       GUID?      // null for ad-hoc
+    operation_id:       GUID?      // null for a submitted job
     hook_index:         u32?
 }
 ```
@@ -83,7 +83,9 @@ make a job record trustworthy:
   supervising, and the exit fields stay null. Nothing exited.
 
 `resolved_identity` is the identity *string* — `SYSTEM`,
-`LocalService`, a SID — that was resolved for the execution.
+`LocalService`, a SID — that was resolved for the execution. For a
+submitted job it is the job identity's user SID, since no name was ever
+involved (§8.5).
 `token_summary` is what the resulting token actually contains. They are
 separate because they can differ, and the `identity` field exposed in
 status views and job events is the former.
@@ -98,6 +100,11 @@ hold one.
 eventd is the historian. It consumes those events from the KMES kernel
 ring buffer, and a query for a service's past jobs is a query to eventd.
 
+A submitted job is the one partial exception: its record is dropped
+like any other, but the jobs system keeps its own entry for a further
+60 seconds so that a submitter polling for the outcome can still read
+it (§8.5). That entry is a retained answer, not a history.
+
 ## Ownership
 
 | Concern | Owner |
@@ -109,6 +116,7 @@ ring buffer, and a query for a service's past jobs is a query to eventd.
 | Identity and token | Job |
 | cgroup assignment | Job |
 | Log correlation | Job |
+| Submitter, job descriptor, progress, retention | Submitted job entry (§8.5) |
 
 A service tracks its current main job's identifier, and a status query
 returns it.

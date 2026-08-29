@@ -20,6 +20,10 @@ descriptor:
 | `SERVICE_INTERROGATE` | 0x0008 | Reload the service. |
 | `SERVICE_ALL_ACCESS` | 0x000F | All four. |
 
+Commands acting on a submitted job are checked against that job's own
+descriptor, with the rights and generic mapping §7.8 defines:
+`JOB_QUERY` (0x0001), `JOB_STOP` (0x0002), `JOB_SIGNAL` (0x0004).
+
 Commands acting on the system are checked against the manager's own
 descriptor:
 
@@ -67,6 +71,9 @@ governs two actions and no queries.
 | `status` | `SERVICE_QUERY_STATUS` |
 | `list` | Evaluated per service; see below |
 | `operation-status` | `SERVICE_QUERY_STATUS` on the operation's target |
+| `job-status` | `JOB_QUERY` on the job |
+| `job-list` | Evaluated per job; see below |
+| `job-stop` | `JOB_STOP` on the job |
 | `shutdown` | `SYSTEM_SHUTDOWN` |
 | `reload-config` | `SYSTEM_RELOAD_CONFIG` |
 
@@ -101,6 +108,9 @@ The manager MUST NOT reveal, through the response, that services were
 omitted. Reporting the omissions would answer the question the filtering
 exists to leave unanswered.
 
+`job-list` MUST be filtered the same way, by `JOB_QUERY` on each job,
+and MUST NOT reveal that jobs were omitted.
+
 ## Not revealing what a caller may not see
 
 Where a command names an object the caller may not query,
@@ -115,3 +125,9 @@ and MUST NOT receive `UNKNOWN_OPERATION` for one that exists.
 
 Where the caller's rights cannot be established because the target
 cannot be resolved, `UNKNOWN_OPERATION` is the correct answer.
+
+For `job-status` and `job-stop` the rule is §7.10's, not this one: a
+job identifier is unguessable, so a caller that names one was told it,
+and the manager answers `UNKNOWN_JOB` for an identifier that names
+nothing and `ACCESS_DENIED` for one that names a job the caller may not
+touch.

@@ -54,26 +54,32 @@ The definition's `Environment` entries, overriding both layers below.
 
 ## Layer 4: protocol variables
 
-`NOTIFY_SOCKET`, always. `LISTEN_FDS` and `LISTEN_FDNAMES`, only when
-descriptors are being injected from the fd store.
+`NOTIFY_SOCKET`, always. `LISTEN_FDS`, `LISTEN_FDNAMES` and
+`LISTEN_PID`, only when descriptors are being injected — from the fd
+store for a service, or from a submission's attachments for a submitted
+job (§8.5).
 
-These have the highest precedence and are inserted after both
-configurable layers, so a service cannot override `NOTIFY_SOCKET` and
-break its own notification protocol. The guard is insertion order rather
-than a reserved-name check, which means the two fd-store variables are
-protected only when they are actually being set — with no descriptors to
-inject they are not inserted, and a value from either configurable layer
-reaches the child unchanged.
+These have the highest precedence. The first three are inserted after
+both configurable layers, and all four names are dropped from those
+layers before insertion, so a service cannot override `NOTIFY_SOCKET`
+and break its own notification protocol, and an `EnvVars\LISTEN_FDS=3`
+cannot point an fd-store-less service's `sd_listen_fds` at whatever
+happens to sit at descriptor 3. The name filter is what protects the
+`LISTEN_*` set when it is *not* being set.
 
 `LISTEN_PID`, which a conforming `sd_listen_fds` implementation checks
-against its own PID before trusting `LISTEN_FDS`, is not set.
+against its own PID before trusting `LISTEN_FDS`, is appended by the
+child itself after the clone, because only then is the PID known; the
+name filter keeps a configured value from shadowing it.
 
 ## What peinit does not set
 
 Not `HOME`, `USER`, `LOGNAME`, `SHELL` or `TERM`. Peios identity is a
 KACS token — a SID — rather than a passwd entry, so there is no
 canonical home directory or login shell to populate. A service that
-needs one supplies it through `EnvVars\` or its own `Environment`.
+needs one supplies it through `EnvVars\` or its own `Environment`; a
+submitted job's submitter supplies it in the submission's
+`environment`, which occupies layer 3 for a job.
 
 ## Hooks and probes
 

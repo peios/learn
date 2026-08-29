@@ -15,6 +15,7 @@ does not recognise as an unrecoverable error for that request (§4.21).
 | `INVALID_ARGUMENTS` | A field the command requires is absent or malformed. | No |
 | `UNKNOWN_SERVICE` | The named service has no definition the manager can act on. | No |
 | `UNKNOWN_OPERATION` | The operation identifier names nothing the manager holds — it never existed, or its retention has elapsed. §4.14 | No |
+| `UNKNOWN_JOB` | The job identifier names nothing the manager holds — it never existed, or its retention has elapsed. §7.7 | No |
 | `ACCESS_DENIED` | The access check denied the requested right. §4.7 | No |
 | `INVALID_STATE` | The command is not valid for the service's current state (§4.12), or the manager is shutting down (§4.15). | No |
 | `OPERATION_TIMEOUT` | A `wait=true` request's operation did not reach a terminal state in time. §4.13 | No |

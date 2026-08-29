@@ -18,6 +18,11 @@ A request is one JSON object.
 | `wait` | bool | no | Whether to block until the operation resolves. §4.13 |
 | `type` | string | for `shutdown` | `poweroff`, `reboot` or `halt`. |
 | `operation_id` | string | for `operation-status` | The operation to report on. |
+| `job_id` | string | for `job-status`, `job-stop` | The job. |
+| `submitter` | string | no | For `job-list`: only jobs with this submitter SID. |
+| `identity` | string | no | For `job-list`: only jobs whose identity is this SID. |
+| `logon_session` | integer | no | For `job-list`: only jobs whose identity is in this logon session. |
+| `state` | string | no | For `job-list`: only jobs in this state (§7.B). |
 
 `command` MUST be present and MUST be a string naming a command the
 manager implements. A request whose `command` is absent, is not a
@@ -36,6 +41,12 @@ be answered `INVALID_ARGUMENTS`.
 `operation_id` MUST be present and a string for `operation-status`. A
 value that is not a well-formed identifier MUST be answered
 `INVALID_ARGUMENTS`.
+
+`job_id` MUST be present and a string for `job-status` and `job-stop`,
+under the same rule. The four `job-list` filters are each optional;
+one that is present with a malformed value — a SID that does not parse,
+a state outside §7.B — MUST be answered `INVALID_ARGUMENTS` rather than
+matching nothing, and filters that are all present MUST all hold.
 
 ## Fields that do not apply
 

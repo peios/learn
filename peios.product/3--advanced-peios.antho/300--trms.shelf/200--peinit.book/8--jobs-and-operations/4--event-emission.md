@@ -30,6 +30,24 @@ The event type is the dotted string; the fields form the msgpack
 payload. The payloads are supersets of the summaries above — `job.ended`
 in particular carries the whole record.
 
+A submitted job's lifecycle rides the same three events, with a null
+service and operation. Three more are its own:
+
+**`job.status`** — the job reported `STATUS` or `PROGRESS`. Carries
+`job_id`, `submitter`, `status`, `progress_current`, `progress_total`,
+`progress_bounded` and `progress_unit` as retained after the datagram.
+Emitted at most once per job per second; a datagram inside the window
+updates the view and emits nothing (§8.5).
+
+**`output.dropped`** — the submitter's output sink stopped draining and
+peinit began dropping its copy of the job's lines. Once per job, on the
+first drop; the record in eventd is unaffected (§11.1).
+
+**`job.access_denied`** — a job command refused by the job's
+descriptor, on either socket, with `caller_sid`, `target_type` of
+`job`, `target`, the requested right by name and the access bits
+requested and granted. `job-list` records one per job it omitted.
+
 ## Operation events
 
 Every operation event carries: `operation_id`, `type`, `service`,

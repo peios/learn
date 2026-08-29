@@ -25,6 +25,13 @@ unrecognised key in `current_job` or `current_operation`.
 whose `type` it does not recognise and MUST NOT discard it. An
 unclassifiable warning is still a warning.
 
+**A command, together with the error codes and enumerated values that
+appear only in responses to it.** A client is exposed to a command only
+by sending it, so a client that does not know a command is never
+exposed to anything it introduces. A manager MAY therefore add a
+command without a version, provided that nothing it introduces can
+reach a client through any *existing* command's response.
+
 ## What may not be added without a version
 
 Anything a client must *recognise* in order to behave correctly cannot
@@ -33,12 +40,13 @@ or to misbehave.
 
 A manager MUST NOT, without a negotiated version:
 
-- introduce an **error code** outside §4.10;
+- introduce an **error code** outside §4.10 on an existing command;
 - introduce a **service state**, **transition cause**, **operation
   state**, **operation type**, **operation source** or **job type**
-  outside §4.B;
+  outside §4.B, or a job state or cause outside §7.B, where an
+  existing command could return it;
 - introduce a **reload mode** outside the three in §4.13;
-- introduce a **command**, or change what an existing command does;
+- change what an existing **command** does;
 - change the **shape** of an existing response, including changing a
   field's type or making a non-nullable field nullable.
 

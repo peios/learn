@@ -53,12 +53,15 @@ there is no Phase 2 to fall back to, and peinit drops into a recovery
 shell.
 
 Once booted, peinit is an event loop over a handful of descriptors: a
-signalfd, the control socket, the notify socket, one timerfd per armed
-timer, a pidfd per supervised process, a pipe pair per service's output,
-the registry's change-notification descriptor, and the JFS device. Work
-arriving on any of them turns into an **operation** — a queued,
-observable request to move a service through its state machine — and
-executing an operation eventually forks a **job**.
+signalfd, the control socket, the jobs socket, the notify socket, one
+timerfd per armed timer, a pidfd per supervised process, a pipe pair
+per supervised process's output, and the registry's change-notification
+descriptor. Work arriving on most of them turns into an **operation** —
+a queued, observable request to move a service through its state
+machine — and executing an operation eventually forks a **job**. Work
+arriving on the jobs socket skips the operation: a submitted job has
+no service and no state machine to contend for, so a submission forks
+a job directly.
 
 Those two objects are how peinit stays comprehensible under concurrency.
 Operations exist so that two administrators issuing conflicting commands

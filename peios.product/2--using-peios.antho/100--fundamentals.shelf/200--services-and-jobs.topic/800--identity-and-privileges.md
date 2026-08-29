@@ -74,7 +74,7 @@ A service is not just its main process — it has hooks, health checks, and a re
 | **`ExecStartPre` / `ExecStartPost`** | `HookIdentity` if set, otherwise the service's `Identity`. |
 | **Health checks** | The service's `Identity`, always. |
 | **`ExecReload`** (command form) | The service's `Identity`, always — `HookIdentity` does not apply. |
-| **[Ad-hoc jobs](~peios/services-and-jobs/jobs-and-operations)** | The token captured by JFS — the submitter's (possibly impersonated) identity. |
+| **[Submitted jobs](~peios/services-and-jobs/jobs-and-operations)** | The submitting process's own primary token — or, if the submitter attached one, the token the kernel verified it could convey (its client's identity, when impersonating). Never an identity named in the request. |
 
 Token materialisation for hooks follows the same rules: a `HookIdentity` of `SYSTEM` is minted; any other principal is requested from authd, at the point the hook runs.
 
@@ -91,6 +91,7 @@ The identity model rests on a few rules peinit never breaks:
 2. **peinit never drops its own SYSTEM identity.** PID 1 runs as SYSTEM for the life of the system — its identity is axiomatic, granted by the kernel at boot.
 3. **Privileges are subtractive only.** `RequiredPrivileges` removes; it can never add.
 4. **Identity is deterministic.** Every service runs as a known principal. `SYSTEM` must be declared explicitly; an empty `Identity` is the minimal `LocalService`, never SYSTEM.
+5. **A submitted job never runs as an identity its submitter could not act as.** peinit installs only the submitter's own primary token or a token the kernel gated on the way in; it never opens a token by a PID or descriptor a submitter names, and there is no identity field to name one.
 
 ## Where to start
 

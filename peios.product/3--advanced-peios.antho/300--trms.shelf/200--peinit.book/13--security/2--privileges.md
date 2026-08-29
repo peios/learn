@@ -9,7 +9,8 @@ system. What it actually exercises is narrower.
 | Privilege or capability | Used for |
 |---|---|
 | `SeCreateTokenPrivilege` | Minting SYSTEM tokens for platform services during bootstrap, before authd exists (§4.2). |
-| `SeTcbPrivilege` | Requesting tokens from authd on a service's behalf, and installing a primary token on a child whose identity differs from peinit's own. |
+| `SeTcbPrivilege` | Requesting tokens from authd on a service's behalf, and installing a primary token on a child whose identity differs from peinit's own — a service's, or a submitted job's. |
+| Token duplication | Turning a job identity into the primary token a submitted job runs as (§8.5): opening the submitter's own primary through its pidfd, or taking the token the kernel attached, and duplicating either to a primary. SYSTEM holds full access on every token's default descriptor, which is what makes the duplicate permitted. |
 | Process creation | Fork and exec, inherent to PID 1. |
 | cgroup management | Creating and destroying trees under `/sys/fs/cgroup/peinit/`. |
 | Signal delivery | SIGTERM and SIGKILL to managed processes. |
@@ -22,7 +23,9 @@ mint, which is the first service start.
 `SeImpersonatePrivilege` is not used. peinit passes the peer's token
 descriptor to AccessCheck directly rather than impersonating the caller
 and evaluating as them, so the privilege that would be needed to
-impersonate is not needed at all.
+impersonate is not needed at all. The same holds on the jobs socket:
+peinit never impersonates a submitter, and the identity a job runs as
+is one the kernel already verified the submitter could convey.
 
 For non-platform services peinit creates no tokens. It installs the ones
 authd minted. It mints only for the SYSTEM platform services it starts

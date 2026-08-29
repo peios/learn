@@ -1,6 +1,6 @@
 ---
 title: Losing a Dependency
-description: What breaks when authd, eventd or JFS is unavailable, and what a bound dependency that never becomes satisfying does.
+description: What breaks when authd or eventd is unavailable, and what a bound dependency that never becomes satisfying does.
 ---
 
 ## authd
@@ -21,13 +21,9 @@ keeps collecting output; when eventd returns the handoff repeats.
 
 There is a log gap bounded by the buffer size. There is **no** event gap
 — audit events land in the KMES ring buffer regardless of eventd's
-state, and eventd resumes from the last persisted sequence.
-
-## JFS
-
-The device may not exist. Phase 1 treats a failure to open `/dev/jfs` as
-a warning and continues, and the boot is unaffected. Nothing else in
-peinit depends on it.
+state, and eventd resumes from the last persisted sequence. A
+submitter's output sink (§11.1) is fed regardless, since it is written
+from the pipe read rather than from the forwarder.
 
 ## A bound dependency
 

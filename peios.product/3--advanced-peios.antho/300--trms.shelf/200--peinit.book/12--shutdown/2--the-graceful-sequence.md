@@ -9,6 +9,15 @@ peinit sets an internal flag. While it is set, no new service starts,
 and control commands other than `status`, `list` and `operation-status`
 are rejected as invalid for the current state.
 
+Every live submitted job (§8.5) is stopped at this point too: SIGTERM
+to each — unless it has already sent `STOPPING=1` — with cause
+`shutdown`, its own `stop_timeout` to the kill, and no ordering between
+jobs or against the service waves, because a job has no dependencies
+to order by. A job still queued for launch is cancelled with the same
+cause. `submit` is refused for the rest of the shutdown; `status`,
+`wait`, `stop` and `signal` keep answering, as do the control socket's
+`job-status`, `job-list` and `job-stop`.
+
 Timer triggers are not disarmed. A calendar timer that fires during the
 shutdown window is still classified and acted on: for a service in
 Inactive, Completed or Failed — precisely the states step 3 classifies
@@ -97,7 +106,14 @@ an observation of it.
 
 On expiry, every remaining participant's cgroup is killed, anything that
 does not drain within the post-kill timeout is marked Abandoned with its
-cgroup leaked, and shutdown continues regardless.
+cgroup leaked, and shutdown continues regardless. Live submitted jobs
+are killed in the same sweep, whatever phase their stop had reached,
+and abandoned on the same terms.
+
+The sequence does not move to step 6 while a submitted job is live. A
+job's reap advances shutdown progress exactly as a service's does, so a
+session that exits promptly on SIGTERM costs the shutdown nothing, and
+one that does not costs it `stop_timeout` and the post-kill grace.
 
 ## Step 6: Save the random seed
 

@@ -152,6 +152,10 @@ Under `Machine\System\Init\`:
 | `MaxControlConnections` | dword | 32 | Maximum concurrent control-socket connections. | [Controlling services](~peios/services-and-jobs/controlling-services) |
 | `MaxRequestSize` | dword | 65536 | Maximum control-socket request size (bytes). | [Controlling services](~peios/services-and-jobs/controlling-services) |
 | `ConnectionTimeout` | dword | 30 | Seconds before an idle control connection is closed. | [Controlling services](~peios/services-and-jobs/controlling-services) |
+| `MaxJobsConnections` | dword | 64 | Maximum concurrent jobs-socket connections. | [Controlling services](~peios/services-and-jobs/controlling-services) |
+| `MaxJobMessageSize` | dword | 65536 | Maximum jobs-socket message size (bytes); bounds a submission's whole definition. | [Controlling services](~peios/services-and-jobs/controlling-services) |
+| `JobsConnectionTimeout` | dword | 30 | Seconds before an idle jobs connection is closed. | [Controlling services](~peios/services-and-jobs/controlling-services) |
+| `MaxJobsPerSubmitter` | dword | 64 | Live submitted jobs one submitting SID may hold; SYSTEM is exempt. | [Jobs and operations](~peios/services-and-jobs/jobs-and-operations) |
 | `MaxLogLineLength` | dword | 8192 | Maximum bytes per service output line before truncation. | [Service output and logging](~peios/services-and-jobs/output-and-logging) |
 | `MaxLogBufferPerService` | dword | 65536 | Maximum bytes buffered per service pipe before back-pressure. | [Service output and logging](~peios/services-and-jobs/output-and-logging) |
 | `LogReadBytesPerEvent` | dword | 16384 | Bytes drained from a service's output pipe per readable event. Larger favours throughput on chatty services, smaller favours fairness between them. | [Service output and logging](~peios/services-and-jobs/output-and-logging) |

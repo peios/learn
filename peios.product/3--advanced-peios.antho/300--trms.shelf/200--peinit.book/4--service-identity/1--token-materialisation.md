@@ -33,7 +33,7 @@ and then a health check materialises three tokens.
 | `ExecStartPre` / `ExecStartPost` | `HookIdentity` if set, otherwise `Identity` |
 | Health checks | `Identity`, always |
 | `ExecReload` external command | `Identity`, always |
-| Ad-hoc jobs | The token JFS captured from the submitter |
+| Submitted jobs | The prepared primary token: the submitter's own, or the token the kernel attached to the submission (§8.5) |
 
 Health checks and reload commands deliberately do not honour
 `HookIdentity`. A health check reports on the service's own health and

@@ -31,6 +31,11 @@ notification channel about itself. A service does not connect to the
 control channel in that capacity — a program that does both is acting in
 two roles.
 
+**A job** the manager started on a submitter's behalf (§7) speaks the
+notification channel exactly as a service does, and is observed and
+stopped from the control channel by the job commands of §4.14. The
+channel by which it is submitted is §7's.
+
 Requirements are stated against the role, not the program.
 
 ## What this chapter covers
@@ -62,3 +67,7 @@ Requirements are stated against the role, not the program.
 - **Kernel interfaces.** Establishing a peer's identity and evaluating
   an access decision are kernel operations, specified in PSPK and in
   the kernel's own reference manual.
+- **Submitting a job.** The channel by which a process asks the manager
+  to run a program under supervision, the identity such a job runs as,
+  and the commands its submitter issues about it are §7. This chapter
+  covers only what a control-channel client sees of such a job.

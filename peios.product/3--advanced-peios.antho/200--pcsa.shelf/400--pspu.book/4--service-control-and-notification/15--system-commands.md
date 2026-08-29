@@ -77,11 +77,14 @@ takes effect the next time that service starts.
 ## During shutdown
 
 Once the manager is shutting down, it MUST reject every command except
-`status`, `list` and `operation-status` with `INVALID_STATE`.
+`status`, `list`, `operation-status`, `job-status`, `job-list` and
+`job-stop` with `INVALID_STATE`.
 
-Those three are permitted because they change nothing and because a
+The first five are permitted because they change nothing and because a
 client watching a shutdown proceed has a legitimate reason to keep
-looking. Everything else — including a second `shutdown` — is refused:
+looking; `job-stop` because a job the shutdown will reach eventually
+may be one a client has reason to end now. Everything else — including
+a second `shutdown` — is refused:
 the manager has committed to a course of action and a command that
 would alter it arrives too late to be honoured consistently.
 

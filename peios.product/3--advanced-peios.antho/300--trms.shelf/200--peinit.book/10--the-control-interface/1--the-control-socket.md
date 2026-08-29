@@ -7,7 +7,9 @@ peinit serves every runtime command on a Unix stream socket at
 `/run/services/peinit/control.sock`, created during Phase 1
 infrastructure setup and existing for the lifetime of the system. Its
 wire protocol is specified in PSPU §4; this chapter is how peinit
-implements its side.
+implements its side. A second socket beside it, the jobs socket, is the
+door for submitting jobs rather than administering services; it is
+§10.7.
 
 ## Creation and protection
 
@@ -21,25 +23,18 @@ socket, or on anything else it creates. Under KACS, mode bits are not
 what governs access — a Security Descriptor is — so setting them would
 be inert.
 
-What governs access is inheritance. `/run` is a tmpfs peinit mounts
-itself in Phase 1, and a fresh tmpfs carries no descriptor at all, which
-under `DENY_MISSING` would leave every inode on it unreachable to
-everything. So peinit stamps the mount root with an inheritable
-descriptor as soon as it mounts it (§2.3):
+What governs access is the descriptor on the socket inode, which the
+kernel checks at `connect()` before any peer identity is established.
+peinit creates `/run/services/peinit/` and stamps the control socket
+explicitly, after binding and before anything can connect:
 
 ```
-O:SY G:SY D:(A;OICI;GA;;;SY)
+O:SYG:SYD:(A;;GA;;;SY)(A;;GA;;;BA)
 ```
 
-Every inode created underneath inherits from it, the two sockets
-included. The parent directory `/run/services/peinit/` is created
-plainly, with no descriptor of its own, so it inherits too.
-
-The effect is that both sockets are reachable by SYSTEM and by nothing
-else. The single inheritable entry grants `GENERIC_ALL` to `S-1-5-18`
-and names no other principal, and connecting to a pathname socket is
-checked against the socket inode's descriptor before any peer identity
-is established.
+The notification socket inherits the `/run` seed of §2.3, which grants
+the same two principals. The jobs socket carries a broader descriptor
+of its own, because reaching it is a different permission (§10.7).
 
 ## Connections
 
@@ -57,6 +52,13 @@ request is read and without a response — there is no error code for it,
 because there is no protocol state in which to deliver one. A peer whose
 token cannot be obtained is closed the same way.
 
+The jobs socket has its own three, under `Machine\System\Init\`:
+`MaxJobsConnections` (64), `MaxJobMessageSize` (65536) and
+`JobsConnectionTimeout` (30), plus a fourth bound that is the
+submitter's rather than the connection's, `MaxJobsPerSubmitter` (64).
+All four are read at boot and on reload-config, and are listed with the
+other operational keys in the registry key reference.
+
 ## The peer token
 
 The token is read **once**, when the connection is accepted, through
@@ -73,10 +75,12 @@ is still evaluated against the identity it connected with.
 ## Idle and waiting
 
 A connection is idle only when it has nothing in flight. One blocked on
-a `wait=true` operation, or with output still buffered, is never idle
-and is never closed by `ConnectionTimeout` — it stays open until the
-operation resolves, bounded by the operation's own timeout rather than
-the connection's.
+a `wait=true` operation, on a `job-stop` with `wait`, or with output
+still buffered, is never idle and is never closed by
+`ConnectionTimeout` — it stays open until the operation or job
+resolves, bounded by the operation's own timeout rather than the
+connection's. A job wait has no timeout of its own; it is bounded by
+the job.
 
 peinit handles one frame per readiness turn, and reads no further frames
 from a connection while a wait is pending on it. Pipelined requests are

@@ -33,6 +33,7 @@ administrator through the same surface that sets it.
 | First returned descriptor | 3 | §4.20 |
 | Descriptor store maximum | Per service; 0 disables | §4.20 |
 | Timeout extension cap | 4 × the phase's base timeout | §4.19 |
+| Progress event rate | At most one per sender per second | §4.19 |
 
 ## Composing the two channels
 

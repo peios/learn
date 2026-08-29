@@ -92,6 +92,6 @@ privileged one.
 
 The exception is a descriptor opened through the Peios native file
 interface, which returns without close-on-exec set. peinit repairs that
-where it opens input devices for the power button; the JFS device
-descriptor and each service's own cgroup directory descriptor are not
-repaired, and are inherited across exec.
+where it opens input devices for the power button; each service's own
+cgroup directory descriptor is not repaired, and is inherited across
+exec.
