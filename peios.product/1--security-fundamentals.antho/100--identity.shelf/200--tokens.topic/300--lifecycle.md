@@ -61,7 +61,7 @@ What does not survive fork is the parent's impersonation. A thread that forks wh
 
 **Thread clone** (`CLONE_THREAD`) is different: the new thread is part of the same process, so it shares the same primary token. Privilege or group adjustments made by any thread are visible to all of them immediately.
 
-**Exec** keeps the primary token. The new binary runs as the same identity. One subtle exception: if the token's `mandatory_policy` has `NEW_PROCESS_MIN` set and the executable carries a lower integrity label than the token, the kernel creates a copy of the token with integrity lowered to match, replaces the primary with that copy, and drops the original reference. This is the mechanism that prevents Medium-integrity code from running at Medium when its image is labelled Low.
+**Exec** keeps the primary token. The new binary runs as the same identity. One subtle exception: if the token's `mandatory_policy` has `NEW_PROCESS_MIN` set and the executable carries an explicit integrity label lower than the token's (an unlabelled executable changes nothing), the kernel creates a copy of the token with integrity lowered to match, replaces the primary with that copy, and drops the original reference. This is the mechanism that prevents Medium-integrity code from running at Medium when its image is labelled Low.
 
 Impersonation is **always reverted at exec**. A thread that execs while impersonating has its impersonation token released before the new program runs. This is enforced — the new binary cannot inherit an impersonation it did not establish.
 

@@ -90,7 +90,7 @@ A separate but related field: every token carries a `mandatory_policy` bitmask. 
 | Flag | Value | Effect |
 |---|---|---|
 | `NO_WRITE_UP` | 0x01 | The MIC rule is active for this token's accesses. |
-| `NEW_PROCESS_MIN` | 0x02 | At exec, if the executable's integrity label is lower than the token's, the token's integrity is lowered to match. |
+| `NEW_PROCESS_MIN` | 0x02 | At exec, if the executable carries an explicit integrity label lower than the token's, the token's integrity is lowered to match. An unlabelled executable leaves it unchanged. |
 
 Both flags are set at token creation and **cannot be changed at runtime**. A process cannot relax its own MIC policy — the kernel rejects any AdjustPrivileges-style call that would. The reasoning: a Medium-integrity process should not be able to silently turn off its own write-up restriction.
 
@@ -104,7 +104,7 @@ For a logon token that is **local policy** — a per-principal record in the reg
 
 For service tokens, peinit decides. For the SYSTEM token, the kernel does.
 
-`NEW_PROCESS_MIN` is set on tokens that want exec to enforce integrity boundaries. When set, exec of a binary marked at a lower level produces a token whose integrity is lowered. This is what prevents a High-integrity shell from launching a Medium-labelled binary as High-integrity — the resulting process is Medium, regardless of who launched it.
+`NEW_PROCESS_MIN` is set on tokens that want exec to enforce integrity boundaries. When set, exec of a binary *marked* at a lower level produces a token whose integrity is lowered. This is what prevents a High-integrity shell from launching a Medium-labelled binary as High-integrity — the resulting process is Medium, regardless of who launched it. A binary with no label at all is not "Medium" for this purpose: it inherits the launcher's level. The unlabelled-means-Medium rule above is about *objects being accessed*, and applying it to executables would demote every process on an image that labels nothing, the TCB included.
 
 ## What MIC does not constrain
 

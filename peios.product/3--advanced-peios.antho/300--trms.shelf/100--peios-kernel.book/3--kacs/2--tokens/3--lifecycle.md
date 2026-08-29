@@ -40,11 +40,17 @@ execs the service binary.
 
 When a token's `mandatory_policy` includes `NEW_PROCESS_MIN`, the
 kernel replaces the primary token at exec time if the executable
-carries a lower integrity label.
+carries an explicit, lower integrity label.
 
 1. The executable's integrity label is read from the mandatory label
-   ACE in its descriptor's SACL. A file with no label is treated as
-   Medium.
+   ACE in its descriptor's SACL. A file with no label — no SACL, or no
+   non-inherit-only mandatory label ACE — is **unlabelled**, and the
+   token survives exec unchanged. This is deliberately not the
+   access-check rule, under which an unlabelled *object* counts as
+   Medium (§3.8.3): an image that labels nothing would otherwise demote
+   every process on it, PID 1 first, to Medium — which is exactly what
+   happened before PEI-530, leaving the TCB below every High-integrity
+   user and unable to convey their identity.
 2. If the file's level is lower than the token's, a new token is
    created following DuplicateToken semantics — new `token_id`, new
    `token_guid`, `modified_id` initialised to the new `token_id`,
@@ -56,8 +62,9 @@ carries a lower integrity label.
    nothing happens and the token survives exec unchanged.
 
 The mechanism only ever lowers integrity, so a child's level is always
-at most its parent's. The flag itself is immutable on the token, which
-is what prevents a process from opting out before exec.
+at most its parent's, and only to a level the image itself claims. The
+flag itself is immutable on the token, which is what prevents a process
+from opting out before exec.
 
 ## Self-installing a primary token
 
