@@ -4,6 +4,7 @@ type: concept
 description: How a Peios machine gets onto a network — netd reconciles links, addresses, routes and DHCP to what the registry says; nothing else configures the network.
 related:
   - peios/networking/configuring-profiles
+  - peios/networking/name-resolution
   - peios/networking/the-net-command
   - peios/registry-concepts/overview
   - peios/services-and-jobs/overview
@@ -53,7 +54,7 @@ When a lease expires and cannot be renewed the address is dropped by default: th
 
 ## What netd does not do
 
-- **Names.** netd never answers a DNS query. It publishes the servers it learns; until the resolver service exists it renders them into `/etc/resolv.conf`, and `Machine\System\Network\Resolver\Hosts` into `/etc/hosts`. Both files are generated and overwritten.
+- **Names.** netd never answers a DNS query. It tells resolvd, live, what each interface contributes — servers, search domains, addresses — and resolvd routes every name to one interface's servers. Nothing is written to `/etc/resolv.conf` or `/etc/hosts`; see [name resolution](~peios/networking/name-resolution).
 - **Firewalling.** Traffic policy is a separate component.
 - **Port ownership.** Who may bind a port is a kernel decision under `Machine\System\Network\TcpIp\PortReservations`.
 - **WiFi association.** A wireless supplicant brings the link up; netd treats the result like any other interface.

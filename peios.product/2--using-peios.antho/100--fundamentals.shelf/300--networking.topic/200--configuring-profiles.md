@@ -63,6 +63,25 @@ The default profile is DHCP with everything from the lease. To keep DHCP but pin
 ```
 reg set Machine/System/Network/Profiles/ethernet/DNS UseFromDHCP dword:0
 reg set Machine/System/Network/Profiles/ethernet/DNS Servers multi:1.1.1.1,9.9.9.9
+```
+
+Two more `DNS` values decide *which* names an interface's servers are
+asked for, which matters the moment a second interface appears —
+typically a VPN:
+
+```
+reg set Machine/System/Network/Profiles/vpn/DNS SearchDomains multi:corp.example
+reg set Machine/System/Network/Profiles/vpn/DNS DNSDefaultRoute dword:1
+reg set Machine/System/Network/Profiles/vpn/DNS DNSExclusive dword:1
+```
+
+`SearchDomains` sends names under `corp.example` to this interface's
+servers. `DNSDefaultRoute` sends *every other* name there too (unset, an
+interface claims that only when it carries the default route).
+`DNSExclusive` goes further: while this interface is up, no other
+interface's servers are consulted for anything — the "ultimate
+protection" a VPN wants, and the setting that stops a hostile LAN from
+advertising the VPN's own domain. See [name resolution](~peios/networking/name-resolution).
 reg set Machine/System/Network/Profiles/ethernet/Address OnLeaseExpiry Keep
 ```
 

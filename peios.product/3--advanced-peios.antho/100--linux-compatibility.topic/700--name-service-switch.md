@@ -4,6 +4,7 @@ type: concept
 description: How getpwnam and friends reach Peios principals — no nsswitch.conf entry, no /etc/passwd, no PAM, and nothing resolves before authd is running.
 related:
   - peios/linux-compatibility/overview
+  - peios/networking/name-resolution
   - peios/linux-compatibility/credential-projection
   - peios/linux-compatibility/setuid-and-uid0
   - peios/managing-local-principals/resolving-names
@@ -26,7 +27,7 @@ That is not tidiness. **A second search order the authority cannot see is a seco
 
 It also closes an extension point Peios does not want. Naming a module in `nsswitch.conf` injects a shared object into **every address space on the system**. That is the in-process-plugin pattern this design rejects everywhere else it appears. Adding a source of identity to a Peios machine means [writing a principal source](~peios/managing-local-principals/overview) — a separate process the authority confines, which cannot mint.
 
-`hosts`, `services`, `networks` and the rest are untouched. They are not identity, and coupling them to this would be a decision about DNS taken for reasons about principals.
+`hosts` is fixed the same way, for the same reason, to a different module: `libnss_peios_net.so.2`, which forwards to `resolvd`, the stub resolver. A `files dns` line would be a second resolver with none of resolvd's routing — and a second answer to *which address is `git.corp`*. There is no `/etc/hosts`; static names live in the registry and resolvd answers them at every door. See [name resolution](~peios/networking/name-resolution). `services`, `networks` and the rest are untouched.
 
 ## There is no `/etc/passwd`
 
