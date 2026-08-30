@@ -55,6 +55,7 @@ referenced.
 | Key | Type | Purpose | Defined in |
 |---|---|---|---|
 | `Machine\System\eventd\LogSocketPath` | string | Where peinit forwards service output. | §11.4 |
+| `Machine\System\eventd\MaxLogDatagramBytes` | dword | Maximum eventd log datagram size peinit may produce; default 262144, valid range 4096–1048576. Applied at boot and on reload. | §11.4 |
 
 ## Watches
 

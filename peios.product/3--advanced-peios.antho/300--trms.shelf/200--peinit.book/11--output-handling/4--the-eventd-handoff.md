@@ -19,7 +19,13 @@ From there peinit is a relay: read from the pipes, tag each line,
 forward. Audit events continue to flow as KMES events, entirely
 separately.
 
-## The record
+## Datagram framing and the record
+
+peinit sends a msgpack array of one or more records in each datagram.
+It takes the largest ordered prefix that fits
+`Machine\System\eventd\MaxLogDatagramBytes`; the default ceiling is
+262144 bytes. A successful datagram advances the replay buffer by the
+whole array, while a failed datagram advances it by nothing.
 
 Each record is a msgpack map:
 
@@ -41,17 +47,22 @@ cannot drain it fast enough its `SO_RCVBUF` fills and the kernel drops
 further datagrams silently — log ingestion deliberately exerts no
 backpressure on senders.
 
-peinit therefore keeps no outbound write buffer. It sends each record as
-a datagram and accepts that some may be dropped. It never blocks on a
-send, and never lets pending records grow without bound.
+peinit therefore keeps no unbounded outbound write buffer. It sends
+bounded arrays of records and accepts that some datagrams may be
+dropped. It never blocks on a send, and never lets pending records grow
+without bound.
 
-Each send opens a datagram socket, sends, and closes it. Records go one
-at a time; there is no batching of several records into one datagram.
+peinit creates one non-blocking datagram socket when forwarding begins,
+connects it to eventd, and reuses both that socket and its encoding
+allocation. It does not create a socket or allocate a fresh output
+buffer per record. When eventd becomes inactive, the connection is
+discarded so the next Active transition connects to the newly bound
+socket.
 
 A send that fails — the receive buffer full — takes peinit out of
-forwarding for the remainder of that turn: the failing record and the
-rest of its batch go back into the pre-eventd buffer. The end of the
-turn re-establishes forwarding by replaying them.
+forwarding for the remainder of that turn: every record in the failed
+datagram and every later record remain in the pre-eventd buffer, in
+order. The end of the turn re-establishes forwarding by replaying them.
 
 ## When eventd goes away
 

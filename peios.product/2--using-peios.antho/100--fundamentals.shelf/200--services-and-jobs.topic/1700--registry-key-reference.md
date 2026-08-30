@@ -175,6 +175,7 @@ Under `Machine\System\Init\`:
 | Key | Type | Purpose | See |
 |---|---|---|---|
 | `Machine\System\eventd\LogSocketPath` | string | Path of eventd's log datagram socket, where peinit forwards service output. | [Service output and logging](~peios/services-and-jobs/output-and-logging) |
+| `Machine\System\eventd\MaxLogDatagramBytes` | dword | Maximum log datagram size peinit sends and eventd accepts; default 262144, valid range 4096–1048576. | [Service output and logging](~peios/services-and-jobs/output-and-logging) |
 
 ## Where to start
 

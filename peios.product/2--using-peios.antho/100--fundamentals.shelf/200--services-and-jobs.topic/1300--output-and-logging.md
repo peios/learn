@@ -68,7 +68,7 @@ When eventd reaches Active, peinit switches from buffering to forwarding:
 3. It switches to real-time forwarding — new output goes out as it arrives.
 4. It clears the buffer.
 
-From then on peinit is a pipe relay: read a line, tag it, forward it as a datagram. The log socket is **non-blocking and loss-tolerant** — if eventd cannot drain it fast enough the kernel drops further datagrams silently, because log ingestion must never exert back-pressure on the whole system through PID 1. peinit keeps no unbounded outbound buffer and never blocks on a send to eventd.
+From then on peinit is a pipe relay: read lines, tag them, and forward the largest ordered batch that fits eventd's configured datagram ceiling. It keeps one connected socket and reuses its encoding buffer, so normal forwarding does not create a socket or output allocation for every line. The log socket is **non-blocking and loss-tolerant** — if eventd cannot drain it fast enough the kernel drops further datagrams silently, because log ingestion must never exert back-pressure on the whole system through PID 1. peinit keeps no unbounded outbound buffer and never blocks on a send to eventd.
 
 If eventd itself crashes after starting, peinit (which supervises it like any service) notices, **re-enables the pre-eventd buffer**, and repeats the handoff when eventd comes back. There is a log gap across the restart, bounded by the buffer size — but audit **events** are unaffected, because they were going to KMES the whole time and eventd resumes consuming them from the last persisted sequence.
 
