@@ -266,12 +266,12 @@ Fields of a single target:
 | `command` | string or array of strings | **yes** | The command. String form runs through a shell; array form is an argv executed directly. An empty array is rejected. |
 | `needs` | array of strings | no | Names of other targets in the same section that must run first. |
 | `clear_out` | bool | no | Wipe this target's output directory before running. Default `true`. |
-| `dependencies` | table | no | **Build targets only.** Build-time dependencies the target needs provisioned. See below. |
+| `dependencies` | table | no | **Build and test targets.** Dependencies the target needs provisioned in its root. Under `--env peipkg` the composed root holds *only* what is declared — a test stage that shells out needs `dash` (pekit runs `command` through `/usr/bin/sh`) and whatever else its script calls. See below. |
 | `sign` | table | no | **Build targets only.** Files in the target's output to sign after the command succeeds, by signature kind. See [`sign`](#target-sign) below. |
 
-Any other key in a target table is an `unknown target key` error. `dependencies`
-and `sign` are accepted only in `[build]` targets; using either in
-`test`/`install`/`clean` is an unknown key.
+Any other key in a target table is an `unknown target key` error. `sign` is
+accepted only in `[build]` targets, and `dependencies` in `[build]` and
+`[test]`; using either in `install`/`clean` is an unknown key.
 
 The `dependencies` table is keyed by **provider** (a selector), each mapping
 dependency names to version constraints:

@@ -46,7 +46,8 @@ licence texts:
 | `firmware-amd-platform` | AMD PSP/SEV, Platform Management Framework, XDNA NPU |
 | `firmware-intel-graphics` | Intel GPUs (i915, xe: GuC, HuC, DMC) |
 | `firmware-intel-platform` | Intel Bluetooth, sensor hub, IPU cameras, NPU, QAT, E800 NICs |
-| `firmware-intel-sound` | Intel audio DSP (AVS, catpt, Skylake SST) — see the SOF note below |
+| `firmware-intel-sound` | Intel audio DSP firmware for pre-2019 parts (AVS, catpt, Skylake SST) |
+| `firmware-intel-sof` | Intel Sound Open Firmware — the audio DSP firmware and topologies for Ice Lake and newer (from SOF's own release, not linux-firmware) |
 | `firmware-nvidia-graphics` | NVIDIA GPUs for nouveau/nova (GSP) |
 | `firmware-audio-codecs` | Cirrus, TI and Creative laptop codecs and amplifiers |
 | `firmware-nic` | Wired NICs: Chelsio, QLogic qed, Myricom, Tehuti, 3Com, legacy USB Ethernet |
@@ -55,8 +56,8 @@ licence texts:
 
 Which ones a machine needs is a question about its hardware, and the
 answer is usually two or three: an Intel laptop wants `firmware-iwlwifi`,
-`firmware-intel-graphics`, `firmware-intel-platform` (Bluetooth) and
-`firmware-audio-codecs`; an AMD one swaps the graphics and platform
+`firmware-intel-graphics`, `firmware-intel-platform` (Bluetooth),
+`firmware-intel-sof` (audio DSP) and `firmware-audio-codecs`; an AMD one swaps the graphics and platform
 packages. `dmesg | grep firmware` after boot names every file a driver asked
 for and did not get, and the file's directory (`intel/`, `amdgpu/`,
 `rtw89/`) maps onto the table.
@@ -113,7 +114,9 @@ no firmware. A driver that probes in the initramfs and cannot find its
 blob is re-probed once the real root is mounted and the device manager
 replays device events.
 
-**Intel Sound Open Firmware** — the audio DSP firmware most Intel laptops
-from 2019 on need — is not in linux-firmware at all. It is a separate
-upstream and will be a separate package; until then such machines have
-working Wi-Fi and graphics and silent speakers.
+**Intel Sound Open Firmware** is not in linux-firmware at all; it is a
+separate upstream (thesofproject's `sof-bin`), which is why it is its own
+package, `firmware-intel-sof`, rather than a family of the linux-firmware
+recipe. Only the Intel-signed images ship — the `community` builds signed
+with the public development key run only on Chromebooks and development
+boards whose DSPs accept that key.
