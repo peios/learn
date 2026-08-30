@@ -18,9 +18,10 @@ them.
 4. Every entry's owner name and group name MUST be the string `root`.
 5. Entries MUST NOT carry extended attributes. Security descriptors are
    applied at file-creation time (§5.20), never through tar attributes;
-   other install-time attributes are applied through side-effect
-   declarations (§5.24) or by higher-level mechanisms outside this
-   specification.
+   a binary signature travels as a detached-signature payload entry
+   (§5.16), from which the consumer derives the attribute; other
+   install-time attributes are applied through side-effect declarations
+   (§5.24) or by higher-level mechanisms outside this specification.
 6. Entry permission bits MUST be `0777` for every entry, with the setuid
    and setgid bits cleared (§5.16).
 7. PAX extended header records, when present, MUST appear in a fixed

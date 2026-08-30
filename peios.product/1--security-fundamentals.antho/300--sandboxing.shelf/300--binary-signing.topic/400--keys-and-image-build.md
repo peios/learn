@@ -1,7 +1,7 @@
 ---
 title: Keys and image build
 type: concept
-description: The public-key catalog compiled into the kernel, the TCB private key held only by image builders, and the peiso signing flow.
+description: The public-key catalog compiled into the kernel, the TCB private key held only by the release infrastructure, and how a signature gets from pekit onto the filesystem.
 related:
   - peios/binary-signing/overview
   - peios/binary-signing/signature-format
@@ -11,7 +11,7 @@ related:
 
 A signed binary's trust level is whatever the **key that signed it** says it should be. The mapping from "this key" to "this PIP level" is the kernel's public-key catalog. The catalog is compiled into the kernel image; there is no way to add keys to a running system, and there is no way to remove them either short of replacing the kernel.
 
-This page covers the catalog's structure, who holds the private keys, how `peiso` (the image builder) uses them, the constraints on key handling, and the v0.20 limitation of having only one key.
+This page covers the catalog's structure, who holds the private keys, how `pekit` uses them and how `peipkg` carries the result onto disk, the constraints on key handling, and the v0.20 limitation of having only one key.
 
 ## The catalog
 
@@ -53,7 +53,7 @@ Future Peios versions will add keys for the other tiers. App-level signing will 
 
 ## The TCB private key
 
-The TCB **private key** is what `peiso` uses to sign TCB binaries at image build. It is the most security-sensitive artefact in the entire system: anyone with the TCB private key can sign a binary that the kernel will then trust at the highest level. There is no revocation, no per-binary blocklist, no way to invalidate a signed binary short of removing it.
+The TCB **private key** is what `pekit` uses to sign TCB binaries and firmware when their packages are built. It is the most security-sensitive artefact in the entire system: anyone with the TCB private key can sign a binary that the kernel will then trust at the highest level. There is no revocation, no per-binary blocklist, no way to invalidate a signed binary short of removing it.
 
 > [!CAUTION]
 > **The TCB private key must never be present on any running Peios system.** It is for image build, and only image build. A running system has no need for the private key — the kernel verifies with the public key only.
@@ -67,24 +67,20 @@ The standard pattern: build infrastructure with the private key produces image a
 
 A system whose private key has been compromised loses the security guarantees of PIP. There is no way to retroactively recover from such a compromise; the only fix is to release a new image with a new public key and re-sign all TCB binaries with the new private key, then deploy. Existing systems running the old image continue to trust the old key.
 
-## peiso and the build flow
+## pekit, peipkg and the build flow
 
-`peiso` is the Peios image builder. Its job is to assemble a complete bootable Peios image — kernel, root filesystem, signed binaries, build artefacts. Signing is one of its tasks.
+Signing happens when a package is built, not when an image is assembled. `pekit`, the package builder, holds the TCB private key on the release infrastructure and signs as part of packing; `peipkg` and `peipkg-compose` (which `peiso` drives to lay down the image's root) carry the result onto the filesystem. No step in between needs the private key.
 
-At build time, peiso:
+At package build, for each file a recipe's `sign.pip` table names, pekit:
 
-1. Compiles or assembles the kernel image. The public-key catalog is built into this image; peiso embeds the kernel-build's public keys (or asserts that they are already embedded).
-2. Collects the binaries that should be signed at TCB level. The full list is defined per release — typically peinit, authd, loregd, lpsd, eventd.
-3. For each binary, peiso:
-   - Computes the appropriate content hash (ELF section zeroed for ELF, full file for non-ELF — see [Signature format](~peios/binary-signing/signature-format)).
-   - Signs the hash with the TCB private key, producing a 3309-byte ML-DSA-65 signature.
-   - Constructs the 3310-byte blob (version byte + signature).
-   - For ELF binaries: reserves the `.peios.sig` section (3310 zero bytes) *before* hashing, then writes the blob into the reserved section after signing. Because the section is zeroed during hashing per the ELF rule, the hash the kernel computes at verification time matches the one that was signed.
-   - For non-ELF binaries: writes the blob as a detached `.sig` file next to the binary. At image-assembly time, peiso reads the detached file and stamps the `security.peios.sig` xattr on the binary in the image's filesystem.
-4. The signed binaries are placed in the image. The detached `.sig` files are discarded.
-5. The image is finalised and emitted as an installable artefact.
+1. Computes the content hash — ELF section zeroed for an ELF file, the entire file for anything else (see [Signature format](~peios/binary-signing/signature-format)).
+2. Signs the hash with the TCB private key and builds the 3310-byte blob (version byte + ML-DSA-65 signature).
+3. Places the blob. For an ELF file it reserves the `.peios.sig` section (3310 zero bytes) *before* hashing and writes the blob into it afterwards, so the hash the kernel computes matches the one signed. For a non-ELF file — a firmware blob, a data file — it writes the blob as a **detached signature**, `<file>.peios.sig`, next to the file. The file itself is untouched.
+4. Packs both into the `.peipkg`. The detached signature is an ordinary payload entry with a reserved suffix; the package format forbids extended attributes on entries, so this is how the xattr placement travels.
 
-At runtime — when the image boots — the kernel reads its own embedded public key, the TCB binaries' embedded sections (or xattrs) provide their signatures, and verification proceeds. No private key is involved at runtime.
+At install — whether `peipkg install` on a running system or `peipkg-compose` building an image root — for each detached signature the installer creates the target file, sets `security.peios.sig` on it to the blob's bytes, and does not write the detached entry to disk at all. The signature is checked at pack time for shape (right length, right version byte, a target that exists and is not ELF); the installer never needs a key.
+
+When the image boots, the kernel's embedded key table verifies binaries from their sections and firmware and other non-ELF content from their xattrs. No private key is involved at runtime.
 
 ## Why one key in v0.20
 

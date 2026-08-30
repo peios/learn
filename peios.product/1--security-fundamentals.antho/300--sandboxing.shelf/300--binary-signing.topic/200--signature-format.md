@@ -39,13 +39,13 @@ A signature blob can live in three places, depending on the file:
 |---|---|
 | ELF section `.peios.sig` | ELF binaries. The signature lives inside the file. |
 | `security.peios.sig` xattr | Non-ELF binaries. Also a fallback for ELF binaries without a `.peios.sig` section. |
-| Detached `.sig` file | Used during image build for non-ELF executables. The image builder reads the detached file and stamps the xattr. |
+| Detached `<file>.peios.sig` entry | Inside a package, for non-ELF files. The installer reads it and stamps the xattr; it never lands on disk itself. |
 
 The order matters. For ELF binaries the kernel looks for the `.peios.sig` section first; if found, the xattr is **not** consulted as a fallback. The ELF section is the canonical location.
 
 For non-ELF binaries — scripts (which are themselves not signed; see [Verification and pinning](~peios/binary-signing/verification-and-pinning)), data files used by tools, anything that does not begin with the ELF magic — only the xattr is consulted.
 
-Detached `.sig` files are a transient form. They exist on the file system being assembled by `peiso` (the image builder) so that the builder can stamp the xattr from them. By the time the image boots, detached files are not used; the xattrs are what the kernel reads.
+Detached signatures are a transport form. A package cannot carry extended attributes, so a non-ELF file's blob rides along as a payload entry named after the file with `.peios.sig` appended; `peipkg` (and `peipkg-compose`, when an image root is built) sets the xattr from it as the file is created and does not write the entry itself. By the time anything runs, detached entries are gone; the xattrs are what the kernel reads.
 
 ### The ELF `.peios.sig` section
 
@@ -74,11 +74,13 @@ The `security.*` namespace requires privileged access to set — ordinary writes
 
 Loss of the xattr (a copy without xattr preservation, a backup-restore through a tool that ignores `security.*`) results in the file being treated as unsigned. The signature blob can be re-applied if the corresponding `.sig` file is preserved, but the xattr layer is not the most robust place for it. ELF binaries get more durability by virtue of their structural signature; non-ELF binaries depend on xattr-preserving operations.
 
-### Detached `.sig` files
+### Detached `<file>.peios.sig` entries
 
-During image build, peiso accepts detached signature files alongside the executables they cover. The convention is `<binary>.sig` — a 3310-byte file containing exactly the blob that should be stamped as the xattr.
+A package carries a non-ELF file's signature as a payload entry with the file's own path plus `.peios.sig` — for `usr/lib/firmware/iwlwifi-so-a0-gf-a0-89.ucode.zst`, the entry `usr/lib/firmware/iwlwifi-so-a0-gf-a0-89.ucode.zst.peios.sig`, holding exactly the 3310-byte blob. The suffix is the ELF section's name on purpose: pekit produces one thing, and only where it lands differs.
 
-The detached form has no role in a running system. It exists only as a packaging convention so that the build system can keep signatures next to their files without modifying the files themselves. peiso reads the `.sig` files, validates them, stamps the xattrs, and discards the detached forms.
+At pack time the entry is checked for shape — 3310 bytes, version byte `0x01`, a target that exists in the same package and is not ELF (an ELF file's signature belongs in its section, and a second carrier would be ignored). At install, peipkg creates the target, sets `security.peios.sig` on it before the file becomes visible at its path, and skips the entry. The entry is not recorded as an installed file; removing the target removes the signature with it.
+
+The detached form has no role in a running system and does not need one: a running system has no signing key, and a signature that travelled inside a package is already where the kernel looks.
 
 ## The content hash
 

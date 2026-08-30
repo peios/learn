@@ -16,8 +16,9 @@ its own trust tier, MUST be able to produce an acceptable signature
 from this chapter alone.
 
 The **verifier** is the Peios kernel. It carries public keys, checks
-signatures at execution and at library load, and derives a process's
-Process Integrity Protection identity from whichever key verified. The
+signatures at execution, at library load and when it reads a file for
+its own use (device firmware; §3.4), and derives a process's Process
+Integrity Protection identity from whichever key verified. The
 verifier role is not publicly implementable and is not specified here;
 this chapter constrains it only where the signer needs guarantees
 about what it will do.

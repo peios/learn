@@ -61,6 +61,15 @@ size MUST be treated as unsigned.
 This is the only location available to non-ELF files, and it is
 available to ELF files that carry no `.peios.sig` section header.
 
+An extended attribute is a property of an inode, not of the file's
+bytes, so a signer cannot ship one: it produces the blob and something
+with the right to set `security.*` attributes on the destination
+filesystem applies it when the file is created. On Peios that is the
+package consumer, from a detached-signature payload entry named
+`<file>.peios.sig` (PSPU §5.16). A signer that emits the blob under
+that name beside the file it signs, and does not touch the file, has
+done its whole job for this placement.
+
 ### Lookup order and commitment
 
 A verifier MUST determine the storage location as follows.

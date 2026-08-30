@@ -12,7 +12,8 @@ installing anything from a package:
 3. Verify the inline signature (§5.30). If verification fails, the
    package's authenticity is unproven; abort.
 4. Decompress and parse the tar archive, enforcing the layout rules of
-   §5.12 and the determinism rules of §5.11.
+   §5.12, the determinism rules of §5.11 and the detached-signature
+   rules of §5.16.
 5. Read `.peipkg/manifest.json` and verify it against §5.18.
 6. Read `.peipkg/files.json` and verify it against §5.25, including the
    two-way coverage check and the `size_installed` equality of §5.18.

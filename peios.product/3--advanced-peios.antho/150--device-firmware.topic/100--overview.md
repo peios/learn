@@ -90,13 +90,32 @@ that.
 ## Trust
 
 Firmware runs on a device that can DMA into host memory, so a tampered
-blob is a compromise of the whole system. In this release Peios trusts the
-firmware files on disk implicitly: binaries and kernel modules carry
-ML-DSA-65 signatures the kernel verifies, firmware does not yet. The
-packages themselves are signed like every other package, and `/usr` is
-read-only, so what is on disk is what the repository published. Signature
-verification at load time is planned; until then, treat `/usr/lib/firmware`
-as part of the trusted base and do not put files there by hand.
+blob is a compromise of the whole system — at least as bad as an unsigned
+binary running with kernel privilege, and it happens without an exec for
+the kernel to intercept. Peios treats firmware as part of the trusted
+computing base and signs it the same way it signs TCB binaries.
+
+Every blob in every `firmware-<family>` package carries an ML-DSA-65
+signature made with the TCB key when the package is built. Blobs are not
+ELF, so the signature travels as a `<blob>.peios.sig` entry beside the
+blob in the package, and `peipkg` turns it into the file's
+`security.peios.sig` extended attribute as it installs the blob (see
+[Signature format](~peios/binary-signing/signature-format)). The kernel
+verifies that attribute every time a driver asks for firmware, on the
+exact bytes it is about to hand to the device, and refuses a file that is
+unsigned, altered, or signed with a key below the TCB tier. The signature
+covers the compressed `.zst` bytes as they sit on disk, so verification
+happens before decompression.
+
+In 2026.8 the check runs in **log** mode: a file that would be refused is
+reported to the kernel log and still loaded, so a system can be brought
+up on a mixed firmware set and the gaps found. Refusal becomes the
+default in the release after the whole farm has shipped signed; until
+then `kacs_fwsig=enforce` on the kernel command line turns it on for a
+boot, and `kacs_fwsig=log` turns it back off. Either
+way, `/usr/lib/firmware` is not a place to put files by hand: an unsigned
+blob dropped there, or one placed on a path added to the loader's search
+list, is exactly what the check exists to catch.
 
 ## What is not shipped
 
