@@ -73,7 +73,10 @@ of hives on the left, a key's values in the middle, and an inspector
 that shows where a value came from — the layer that won, and the
 sequence it won at — before you change it. Edits are guarded: if a
 value changes under you between reading and saving, the save is
-refused and the app says so instead of overwriting blind. Like every
+refused and the app says so instead of overwriting blind. The manual
+is built in: a Docs tab shows what `regman` knows about the selected
+key, and a documented value carries its card — type, default, whether
+a change applies live — right beside the editor. Like every
 Atrium app it acts with exactly your authority — it runs `reg` as
 you — so a key your logon may not open shows as denied, not as empty.
 
