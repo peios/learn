@@ -78,7 +78,7 @@ The recovery shell additionally receives `TERM=linux` and `HOME=/`.
 
 | Where | SDDL |
 |---|---|
-| `/dev/shm`, `/run`, `/sys/fs/cgroup` after mounting | `O:SYG:SYD:(A;OICI;GA;;;SY)(A;OICI;GA;;;BA)(A;OICI;GRGX;;;WD)` |
+| `/dev/shm`, `/run`, `/sys/fs/cgroup` after mounting | `O:SYG:SYD:(A;OICI;GA;;;SY)(A;OICI;GA;;;BA)(A;CI;GRGX;;;WD)` |
 | `/dev/null`, `/dev/zero`, `/dev/full`, `/dev/random`, `/dev/urandom`, `/dev/tty`, `/dev/ptmx` (DACL only) | `D:(A;;GA;;;SY)(A;;GA;;;BA)(A;;FRFW;;;WD)` |
 | A provisioned path with no `Security` | `O:SYG:SYD:(A;;GA;;;SY)(A;;GA;;;BA)(A;;FR;;;BU)` |
 | A service's `/run/<name>` runtime directory | `O:SYG:SYD:(A;;GA;;;SY)(A;;GA;;;BA)(A;;GA;;;<service SID>)` |

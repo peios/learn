@@ -76,11 +76,11 @@ Three of the four filesystems peinit mounts are fresh and empty:
 Security Descriptor is denied to every caller, and there is nothing on a
 newly mounted tmpfs for a new inode to inherit from — so peinit stamps
 the mount root with a descriptor that grants SYSTEM and Administrators
-full control, grants Everyone read and execute, and is marked inheritable
-by both containers and objects:
+full control, inheritable by both containers and objects, and grants
+Everyone read and execute, inheritable by containers only:
 
 ```
-O:SY G:SY D:(A;OICI;GA;;;SY)(A;OICI;GA;;;BA)(A;OICI;GRGX;;;WD)
+O:SY G:SY D:(A;OICI;GA;;;SY)(A;OICI;GA;;;BA)(A;CI;GRGX;;;WD)
 ```
 
 Everything created underneath — the notify socket, per-service runtime
@@ -88,10 +88,11 @@ directories, the cgroup hierarchy — inherits from it; the two sockets
 that need a different population are stamped explicitly in step 9. This is why peinit never sets mode bits on the sockets it creates;
 under KACS they would mean nothing, and the descriptor is the thing that
 does the work. It is the same descriptor the initramfs seeds onto the
-root filesystem, and the two are kept identical on purpose: this one
-inheritable ACL is, in practice, the access policy of everything under
-these mounts, so an ACE missing here is missing from every per-service
-directory under `/run/services`.
+root filesystem but for the inheritance flags on that last ACE, and the
+two are kept in step on purpose: this one inheritable ACL is, in
+practice, the access policy of everything under these mounts, so an ACE
+missing here is missing from every per-service directory under
+`/run/services`.
 
 The Everyone ACE grants execute as well as read because on Peios execute
 *is* traverse — `FILE_TRAVERSE` and `FILE_EXECUTE` are the same bit — and
@@ -101,6 +102,16 @@ than SYSTEM cannot otherwise reach its own runtime directory. SYSTEM and
 Administrators keep `GenericAll` rather than read/write/execute because
 `GenericAll` carries `WRITE_DAC`, `WRITE_OWNER` and `DELETE`, and peinit
 re-stamps descriptors throughout `/run`.
+
+That ACE is inheritable by containers only, which is the one place this
+descriptor differs from the root filesystem's. What a service needs here
+is to walk to its own directory, and container inheritance gives it that
+by itself. Object inheritance would additionally put Everyone-read on
+every *file* anything creates beneath these mounts — a service's runtime
+state, and shared memory segments, readable by any principal through
+inheritance alone. The root filesystem needs object inheritance because a
+service has to read and execute the binaries beneath it; nothing under
+these three mounts is a binary.
 
 This descriptor is not the one prelude's `seed-sd` writes by default.
 That one is narrower, and stays narrower: it also stamps `/dev`, where
