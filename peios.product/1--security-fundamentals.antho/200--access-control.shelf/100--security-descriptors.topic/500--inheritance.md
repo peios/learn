@@ -74,6 +74,26 @@ Each inherited ACE goes through a small transformation as it is copied:
 
 The CREATOR substitution is the mechanism that makes inheritable ACEs portable. A directory's DACL containing `CI | OI ACCESS_ALLOWED CREATOR_OWNER GENERIC_ALL` means "every file or subdirectory created under here grants full access to whoever owns it". The owner of each child is different; the substitution at creation time fills in the right SID for each one.
 
+### A CREATOR ACE inherited by a directory produces two ACEs
+
+Substitution alone would answer the question for one object and destroy the rule that asked it. A subdirectory would come away holding a *concrete* SID — its own creator's — with that access over everything beneath it, permanently, and nothing further down would ever resolve against its own creator again.
+
+So when a container inherits a CREATOR ACE it receives both halves:
+
+| | SID | Flags |
+|---|---|---|
+| The rule's answer for this directory | substituted | `INHERITED`, no inheritance flags |
+| The rule, carried onward | left as `CREATOR_OWNER` | original inheritance flags, plus `IO` |
+
+The second is inherit-only, so it grants nothing on the directory itself; it exists to be inherited again further down, where it resolves against whoever creates the next object.
+
+An **object** receives the substituted ACE alone. A file has no children for the rule to reach, so the copy carries no inheritance flags either.
+
+`NO_PROPAGATE_INHERIT_ACE` ends the rule as it ends any other: with `OI` and `CI` cleared there is nothing to carry, and only the substituted ACE is written.
+
+> [!NOTE]
+> The inheritance-flag detail matters more than it looks. The substituted ACE keeping `OI` or `CI` is exactly how a concrete SID escapes downward — which is why the resolved copy is stripped of them and the unresolved copy is the only thing that propagates.
+
 ## Sources of an inherited SD, ranked
 
 Which source wins for each component of the child SD, in order:

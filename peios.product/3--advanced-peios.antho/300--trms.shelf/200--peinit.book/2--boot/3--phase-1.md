@@ -80,7 +80,7 @@ full control, inheritable by both containers and objects, and grants
 Everyone read and execute, inheritable by containers only:
 
 ```
-O:SY G:SY D:(A;OICI;GA;;;SY)(A;OICI;GA;;;BA)(A;CI;GRGX;;;WD)
+O:SY G:SY D:(A;OICI;GA;;;SY)(A;OICI;GA;;;BA)(A;CI;GRGX;;;WD)(A;OICIIO;GA;;;S-1-3-0)
 ```
 
 Everything created underneath — the notify socket, per-service runtime
@@ -103,8 +103,17 @@ Administrators keep `GenericAll` rather than read/write/execute because
 `GenericAll` carries `WRITE_DAC`, `WRITE_OWNER` and `DELETE`, and peinit
 re-stamps descriptors throughout `/run`.
 
-That ACE is inheritable by containers only, which is the one place this
-descriptor differs from the root filesystem's. What a service needs here
+The last ACE is `CREATOR OWNER`, and it is what makes the container-only
+Everyone ACE survivable. A file created under these mounts inherits the
+SYSTEM and Administrators ACEs and nothing else — and that is a
+*non-empty* DACL, so the creating token's default DACL is never
+consulted. Without it a service would create runtime state it could not
+read back. It is inherit-only, so it grants nothing on the directory it
+sits on; it is resolved against whoever creates each object, and carried
+onward down each container.
+
+The Everyone ACE is inheritable by containers only, which is the one
+place this descriptor differs from the root filesystem's. What a service needs here
 is to walk to its own directory, and container inheritance gives it that
 by itself. Object inheritance would additionally put Everyone-read on
 every *file* anything creates beneath these mounts — a service's runtime
