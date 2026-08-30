@@ -1,6 +1,6 @@
 ---
 title: Validation
-description: A published book must contain no reference that fails to resolve — how to check, and the two traps that survive a careless check.
+description: A published book must contain no reference that fails to resolve — how to check, what the builder checks for you, and the two traps that survive a careless check.
 ---
 
 ## Every reference resolves
@@ -35,6 +35,16 @@ else.
 > every one of them still resolves — to the wrong article. Nothing
 > reports an error, and the document is wrong in a way that reads as
 > correct.
+
+## Named citations are checked for you
+
+Unlike `§` references, named citations (§5.3) are validated by the
+builder: a duplicated name, a malformed one, or an anchor outside a book
+fails the build. What the builder cannot check is the other direction —
+whether a citation *from outside the corpus*, in a test or a code
+comment, still names a statement that exists. Deleting an anchor is
+therefore a deliberate act: grep the name across the repositories that
+cite it before removing it.
 
 ## Two traps
 

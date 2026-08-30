@@ -1,6 +1,6 @@
 ---
 title: Citing Between Books
-description: Citing within a book, between books, and into code — and why the § reference, not the prose beside it, is the durable part.
+description: Citing within a book, between books, by name, and into code — and why the reference, not the prose beside it, is the durable part.
 ---
 
 ## Within a book
@@ -50,6 +50,14 @@ full citation, so that a search finds every site depending on it:
 
 ```c
 /* Per PCDS §5.6: inherited ACEs precede explicit ones. */
+```
+
+Where the rule carries a named citation (§5.3), cite it by name
+instead. It resolves to the statement rather than to the article
+holding it, so a test says exactly what it verifies:
+
+```rust
+// Verifies PCDS *sd.inherited-aces-precede-explicit
 ```
 
 > [!NOTE]
