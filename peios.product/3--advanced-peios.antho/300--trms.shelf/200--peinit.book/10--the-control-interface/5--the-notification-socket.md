@@ -40,11 +40,21 @@ pathname socket needs — the same reasoning as the jobs socket (§10.7).
 Administrators are absent, unlike the control socket: an administrator
 has no business asserting that a service is ready.
 
-The descriptor is installed **between `bind` and first use**, not
-afterwards. `bind` publishes a pathname socket under whatever it
-inherits from the parent directory, and a datagram socket has no
-`listen` to hold it back, so stamping it afterwards by path would leave
-a window in which it was reachable under a descriptor nobody chose.
+The descriptor is installed **by path, immediately after `bind`** —
+before the socket is made non-blocking, given `SO_PASSCRED`, or polled.
+
+It is by path because the fd form does not work on a socket. KACS
+exposes no fd-targeted descriptor call of its own: `fd_set_sd` is the
+path call with the target as `dirfd`, an empty path and `AT_EMPTY_PATH`,
+and the kernel answers `EOPNOTSUPP` for a socket. Stamping by fd was
+tried here and took PID 1 into recovery.
+
+That leaves a window between `bind` and the stamp in which the socket
+carries what it inherited. It is safe for the same reason it is on the
+control socket: the parent grants services traverse and nothing else and
+carries no inheritable ACE, so the inherited descriptor is narrower than
+the one being installed. The failure direction is refusal, not
+exposure.
 
 The parent directory `/run/services/peinit` carries a descriptor of its
 own, shared with the control socket that lands in it later in boot:
