@@ -1,93 +1,89 @@
 ---
 title: Quick start
 type: how-to
-description: Run your first peiso build — a minimal peiso.toml that composes the package root and packs the initramfs, and what it leaves on disk.
+description: Build the Experimental medium from a four-line spec and boot it under QEMU — no root, one command.
 related:
-  - peios/building-images/overview
-  - peios/building-images/running-a-build
-  - peios/peiso/reference/the-build-spec
-  - peios/package-management/composing-a-root
+  - peios/peiso/building-images/overview
+  - peios/peiso/building-images/running-a-build
+  - peios/peiso/reference/the-spec
 ---
 
-This page runs the smallest build peiso can do. At the end you have a composed Peios package root on disk with the initramfs cpio packed inside it, produced by one `sudo peiso build` against a three-table `peiso.toml`. The squashfs, UKI, and ISO stages are opt-in and stay off here — see [The build pipeline](~peios/building-images/the-build-pipeline) for the full chain.
+This page builds the Peios Experimental medium and boots it. It assumes a checkout of the Peios tree with a populated package pool (`pkgs/_pkgsOut_`), which is where the edition and its closure come from today.
 
-## Prerequisites
+## What you need on the build host
 
-peiso orchestrates other tools and composes real packages, so all three of these are hard requirements — there is no build without them.
+- **peiso**, built from `peiso/` in the tree (`go build -o peiso .`), or on your PATH.
+- **squashfs-tools**, **xorriso**, **dosfstools** and **mtools** — the host-side packers. Everything Peios-specific (the initramfs and UKI tools) is taken from the root being built.
+- For booting: **QEMU** with KVM and the **OVMF** firmware.
 
-- **Root.** The build chroots into the composed root to run its shipped applets, so it must run as root. Run it under `sudo`.
-- **`peipkg-compose` on `PATH`.** peiso shells out to it to compose the root. If it is installed somewhere `sudo` cannot see, set `PEISO_COMPOSE` to its path — the full lookup chain is in [Running a build](~peios/building-images/running-a-build#environment).
-- **A package source.** peiso does not fetch or build packages. You need built `.peipkg` files (a package farm) and a **multi-root compose manifest** that lays them out: it must produce both the main root and a nested initramfs root, and the packages it installs must include `peiosutils` (which ships the `mkirf` applet the build runs inside the root) and `fsbase` (which owns the `/system/boot` directory the cpio is written into). The Peios repository's `dist/prod/manifest.toml` is the reference manifest, composed from the repository's own farm; writing manifests is covered in [Composing a root](~peios/package-management/composing-a-root).
+No root. If any step asks for it, that is a bug.
 
-No other host tools are needed for this build. `mksquashfs`, `xorriso`, and friends only come into play when you enable the optional stages.
+## The spec
 
-## Lay out the build directory
-
-Work in a directory that holds your compose manifest. With the reference setup that is the repository's `dist/prod/` directory, which already contains a full `peiso.toml`; to follow this page from scratch, use a fresh directory containing:
-
-- `manifest.toml` — your multi-root compose manifest;
-- the package farm it references via its `local_packages` globs;
-- `peiso.toml` — written in the next step.
-
-## Write the minimal spec
-
-Create `peiso.toml` next to the manifest:
+`dist/release/experimental.toml`:
 
 ```toml
-schema = 1
+[[packages.repository]]
+url = "file://../../pkgs/_pkgsOut_/"
+keys = ["../../pkgs/dev-signing.pub"]
 
-[root]
-manifest = "manifest.toml"
-out      = "root"
-
-[initramfs]
-dir  = "boot/initramfs"
-cpio = "system/boot/initramfs.cpio.gz"
+[baseline]
+edition = "Experimental"
+source_date = "2026-06-22T00:00:00Z"
 ```
 
-This is the whole spec — `schema`, `[root]`, and `[initramfs]` are the only required tables. `manifest` and `out` are resolved relative to the spec file's own directory, so the build behaves the same wherever you invoke it from. `dir` and `cpio` are relative to the composed root: `dir` names the nested initramfs root your multi-root manifest produces, and `cpio` is where `mkirf` writes the packed archive inside the root. Every field, including the optional ones this spec omits, is documented in [The build spec](~peios/peiso/reference/the-build-spec).
+That is the whole thing. The edition name is lowercased and hyphenated to find the package — `peios-experimental` — and, with no `version`, the newest one wins. `keys` names the public key the pool's packages were signed with; the medium repository has to trust it to carry them. [The spec](~peios/peiso/reference/the-spec) lists every key.
 
-## Run the build
+## Build
 
-```bash
-cd /path/to/your/build/dir
-sudo peiso build
+```sh
+cd dist/release
+peiso iso experimental.toml
 ```
 
-`build` takes one optional argument, the spec path, and it defaults to `peiso.toml` in the current directory — so the bare command above is enough. peiso prints one progress line per stage, with your absolute paths substituted:
+peiso reports each stage:
 
-```
-peiso: composing root -> /path/to/your/build/dir/root
-peiso: packing initramfs (chroot /path/to/your/build/dir/root) -> /system/boot/initramfs.cpio.gz
-peiso: built /path/to/your/build/dir/root
-```
-
-`peipkg-compose`'s own output streams between the first two lines. On a rebuild, a `peiso: cleaning …` line appears first: peiso deletes the previous `root/` and composes fresh every time, so never keep anything you care about inside it. The command exits `0` on success.
-
-If it fails, the error is printed as `peiso: <err>` and the exit code is `1`. The three you are most likely to hit first:
-
-- `build chroots into the composed root and must run as root (try: sudo peiso build)` — you forgot `sudo`.
-- `peipkg-compose not found on PATH or next to peiso (set PEISO_COMPOSE to override)` — see the [environment section of Running a build](~peios/building-images/running-a-build#environment); `sudo`'s `secure_path` is the usual culprit.
-- `/usr/bin/mkirf not in the composed root … (is peiosutils composed in?)` — your manifest did not compose `peiosutils` in, so the root has no `mkirf` to pack the initramfs with.
-
-## What landed on disk
-
-The build leaves one artifact tree, rooted at the spec's `out` directory:
-
-- `root/` — a complete, valid peipkg package root: every package's files at their installed paths, plus a seeded peipkg state database.
-- `root/boot/initramfs/` — the nested initramfs root, composed in the same pass by the multi-root manifest.
-- `root/system/boot/initramfs.cpio.gz` — the packed initramfs cpio, exactly where an installed system stores its own.
-
-Confirm the cpio exists:
-
-```bash
-ls -lh root/system/boot/
+```text
+resolving peios-experimental
+resolved peios-experimental 2026.8-1 (79 packages)
+composing dist/peios-experimental-2026.8/root
+resolving medium packages
+publishing dist/peios-experimental-2026.8/repo
+medium repo: 2 packages, trust anchor 6e50…
+staged seed authd-policy
+…
+seeds: 15 staged
+packing initramfs -> …/root/system/boot/initramfs.cpio.gz
+squashing root -> …/rootfs.squashfs
+squashed with 4414 signature attribute(s)
+building UKI -> …/root/boot/efi/EFI/BOOT/BOOTX64.EFI
+building ISO -> dist/peios-experimental-2026.8/peios-experimental-2026.8.iso
+dist/peios-experimental-2026.8/peios-experimental-2026.8.iso
 ```
 
-There is no rootfs squashfs, no UKI, and no `peios.iso` — those stages only run when their spec tables are present, and this spec left them out.
+The last line is the ISO. Everything the build made is beside it, in `dist/peios-experimental-2026.8/` — see [Running a build](~peios/peiso/building-images/running-a-build) for the layout.
 
-## Where to go next
+## Boot
 
-- **Understand what just ran.** [The build pipeline](~peios/building-images/the-build-pipeline) walks every stage in order — the compose, the chroot, and the optional stages this build skipped.
-- **The command in full.** [Running a build](~peios/building-images/running-a-build) covers the exit codes, host-tool checklist, environment, and the `dist/prod/` Makefile workflow that drives real builds.
-- **Grow the spec.** Add `[squashfs]`, `[uki]`, and `[iso]` tables to carry this build all the way to a bootable live ISO — every field is in [The build spec](~peios/peiso/reference/the-build-spec).
+```sh
+make boot
+```
+
+runs QEMU with UEFI firmware, the ISO attached as a virtio disk, and the serial console on your terminal. You will see the kernel, then `prelude` (the initramfs PID 1) running its hooks — `live-boot` finds the medium and mounts the live root — then `peinit` bringing up the services the release's seeds define, and finally a login prompt. The image autologs in a development account.
+
+The same Makefile has `boot-dwe`, `boot-install` and `boot-installed`; [Running a build](~peios/peiso/building-images/running-a-build) covers them.
+
+## Change something
+
+Two things are yours to change in the spec without touching anything else:
+
+```toml
+[devtools]
+dwe = true            # a development medium; builds to …-2026.8-dwe/
+
+[registry]
+remove = ["lpsd-first-account"]   # drop a seed the release would apply
+add    = ["my-service"]           # add one a package in the closure ships
+```
+
+To change *what the system contains*, change the edition package (`pkgs/peios-experimental/`) and republish it; the spec does not change. [Editions](~peios/peiso/editions-and-upgrades/editions) explains why that line is drawn where it is.

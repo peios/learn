@@ -1,95 +1,58 @@
 ---
 title: Building a Peios image
 type: concept
-description: "peiso is the Peios image builder: it turns a declarative peiso.toml spec into a bootable image tree, layering boot machinery over a peipkg-compose root."
+description: "peiso turns a spec that names an edition into a bootable Peios medium: it composes the edition package's closure into a root, adds what a live medium needs, and packs it — with no privilege."
 related:
-  - peios/peiso/reference/the-build-spec
-  - peios/building-images/the-build-pipeline
-  - peios/building-images/running-a-build
+  - peios/peiso/building-images/the-build-pipeline
+  - peios/peiso/building-images/quick-start
+  - peios/peiso/reference/the-spec
+  - peios/peiso/editions-and-upgrades/editions
   - peios/package-management/composing-a-root
 ---
 
-**`peiso`** is the Peios image builder. Given a declarative spec, it builds a bootable Peios image tree from scratch: it takes a release's worth of packages and produces an artifact that a machine can boot.
+**`peiso`** is the Peios image builder. Given a spec of a few lines — which edition, where its packages come from, a couple of flags — it produces a bootable installation medium: a UEFI ISO carrying a live Peios and everything needed to install it onto a disk.
 
-It is a **v1** tool with a deliberately narrow scope. It does not resolve packages, fetch payloads, or lay out a root — that is [`peipkg-compose`](~peios/package-management/composing-a-root)'s job, and peiso calls it for exactly that work. peiso owns everything above the package root: the boot machinery that turns a directory of installed software into something bootable.
+It is a user-facing tool. Building a slightly customised Peios image is meant to be an ordinary thing to do, not a project: you should never have to list packages, name registry seeds, or run anything as root.
 
-This page explains what a package root is versus what a bootable image is, the chain of artifacts peiso emits between the two, how you invoke it, and the limits of its v1 scope.
+## The release is a package
 
-## Where peiso sits — above compose
+The thing peiso builds *from* is not a list. A Peios release is an **edition package** — `peios-experimental` today — whose version is the OS version, whose dependency closure is the base system (kernel, initramfs, services, firmware, the installer), and which ships the system's identity (`/usr/lib/os-release`) and a small data file, `release.toml`, stating what the release asks of a system beyond its packages. [Editions](~peios/peiso/editions-and-upgrades/editions) explains that package in full.
 
-The two tools split the work at a well-defined boundary.
+peiso's job is therefore small: resolve that one package, compose its closure, and add what makes the result a *medium* rather than an installed system. An installed system moves to the next release by upgrading the same package, through [`upgrade-peios`](~peios/peiso/editions-and-upgrades/upgrading-peios).
 
-`peipkg-compose` builds the **package root**: a directory tree with every package's payload laid out at its installed paths, a seeded peipkg state database, and each repository written back as a `.repo` file. The result is a valid peipkg system that can manage itself — but it is only that. Compose's contract stops at delivering a valid peipkg root: no bootloader, no packed initramfs, no kernel image, no live-boot wiring. Those belong to whatever assembles the image around it. See [Composing a root](~peios/package-management/composing-a-root) for the full contract.
+## What peiso adds to an edition
 
-peiso is that outer assembler. It **shells out to `peipkg-compose build`** to produce the root, then layers boot machinery on top of it. The division of responsibility is:
+An edition describes an installed Peios. A live medium needs three more things, and they are peiso's, not the edition's:
 
-- **compose = the package stage.** Resolve, verify, and lay out software into a root directory. Offline, deterministic, no boot concerns.
-- **peiso = the bootable-image stage.** Take that root and produce an initramfs, a squashable rootfs, a kernel image, and a bootable medium.
+- **The boot flavour.** `first_boot = "live"` (the default) adds `live-boot`, whose initramfs hook finds the medium and mounts the live root from it. An installed system carries `disk-boot` instead; the installer swaps one for the other on the target. Neither belongs in the edition, because which one a system carries is a property of the medium it boots from.
+- **The medium repository.** The installer takes the target's boot packages from a small signed repository carried on the ISO. peiso publishes it per build, with a throwaway signing key.
+- **Devtools.** `dwe = true` adds the [Developer Workstation Environment](~peios/dwe/what-dwe-is): `dwed` running as SYSTEM, reachable over vsock. It makes the image ownable, which is why it is a property of a *development* medium and can never be installed as a mere package.
 
-Because the boot stage runs Peios' own applets — and runs them inside the composed root — peiso needs privilege where compose needs none. This requirement is covered below.
+Everything else in the image comes from the edition.
 
-## The output chain
-
-peiso builds an image as a chain of artifacts, each consuming earlier ones. The initramfs cpio is packed inside the composed root, so both the squashfs (a squash of the whole root) and the UKI (kernel + cpio + cmdline) contain it; the ISO then carries the UKI and the squashfs side by side.
+## Where the stages happen
 
 ```mermaid
 flowchart LR
-    A["package root<br/>(peipkg-compose)"] --> B["initramfs cpio<br/>(mkirf, in-root)"]
-    B --> C["rootfs.squashfs<br/>(optional)"]
-    B --> D["UKI — one EFI binary<br/>(mkuki, in-root)"]
-    C --> E["bootable UEFI live ISO<br/>(optional)"]
-    D --> E
+    S["spec<br/>(edition, source)"] --> R["root/<br/>(peipkg compose)"]
+    R --> M["repo/<br/>(medium repository)"]
+    R --> Q["seeds<br/>(release.toml → autoapply.d)"]
+    Q --> I["initramfs cpio<br/>(mkirf)"]
+    I --> F["rootfs.squashfs"]
+    I --> U["UKI<br/>(mkuki)"]
+    F --> O["ISO"]
+    U --> O
+    M --> O
 ```
 
-1. **Package root.** peiso calls `peipkg-compose build` on the spec's manifest. A single multi-root manifest can compose both the main system root and a nested initramfs root in one pass. (An older spec form gave the initramfs root its own separate manifest to compose; that form is transitional — prefer the single multi-root manifest.)
+The root is composed by peipkg's compose library — the same code as [`peipkg-compose`](~peios/package-management/composing-a-root), driven in-process. The initramfs and the UKI are packed by [`mkirf`](~peios/boot-and-trust-establishment/mkirf) and [`mkuki`](~peios/boot-and-trust-establishment/mkuki), the applets *shipped inside the root*, so the tools that build the boot artifacts are the ones the running system carries. [The build pipeline](~peios/peiso/building-images/the-build-pipeline) walks every stage.
 
-2. **Initramfs cpio.** peiso chroots into the composed root and runs the root's own **[`mkirf`](~peios/boot-and-trust-establishment/mkirf)** applet to pack the initramfs root into a cpio archive. Running the shipped mkirf in its native environment means the tool that builds the initramfs is the same one the running system uses — no divergence between what is tested and what runs. (Before this step, extra files may be dropped straight into the initramfs root via the spec's file `inject` list — a temporary bypass of packaging, used for things like the live-boot hook until they are properly packaged.)
+## No privilege
 
-3. **Squashfs rootfs (optional).** peiso squashes the whole composed root into a read-only squashfs image (the reference spec names it `rootfs.squashfs`). squashfs **preserves existing extended attributes** — where [KACS security descriptors](~peios/security-descriptors/overview) ride — so the live rootfs is byte-identical to an installed system. The image is written outside the root tree so it can never contain itself.
+Nothing in a peiso build runs as root. The old builder chrooted into the composed root to run the shipped applets; peiso runs them on the host under the root's own dynamic loader instead. Where a package would have a `security.*` attribute set on a file — the kernel's firmware signature, `security.peios.sig` — compose hands the signature to peiso and peiso writes it into the squashfs directly, where placing an attribute needs no capability. The composed `root/` on the build host is only an intermediate; the image is the artifact, and the image is complete.
 
-4. **UKI (optional).** peiso chroots in again and runs the root's **[`mkuki`](~peios/boot-and-trust-establishment/mkuki)** applet to bundle the kernel, the initramfs cpio, and the kernel command line into a **Unified Kernel Image** — one EFI binary that UEFI firmware boots directly, with no separate bootloader.
+That property is what lets a build run on any machine, in CI, or by any user, and it is why `sudo` appears nowhere in this anthology.
 
-5. **Bootable ISO (optional).** peiso emits `peios.iso`: a UEFI-bootable live image carrying the UKI on an EFI System Partition (ESP) and the rootfs squashfs in its data area, so the running system reads the OS off the medium rather than fitting the whole thing in RAM.
+## What it is not
 
-Steps 3, 4, and 5 are optional and driven by the spec — a build can stop at the packed root plus initramfs, or run all the way to an ISO.
-
-### What lands on disk
-
-A full build leaves, among other things:
-
-- the composed `root/` tree (the package root plus the packed initramfs cpio inside it);
-- the rootfs squashfs (named by `[squashfs].out`; `rootfs.squashfs` in the reference spec) — written beside `root/`, not inside it;
-- the UKI at its ESP fallback path, e.g. `boot/efi/EFI/BOOT/BOOTX64.EFI`;
-- `peios.iso` — the bootable UEFI live medium.
-
-## How you run it
-
-peiso has a single verb:
-
-```
-sudo peiso build [spec.toml]
-```
-
-It is driven by a **`peiso.toml`** spec (schema `1`) that declares the whole image in one file — the manifest to compose, how the initramfs is packed, and the optional squashfs, UKI, ISO, registry-seed, and feature stages. The spec path defaults to `peiso.toml`.
-
-The build **must run as root** — it chroots into the composed root to run the Peios-native applets (mkirf, mkuki), and chroot is privileged; the full rationale is in [Running a build](~peios/building-images/running-a-build).
-
-See [Running a build](~peios/building-images/running-a-build) for the command in detail, and [The build spec](~peios/peiso/reference/the-build-spec) for every field of `peiso.toml`.
-
-## Scope and v1 caveats
-
-peiso is at **v1**, and this page describes its current behaviour; the surface is not frozen and may change.
-
-- **Distribution / live-image focused.** The chain above is built around producing a bootable live image (UKI + off-RAM squashfs on a UEFI-bootable ISO). This is the path v1 supports.
-- **A single spec schema.** One `schema = 1` spec shape, parsed strictly.
-- **Optional stages.** squashfs, UKI, ISO, registry seeds, and feature enablement are each opt-in through their spec sections; a minimal build composes the root and packs the initramfs and stops.
-- **Transitional mechanisms exist.** The file-`inject` packaging bypass and the older separate-compose initramfs manifest are both temporary mechanisms on the way to fully-packaged inputs. They are documented where they are used, and labelled as temporary.
-
-Note that v1 does **no signing**: peiso layers boot machinery; it does not create keys or sign binaries. Security properties come from the packages and their preserved security descriptors, not from anything peiso adds.
-
-## Where to go next
-
-- To understand each stage in order — the composes, the chroot, the layering that lets the squashfs embed the initramfs and the ISO carry both the UKI and the squashfs — read [The build pipeline](~peios/building-images/the-build-pipeline).
-- To run a build — the command, root requirement, and how peiso finds `peipkg-compose` — read [Running a build](~peios/building-images/running-a-build).
-- For every field of `peiso.toml`, section by section, read [The build spec](~peios/peiso/reference/the-build-spec).
-- For the package stage beneath peiso — how the root is resolved, verified, and laid out — read [Composing a root](~peios/package-management/composing-a-root).
+peiso does not build packages (that is [pekit](~pekit/getting-started/what-is-pekit)), does not resolve or fetch them itself (compose does), and does not decide what a Peios contains (the edition does). A spec can add or remove registry seeds and choose the boot flavour and devtools; anything beyond that is a change to the edition package, which is where it belongs.
