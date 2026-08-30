@@ -9,6 +9,12 @@ Each writer thread writes to its shard with explicit transactions: a
 `BEGIN`, one `INSERT` per event, a `COMMIT`. The commit is the
 durability boundary.
 
+For every maximal contiguous sequence run represented by the event rows
+and `synthetic.gap` rows in that transaction, the writer also inserts a
+`receipt_ranges` row for `(boot_id, cpu_id, first_sequence,
+last_sequence)` (§3.1). Events, gaps and their receipts commit together:
+there is no second durability operation and no global receipt writer.
+
 The database runs in WAL mode with `synchronous = FULL`, so every commit
 fsyncs the write-ahead log. This is the strictest of the three stores'
 settings, and the only one where per-transaction durability is bought at
@@ -73,3 +79,23 @@ pages, and the per-checkpoint cost is bounded by the threshold.
 Each writer prepares its `INSERT` once at startup and reuses it for
 every row, which keeps SQL parsing and planning off the hot path
 entirely.
+
+The receipt insert and new-event-type catalogue insert are prepared and
+reused too. A known event type causes no catalogue SQL operation; the
+writer's in-memory intern table identifies only genuinely new names,
+which are inserted in the same transaction as their first event (§3.1).
+
+## Maintenance commands
+
+The writer owns the shard's only read-write connection. Retention,
+receipt compaction and index policy code may inspect through read-only
+connections, but they submit bounded maintenance commands to this
+writer rather than opening another writer or taking a shard mutex.
+
+The writer considers low-priority maintenance only at transaction
+boundaries and rechecks ingestion pressure after one bounded action. A
+size-urgent retention delete may be included in an existing ingestion
+transaction so it adds no second commit. Index creation remains
+cancellable through SQLite's progress handler (§3.4). Under sustained
+pressure maintenance may lag indefinitely; accepting incoming events is
+the higher priority.

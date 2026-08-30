@@ -15,19 +15,20 @@ state, and events emitted while eventd was down accumulate there.
 transactions survive, and SQLite rolls back the in-flight batch on the
 next open.
 
-**There is a sequence gap.** Events between the last committed batch and
-the crash were never persisted. On restart eventd derives its resume
-points from committed rows, sees the difference from the current ring
-buffer state, and writes a gap record (§2.5).
+**There may be uncovered sequences.** Events in an uncommitted batch
+were not persisted, but some may still survive in KMES. On restart
+eventd merges committed receipt ranges from all shards, re-ingests each
+uncovered survivor, and writes a gap only for a sequence present in
+neither receipts nor the ring (§2.2, §2.5).
 
 **Socket-buffered data is gone.** The kernel discards a socket receive
 queue on process exit, taking whatever logs and metrics were waiting.
 Acceptable by the loss model.
 
 No manual recovery is needed and none is offered. eventd restarts,
-re-attaches, resumes draining, and records what was missed. The boot
-boundary logic recognises the restart from the committed rows themselves
-rather than from any flag written in advance (§3.7) — which is the
+re-attaches, resumes draining, and records only what was truly missed.
+The boot-boundary logic recognises the restart from committed rows or
+receipts rather than a flag written in advance (§3.7) — which is the
 point, since a crash is precisely the case where nothing was written in
 advance.
 
@@ -51,8 +52,7 @@ least:
 
 - the current boot ID
 - the active shard count and the readable historical shard count
-- the per-CPU last committed sequence numbers, derived from committed
-  rows
+- the per-CPU committed receipt coverage and highest covered sequence
 - the current non-streaming and streaming query counts
 - the metric series cache occupancy
 - the last observed write error for each store, where one exists

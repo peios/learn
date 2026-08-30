@@ -17,11 +17,12 @@ each variable-sized copy costs freelist bookkeeping, potential lock
 contention in a multi-threaded allocator, and occasional page faults
 when it asks the kernel for more.
 
-A per-drain-cycle arena avoids all of it: allocate a block at the start
-of the cycle, hand out sequential chunks by bumping a pointer, and
-release the whole block once the batch has been handed off. Per-event
-allocation cost falls from tens of nanoseconds to one or two, and the
-latency spikes disappear with it.
+A pool of arena chunks avoids all of it: hand out sequential space by
+bumping a pointer, transfer the owning chunk with the channel slot, and
+recycle it only after the writer consumes the last referenced event.
+The pool's charged bytes are part of the channel byte bound (§2.3), so
+the optimisation cannot create a hidden queue. Per-event allocation
+cost falls from allocator bookkeeping to a pointer bump.
 
 ## Drain thread affinity
 

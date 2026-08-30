@@ -1,6 +1,6 @@
 ---
 title: Limits
-description: Every bound a collector must enforce, with the mainline collector's value and adjustable range, and the one relation that ties two of them together.
+description: Every bound a collector must enforce, with the mainline collector's value and adjustable range.
 ---
 
 Every bound this chapter requires a collector to enforce, with the value
@@ -23,7 +23,8 @@ configuration is catalogued in the eventd TRMP §A.
 
 | Bound | Mainline value | Mainline range | Key | Section |
 |---|---|---|---|---|
-| Query message ceiling | 65536 B | 1024 – 16777216 | `MaxQueryMessageBytes` | §3.15 |
+| Query request ceiling | 65536 B | 1024 – 16777216 | `MaxQueryRequestBytes` | §3.15 |
+| Query response target | 65536 B | 1024 – 16777216 | `QueryResponseTargetBytes` | §3.15 |
 | Query timeout | 30000 ms | 1000 – 300000 | `QueryTimeoutMs` | §3.16 |
 | Concurrent queries | 128 | 1 – 4096 | `MaxConcurrentQueries` | §3.14 |
 | Concurrent streaming queries | 64 | 1 – 1024 | `MaxStreamingQueries` | §3.14 |
@@ -45,15 +46,11 @@ These are not configuration and a collector MUST NOT vary them.
 | Timestamp domain | `0` – `9223372036854775807` ns | §3.5 |
 | GUID field width | 16 bytes | §3.7, §3.11 |
 | Message length prefix | 4 bytes, little-endian | §3.15 |
+| Maximum response payload | `2^32 - 1` bytes | §3.15 |
 | Transforms per query | at most 1 | §3.25 |
 | Terminal aggregations per query | at most 1 | §3.25 |
 | Queries per connection | exactly 1 | §3.14 |
 
-## The relation between two of them
-
-The query message ceiling MUST NOT be smaller than the largest record a
-collector can store, because a record that will not fit in a response
-fails every query that reaches it (§3.15). The ingestion ceilings bound
-what a producer can deposit; the query message ceiling bounds what can
-be handed back. Nothing enforces the relation automatically, and the
-mainline defaults do not satisfy it.
+The response target is not a ceiling. A complete record larger than the
+target travels alone, so the configurable ingestion ceilings do not
+need to be coupled to it (§3.15).

@@ -39,7 +39,7 @@ is a substitute for the timestamp ordering they follow.
 
 Metric samples may arrive out of timestamp order (§5.1), so insertion
 order and time order genuinely differ. Every metric computation —
-`RATE`'s consecutive pairs, rollup window membership, cross-type
+`RATE`'s consecutive pairs, aggregate window membership, cross-type
 interval construction — is defined over `(timestamp, id)` ascending
 precisely so that a late-arriving sample lands where its timestamp says
 it belongs rather than where it happened to be written.

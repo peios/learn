@@ -63,6 +63,15 @@ acceptable where event loss is not, and larger, less frequent
 transactions are more efficient at the moderate volumes logs normally
 run at.
 
+The writer keeps the known origin names in memory. Before inserting the
+first log row for an origin not in that set, it executes
+`INSERT OR IGNORE` into `log_origins` in the same transaction (§4.2).
+A transaction-local pending set ensures that insert runs only once per
+new origin in a batch. The main in-memory set is updated only after
+commit and the pending set is discarded on rollback. Thus discovery
+never needs to scan the hot `logs` table, and a rolled-back first row
+cannot make the cache claim that its catalogue entry exists.
+
 ## Durability
 
 The log store runs in WAL mode with `synchronous=NORMAL`, not FULL.

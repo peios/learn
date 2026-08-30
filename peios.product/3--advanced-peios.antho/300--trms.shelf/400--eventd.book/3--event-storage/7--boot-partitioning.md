@@ -5,11 +5,9 @@ description: Every stored record carries a boot_id — what it is for, where it 
 
 Every record eventd stores — every event, every log line, every raw
 metric sample — carries a `boot_id`: a 16-byte GUID identifying the boot
-that produced it. peinit assigns it at each boot and eventd reads it at
-startup.
-
-Derived metric rollups are the exception. They are boot-agnostic
-aggregates and carry no `boot_id` (§5.6).
+that produced it. Linux assigns it at boot; eventd reads
+`/proc/sys/kernel/random/boot_id` at startup, validates the UUID text,
+and stores the corresponding PCDS-layout GUID.
 
 ## What it is for
 
@@ -38,8 +36,7 @@ The metric store records it **per sample** but does not make it part of
 series identity (§5.2). A time series stays continuous across a reboot,
 which is what a chart of CPU usage across a restart should show, and a
 query that wants one boot's worth filters for it explicitly
-(PSPU §3.25). Rollups stay boot-agnostic scalars, so a boot-filtered
-metric query is served from raw samples and never from a rollup.
+(PSPU §3.25).
 
 ## Uniqueness
 
@@ -50,27 +47,33 @@ disambiguating dimension, and the triple
 
 ## Detecting the boundary
 
-At startup eventd reads the current boot ID from peinit, then searches
-every readable event shard database — historical shards included — for
-committed rows carrying it.
+At startup eventd reads the kernel boot ID, then searches every readable
+event shard database — historical shards included — for committed rows
+or receipt ranges carrying it.
 
-**No committed rows for this boot.** This is the boot's first eventd
-start. eventd resets every per-CPU sequence tracker to 0, records the
-new boot ID for all subsequent writes to all three stores, and emits
-`synthetic.startup` with `restart` false.
+**No committed rows or receipts for this boot.** This is the boot's
+first successful eventd start. Coverage for every CPU begins before
+sequence 1, the new boot ID is used for subsequent writes to all three
+stores, and `synthetic.startup` carries `restart` false.
 
-**Committed rows exist.** eventd crashed and peinit restarted it within
-the same boot. eventd restores each CPU's tracker from the maximum
-non-null `sequence` for `(boot_id, cpu_id)` across every readable shard,
-with CPUs having no rows resuming at 0; continues writing under the
-existing boot ID; and emits `synthetic.startup` with `restart` true.
+**Committed rows or receipts exist.** eventd was previously ready in the
+same boot. It merges receipt coverage per `(boot_id, cpu_id)`, reconciles
+that coverage with surviving ring records (§2.2), continues under the
+same boot ID, and emits `synthetic.startup` with `restart` true.
 
 The two cases are distinguished by the data itself rather than by any
 flag eventd persisted. That is the point: a flag would have to be
 written at a moment eventd might not reach, and a crash is precisely the
 case where it did not.
 
-Committed rows are the authority throughout. The metadata database's
-sequence checkpoints and the previous `synthetic.shutdown` payload
-record the same numbers, and both are diagnostic — neither is consulted
-for resumption (§2.2, §3.5).
+Committed receipt ranges are the sequence authority. Committed event
+rows still establish that eventd previously ran when no receipt was yet
+needed. The metadata database's sequence checkpoints and the previous
+`synthetic.shutdown` payload are diagnostic — neither is consulted for
+recovery (§2.2, §3.5).
+
+The receipt key is sound only while KMES sequence numbers do not restart
+under one kernel boot ID. v0.23 therefore requires KMES to remain
+initialised for the whole boot. A future KMES ABI may add a stream
+generation GUID to make module reloads distinguishable without relying
+on that lifecycle invariant.

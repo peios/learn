@@ -12,56 +12,66 @@ entirely.
    required keys are `EventStorePath`, `LogStorePath`, `MetricStorePath`,
    `QuerySocketPath`, `LogSocketPath` and `MetricSocketPath`; a missing
    or invalid one fails startup.
-2. Read the optional keys and apply compiled-in defaults for those
+2. Open and validate the three provisioned store directories without
+   following symbolic links. A missing directory, unsafe component or
+   descriptor that is not equivalent to the protected platform default
+   fails startup (§3.3).
+3. Read the optional keys and apply compiled-in defaults for those
    absent (§A).
-3. Arm a persistent watch on the subtree, for runtime changes (§8.3).
+4. Arm a persistent watch on the subtree, for runtime changes (§8.3).
 
 ## Phase 2 — KMES attachment and shard sizing
 
-4. Discover the CPU count by calling `kmes_attach` with incrementing
-   CPU identifiers from 0 until `EINVAL`. The call requires
-   SeSecurityPrivilege in the effective token. Discovering no CPUs fails startup.
-5. Map each per-CPU ring buffer.
-6. Resolve the active shard count from `StorageShards` — the CPU count
-   when it is 0, the configured value otherwise.
-7. Compute the shard-to-CPU assignment (§2.3).
+5. Query the KMES logical slot count with
+   `kmes_attach(KMES_ATTACH_QUERY_SLOTS, …)`, walk every slot, skip
+   `EINVAL` holes, and assign dense internal ordinals to successful
+   logical CPU IDs (§2.2). The calls require SeSecurityPrivilege in the
+   effective token. Discovering no buffers fails startup.
+6. Map each per-CPU ring buffer.
+7. Resolve the active shard count from `StorageShards` — the attached
+   KMES-buffer count when it is 0, the configured value otherwise.
+8. Compute the shard-to-CPU assignment (§2.3).
 
 ## Phase 3 — Storage
 
-8. Open or create each active event shard: verify the schema version,
+9. Open or create each active event shard: verify the schema version,
    open in WAL mode with `synchronous=FULL`, create tables and indexes
    if new, and quarantine on reported corruption (§3.3). Discover
    historical shards matching the naming pattern, and open those with a
    recognised schema read-only; exclude the rest from the query path.
-9. Open or create the log store — schema verified, WAL,
-   `synchronous=NORMAL`, quarantine on corruption (§4.3).
-10. Open or create the metric store, likewise (§5.4). The series cache
-    starts empty and fills on demand.
-11. Open or create `eventd-meta.db`. Load the index and rollup counters
-    and desired sets, load the sequence checkpoints for diagnostics
-    only, and discover each shard's material indexes from its schema
-    (§3.5).
+10. Open or create `logs.db` in the log store directory — schema
+    verified, WAL, `synchronous=NORMAL`, quarantine on corruption
+    (§4.3).
+11. Open or create `metrics.db` in the metric store directory, likewise
+    (§5.4). The series cache starts empty and fills on demand.
+12. Open or create `eventd-meta.db`. Load the index counters and desired
+    set, load the sequence checkpoints for diagnostics only, and
+    discover each shard's material indexes from its schema (§3.5).
 
 ## Phase 4 — The boot boundary
 
-12. Read the current boot ID from peinit.
-13. Search every readable event shard for committed rows carrying it.
-14. **No rows** — the boot's first eventd start. Reset every per-CPU
-    sequence tracker to 0 and record the new boot ID for subsequent
-    writes.
-15. **Rows exist** — a restart within the boot. Derive each CPU's resume
-    point from the maximum committed `sequence` for
-    `(boot_id, cpu_id)` across every readable shard; CPUs with no rows
-    resume at 0 (§3.7).
+13. Read `/proc/sys/kernel/random/boot_id`, require valid UUID text, and
+    convert it to PCDS GUID layout. An unavailable or malformed value
+    fails startup.
+14. Read and merge every committed `receipt_ranges` row for that boot
+    from every readable active and historical shard, grouped by logical
+    CPU ID (§2.2, §3.1).
+15. Search those shards for any committed row or receipt carrying the
+    boot ID. None means the boot's first successful eventd start;
+    otherwise this is a restart within the boot (§3.7).
+16. Initialise each drain's recovery coverage from the merged receipts.
+    It begins at the ring's oldest survivor, skips covered sequences,
+    re-ingests uncovered survivors, and records as gaps only sequences
+    in neither source (§8.5).
 
 ## Phase 5 — Sockets
 
-16. Create the query socket at `QuerySocketPath`. A stale pathname left
+17. Create the query socket at `QuerySocketPath`. A stale pathname left
     by a crash is unlinked first if it is an `AF_UNIX` socket; if the
     path exists and is not a socket, startup fails.
-17. Create the log socket at `LogSocketPath`, same rule.
-18. Create the metric socket at `MetricSocketPath`, same rule.
-19. Establish the Security Descriptor on all three, before any of them
+18. Create the log socket at `LogSocketPath`, same rule.
+19. Create the metric socket at `MetricSocketPath`, same rule.
+20. Establish the Security Descriptor on all three, before any of them
     accepts or receives anything (§7.6).
 
 The stale-socket rule distinguishes the two cases deliberately.
@@ -72,19 +82,21 @@ is a configuration error worth failing on.
 
 ## Phase 6 — Threads
 
-20. One drain thread per CPU, each beginning to read its ring buffer.
 21. One writer thread per active shard.
-22. The log ingestion thread.
-23. The metric ingestion thread.
-24. The retention thread.
-25. The adaptive indexing and rollup policy thread.
+22. One drain thread per attached logical CPU, each beginning to
+    reconcile and read its ring buffer.
+23. The log ingestion thread.
+24. The metric ingestion thread.
+25. The retention coordinator thread.
+26. The adaptive indexing policy thread.
 
 ## Phase 7 — Ready
 
-26. Write and **commit** a `synthetic.startup` event recording the boot
-    ID, the shard count and the per-CPU resume points (§3.2). The commit
+27. Write and **commit** a `synthetic.startup` event recording the boot
+    ID, the shard count and the per-CPU recovered coverage points
+    (§3.2). The commit
     happens before readiness is signalled.
-27. Signal readiness to peinit.
+28. Signal readiness to peinit.
 
 Committing before signalling is what makes the startup record
 trustworthy. A readiness signal sent before the commit could be followed

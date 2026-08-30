@@ -23,8 +23,9 @@ follows from them rather than from anything specific to a stage.
 ## The ring buffers are the only buffer
 
 eventd holds no large intermediate queue between KMES and SQLite. The
-handoff channel is bounded by the maximum batch size and nothing else
-accumulates.
+handoff channel has startup-fixed slot and byte bounds chosen by
+performance testing, independently of the writer's transaction batch
+size, and nothing else accumulates (§2.3).
 
 When the writer falls behind, the channel fills; when the channel is
 full, the drain thread stops reading; when the drain thread stops

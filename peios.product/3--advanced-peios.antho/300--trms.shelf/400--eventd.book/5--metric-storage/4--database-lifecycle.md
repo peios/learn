@@ -5,17 +5,23 @@ description: The metric store file — its path, creation, opening, concurrency 
 
 ## Path
 
-The file named by `MetricStorePath` (§A). No compiled-in default; a
-missing or invalid value is a startup failure. eventd creates the file
-and any absent parent directories.
+`MetricStorePath` (§A) names a provisioned directory, conventionally
+`/var/state/eventd/metrics`. The database itself has the fixed name
+`metrics.db` inside it. A missing, invalid or unsafe directory is a
+startup failure.
+
+The directory has the provisioning, descriptor and path-resolution
+requirements defined for the event store (§3.3). eventd does not create
+it or any parent directory, never follows a symbolic-link component,
+and creates or opens the database relative to an already validated
+directory handle.
 
 ## Creation
 
 1. WAL mode.
 2. `PRAGMA synchronous=NORMAL` — the log store's reasoning, for the same
    reason: metric loss on power failure is acceptable (§4.1).
-3. The `series`, `samples`, `rollups` and `metadata` tables (§5.2,
-   §5.6).
+3. The `series`, `samples` and `metadata` tables (§5.2).
 4. Every write-time index.
 5. The `schema_version` and `created_at` entries.
 
@@ -24,9 +30,9 @@ and any absent parent directories.
 1. Open in WAL mode with synchronous NORMAL.
 2. Verify the schema version. Missing or unrecognised is a **startup
    failure**; no migration.
-3. Verify structural integrity — required tables and indexes present,
-   including `rollups` and its lookup index. Failing this, with SQLite
-   reporting no corruption, is a **startup failure**.
+3. Verify structural integrity — required tables and indexes present.
+   Failing this, with SQLite reporting no corruption, is a **startup
+   failure**.
 4. On SQLite reporting corruption, quarantine and replace, exactly as
    for a shard (§3.3): matching `-wal` and `-shm` files renamed with the
    same `.corrupt.<timestamp_ns>` suffix, `.N` appended if the name is
@@ -40,9 +46,11 @@ After opening or creation the series cache is empty and fills on demand
 
 ## Concurrency
 
-One read-write connection owned by the metric writer thread, and any
-number of read-only query connections. WAL mode permits both
-concurrently.
+Exactly one read-write connection, owned by the metric writer thread,
+and any number of read-only query and maintenance connections. WAL mode
+permits readers alongside the writer. Retention and later maintenance
+features plan with read-only connections and submit bounded commands to
+the writer; they never open another read-write connection (§3.6).
 
 The single-writer property is load-bearing here in a way it is not for
 the other stores: series resolution checks for an existing row and then

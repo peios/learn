@@ -18,10 +18,12 @@ There are four.
 An `"ok"` message carries `records`, an array of flat maps (§3.22).
 
 Records are chunked at record boundaries: a successful query sends one
-or more `"ok"` messages, each within the message ceiling (§3.15). A
-collector MUST NOT split one record across two messages. A record too
-large to fit in a message alone MUST fail the query with an error rather
-than being truncated, partially sent, or skipped.
+or more `"ok"` messages, ordinarily at or below the response target
+(§3.15). A collector MUST NOT split one record across two messages. If
+one complete record exceeds the target, that record occupies an
+otherwise empty `"ok"` message by itself. It MUST NOT be truncated,
+partially sent, skipped, or turned into a query error merely because it
+exceeds the target.
 
 Each record is self-describing and records in one response MAY carry
 different sets of keys — event payload fields vary by event type, metric

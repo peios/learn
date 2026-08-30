@@ -35,8 +35,8 @@ directory as one store (§2.3).
 configuration, opened read-only and still queried (§3.3).
 
 **Handoff channel**: the bounded queue between drain threads and a
-writer thread. It is a staging area for the current batch, not a buffer
-(§2.3).
+writer thread. It is a small startup-fixed scheduling handoff, bounded
+by slots and bytes independently of transaction batch size (§2.3).
 
 **Synthetic event**: a record eventd generates itself and writes
 directly to a shard, bypassing KMES. Synthetic events carry no identity
@@ -59,9 +59,8 @@ shard is quiet and diverge from it under pressure (§3.4).
 **Shedding**: dropping secondary indexes to protect write throughput
 (§3.4).
 
-**Rollup**: a pre-computed metric aggregate for one series, one
-function and one time window (§5.6). **Rollup registry**: the global set
-of (function, window) pairs being pre-computed.
+**Rollup**: a possible future pre-computed metric aggregate. v0.23 has
+no rollup table or registry and answers from raw samples (§5.6).
 
 **Series cache**: the bounded in-memory map from series identity to
 series row, which keeps metric ingestion off SQLite in the common case

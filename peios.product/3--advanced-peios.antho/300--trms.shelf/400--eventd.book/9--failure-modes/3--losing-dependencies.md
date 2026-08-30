@@ -59,6 +59,7 @@ not as a failure (§2.2).
 
 ## peinit
 
-peinit supplies the boot ID at startup and manages the lifecycle. It has
-no runtime role once eventd is running, so there is no failure mode
-here — peinit going away means the system is going away.
+peinit manages eventd's lifecycle but supplies no runtime service to it.
+The boot ID comes from `/proc/sys/kernel/random/boot_id` (§8.1). There is
+therefore no separate peinit-loss mode once eventd is running — peinit
+going away means the system is going away.

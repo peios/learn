@@ -5,11 +5,19 @@ description: Discovering CPUs and attaching to their rings, the drain threads, c
 
 ## Attachment
 
-At startup eventd discovers the CPU count by calling `kmes_attach` with
-incrementing CPU identifiers from 0 until the call returns `EINVAL`.
-Each successful call returns one file descriptor for that CPU's ring
-buffer, and eventd maps each one. The mapping size is derived from the
-`capacity` value the call reports, as PSPK defines it.
+At startup eventd calls `kmes_attach(KMES_ATTACH_QUERY_SLOTS, …)` to
+obtain the logical CPU slot count. It then walks every slot from zero to
+one below that count. A successful call returns one descriptor for that
+logical CPU's ring buffer; `EINVAL` means the slot is a hole and eventd
+continues rather than treating it as the end of enumeration. Each
+successful descriptor is mapped at the size derived from the returned
+`capacity`, exactly as PSPK §2.3 defines.
+
+The attached logical CPU IDs may therefore be sparse. eventd assigns
+the successful attachments dense internal ordinals in ascending logical
+CPU-ID order for shard routing (§2.3), while preserving the logical
+`cpu_id` everywhere externally visible: event rows, receipt ranges, gap
+records and diagnostics.
 
 Attachment requires SeSecurityPrivilege in the effective token, which is
 the privilege that grants an unfiltered view of every event on the
@@ -40,8 +48,11 @@ Each thread follows the read protocol PSPK specifies:
 
 ## Copying
 
-A drain thread copies the event — header and payload — into
-process-local memory before it advances `read_pos`.
+A drain thread reserves both one slot and the event's byte length in its
+shard handoff before copying the event — header and payload — into
+process-local memory and advancing `read_pos`. If either reservation is
+unavailable, it leaves the event in KMES and waits; it does not copy or
+advance first (§2.3).
 
 Nothing derived from the mapped region ever reaches a writer thread. The
 region is producer-owned and KMES may overwrite any part of it the
@@ -58,56 +69,54 @@ An administrator changing the ring buffer capacity causes KMES to
 replace the buffers, which it signals by changing the `generation`
 field. A drain thread checks it after each drain cycle, and on a change:
 
-1. Records the sequence number of the last event it processed.
-2. Calls `kmes_attach` again for its CPU, obtaining a descriptor for the
-   resized buffer.
-3. Maps the new buffer.
-4. Unmaps the old one and closes the old descriptor.
-5. Scans the new buffer for the first event whose sequence number
-   exceeds the recorded one.
-6. Resumes draining from there.
+1. Records the sequence number of the last event it has successfully
+   handed off.
+2. Finishes draining the old buffer to its now-frozen `write_pos`,
+   updating that sequence number as it goes.
+3. Calls `kmes_attach` again for the same logical CPU, obtains the
+   replacement descriptor, and maps it while the old mapping remains
+   valid.
+4. Scans the new buffer from `tail_pos` for the first event whose
+   sequence is greater than the final sequence drained from the old
+   buffer, and sets the new `read_pos` there.
+5. Closes and unmaps the old buffer only after that scan succeeds.
+6. Resumes draining from the new buffer.
 
 Each drain thread handles this independently. There is no barrier, no
 coordination and no shared state, because each attaches only to its own
 CPU's buffer — so a resize is a per-CPU event that happens to occur on
 every CPU at roughly the same time.
 
-The scan in step 5 is what makes the transition lossless in both
-directions: no event is skipped, and none is written twice.
+Draining the frozen old buffer before switching prevents loss at the
+back of the old generation. The sequence scan prevents duplicates from
+the events KMES copied into the replacement. A shrink may still discard
+the oldest survivors; that loss appears as an ordinary sequence gap.
 
 ## Sequence tracking
 
-Each drain thread holds the last sequence number it saw for its CPU. It
-serves gap detection (§2.5) and resumption after a generation change or
-a restart.
+During an uninterrupted run, each drain thread holds the last sequence
+number it saw for its logical CPU. It serves gap detection (§2.5) and a
+generation change.
 
-At startup, if committed rows already exist for the current boot, the
-resume point for each CPU is derived from those rows:
+After a restart, there is deliberately no single resume number. Different
+shard transactions may have committed out of sequence, so taking
+`MAX(sequence)` could skip an earlier stripe that never committed. The
+authority is the union of committed `receipt_ranges` from every readable
+active and historical shard (§3.1).
 
-```sql
-MAX(sequence)
-WHERE boot_id = current_boot_id
-  AND cpu_id = cpu
-  AND sequence IS NOT NULL
-```
+Startup merges those ranges per `(boot_id, cpu_id)`, scans the surviving
+ring records, skips survivors already covered by a receipt, and
+re-ingests uncovered survivors. It emits a gap only for a sequence that
+is covered by neither a committed receipt nor a surviving ring record
+(§8.5). With no receipt for a CPU, coverage begins before sequence 1, so
+an overwritten prefix is detected correctly.
 
-across **every readable event shard database**, historical shards
-included. Historical shards can hold current-boot rows: an eventd
-restarted within one boot under a smaller shard count leaves its
-higher-numbered shards behind, and the events it wrote to them before
-the restart are still that boot's events.
+The metadata database's sequence checkpoints and the shutdown event are
+diagnostic only (§3.5, §8.4). Neither participates in recovery.
 
-The `sequence IS NOT NULL` clause excludes synthetic events, which have
-no sequence numbers (§2.6).
-
-Committed rows are the authority. The metadata database holds sequence
-checkpoints and the shutdown event records the same numbers (§3.5,
-§8.4), but both are diagnostic: a checkpoint can be stale in exactly the
-case that matters, where eventd died between its last commit and its
-last checkpoint, and trusting it would mean re-reading events already
-stored or skipping a gap.
-
-With no prior rows for the current boot, the tracker starts at 0. The
-first event on each CPU carries sequence number 1, so a tracker at 0
-expects 1 and detects a gap correctly if the first event it sees is
-later.
+KMES sequence numbering MUST remain continuous while the kernel boot ID
+is unchanged. The v0.23 deployment therefore initialises KMES once for
+the whole boot and does not unload or reload it. A sequence regression
+under the same boot ID, other than duplicates deliberately encountered
+during replacement scanning, is a fatal incompatibility: eventd stops
+rather than confuse two KMES stream lifetimes under one receipt key.

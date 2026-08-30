@@ -8,7 +8,7 @@ There is no sharding here: one ingestion thread produces the writes, so
 splitting the target would give a single writer several files to switch
 between rather than several writers working in parallel.
 
-It holds one `logs` table.
+It holds the `logs`, `log_origins` and `metadata` tables.
 
 | Column | Type | Contents |
 |---|---|---|
@@ -28,6 +28,24 @@ correlation key — which is not an identity at all, since `origin` is
 self-asserted and unverified (PSPU §3.28).
 
 A program needing more structure than this emits events.
+
+## The origin catalogue
+
+`log_origins` has one column, `origin TEXT PRIMARY KEY`. The log writer
+inserts a previously unseen origin in the same transaction as its first
+log row (§4.1), so every committed row is discoverable immediately.
+
+Query planning enumerates origins from this compact catalogue rather than
+running `DISTINCT origin` over the retained log rows (§6.1). Catalogue
+entries deliberately survive ordinary retention. An origin may
+therefore remain discoverable after its final row expires; this safe
+superset avoids write work on the ingestion path. Low-priority
+maintenance may remove an entry after proving through a read-only scan
+that no row refers to it, with the deletion submitted to the log writer.
+The writer rechecks `NOT EXISTS` in that transaction and removes the
+origin from its in-memory set only after commit, so a log arriving
+between planning and execution cannot become undiscoverable. Catalogue
+pages count toward logical live size.
 
 ## `is_error` is an integer here and a boolean there
 
@@ -68,7 +86,8 @@ increment them (§6.5).
 ## Schema version
 
 The log store holds a `metadata` table with the same two-column
-structure as a shard's (§3.1). Its version is in §B.
+structure as a shard's (§3.1). Schema version 1 comprises `logs`,
+`log_origins` and `metadata`; its version number is in §B.
 
 eventd checks it at startup and applies the lifecycle rules of §4.3,
 and does not migrate.

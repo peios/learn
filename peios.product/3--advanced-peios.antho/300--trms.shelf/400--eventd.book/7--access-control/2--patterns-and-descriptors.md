@@ -54,6 +54,7 @@ Machine\System\eventd\Security\Logs\*
 Machine\System\eventd\Security\Logs\loregd
 Machine\System\eventd\Security\Metrics\*
 Machine\System\eventd\Security\Metrics\cpu
+Machine\System\eventd\Security\Admin
 ```
 
 Each type's wildcard default is **load-bearing**. If a default is
@@ -67,13 +68,15 @@ them with the ordinary registry tools rather than through eventd.
 
 ## Defaults on first boot
 
-eventd creates the three wildcard keys if they do not exist:
+eventd creates the three wildcard keys and administrative descriptor if
+they do not exist:
 
 | Key | Default |
 |---|---|
 | `…\Security\Events\*` | SYSTEM and Administrators: `EVENTD_READ` on all fields. |
 | `…\Security\Logs\*` | SYSTEM, Administrators and Authenticated Users: `EVENTD_READ` on all fields. |
 | `…\Security\Metrics\*` | SYSTEM, Administrators and Authenticated Users: `EVENTD_READ` on all fields. |
+| `…\Security\Admin` | SYSTEM and Administrators: `EVENTD_ADMINISTER`. |
 
 The asymmetry reflects sensitivity. Events include security audit data
 and are restricted to administrators; logs and metrics are operational
@@ -96,15 +99,11 @@ one is a commitment to keep those claim names meaningful thereafter.
 
 ## The administrative descriptor
 
-`INDEX` (PSPU §3.23) is checked against `admin_sd`, held in the metadata
-database rather than the registry (§3.5), with `EVENTD_ADMINISTER` as
-the desired access. Its default grants SYSTEM and Administrators.
+`INDEX` (PSPU §3.23) is checked against
+`Machine\System\eventd\Security\Admin`, with `EVENTD_ADMINISTER` as the
+desired access. Its default grants SYSTEM and Administrators.
 
 eventd refuses `INDEX` outright if no administrative descriptor exists,
-by the same fail-closed rule as the read path.
-
-> [!NOTE]
-> This is the one piece of access control state outside the registry, and
-> the protection of the directory holding it is not otherwise specified
-> (§3.3). A process able to write the event store directory can rewrite
-> the descriptor governing eventd's own policy.
+by the same fail-closed rule as the read path. Keeping it in the
+registry means the registry's own descriptor protects the policy and a
+recreated `eventd-meta.db` cannot reset it (§3.5).

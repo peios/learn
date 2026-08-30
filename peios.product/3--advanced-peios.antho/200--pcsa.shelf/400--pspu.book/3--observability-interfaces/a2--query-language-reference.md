@@ -60,7 +60,6 @@ METRIC name[label_selector] [transform] [aggregation] [clauses…]
 | Histogram series with no percentile function | execution | §3.25 |
 | Unbracketed metric query with `SINCE` resolving to several series | execution | §3.25 |
 | Cross-type metric selector resolving to several series | execution | §3.26 |
-| Result record larger than the message ceiling | execution | §3.16 |
 | Aggregation producing a non-finite value | execution | §3.23, §3.25 |
 
 "Parse" failures need no data. "Execution" failures depend on what the

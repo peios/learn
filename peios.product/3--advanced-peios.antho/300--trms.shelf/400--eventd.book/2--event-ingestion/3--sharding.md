@@ -7,22 +7,26 @@ description: Event writes distributed across up to 256 independent databases —
 
 Event writes are distributed across one to 256 independent SQLite
 databases. The count comes from `StorageShards` (§A); zero means "as
-many shards as there are CPUs", and is the default.
+many shards as there are successfully attached KMES buffers", and is
+the default.
 
 Two properties make a count perform well, and neither is enforced. A
 power of two lets routing use a bitwise AND rather than a modulo. A
-multiple of the CPU count distributes shards evenly across CPUs. The
-default satisfies the second by construction.
+multiple of the attached-buffer count distributes shards evenly across
+drain threads. The default satisfies the second by construction.
 
 ## Assignment
 
 Shard-to-CPU assignment is computed once at startup and is fixed for the
 process lifetime.
 
-For each CPU `c`, eventd assigns every shard `j` where
-`j % cpu_count == c`. If that produces nothing — which happens when
-there are fewer shards than CPUs — CPU `c` is instead assigned
-`c % shard_count`. Every CPU ends with at least one write path.
+The successfully attached logical CPUs are assigned dense ordinals
+`c = 0..attached_count-1` in logical-ID order (§2.2). For each ordinal
+`c`, eventd assigns every shard `j` where
+`j % attached_count == c`. If that produces nothing — which happens
+when there are fewer shards than attached buffers — ordinal `c` is
+instead assigned `c % shard_count`. Every drain thread ends with at
+least one write path. Logical `cpu_id`, not the ordinal, is stored.
 
 The three cases behave differently:
 
@@ -32,8 +36,16 @@ The three cases behave differently:
 | shards < CPUs | several CPUs share a shard |
 | shards > CPUs | a CPU owns several shards |
 
-A drain thread owning several shards distributes its events round-robin,
-sending each successive event to the next shard it owns.
+A drain thread owning several shards distributes **contiguous sequence
+stripes**, not individual events round-robin. It sends a fixed positive
+number of successive events to one shard, then moves to the next shard
+it owns. The stripe length is selected once at startup and is not
+persisted; committed receipt ranges, rather than recomputing the routing
+choice, are the recovery authority (§2.2, §3.1).
+
+Keeping a contiguous run together makes one receipt describe the run
+compactly. It preserves parallelism across CPUs and across successive
+stripes without requiring any cross-shard commit coordinator.
 
 When the counts do not divide evenly, some CPUs carry one shard more
 than others, or some shards receive from one CPU more than others. The
@@ -66,12 +78,15 @@ multi-producer and single-consumer.
 ## The handoff channel
 
 Each writer thread has one bounded channel through which drain threads
-submit events. Its capacity does not exceed the maximum batch size
-(§2.4).
+submit events. Its capacity is fixed at startup and independent of
+`MaxBatchSize`: the channel is bounded both by occupied slots and by the
+total bytes held by those slots. Both are internal implementation limits
+selected by performance testing, not live registry settings.
 
-When the channel is full the drain thread **stops reading from the ring
-buffer** and waits. It does not drop events to relieve the pressure and
-it does not grow the channel. Events accumulate in the ring buffer
+When either bound would be exceeded the drain thread **stops reading
+from the ring buffer** and waits. It reserves capacity before copying or
+advancing `read_pos` (§2.2), does not drop events to relieve pressure,
+and does not grow the channel. Events accumulate in the ring buffer
 instead, which is the designed path (§2.1):
 
 ```text
@@ -82,8 +97,12 @@ writer slow → channel fills → drain pauses → ring buffer absorbs
 When the writer commits and the channel has room, the drain thread
 resumes immediately.
 
-The channel is a staging area for one batch, not a second buffer. Its
-bound is the batch size precisely so that it cannot become one.
+The channel is a small scheduling handoff, not storage for a complete
+transaction and not a second backlog buffer. A writer can consume and
+insert one slot while producers refill it, so a transaction may contain
+many more events than the channel can hold simultaneously. Changing
+`MaxBatchSize` changes only the writer's next commit threshold and never
+resizes or replaces a live channel (§8.3).
 
 ## Lifecycle and reconfiguration
 

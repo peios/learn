@@ -36,11 +36,11 @@ captures. That is the only visibility available while the disk is still
 full and the gap record cannot yet be written.
 
 If eventd crashes before the disk recovers, the in-memory list dies with
-it. Nothing is silently lost even so: on restart, resume points are
-derived from committed rows, and the difference from the current ring
-buffer state is detected as an ordinary restart gap (§3.7). The record
-is coarser — one gap rather than several — but the loss is still
-recorded.
+it. Nothing is silently lost even so: on restart, committed receipt
+ranges are reconciled with the current ring survivors. Uncovered
+survivors are ingested again, and sequences present in neither source
+become ordinary restart gaps (§2.2, §3.7). The record may be coarser —
+one gap rather than several — but the loss is still recorded.
 
 Meanwhile events accumulate in the ring buffers. If the disk stays full
 long enough, they overrun and additional loss occurs, detected by the

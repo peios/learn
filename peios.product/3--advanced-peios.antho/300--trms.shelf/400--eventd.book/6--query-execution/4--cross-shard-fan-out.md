@@ -44,8 +44,8 @@ coordinator combines them:
 `AVG` is the one that cannot be composed from its own output. Averaging
 per-shard averages weights each shard equally regardless of how many
 rows it held, so a shard is asked for the sum and the count and the
-coordinator divides once — the same reasoning that makes rollup
-composition carry `sample_count` (§5.6).
+coordinator divides once. Averaging shard averages would weight shards
+rather than rows and give a different answer.
 
 Pushing aggregation down bounds the coordinator's memory to the group
 key cardinality times the shard count, rather than to the total row

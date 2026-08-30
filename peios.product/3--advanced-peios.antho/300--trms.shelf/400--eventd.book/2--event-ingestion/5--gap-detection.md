@@ -8,6 +8,10 @@ thread knows what it last saw. That is the whole mechanism: an event
 whose sequence number exceeds the expected next one means the numbers in
 between belonged to events eventd never received.
 
+During restart reconciliation, "expected" is the union of committed
+receipt coverage and surviving ring records rather than one last-seen
+number. A sequence already covered by either source is not a gap (§2.2).
+
 ## Causes
 
 - **Ring buffer overrun.** KMES overwrote events before eventd read
@@ -34,9 +38,11 @@ On detecting a jump, the drain thread generates a gap record carrying:
 
 The record is written into the shard database through the normal write
 path — handed to the same writer thread, batched with ordinary events,
-committed in the same transaction. It is not emitted through KMES, which
-would be circular: the mechanism for recording that the event transport
-lost something cannot depend on that transport.
+committed in the same transaction. That transaction's receipt range
+covers the missing sequence interval as well as any real event rows, so
+a restart never emits the same gap twice (§3.1). It is not emitted
+through KMES, which would be circular: the mechanism for recording that
+the event transport lost something cannot depend on that transport.
 
 The gap details are stored as a MessagePack map in the `payload` column
 (§3.2), and gap records are queryable exactly like any other event.
@@ -55,7 +61,8 @@ most needs to return.
 `sequence` stays null because a gap record has no place in the sequence:
 it describes numbers that were skipped, and giving it one of them would
 make it indistinguishable from the event that was lost. It is also what
-keeps gap records out of the resume-point derivation in §2.2.
+keeps gap records distinct from real events; `receipt_ranges` records
+the accounted sequence interval separately (§3.1).
 
 ## Lapping
 

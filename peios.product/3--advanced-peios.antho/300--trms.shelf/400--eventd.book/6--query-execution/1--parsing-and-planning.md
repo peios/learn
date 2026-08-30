@@ -48,12 +48,17 @@ Planning resolves what the query will actually touch:
   frequency accounting (§6.5)
 - which stores are involved, including any cross-type source
 
-The identifier discovery step is the expensive one and its cost is not
-bounded by the query. `EVENTS SINCE 30d ago` with no type pattern has to
-establish every distinct event type in that range before it can
-authorize anything, and whether that is an index scan or a table scan
-depends on whether `event_type` currently has an index — which is an
-adaptive decision that pressure may have reversed (§3.4).
+Identifier discovery reads compact catalogues: the union of every
+shard's `event_types`, the log store's `log_origins`, and the metric
+store's `series` rows (§3.1, §4.2, §5.2). The primary selector filters
+that set before access checks. Discovery therefore never runs a
+`DISTINCT` scan over a hot records table and does not depend on an
+adaptive event index being present.
+
+Catalogues may conservatively contain a name whose final retained row was
+deleted. That safe superset can cause an extra access check but cannot
+expose a row or omit a concrete identifier that committed successfully.
+Low-priority cleanup is optional and is never query-critical.
 
 ## When payloads are decoded
 

@@ -23,9 +23,6 @@ policy interval (§3.5). Query handlers never write to that database
 directly, which is what keeps the once-per-query update off any lock a
 writer thread contends for.
 
-Metric queries feed the parallel rollup registry counters instead
-(§5.6), which record `(function, window)` pairs rather than fields.
-
 ## Concurrency
 
 eventd bounds concurrent queries — streaming and non-streaming together
@@ -53,6 +50,16 @@ exhaust ingestion (PSPU §3.3).
 > class of missing primitive as the datagram peer identity that leaves
 > `origin` unverifiable (PSPU §3.28), and the global limit is what stands
 > in for it.
+
+## Request and response sizes
+
+eventd rejects an inbound frame above `MaxQueryRequestBytes` before
+allocating or reading its payload. Outbound result records are grouped
+at record boundaries toward `QueryResponseTargetBytes` (§A). The target
+is not a limit: a complete record that exceeds it is sent alone, never
+split, truncated, skipped or failed merely for exceeding the target
+(PSPU §3.15–§3.16). Only the protocol's `u32` frame length is a hard
+outbound bound.
 
 ## Timeouts
 

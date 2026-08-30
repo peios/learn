@@ -9,24 +9,26 @@ If the out-of-memory killer takes eventd, it is treated exactly as a
 crash (§8.5): the databases are consistent, the ring buffers are
 untouched, peinit restarts the daemon, and the gap is recorded.
 
-Three things bound eventd's memory, and each is worth knowing because
-each has a configuration that governs it:
+The principal long-lived memory consumers are:
 
 | Consumer | Proportional to | Bounded by |
 |---|---|---|
 | Series cache | distinct metric series held in memory | `MetricSeriesCacheSize` (§5.3) |
-| Index and rollup counters | distinct fields and function-window pairs queried | the query surface itself |
+| Event-type and log-origin intern sets | distinct committed identifiers not yet cleaned from active catalogues | catalogue cardinality; no independent memory setting (§3.1, §4.2) |
+| Adaptive index counters | distinct event fields queried | the event query surface |
 | SQLite page caches | connections and active indexes | per-connection configuration (§C) |
+| Event handoff channels | occupied slots and copied event bytes | startup-fixed internal slot and byte limits (§2.3) |
 
-The handoff channels are deliberately not on that list. They are bounded
-by the batch size (§2.3), which is the entire point of the
-ring-buffers-are-the-only-buffer rule: the thing that would otherwise
-grow without limit under load is the thing that is fixed.
+The handoff limits do not follow live `MaxBatchSize` changes. The
+channels are small scheduling handoffs; KMES remains the real event
+backlog.
 
-The consumer most likely to surprise is the series cache under a
-high-cardinality producer — not because the cache grows, since it is
-bounded, but because the `series` table does, and the cache then
-thrashes on the thread that also drains the metric socket (§5.3).
+High-cardinality producers are the likely surprise. The series cache
+cannot grow past its limit, but the `series` table can grow and make it
+thrash on the thread that also drains the metric socket (§5.3).
+Identifier intern sets intentionally trade memory for zero catalogue work
+on known-name ingestion; store size retention and low-priority orphan
+cleanup bound them only indirectly.
 
 ## Query slots
 
@@ -58,12 +60,10 @@ pressure and signal cancellation; the writer aborts the `CREATE INDEX`,
 SQLite rolls back the partial index, and event writing resumes
 immediately (§3.4).
 
-**Retention holding a write lock.** The shard's writer blocks until
-retention releases it. Retention works in small bounded batches and
-releases the coordination primitive between them, and under sustained
-write pressure it delays the next batch long enough for a waiting writer
-to make progress (§3.6). Events accumulate in the ring buffer during the
-stall, which is the ordinary absorption path.
+**A writer-owned maintenance command.** Retention and adaptive-index
+maintenance execute only as bounded, low-priority commands at
+transaction boundaries. Ingestion wins before the next command; there
+is no competing read-write connection or writer mutex (§3.6).
 
 Neither stall loses anything by itself. Both contribute to ring buffer
 pressure, and prolonged enough, both end at §9.1.

@@ -14,10 +14,15 @@ inputs changing underneath it.
 ## What applies immediately
 
 Tuning parameters: batch sizes and latencies for all three writers,
-retention periods and the delete batch size, adaptive index and rollup
-thresholds and windows, the adaptive scalar rollup window, the WAL
-checkpoint threshold, the query timeout, the cross-type window and
-lookback limit, and the query and streaming concurrency limits.
+retention periods and the delete batch size, adaptive index thresholds
+and windows, the WAL checkpoint threshold, the query request and
+response sizes, the query timeout, the cross-type window and lookback
+limit, and the query and streaming concurrency limits.
+
+A live `MaxBatchSize` change is an atomic update to the event writers'
+next commit threshold. It does not resize, replace or drain their
+startup-fixed handoff channels (§2.3). The log and metric batch settings
+likewise affect only subsequent transaction thresholds.
 
 ## What waits for a restart
 

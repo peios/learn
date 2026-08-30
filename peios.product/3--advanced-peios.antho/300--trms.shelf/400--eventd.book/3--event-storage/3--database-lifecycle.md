@@ -10,15 +10,27 @@ named by `EventStorePath` (§A). There is no compiled-in default: a
 missing or invalid value is a startup failure, and eventd writes event
 databases nowhere else.
 
-eventd creates the directory if it is absent.
+The standard path is `/var/state/eventd/events/`. The eventd package
+declares `/var/state/eventd/` and its `events/`, `logs/`, and `metrics/`
+children as required peinit provisioned directories. Each carries an
+explicit protected, inheritable descriptor granting full control only
+to SYSTEM and Administrators:
 
-> [!NOTE]
-> Nothing in eventd's design constrains the protection on that
-> directory. The three sockets get Security Descriptors (PSPU §3.3), but
-> the store paths are ordinary configuration, and the metadata database
-> inside this directory holds the descriptor governing administrative
-> operations (§3.5). A process that can write the directory can rewrite
-> that descriptor.
+```text
+O:SYG:SYD:P(A;OICI;GA;;;SY)(A;OICI;GA;;;BA)
+```
+
+A deployment choosing another configured path MUST provision it with
+equivalent protection before eventd starts.
+
+eventd does not create store directories. It opens every path component
+without following symbolic links, retains the resulting directory
+descriptor, and opens, creates, renames and quarantines database, WAL
+and shared-memory files relative to that descriptor. A missing path, a
+non-directory component, a symbolic-link component, or protection that
+allows an untrusted principal to replace children is a startup failure.
+SQLite's database, `-wal`, and `-shm` files inherit the directory's
+protection.
 
 ## Naming
 
@@ -36,7 +48,8 @@ A shard database that does not exist is created with:
 
 1. WAL mode, `PRAGMA journal_mode=WAL`
 2. `PRAGMA synchronous=FULL`
-3. the `events` and `metadata` tables (§3.1)
+3. the `events`, `event_types`, `receipt_ranges`, and `metadata` tables
+   (§3.1)
 4. the `idx_events_timestamp` index
 5. the `schema_version` and `created_at` entries
 

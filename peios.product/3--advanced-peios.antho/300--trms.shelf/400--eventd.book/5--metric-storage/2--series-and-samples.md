@@ -106,12 +106,6 @@ permitted and `id` gives them a stable order.
 `id` is internal. It is never exposed as a query field, a result field,
 an access-control field, or a reserved label key (PSPU §3.28).
 
-## The rollups table
-
-The database also holds `rollups`, defined in §5.6. Rollups are
-boot-agnostic scalar aggregates and carry no `boot_id`, which is why a
-boot-filtered metric query is never served from one.
-
 ## Write-time indexes
 
 - `idx_samples_series_timestamp` on `samples(series_id, timestamp, id)`
@@ -122,12 +116,10 @@ boot-filtered metric query is never served from one.
 - `idx_series_name` on `series(name)` — name lookups.
 - `idx_series_label_hash` on `series(label_hash)` — series resolution on
   the ingestion path.
-- `idx_rollups_series_function_window` on
-  `rollups(series_id, function, window_seconds, window_start)`.
 
 ## Schema version
 
 A `metadata` table with the same structure as the other stores' (§3.1).
-Version 1 comprises `series`, `samples`, `rollups` and `metadata`; the
-current value is in §B. eventd checks it at startup, applies the
-lifecycle rules of §5.4, and does not migrate.
+Version 1 comprises `series`, `samples` and `metadata`; the current value
+is in §B. eventd checks it at startup, applies the lifecycle rules of
+§5.4, and does not migrate.

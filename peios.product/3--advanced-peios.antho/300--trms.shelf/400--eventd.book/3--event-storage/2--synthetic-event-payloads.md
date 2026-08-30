@@ -14,9 +14,9 @@ traverse.
 | Field | Type | Contents |
 |---|---|---|
 | `boot_id` | string | The current boot ID, PCDS canonical GUID form. |
-| `restart` | bool | True when committed rows for this boot already existed at startup; false on the boot's first eventd start. |
+| `restart` | bool | True when committed rows or receipts for this boot already existed at startup; false on the boot's first successful eventd start. |
 | `shard_count` | unsigned integer | Active shard count after resolving `StorageShards`. |
-| `resume_points` | array of map | One entry per CPU, ordered by `cpu_id` ascending. Each has `cpu_id` and `sequence`, both unsigned integers. |
+| `resume_points` | array of map | One entry per logical CPU, ordered by `cpu_id` ascending. Each has `cpu_id` and `sequence`, the highest sequence contiguously accounted for after receipt/ring reconciliation, or 0. |
 
 `restart` is the boot-boundary decision of §3.7 recorded as data, which
 makes "did eventd crash during this boot, and how often" answerable by
@@ -26,10 +26,10 @@ query rather than by inference from gaps.
 
 | Field | Type | Contents |
 |---|---|---|
-| `last_sequences` | array of map | One entry per CPU, ordered by `cpu_id` ascending. Each has `cpu_id` and `sequence` — the last committed sequence for that CPU this boot, or 0 if none was. |
+| `last_sequences` | array of map | One entry per logical CPU, ordered by `cpu_id` ascending. Each has `cpu_id` and `sequence` — the highest sequence contiguously covered by committed receipts for that CPU this boot, or 0 if none was. |
 
-Diagnostic only. Startup derives its resume points from committed rows,
-never from this payload (§2.2).
+Diagnostic only. Startup derives recovery coverage from committed
+receipt ranges, never from this payload (§2.2).
 
 ## `synthetic.gap`
 

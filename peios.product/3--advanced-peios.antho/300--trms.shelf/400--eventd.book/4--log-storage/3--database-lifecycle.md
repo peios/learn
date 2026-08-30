@@ -1,15 +1,20 @@
 ---
 title: Database Lifecycle
-description: The log store is a file rather than a directory — its path, creation, opening, concurrency and checkpointing.
+description: The log store directory and fixed database file — its creation, opening, concurrency and checkpointing.
 ---
 
 ## Path
 
-The log store is the file named by `LogStorePath` (§A) — a file path,
-unlike the event store's directory. There is no compiled-in default: a
-missing or invalid value is a startup failure.
+`LogStorePath` (§A) names a provisioned directory, conventionally
+`/var/state/eventd/logs`. The database itself has the fixed name
+`logs.db` inside it. A missing, invalid or unsafe directory is a startup
+failure.
 
-eventd creates the file and any absent parent directories.
+The directory has the provisioning, descriptor and path-resolution
+requirements defined for the event store (§3.3). eventd does not create
+it or any parent directory, never follows a symbolic-link component,
+and creates or opens the database relative to an already validated
+directory handle.
 
 ## Creation
 
@@ -17,7 +22,7 @@ A log store that does not exist is created with:
 
 1. WAL mode, `PRAGMA journal_mode=WAL`
 2. `PRAGMA synchronous=NORMAL`
-3. the `logs` and `metadata` tables (§4.2)
+3. the `logs`, `log_origins` and `metadata` tables (§4.2)
 4. the `idx_logs_timestamp`, `idx_logs_origin` and `idx_logs_job_id`
    indexes
 5. the `schema_version` and `created_at` entries
@@ -44,9 +49,11 @@ startup rather than proceeding without logs.
 
 ## Concurrency
 
-One read-write connection owned by the log writer thread, and any number
-of read-only connections owned by query handlers. WAL mode lets them run
-concurrently.
+Exactly one read-write connection, owned by the log writer thread, and
+any number of read-only query and maintenance connections. WAL mode
+lets readers run concurrently. Retention and catalogue cleanup submit
+bounded commands to the writer and never open another read-write
+connection (§3.6).
 
 ## Checkpointing
 

@@ -23,7 +23,7 @@ Four services use it:
 | registryd | Starts before authd exists at all. |
 | lpsd | Must be running before authd can resolve a local identity. |
 | authd | Needs `SeTcbPrivilege` and `SeCreateTokenPrivilege`; it is the minter for everything else. |
-| eventd | Starts early, before authd is necessarily available. |
+| eventd | Is a trusted platform daemon and keeps the bootstrap identity even though its standard service definition orders it after authd. |
 
 Nothing restricts which services may declare `Identity=SYSTEM`. There is
 no allowlist, because an allowlist would be enforcing a boundary that is

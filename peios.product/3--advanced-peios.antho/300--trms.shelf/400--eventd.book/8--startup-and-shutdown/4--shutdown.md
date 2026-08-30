@@ -20,8 +20,8 @@ can without blocking indefinitely.
    cycle from its ring buffer.
 4. **Final commit.** Every writer commits its current batch immediately,
    whatever its size. The log and metric writers do the same.
-5. **Record sequence state.** Derive the per-CPU last committed
-   sequence from committed rows — the same rule startup uses — and write
+5. **Record sequence state.** Derive each logical CPU's highest
+   contiguously covered sequence from committed receipt ranges and write
    it to `sequence_checkpoints` for diagnostics (§3.5).
 6. **Emit the shutdown event.** Write `synthetic.shutdown` with the
    per-CPU sequences, using the daemon-wide shard assignment rule
@@ -55,9 +55,8 @@ What an aborted shutdown costs:
 - **Uncommitted log and metric batches** are lost, which is acceptable
   by design.
 - **The diagnostic sequence metadata** may be stale. It does not matter:
-  startup derives resume points from committed rows and detects the
-  difference between those rows and the ring buffer state as an ordinary
-  gap (§2.5).
+  startup derives coverage from committed receipt ranges and reconciles
+  it with the ring buffer (§2.2).
 
 Every consequence is one the restart path already handles, which is why
 aborting is safe rather than merely tolerable.

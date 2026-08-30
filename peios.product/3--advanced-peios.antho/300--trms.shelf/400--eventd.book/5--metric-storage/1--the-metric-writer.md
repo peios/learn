@@ -42,9 +42,8 @@ already held for that series.
 Producers batch, clocks step, and sweeps get retried. Refusing late
 samples would convert any of those into silent loss, so eventd accepts
 them and defines every ordering it performs over `(timestamp, id)`
-rather than over insertion order — which is what makes rollup
-computation and `RATE` evaluation deterministic regardless of arrival
-(§5.6, §6.2).
+rather than over insertion order. That makes raw `RATE` and `DELTA`
+evaluation deterministic regardless of arrival (§6.2).
 
 ## Batching
 

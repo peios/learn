@@ -56,11 +56,11 @@ falls behind, backpressure propagates backwards until the ring buffer
 absorbs it — and when the ring buffer cannot, the loss is detected and
 recorded rather than hidden (§2.5).
 
-Two subsystems adapt to the workload rather than being tuned for it.
-Adaptive indexing watches which fields queries filter on and maintains
-indexes for them, shedding those indexes under write pressure because
-throughput outranks query latency (§3.4). Adaptive rollups pre-compute
-the metric aggregations that are asked for often (§5.6).
+Adaptive indexing watches which fields event queries filter on and
+maintains indexes for them, shedding those indexes under write pressure
+because ingestion throughput outranks query latency (§3.4). Metric
+queries read raw samples in v0.23; adaptive rollups are deferred until a
+later schema can prove cached aggregates current (§5.6).
 
 Everything eventd holds is readable only through access checks that KACS
 performs, per event type, per log origin, per metric name, and per field

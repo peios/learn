@@ -5,9 +5,9 @@ description: The one database in the store that is not a shard — its tables, i
 
 One database in the event store directory is not a shard:
 `eventd-meta.db`. It holds the state that is global to eventd rather
-than to any shard — the adaptive index and rollup state, diagnostic
-sequence checkpoints, and the administrative Security Descriptor — and
-it is the one database that survives shard reconfiguration untouched.
+than to any shard — adaptive index state and diagnostic sequence
+checkpoints — and it is the one database that survives shard
+reconfiguration untouched.
 
 It is created on first startup if absent, opened in WAL mode with
 `synchronous=NORMAL`. It is written once per policy interval and read at
@@ -35,18 +35,6 @@ as the shards (§3.3).
 | `priority` | INTEGER NOT NULL | Rank; lower is higher priority. |
 | `is_expression` | INTEGER NOT NULL | 1 for a payload expression index, 0 for a column index. |
 
-**`rollup_counters`** and **`desired_rollups`** — the same pair for
-metric rollups (§5.6), keyed by `function_window`, a composite of
-function name and window size such as `avg_3600`.
-
-| Column | Type | Contents |
-|---|---|---|
-| `function_window` | TEXT PRIMARY KEY | Function and window, e.g. `avg_3600`. |
-| `query_count` | INTEGER NOT NULL | Queries using the pair within the window. |
-| `window_start` | INTEGER NOT NULL | When the window started. |
-
-`desired_rollups` carries `function_window` and `priority`.
-
 **`sequence_checkpoints`** — diagnostic only.
 
 | Column | Type | Contents |
@@ -56,11 +44,10 @@ function name and window size such as `avg_3600`.
 | `sequence` | INTEGER NOT NULL | Last committed sequence for that pair when written. |
 | `updated_at` | INTEGER NOT NULL | When it was written. |
 
-Primary key `(boot_id, cpu_id)`. Startup resumption derives its points
-from committed event rows and never from this table (§2.2). The table
-exists so that an operator can see what eventd believed at shutdown and
-compare it with what the rows say — the two disagreeing is itself
-diagnostic.
+Primary key `(boot_id, cpu_id)`. Startup recovery uses committed receipt
+ranges and never this table (§2.2). The table exists so that an operator
+can see what eventd believed at shutdown and compare it with receipt
+coverage — the two disagreeing is itself diagnostic.
 
 **`meta`** — key-value.
 
@@ -69,23 +56,15 @@ diagnostic.
 | `key` | TEXT PRIMARY KEY | Metadata key. |
 | `value` | BLOB NOT NULL | Strings as UTF-8 bytes, binary as raw bytes. |
 
-with three required entries: `schema_version` (§B), `created_at` as a
-UTC `YYYY-MM-DDTHH:MM:SSZ` string, and **`admin_sd`**, a self-relative
-Security Descriptor governing administrative operations — the `INDEX`
-command above all (§7.2).
-
-The default `admin_sd` grants SYSTEM and Administrators.
-
-> [!NOTE]
-> `admin_sd` is the only access control state eventd keeps outside the
-> registry. Everything on the read path lives under
-> `Machine\System\eventd\Security\` where the registry's own access
-> control protects it; this one sits in a file in the event store
-> directory, whose protection is not otherwise specified (§3.3).
+with two required entries: `schema_version` (§B) and `created_at` as a
+UTC `YYYY-MM-DDTHH:MM:SSZ` string. The administrative descriptor lives
+with every other eventd descriptor at
+`Machine\System\eventd\Security\Admin` (§7.2); no access-control state is
+stored in this reconstructible database.
 
 ## Concurrency
 
-One writer connection, owned by the index and rollup policy thread. No
+One writer connection, owned by the index policy thread. No
 other thread opens the database read-write.
 
 Query handlers write only to the in-memory counters; the policy thread
@@ -109,22 +88,19 @@ or `meta` entry is missing or malformed, eventd logs an error and
 
 This is the opposite of the rule for a shard, which fails startup
 (§3.3), and the difference is what is at stake. A shard holds the only
-copy of audit data. This database holds an optimisation policy, some
-diagnostics, and a descriptor with a known default — all of it
-reconstructible, none of it irreplaceable. Losing it costs the
-adaptation eventd had accumulated, and the counters begin refilling
-immediately.
-
-The one thing recreation does lose is a customised `admin_sd`, which
-reverts to the default.
+copy of audit data. This database holds an optimisation policy and some
+diagnostics — all of it reconstructible, none of it irreplaceable.
+Losing it costs the adaptation eventd had accumulated, and the counters
+begin refilling immediately. Security policy is unaffected because it
+lives in the registry.
 
 ## Startup
 
 1. Open `eventd-meta.db`, creating it if absent.
 2. Verify the schema version and required `meta` entries; recreate from
    defaults on failure.
-3. Load `index_counters` and `rollup_counters` into memory.
-4. Load `desired_indexes` and `desired_rollups` into memory.
+3. Load `index_counters` into memory.
+4. Load `desired_indexes` into memory.
 5. Load `sequence_checkpoints`, for diagnostics only.
 6. Discover the material indexes in each shard from its schema and
    compare against the desired set.

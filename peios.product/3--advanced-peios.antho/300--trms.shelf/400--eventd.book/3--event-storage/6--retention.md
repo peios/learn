@@ -54,23 +54,28 @@ when whole boots are exhausted does eventd start on the current one.
 
 ## Running it
 
-Retention runs on a background thread of its own, never on a writer or
-drain thread, using a separate read-write connection per store. It
-processes the event store first, then the log store (§4.4), then the
-metric store (§5.5). The interval is `RetentionCheckIntervalMinutes`
-(§A).
+A background retention coordinator processes the event store first,
+then the log store (§4.4), then the metric store (§5.5). The interval is
+`RetentionCheckIntervalMinutes` (§A). It uses read-only connections to
+measure and plan; it owns no read-write connection.
 
-WAL mode lets a reader run alongside a writer, but not a second writer,
-so the retention thread coordinates with each shard's writer thread — a
-shard-level mutex taken before writing, which the writer briefly yields
-to.
+Each database has exactly one read-write connection, owned by its
+ingestion writer. The coordinator submits low-priority maintenance
+commands to that owner. A command runs only at a transaction boundary,
+deletes at most `RetentionDeleteBatchRows`, and yields to ingestion
+before another command runs. Under urgent size pressure the owner may
+append one bounded deletion to an ingestion transaction it already has
+open, avoiding an additional commit and fsync.
 
-Deletion is batched. Each transaction deletes at most
-`RetentionDeleteBatchRows` and commits before the next, and between
-batches the retention thread releases the coordination primitive and
-rechecks writer pressure. A single unbatched `DELETE` over a month of
-events would hold a write transaction for as long as it took, blocking
-the writer thread and, behind it, the drain thread and the ring buffer.
+The passive checkpoint attempted before a size measurement is also a
+writer-owned command. The coordinator requests it, then reads the page
+and freelist counts through its read-only connection. It never tries to
+checkpoint through that connection or temporarily promotes it.
+
+There is no retention writer mutex and no second SQLite writer. A
+single unbatched `DELETE` over a month of events could otherwise hold a
+write transaction for as long as it took, blocking the writer and,
+behind it, the drain thread and KMES ring.
 
 ## Reclamation
 

@@ -1,6 +1,6 @@
 ---
 title: Query Framing
-description: Length-prefixed MessagePack in both directions, the message ceiling, and the requirement that the ceiling admit every record.
+description: Length-prefixed MessagePack in both directions, the inbound request ceiling, and the outbound response target.
 ---
 
 Every message in either direction is a length-prefixed MessagePack
@@ -20,51 +20,54 @@ socket at a configured path, so there is no possibility of reaching the
 wrong service by accident in the way a shared header guards against
 (PSPU §2.7), and versioning is handled as §3.29 describes.
 
-## The message ceiling
+## The two size controls
 
-A collector declares a maximum payload size, the **query message
-ceiling**, which bounds messages in both directions.
+A collector declares two independent sizes. The **query request
+ceiling** is a hard inbound limit. The **query response target** is a
+soft outbound batching target. They are separate because an untrusted
+client must not be able to force an arbitrarily large allocation merely
+by declaring a request length, while a record the collector has already
+accepted must remain possible to return.
 
 > [!NOTE]
 > §3.A gives the mainline value and adjustable range
-> for this bound and every other in this chapter.
+> for both sizes and every other bound in this chapter.
 
 **Inbound.** A collector MUST refuse a request whose `length` exceeds
-the ceiling. It MUST do so without reading the payload — the point of
-checking the prefix is to avoid allocating for a request that a
-malicious or broken client has declared too large — and it MUST send an
-error response (§3.16) before closing the connection. A collector MUST
-NOT close on an oversized request silently: a bare close is
+the request ceiling. It MUST do so without reading the payload — the
+point of checking the prefix is to avoid allocating for a request that
+a malicious or broken client has declared too large — and it MUST send
+an error response (§3.16) before closing the connection. A collector
+MUST NOT close on an oversized request silently: a bare close is
 indistinguishable from a crash, and leaves a client unable to tell that
 shortening its query is the remedy.
 
-**Outbound.** A collector MUST ensure every response payload it sends is
-within the ceiling, chunking result records across messages as §3.16
-describes.
+**Outbound.** A collector SHOULD chunk result records so an ordinary
+response does not exceed the response target (§3.16). The target is not
+a ceiling: when one complete record would exceed it, the collector MUST
+send that record alone in one response rather than split, truncate,
+skip, or reject it.
 
-## The ceiling must admit every record
+## Every stored record must remain returnable
 
-A collector MUST NOT operate with a query message ceiling smaller than
-the largest record it can store.
+A collector MUST NOT store a record whose encoded result representation
+cannot fit in the protocol's `u32` payload length. This structural
+framing bound is the only outbound ceiling.
 
-A single result record is never split across messages (§3.16), so a
-record larger than the ceiling cannot be returned at all — and it cannot
-be skipped either, because skipping it would silently misreport what the
-store holds. It fails the query, and it fails every query whose range
-covers it, for as long as retention keeps it. One oversized record
-renders a span of history unreadable.
+A single result record is never split across messages (§3.16). A
+collector MUST therefore ensure that its accepted record encodings have
+a bounded result expansion that fits one frame. It MAY establish that
+statically from the protocol's record limits; it need not flatten or
+encode each record on the ingestion path merely to check response size.
+An implementation MAY encode a large response incrementally after
+writing its known length; it need not allocate another buffer as large
+as the record.
 
-The two are related by configuration and nothing enforces the relation
-automatically: the ingestion ceilings (§3.6, §3.9) bound the largest
-record a producer can deposit, and the query message ceiling bounds the
-largest that can be handed back. An administrator who raises one MUST
-raise the other.
-
-> [!NOTE]
-> The mainline defaults do not satisfy this. The log and metric datagram
-> ceilings are 262144 bytes and the query message ceiling is 65536, so a
-> producer can deposit a log line four times larger than any response
-> that could carry it.
+The ingestion ceilings (§3.6, §3.9) remain independent configuration.
+Raising one does not require raising the response target: it merely
+makes a single-record response above that target more likely. The
+structural `u32` requirement is a property of the wire encodings, not a
+configurable coupling between those values.
 
 ## Requests
 

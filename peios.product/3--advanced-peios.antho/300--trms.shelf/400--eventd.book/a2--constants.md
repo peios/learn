@@ -3,9 +3,9 @@ title: Constants
 description: eventd's own constants — access rights, generic mapping, the field GUID namespace, data type roots and origin names.
 ---
 
-Wire-protocol constants — the framing, the ingestion limits, the query
-message ceiling — belong to the interfaces rather than to eventd and are
-in PSPU §3.A.
+Wire-protocol constants — framing, ingestion limits, the query request
+ceiling and response target — belong to the interfaces rather than to
+eventd and are in PSPU §3.A.
 
 ## Access rights
 
@@ -106,26 +106,6 @@ Payload schemas are in §3.2.
 
 Stored in `series.type`. The query language exposes the names, not the
 numbers (PSPU §3.22).
-
-## Rollup functions
-
-| Value | Function |
-|---|---|
-| 0 | AVG |
-| 1 | MIN |
-| 2 | MAX |
-| 3 | SUM |
-| 4 | RATE |
-| 5 | DELTA |
-
-These name **per-series** rollup functions. Window aggregation keywords
-have no identifiers of their own: `AVG_OVER`, `MIN_OVER`, `MAX_OVER` and
-`SUM_OVER` map to AVG, MIN, MAX and SUM when no transform is present,
-and RATE and DELTA rollups carry `covered_ns` for exact composition
-(§5.6).
-
-P50, P95 and P99 have no identifiers because percentiles are not
-composable and are never rolled up.
 
 ## Log severity
 

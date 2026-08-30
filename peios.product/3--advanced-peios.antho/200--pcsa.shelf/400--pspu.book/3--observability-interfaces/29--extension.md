@@ -94,9 +94,9 @@ four existing ones can express.
 ## Limits are not the interface
 
 The declared bounds — the datagram ceilings (§3.6, §3.9), the query
-message ceiling (§3.15), the concurrency and timeout bounds (§3.14,
-§3.16), the existence window and lookback limit (§3.26) — are
-configuration, and an administrator may change any of them.
+request ceiling and response target (§3.15), the concurrency and timeout
+bounds (§3.14, §3.16), the existence window and lookback limit (§3.26)
+— are configuration, and an administrator may change any of them.
 
 A collector MUST behave identically at any value in its supported range.
 A producer or client MUST NOT infer a bound from having exceeded one, or

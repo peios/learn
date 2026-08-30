@@ -35,9 +35,13 @@ tiny and trend data is worth more the further back it goes (§5.5).
 
 ## Batching
 
-Deletion is batched at `RetentionDeleteBatchRows` per transaction, with
-a commit between batches. Between them the retention thread releases any
-writer coordination primitive and rechecks writer pressure.
+The retention coordinator plans with a read-only connection and submits
+low-priority commands to the log writer. Each writer-owned transaction
+deletes at most `RetentionDeleteBatchRows`, and ingestion is rechecked
+before the next command. Under urgent size pressure the writer may
+append one bounded delete to a transaction already open. Retention
+never takes a writer mutex or opens a second read-write connection
+(§3.6).
 
 The stall this avoids is the log ingestion thread's, and that thread is
 also the one draining the socket (§4.1) — so a retention pass holding a

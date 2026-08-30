@@ -1,6 +1,6 @@
 ---
-title: The Events Table
-description: One table per shard with every KMES header field as its own column, the untouched payload blob, and the write-time indexes.
+title: The Event Shard Schema
+description: Event rows, committed sequence receipts, the event-type catalogue, and the write-time index in every shard.
 ---
 
 Every shard database holds one `events` table.
@@ -48,6 +48,71 @@ Storing the bytes verbatim is also what keeps a payload field that
 collides with a header name recoverable: the value is suppressed from
 the query surface but remains in the blob.
 
+## The event-type catalogue
+
+Every shard also holds `event_types`:
+
+| Column | Type | Contents |
+|---|---|---|
+| `event_type` | TEXT PRIMARY KEY | A concrete event type that has been committed to this shard. |
+
+The writer loads this small set into an in-memory intern table at
+startup. A known type adds no catalogue statement to an event insert. A
+genuinely new type is inserted once, in the same transaction as its
+first event, and enters the in-memory set only after that transaction
+commits. A transaction-local pending set prevents later events of that
+type in the same batch from repeating the catalogue statement; rollback
+discards the pending set.
+
+Query planning unions these catalogues across relevant active and
+historical shards to discover concrete identifiers for access checks
+(§6.1). It never needs a `DISTINCT event_type` scan of the events table,
+so `idx_events_event_type` remains an adaptive index that may be shed
+without breaking planning (§3.4).
+
+Retention records the distinct types touched by each delete batch and
+offers orphan checks as low-priority maintenance. The writer rechecks
+`NOT EXISTS` in the deletion transaction, and removes the type from its
+in-memory set only after that deletion commits. A stale catalogue row is
+safe — it causes an unnecessary access check but cannot expose data — so
+an unindexed or pressure-interrupted check is simply skipped and cleanup
+never delays ingestion. Catalogue pages count toward the store's logical
+live size (§3.6), preventing unique-name abuse from escaping the
+store-wide size accounting.
+
+## Committed receipt ranges
+
+Every shard also holds `receipt_ranges`:
+
+| Column | Type | Contents |
+|---|---|---|
+| `boot_id` | BLOB NOT NULL | 16-byte kernel boot ID. |
+| `cpu_id` | INTEGER NOT NULL | Logical KMES CPU identifier. |
+| `first_sequence` | INTEGER NOT NULL | First accounted sequence, inclusive. |
+| `last_sequence` | INTEGER NOT NULL | Last accounted sequence, inclusive. |
+
+The primary key is `(boot_id, cpu_id, first_sequence, last_sequence)`,
+and every row satisfies `first_sequence > 0` and
+`last_sequence >= first_sequence`.
+
+A receipt says that every sequence in its range was accounted for by
+the same transaction: either the real event row was stored or a
+`synthetic.gap` row durably records why it was absent. The receipt is in
+that transaction, so its presence proves commit without a global
+checkpoint or another fsync. Receipt rows survive event retention.
+
+Startup unions and merges overlapping or adjacent ranges across every
+readable shard (§2.2, §8.5). A read-only background pass may prepare a
+low-priority compaction plan while the store is quiet. Writer-owned
+mutations first insert a merged range and only later delete ranges it
+subsumes, including ranges in other shards. Insert-before-delete makes
+every intermediate state conservative and crash-safe.
+
+Compaction mutations piggyback transactions a writer would commit
+anyway; they never cause a standalone commit or fsync, acquire no
+hot-path coordination primitive, and may lag indefinitely. Startup
+merge correctness never depends on physical compaction.
+
 ## Identity may be absent two ways
 
 `effective_token_guid` distinguishes two cases that would otherwise
@@ -72,7 +137,8 @@ system's business.
 
 ## Schema version
 
-Each shard holds a `metadata` table:
+Each shard holds `events`, `event_types`, `receipt_ranges`, and a
+`metadata` table:
 
 | Column | Type | Contents |
 |---|---|---|

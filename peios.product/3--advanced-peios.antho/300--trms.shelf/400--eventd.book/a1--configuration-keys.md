@@ -15,9 +15,9 @@ No compiled-in defaults. A missing or invalid value fails startup
 
 | Key | Type | Description |
 |---|---|---|
-| `EventStorePath` | REG_SZ | Directory for the event shard databases and `eventd-meta.db`. |
-| `LogStorePath` | REG_SZ | File path for the log store database. |
-| `MetricStorePath` | REG_SZ | File path for the metric store database. |
+| `EventStorePath` | REG_SZ | Provisioned directory for event shards and `eventd-meta.db`; standard deployment `/var/state/eventd/events/`. |
+| `LogStorePath` | REG_SZ | Provisioned directory for `logs.db`; standard deployment `/var/state/eventd/logs/`. |
+| `MetricStorePath` | REG_SZ | Provisioned directory for `metrics.db`; standard deployment `/var/state/eventd/metrics/`. |
 | `QuerySocketPath` | REG_SZ | Unix socket path for queries. |
 | `LogSocketPath` | REG_SZ | Unix socket path for log ingestion. |
 | `MetricSocketPath` | REG_SZ | Unix socket path for metric ingestion. |
@@ -32,7 +32,7 @@ No compiled-in defaults. A missing or invalid value fails startup
 
 | Key | Type | Default | Range | Description |
 |---|---|---|---|---|
-| `StorageShards` | REG_DWORD | 0 | 0–256 | Number of event shards. 0 means the CPU count. |
+| `StorageShards` | REG_DWORD | 0 | 0–256 | Number of event shards. 0 means the successfully attached KMES-buffer count. |
 | `MaxBatchSize` | REG_DWORD | 10000 | 100–100000 | Maximum events per writer transaction. |
 | `MaxBatchLatencyMs` | REG_DWORD | 100 | 10–5000 | Maximum ms before an event batch commits. |
 
@@ -70,15 +70,6 @@ No compiled-in defaults. A missing or invalid value fails startup
 | `SheddingBatchPercent` | REG_DWORD | 75 | 50–100 | Percentage of batches in the window exceeding 75% of `MaxBatchSize` that triggers graduated shedding. |
 | `EmergencySheddingBufferPercent` | REG_DWORD | 75 | 50–95 | Ring buffer fill percentage triggering emergency shedding. |
 
-## Adaptive rollups
-
-| Key | Type | Default | Range | Description |
-|---|---|---|---|---|
-| `AdaptiveRollupWindowHours` | REG_DWORD | 48 | 1–168 | Rolling window for rollup query frequency. |
-| `AdaptiveRollupScalarWindowSeconds` | REG_DWORD | 300 | 60–86400 | Base window used when a scalar range query triggers rollup creation. |
-| `AdaptiveRollupCreateThreshold` | REG_DWORD | 50 | 10–10000 | Queries needed to trigger rollup computation. |
-| `AdaptiveRollupDropThreshold` | REG_DWORD | 5 | 1–1000 | Frequency below which a pair leaves the registry. Less than the create threshold. |
-
 ## Retention
 
 | Key | Type | Default | Range | Description |
@@ -89,7 +80,7 @@ No compiled-in defaults. A missing or invalid value fails startup
 | `LogRetentionMaxBytes` | REG_QWORD | 0 | 0–2^64−1 | Maximum logical live size of the log store. 0 means no limit. |
 | `MetricRetentionDays` | REG_DWORD | 90 | 1–3650 | Maximum age of metric samples. |
 | `MetricRetentionMaxBytes` | REG_QWORD | 0 | 0–2^64−1 | Maximum logical live size of the metric store. 0 means no limit. |
-| `RetentionCheckIntervalMinutes` | REG_DWORD | 60 | 1–1440 | How often the retention thread runs. |
+| `RetentionCheckIntervalMinutes` | REG_DWORD | 60 | 1–1440 | How often the retention coordinator runs. |
 | `RetentionDeleteBatchRows` | REG_DWORD | 10000 | 100–100000 | Maximum rows deleted in one retention transaction. |
 
 ## Querying
@@ -100,14 +91,8 @@ No compiled-in defaults. A missing or invalid value fails startup
 | `MaxConcurrentQueries` | REG_DWORD | 128 | 1–4096 | Concurrent queries globally, streaming and non-streaming. |
 | `MaxStreamingQueries` | REG_DWORD | 64 | 1–1024 | Concurrent streaming queries globally. |
 | `MaxDistinctStreamValues` | REG_DWORD | 100000 | 1000–10000000 | Values tracked by one DISTINCT streaming query. |
-| `MaxQueryMessageBytes` | REG_DWORD | 65536 | 1024–16777216 | Maximum query request or response payload. |
-
-> [!NOTE]
-> `MaxQueryMessageBytes` and the two datagram ceilings are related and
-> nothing enforces the relation. A record larger than the query message
-> ceiling cannot be returned and fails every query that reaches it
-> (PSPU §3.15). At these defaults a producer can deposit a log line four
-> times larger than any response that could carry it.
+| `MaxQueryRequestBytes` | REG_DWORD | 65536 | 1024–16777216 | Hard maximum query request payload. |
+| `QueryResponseTargetBytes` | REG_DWORD | 65536 | 1024–16777216 | Soft response batching target; one complete record may exceed it (§6). |
 
 ## Cross-type filtering
 
@@ -128,10 +113,12 @@ Machine\System\eventd\Security\Logs\*
 Machine\System\eventd\Security\Logs\<pattern>
 Machine\System\eventd\Security\Metrics\*
 Machine\System\eventd\Security\Metrics\<pattern>
+Machine\System\eventd\Security\Admin
 ```
 
-The administrative descriptor is not here; it is `admin_sd` in
-`eventd-meta.db` (§3.5).
+`Security\Admin` governs `EVENTD_ADMINISTER`, especially `INDEX`, and
+defaults to SYSTEM and Administrators. It is registry-protected policy,
+not data in `eventd-meta.db` (§3.5, §7.2).
 
 ## When a change takes effect
 
