@@ -42,13 +42,13 @@ The order in which names are reported is stratum-ascending and then
 each stratum's own `readdir` order — deterministic for one capture, and
 not otherwise specified. [*enumerate.order-stratum-then-readdir]
 
-## Consistency
+## Consistency [*enumerate.changes-after-open-invisible]
 
 There is exactly one capture per descriptor. Nothing appends to the
 list after the directory is opened, and nothing re-captures — a
 rewind replays the original capture, since the directory uses the
-generic `llseek`. [*enumerate.rewind-replays-capture] A change to any participating stratum after the open
-is therefore invisible to that descriptor for its lifetime. [*enumerate.changes-after-open-invisible]
+generic `llseek`. A change to any participating stratum after the open
+is therefore invisible to that descriptor for its lifetime.
 
 What that bounds is only what stratafs itself contributes. Each
 participating directory is enumerated by its own filesystem, with
@@ -57,23 +57,23 @@ participants are read sequentially with no cross-stratum lock or
 barrier. A merged listing is no better than the listings it is
 assembled from, and nothing claims otherwise.
 
-## The settled participant set
+## The settled participant set [*enumerate.participant-set-settled-at-open]
 
 For the purpose of enumeration, the participating set is settled when
 the directory is opened and does not change for the life of the
-descriptor. [*enumerate.participant-set-settled-at-open] What is settled is the set of participating **directory
+descriptor. What is settled is the set of participating **directory
 objects**, not the set of stratum positions: the descriptor holds a
 `struct path` reference on each participant, pinned until release, and
 nothing re-resolves those positions by path. A participant that has
 since been removed and replaced by another directory at the same path
-is a different object and contributes nothing. [*enumerate.replaced-participant-contributes-nothing]
+is a different object and contributes nothing.
 
 The settled set has exactly three consumers: the enumeration itself,
 the access check performed when the directory is opened (§4.6.2), and
 the origin attribute read through that descriptor (§4.7). It extends to
 nothing else. Resolving a name relative to the descriptor — opening,
 removing, renaming, linking — is an ordinary live resolution under
-§4.3.1, performed against the strata as they are at that moment. [*enumerate.descriptor-relative-resolution-is-live]
+§4.3.1, performed against the strata as they are at that moment.
 
 So a descriptor opened before a stratum began to hold the directory
 will not list that stratum's names, but `openat` through the same
@@ -89,23 +89,23 @@ descriptor ever having been consulted — and a stratum owner could make
 a directory participate precisely to expose it. A caller that wants the
 current participant set reopens.
 
-## Positions
+## Positions [*enumerate.offsets-are-plain-ordinals]
 
 Offsets 0 and 1 are `.` and `..`. Offset `2 + k` is the k-th element of
 the captured list — a plain ordinal. The offset each participant
 filesystem supplies is discarded: no provider cookie, no stratum index,
-and no name hash is encoded. [*enumerate.offsets-are-plain-ordinals]
+and no name hash is encoded.
 
 A position is therefore meaningful only within one open file
 description. On close and reopen — and so across a remount or a reboot —
 the capture is rebuilt from each stratum's current contents and current
 `readdir` order, and ordinal `2 + k` may name a different entry or
 none. `telldir` and `seekdir` across descriptors are unreliable on a
-stratafs directory, as is NFS re-export of one. [*enumerate.positions-not-portable-across-descriptors]
+stratafs directory, as is NFS re-export of one.
 
-## Access
+## Access [*enumerate.requires-rights-on-every-participant]
 
 Enumeration requires traverse and list rights on **every** participating
-directory, checked before the capture is built. [*enumerate.requires-rights-on-every-participant] The check returns on
+directory, checked before the capture is built. The check returns on
 the first refusal, and a refusal aborts the open entirely, so no
-partial listing covering only the readable strata can be produced. [*enumerate.no-partial-listing]
+partial listing covering only the readable strata can be produced.

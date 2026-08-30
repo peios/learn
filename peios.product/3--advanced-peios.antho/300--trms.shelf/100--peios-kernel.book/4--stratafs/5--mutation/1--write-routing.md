@@ -7,19 +7,19 @@ An operation that modifies an existing object is performed against
 exactly one stratum. This section covers which, and when the decision
 is made.
 
-## Accepting modification
+## Accepting modification [*write.accepts-modification]
 
 A stratum **accepts modification** of an object it provides when all
 three of the following hold:
 
 - the stratum does not carry `ro`;
 - the provider's mount is not read-only;
-- the provider's inode is not marked immutable. [*write.accepts-modification]
+- the provider's inode is not marked immutable.
 
 The predicate is a property of the stratum and the object alone. It
 takes the superblock, the stratum index and the provider path, and
 nothing else — no credentials, no security descriptor, no access
-check. [*write.predicate-ignores-caller]
+check.
 
 That restriction is load-bearing. Were the predicate to take the
 caller's rights into account, a caller *refused* write access by the
@@ -31,7 +31,7 @@ could freeze any file in the mount.
 
 Note the third term is the immutable inode flag specifically, not
 unwritability in general. A file that is unwritable by its mode bits is
-routed in place and refused by the underlying filesystem. [*write.unwritable-mode-routes-in-place]
+routed in place and refused by the underlying filesystem.
 
 ## The rule
 
@@ -108,7 +108,7 @@ has already happened by the time an operation reaches stratafs, so a
 modifying operation arriving here is one its caller was entitled to
 perform, and routing it is a decision about strata alone.
 
-## Shared writable mappings
+## Shared writable mappings [*write.mmap-routes-on-maywrite]
 
 Establishing a shared writable mapping routes, even though no bytes
 have been written, because stores through such a mapping reach the
@@ -120,23 +120,23 @@ become writable" bit rather than the "is writable" bit. A `PROT_READ`
 shared mapping taken from a writable descriptor therefore routes,
 because it can acquire write access later through `mprotect` with no
 filesystem operation in between. A private mapping, and a shared
-mapping that cannot acquire write access, do not route. [*write.mmap-routes-on-maywrite] Where routing
-yields read-only, the mapping is refused with `EROFS`. [*write.mmap-refused-when-read-only]
+mapping that cannot acquire write access, do not route. Where routing
+yields read-only, the mapping is refused with `EROFS`.
 
-## What a copy-up does to an open descriptor
+## What a copy-up does to an open descriptor [*write.copying-descriptor-follows-copy]
 
 A copy-up performed for one descriptor changes which object provides
 the name. That descriptor refers to the copy from then on: it keeps the
 inode it was opened against while the inode's backing object becomes
-the copy (§4.4.3), and its backing file is replaced. [*write.copying-descriptor-follows-copy]
+the copy (§4.4.3), and its backing file is replaced.
 
 Every other descriptor already open against the original continues to
 refer to the original, and any fresh resolution of the path yields a
-new inode standing for the copy. [*write.other-descriptors-keep-original] The pre-copy-up file is not closed —
+new inode standing for the copy. The pre-copy-up file is not closed —
 it is retained so that locks and leases taken before the copy-up keep
 working (§4.5.7).
 
-## Special files
+## Special files [*write.special-files-never-copied-up]
 
 A FIFO, socket, or device node is opened and written without the
 filesystem object being modified: what is written passes to a pipe, a
@@ -144,7 +144,7 @@ socket, or a driver, not to the object's contents. Writing to such an
 object therefore does not route, and such an object is never copied up
 — every routing site gates on the object being a regular file, and the
 copyable flag excludes anything that is not a regular file, directory
-or symlink. [*write.special-files-never-copied-up]
+or symlink.
 
 Copying up a FIFO would sever it: a reader holding the original and a
 writer that arrived after the copy would hold two unrelated pipes. A
@@ -153,16 +153,16 @@ the same device.
 
 Opens, reads and writes are forwarded to the provider whether or not it
 accepts modification, since the write-mode downgrade and the `O_TRUNC`
-refusal both apply to regular files only. [*write.special-file-io-forwarded] Operations that modify the
+refusal both apply to regular files only. Operations that modify the
 object itself — its mode, its descriptor, its extended attributes — do
 route, and where the provider does not accept modification they fail
 with `EROFS`, because the copy-up branch cannot apply to an object that
-is never copied up. [*write.special-file-metadata-erofs]
+is never copied up.
 
-## `ioctl`
+## `ioctl` [*write.ioctl-regular-file-refused]
 
 `ioctl` on a regular file is refused unconditionally with `ENOTTY`, and
-its compat form with `ENOIOCTLCMD`. [*write.ioctl-regular-file-refused] Stored-file `ioctl`s can mutate
+its compat form with `ENOIOCTLCMD`. Stored-file `ioctl`s can mutate
 data and would need command-by-command routing, which is not
 implemented; refusing is the conservative stand-in. `ioctl` on a
-non-regular file is forwarded to the provider. [*write.ioctl-special-file-forwarded]
+non-regular file is forwarded to the provider.

@@ -64,7 +64,7 @@ shadows the same name in every lower stratum, the right to create in
 the create stratum's directory is the right to determine what every
 lower stratum's entry of that name resolves to.
 
-## Where the create stratum's directory does not exist
+## Where the create stratum's directory does not exist [*security.create-check-falls-back-to-provider-directory]
 
 A merged directory has a create stratum whether or not that
 subdirectory exists (§4.3.2), so a check naming "the create stratum's
@@ -76,18 +76,18 @@ carried out, and in particular before any directory is materialised:
 the authorisation call strictly precedes parent materialisation in
 creation, in tmpfile creation, and in the unnamed-link path. Where the
 checks fail, nothing has been created, so the create stratum is left
-exactly as it was. [*security.create-checks-precede-materialisation]
+exactly as it was.
 
 Where the create stratum does not hold the path, the check falls back
 to the **corresponding provider directory** — the merged provider of
 that same relative path — which is the descriptor the directory will
 carry once materialised (§4.6.3). It is never skipped, and never
-substituted with an ancestor's descriptor. [*security.create-check-falls-back-to-provider-directory] Where no provider exists
-either, the result is `EROFS`. [*security.create-with-no-provider-erofs]
+substituted with an ancestor's descriptor. Where no provider exists
+either, the result is `EROFS`.
 
 Materialising the intervening directories is part of the operation, not
 a separate one. No per-ancestor authorisation is taken; the mkdirs are
-exempted by the copy-up context. [*security.no-per-ancestor-authorisation] Checking against the descriptor the
+exempted by the copy-up context. Checking against the descriptor the
 directory will have keeps the answer independent of how much of the
 create stratum happens to have been materialised already: the first
 caller to write into a deep path and the hundredth face the same check,
@@ -95,15 +95,15 @@ against the same descriptor.
 
 A create that fails *after* materialisation for a reason other than a
 check — `EEXIST`, `ENOSPC` — does leave the intervening directories in
-place. [*security.late-failure-leaves-materialised-directories]
+place.
 
-## Copy-up carries no separate authority
+## Copy-up carries no separate authority [*security.copy-up-requires-no-extra-right]
 
 A copy-up requires no right beyond those the operation that provoked it
 already required. In particular it does not require the caller to hold
 the right to read the provider's object, nor the right to add an entry
 to the create stratum's directory. Neither copy-up path takes any
-authorisation at all. [*security.copy-up-requires-no-extra-right]
+authorisation at all.
 
 Copy-up is the mechanism by which an authorised modification is
 realised, not an operation a caller requests. The read of the provider
@@ -135,11 +135,11 @@ matters here is what stratafs must hold up its end of: the context
 exempts caller authorisation only, so every mutation still goes through
 the ordinary VFS path under write access on the target mount, a
 read-only filesystem still refuses, and filesystem errors still
-propagate. [*security.copy-up-context-exempts-caller-check-only] Nothing is performed under a borrowed or elevated identity —
-every copy-up mutation runs with the calling task's own credentials. [*security.copy-up-runs-as-caller]
+propagate. Nothing is performed under a borrowed or elevated identity —
+every copy-up mutation runs with the calling task's own credentials.
 
 One adjacent path does borrow one. The stale-staging recovery scan
 opens the create-stratum directory with the **mounter's** credentials
 rather than the caller's, and since the KACS token derives from the
-current credentials, that read is authorised as the mounter. [*security.stale-staging-scan-uses-mounter-credentials] It runs
+current credentials, that read is authorised as the mounter. It runs
 inside a copy-up context in any case, so it changes no decision.

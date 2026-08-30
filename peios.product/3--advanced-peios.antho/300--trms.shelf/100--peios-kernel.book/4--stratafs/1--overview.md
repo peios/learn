@@ -26,7 +26,7 @@ name visible, some names cannot be removed at all, and several
 operations that succeed on an ordinary filesystem are refused here
 rather than faked. §4.8 collects the consequences.
 
-## Where it sits
+## Where it sits [*mount.superblock-identity]
 
 stratafs is not part of PKM. It is staged into the kernel tree as
 `fs/stratafs`, built by `CONFIG_STRATAFS_FS` — a boolean option, so it
@@ -41,10 +41,10 @@ enter it.
 
 The filesystem type registers under the name `stratafs`, with the
 superblock magic `0x53545241` — ASCII `STRA` — and the flags
-`FS_USERNS_MOUNT` and `FS_RENAME_DOES_D_MOVE`. [*mount.superblock-magic] It takes no device;
+`FS_USERNS_MOUNT` and `FS_RENAME_DOES_D_MOVE`. It takes no device;
 superblocks come from `get_tree_nodev`, so the device identifier
 reported for every object in a mount is an anonymous one belonging to
-the mount rather than to any stratum. [*mount.anonymous-device-id]
+the mount rather than to any stratum.
 
 A small part of the filesystem is written in Rust. The crate
 `stratafs-core` is staged into the kernel alongside PKM's own Rust
@@ -53,13 +53,13 @@ stack-wide flag rules, selecting the provider from a presence bitmap,
 and routing one modifying operation. Everything else — the VFS glue,
 resolution, enumeration, copy-up — is C.
 
-## The model
+## The model [*strata.identified-by-path]
 
 A mount is defined by its **stratum stack**: an ordered list of strata,
 highest-precedence first, fixed for the life of the mount. A stratum is
 identified by its **path**, not by the directory that path resolved to
 at mount time, which is what allows a package transaction to replace a
-whole stratum by renaming trees around underneath a live mount. [*strata.identified-by-path]
+whole stratum by renaming trees around underneath a live mount.
 
 For a given name in a given directory, the **provider** is the
 highest-precedence stratum that holds it. A name whose provider is a

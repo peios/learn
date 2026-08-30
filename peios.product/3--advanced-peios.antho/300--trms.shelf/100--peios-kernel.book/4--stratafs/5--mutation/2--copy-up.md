@@ -12,7 +12,7 @@ mechanics from caller authorisation without granting anything. §3.9.7
 describes that context in full; §4.6.3 covers the stratafs side of the
 bargain.
 
-## Parents
+## Parents [*copy-up.materialises-missing-parents]
 
 Where the create stratum does not hold the directories containing the
 object's path, they are created first, walking the relative path
@@ -20,7 +20,7 @@ component by component from the create-stratum root downwards. Each is
 created as an empty directory with the mode of the corresponding
 **merged provider** directory, and with that directory's security
 descriptor, installed by KACS during the create phase rather than
-inherited. [*copy-up.materialises-missing-parents]
+inherited.
 
 Contents are not copied. The directories exist to hold the copied
 object; the entries they hold in lower strata continue to be reached by
@@ -30,10 +30,10 @@ Where the create stratum holds one of those components as something
 other than a directory, the copy-up fails with `ENOTDIR` and the
 operation requiring it fails. The blocking entry is not removed or
 replaced — there is no `unlink`, `rmdir` or `rename` anywhere on the
-parent-materialisation path. [*copy-up.parent-conflict-enotdir]
+parent-materialisation path.
 
 Materialised parents receive a mode and a descriptor, and nothing else:
-no extended attributes and no timestamp preservation. [*copy-up.parents-mode-and-descriptor-only]
+no extended attributes and no timestamp preservation.
 
 ## What is replicated
 
@@ -85,24 +85,24 @@ copy-up was provoked by a path rather than a descriptor, the source is
 reopened for each chunk; the staged file is reopened for each chunk
 either way.
 
-## The source must still be the provider
+## The source must still be the provider [*copy-up.source-must-still-be-provider]
 
 Before beginning a copy-up on behalf of a descriptor, the object the
 descriptor refers to is verified still to be the provider of that name,
 comparing both the path and the provider inode. Where it is not, the
-copy-up is not performed and the operation fails with `ESTALE`. [*copy-up.source-must-still-be-provider]
+copy-up is not performed and the operation fails with `ESTALE`.
 
 The verification is repeated immediately before publication, under the
 create directory's lock, and publication itself uses an operation that
 fails if the target name already exists: linking an anonymous object
 into place, or a `RENAME_NOREPLACE`. Both additionally test the target
 dentry explicitly, and an `EEXIST` from either is normalised to
-`ESTALE`. [*copy-up.publication-refuses-existing-name]
+`ESTALE`.
 
 That is decisive for the case that matters. A competing copy-up
 publishes into the same create-stratum directory, where the
 filesystem's own atomicity applies, so exactly one of two racing
-copy-ups succeeds and the other fails `ESTALE`. [*copy-up.one-racing-copy-up-wins]
+copy-ups succeeds and the other fails `ESTALE`.
 
 It cannot extend further, and nothing tries to. Strata may be on
 different filesystems, and stratafs can neither lock them together nor
@@ -119,11 +119,11 @@ writes. A caller therefore has to be prepared for a write to fail
 `ESTALE` on a descriptor that was valid when it was opened and has done
 nothing wrong. §4.8 records it.
 
-## Staging and atomicity
+## Staging and atomicity [*copy-up.never-partially-observable]
 
 A copy-up is never observable in a partial state. All content,
 attribute and metadata work happens on an object that is not reachable
-through the mount, and publication is a single step. [*copy-up.never-partially-observable]
+through the mount, and publication is a single step.
 
 Two arrangements are used, chosen by type:
 
@@ -137,24 +137,24 @@ Two arrangements are used, chosen by type:
 A staged name is `.stratafs-stage-` followed by the mount cookie and a
 per-stage identifier, in a 64-byte buffer, with up to eight retries on
 collision. It is excluded from resolution and from enumeration for the
-mount that owns it, and removed if the copy-up fails. [*copy-up.staged-entries-hidden] The exclusion is
+mount that owns it, and removed if the copy-up fails. The exclusion is
 local: a second stratafs mount sharing the create stratum, and every
 direct reader of that directory, sees an ordinary entry containing a
-partial copy. [*copy-up.staging-hidden-only-locally]
+partial copy.
 
-### Identifying staging entries
+### Identifying staging entries [*copy-up.orphan-recovery-checks-marker]
 
 A staged name alone is not proof of ownership, so each staged object
 also carries a marker in the extended attribute
 `security.peios.stratafs_staging`. The marker is a 24-byte
 little-endian structure: a magic of `0x53544731` — ASCII `STG1` — a
 version, its own size, a per-boot cookie, and the cookie of the mount
-that created it. [*copy-up.staging-marker-format]
+that created it.
 
 Recovery of an orphan is therefore precise. A staged entry whose marker
 is valid and whose owning mount is not live is removed; one belonging to
 a live mount is left alone, and so is one whose marker is missing,
-short, or carries the wrong magic, version or size. [*copy-up.orphan-recovery-checks-marker] That matters
+short, or carries the wrong magic, version or size. That matters
 because two mounts may share a create stratum, and an unqualified
 cleanup would have each new mount destroy the other's copy-up in
 flight.
@@ -176,15 +176,15 @@ have to visit every one of to find.
 
 The marker is removed after publication. A failure to remove it is only
 warned about, leaving the marker on the published copy until a later
-lookup cleans it. [*copy-up.marker-removed-after-publication]
+lookup cleans it.
 
 Where a copy-up fails for any reason, the create stratum is left with
-no new entry at the target path and the operation fails. [*copy-up.failure-leaves-no-entry] Nothing falls
+no new entry at the target path and the operation fails. Nothing falls
 back to a weaker replication: an object whose descriptor or extended
 attributes could not be preserved is never published. A published copy
-whose descriptor handoff then fails is rolled back. [*copy-up.rolled-back-on-handoff-failure]
+whose descriptor handoff then fails is rolled back.
 
-## Concurrent modification
+## Concurrent modification [*copy-up.no-source-snapshot]
 
 The provider may be modified while it is being copied, by a writer that
 does not know stratafs exists.
@@ -193,7 +193,7 @@ Copy-up reads the provider as any reader would, with no locking of the
 source and no snapshot, and offers no stronger consistency than an
 ordinary read of that object. Where the provider is modified during the
 copy, the copy may contain bytes from more than one state of the
-source, exactly as a concurrent `read` of the same object may. [*copy-up.no-source-snapshot]
+source, exactly as a concurrent `read` of the same object may.
 
 Nothing detects that and restarts — there is no retry loop, no
 generation check. Equally, nothing blocks waiting for a quiescent
@@ -207,4 +207,4 @@ create stratum's filesystem, which stratafs does control.
 Once published, the copy is independent of its source. Subsequent
 modifications to the object it was copied from are not reflected in it,
 and are not visible through the mount for as long as the copy provides
-the name. [*copy-up.independent-once-published]
+the name.

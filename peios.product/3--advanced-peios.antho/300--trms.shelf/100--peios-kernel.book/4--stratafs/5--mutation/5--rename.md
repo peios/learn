@@ -62,7 +62,7 @@ inside the provider stratum. [*rename.cross-mount-exdev]
 The immutable-provider caveat of §4.5.4 applies to condition 1 as well:
 an immutable source yields `EPERM` from the VFS rather than `EROFS`. [*rename.immutable-source-eperm]
 
-## Replacing atomically
+## Replacing atomically [*rename.replace-is-atomic]
 
 A rename onto an existing destination is the operation by which most
 software replaces a file safely, and it works through a stratafs mount
@@ -70,7 +70,7 @@ for a destination provided by a lower stratum. That case is permitted
 by condition 2: the destination is shadowed by the renamed object
 rather than removed, so no whiteout is required, and the replacement is
 a single `vfs_rename` within one directory pair of one stratum — atomic
-on the filesystem holding `P`. [*rename.replace-is-atomic]
+on the filesystem holding `P`.
 
 Where the source of such a rename is a temporary file the caller
 created in the same directory, §4.5.3 placed it in the create stratum,
@@ -99,11 +99,11 @@ condition is the only destination constraint an exchange genuinely
 needs, because it is the only one that arises from the names spanning
 strata rather than from what the names hold.
 
-### The `RENAME_NOREPLACE` ordering
+### The `RENAME_NOREPLACE` ordering [*rename.noreplace-eexist-takes-precedence]
 
 A `RENAME_NOREPLACE` whose destination is held by any participating
 stratum fails with `EEXIST`, and that `EEXIST` takes precedence over
-conditions 1, 3 and 4. [*rename.noreplace-eexist-takes-precedence] It is not stratafs that decides this. For
+conditions 1, 3 and 4. It is not stratafs that decides this. For
 `RENAME_NOREPLACE` the VFS looks the destination up with `LOOKUP_EXCL`
 and returns `EEXIST` for a positive dentry before `vfs_rename` runs at
 all, and stratafs's merged lookup makes the dentry positive whenever any

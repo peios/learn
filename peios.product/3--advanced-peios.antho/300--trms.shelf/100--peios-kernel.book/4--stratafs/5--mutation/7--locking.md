@@ -9,11 +9,11 @@ established over directories that have their own writers, so a lock
 taken through the mount and a lock taken directly on the same object
 must be the same lock.
 
-## The rule
+## The rule [*lock.taken-on-the-provider-object]
 
 A lock taken through a stratafs mount is held on the provider's object,
 in the same lock space as a lock taken on that object by any other
-path. [*lock.taken-on-the-provider-object] Both the POSIX and the `flock` paths retarget the request onto
+path. Both the POSIX and the `flock` paths retarget the request onto
 the descriptor's provider file, so the lock lands on the provider
 inode's own lock context.
 
@@ -21,15 +21,15 @@ stratafs maintains no lock space of its own. There is no lock list, no
 fallback onto the outer inode, and no per-inode lock state. Two callers
 that lock the same provider object — one through the mount, one through
 the stratum directly, or two through different stratafs mounts sharing
-that stratum — contend with each other. [*lock.shares-the-provider-lock-space] Open-file-description locks are
+that stratum — contend with each other. Open-file-description locks are
 re-owned onto the provider file so that their per-description semantics
-are preserved. [*lock.ofd-locks-reowned-onto-provider]
+are preserved.
 
 Taking a lock does not modify an object, so it does not route (§4.5.1)
-and cannot itself cause a copy-up. [*lock.never-causes-copy-up] Locking requires no write access
-either, so a read-only descriptor can carry an exclusive lock. [*lock.read-only-descriptor-may-lock]
+and cannot itself cause a copy-up. Locking requires no write access
+either, so a read-only descriptor can carry an exclusive lock.
 
-## Locks and a changing provider
+## Locks and a changing provider [*lock.not-transferred-on-provider-change]
 
 A lock is held on the object a descriptor resolved to. That object may
 cease to be the provider afterwards — because a higher-precedence
@@ -37,11 +37,11 @@ stratum gains the name, because the object is removed from its stratum,
 or because a copy-up produced a new object.
 
 In every such case the lock remains held on the object it was taken on.
-It is not transferred, and it does not begin to guard the new provider. [*lock.not-transferred-on-provider-change]
+It is not transferred, and it does not begin to guard the new provider.
 
 **Two callers may therefore hold exclusive locks on one merged path
 without contending**, whenever they opened it either side of a change of
-provider. [*lock.divergent-locks-on-one-merged-path] Neither is wrong about the object it locked; they locked
+provider. Neither is wrong about the object it locked; they locked
 different objects, and each lock is honoured by everything else holding
 that object. The merged path is what stopped naming one thing. §4.8
 records it.
@@ -73,13 +73,13 @@ visible in behaviour:
 
 All of it is serialised by the descriptor's mutation lock.
 
-## Leases and mandatory locking
+## Leases and mandatory locking [*lock.leases-are-the-providers]
 
 Leases are established on the provider's object, in that object's own
 lock space, and every result is the provider's own, returned unchanged.
 stratafs neither adds to nor removes from whatever semantics the
 provider's filesystem gives them, and never reports a lock as
-established where the provider's filesystem refused it. [*lock.leases-are-the-providers]
+established where the provider's filesystem refused it.
 
 Mandatory locking has no subject here: the platform does not offer it,
 and stratafs contains nothing that would obstruct it. The outer inode

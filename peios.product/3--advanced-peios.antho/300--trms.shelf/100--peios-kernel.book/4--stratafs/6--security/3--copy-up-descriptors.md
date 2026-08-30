@@ -8,7 +8,7 @@ descriptor is the source's — owner, group, discretionary list, system
 list and integrity label alike — and it is KACS that carries it, not
 stratafs. [*security.copy-up-descriptor-preserved]
 
-## How it is carried
+## How it is carried [*security.copy-up-never-inherits-descriptor]
 
 When a copy-up context is created, the provider's complete effective
 descriptor is resolved and pinned as a byte string on the context. Each
@@ -19,38 +19,38 @@ copy of the source bytes, so all five components are preserved together.
 
 The canonical descriptor attribute is deliberately excluded from
 stratafs's own extended-attribute replication, precisely so that the
-two mechanisms cannot disagree. [*security.copy-up-descriptor-xattr-not-replicated]
+two mechanisms cannot disagree.
 
 The separation inside KACS is clean and explicit. The inode security
 initialisation takes the copy-up branch first, and taking it
 short-circuits the inheritance builder entirely. Ordinary creation in a
 create stratum inherits from its parent (§4.5.3); copy-up preserves.
 There is no path on which a copied-up object receives an inherited
-descriptor. [*security.copy-up-never-inherits-descriptor]
+descriptor.
 
 Directories materialised in the create stratum to hold a copied-up
 object are handled the same way, each carrying the descriptor of the
 corresponding **provider** directory — the merged provider of that same
-relative path, which is what the pre-check of §4.6.2 evaluated against. [*security.copy-up-materialised-directory-descriptor]
+relative path, which is what the pre-check of §4.6.2 evaluated against.
 
-## Failure
+## Failure [*security.copy-up-descriptor-failure-fails-operation]
 
 Where the source descriptor cannot be replicated, the copy-up fails and
 the operation that required it fails. A missing, corrupt, unresolvable,
 oversized or unsupported descriptor fails the phase before the
 destination is created, and an absent pinned descriptor at install time
-fails the create. [*security.copy-up-descriptor-failure-fails-operation] Nothing publishes a copied-up object carrying any
+fails the create. Nothing publishes a copied-up object carrying any
 other descriptor: the descriptor is installed at inode creation, before
 any content, and publication is a link or rename of an object already
 stamped, so there is no window in which a differently-protected object
-is reachable. [*security.copy-up-no-unprotected-window]
+is reachable.
 
 The failure errno is not the specified one. §4.8's table pairs
 descriptor failure with `EIO` alongside extended-attribute failure, and
 the extended-attribute half does report `EIO`. The descriptor half is
 carried by KACS, whose failures surface as `EACCES`, `EOPNOTSUPP`,
 `EINVAL`, `ESTALE` or `ENOMEM`; there is no `EIO` anywhere on that
-path. [*security.copy-up-descriptor-failure-errno] This is tracked as a defect.
+path. This is tracked as a defect.
 
 ## Why preservation rather than inheritance
 
@@ -71,11 +71,11 @@ Preserving the source descriptor closes that: a copy is exactly as
 reachable as its original, and copy-up changes which stratum holds an
 object without changing who may reach it.
 
-## Provenance
+## Provenance [*security.copy-up-descriptor-owner-is-source]
 
 Because the descriptor is preserved, the copy's descriptor-level owner
 is the owner of the object it was copied from, not the caller who
-caused the copy. [*security.copy-up-descriptor-owner-is-source] Ownership therefore does not record who created the
+caused the copy. Ownership therefore does not record who created the
 copy and cannot be relied on to; the audit record of §4.6.5 is where
 that is available.
 
@@ -88,10 +88,10 @@ route.
 The POSIX owner is a different matter, and is *not* preserved — §4.5.8
 records what follows.
 
-## What "the source's descriptor" means
+## What "the source's descriptor" means [*security.copy-up-pins-effective-descriptor]
 
 The descriptor pinned at the start of a copy-up is the provider's
-**effective** descriptor rather than its raw stored attribute. [*security.copy-up-pins-effective-descriptor] On a
+**effective** descriptor rather than its raw stored attribute. On a
 provider mount whose own policy class synthesises, that would be the
 synthesised value. In practice that case is unreachable: reaching the
 object through the stratafs mount at all requires a real descriptor,

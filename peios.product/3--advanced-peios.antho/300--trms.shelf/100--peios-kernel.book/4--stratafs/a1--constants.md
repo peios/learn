@@ -7,7 +7,7 @@ Every value below is generated from the source by
 `pkm/tools/gen-stratafs-constants.py`. Nothing here is transcribed by
 hand, and the generator's `--check` mode fails if the two drift apart. [*const.generated-from-source]
 
-## Filesystem identity
+## Filesystem identity [*const.magic-alias-shared-with-kacs]
 
 | Constant              | Value        | Meaning                                         |
 |-----------------------|--------------|-------------------------------------------------|
@@ -17,7 +17,7 @@ hand, and the generator's `--check` mode fails if the two drift apart. [*const.g
 
 `STRATAFS_MAGIC` is an alias for `STRATAFS_SUPER_MAGIC`, which is
 declared in the header stratafs shares with KACS so that the mount
-policy class keyed on it cannot drift (§4.6.4). [*const.magic-alias-shared-with-kacs]
+policy class keyed on it cannot drift (§4.6.4).
 
 ## Stratum flags
 
@@ -54,10 +54,10 @@ copy-up replication (§4.6.3).
 | `STRATAFS_STAGE_PREFIX`         | `".stratafs-stage-"` | Staged-name prefix                          |
 | `STRATAFS_RECOVERY_BATCH`       | `128`                | Names scanned per staging-recovery pass     |
 
-### The staging marker
+### The staging marker [*const.stage-marker-layout]
 
 `struct stratafs_stage_marker` is packed and 24 bytes, all fields
-little-endian. [*const.stage-marker-layout] It is the value of the staging attribute above.
+little-endian. It is the value of the staging attribute above.
 
 | Offset | Size | Field          | Type     |
 |--------|------|----------------|----------|
@@ -67,10 +67,10 @@ little-endian. [*const.stage-marker-layout] It is the value of the staging attri
 | 8      | 8    | `boot_cookie`  | `__le64` |
 | 16     | 8    | `mount_cookie` | `__le64` |
 
-## Routing
+## Routing [*const.route-discriminants-match-rust]
 
 The value `route_existing` returns (§4.5.1), as the Rust decision
-core names it and as the C glue mirrors it. The discriminants match. [*const.route-discriminants-match-rust]
+core names it and as the C glue mirrors it. The discriminants match.
 
 | C enumerator               | Value | Rust       |
 |----------------------------|-------|------------|
@@ -103,11 +103,11 @@ observable to a caller (§4.2.1). [*const.config-errors-collapse-to-einval]
 | `RepeatedCreate` | `4`          |
 | `CreateReadOnly` | `5`          |
 
-## Build configuration
+## Build configuration [*const.build-kconfig-option]
 
 stratafs is built by `CONFIG_STRATAFS_FS`, a boolean option, so what it
 builds is linked into `vmlinux` rather than loaded. It depends on
-`CONFIG_SECURITY_PKM` and selects `FS_STACK`. [*const.build-kconfig-option] Its sources are staged
+`CONFIG_SECURITY_PKM` and selects `FS_STACK`. Its sources are staged
 into the kernel tree as `fs/stratafs`, separate from PKM's own
 `security/pkm`. `CONFIG_STRATAFS_KUNIT_TEST` builds the in-kernel unit tests.
 
