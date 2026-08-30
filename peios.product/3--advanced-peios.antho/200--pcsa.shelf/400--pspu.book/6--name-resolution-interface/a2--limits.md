@@ -13,7 +13,9 @@ description: The mainline values for every bound in this chapter.
 | Positive TTL cap | 86 400 s | §6.7 |
 | Negative TTL cap | 300 s | §6.7 |
 | EDNS0 buffer advertised | 1 232 bytes | §6.7 |
-| Questions in flight | 4 096 | §6.7 |
+| Upstream transactions in flight (synthetic and cached answers are never refused) | 4 096 | §6.7 |
+| Native connections still delivering a request | 256 | §6.4 |
+| Stub TCP clients held at once | 256 | §6.8 |
 | Cache entries | 8 192 | §6.7 |
 | Stub TCP client bound | 10 s | §6.8 |
 | Manager reconnect backoff | 0.5 s doubling to 10 s | §6.9 |
