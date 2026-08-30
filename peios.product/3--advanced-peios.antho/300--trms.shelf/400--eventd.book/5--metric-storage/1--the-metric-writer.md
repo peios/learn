@@ -14,25 +14,28 @@ The wire contract is PSPU §3.9 to §3.13.
 
 For each valid record:
 
-1. **Resolve the series** from name and labels — and, for a histogram,
+1. **Authorize the name.** The datagram's KACS token must hold
+   `EVENTD_PUBLISH` on the resolved metric-name descriptor (§7.6).
+2. **Resolve the series** from name and labels — and, for a histogram,
    bucket boundaries — through the in-memory series cache (§5.3). A
    series that does not exist is inserted into `series` with the
    record's type, and the cache is updated.
-2. **Check the type.** If the record's type differs from the resolved
+3. **Check the type.** If the record's type differs from the resolved
    series' type, the record is dropped silently. The type is set at
    creation and is immutable; a series never changes type.
-3. **Insert the sample** into `samples` with the resolved `series_id`,
+4. **Insert the sample** into `samples` with the resolved `series_id`,
    the timestamp and the value. SQLite assigns `samples.id`, which is
    the deterministic tiebreaker among samples sharing a timestamp
    (§5.2). A histogram's data is encoded as the canonical MessagePack
    sample map and stored in `histogram_data`.
 
-Step 2 is the failure that leaves no trace. A producer that changes a
+Step 3 is the failure that leaves no trace. A producer that changes a
 metric's type has silently stopped emitting it — every sample discarded,
 no event, no counter, nothing in any log — and the only symptom is a
-series that stopped advancing. The reason nothing is emitted is
-PSPU §3.4: ingestion is unauthenticated, and reacting to input at all
-is an amplification vector.
+series that stopped advancing. Authentication identifies the producer;
+it does not make reactions proportional to its bad input safe. PSPU
+§3.4 still forbids a durable response because it is an amplification
+vector.
 
 ## Out-of-order samples
 

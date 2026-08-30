@@ -52,6 +52,7 @@ No compiled-in defaults. A missing or invalid value fails startup
 | `MetricMaxBatchLatencyMs` | REG_DWORD | 1000 | 10–5000 | Maximum ms before a metric batch commits. |
 | `MaxMetricDatagramBytes` | REG_DWORD | 262144 | 4096–1048576 | Maximum accepted metric datagram size. |
 | `MetricSeriesCacheSize` | REG_DWORD | 50000 | 1000–1000000 | Entries in the LRU series resolution cache. |
+| `MetricAuthorizationCacheSize` | REG_DWORD | 16384 | 256–1000000 | Cached KACS publication verdicts, invalidated by security-policy generation. |
 
 ## Adaptive indexing
 

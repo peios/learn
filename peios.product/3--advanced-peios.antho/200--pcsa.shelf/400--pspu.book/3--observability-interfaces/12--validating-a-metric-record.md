@@ -15,7 +15,10 @@ sample everything.
 
 - it is not valid MessagePack
 - it decodes to something that is neither a map nor an array of maps
-- the kernel reported it truncated (§3.9)
+- no KACS sender token arrived
+- the kernel reported its data or ancillary data truncated (§3.9)
+- the collector cannot query the sender token or resolve publication
+  policy
 
 ## The record is discarded
 
@@ -64,6 +67,10 @@ untouched, for any of the following.
 
 - the record resolves to an existing series whose type differs (§3.10)
 
+**Publication policy**
+
+- the conveyed KACS token is denied `EVENTD_PUBLISH` for `name` (§3.9)
+
 ## Why the timestamp rule differs from logs
 
 On the log channel a malformed timestamp is ignored and the record
@@ -82,10 +89,11 @@ answer to that.
 
 ## Silence, again
 
-A collector MUST NOT emit an event, log an error, or increment anything
-a client can observe in response to any failure in this article — with
-no exception for the series-consistency failure, which is the one that
-most looks like it deserves one.
+A collector MUST NOT emit an event, write a durable log, or increment
+anything a query client can observe in response to any failure in this
+article — with no exception for the series-consistency failure, which is
+the one that most looks like it deserves one. Local in-memory diagnostic
+counters and rate-limited standard-error output are permitted by §3.4.
 
 A producer that changes a metric's type is misconfigured, and the
 misconfiguration is permanent and invisible: every sample is discarded

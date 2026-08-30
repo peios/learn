@@ -15,7 +15,7 @@ It holds the `logs`, `log_origins` and `metadata` tables.
 | `id` | INTEGER PRIMARY KEY | SQLite rowid, monotonic. |
 | `boot_id` | BLOB NOT NULL | 16-byte boot ID GUID in PCDS binary layout. |
 | `timestamp` | INTEGER NOT NULL | Nanoseconds since the Unix epoch — the producer's value if it supplied one, otherwise eventd's clock at receipt. |
-| `origin` | TEXT NOT NULL | The producing program's name, as the producer declared it. |
+| `origin` | TEXT NOT NULL | The service context peinit associated with the output pipe. |
 | `is_error` | INTEGER NOT NULL | 1 for standard error or an explicitly marked error, 0 otherwise. |
 | `message` | TEXT NOT NULL | The log text. |
 | `job_id` | BLOB | 16-byte correlation GUID when the producer supplied one; null otherwise. |
@@ -23,9 +23,9 @@ It holds the `logs`, `log_origins` and `metadata` tables.
 The schema is deliberately narrow. A log record is text with light
 metadata: what produced it, whether it was an error, when, and
 optionally which execution it belongs to. There is no payload blob and
-no origin class, and the only identity-like field is the optional
-correlation key — which is not an identity at all, since `origin` is
-self-asserted and unverified (PSPU §3.28).
+no origin class. `origin` is broker-attested rather than a service's
+self-assertion: the log socket admits peinit and excludes service-logon
+tokens (§7.6). The optional correlation key is not an identity.
 
 A program needing more structure than this emits events.
 
@@ -62,9 +62,9 @@ Three indexes are created with the table:
 - `idx_logs_origin` on `logs(origin)` — "show me logs from X", which is
   the dominant log query.
 - `idx_logs_job_id` on `logs(job_id) WHERE job_id IS NOT NULL` — a
-  partial index for "show me logs for job X". Partial because
-  directly-submitted lines carry no correlation key, so only correlated
-  lines are worth indexing.
+  partial index for "show me logs for job X". Partial because ordinary
+  service output may carry no correlation key, so only correlated lines
+  are worth indexing.
 
 The origin index costs write amplification beyond the timestamp index,
 and the cost is modest in practice: `origin` has low cardinality, tens

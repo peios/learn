@@ -14,6 +14,7 @@ eventd and are in PSPU §3.A.
 | `EVENTD_READ` | 0 | 0x0001 | Read records matching the pattern. |
 | `EVENTD_CLEAR` | 1 | 0x0002 | Delete records matching the pattern. Reserved; nothing uses it yet (§7.1). |
 | `EVENTD_ADMINISTER` | 2 | 0x0004 | Change eventd's own policy — the `INDEX` command. |
+| `EVENTD_PUBLISH` | 3 | 0x0008 | Publish metric records under the matching name. |
 
 ## Generic mapping
 
@@ -23,12 +24,12 @@ Passed to AccessCheck in the `generic_read`, `generic_write`,
 | Generic right | Value | Composed of |
 |---|---|---|
 | `GENERIC_READ` | 0x00020001 | `EVENTD_READ` \| `READ_CONTROL` |
-| `GENERIC_WRITE` | 0x00020006 | `EVENTD_CLEAR` \| `EVENTD_ADMINISTER` \| `READ_CONTROL` |
+| `GENERIC_WRITE` | 0x0002000E | `EVENTD_CLEAR` \| `EVENTD_ADMINISTER` \| `EVENTD_PUBLISH` \| `READ_CONTROL` |
 | `GENERIC_EXECUTE` | 0x00020001 | `EVENTD_READ` \| `READ_CONTROL` |
-| `GENERIC_ALL` | 0x000F0007 | `EVENTD_READ` \| `EVENTD_CLEAR` \| `EVENTD_ADMINISTER` \| `DELETE` \| `READ_CONTROL` \| `WRITE_DAC` \| `WRITE_OWNER` |
+| `GENERIC_ALL` | 0x000F000F | `EVENTD_READ` \| `EVENTD_CLEAR` \| `EVENTD_ADMINISTER` \| `EVENTD_PUBLISH` \| `DELETE` \| `READ_CONTROL` \| `WRITE_DAC` \| `WRITE_OWNER` |
 
-`EVENTD_ADMINISTER` is in `GENERIC_WRITE` and deliberately not in
-`GENERIC_READ` or `GENERIC_EXECUTE` (§7.1).
+`EVENTD_ADMINISTER` and `EVENTD_PUBLISH` are in `GENERIC_WRITE` and
+deliberately not in `GENERIC_READ` or `GENERIC_EXECUTE` (§7.1, §7.6).
 
 ## Field GUID namespace
 

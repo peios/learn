@@ -77,3 +77,16 @@ own connection lifetime, which for a dashboard may be days.
 > would also mean a streaming query could change what it returns halfway
 > through for reasons the client cannot see. The snapshot is the simpler
 > contract and is what PSPU §3.14 states; the exposure is the cost.
+
+## Metric publication
+
+The metric ingestion thread owns a separate bounded cache for
+`EVENTD_PUBLISH` checks (§7.6). It is keyed by the conveyed token's
+`token_id` and `modified_id` plus concrete metric name. It caches denials
+as well as grants, clears as a unit when full, and is invalidated by the
+same descriptor generation as the read caches.
+
+This cache is deliberately thread-local. A recurring metric performs a
+borrowed string lookup without allocation, shared locking or AccessCheck;
+the only per-datagram identity operation left is querying the fresh
+token fd's stable statistics before that fd is closed.

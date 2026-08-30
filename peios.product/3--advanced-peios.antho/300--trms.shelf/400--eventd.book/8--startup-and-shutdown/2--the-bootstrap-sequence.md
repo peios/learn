@@ -69,10 +69,12 @@ entirely.
 17. Create the query socket at `QuerySocketPath`. A stale pathname left
     by a crash is unlinked first if it is an `AF_UNIX` socket; if the
     path exists and is not a socket, startup fails.
-18. Create the log socket at `LogSocketPath`, same rule.
+18. Create the log socket at `LogSocketPath`, then replace its inherited
+    descriptor with the protected deny-Service, allow-SYSTEM broker
+    descriptor (§7.6).
 19. Create the metric socket at `MetricSocketPath`, same rule.
-20. Establish the Security Descriptor on all three, before any of them
-    accepts or receives anything (§7.6).
+20. Establish and verify the Security Descriptor on all three, before
+    any of them accepts or receives anything (§7.6).
 
 The stale-socket rule distinguishes the two cases deliberately.
 Unlinking a leftover socket is recovery from eventd's own crash;

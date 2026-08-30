@@ -25,11 +25,10 @@ record-type column exists (§3.1).
 Payload schemas for all five are in §3.2.
 
 Note what is absent: there is no synthetic event for malformed
-ingestion input. Log and metric datagrams arrive unauthenticated from
-arbitrary local processes, and emitting a durable record per bad
-datagram would hand every process an amplification primitive
-(PSPU §3.4). These five are conditions eventd observed about itself, not
-reactions to what it was sent.
+ingestion input. Authentication does not make admitted input trustworthy,
+and emitting a durable record per bad datagram would hand a producer an
+amplification primitive (PSPU §3.4). These five are conditions eventd
+observed about itself, not reactions to what it was sent.
 
 ## Which shard
 

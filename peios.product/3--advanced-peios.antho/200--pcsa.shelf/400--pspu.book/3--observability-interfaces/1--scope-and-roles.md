@@ -27,11 +27,12 @@ between. There is one collector. It is the party being asked, on all
 three interfaces — which is why the obligations in this chapter fall
 mostly on it, and why the producer and client roles are so thin.
 
-A **producer** is any process that submits log records or metric
-samples. The producer role is unrestricted by design: the point of a
-system log is that everything on the system can write to it. A producer
-declares what it is (§3.7, §3.11) and the collector does not verify the
-declaration (§3.4).
+A **producer** is a process that submits metric samples. Its KACS token
+is conveyed with every datagram, and the collector verifies that it may
+publish each metric name (§3.9). Service output reaches the log channel
+through the service manager instead: the service manager authenticates
+the service origin by the pipe it owns, then acts as the sole log broker
+(§3.6).
 
 A **client** is a process that issues a query and reads the result. A
 client's identity, unlike a producer's, is established by the collector
@@ -69,8 +70,8 @@ This chapter does not cover:
 - How a collector stores, indexes, retains or accelerates anything —
   its own design. The mainline collector's is described in the eventd
   TRMP.
-- Which producers a system permits to reach the ingestion channels, and
-  how that is configured.
+- Which principals receive publication rights for individual metric
+  names, and how those rights are administered.
 - Administering a collector's contents.
 
 The third of those is the point of the whole document. A collector is
@@ -83,8 +84,8 @@ A system that offers none of these is still Peios. Observability is not
 in the definition of the platform, and a system that ships a different
 collector, or none, conforms exactly as well.
 
-They are specified because they are *public*. Every service on the
-system is a log producer, every collection agent is a metric producer,
+They are specified because they are *public*. Every service has its
+output brokered into logs, every collection agent is a metric producer,
 and every dashboard, alerting tool and command-line viewer is a query
 client. All three of those are third-party positions, and all three need
 a contract that stays put.

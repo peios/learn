@@ -74,14 +74,21 @@ they do not exist:
 | Key | Default |
 |---|---|
 | `…\Security\Events\*` | SYSTEM and Administrators: `EVENTD_READ` on all fields. |
-| `…\Security\Logs\*` | SYSTEM, Administrators and Authenticated Users: `EVENTD_READ` on all fields. |
-| `…\Security\Metrics\*` | SYSTEM, Administrators and Authenticated Users: `EVENTD_READ` on all fields. |
+| `…\Security\Logs\*` | SYSTEM, Administrators and Authenticated Users: `EVENTD_READ`. |
+| `…\Security\Metrics\*` | SYSTEM and Administrators: `EVENTD_READ | EVENTD_PUBLISH`; Authenticated Users: `EVENTD_READ`. |
 | `…\Security\Admin` | SYSTEM and Administrators: `EVENTD_ADMINISTER`. |
 
 The asymmetry reflects sensitivity. Events include security audit data
 and are restricted to administrators; logs and metrics are operational
-data and are readable by any authenticated user. An administrator can
-tighten either.
+data and are readable by any authenticated user. Publication is
+fail-closed for ordinary services until a more-specific pattern grants
+their service SID `EVENTD_PUBLISH` (§7.6). An administrator can tighten
+either side independently.
+
+On upgrade, eventd replaces the old Metrics read-only wildcard only when
+its binary descriptor exactly matches the former compiled default. A
+value an administrator changed is never treated as a default and never
+rewritten.
 
 ## Conditional ACEs
 

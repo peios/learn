@@ -1,75 +1,103 @@
 ---
 title: The Write Path
-description: There is no per-record access control on the way in — what stands in its place, and what that leaves open for an operator.
+description: Broker-attested log origins and KACS-authorized metric names, including the cache that keeps AccessCheck off the steady-state hot path.
 ---
 
-There is no per-record access control on the way in. This article
-records what stands in its place and what that leaves open.
+The three write paths establish provenance differently because their
+inputs come from different places.
 
 ## Events
 
 Emission is KMES's business. `kmes_emit` and `kmes_emit_batch` require
-SeAuditPrivilege, and eventd is not in the path — it consumes what KMES
-delivers and applies no admission control of its own (§2.2).
+SeAuditPrivilege, and eventd is not in the admission path — it consumes
+what KMES delivers (§2.2).
 
 The identity stamps on an event are the kernel's, captured from kernel
-state at the moment of the write, and an emitting process cannot set,
-influence or suppress them. That is what makes an event's `process_guid`
-evidence in a way that a log's `origin` is not.
+state at the write. An emitting process cannot set, influence or
+suppress them. That is what makes an event's `process_guid` evidence.
 
-## Logs and metrics
+## Logs use peinit as a broker
 
-The Security Descriptor on each ingestion socket is the entirety of the
-write-path control (PSPU §3.3). There is nothing per record: no token is
-obtained, no identity is checked, and no field is verified.
+Service processes do not reach the log socket. eventd replaces the
+inherited descriptor on `LogSocketPath` with this protected DACL before
+its first receive:
 
-The socket descriptor is therefore doing all the work, and it is worth
-being precise about what it does and does not do on Peios. An access
-decision is routed through the object's Security Descriptor, not through
-POSIX mode bits, so setting a mode on a socket pathname restricts
-nothing — and an inode created without a descriptor is denied to every
-caller, so binding a socket into a directory carrying no inheritable
-ACEs produces a socket that nothing, including the service manager, can
-reach. eventd establishes the descriptor on each socket before it begins
-receiving on it.
+```text
+O:SYG:SYD:P(D;;0x2;;;SU)(A;;GA;;;SY)
+```
 
-## Origin and name are claims
+`SU` is the Service logon group, S-1-5-6. Every phase-2 service token,
+including a SYSTEM service token, carries it. peinit's bootstrap SYSTEM
+token does not. The deny is evaluated before the SYSTEM allow, so a
+service cannot write merely because its user SID is SYSTEM; peinit can.
 
-`origin` in a log record and `name` in a metric record are self-reported
-(PSPU §3.7, §3.10). Any process that can reach an ingestion socket can
-write under any origin or metric name it likes, including one belonging
-to another program.
+peinit determines `origin` from the output pipe it is draining and may
+batch records from several origins in one datagram. eventd therefore
+does not request or check a KACS token for each log datagram. The socket
+admission attests the broker and the broker attests the origin, without
+token-fd churn or an AccessCheck on the log hot path.
 
-The consequences are the obvious ones. A compromised service can inject
-log lines attributed to another service, manufacturing a plausible
-operational narrative. It can bury a real incident under noise
-attributed elsewhere. It can create metric series under a name a
-dashboard trusts.
+A log origin proves which service context peinit associated with the
+line. It does not prove that the line's message is truthful.
 
-Read-path descriptors limit who can *see* data written under a given
-identifier; they do nothing about who wrote it. eventd never presents a
-stored `origin` or metric `name` as evidence of provenance.
+## Metrics carry the producer token
 
-> [!NOTE]
-> Closing this needs a primitive eventd does not have: a way to obtain
-> the peer's token for a **datagram**, as `KACS_SO_PEER_TOKEN` does for
-> a stream connection. With one, an ingestion socket could carry a
-> descriptor governing which origins a sender may write, checked per
-> datagram — which is the shape the read path already has. Until it
-> exists, confining which processes can reach the socket at all is the
-> only available control, and it is coarse: it is a decision about
-> processes, where the thing worth controlling is names.
+A metric producer enables `KACS_SO_PASS_TOKEN` once on its persistent
+sending socket. KACS attaches the producer's effective identity to each
+datagram as `KACS_SCM_TOKEN`. eventd uses `recvmsg` with room for exactly
+one token and no ordinary file descriptors.
 
-## What this means for an operator
+eventd discards the whole datagram before MessagePack parsing when:
 
-The interim posture is that the ingestion sockets are a trust boundary
-that only separates "can reach eventd" from "cannot" — and on a system
-where every service logs, nearly everything is on the inside.
+- no token arrived
+- the data was truncated
+- the ancillary data was truncated
+- querying the token or resolving policy failed
 
-Two things follow. Data whose provenance must be trustworthy belongs in
-an event, where the kernel stamps the identity, rather than in a log
-where the producer asserts it. And read-path descriptors on the origins
-and metric names that matter are worth writing even so: they prevent an
-unauthorized reader from *querying* data written under a spoofed
-identifier, which is a smaller property than authenticity but not
-nothing.
+For a valid datagram, eventd resolves each record's metric name through
+the ordinary hierarchical Metrics descriptor namespace (§7.2) and runs
+AccessCheck against the conveyed token for `EVENTD_PUBLISH`. A denied
+record is discarded; authorized sibling records in the same datagram
+continue.
+
+The wildcard Metrics descriptor grants `EVENTD_PUBLISH` to SYSTEM and
+Administrators, not Authenticated Users. A package that owns a metric
+prefix installs a more-specific descriptor granting its service SID
+that right. Existing wildcard descriptors that exactly match eventd's
+old read-only default are upgraded in place; administrator-modified
+descriptors are never rewritten.
+
+Authorization covers the metric name, not its labels or value. An
+authorized producer can create arbitrarily many valid label sets under
+that name (§5.3).
+
+## The publication cache
+
+A full AccessCheck is not performed per sample or per datagram. The
+metric ingestion thread owns a bounded verdict cache keyed by:
+
+```text
+(token_id, modified_id, concrete metric name)
+```
+
+KACS reuses the captured token object while a persistent sender socket
+keeps the same effective identity, so ordinary traffic repeatedly hits
+the same entry. A hit performs no allocation and no AccessCheck.
+
+`MetricAuthorizationCacheSize` bounds the total entry count. When full,
+eventd clears the cache rather than maintaining an LRU list on the write
+path. This makes churn expensive for the producer causing it without
+adding pointer updates to every successful lookup.
+
+The descriptor cache carries a generation. Any security-registry change
+advances it and clears all local publication verdicts before they are
+reused. The cache stores denials as well as grants, so repeatedly sending
+an unauthorized name does not repeatedly invoke KACS.
+
+## Rejected input
+
+Missing identity, truncation, denied records and policy errors increment
+in-memory diagnostic counters. Policy errors may produce rate-limited
+standard-error text. None produces a durable event or log record: doing
+work proportional to hostile input would create an amplification path
+(PSPU §3.4).

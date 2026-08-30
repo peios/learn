@@ -55,6 +55,8 @@ least:
 - the per-CPU committed receipt coverage and highest covered sequence
 - the current non-streaming and streaming query counts
 - the metric series cache occupancy
+- metric datagrams missing identity, truncated, denied by name policy or
+  rejected by an authorization error
 - the last observed write error for each store, where one exists
 
 The format is not a stable machine interface and its wording may change.

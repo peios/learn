@@ -19,6 +19,19 @@ From there peinit is a relay: read from the pipes, tag each line,
 forward. Audit events continue to flow as KMES events, entirely
 separately.
 
+## Broker authentication
+
+eventd's log socket denies `FILE_WRITE_DATA` to the Service logon group
+before allowing SYSTEM. peinit's bootstrap token is SYSTEM without that
+group; every phase-2 service token carries it, including a token whose
+user is SYSTEM. peinit is therefore the only service-output broker.
+
+peinit does not attach a KACS token per log datagram. The socket
+descriptor authenticates the broker once at send admission, and peinit
+derives each `origin` from the pipe it is draining. Avoiding ancillary
+token fds also preserves mixed-origin batching and the hot-path reuse
+described below.
+
 ## Datagram framing and the record
 
 peinit sends a msgpack array of one or more records in each datagram.
