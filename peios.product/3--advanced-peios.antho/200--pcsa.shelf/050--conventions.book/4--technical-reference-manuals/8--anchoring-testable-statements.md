@@ -1,6 +1,6 @@
 ---
 title: Anchoring Testable Statements
-description: A manual has no keywords to grep, so named citations are the only handle it can offer a test suite — and the pass that adds them comes after the prose, not during it.
+description: A manual has no keywords to grep, so named citations are the only handle it can offer a test suite — where the anchor goes, what deserves one, and why the pass comes after the prose.
 ---
 
 A specification's testable statements are already findable: they carry
@@ -28,6 +28,32 @@ text is finished.
 Where a component's manual is written before its tests exist — which is
 usual — the anchoring pass is still worth running, because it is what
 tells the test author where to start.
+
+## Put the anchor on the heading
+
+**By default an anchor goes on a section's heading, and a section gets
+one.** A manual that is well structured already devotes a section to a
+behaviour, so the section is the thing a test wants to cite, and the
+heading is where the anchor belongs:
+
+```markdown
+### `ro` [*strata.ro-is-independent-of-filesystem]
+```
+
+An anchor on a heading rides the document's structure rather than one
+sentence of prose. A sentence gets rewritten in the ordinary course of
+keeping a manual true; a section is a more stable thing to have named,
+and the anchor moves with it.
+
+The exception is a section that states **several distinct behaviours**
+— most often a table of error conditions, or a numbered list of rules
+that each hold independently. There the section is the wrong unit: one
+name for fourteen rules tells a test suite no more than the article
+number did. Anchor those individually, in the table row or list item
+that states each rule.
+
+The test is not a count. It is whether a reader asking "which behaviour
+does this name?" could get more than one answer.
 
 ## Choosing what to anchor
 

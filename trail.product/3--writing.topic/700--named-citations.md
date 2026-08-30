@@ -25,6 +25,33 @@ Anything outside the site can now point at exactly that sentence:
 
 The build collects every anchor into `citations.json`, so a test suite can ask which citations nothing yet verifies.
 
+## Anchors on headings
+
+An anchor on a heading names the **whole section**:
+
+```markdown
+### `ro` [*strata.ro-is-independent-of-filesystem]
+```
+
+This is usually what you want. A well-structured document already gives
+a behaviour its own section, so the section is the citable unit, and an
+anchor on a heading rides the structure rather than one sentence of
+prose that may later be rewritten.
+
+The marker renders inside the heading and contributes nothing to the
+heading's id or its table-of-contents entry, so it is safe to add to an
+existing heading — nothing that linked to that section breaks.
+
+In `citations.json` a heading anchor is reported with `"kind":
+"section"` and its context is the heading text; everything else is
+`"kind": "statement"`. A coverage report wants the difference: an
+uncovered section is a different-sized gap from an uncovered sentence.
+
+Reach for a statement anchor when one section states several
+independent rules — a table of error conditions, or a numbered list —
+where one name for the section would be too coarse to say which rule is
+untested.
+
 ## An anchor is a locator
 
 It marks a **place**, not a span. `[*copy-up.preserves-ownership]` says "the statement here is called this"; it does not say where that statement begins or ends, and Trail never tries to work that out.
