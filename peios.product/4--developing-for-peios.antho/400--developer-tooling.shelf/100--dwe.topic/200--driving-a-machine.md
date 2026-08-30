@@ -23,7 +23,8 @@ The context id is how the host addresses this guest. Any value of 3 or above wor
 In the Peios tree, `make boot-dwe` is `make boot` with that device attached:
 
 ```sh
-cd dist/prod
+cd dist/release
+make iso-dwe               # build the DWE medium (once; no root needed)
 make boot-dwe              # or: make boot-dwe DWE_CID=4
 ```
 
