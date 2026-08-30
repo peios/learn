@@ -71,7 +71,10 @@ every cycle pays the eviction cost on the one thread that also drains
 the metric socket. The failure presents as metric loss, because the
 thread stops reading while it queries.
 
-eventd does not defend against this and cannot: at the interface, a
-producer creating a genuinely new series is indistinguishable from one
-creating garbage, and every available defence would break a correct
-producer to inconvenience an incorrect one (PSPU §3.13).
+eventd does not cap series creation: at the interface, a producer
+creating a genuinely new series is indistinguishable from one creating
+garbage, and rejecting either would break a correct producer to
+inconvenience an incorrect one (PSPU §3.13). The default 1 GiB metric
+retention ceiling bounds the resulting disk growth (§5.5), but it does
+not prevent a hot working set from exceeding this cache and thrashing
+the ingestion thread before retention runs.

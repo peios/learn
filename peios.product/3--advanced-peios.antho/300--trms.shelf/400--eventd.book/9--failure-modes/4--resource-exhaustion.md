@@ -27,8 +27,9 @@ High-cardinality producers are the likely surprise. The series cache
 cannot grow past its limit, but the `series` table can grow and make it
 thrash on the thread that also drains the metric socket (§5.3).
 Identifier intern sets intentionally trade memory for zero catalogue work
-on known-name ingestion; store size retention and low-priority orphan
-cleanup bound them only indirectly.
+on known-name ingestion. The default 1 GiB metric retention ceiling and
+low-priority orphan cleanup bound persistent growth indirectly, but do
+not bound the number of active series between retention passes.
 
 ## Query slots
 

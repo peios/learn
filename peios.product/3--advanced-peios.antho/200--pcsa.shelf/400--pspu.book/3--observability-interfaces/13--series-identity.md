@@ -76,8 +76,12 @@ them; nothing else removes one.
 > is worth being clear about what it costs. Labels are producer-supplied
 > and are not part of publication authorization (§3.9), so a producer
 > authorized for one metric name can create series beneath that name
-> without limit, and each persists until the retention window elapses.
-> Name authorization bounds the namespace, not its label cardinality.
+> without limit. Name authorization bounds the namespace, not its label
+> cardinality.
+> Without a byte ceiling, each series persists until the retention window
+> elapses. A collector-level ceiling may remove the oldest samples, and
+> then their orphaned series, earlier; it bounds storage rather than
+> admission and does not change this rule.
 
 ## Gaps are preserved
 

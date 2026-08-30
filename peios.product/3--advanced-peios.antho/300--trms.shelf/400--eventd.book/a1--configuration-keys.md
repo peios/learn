@@ -80,7 +80,7 @@ No compiled-in defaults. A missing or invalid value fails startup
 | `LogRetentionDays` | REG_DWORD | 14 | 1–3650 | Maximum age of log entries. |
 | `LogRetentionMaxBytes` | REG_QWORD | 0 | 0–2^64−1 | Maximum logical live size of the log store. 0 means no limit. |
 | `MetricRetentionDays` | REG_DWORD | 90 | 1–3650 | Maximum age of metric samples. |
-| `MetricRetentionMaxBytes` | REG_QWORD | 0 | 0–2^64−1 | Maximum logical live size of the metric store. 0 means no limit. |
+| `MetricRetentionMaxBytes` | REG_QWORD | 1073741824 (1 GiB) | 0–2^64−1 | Maximum logical live size of the metric store. 0 explicitly disables the limit. |
 | `RetentionCheckIntervalMinutes` | REG_DWORD | 60 | 1–1440 | How often the retention coordinator runs. |
 | `RetentionDeleteBatchRows` | REG_DWORD | 10000 | 100–100000 | Maximum rows deleted in one retention transaction. |
 

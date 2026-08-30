@@ -78,6 +78,13 @@ labels whose value sets are small and known. A dimension that is not
 bounded belongs in an event payload, where it costs one field, not in a
 label, where it costs a series.
 
+A collector may bound its total metric storage through retention without
+limiting series creation. Peios eventd does this by default: it continues
+accepting new series but removes the oldest samples when the metric
+store's logical live size exceeds its configured ceiling. That protects
+the volume; it does not make high-cardinality labels safe, because an
+active set larger than the series cache can still thrash ingestion.
+
 ## Types
 
 The type is fixed when the series is first seen and is **immutable**. A
