@@ -15,11 +15,21 @@ path first.
 ## The descriptor
 
 ```
-O:SYG:SYD:(A;;GA;;;SY)(A;;FW;;;SU)
+O:SYG:SYD:(A;;GA;;;SY)(A;;FW;;;S-1-5-6)
 ```
 
-`SU` is the Service group `S-1-5-6`, which every token minted for a
-service logon carries. That is the right grantee because it *is* the
+`S-1-5-6` is the Service group, which every token minted for a service
+logon carries.
+
+It is written out rather than as its `SU` alias, and that is deliberate
+rather than an oversight. The alias table lives in libpeios, which is a
+separately versioned package that nothing here declares a minimum
+version of — so an image pairing a peinit that writes `SU` with a
+libpeios that predates the alias parses this descriptor, fails, and
+takes PID 1 into recovery before a console exists to say why. That is
+not hypothetical: it is what happened the first time this descriptor was
+written. A literal SID has been understood by every version there has
+ever been. That is the right grantee because it *is* the
 population with something to say here: membership follows from having
 been started as a service rather than from which account a process runs
 under, so an ordinary user process cannot acquire it however it was
@@ -38,7 +48,7 @@ a window in which it was reachable under a descriptor nobody chose.
 
 The parent directory `/run/services/peinit` carries a descriptor of its
 own, shared with the control socket that lands in it later in boot:
-SYSTEM and Administrators in full, and `SU` traverse only. One constant
+SYSTEM and Administrators in full, and `S-1-5-6` traverse only. One constant
 serves both because `ensure_directory` re-stamps a directory that
 already exists — two call sites installing different descriptors on one
 path would silently leave whichever ran last, and since the notify

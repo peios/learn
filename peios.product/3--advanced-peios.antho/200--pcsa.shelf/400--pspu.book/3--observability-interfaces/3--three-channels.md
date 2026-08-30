@@ -48,10 +48,11 @@ normal system, and a burst of either must not delay the other. Three
 sockets means three populations of caller that cannot starve one
 another, whatever load any of them is under.
 
-The second is **access control**. The set of processes that may write
-logs is every process on the system; the set that may read them is not.
-Those want different Security Descriptors, and a descriptor is a
-property of a socket.
+The second is **access control**. The service manager alone writes the
+log channel, while service processes write the metric channel under
+their own conveyed identities; the set that may read either is
+different again. Those want different Security Descriptors, and a
+descriptor is a property of a socket.
 
 The separation is **not** for isolation. One collector serves all three,
 so a defect or a hang in any of them reaches the others regardless, and
@@ -61,11 +62,16 @@ this chapter does not pretend otherwise.
 
 A collector MUST protect each socket with a Security Descriptor.
 
-This is the whole of the access control on the two ingestion channels:
-there is no per-record write authorization anywhere in this chapter
-(§3.4), so the descriptor on the socket is the only thing standing
-between a process and the ability to write a log line under any name it
-likes.
+The log socket descriptor MUST deny `FILE_WRITE_DATA` to the Service
+logon group before allowing SYSTEM. The service manager runs as SYSTEM
+without the Service group; every service it launches, including a
+SYSTEM service, carries that group. The ordered deny therefore makes
+the service manager the log broker without making every SYSTEM service
+one (§3.6).
+
+The metric socket descriptor is coarse admission only. Every metric
+datagram also carries a KACS sender token and every metric name is
+authorized for `EVENTD_PUBLISH` (§3.9).
 
 A collector MUST NOT rely on the socket's POSIX mode bits for this. On
 Peios an access decision is routed through the object's Security

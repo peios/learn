@@ -127,27 +127,19 @@ a client whose group memberships change mid-stream continues to be
 evaluated against what it connected with, and a client whose access is
 revoked keeps receiving records until it disconnects.
 
-## The write path is not access-controlled
+## What write authentication proves
 
-Nothing on either ingestion channel is authorized per record (§3.4).
-Access control here is a read-path mechanism only, and the Security
-Descriptor on each ingestion socket is the whole of the write-path
-control (§3.3).
+Log `origin` is broker-attested. The service manager chooses it from
+the pipe being read, and the log socket excludes service processes
+(§3.6). It proves which service context the manager associated with the
+line; it does not prove that the line's text is true.
 
-The consequence is that **`origin` and metric `name` are self-asserted**
-(§3.7, §3.10). Any process that can reach an ingestion socket may write
-under any origin or metric name it likes, including one belonging to
-another program — which permits fabricating a plausible operational
-record, or burying a real one under noise attributed elsewhere.
+Metric `name` is publisher-authorized. KACS attests the effective token
+that sent the datagram and the collector verifies `EVENTD_PUBLISH` for
+that name (§3.9). Labels and values remain producer statements. A
+publisher authorized for `http.requests` can report any value and any
+valid label set for that name.
 
-Read-path rules limit who can *see* data written under a given
-identifier; they do nothing about who wrote it. A collector MUST NOT
-present a stored `origin` or metric `name` as evidence of provenance,
-and a client MUST NOT treat one as authenticated.
-
-> [!NOTE]
-> Closing this needs something the interface cannot supply on its own: a
-> way to obtain the peer's token for a datagram, as a collector obtains
-> one for a stream connection (§3.14). Until that exists, a producer's
-> claim about itself is unverifiable, and confining the set of processes
-> that can reach the socket at all is the only available control.
+Read authorization is independent. Permission to publish an identifier
+does not imply permission to query it, and permission to query it does
+not imply permission to publish it.

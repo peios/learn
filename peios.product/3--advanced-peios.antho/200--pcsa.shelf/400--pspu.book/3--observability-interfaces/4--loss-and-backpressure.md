@@ -46,12 +46,13 @@ A collector MUST NOT emit an event, write a log entry, or perform any
 other work proportional to the volume of malformed or unwanted input it
 receives.
 
-Ingestion input is unauthenticated and arrives from arbitrary local
-processes (§3.3). A collector that reacted to bad input — by logging it,
-by counting it in a way a client can observe, or by emitting a
-diagnostic event — would hand every process on the system an
-amplification primitive: a cheap malformed datagram producing an
-expensive durable record. Silence is the defence.
+Ingestion input is untrusted even though its admission is authenticated
+(§3.3). A collector that reacted to bad input — by logging it, by
+counting it in a way a client can observe, or by emitting a diagnostic
+event — would hand an admitted process an amplification primitive: a
+cheap malformed datagram producing an expensive durable record. Silence
+is the defence. In-memory diagnostic counters and rate-limited standard
+error output are permitted because they do not grow with durable input.
 
 The rule binds only on responses to *input*. A collector MAY record its
 own internal conditions, and the mainline collector records several

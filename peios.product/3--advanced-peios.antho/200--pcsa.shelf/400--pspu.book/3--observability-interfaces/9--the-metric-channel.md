@@ -7,6 +7,20 @@ A collector MUST expose an `AF_UNIX` `SOCK_DGRAM` socket for metric
 ingestion, protected by a Security Descriptor as §3.3 requires,
 separate from the log socket.
 
+Before its first send, a producer MUST enable `KACS_SO_PASS_TOKEN` on
+its persistent sending socket. KACS then attaches the producer's
+effective token to every datagram as `KACS_SCM_TOKEN`. A collector MUST
+receive with ancillary space for that token and MUST discard the whole
+datagram when the token is absent or the data or control message was
+truncated.
+
+For every valid record, the collector resolves the metric name's
+publication policy and runs KACS AccessCheck for `EVENTD_PUBLISH`
+against the conveyed token. A denied record is discarded silently.
+Records with other authorized names in the same datagram remain valid.
+An implementation MAY cache a verdict by stable token identity, token
+modification identity, metric name and policy generation.
+
 The channel works exactly as the log channel does, for the reasons given
 there: a declared datagram ceiling, truncated datagrams discarded whole,
 a receive queue of at most four times the ceiling, no backpressure, no
@@ -37,7 +51,8 @@ interface of its own.
 
 ## Batching
 
-Batching matters more here than it does for logs. A collection sweep
+Batching matters more here than it does for logs. It amortizes both the
+datagram and conveyed-token costs. A collection sweep
 produces many samples at once — every CPU core, every disk, every
 interface — and they share a moment, so a producer SHOULD submit a sweep
 as one batched datagram rather than as one datagram per sample.

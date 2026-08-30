@@ -42,20 +42,19 @@ queue fills, they are discarded. This is the designed degradation
 threshold without changing what happens at it, and an unbounded one
 converts data loss into memory exhaustion.
 
-## Reachability
+## The service-manager broker
 
-Every process that produces output is a log producer, including
-processes that have not been written with a collector in mind.
+Every service produces output, including programs that know nothing
+about the collector, but service processes do not write this socket.
+The service manager holds each service's standard output and standard
+error at fork, determines the origin from the pipe it read, and forwards
+the resulting records (peinit TRM).
 
-The mainline arrangement is that the service manager holds each
-service's standard output and standard error at fork and forwards what
-it reads (peinit TRM). It is **not** a privileged producer: it uses this
-socket, this record format and these rules like anything else, and its
-role is to bridge programs that write to a file descriptor into an
-interface that expects datagrams.
+The log socket MUST implement the deny-Service, allow-SYSTEM descriptor
+in §3.3. A collector MUST accept log origins from this broker without a
+per-record KACS token or AccessCheck. A service can choose the bytes it
+writes to its pipe but cannot choose another service's origin.
 
-A producer that wants control over its own metadata MAY write to the
-socket directly instead, with no registration, negotiation or setup of
-any kind. Direct submission and forwarded submission are the same
-interface; nothing distinguishes them on the wire, and a collector MUST
-NOT treat them differently.
+Direct log submission is not part of this interface. A program that
+wants structured, authenticated observability data emits an event or a
+metric; it does not bypass the service manager to assert a log origin.

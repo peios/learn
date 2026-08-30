@@ -13,9 +13,11 @@ they place on either side. The eventd TRMP §1.4 compares the systems.
 The closest relative is journald's native socket: a Unix datagram
 socket, world-writable, accepting a self-describing record from any
 local process, with no acknowledgement and no notification of loss. The
-agreements are substantive — datagram rather than stream, self-asserted
-identity, silent drop under pressure, a forwarder bridging programs that
-only know standard output.
+agreements are substantive — datagram rather than stream, silent drop
+under pressure, and a forwarder bridging programs that only know
+standard output. The identity model differs: this interface admits only
+the service-manager broker, which assigns the origin from the pipe it
+read rather than accepting a process's self-assertion.
 
 The differences are three. The record here is MessagePack rather than a
 line-oriented key-value text format, because the collector already
@@ -34,9 +36,11 @@ expression.
 
 ## Metric ingestion
 
-The shape is StatsD's: push, datagram, fire-and-forget, no registration,
-sender-named series. It is the opposite of Prometheus's, where the
-collector pulls from endpoints it has been configured to know about.
+The shape is StatsD's: push, datagram, fire-and-forget, no series
+registration, sender-named series. KACS sender identity and per-name
+publication authorization are deliberate additions. It is the opposite
+of Prometheus's, where the collector pulls from endpoints it has been
+configured to know about.
 
 The choice follows from the loss model rather than from taste (§3.9). A
 pulling collector must reach every producer on a schedule, which makes

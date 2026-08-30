@@ -20,6 +20,11 @@ under any load, in any failure state (§3.4).
 counter, in response to a malformed, unwanted or excessive submission
 (§3.4).
 
+**Authenticate ingestion.** Admit only the service-manager broker on
+the log socket; require a complete KACS token on every metric datagram
+and authorize every metric name for `EVENTD_PUBLISH` (§3.3, §3.6,
+§3.9).
+
 **Validate at the stated scope.** Datagram, record, or field — as §3.8
 and §3.12 set out, and no more broadly. In particular a malformed record
 MUST NOT cost the valid records batched with it, and a malformed
@@ -60,10 +65,14 @@ without notice (§3.8, §3.12).
 **Stay within the datagram ceiling**, batched or not — and know that you
 cannot discover it (§3.6).
 
-**Choose a stable, conforming identifier.** An origin or metric name
-matching the identifier grammar, naming you distinguishably, and using
-dots for hierarchy — because it is what access rules are written against
-and what queries select on (§3.7, §3.10).
+**Choose a stable, conforming metric name.** It must match the identifier
+grammar, name the producer distinguishably and use dots for hierarchy,
+because publication and read rules are written against it and queries
+select on it (§3.10).
+
+**Convey metric identity.** Enable `KACS_SO_PASS_TOKEN` before sending
+metrics and retain the sending socket so the captured-token and
+authorization caches remain effective (§3.9).
 
 **Timestamp at production**, not at submission (§3.7).
 
@@ -88,8 +97,9 @@ every `"ok"` message for that query is void (§3.16).
 access, counts count only what you may see, and an absent field is
 indistinguishable from a denied one (§3.28).
 
-**Assume nothing about provenance.** An `origin` and a metric `name` are
-what the producer claimed (§3.28).
+**Interpret provenance narrowly.** A log origin is broker-attested and a
+metric name is publisher-authorized; neither proves the message, value
+or labels are truthful (§3.28).
 
 **Do not parse error strings** (§3.16).
 

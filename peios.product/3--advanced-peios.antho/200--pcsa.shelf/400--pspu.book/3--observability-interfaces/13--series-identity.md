@@ -74,10 +74,10 @@ them; nothing else removes one.
 > [!NOTE]
 > The absence of a cap is a deliberate and load-bearing decision, and it
 > is worth being clear about what it costs. Labels are producer-supplied
-> and unverified (§3.4), so any process that can reach the metric socket
-> can create series without limit, and each persists until the retention
-> window elapses. The Security Descriptor on the socket (§3.3) is the
-> only thing that bounds this.
+> and are not part of publication authorization (§3.9), so a producer
+> authorized for one metric name can create series beneath that name
+> without limit, and each persists until the retention window elapses.
+> Name authorization bounds the namespace, not its label cardinality.
 
 ## Gaps are preserved
 
