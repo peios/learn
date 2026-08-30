@@ -154,6 +154,39 @@ of the following.
 50. Serve member enumeration where it withholds `MEMBERS` as `TooLarge`
     (§2.17).
 
+### Service attestation
+
+An authority that implements `ServiceAttest` MUST satisfy all of the
+following. An authority that does not implement it MUST refuse the
+message, and is conforming.
+
+51. Never hold, store, or accept a credential for a service identity,
+    and never offer a credential exchange for one (§2.19).
+52. Refuse a `ServiceAttest` unless both the peer's principal and the
+    peer's being the platform's service manager are established from the
+    connection, and never from the message (§2.19).
+53. Answer a peer that satisfies neither condition, or only one, with
+    `PermissionDenied` (§2.19).
+54. Never mint a token under this message for a principal that has not
+    been designated as usable for a service logon, and refuse with
+    `AccountRestricted` where it cannot determine whether a principal
+    carries that designation (§2.19).
+55. Never let a refusal distinguish "no such principal" from "not
+    designated for service logon" (§2.19, §2.10).
+56. Reject an empty or unusable `service` with `MalformedRequest`
+    (§2.19).
+57. Record the logon type as `Service`, and leave every `profile` field
+    empty rather than inventing a value (§2.19, §2.9).
+58. Issue a token that cannot be used to authenticate to another system
+    on the authority's behalf, at a level below the one a credentialled
+    logon receives and bounding everything derived from it (§2.19).
+59. Record that the logon was attested rather than authenticated,
+    wherever it records what vouched for a credentialled logon (§2.19).
+60. Reject a `LogonStart` that would complete with no credential
+    exchange for an identity it accepts under `ServiceAttest`, and
+    reject a `ServiceAttest` naming an identity it accepts under
+    `LogonStart` (§2.19).
+
 ## Client obligations
 
 There are two client roles, and they are independent. A program may be

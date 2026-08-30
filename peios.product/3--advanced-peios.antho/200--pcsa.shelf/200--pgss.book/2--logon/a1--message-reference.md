@@ -14,6 +14,7 @@ description: Every message type by number and socket, the protocol constants, an
 | `0x8001` | `CredentialRequest` | authority → client | §2.8 |
 | `0x8002` | `AccessGranted` | authority → client | §2.9 |
 | `0x8003` | `AccessDenied` | authority → client | §2.10 |
+| `0x0020` | `ServiceAttest` | client → authority | §2.19 |
 
 ### On `/run/ident.sock`
 
@@ -57,6 +58,8 @@ other socket (§2.14).
 | `shell` | 4096 bytes | §2.9 |
 | `display_name` | 256 bytes | §2.9 |
 | `reason` | 512 bytes | §2.10 |
+| `identity` | 128 bytes | §2.19 |
+| `service` | 256 bytes | §2.19 |
 | `name` (lookup key) | 256 bytes | §2.16 |
 | `sid` | 68 bytes | §2.16 |
 | `qualified_name` | 512 bytes | §2.16 |

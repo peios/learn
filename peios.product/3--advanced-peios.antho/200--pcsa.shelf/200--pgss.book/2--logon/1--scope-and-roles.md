@@ -49,7 +49,9 @@ This chapter covers:
   attributes a POSIX program expects of one (§2.13 to §2.18)
 - how a bare name is resolved when more than one source could answer it
   (§2.15)
-- the obligations binding on each role (§2.19)
+- how a service manager obtains a token for a service, where there is no
+  credential to exchange (§2.19)
+- the obligations binding on each role (§2.20)
 
 This chapter does not cover:
 

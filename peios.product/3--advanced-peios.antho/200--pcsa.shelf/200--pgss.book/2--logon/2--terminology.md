@@ -15,7 +15,7 @@ a running system.
 **Client.** A process that connects to the authority. Also called the
 *originator* when the emphasis is on whose identity the authority
 verifies. There are two client roles — originating a logon and looking
-an identity up — and they are independent (§2.19).
+an identity up — and they are independent (§2.20).
 
 **Principal.** The identity a logon is *for* — the person or service
 being authenticated. The principal is not a party to the conversation;
@@ -45,6 +45,13 @@ understanding what it is for.
 SIDs, privileges and integrity level — from the authenticated identity
 and local policy. Distinct from *authentication*, which establishes only
 that the principal is who they claim.
+
+**Attestation.** A trusted process's assertion that a logon should
+happen, standing in for a credential where none exists and none should.
+Distinct from *authentication*, which establishes that a principal is
+who they claim by something only they could present; an attestation
+establishes only that the party asking is one the authority permits to
+ask (§2.19).
 
 **Source.** A party an authority consults in order to answer a question
 about identity. Whether an authority has sources at all, and what they

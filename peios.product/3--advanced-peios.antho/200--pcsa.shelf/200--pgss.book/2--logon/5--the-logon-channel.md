@@ -39,6 +39,15 @@ remember.
 An authority MUST close the connection after sending its terminal
 message. A client MUST close after receiving one.
 
+A `ServiceAttest` (§2.19) is not a conversation and exchanges no
+credential, but it is bound by the same rule: one per connection,
+answered with one terminal message, and the connection closed. It is
+carried here rather than on its own socket because it *is* a logon in
+every respect except how the authority was satisfied — it creates a
+session and mints a token — and because the volume is a handful of
+requests at start-up rather than the sustained load §2.14 exists to
+separate.
+
 > [!NOTE]
 > A protocol whose connections are long-lived and shared reaches the
 > opposite conclusion, and multiplexes. PSI does (PSPU §2.7), and so
