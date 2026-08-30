@@ -41,6 +41,30 @@ restatement of something already anchored nearby. An anchor on prose
 that no test could ever cite is worse than no anchor: it will be
 counted as uncovered forever.
 
+## Anchor where the rule is defined, once
+
+A manual states its important rules more than once — in the article that
+defines a rule, in a summary of consequences, in a table collecting
+every error condition. Only the defining occurrence carries the anchor.
+
+A second anchor on a restatement does not add coverage; it splits it.
+Two names for one behaviour means two entries in a report, one test
+between them, and no way for a reader to tell which name the other tests
+were meant to cite.
+
+The signals that a passage is a restatement rather than a definition are
+usually explicit: it closes with a `§` reference to the article that
+owns the rule, or it sits under a heading that disclaims authority. Where
+a section says the articles above remain authoritative, it carries no
+anchors at all.
+
+The mirror of this also has to be checked. A summary left unanchored is
+correct only if the rules it summarises are anchored where they are
+defined — a table of error conditions whose rows appear nowhere else in
+prose is a *definition*, however much it looks like a summary, and an
+author SHOULD anchor its rows rather than leave the most testable
+surface in the manual uncitable.
+
 ## One anchor is not one test
 
 Coverage against a manual is *"does this citation have at least one
