@@ -123,6 +123,7 @@ Any option you supply is not asked for, so scripted invocations keep working unc
 | `--display-name <text>` | A human's name for a human to read. |
 | `--disabled` | Create it unable to sign in. |
 | `--no-password` | Create a principal that authenticates with no credential at all. See below. |
+| `--service` | Create a principal that exists to run a service, and can do nothing else. See below. |
 | `--no-prompt` | Fail rather than ask for anything missing. |
 
 Nothing is sent until you confirm, so answering `n` creates nothing.
@@ -130,6 +131,35 @@ Nothing is sent until you confirm, so answering `n` creates nothing.
 **`lps` never prompts when standard input is not a terminal.** A prompt down a pipe would consume the next line of whatever is driving the tool. See *From a script* below.
 
 The RID is allocated by `lpsd` and reported back. You do not choose it, and the uid follows from it.
+
+#### `--service`
+
+Creates a principal that may be used **only** to run a service, and for
+nothing else. It cannot sign in at a console, over the network, or as a
+batch job — a sign-on of any other kind is refused even with the correct
+credential.
+
+Most services do not need one. A service already gets an identity
+without an account: it runs as `LocalService` and carries a per-service
+SID derived from its name, which you can name in a security descriptor
+like any other principal. Reach for `--service` when a service needs
+something a bare SID cannot be — membership of a group, a home
+directory, or a profile.
+
+A service principal has no credential and cannot be given one. The
+authority mints its token on the service manager's attestation instead,
+and only the service manager may ask: nothing else on the system can
+obtain a token for it, with or without a password.
+
+The restriction is a property of the account rather than of this
+machine, so it travels with the principal. It is also the reason the
+flag exists at all: without it, an ordinary account could be named as a
+service's identity, and the machine would then be able to obtain a token
+for that account with no credential.
+
+Every principal created without this flag permits every kind of sign-on
+a person uses and never a service logon, so an existing account cannot
+become a service identity by accident.
 
 #### `--no-password`
 

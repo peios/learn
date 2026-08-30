@@ -187,6 +187,17 @@ message, and is conforming.
     reject a `ServiceAttest` naming an identity it accepts under
     `LogonStart` (§2.19).
 
+### Logon type restrictions
+
+61. Refuse a logon whose type the principal's holder does not permit,
+    with `AccountRestricted`, after authentication rather than instead
+    of it (§2.16, §2.10).
+62. Read an unstated `LOGON_TYPES` as its own default rather than as
+    "nothing permitted", and never include `Service` in that default
+    (§2.16, §2.19).
+63. Never widen what a principal's holder permits. Local policy may
+    narrow it further; nothing may add to it (§2.16).
+
 ## Client obligations
 
 There are two client roles, and they are independent. A program may be

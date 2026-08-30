@@ -83,10 +83,22 @@ them.
 | 6 | `MEMBERS` | array of references, 256 |
 | 7 | `CLAIMS` | array of claim entries, 64 |
 | 8 | `ENABLED` | `u8` |
+| 9 | `LOGON_TYPES` | `u32` |
 
 An authority MUST ignore a bit it does not implement, and MUST NOT
 report it (below). Claim entries use the claim attribute format PCDS
 §5.9 specifies.
+
+`LOGON_TYPES` is a bitmask over the logon type values of §2.B: bit *n*
+set means the principal may be used for logon type *n*. **Zero means the
+holder states nothing**, not that nothing is permitted — a source that
+predates the field sends zero, and an authority that read that as "no
+logon permitted" would lock every principal on every existing system out
+at once.
+
+An authority substituting a default for zero MUST NOT include `Service`
+in it. A principal that has never said how it may be used has certainly
+not said it may be used for a credential-free service logon (§2.19).
 
 > [!NOTE]
 > Field bits are the one place in this chapter where an enumeration may

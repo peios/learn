@@ -234,6 +234,21 @@ entirely.
 36. Never write credential material to a log, audit record, or
     diagnostic (PGSS §2.12).
 
+### Logon type restrictions
+
+37. State a principal's `permitted_logon_types` where it holds the
+    property, and send zero where it does not (§2.13).
+38. Never send "everything" for a principal whose restrictions it does
+    not hold — zero is the honest answer, and "everything" asserts that
+    the principal may be used for a credential-free service logon
+    (§2.13, PGSS §2.19).
+39. Never refuse an authentication on the strength of the restrictions
+    it states. A source states; the authority decides (§2.4, §2.13).
+40. Answer `LOGON_TYPES` from a `Query` as stored, including "not
+    stated", and never substitute a default of its own — what silence
+    means is the authority's reading, and two components with their own
+    defaults can disagree (§2.15, PGSS §2.16).
+
 ## What a source is not required to do
 
 A source is **not** required to store anything, to be local, to be

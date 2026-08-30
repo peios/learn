@@ -19,6 +19,7 @@ outcome a source can produce.**
 | `primary_group` | length-framed bytes (SID) | 68 bytes |
 | `profile` | length-framed structure (PGSS §2.9) | |
 | `claims` | array of claim entries | 64 |
+| `permitted_logon_types` | `u32` | PGSS §2.16 |
 
 Note what is absent: no session, no token, no privileges, no integrity
 level. A source has no way to express them (§2.4).
@@ -46,6 +47,26 @@ The obligation is on what a source **asserts**, not on what it creates.
 A source that validates a name when an administrator adds it, and not
 when it reads one back from storage, has enforced nothing against a
 store it did not itself write.
+
+### permitted_logon_types
+
+Which kinds of sign-on this principal may be used for, as the bitmask
+PGSS §2.16 defines for the `LOGON_TYPES` field.
+
+A source **states** the property and MUST NOT act on it. Deciding what
+to do about a principal's restrictions is derivation, and derivation is
+the authority's (§2.4) — a source that refused an authentication on
+these grounds would be making an access decision it has no standing to
+make, and would do it *differently* from the authority that also has to.
+
+Zero means the source states nothing, and a source that does not hold
+the property MUST send zero rather than inventing a value. In particular
+it MUST NOT send "everything", which would assert that a principal may
+be used for a credential-free service logon (PGSS §2.19) on no evidence
+at all.
+
+An appended field: a source predating it simply does not write it, which
+the authority reads as zero and therefore as its own default.
 
 ### groups
 

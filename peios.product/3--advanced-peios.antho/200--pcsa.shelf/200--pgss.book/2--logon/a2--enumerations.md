@@ -109,6 +109,7 @@ single bit.
 | 6 | `MEMBERS` | array of references |
 | 7 | `CLAIMS` | array of claim entries |
 | 8 | `ENABLED` | `u8` |
+| 9 | `LOGON_TYPES` | `u32` |
 
 This is the sole exception to the rule above. A bit MAY be added without
 a version bump, because a reply states which fields it answered and an
