@@ -84,6 +84,9 @@ dwe = true            # a development medium; builds to …-2026.8-dwe/
 [registry]
 remove = ["lpsd-first-account"]   # drop a seed the release would apply
 add    = ["my-service"]           # add one a package in the closure ships
+
+[[package]]
+name = "bash"                     # carry a package the edition does not
 ```
 
-To change *what the system contains*, change the edition package (`pkgs/peios-experimental/`) and republish it; the spec does not change. [Editions](~peios/peiso/editions-and-upgrades/editions) explains why that line is drawn where it is.
+To change *what the release is*, change the edition package (`pkgs/peios-experimental/`) and republish it; the spec does not change. [Editions](~peios/peiso/editions-and-upgrades/editions) explains why that line is drawn where it is.

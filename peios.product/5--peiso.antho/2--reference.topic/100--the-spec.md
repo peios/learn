@@ -27,6 +27,11 @@ dwe = false
 [registry]
 add    = []
 remove = []
+
+[[package]]
+name    = "bash"
+version = ">= 5.2"
+root    = ""
 ```
 
 ## `[[packages.repository]]`
@@ -65,6 +70,18 @@ Adjust the seeds the edition auto-applies. Names are seed names — `login-conso
 
 The starting list comes from the edition's [`release.toml`](~peios/peiso/editions-and-upgrades/release-toml), not from the spec. A spec never has to name a seed the release already applies.
 
+## `[[package]]`
+
+A package to carry beyond the edition. Repeat the table for each.
+
+| Key | | |
+|---|---|---|
+| `name` | required | The package name, resolved from the spec's sources with its dependencies. |
+| `version` | optional | A constraint in peipkg's grammar — `"5.2"`, `">= 5.2"`, `">= 5.2, < 6"`. Absent means any version, newest wins. |
+| `root` | optional | `"initramfs"` to place the package in the initramfs root — an extra boot hook, say. Absent means the main root. |
+
+An addition rides on the same resolution as the edition, so a package that conflicts with the edition's closure fails the build rather than quietly displacing something. There is no way to remove a package: the edition's closure is what makes the image a Peios, and everything else is here only because a `[[package]]` put it there.
+
 ## What the spec cannot say
 
-The spec has no package list, no initramfs or squashfs or UKI section, and no way to inject files. Those were the previous builder's spec, and each was a way for an image to drift from the release it claimed to be. What a Peios contains is the edition package's to say; peiso builds what it says.
+The spec has no initramfs, squashfs or UKI section, and no way to inject files. Those were the previous builder's spec, and each was a way for an image to drift from the release it claimed to be. `[[package]]` adds to a release; it does not redefine one. What a Peios contains is the edition package's to say; peiso builds what it says, plus what you asked for on top.
