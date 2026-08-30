@@ -103,7 +103,7 @@ may sit above the create stratum, below it, or both. [*strata.unflagged-modified
 ### `ro`
 
 `ro` is a stratafs-level assertion, independent of whether the
-stratum's filesystem is itself read-only. It is one of three terms in
+stratum's filesystem is itself read-only. [*strata.ro-is-independent-of-filesystem] It is one of three terms in
 the predicate that decides whether a stratum **accepts modification**
 of an object it provides:
 
