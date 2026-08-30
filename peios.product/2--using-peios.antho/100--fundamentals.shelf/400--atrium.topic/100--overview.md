@@ -57,5 +57,14 @@ The Terminal app is your shell on the machine — the same shell a
 console login gives you, in a window. Closing the window ends the
 shell and everything it is running.
 
+## Services
+
+The Services app is service administration in a window: everything
+peinit supervises, its state and health at a glance, and start, stop
+and restart a click away. It acts with exactly your authority — it
+runs `svctl` as you — so it takes an administrator's logon; peinit
+refuses the connection to anyone else, and the app says so rather
+than showing an empty room.
+
 Atrium serves plain HTTP in this version: use it on networks you
 trust.
