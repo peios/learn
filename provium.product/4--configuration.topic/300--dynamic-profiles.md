@@ -23,19 +23,19 @@ This is the same idea as [`cmdline_file`](~provium/configuration/provium-toml#cm
 
 ## Cmdline from the builder
 
-Start with the smaller case. Image builders usually emit a kernel command line of their own — `peiso`, for instance, writes one to `out/root/boot/cmdline`. If you copy that string into your profile's `cmdline`, the two drift the moment the builder changes it (a new `init=`, a new console). Point `cmdline_file` at the builder's file instead:
+Start with the smaller case. Image builders usually emit a kernel command line of their own — a `peiso` build, for instance, carries the one its boot package ships at `root/usr/share/live-boot/cmdline`. If you copy that string into your profile's `cmdline`, the two drift the moment the builder changes it (a new `init=`, a new console). Point `cmdline_file` at the builder's file instead:
 
 ```toml
 [profiles.peios]
-kernel       = "../peiso/out/root/usr/lib/modules/<release>/vmlinuz-<release>"
-initrd       = "../peiso/out/initrd.img"
-cmdline_file = "../peiso/out/root/boot/cmdline"
+kernel       = "../dist/peios-experimental-2026.8/root/usr/lib/modules/<release>/vmlinuz-<release>"
+initrd       = "../dist/peios-experimental-2026.8/root/system/boot/initramfs.cpio.gz"
+cmdline_file = "../dist/peios-experimental-2026.8/root/usr/share/live-boot/cmdline"
 ```
 
 Provium reads the file at boot, collapses its whitespace to single spaces, and uses it as the command line. You can still add tokens inline — they're appended *after* the file, so they win for last-wins kernel parameters:
 
 ```toml
-cmdline_file = "../peiso/out/root/boot/cmdline"
+cmdline_file = "../dist/peios-experimental-2026.8/root/usr/share/live-boot/cmdline"
 cmdline      = "loglevel=7"     # verbose, on top of whatever the builder set
 ```
 
@@ -47,10 +47,10 @@ The `build` field takes a shell command. Provium runs it — once, before any VM
 
 ```toml
 [profiles.peios-full]
-build        = "peiso build manifests/peios-full.toml --out {out}"
+build        = "peiso iso specs/peios-full.toml --out {out}"
 kernel       = "{out}/root/usr/lib/modules/<release>/vmlinuz-<release>"
-initrd       = "{out}/initrd.img"
-cmdline_file = "{out}/root/boot/cmdline"
+initrd       = "{out}/root/system/boot/initramfs.cpio.gz"
+cmdline_file = "{out}/root/usr/share/live-boot/cmdline"
 ```
 
 Now `provium` builds `peios-full` before the suite runs, and tests boot exactly what was just built:
@@ -76,7 +76,7 @@ Set [`build_out`](~provium/configuration/provium-toml#build-out) to pin it somew
 ```toml
 [profiles.peios-full]
 build_out    = "/tmp/provium-builds/peios-full"
-build        = "peiso build manifests/peios-full.toml --out {out}"
+build        = "peiso iso specs/peios-full.toml --out {out}"
 kernel       = "{out}/root/usr/lib/modules/<release>/vmlinuz-<release>"
 # …
 ```
@@ -123,7 +123,7 @@ This matters because a half-finished build often leaves the *previous* run's art
 
 ## Worked example
 
-A self-contained suite that builds its own image. The manifest lives in the suite, so a fresh clone can `provium` with nothing else set up:
+A self-contained suite that builds its own image. The peiso spec lives in the suite, so a fresh clone can `provium` with nothing else set up:
 
 ```toml
 # test-suite/provium.toml
@@ -131,10 +131,10 @@ A self-contained suite that builds its own image. The manifest lives in the suit
 roots = ["tests"]
 
 [profiles.peios-full]
-build        = "peiso build manifests/peios-full.toml --out {out}"
+build        = "peiso iso specs/peios-full.toml --out {out}"
 kernel       = "{out}/root/usr/lib/modules/<release>/vmlinuz-<release>"
-initrd       = "{out}/initrd.img"
-cmdline_file = "{out}/root/boot/cmdline"
+initrd       = "{out}/root/system/boot/initramfs.cpio.gz"
+cmdline_file = "{out}/root/usr/share/live-boot/cmdline"
 ```
 
 ```

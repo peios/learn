@@ -170,7 +170,7 @@ Common additions:
 
 ```toml
 [profiles.peios]
-cmdline_file = "../peiso/out/root/boot/cmdline"
+cmdline_file = "../dist/peios-experimental-2026.8/root/usr/share/live-boot/cmdline"
 cmdline      = "loglevel=7"   # optional; appended after the file
 ```
 
@@ -201,10 +201,10 @@ The field exists to future-proof the schema for other ports — when there's a W
 
 ```toml
 [profiles.peios]
-build        = "peiso build manifests/peios.toml --out {out}"
+build        = "peiso iso specs/peios.toml --out {out}"
 kernel       = "{out}/root/usr/lib/modules/<release>/vmlinuz-<release>"
-initrd       = "{out}/initrd.img"
-cmdline_file = "{out}/root/boot/cmdline"
+initrd       = "{out}/root/system/boot/initramfs.cpio.gz"
+cmdline_file = "{out}/root/usr/share/live-boot/cmdline"
 ```
 
 | Type | Default | Description |
