@@ -193,7 +193,8 @@ Compose's contract stops at producing a valid peipkg root. It is deliberately na
 - **Not a full image builder.** It produces only a directory tree — no bootloader, kernel, initramfs contents, registry seed, or peinit wiring. Those belong to whatever assembles the image around it.
 - **Not a live-system tool.** It never touches the host `/`. There is no three-phase transaction, no commit boundary, no rollback journal, and no crash-recovery — the output is disposable, and its only atomicity is the single whole-tree rename above.
 - **Not the producer side.** It does not build or sign `.peipkg` files and it does not serve repositories — those are the separate `peipkg-build`, `peipkg-repo`, and `peipkg-manager` tools. Compose consumes ordinary peipkg packages and repositories unchanged, exactly as [PSPU §5](~peios/package-format-and-repository-protocol/scope-and-roles) defines them.
-- **No side effects.** `ldconfig`, `depmod`, and `man-db` are not run; no KACS security descriptors are applied; no audit events are emitted. A booted system runs those itself.
+- **No side effects.** `ldconfig`, `depmod`, and `man-db` are not run, and no audit events are emitted. A booted system runs those itself.
+- **Security descriptors are applied**, where a package declares one. A descriptor is stored in an ordinary extended attribute, so this needs no Peios kernel on the build host — and an image writer that cannot set `security.*` attributes can have compose hand them over instead, to be written into the image directly. Unlike `peipkg install`, compose applies overrides unconditionally: composing a root from nothing is the operator's own act, and there is no running system whose access control could be changed behind their back.
 
 No environment variables are read, and there is no `--version` flag.
 

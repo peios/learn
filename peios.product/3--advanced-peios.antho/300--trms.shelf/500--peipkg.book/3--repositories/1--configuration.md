@@ -15,6 +15,7 @@ peipkg applies to it.
 | Minimum index version | The out-of-band freshness floor applied at first add |
 | Maximum trusted age | How long a repository's trust state stays usable without a refresh |
 | Insecure transport | Whether a non-HTTPS base URL is permitted for this repository |
+| Allow SD overrides | Whether packages from here may declare security descriptors (PSPU §5.20) |
 
 The default signature policy for a new repository is `required`. The
 default maximum trusted age is 30 days. The default priority is the same
@@ -50,3 +51,26 @@ acknowledging the transport.
 Changing the insecure-transport setting after a repository has been
 added means editing its configuration file. There is no verb for it, and
 so no prompt and no audit event accompanies the change.
+
+## Allowing security-descriptor overrides
+
+A package may declare a security descriptor for an entry it ships, and
+the format cannot check that its producer had any authority over the
+principals that descriptor grants access to. §5.20 makes that the
+consumer's judgement, so it is configured per repository.
+
+It defaults to **off**, and a package carrying overrides from a
+repository that has not been vouched for is refused outright rather than
+installed with the overrides dropped. A repository whose packages
+legitimately ship descriptors — the system's own, above all, since
+`fsbase` is what declares the descriptors for `/home` and `/tmp` —
+must say so:
+
+```toml
+allow_sd_overrides = true
+```
+
+The default fails towards less authority, which is the direction that
+shows: an install stops and says why. Failing the other way would let a
+repository nobody had thought about set access control on the machine,
+and nothing would report it.

@@ -124,6 +124,23 @@ Protected ACLs are used when an object should be administered without reference 
 
 The flags can also be set after creation, via a subsequent `kacs_set_sd`. Doing so does not retroactively remove previously inherited ACEs — they were copied at creation time and are now the child's own — but it does protect against future re-inheritance if a propagation tool sweeps the tree.
 
+### A protected DACL is how a subtree gets its own policy
+
+The Peios filesystem is a worked example, and a useful one because it is small enough to hold in your head.
+
+The root's DACL is inheritable and grants SYSTEM and Administrators full control, Everyone read and execute, and CREATOR OWNER full control of whatever it makes. Every path on the system takes its descriptor from that by inheritance, which is what makes `/usr` readable and executable without anything having to say so per file.
+
+Two directories opt out, and both have to:
+
+| Path | Protected because |
+|---|---|
+| `/home` | Everyone would otherwise inherit read, and every account could enumerate the others. It grants Everyone traverse and **not** list, so a principal reaches its own directory without seeing who else has one. |
+| `/tmp` | Everyone would otherwise inherit read on every file in it. Protecting it, plus CREATOR OWNER, makes each temporary file private to whoever made it. |
+
+Neither could be expressed by editing the root's ACL, because the root's ACL is also `/usr`'s and `/var`'s. That is the whole reason the protected flag exists: one inheritable ACL is one policy, and a system needs more than one.
+
+Both descriptors are declared by the `fsbase` package rather than stamped at boot, so the statement of what `/home` is lives beside the thing that creates it.
+
 ## Auto-inherit flags
 
 Two more SD control flags work alongside the protected flags:

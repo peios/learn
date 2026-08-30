@@ -105,7 +105,9 @@ To turn autologon off, give the principal a password with [`lps password`](~peio
 
 Without `-p`, `login` builds a fresh environment: `HOME`, `SHELL`, `USER`, `LOGNAME`, `PATH=/bin`, and `TERM` carried through from its own. The shell's `argv[0]` gets a leading dash, which every shell reads as "this is a login shell, run the profile files".
 
-The home directory comes from the profile the authority sent, and **a missing one is not fatal**. `login` reports it and starts you in `/`. Refusing to proceed over an absent directory would turn a cosmetic problem into being locked out, and creating it would put directory provisioning inside the one program that has to keep working when everything else is broken.
+The home directory comes from the profile the authority sent, and **a missing one is not fatal**. `login` reports it and starts you in `/`. Refusing to proceed over an absent directory would turn a cosmetic problem into being locked out.
+
+`login` does not create it. Two reasons, and either would be enough. It has already made your token its own by the time it changes directory, so it is you rather than the system — and `/home` lets you walk through it but not create in it. And directory provisioning has no business inside the one program that has to keep working when everything else is broken. The authority creates the directory when it grants the logon, before `login` is handed anything; reaching this fallback means the authority named no home, or could not make one.
 
 ## Exit status
 

@@ -59,7 +59,13 @@ You need to be an administrator to do this. See [the `lps` command](~peios/manag
 
 **No per-user group is created.** That Linux convention exists so a file's *group* ownership means something, and under KACS it means nothing — access is decided by the token, not by the mode bits. A group per user would be ceremony with a RID attached.
 
-**The home directory is not created either.** `lps` records the path; nothing makes the directory. A principal whose home is missing still signs in, starting in `/`, and `login` says so.
+**The home directory is not created here.** `lps` records the path and nothing more. The directory appears at the principal's **first sign-in**, made by the authority when it grants the logon — and only when the account has a home recorded, which is why a service principal never grows one.
+
+It is created owned by the principal, with a protected DACL: full control for its owner, for SYSTEM and for Administrators, and nothing for anybody else. Protected matters — without it the root's inheritable "Everyone may read" ACE would apply and every account could read every other account's files.
+
+A principal whose home could not be created still signs in, starting in `/`, and `login` says so. A directory is not worth failing a logon over.
+
+An existing directory is left exactly as it is, and one owned by somebody else is reported rather than taken over. So pointing a new account's home at another principal's directory does not hand it over — it produces a warning in the log and an account that starts somewhere it does not own.
 
 ## Accounts with no password
 

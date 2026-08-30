@@ -39,16 +39,66 @@ peipkg creates entries without supplying an explicit security
 descriptor, so the kernel computes one by inheritance from the parent
 directory at creation time.
 
-Manifest-declared overrides are carried in the manifest and validated
-for base64 decodability, decoded length, and sort order. They are not
-checked against the payload — an override naming a path the package does
-not ship, or naming a symlink, or decoding to bytes that are not a
-security descriptor, is accepted — and they are not applied. No
-descriptor peipkg supplies is ever an override.
+That is the default and it is what the overwhelming majority of entries
+get. Inheritance is expressed by the *absence* of a descriptor, not by
+peipkg computing one.
 
-The operator-facing policy of PSPU §5.20 — surfacing each override,
-diffing it against inheritance, requiring confirmation for a non-official
-repository — has nothing to act on as a result.
+### Overrides
+
+A package may declare a descriptor for a specific entry, through the
+manifest's `sd_overrides` (PSPU §3.3.5). Every override is checked
+before anything is installed — the descriptor decodes from base64,
+stays inside the size limit, and parses; the list is sorted and free of
+duplicates; and each path names a real payload entry that is not a
+symlink. §5.20 requires all of that to happen up front, because
+deferring it to the moment a descriptor is applied turns a malformed
+package into a partially completed install.
+
+Overrides are applied last, after the payload is written and after any
+signature attributes are stamped. A descriptor can withhold `WRITE_DAC`
+from the installing process, so nothing may still be waiting to be
+written when one takes effect.
+
+Where the descriptor lands depends on the entry:
+
+| Entry | Stamped on |
+|---|---|
+| Regular file | its staged sibling, before the commit rename |
+| Directory | its final path, after the payload beneath it exists |
+
+Stamping a file before the rename means it becomes visible already
+carrying its descriptor, rather than briefly wearing an inherited one.
+A directory has no staged sibling — it is created at its final path —
+so it is stamped in place once its children are there.
+
+If the kernel rejects a descriptor, most often because it names a
+principal the system does not know, the install fails and rolls back.
+It is never warned past.
+
+### The override policy
+
+The kernel checks that a declared descriptor is well-formed. Nothing
+checks that the package's producer had any authority over the principals
+it grants access to, and §5.20 makes that the consumer's question.
+
+peipkg answers it per repository, from `allow_sd_overrides` in the
+repository's configuration. A package carrying overrides from a
+repository that does not permit them is **refused** — not installed with
+the overrides quietly dropped, which §5.20 forbids by name. A package
+declaring no overrides is unaffected: the policy gates declaring
+descriptors, not installing.
+
+Every override applied is listed in the install report.
+
+> [!NOTE]
+> This is a deliberate subset of §5.20. The spec also asks for each
+> override to be shown to the operator with a diff against what
+> inheritance would have produced, and for a per-repository allowlist of
+> the principals an override may name. Both require peipkg to compute
+> KACS inheritance itself in order to render the diff. Until a
+> repository exists that is neither wholly trusted nor wholly refused,
+> the per-repository switch enforces the binding rule and leaves the
+> graduated middle unbuilt rather than half-built.
 
 ## Hashing
 

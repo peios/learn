@@ -423,7 +423,7 @@ The package file accepts exactly these top-level keys; anything else is an
 | `provides` | table | no | name → version of capabilities this package provides. |
 | `replaces` | table | no | name → constraint of packages this one replaces. |
 | `side_effects` | array of strings | no | Declared install-time side effects. |
-| `sd_overrides` | table | no | path → SDDL security-descriptor overrides. |
+| `sd_overrides` | table | no | payload path → SDDL security descriptor. See [`[sd_overrides]`](#sd_overrides). |
 | `claims` | table | no | Claim slots on provides/dependencies. See [`[claims]`](#claims). |
 
 > [!IMPORTANT]
@@ -619,3 +619,45 @@ entries by name; consumer-side slots (`claims.dependencies`) attach to matching
 - [Supporting files](~pekit/reference/supporting-files) — the workspace, env, keyring, lockfile, and patch-series schemas.
 - [Anatomy of a recipe](~pekit/recipes/anatomy) — the narrative walk-through of these files.
 - [Packaging files](~pekit/recipes/packages) — how `[files]` refs and destinations resolve.
+
+## `[sd_overrides]`
+
+Each key is a payload path — exactly as it appears in the package, with
+no leading slash — and each value is an SDDL string. pekit compiles it
+to a binary security descriptor at pack time and puts the result in the
+manifest.
+
+```toml
+[sd_overrides]
+"home" = "O:SYG:SYD:P(A;OICI;GA;;;SY)(A;OICI;GA;;;BA)(A;;FX;;;WD)"
+```
+
+An entry with no override gets its descriptor by inheritance from its
+parent directory when the consumer creates it, and that is what almost
+every entry should get. Declare one where a path needs to be more
+restrictive than its parent would make it, needs access for a principal
+the parent's inheritable ACEs do not name, or needs to start a new
+inheritance scope of its own.
+
+Three constraints are worth knowing before writing one:
+
+- **The path must name a real payload entry**, and it must be a regular
+  file or a directory — never a symlink, which carries no descriptor of
+  its own. A consumer rejects the whole package otherwise.
+- **Absolute SID aliases only.** The compile happens on a build host
+  with no domain and no machine to resolve against, so `SY`, `BA`, `WD`
+  and literal SIDs are fine while domain-relative aliases (`DA`, `EA`,
+  and the rest) are an error. CREATOR OWNER has no alias here and is
+  written `S-1-3-0`.
+- **A rights field is mnemonics or a hex mask, not both.** `FRFX` and
+  `0x1200af` each parse; `FRFX0x6` does not. Rights with no two-letter
+  mnemonic — `FILE_ADD_FILE` and `FILE_ADD_SUBDIRECTORY`, in particular
+  — therefore force the whole mask to be written as hex.
+
+> [!NOTE]
+> A declared descriptor only takes effect if the consumer is willing to
+> apply it. `peipkg install` gates that on the originating repository's
+> `allow_sd_overrides` setting and refuses a package that carries
+> overrides it may not apply, rather than installing it with them
+> dropped. An image composed by `peipkg-compose` applies them
+> unconditionally.
