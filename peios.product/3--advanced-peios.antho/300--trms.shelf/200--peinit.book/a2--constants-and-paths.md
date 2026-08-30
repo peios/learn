@@ -83,7 +83,7 @@ The recovery shell additionally receives `TERM=linux` and `HOME=/`.
 | A provisioned path with no `Security` | `O:SYG:SYD:(A;;GA;;;SY)(A;;GA;;;BA)(A;;FR;;;BU)` |
 | A service's `/run/<name>` runtime directory | `O:SYG:SYD:(A;;GA;;;SY)(A;;GA;;;BA)(A;;GA;;;<service SID>)` |
 | The random seed file | `O:SYG:SYD:(A;;GA;;;SY)` |
-| The default ServiceSecurity | `O:SYG:SYD:(A;;GA;;;SY)(A;;0x0005;;;BA)` |
+| The default ServiceSecurity | `O:SYG:SYD:(A;;0x000F;;;SY)(A;;0x000F;;;BA)` |
 | The default ControlSecurity | `O:SYG:BAD:(A;;0x0003;;;SY)(A;;0x0003;;;BA)` |
 | The control socket inode | `O:SYG:SYD:(A;;GA;;;SY)(A;;GA;;;BA)` |
 | The jobs socket inode | `O:SYG:SYD:(A;;GA;;;SY)(A;;GA;;;BA)(A;;FW;;;AU)` |

@@ -15,6 +15,8 @@ Returns everything the manager knows about one service.
 {
     "status": "ok",
     "service": "jellyfin",
+    "display_name": "Jellyfin",
+    "description": "Media server for the living room.",
     "state": "active",
     "cause": "explicit_start",
     "status_text": "Listening on port 8096",
@@ -40,6 +42,8 @@ Returns everything the manager knows about one service.
 
 | Field | Type | Meaning |
 |---|---|---|
+| `display_name` | string or null | The definition's human-readable name. |
+| `description` | string or null | The definition's human-readable description. |
 | `state` | string | §4.B. |
 | `cause` | string or null | Why the service last transitioned. §4.B. |
 | `status_text` | string or null | The most recent status string the service sent (§4.19). |
@@ -91,16 +95,21 @@ Returns every service the caller may query, with a compact summary.
 {
     "status": "ok",
     "services": [
-        {"service": "jellyfin", "state": "active",
-         "cause": "explicit_start", "health": "healthy"},
-        {"service": "registryd", "state": "active",
+        {"service": "jellyfin", "display_name": "Jellyfin",
+         "description": "Media server for the living room.",
+         "state": "active", "cause": "explicit_start",
+         "health": "healthy"},
+        {"service": "registryd", "display_name": null,
+         "description": null, "state": "active",
          "cause": "dependency_start", "health": null}
     ]
 }
 ```
 
-Exactly four fields per entry. Services the caller may not query are
-omitted (§4.7).
+Exactly six fields per entry: the name, the definition's nullable
+`display_name` and `description`, and the state, cause and health of
+the status shape. Services the caller may not query are omitted
+(§4.7).
 
 A service whose definition has been withdrawn is listed, and the list
 entry does not say so. A client that needs to know MUST issue a

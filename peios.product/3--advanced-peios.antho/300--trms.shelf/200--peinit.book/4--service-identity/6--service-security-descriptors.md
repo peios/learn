@@ -55,13 +55,14 @@ If that key has no `ServiceSecurity` either, peinit applies a built-in
 default:
 
 ```
-O:SY G:SY D:(A;;GA;;;SY)(A;;0x0005;;;BA)
+O:SY G:SY D:(A;;0x000F;;;SY)(A;;0x000F;;;BA)
 ```
 
-SYSTEM gets full access. Administrators get `SERVICE_QUERY_STATUS` and
-`SERVICE_STOP` — query and stop, but not start and not reload. The
-asymmetry is deliberate: stopping something that is misbehaving is a
-containment action, and starting something is a change.
+SYSTEM and Administrators both get `SERVICE_ALL_ACCESS`. An
+administrator who may stop any service and shut the machine down gains
+nothing by being unable to start one, so the default does not attempt a
+narrower grant; a service that wants one carries its own
+`ServiceSecurity` value.
 
 ## The check
 
