@@ -45,6 +45,20 @@ Each `mount(2)` passes the filesystem name as both the source and the
 filesystem type, passes only the listed flags, and passes null mount
 data. Mount points that do not exist are created first.
 
+`/dev/pts` additionally gets a KACS mount policy immediately after it is
+mounted: `SYNTHESIZE_EPHEMERAL`, with a template descriptor granting
+SYSTEM and Administrators full control and Authenticated Users read,
+write and traverse. devpts cannot store security descriptors, and its
+slave nodes are materialised by the kernel when a terminal opens
+`/dev/ptmx` — never through a create path that could stamp or inherit
+one — so under the default `DENY_MISSING` every pseudo-terminal on the
+machine is unopenable. The policy is set through
+`SYS_KACS_SET_MOUNT_POLICY` on an `O_PATH` descriptor of the mount
+point. The template applies to every SD-less inode of the mount alike,
+so any authenticated principal may open any slave; per-owner slave
+descriptors need kernel support for stamping the opener's identity at
+materialisation, and are recorded as future work, not provided here.
+
 There is a bootstrap wrinkle in reading mountinfo at all: the file lives
 in `/proc`, which is one of the things being checked for. If the read
 fails with `ENOENT` or `ENOTDIR`, peinit mounts `/proc` from the table
