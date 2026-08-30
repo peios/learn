@@ -28,7 +28,7 @@ authoritative for the conditions themselves.
 | Sixteen consecutive collisions allocating a mount cookie | `EAGAIN` |
 
 The option-only conditions are decided before any path is touched, and
-the `EPERM` admission test before any path is resolved. The per-path
+the `EPERM` admission test before any path is resolved. [*failure.mount.option-checks-precede-path-checks] The per-path
 conditions follow. §4.2.3 records the one place the specified ordering
 is not achieved.
 

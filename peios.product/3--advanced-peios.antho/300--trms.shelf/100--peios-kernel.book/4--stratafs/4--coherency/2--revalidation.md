@@ -13,7 +13,7 @@ implements neither.
 `d_revalidate` returns 0 for every dentry except the mount root. The
 VFS therefore discards the dentry and re-enters `lookup` on every path
 walk, and the lookup re-resolves the parent and the child from their
-relative path strings across every stratum.
+relative path strings across every stratum. [*coherency.revalidate.always-invalidates]
 
 Nothing is memoised. No version value is recorded, no directory
 identity is retained for comparison, no nearest-existing-ancestor walk
@@ -45,11 +45,11 @@ The cost is real and lands on the hottest path in the kernel.
 returns `ECHILD` and the walk is retried in ref-walk mode, and the
 directory permission check does the same. RCU-walk is therefore never
 used on a stratafs mount, and the fallback is taken always rather than
-only where it genuinely cannot proceed.
+only where it genuinely cannot proceed. [*coherency.revalidate.rcu-walk-refused]
 
 What replaces it, per path component, is one full `filename_lookup` per
 stratum — up to sixteen — plus one merged resolution per proper prefix
-of the path, for the ancestor-masking test of §4.3.3. Where a mount is
+of the path, for the ancestor-masking test of §4.3.3. [*coherency.revalidate.lookups-per-component] Where a mount is
 established over a directory of executables, that lies on the path of
 every program execution, and there is no dentry cache hit to avoid it.
 

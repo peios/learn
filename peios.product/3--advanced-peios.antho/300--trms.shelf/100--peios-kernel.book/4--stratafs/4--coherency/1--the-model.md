@@ -20,14 +20,14 @@ told anything.
 
 A resolution depends only on which names each participating stratum
 directory holds and what type each entry has. It does not depend on the
-contents of any file.
+contents of any file. [*coherency.resolution-depends-on-names-not-contents]
 
 A change to an object's **contents** therefore requires no action at
 all. stratafs inodes carry no address-space operations; there is no
 second page cache, and every data operation is forwarded to a backing
 file opened on the provider. A change to that object is observed
 through the mount immediately and by construction, because there is
-nothing to invalidate.
+nothing to invalidate. [*coherency.content-change-visible-immediately]
 
 A change to the **structure** of a participating stratum directory — an
 entry created, removed, renamed, or replaced by one of another type —
@@ -38,7 +38,7 @@ handled, which is by not caching anything.
 
 A structural change in a stratum becomes visible to any resolution
 begun after the stratum's own filesystem exposes that change to an
-ordinary lookup. stratafs adds no delay of its own: there is no
+ordinary lookup. [*coherency.structural-change-visible-to-next-resolution] stratafs adds no delay of its own: there is no
 timeout, no jiffies comparison, no generation counter, and no
 resolution cache to serve a stale answer from.
 
@@ -51,7 +51,7 @@ Resolutions already completed are not revisited. Every regular-file
 open is detached onto a descriptor-private dentry and inode holding
 their own reference to the provider, and I/O runs against the file
 opened at that time, so later masking or removal in any stratum cannot
-reach that descriptor. It is not re-pointed and it does not fail. A
+reach that descriptor. It is not re-pointed and it does not fail. [*coherency.open-file-unaffected-by-later-change] A
 process holding a configuration file open across a package upgrade
 continues to read the file it opened.
 
@@ -65,5 +65,5 @@ Because resolutions are made against current state, and because a
 stratum is a path rather than a directory object (§4.2.1), a stratum's
 directory may be replaced wholesale — by a package transaction, by a
 reconciler, by an administrator — while the mount is live, with no
-remount and no interruption to callers. That is the requirement the
+remount and no interruption to callers. [*coherency.stratum-replaceable-while-mounted] That is the requirement the
 filesystem exists to satisfy, and §4.4.2 is the whole of its cost.

@@ -5,7 +5,7 @@ description: Every stratafs constant — filesystem identity, stratum flags, ext
 
 Every value below is generated from the source by
 `pkm/tools/gen-stratafs-constants.py`. Nothing here is transcribed by
-hand, and the generator's `--check` mode fails if the two drift apart.
+hand, and the generator's `--check` mode fails if the two drift apart. [*const.generated-from-source]
 
 ## Filesystem identity
 
@@ -17,7 +17,7 @@ hand, and the generator's `--check` mode fails if the two drift apart.
 
 `STRATAFS_MAGIC` is an alias for `STRATAFS_SUPER_MAGIC`, which is
 declared in the header stratafs shares with KACS so that the mount
-policy class keyed on it cannot drift (§4.6.4).
+policy class keyed on it cannot drift (§4.6.4). [*const.magic-alias-shared-with-kacs]
 
 ## Stratum flags
 
@@ -57,7 +57,7 @@ copy-up replication (§4.6.3).
 ### The staging marker
 
 `struct stratafs_stage_marker` is packed and 24 bytes, all fields
-little-endian. It is the value of the staging attribute above.
+little-endian. [*const.stage-marker-layout] It is the value of the staging attribute above.
 
 | Offset | Size | Field          | Type     |
 |--------|------|----------------|----------|
@@ -70,7 +70,7 @@ little-endian. It is the value of the staging attribute above.
 ## Routing
 
 The value `route_existing` returns (§4.5.1), as the Rust decision
-core names it and as the C glue mirrors it. The discriminants match.
+core names it and as the C glue mirrors it. The discriminants match. [*const.route-discriminants-match-rust]
 
 | C enumerator               | Value | Rust       |
 |----------------------------|-------|------------|
@@ -81,7 +81,7 @@ core names it and as the C glue mirrors it. The discriminants match.
 ## The decision core
 
 `stratafs-core` holds the stack-wide flag rules, provider selection,
-and routing. Its flag bits match the C ones above exactly.
+and routing. Its flag bits match the C ones above exactly. [*const.core-flag-bits-match-c]
 
 | Constant          | Value |
 |-------------------|-------|
@@ -93,7 +93,7 @@ and routing. Its flag bits match the C ones above exactly.
 
 The crate distinguishes these configuration errors. The C boundary
 collapses all of them to `EINVAL`, so the distinction is not
-observable to a caller (§4.2.1).
+observable to a caller (§4.2.1). [*const.config-errors-collapse-to-einval]
 
 | Error            | Discriminant |
 |------------------|--------------|
@@ -107,7 +107,7 @@ observable to a caller (§4.2.1).
 
 stratafs is built by `CONFIG_STRATAFS_FS`, a boolean option, so what it
 builds is linked into `vmlinux` rather than loaded. It depends on
-`CONFIG_SECURITY_PKM` and selects `FS_STACK`. Its sources are staged
+`CONFIG_SECURITY_PKM` and selects `FS_STACK`. [*const.build-kconfig-option] Its sources are staged
 into the kernel tree as `fs/stratafs`, separate from PKM's own
 `security/pkm`. `CONFIG_STRATAFS_KUNIT_TEST` builds the in-kernel unit tests.
 

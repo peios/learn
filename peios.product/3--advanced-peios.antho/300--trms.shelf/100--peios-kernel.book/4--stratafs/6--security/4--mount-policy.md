@@ -8,14 +8,14 @@ to an object with no readable security descriptor. The class is derived
 from the filesystem magic, not from an administrative choice: the
 policy resolver maps the stratafs magic to the deny-missing class, and
 falls back to that mapping whenever a cached policy value is not one of
-the valid ones.
+the valid ones. [*security.mount-policy-is-deny-missing]
 
 It cannot be set to anything else. The set path rejects a superblock
 carrying the stratafs magic with `EOPNOTSUPP` **before** it validates
 its arguments or checks privilege, and there is no mount option to
 choose one — stratafs's parameter table holds exactly one entry, and
-anything else is refused. Reading a mount's policy is itself privileged,
-requiring TCB privilege, though for stratafs the answer is fixed.
+anything else is refused. [*security.mount-policy-cannot-be-set] Reading a mount's policy is itself privileged,
+requiring TCB privilege, though for stratafs the answer is fixed. [*security.mount-policy-read-requires-tcb]
 
 Two classes are excluded for distinct reasons.
 
@@ -47,14 +47,14 @@ stratafs's own merged-directory check turns `ENODATA` or `EOPNOTSUPP`
 straight into `EACCES` rather than asking the provider's superblock to
 synthesise, and an object open resolves the missing-descriptor policy
 against the **stratafs** superblock, yielding a missing-descriptor
-cache entry and then `EACCES`.
+cache entry and then `EACCES`. [*security.missing-descriptor-denied]
 
 A descriptor that is present but cannot be interpreted is a distinct
 case and is not routed to mount policy. It takes the ordinary
 corrupt-descriptor outcome: a corrupt cache entry and an emitted event
 on the open path, and a validation failure on the merged-directory
 path. The two produce the same errno by different routes, and mount
-policy is consulted in neither.
+policy is consulted in neither. [*security.corrupt-descriptor-not-mount-policy]
 
 ## Consequence
 
@@ -68,7 +68,7 @@ from direct access is always in the refusing direction. An object with
 no descriptor on a stratum whose own filesystem would synthesise one is
 refused through the stratafs mount while remaining reachable through
 its stratum path. An object reachable through its stratum path is never
-made *more* reachable by being merged. The same holds for a stratum on
+made *more* reachable by being merged. [*security.merge-never-widens-access] The same holds for a stratum on
 an unmanaged filesystem, whose objects carry no descriptors at all:
 merging one is permitted but yields nothing readable, and is not a
-useful arrangement.
+useful arrangement. [*security.unmanaged-stratum-yields-nothing-readable]

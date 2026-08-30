@@ -15,39 +15,39 @@ Two composite rights recur:
 
 - **Search** — traverse on every participating directory, since every
   one is searched to resolve a name. The permission hook maps the
-  kernel's execute intent onto it.
+  kernel's execute intent onto it. [*security.merged-search-right]
 - **Enumerate** — Search plus list on every participating directory.
   The permission hook maps the read intent onto the list right, and
-  directory open demands both together.
+  directory open demands both together. [*security.merged-enumerate-right]
 
 | Operation | Checked against |
 |---|---|
-| Resolving a name | Search |
-| Enumerating | Enumerate, before the listing is captured |
-| Reading an object's attributes | Search, plus whatever the object's own descriptor requires |
-| Reading the origin attribute on a merged directory | Search, plus read-EA on **every** participant (§4.7) |
-| Creating a name | Search, plus add-file or add-subdirectory on the **create stratum's** directory |
-| Copy-up | Nothing beyond what the operation it serves already required |
-| Removing a name | Search, plus delete-child on the **provider's** directory |
-| Removing a directory | Enumerate — emptiness is judged across every participant — plus delete-child on the provider's directory |
-| Rename, source | Search, plus delete-child on the source **provider's** directory |
-| Rename, destination | Search, plus add-entry on the source provider's directory, which §4.5.5 requires to hold the destination, plus delete-child where that directory already holds the name |
-| Rename of a directory | Both of the above, plus Enumerate on the object being renamed, and Enumerate on the destination where its provider is a directory |
-| `RENAME_EXCHANGE` | Search on both, plus add-entry and delete-child on the directory of the stratum providing both names |
-| Link | Search on both, plus add-file on the source provider's directory |
-| Creating or linking an unnamed file | Search, plus add-file on the **create stratum's** directory |
+| Resolving a name | Search [*security.rights.resolve] |
+| Enumerating | Enumerate, before the listing is captured [*security.rights.enumerate] |
+| Reading an object's attributes | Search, plus whatever the object's own descriptor requires [*security.rights.read-attributes] |
+| Reading the origin attribute on a merged directory | Search, plus read-EA on **every** participant (§4.7) [*security.rights.read-origin] |
+| Creating a name | Search, plus add-file or add-subdirectory on the **create stratum's** directory [*security.rights.create] |
+| Copy-up | Nothing beyond what the operation it serves already required [*security.rights.copy-up] |
+| Removing a name | Search, plus delete-child on the **provider's** directory [*security.rights.remove] |
+| Removing a directory | Enumerate — emptiness is judged across every participant — plus delete-child on the provider's directory [*security.rights.rmdir] |
+| Rename, source | Search, plus delete-child on the source **provider's** directory [*security.rights.rename-source] |
+| Rename, destination | Search, plus add-entry on the source provider's directory, which §4.5.5 requires to hold the destination, plus delete-child where that directory already holds the name [*security.rights.rename-destination] |
+| Rename of a directory | Both of the above, plus Enumerate on the object being renamed, and Enumerate on the destination where its provider is a directory [*security.rights.rename-directory] |
+| `RENAME_EXCHANGE` | Search on both, plus add-entry and delete-child on the directory of the stratum providing both names [*security.rights.rename-exchange] |
+| Link | Search on both, plus add-file on the source provider's directory [*security.rights.link] |
+| Creating or linking an unnamed file | Search, plus add-file on the **create stratum's** directory [*security.rights.unnamed-file] |
 
 The mutating rights land on the directory that actually changes, which
 follows from §4.5: an entry appears in the create stratum's directory
 and disappears from the provider's, so in each case it is that
 directory's descriptor that decides. The two coincide whenever the
-create stratum is also the provider.
+create stratum is also the provider. [*security.mutating-right-on-modified-directory]
 
 One right the table does not name is required anyway: the underlying
 `vfs_link` makes KACS demand write-attributes on the **source object**,
 which is an object-descriptor right outside the directory scope this
-section covers. Linking an unnamed file is exempt, since stratafs marks
-the source for that purpose.
+section covers. [*security.link-requires-write-attributes-on-source] Linking an unnamed file is exempt, since stratafs marks
+the source for that purpose. [*security.unnamed-link-exempt-from-source-check]
 
 The effective rights on a merged directory are therefore the
 intersection of the rights on its participants, with mutating rights
@@ -76,18 +76,18 @@ carried out, and in particular before any directory is materialised:
 the authorisation call strictly precedes parent materialisation in
 creation, in tmpfile creation, and in the unnamed-link path. Where the
 checks fail, nothing has been created, so the create stratum is left
-exactly as it was.
+exactly as it was. [*security.create-checks-precede-materialisation]
 
 Where the create stratum does not hold the path, the check falls back
 to the **corresponding provider directory** — the merged provider of
 that same relative path — which is the descriptor the directory will
 carry once materialised (§4.6.3). It is never skipped, and never
-substituted with an ancestor's descriptor. Where no provider exists
-either, the result is `EROFS`.
+substituted with an ancestor's descriptor. [*security.create-check-falls-back-to-provider-directory] Where no provider exists
+either, the result is `EROFS`. [*security.create-with-no-provider-erofs]
 
 Materialising the intervening directories is part of the operation, not
 a separate one. No per-ancestor authorisation is taken; the mkdirs are
-exempted by the copy-up context. Checking against the descriptor the
+exempted by the copy-up context. [*security.no-per-ancestor-authorisation] Checking against the descriptor the
 directory will have keeps the answer independent of how much of the
 create stratum happens to have been materialised already: the first
 caller to write into a deep path and the hundredth face the same check,
@@ -95,7 +95,7 @@ against the same descriptor.
 
 A create that fails *after* materialisation for a reason other than a
 check — `EEXIST`, `ENOSPC` — does leave the intervening directories in
-place.
+place. [*security.late-failure-leaves-materialised-directories]
 
 ## Copy-up carries no separate authority
 
@@ -103,7 +103,7 @@ A copy-up requires no right beyond those the operation that provoked it
 already required. In particular it does not require the caller to hold
 the right to read the provider's object, nor the right to add an entry
 to the create stratum's directory. Neither copy-up path takes any
-authorisation at all.
+authorisation at all. [*security.copy-up-requires-no-extra-right]
 
 Copy-up is the mechanism by which an authorised modification is
 realised, not an operation a caller requests. The read of the provider
@@ -135,11 +135,11 @@ matters here is what stratafs must hold up its end of: the context
 exempts caller authorisation only, so every mutation still goes through
 the ordinary VFS path under write access on the target mount, a
 read-only filesystem still refuses, and filesystem errors still
-propagate. Nothing is performed under a borrowed or elevated identity —
-every copy-up mutation runs with the calling task's own credentials.
+propagate. [*security.copy-up-context-exempts-caller-check-only] Nothing is performed under a borrowed or elevated identity —
+every copy-up mutation runs with the calling task's own credentials. [*security.copy-up-runs-as-caller]
 
 One adjacent path does borrow one. The stale-staging recovery scan
 opens the create-stratum directory with the **mounter's** credentials
 rather than the caller's, and since the KACS token derives from the
-current credentials, that read is authorised as the mounter. It runs
+current credentials, that read is authorised as the mounter. [*security.stale-staging-scan-uses-mounter-credentials] It runs
 inside a copy-up context in any case, so it changes no decision.

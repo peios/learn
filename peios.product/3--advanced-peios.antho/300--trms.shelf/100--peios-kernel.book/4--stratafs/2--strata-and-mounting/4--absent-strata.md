@@ -12,18 +12,18 @@ stratum.
 
 An absent stratum holds no names, participates in no merged directory,
 and contributes no entries to any enumeration. It keeps its position
-and its precedence; only its presence bit is clear.
+and its precedence; only its presence bit is clear. [*strata.absent-contributes-nothing]
 
 The mechanism is a single test in the resolver. Resolving one stratum
 either succeeds, or fails with `ENOENT` or `ENOTDIR`, in which case the
 stratum is skipped and its bit is left clear. Any other error —
 `EACCES`, `EIO`, `ELOOP`, `ENAMETOOLONG`, `ESTALE` — is not treated as
-absence and fails the whole resolution instead. So a stratum that is
+absence and fails the whole resolution instead. [*strata.only-enoent-enotdir-are-absence] So a stratum that is
 unreadable for a reason other than not being there masks the name for
 every stratum, rather than being passed over.
 
 An absent create stratum additionally causes every operation that would
-create or copy up to fail with `EROFS`. The create stratum's root is
+create or copy up to fail with `EROFS`. [*strata.absent-create-stratum-erofs] The create stratum's root is
 re-resolved at the point of use and its `ENOENT` is mapped to `EROFS`
 by each of the paths that needs it — the copy-up parent walk, the
 creation authorisation pre-check, and the routing decision, which
@@ -31,7 +31,7 @@ computes create-stratum presence live and requires the result to be a
 directory. stratafs does not create the stratum's own directory to
 satisfy such an operation: establishing that directory, with the
 security descriptor it should have, belongs to whatever provisions the
-system, and a mount that minted it would be choosing that descriptor.
+system, and a mount that minted it would be choosing that descriptor. [*strata.absent-create-dir-not-created]
 
 ## Appearing and disappearing
 
@@ -42,7 +42,7 @@ A stratum's directory is never held; only its path string is. Every
 resolution walks that string afresh, so a directory that comes into
 existence is picked up by the very next lookup, and one that is
 removed, renamed away, or replaced by another directory is picked up
-just as immediately — the walk finds nothing, or finds the replacement.
+just as immediately — the walk finds nothing, or finds the replacement. [*strata.appearance-observed-on-next-lookup]
 
 The specification describes this in terms of a version tuple recorded
 over the nearest existing ancestor of an absent stratum's path, and an
@@ -67,5 +67,5 @@ memory. The inode-number identity map (§4.4.3) is keyed on the provider
 inode object and pins it for the life of the mount, so if the same
 underlying inode is reached again — because the directory was renamed
 away and back rather than replaced — it receives the same inode number
-it had before. That is exactly what the identity rule requires: equal
+it had before. [*strata.reappearance-preserves-inode-number] That is exactly what the identity rule requires: equal
 numbers for one provider object, whatever path reached it.

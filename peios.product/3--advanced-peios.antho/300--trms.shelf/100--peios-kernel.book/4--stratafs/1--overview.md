@@ -8,12 +8,12 @@ stratafs presents an ordered set of existing directories — its
 directory on an ordinary filesystem, owned and written by whatever
 agent owns it, with no coordination with stratafs and no notification
 to it. The merged view reflects changes to any stratum without a
-remount.
+remount. [*mount.reflects-stratum-changes]
 
 It is a stacking filesystem in the strict sense: it stores no file
 data, no directory entries, and no security descriptors. Every object
 reachable through a stratafs mount is a real object on a real stratum,
-and every data and metadata operation is performed against that object.
+and every data and metadata operation is performed against that object. [*model.every-object-is-real]
 stratafs inodes carry no address-space operations, so there is no
 second page cache to keep coherent; reads, writes, mappings and splices
 are forwarded to a backing file opened on the provider.
@@ -41,10 +41,10 @@ enter it.
 
 The filesystem type registers under the name `stratafs`, with the
 superblock magic `0x53545241` — ASCII `STRA` — and the flags
-`FS_USERNS_MOUNT` and `FS_RENAME_DOES_D_MOVE`. It takes no device;
+`FS_USERNS_MOUNT` and `FS_RENAME_DOES_D_MOVE`. [*mount.superblock-magic] It takes no device;
 superblocks come from `get_tree_nodev`, so the device identifier
 reported for every object in a mount is an anonymous one belonging to
-the mount rather than to any stratum.
+the mount rather than to any stratum. [*mount.anonymous-device-id]
 
 A small part of the filesystem is written in Rust. The crate
 `stratafs-core` is staged into the kernel alongside PKM's own Rust
@@ -59,7 +59,7 @@ A mount is defined by its **stratum stack**: an ordered list of strata,
 highest-precedence first, fixed for the life of the mount. A stratum is
 identified by its **path**, not by the directory that path resolved to
 at mount time, which is what allows a package transaction to replace a
-whole stratum by renaming trees around underneath a live mount.
+whole stratum by renaming trees around underneath a live mount. [*strata.identified-by-path]
 
 For a given name in a given directory, the **provider** is the
 highest-precedence stratum that holds it. A name whose provider is a
