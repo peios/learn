@@ -66,5 +66,16 @@ runs `svctl` as you — so it takes an administrator's logon; peinit
 refuses the connection to anyone else, and the app says so rather
 than showing an empty room.
 
+## Registry
+
+The Registry app browses the machine's layered configuration: a tree
+of hives on the left, a key's values in the middle, and an inspector
+that shows where a value came from — the layer that won, and the
+sequence it won at — before you change it. Edits are guarded: if a
+value changes under you between reading and saving, the save is
+refused and the app says so instead of overwriting blind. Like every
+Atrium app it acts with exactly your authority — it runs `reg` as
+you — so a key your logon may not open shows as denied, not as empty.
+
 Atrium serves plain HTTP in this version: use it on networks you
 trust.
