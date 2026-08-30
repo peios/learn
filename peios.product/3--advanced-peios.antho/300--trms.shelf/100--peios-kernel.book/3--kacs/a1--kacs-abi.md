@@ -602,9 +602,6 @@ Named for the Windows privilege identifiers (SeTcbPrivilege, …).
 | `KACS_SE_RELABEL_PRIVILEGE` | `0x100000000` (4294967296) |
 | `KACS_SE_CREATE_SYMBOLIC_LINK_PRIVILEGE` | `0x800000000` (34359738368) |
 
-Bit 63 (`0x8000000000000000`) was `KACS_SE_BIND_PRIVILEGED_PORT_PRIVILEGE`;
-retired when port reservations (`net.h`) replaced it, not reused.
-
 ## socket.h
 
 From `uapi/pkm/socket.h`.
@@ -688,7 +685,7 @@ accepting. -EINVAL if the socket is not listening.
 
 *Ancillary message type, at cmsg_level SOL_KACS.*
 
-Data: one int. Received: a token fd (TOKEN_QUERY | TOKEN_IMPERSONATE | TOKEN_DUPLICATE,
+Data: one int. Received: a token fd (TOKEN_QUERY | TOKEN_IMPERSONATE,
 O_CLOEXEC) for the identity the kernel attests sent the accompanying
 data. Delivered when the receive buffer has room for it and the conveyed
 identity differs from the reader's register; a receiver that reads no
@@ -1252,6 +1249,22 @@ kacs:kacs_signing_verify _crypto / _probe.
 | `KACS_SIG_XATTR_HASH_FAIL` | `21` | hashing failed for xattr sig |
 | `KACS_SIG_SIZE_CHANGED` | `22` | file size changed during probe (TOCTOU) |
 
+kacs_firmware reason — why a kernel-initiated firmware read was allowed
+or refused (kacs/firmware.c, PEI-493). Firmware is code that runs on a
+device with DMA into host memory, so it is held to the PeiosTcb tier:
+the same bar as a usermodehelper exec. `ret` is the verdict handed to
+the loader; under log mode it is 0 whatever the reason. Emitted by
+kacs:kacs_firmware_load. No path, key, or signature bytes are recorded.
+
+| Constant | Value | Notes |
+|---|---|---|
+| `KACS_FW_ALLOWED` | `0` | verified at PeiosTcb |
+| `KACS_FW_UNSIGNED` | `1` | no signature material on the file |
+| `KACS_FW_NO_KEY_MATCH` | `2` | signed, but no built-in key verified it |
+| `KACS_FW_BELOW_TCB` | `3` | verified, but the key's tier is below PeiosTcb |
+| `KACS_FW_UNVERIFIABLE` | `4` | verification could not run (crypto unavailable) |
+| `KACS_FW_PROBE_FAILED` | `5` | reading the signature material failed |
+
 *kacs_socket reason — the outcome of an AF_UNIX socket SD / impersonation hook.*
 
 Distinguishes the guard, not-applicable, and verdict paths that
@@ -1287,6 +1300,8 @@ otherwise collapse into an indistinguishable -EACCES. Verdict is the
 | `KACS_SOCK_DELIVER` | `20` | KACS_SCM_TOKEN delivered to a receiver |
 | `KACS_SOCK_LISTEN` | `21` | listener identity captured at listen() |
 | `KACS_SOCK_RESTAMP` | `22` | listener identity replaced by KACS_SO_RESTAMP |
+| `KACS_SOCK_PORT_BIND` | `23` | inet bind: port reservation SD verdict |
+| `KACS_SOCK_PORT_TABLE` | `24` | port reservation table load result |
 
 *kacs_ipc reason — a System V IPC object SD decision (ipc.c).*
 
