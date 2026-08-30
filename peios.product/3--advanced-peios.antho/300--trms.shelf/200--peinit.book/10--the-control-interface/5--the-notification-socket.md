@@ -10,8 +10,40 @@ nothing hardcodes it. The kernel command line can override it with
 `peios.notifysocket=`.
 
 There is one socket, not one per service, and the bind unlinks any stale
-path first. It carries the same inherited descriptor as the control
-socket (§10.1).
+path first.
+
+## The descriptor
+
+```
+O:SYG:SYD:(A;;GA;;;SY)(A;;FW;;;SU)
+```
+
+`SU` is the Service group `S-1-5-6`, which every token minted for a
+service logon carries. That is the right grantee because it *is* the
+population with something to say here: membership follows from having
+been started as a service rather than from which account a process runs
+under, so an ordinary user process cannot acquire it however it was
+launched.
+
+`FW` is the file-write generic right, which is what a write to a
+pathname socket needs — the same reasoning as the jobs socket (§10.7).
+Administrators are absent, unlike the control socket: an administrator
+has no business asserting that a service is ready.
+
+The descriptor is installed **between `bind` and first use**, not
+afterwards. `bind` publishes a pathname socket under whatever it
+inherits from the parent directory, and a datagram socket has no
+`listen` to hold it back, so stamping it afterwards by path would leave
+a window in which it was reachable under a descriptor nobody chose.
+
+The parent directory `/run/services/peinit` carries a descriptor of its
+own, shared with the control socket that lands in it later in boot:
+SYSTEM and Administrators in full, and `SU` traverse only. One constant
+serves both because `ensure_directory` re-stamps a directory that
+already exists — two call sites installing different descriptors on one
+path would silently leave whichever ran last, and since the notify
+socket is bound first, that would be the control socket's, quietly
+removing the traverse services need to reach `notify.sock` at all.
 
 The protocol itself is PSPU §4. What follows is how peinit decides
 whether to believe a datagram.

@@ -1,6 +1,6 @@
 ---
 title: The authd Path
-description: Every non-SYSTEM token comes from authd — peinit resolves no identities itself, and the interface belongs to authd.
+description: Every non-SYSTEM token comes from authd — what peinit sends, what it must never do to obtain one, and why the token it gets back is deliberately weaker.
 ---
 
 For any identity other than `SYSTEM`, the token comes from authd. peinit
@@ -8,55 +8,102 @@ does not resolve identities, does not know whether a principal is local
 or from a domain, and does not want to: routing is authd's whole
 purpose.
 
-What peinit requires of authd is:
+The division is not that peinit lacks the privilege to mint — it plainly
+has it, and uses it for the `SYSTEM` path (§4.2). It is that the
+privilege set and integrity level an identity carries are **policy**,
+and policy is authd's. A second component deciding it in parallel is a
+disagreement waiting to happen, and peinit has already shipped one: its
+hand-written privilege bit table had four wrong entries, silently
+stripping privileges a service had asked to keep.
 
-1. peinit sends the `Identity` value verbatim.
-2. authd routes it to an identity source — a built-in for the
-   well-known principals, lpsd for local accounts, a connector for
-   domain accounts.
-3. The source returns the principal's user SID and group SIDs.
-4. authd mints a KACS token, creates a logon session, adds the
-   per-service SID to the group list, and returns the token descriptor
-   to peinit.
+## The request
 
-Every non-SYSTEM service start depends on this, and every one of them
-fails if authd is unavailable when the token is needed. Platform
-services are unaffected, because they never take this route.
+peinit sends a `ServiceAttest` on `/run/logon.sock`, specified as PGSS
+Logon §2.19. It carries two strings:
+
+| Field | Value |
+|---|---|
+| `identity` | The definition's `Identity` value, verbatim |
+| `service` | The name of the service being started |
+
+authd answers with `AccessGranted` carrying the token as an `SCM_RIGHTS`
+descriptor, or `AccessDenied`. There is no credential exchange, because
+a service identity has no credential and must never acquire one — a
+machine that could authenticate its own services unattended would have
+to hold their secrets.
+
+authd derives the per-service SID from `service` and adds it to the
+token, so the SID that distinguishes one service from another comes from
+the authority on this path rather than from peinit (§4.4). Note that
+authd cannot verify `service`: the process it names does not exist yet,
+so there is no token to interrogate. peinit is trusted on it, which is
+the reason for the restriction below.
+
+## This request must come from PID 1
+
+authd authorises a `ServiceAttest` on two facts: that the peer's token
+names SYSTEM, and that **the peer is PID 1**. The second is not
+redundant. SYSTEM alone is every platform daemon on the machine, so
+without it, compromising any one of them would yield a token for any
+service identity authd would mint.
+
+That makes it a standing constraint on this crate: the connection is
+opened by peinit's own process and must never be opened by a forked
+helper. Nothing in the code enforces it. If it is ever broken the
+symptom is every non-SYSTEM service failing to start at boot with an
+authorisation error, which reads like a fault in authd rather than like
+a refactor.
+
+## The token is weaker than a user's, deliberately
+
+An attested token is minted one rung lower on the impersonation ratchet
+than a credentialled logon: `Impersonation` rather than `Delegation`.
+
+The evidence behind it does not travel. A credential a principal source
+verified is something another machine could in principle have checked
+too; peinit's word is evidence on this machine only. A service token
+that could be forwarded off the box on the strength of it would let one
+system's PID 1 act as an arbitrary account on another.
+
+Because the level is a ratchet, nothing derived from a service's token
+can exceed it either.
+
+## Failure is a failure
+
+Every non-SYSTEM service start depends on authd being reachable, and
+every one of them fails if it is not. Platform services are unaffected,
+because they never take this route.
+
+This is the intended behaviour rather than a limitation. The client that
+preceded it returned a freshly minted SYSTEM token whenever it could not
+do better, so a service declaring `LocalService` ran with peinit's entire
+privilege set — and status output reported it as `LocalService`, which is
+what kept the problem invisible from outside. A service that does not
+start is visible; a service running as the wrong principal is not.
+
+`summarize_token` now refuses to describe a token as an identity it does
+not carry: where the declared identity predicts a user SID, a token
+carrying a different one fails the launch rather than being reported
+under the name that was asked for. It is only checked where the identity
+predicts a SID — a principal name is authd's to resolve, and peinit has
+nothing to compare it against.
+
+## What may be attested
+
+authd accepts the platform's own service identities — `SYSTEM`,
+`LocalService`, `NetworkService` — which no principal source holds and
+for which no credential could exist.
+
+Anything else must be designated in the principal's own record as usable
+for a service logon, and until that designation exists authd refuses it.
+So a definition naming an ordinary principal does not start. That is the
+property the design exists to guarantee: without it, the service manager
+would be an oracle that mints a credential-free token for anybody on the
+machine.
 
 ## The interface is authd's
 
-The steps above describe what peinit needs, not how it asks. authd owns
-the request and response schema, the socket path, and the descriptor
-passing mechanism. No authd specification exists yet — authd's design
-was deliberately deferred until KACS and the registry had settled — so
-this path is not implementable from this manual alone.
-
-## The current implementation
-
-peinit's authd client is a placeholder. It ignores the requested
-identity and returns a freshly minted SYSTEM token, taking the §4.2 path
-for every service.
-
-The consequence is that every service currently runs with user SID
-`S-1-5-18` and peinit's full privilege set, whatever its definition
-says. `RequiredPrivileges` still applies, and is currently the only
-thing that reduces what a service can do. A service that does not set it
-runs fully privileged.
-
-Two things follow that are worth stating plainly, because both are
-easy to reason wrongly about:
-
-- **Status output reports the declared identity, not the effective
-  one.** The job's resolved identity string is what appears in a status
-  query and in a `job.created` event, and it says `LocalService` for a
-  service running on a SYSTEM token.
-- **The per-service SID is still correct.** peinit computes it from the
-  service name and adds it to the minted token (§4.4), so per-service
-  ACLs behave as designed even while the user SID does not.
-
-The placeholder also interacts with socket protection in a way worth
-knowing about. peinit's sockets are reachable only by SYSTEM (§13.3),
-so a service on a correctly resolved non-SYSTEM token could not reach
-the notification socket to report readiness. Today every service holds
-a SYSTEM token, so the question does not arise — which means the two
-have to be resolved together rather than one at a time.
+peinit speaks the protocol through `libauthd`, which is its definition,
+rather than encoding the message itself. A second implementation of a
+wire format that mints identity is the kind of duplication that fails
+silently and in the worst place.

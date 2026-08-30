@@ -31,6 +31,19 @@ the session's logon SID when it creates the token, and rejects a create
 whose group list already contains it. So peinit filters that group out
 of the template before building.
 
+**Two groups are added that the template does not carry.** The
+per-service SID (§4.4), which is what keeps platform daemons
+distinguishable while they all run as SYSTEM; and the Service group
+`S-1-5-6`, which every token authd mints for a service logon carries by
+derivation from the logon type.
+
+The second is load-bearing rather than cosmetic. `S-1-5-6` is the
+grantee on anything reachable by services as a class — peinit's own
+notification socket first among them (§10.5) — so a SYSTEM service
+minted here without it would be unable to report itself ready, while an
+otherwise identical service on an authd-minted token could. A service is
+no less a service for having been started before the authority was.
+
 peinit also asserts that its own token is a primary token and that its
 user SID really is `S-1-5-18` before minting, and fails the start with a
 message naming what it found otherwise. PID 1 minting from something

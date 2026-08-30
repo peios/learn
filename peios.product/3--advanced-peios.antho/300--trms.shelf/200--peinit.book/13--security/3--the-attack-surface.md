@@ -17,12 +17,17 @@ description: What the socket descriptors mean in practice, and what the autorun 
 
 ## What the socket descriptors mean in practice
 
-The control socket is stamped for SYSTEM and Administrators (§10.1);
-the notification socket inherits the `/run` seed, which grants the same
-two. A connection from any other principal is refused at `connect()`,
-by the filesystem, before peinit ever obtains a peer token — which
-means the `ACCESS_DENIED` path and the audit event are unreachable for
-such a caller on those two sockets.
+The control socket is stamped for SYSTEM and Administrators (§10.1).
+The notification socket is stamped for SYSTEM and for the Service group
+`S-1-5-6` (§10.5) — every process started as a service, and nothing
+else. Administrators are deliberately absent from it: an administrator
+has no business asserting that a service is ready, and the two sockets
+have different populations however alike their paths look.
+
+A connection from any other principal is refused at `connect()`, by the
+filesystem, before peinit ever obtains a peer token — which means the
+`ACCESS_DENIED` path and the audit event are unreachable for such a
+caller on those two sockets.
 
 The jobs socket is deliberately wider: `FILE_WRITE_DATA` for
 Authenticated Users, full control for SYSTEM and Administrators
@@ -34,12 +39,13 @@ kernel verified the submitter held. The `ACCESS_DENIED` path *is*
 reachable here — it is how a submitter learns it may not touch another
 submitter's job — and every such denial is a `job.access_denied` event.
 
-Since every service currently receives a SYSTEM token (§4.3), the
-narrower two sockets are not yet observed by anything non-SYSTEM:
-every notifier and every client is SYSTEM. The two have to move
-together, because a service correctly resolved to a non-SYSTEM identity
-could not reach the notification socket to report that it had started.
-A submitted job running as a user is already in that position.
+These moved together with §4.3, and had to. A service resolved to a
+non-SYSTEM identity could not have reached the notification socket to
+report that it had started, so making identity real while the socket
+stayed SYSTEM-only would have broken every non-SYSTEM service's
+readiness protocol at once. What makes the pair work is that the tokens
+peinit mints for itself now carry `S-1-5-6` as well, so a `SYSTEM`
+service and a `LocalService` one are on the same footing here.
 
 ## The autorun directory
 
