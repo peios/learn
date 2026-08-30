@@ -55,4 +55,4 @@ That property is what lets a build run on any machine, in CI, or by any user, an
 
 ## What it is not
 
-peiso does not build packages (that is [pekit](~pekit/getting-started/what-is-pekit)), does not resolve or fetch them itself (compose does), and does not decide what a Peios contains (the edition does). A spec can add packages on top of the edition, add or remove registry seeds, and choose the boot flavour and devtools; anything beyond that is a change to the edition package, which is where it belongs.
+peiso does not build packages (that is [pekit](~pekit/getting-started/what-is-pekit)), does not resolve or fetch them itself (compose does), and does not decide what a Peios contains (the edition does). A spec can add packages, files, first-boot scripts, features and medium contents on top of the edition, adjust the packers, and choose the boot flavour and devtools — [Customising an image](~peios/peiso/building-images/customising-an-image) — and every addition is recorded beside the build. What the *release* is remains the edition package's to say.

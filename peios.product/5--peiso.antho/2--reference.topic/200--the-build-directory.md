@@ -17,6 +17,7 @@ A build refuses to run if `root/` already exists. Remove the directory (or `make
 | `compose.lock.toml` | compose stage | The resolved closure: every package, version, root, source and hash. What the image *is*, exactly. |
 | `root/` | compose stage | The composed system. `root/boot/initramfs/` is the initramfs root; `root/var/state/peipkg/` its database; `root/lcl/conf/peipkg/` its repository configuration. |
 | `sidecars.jsonl` | compose stage | The signature sidecars compose recorded instead of stamping: one `{path, blob}` per line, path relative to `root/`. Consumed by the squashfs stage. |
+| `customisations.toml` | customise stage | Every file, autorun and feature the spec added, with the host paths they came from. |
 | `repo/` | medium stage | The medium repository: descriptor, indexes, keys, and the `disk-boot` packages. Copied onto the ISO as `repo/`. |
 | `root/lcl/conf/peipkg/peios-medium.repo` | medium stage | The client configuration for it, anchored on this build's key. |
 | `root/lcl/policy/autoapply.d/*.reg` | seeds stage | The staged seeds. |

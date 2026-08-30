@@ -32,6 +32,33 @@ remove = []
 name    = "bash"
 version = ">= 5.2"
 root    = ""
+
+[[file]]
+src  = "overlay/motd"
+dest = "usr/etc/motd"
+sddl = "O:SYG:SYD:(A;;GA;;;SY)(A;;FR;;;WD)"
+
+[[autorun]]
+src  = "scripts/setup.sh"
+name = "50-setup"
+
+[[feature]]
+name  = "dynamic-boot"
+state = "enable"
+
+[[medium]]
+src  = "docs/"
+dest = "docs"
+
+[squashfs]
+compression = "zstd"
+exclude     = []
+
+[initramfs]
+exclude = ["var/state/peipkg", "lcl/conf/peipkg"]
+
+[boot]
+cmdline_extra = ""
 ```
 
 ## `[[packages.repository]]`
@@ -82,6 +109,60 @@ A package to carry beyond the edition. Repeat the table for each.
 
 An addition rides on the same resolution as the edition, so a package that conflicts with the edition's closure fails the build rather than quietly displacing something. There is no way to remove a package: the edition's closure is what makes the image a Peios, and everything else is here only because a `[[package]]` put it there.
 
+## `[[file]]`
+
+A file injected into the root, outside any package. [Customising an image](~peios/peiso/building-images/customising-an-image) discusses the cost.
+
+| Key | | |
+|---|---|---|
+| `src` | required | Host path, relative to the spec; must exist and be a file. |
+| `dest` | required | Path inside the root: relative (a leading `/` is dropped), cleaned, and not escaping the root. |
+| `sddl` | optional | The file's security descriptor in SDDL, written into the image as `security.peios.sd`. Refused for a `dest` under `boot/initramfs/`. |
+
+## `[[autorun]]`
+
+A script placed executable in `/lcl/policy/autorun.d/`.
+
+| Key | | |
+|---|---|---|
+| `src` | required | Host path, relative to the spec. |
+| `name` | optional, default the file's name | The entry's name in the directory; ordering is by name. peiso's own entries are `10-apply-seeds.sh` and `20-features.sh`. |
+
+## `[[feature]]`
+
+| Key | | |
+|---|---|---|
+| `name` | required | A feature under `/libexec/features/`, present in the root. |
+| `state` | optional, default `"enable"` | `"enable"` runs `feat add` (install then enable); `"install"` runs `feat install` only. |
+
+## `[[medium]]`
+
+A file or directory placed in the ISO's data area, reachable at `/media/peios/<dest>` on the live system.
+
+| Key | | |
+|---|---|---|
+| `src` | required | Host path, relative to the spec; a file or a directory. Symlinks are refused — an ISO9660 data area cannot carry them. |
+| `dest` | required | Path on the medium, relative and cleaned. |
+
+## `[squashfs]`
+
+| Key | | |
+|---|---|---|
+| `compression` | optional, default `"zstd"` | Passed to `mksquashfs -comp`. |
+| `exclude` | optional | Root-relative paths left out of the image (a directory takes its subtree). |
+
+## `[initramfs]`
+
+| Key | | |
+|---|---|---|
+| `exclude` | optional, default `["var/state/peipkg", "lcl/conf/peipkg"]` | Globs, relative to the initramfs root, that `mkirf` leaves out. Setting it replaces the default; `[]` excludes nothing. |
+
+## `[boot]`
+
+| Key | | |
+|---|---|---|
+| `cmdline_extra` | optional | Appended to the kernel command line the boot package ships, and baked into the UKI. There is no full replacement. |
+
 ## What the spec cannot say
 
-The spec has no initramfs, squashfs or UKI section, and no way to inject files. Those were the previous builder's spec, and each was a way for an image to drift from the release it claimed to be. `[[package]]` adds to a release; it does not redefine one. What a Peios contains is the edition package's to say; peiso builds what it says, plus what you asked for on top.
+No package list, no output paths, no ISO label, no full command-line replacement. Everything the spec adds — packages, files, scripts, features, medium contents — is an addition to a release, recorded in `customisations.toml`; nothing in it can redefine what the release is, and nothing in it can quietly produce a different image from the same file. What a Peios contains is the edition package's to say; peiso builds what it says, plus what you asked for on top.
