@@ -35,10 +35,12 @@ The second form is for any layout other than the one above: partition however yo
 **2. Format the root, with a descriptor.** This is the step with no equivalent on other systems:
 
 ```
-mke2fs -t ext4 -E root_sddl="O:SYG:SYD:(A;OICI;GA;;;SY)(A;OICI;GA;;;BA)" /dev/vdb2
+mke2fs -t ext4 -E root_sddl="O:SYG:SYD:(A;OICI;GA;;;SY)(A;OICI;GA;;;BA)(A;OICI;GRGX;;;WD)" /dev/vdb2
 ```
 
-The descriptor is written to the root directory's `security.peios.sd` at format time, so the filesystem is administrable from the instant it exists. Because both ACEs are inheritable, everything created inside it derives its own descriptor from that one. See [Formatting with security descriptors](~peios/disks-and-filesystems/formatting-with-security-descriptors).
+The descriptor is written to the root directory's `security.peios.sd` at format time, so the filesystem is administrable from the instant it exists. Because every ACE is inheritable, everything created inside it derives its own descriptor from that one.
+
+It is byte-for-byte the descriptor the live system's own root carries, which is the point: an installed system should not quietly have a different access policy from the medium it was installed from. Everyone gets read and execute rather than read alone because on Peios execute is also traverse, and a principal that cannot traverse a directory cannot enter it — which would leave every service that does not run as SYSTEM unable to reach its own working directory. See [Formatting with security descriptors](~peios/disks-and-filesystems/formatting-with-security-descriptors).
 
 **3. Copy the system.** `cp -ax`, which preserves owner, DACL, SACL, timestamps, links and extended attributes, and stops at filesystem boundaries. Every one of those is required rather than best-effort, so a descriptor that cannot be carried across stops the install instead of quietly downgrading it. Mountpoints are recreated as empty directories rather than copied into: `/proc`, `/sys` and `/dev` are mount-moved into the new root by prelude at boot, and `/bin`, `/etc`, `/lib` and the rest are StrataFS views mounted over theirs. What lives *behind* those views — `/usr` and `/lcl` — is ordinary content on the root filesystem, and is copied in full.
 

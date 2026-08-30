@@ -76,10 +76,11 @@ Three of the four filesystems peinit mounts are fresh and empty:
 Security Descriptor is denied to every caller, and there is nothing on a
 newly mounted tmpfs for a new inode to inherit from — so peinit stamps
 the mount root with a descriptor that grants SYSTEM and Administrators
-full control and is marked inheritable by both containers and objects:
+full control, grants Everyone read and execute, and is marked inheritable
+by both containers and objects:
 
 ```
-O:SY G:SY D:(A;OICI;GA;;;SY)(A;OICI;GA;;;BA)
+O:SY G:SY D:(A;OICI;GA;;;SY)(A;OICI;GA;;;BA)(A;OICI;GRGX;;;WD)
 ```
 
 Everything created underneath — the notify socket, per-service runtime
@@ -91,6 +92,21 @@ root filesystem, and the two are kept identical on purpose: this one
 inheritable ACL is, in practice, the access policy of everything under
 these mounts, so an ACE missing here is missing from every per-service
 directory under `/run/services`.
+
+The Everyone ACE grants execute as well as read because on Peios execute
+*is* traverse — `FILE_TRAVERSE` and `FILE_EXECUTE` are the same bit — and
+an explicit `chdir` is the one traversal that does not get the
+`SeChangeNotifyPrivilege` bypass. A service running as anything other
+than SYSTEM cannot otherwise reach its own runtime directory. SYSTEM and
+Administrators keep `GenericAll` rather than read/write/execute because
+`GenericAll` carries `WRITE_DAC`, `WRITE_OWNER` and `DELETE`, and peinit
+re-stamps descriptors throughout `/run`.
+
+This descriptor is not the one prelude's `seed-sd` writes by default.
+That one is narrower, and stays narrower: it also stamps `/dev`, where
+every ACE is inherited by the next hot-plugged block device, so a read
+ACE for Everyone there would be every filesystem descriptor on the
+machine bypassed by opening the raw disk.
 
 Failure to apply the descriptor sends peinit to recovery. Without it
 every file peinit later creates on that filesystem would be unreachable
