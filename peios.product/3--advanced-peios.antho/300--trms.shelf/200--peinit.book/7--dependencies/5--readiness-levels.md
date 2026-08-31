@@ -3,6 +3,13 @@ title: Readiness Levels
 description: How a service waits for a condition inside another service — Requires = ["netd:routed"] — and why a level is exact, per-publisher and never stale.
 ---
 
+> [!WARNING]
+> **Incomplete in this version.** Publishing works and the syntax is
+> accepted, but the start gate does **not** yet hold: a service whose
+> required level never arrives starts anyway. Do not rely on
+> `Requires = ["<service>:<level>"]` to keep a service back. See
+> [what is not finished](#what-is-not-finished).
+
 `network-online.target` on systemd is famously meaningless, because
 "online" has no single definition. A service needing a default route and
 a service needing only a loopback address want different things, and one
@@ -78,6 +85,23 @@ mechanism exists to prevent.
 
 Because peinit is the process that notices a service exiting, this needs
 no timeout and no liveness check.
+
+## What is not finished
+
+The gate does not hold yet, and a service declaring a level it will never
+get starts regardless.
+
+The reason is structural rather than a missing check. peinit's start plan
+has three answers about a dependency — *satisfied* (proceed), *startable*
+(start it, then proceed), *missing* (block) — and an unmet level is none
+of them. It is a condition that may arrive later, on a service that is
+already running and that starting again would not help. The ordinary
+`Requires` wait works because peinit starts the target and waits for it to
+reach Active; a level has no equivalent event in the plan, so the
+dependent has to be re-checked at dispatch rather than decided at plan
+time.
+
+Until that lands, treat a level as documentation of intent.
 
 ## What happens on a drop
 
