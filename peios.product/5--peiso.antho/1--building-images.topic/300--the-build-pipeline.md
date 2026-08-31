@@ -14,7 +14,7 @@ related:
 
 ## 1. Resolve and compose the root
 
-peiso writes a [compose manifest](~peios/package-management/composing-a-root) naming the edition package (at the spec's `version`, or any), the medium's extras (`live-boot` for `first_boot = "live"`; `peios-dwe` when `dwe = true`), the spec's package sources, and one named root, `initramfs` at `boot/initramfs`.
+peiso writes a [compose manifest](~peios/package-management/composing-a-root) naming the edition package (at the spec's `version`, or any), the medium's extras (`live-boot` for `first_boot = "live"`, none at all for `"none"`; `peios-dwe` when `dwe = true`), the spec's package sources, and one named root, `initramfs` at `boot/initramfs`.
 
 A `file://` source that holds a repository descriptor is declared as a repository; one that does not (the local pool, `pkgs/_pkgsOut_`) joins as local packages. Then peiso resolves — a lock — and reads the edition's resolved version from it, because the build directory is named after that version and the spec may not have said it. Only then does it compose, from the lock, into `root/`. The manifest and lock are kept beside the root: they record exactly what was resolved.
 

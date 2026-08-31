@@ -11,13 +11,15 @@ related:
 ## The commands
 
 ```text
-peiso root <spec.toml> [--out <dir>]
-peiso iso  <spec.toml>
+peiso root <spec.toml>... [--out <dir>]
+peiso iso  <spec.toml>...
 ```
 
 `peiso root` composes the spec's edition into a root tree and stops — useful for inspecting what a release contains, or for a root that will be packed some other way. `--out` names the directory (it must not exist); without it the root goes to the same place `iso` would put it.
 
-`peiso iso` runs [the whole pipeline](~peios/peiso/building-images/the-build-pipeline) and prints the ISO's path on stdout as its last line; progress goes to stderr. Both commands take the spec as their one positional argument and work from any current directory — relative paths *inside* the spec resolve against the spec's own directory, and the output directory `dist/peios-…/` is relative to where you run.
+`peiso iso` runs [the whole pipeline](~peios/peiso/building-images/the-build-pipeline) and prints the ISO's path on stdout as its last line; progress goes to stderr. Both commands work from any current directory — relative paths *inside* a spec resolve against that spec's own directory, and the output directory `dist/peios-…/` is relative to where you run.
+
+Both also take more than one spec, layering them left to right, so a statement of where packages come from can be shared across many builds that each name only what they build. [The spec](~peios/peiso/reference/the-spec#layering) has the rules.
 
 There is no `--version`, `--edition` or `--dwe` flag. Everything that shapes an image is in the spec, so a build is reproducible from the file alone.
 

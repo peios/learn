@@ -8,7 +8,7 @@ related:
   - peios/peiso/editions-and-upgrades/release-toml
 ---
 
-A spec is a TOML file. Unknown keys are errors. Relative paths resolve against the spec file's directory, not the current directory.
+A spec is a TOML file. Unknown keys are errors. Relative paths resolve against the spec file's directory, not the current directory — which is also what lets several specs be [layered](#layering) into one.
 
 ```toml
 [[packages.repository]]
@@ -61,6 +61,45 @@ exclude = ["var/state/peipkg", "lcl/conf/peipkg"]
 cmdline_extra = ""
 ```
 
+## Layering
+
+A build may name several specs, and they are layered left to right:
+
+```sh
+peiso root shared.toml profiles/kernel-only/peiso.toml
+```
+
+Each file is read and resolved on its own first, **against its own directory**. A `file://` repository URL, a `[[file]]` `src`, an `[[autorun]]` script: each means what it says where it is written, so a layer stays movable and two layers in different directories can each name paths beside themselves.
+
+Only the layering as a whole has to be a complete spec. The two requirements no single file can be held to — an edition, and at least one repository — are checked after the merge, and the error names every layer rather than guessing which should have carried the key. So this is a spec:
+
+```toml
+# shared.toml — where packages come from. A property of the checkout.
+[[packages.repository]]
+url  = "file://../pkgs/_pkgsOut_/"
+keys = ["../pkgs/dev-signing.pub"]
+```
+
+```toml
+# profiles/kernel-only/peiso.toml — what is being built. A property of
+# this one build.
+[baseline]
+edition    = "kernel-only"
+first_boot = "none"
+```
+
+…while neither file is one alone. That split is the point: many builds can share one statement of where packages come from without repeating it, and without a build's own file having to restate anything it does not care about.
+
+### What a layer does to the one below
+
+| | |
+|---|---|
+| Scalars | A layer that states one overrides; a layer silent about one leaves it alone. `edition`, `version`, `first_boot`, `source_date`, `squashfs.compression`, `boot.cmdline_extra`, `devtools.dwe`. |
+| Lists | Accumulate in layering order: `[[packages.repository]]`, `[[package]]`, `[[file]]`, `[[autorun]]`, `[[feature]]`, `[[medium]]`, `registry.add`, `registry.remove`, `squashfs.exclude`. Repositories are searched in that order, so a base layer's sources come before a later layer's additions. |
+| `initramfs.exclude` | Replaces rather than accumulates. Absent and empty already mean different things there — the default list, and nothing — and appending would leave a layer no way to write either. |
+
+A single spec is just a layering of one, so nothing above changes what one file on its own means.
+
 ## `[[packages.repository]]`
 
 Where packages come from. At least one is required; several are searched together, in order.
@@ -77,7 +116,7 @@ Where packages come from. At least one is required; several are searched togethe
 |---|---|---|
 | `edition` | required | The edition name as written on the box: `"Experimental"`. The package is `peios-` plus the name lowercased with each run of whitespace replaced by a hyphen: `"Pro Desktop"` → `peios-pro-desktop`. |
 | `version` | optional | The edition version to build, e.g. `"2026.8"`. Absent means the newest available. Written without the packaging revision; `2026.8` matches `2026.8-1` and any later revision. |
-| `first_boot` | optional, default `"live"` | What the medium boots into. `"live"` adds `live-boot` to the root. `"install"` is reserved and currently refused. |
+| `first_boot` | optional, default `"live"` | What the medium boots into. `"live"` adds `live-boot` to the root. `"none"` says the composition is not a medium at all and adds no boot flavour — for a root something else will boot, or make bootable its own way; `peiso iso` refuses it. `"install"` is reserved and currently refused. |
 | `source_date` | optional | An RFC 3339 timestamp stamped on everything the build produces — compose's source date, the repository indexes, every squashfs entry, the ISO. Absent means the build time, which is not reproducible. |
 
 ## `[devtools]`
