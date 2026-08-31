@@ -94,7 +94,7 @@ first_boot = "none"
 
 | | |
 |---|---|
-| Scalars | A layer that states one overrides; a layer silent about one leaves it alone. `edition`, `version`, `first_boot`, `source_date`, `squashfs.compression`, `boot.cmdline_extra`, `devtools.dwe`. |
+| Scalars | A layer that states one overrides; a layer silent about one leaves it alone. `edition`, `version`, `first_boot`, `source_date`, `squashfs.compression`, `squashfs.level`, `boot.cmdline_extra`, `devtools.dwe`. |
 | Lists | Accumulate in layering order: `[[packages.repository]]`, `[[package]]`, `[[file]]`, `[[autorun]]`, `[[feature]]`, `[[medium]]`, `registry.add`, `registry.remove`, `squashfs.exclude`. Repositories are searched in that order, so a base layer's sources come before a later layer's additions. |
 | `initramfs.exclude` | Replaces rather than accumulates. Absent and empty already mean different things there — the default list, and nothing — and appending would leave a layer no way to write either. |
 
@@ -188,6 +188,7 @@ A file or directory placed in the ISO's data area, reachable at `/media/peios/<d
 | Key | | |
 |---|---|---|
 | `compression` | optional, default `"zstd"` | Passed to `mksquashfs -comp`. |
+| `level` | optional, default the compressor's own | Passed to `mksquashfs -Xcompression-level`; must be a level the chosen compressor accepts. A low level trades image size for build time — the knob a [dev layer](~peios/peiso/building-images/running-a-build) sets, never a release. |
 | `exclude` | optional | Root-relative paths left out of the image (a directory takes its subtree). |
 
 ## `[initramfs]`

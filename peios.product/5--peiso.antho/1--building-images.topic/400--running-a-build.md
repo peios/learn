@@ -32,6 +32,7 @@ There is no `--version`, `--edition` or `--dwe` flag. Everything that shapes an 
 | Target | |
 |---|---|
 | `make iso` | build peiso from the tree, then `peiso iso experimental.toml` |
+| `make iso-dev` | the same with the `dev.toml` layer: a low squashfs level, so the squash stage takes a fraction of the time and the image is somewhat larger — the edit-boot loop's target, never a release. It writes the same build directory as `iso`. |
 | `make iso-dwe` | the same from `experimental-dwe.toml` |
 | `make boot` | boot the newest plain build: UEFI, serial console, atriumd forwarded to `localhost:8080` |
 | `make boot-dwe` | boot the newest DWE build with a vsock device (`DWE_CID`, default 3) |

@@ -39,7 +39,7 @@ The same source tree always compiles to the same image, byte for byte. This is w
 
 - **Ownership, inode numbers, and timestamps** are all emitted as zero.
 - **Permission bits are normalised.** The source tree is authoritative for file *type* and, for regular files, *executability* — nothing else. Read/write permission bits are not Peios's access mechanism, so they are flattened to a constant: directories `0755`, symlinks `0777`, FIFOs and device nodes `0644`, regular files `0755` if executable and `0644` otherwise.
-- **The gzip member** carries mtime 0 and no embedded filename (the `gzip -n` equivalent), at compression level 9.
+- **The gzip member** carries mtime 0 and no embedded filename (the `gzip -n` equivalent), at compression level 6 — on a real image, level 9 buys well under a percent of size for more than twice the time.
 - **The early region** is byte-stable, with file payloads padded to a 16-byte boundary by widening the preceding entry's name field with NUL bytes.
 
 ## Validation and errors
