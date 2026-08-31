@@ -28,7 +28,7 @@ Start with the smaller case. Image builders usually emit a kernel command line o
 ```toml
 [profiles.peios]
 kernel       = "../dist/peios-experimental-2026.8/root/usr/lib/modules/<release>/vmlinuz-<release>"
-initrd       = "../dist/peios-experimental-2026.8/root/system/boot/initramfs.cpio.gz"
+initrd       = "../dist/peios-experimental-2026.8/root/system/boot/initramfs.cpio.zst"
 cmdline_file = "../dist/peios-experimental-2026.8/root/usr/share/live-boot/cmdline"
 ```
 
@@ -49,7 +49,7 @@ The `build` field takes a shell command. Provium runs it — once, before any VM
 [profiles.peios-full]
 build        = "peiso iso specs/peios-full.toml --out {out}"
 kernel       = "{out}/root/usr/lib/modules/<release>/vmlinuz-<release>"
-initrd       = "{out}/root/system/boot/initramfs.cpio.gz"
+initrd       = "{out}/root/system/boot/initramfs.cpio.zst"
 cmdline_file = "{out}/root/usr/share/live-boot/cmdline"
 ```
 
@@ -173,7 +173,7 @@ roots = ["tests"]
 [profiles.peios-full]
 build        = "peiso iso specs/peios-full.toml --out {out}"
 kernel       = "{out}/root/usr/lib/modules/<release>/vmlinuz-<release>"
-initrd       = "{out}/root/system/boot/initramfs.cpio.gz"
+initrd       = "{out}/root/system/boot/initramfs.cpio.zst"
 cmdline_file = "{out}/root/usr/share/live-boot/cmdline"
 ```
 

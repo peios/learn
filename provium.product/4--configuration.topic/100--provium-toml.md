@@ -228,7 +228,7 @@ The field exists to future-proof the schema for other ports — when there's a W
 [profiles.peios]
 build        = "peiso iso specs/peios.toml --out {out}"
 kernel       = "{out}/root/usr/lib/modules/<release>/vmlinuz-<release>"
-initrd       = "{out}/root/system/boot/initramfs.cpio.gz"
+initrd       = "{out}/root/system/boot/initramfs.cpio.zst"
 cmdline_file = "{out}/root/usr/share/live-boot/cmdline"
 ```
 

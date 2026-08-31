@@ -8,10 +8,10 @@ related:
   - peios/boot-and-trust-establishment/overview
 ---
 
-`mkirf` compiles an initramfs *source tree* into an initramfs *image*. The source tree is an ordinary directory — on a running Peios system that directory is [`/boot/initramfs/`](~peios/boot-and-trust-establishment/initramfs-stage) — whose contents map 1:1 onto `/` inside the initramfs. The image is a single deterministic, gzip-compressed newc cpio archive that the bootloader loads into memory alongside the kernel.
+`mkirf` compiles an initramfs *source tree* into an initramfs *image*. The source tree is an ordinary directory — on a running Peios system that directory is [`/boot/initramfs/`](~peios/boot-and-trust-establishment/initramfs-stage) — whose contents map 1:1 onto `/` inside the initramfs. The image is a single deterministic, compressed newc cpio archive — zstd by default, `--compress gzip` for a kernel built without zstd support — that the bootloader loads into memory alongside the kernel.
 
 ```
-mkirf [--watch] [--debounce SECS] [--exclude GLOB]... <src-dir> <out-file>
+mkirf [--watch] [--debounce SECS] [--exclude GLOB]... [--compress ALGO] <src-dir> <out-file>
 ```
 
 This page is the command reference. For what the initramfs stage *is* — prelude, the `/boot/initramfs/` layout, and the handoff to the real root — see [The initramfs stage](~peios/boot-and-trust-establishment/initramfs-stage); for how hooks declare their order, see [Boot hooks](~peios/boot-and-trust-establishment/boot-hooks). `mkirf` reads `<src-dir>` and writes `<out-file>`; it never writes back into the source tree, so the directory you inspect is always exactly what packages and you have put there.
@@ -31,7 +31,7 @@ Given a source tree, one build runs a fixed sequence:
 
 ### Early (pre-decompression) segments
 
-A reserved `<src-dir>/++/` directory, if present, holds *early* initramfs segments — content the kernel consumes **before** it decompresses the main archive, namely CPU microcode and ACPI table overrides. Each immediate child of `++/` is one segment whose own contents map onto the cpio root (`++/microcode/kernel/x86/microcode/GenuineIntel.bin` becomes `kernel/x86/microcode/GenuineIntel.bin`); the segment directory name is a human label and never appears in the archive. Every `++/` entry must itself be a directory. The segments are merged into one **uncompressed** cpio prepended ahead of the gzip-compressed main archive. With no `++/` directory the output is exactly a single gzip member. `mkirf` stays format-agnostic here: it knows "early segments", never "microcode".
+A reserved `<src-dir>/++/` directory, if present, holds *early* initramfs segments — content the kernel consumes **before** it decompresses the main archive, namely CPU microcode and ACPI table overrides. Each immediate child of `++/` is one segment whose own contents map onto the cpio root (`++/microcode/kernel/x86/microcode/GenuineIntel.bin` becomes `kernel/x86/microcode/GenuineIntel.bin`); the segment directory name is a human label and never appears in the archive. Every `++/` entry must itself be a directory. The segments are merged into one **uncompressed** cpio prepended ahead of the compressed main archive. With no `++/` directory the output is exactly a single compressed member. `mkirf` stays format-agnostic here: it knows "early segments", never "microcode".
 
 ## The deterministic-build guarantee
 
@@ -39,7 +39,7 @@ The same source tree always compiles to the same image, byte for byte. This is w
 
 - **Ownership, inode numbers, and timestamps** are all emitted as zero.
 - **Permission bits are normalised.** The source tree is authoritative for file *type* and, for regular files, *executability* — nothing else. Read/write permission bits are not Peios's access mechanism, so they are flattened to a constant: directories `0755`, symlinks `0777`, FIFOs and device nodes `0644`, regular files `0755` if executable and `0644` otherwise.
-- **The gzip member** carries mtime 0 and no embedded filename (the `gzip -n` equivalent), at compression level 6 — on a real image, level 9 buys well under a percent of size for more than twice the time.
+- **The compressed member** uses a fixed compressor at a fixed level: zstd level 3 by default (on a real image it compresses ~9x faster than gzip to a slightly smaller archive, and the kernel decompresses it ~6x faster at boot), or gzip level 6 with mtime 0 and no embedded filename (the `gzip -n` equivalent) under `--compress gzip`.
 - **The early region** is byte-stable, with file payloads padded to a 16-byte boundary by widening the preceding entry's name field with NUL bytes.
 
 ## Validation and errors

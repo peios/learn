@@ -22,7 +22,7 @@ A build refuses to run if `root/` already exists; `--overwrite` replaces it (onl
 | `root/lcl/conf/peipkg/peios-medium.repo` | medium stage | The client configuration for it, anchored on this build's key. |
 | `root/lcl/policy/autoapply.d/*.reg` | seeds stage | The staged seeds. |
 | `root/lcl/policy/autorun.d/10-apply-seeds.sh` | seeds stage | The autorun that drains them at boot. |
-| `root/system/boot/initramfs.cpio.gz` | initramfs stage | The packed initramfs, inside the root. |
+| `root/system/boot/initramfs.cpio.zst` | initramfs stage | The packed initramfs, inside the root. |
 | `rootfs.squashfs` | squashfs stage | The live root filesystem, with signature attributes. Outside `root/` so it cannot contain itself. |
 | `root/boot/efi/EFI/BOOT/BOOTX64.EFI` | UKI stage | The unified kernel image. `root/boot/efi/` is the ESP tree. |
 | `peios-<edition>-<version>[-dwe].iso` | ISO stage | The medium. |

@@ -53,7 +53,7 @@ medium repo: 2 packages, trust anchor 6e50…
 staged seed authd-policy
 …
 seeds: 15 staged
-packing initramfs -> …/root/system/boot/initramfs.cpio.gz
+packing initramfs -> …/root/system/boot/initramfs.cpio.zst
 squashing root -> …/rootfs.squashfs
 squashed with 4414 signature attribute(s)
 building UKI -> …/root/boot/efi/EFI/BOOT/BOOTX64.EFI

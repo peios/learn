@@ -41,7 +41,7 @@ A seed the spec names that no package in the root ships is an error, not a warni
 
 ## 4. Pack the initramfs
 
-[`mkirf`](~peios/boot-and-trust-establishment/mkirf) packs `root/boot/initramfs/` into `root/system/boot/initramfs.cpio.gz` — inside the root, where an installed system keeps its own, so the squashfs carries it. Two subtrees are excluded: `var/state/peipkg` (the initramfs root's package database) and `lcl/conf/peipkg` (its repository configuration). Both belong to the real root.
+[`mkirf`](~peios/boot-and-trust-establishment/mkirf) packs `root/boot/initramfs/` into `root/system/boot/initramfs.cpio.zst` — inside the root, where an installed system keeps its own, so the squashfs carries it. Two subtrees are excluded: `var/state/peipkg` (the initramfs root's package database) and `lcl/conf/peipkg` (its repository configuration). Both belong to the real root.
 
 mkirf is the copy in the root being built, run on the host under the root's own dynamic loader (`usr/lib/<triplet>/ld-linux-*.so.2 --library-path … --argv0 mkirf …/usr/bin/peiosutils`). No chroot, no privilege, and no second implementation of the tool the running system uses.
 
