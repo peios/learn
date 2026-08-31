@@ -75,10 +75,26 @@ buffer per record. When eventd becomes inactive, the connection is
 discarded so the next Active transition connects to the newly bound
 socket.
 
-A send that fails — the receive buffer full — takes peinit out of
-forwarding for the remainder of that turn: every record in the failed
-datagram and every later record remain in the pre-eventd buffer, in
-order. The end of the turn re-establishes forwarding by replaying them.
+A **drop** and a **transport failure** are handled differently, and the
+difference is what keeps the lossy design working.
+
+A drop is `EAGAIN`, `EWOULDBLOCK` or `ENOBUFS` — the receive buffer is
+full and the datagram did not fit. That is the designed outcome under
+load, so the connection stands and forwarding continues. Live records in
+the dropped datagram are gone; peinit counts them and sends the next
+batch. Replaying the pre-eventd buffer is the one case where waiting
+beats dropping — those records are already held and the buffer is
+bounded, so the flush stops and the next turn tries again.
+
+A transport failure is anything else: the socket path gone, the peer
+refusing. peinit clears the connection, keeps the unsent records in the
+pre-eventd buffer in order, and the end of the turn re-establishes
+forwarding by replaying them.
+
+Treating a drop as a transport failure made peinit oscillate between
+forwarding and buffering under exactly the load the lossy socket exists
+to absorb, and replay records eventd may already have held — so the
+busier eventd got, the more work peinit made for it.
 
 ## When eventd goes away
 
