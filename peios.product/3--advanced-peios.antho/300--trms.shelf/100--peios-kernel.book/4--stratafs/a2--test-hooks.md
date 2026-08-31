@@ -1,6 +1,6 @@
 ---
 title: Test hooks
-description: The debugfs rendezvous and fail points conformance tests use to hold a copy-up open or fail an internal step — doubly gated, inert on every production boot.
+description: The securityfs rendezvous and fail points conformance tests use to hold a copy-up open or fail an internal step — doubly gated, inert on every production boot.
 ---
 
 Several of this chapter's promises are about windows that no
@@ -25,18 +25,24 @@ The hooks are doubly gated:
 - `CONFIG_STRATAFS_FS_TEST_HOOKS` compiles them in. Without it every
   hook site is an inline constant zero.
 - `stratafs.test_hooks=1` on the kernel command line registers them.
-  Without it nothing appears in debugfs and each hook site reduces to
+  Without it nothing appears in securityfs and each hook site reduces to
   reading one never-true flag.
 
 Production images build the option but never pass the parameter; only
 the provium test profiles do. Arming a hook additionally requires
-reaching a mounted debugfs, which on a managed system means a caller
+reaching a mounted securityfs, which on a managed system means a caller
 able to establish the mount and satisfy its policy class.
 
 ## Interface
 
-Each hook point is one debugfs file under `stratafs/hooks/`. Writing
-arms or disarms it; reading reports its state:
+Each hook point is one securityfs file under `stratafs/hooks/`,
+alongside KACS's own `kacs/` endpoints. securityfs rather than debugfs
+is forced by kernel lockdown: the Peios kernel builds
+`LOCK_DOWN_KERNEL_FORCE_INTEGRITY`, and the integrity set refuses every
+debugfs open that is not a read of a mode-0444 file — a debugfs hook
+would be visible and permanently untouchable. Lockdown does not gate
+securityfs. Writing a hook's file arms or disarms it; reading reports
+its state:
 
 | Write     | Effect                                                       |
 |-----------|--------------------------------------------------------------|
