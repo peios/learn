@@ -48,12 +48,24 @@ but peinit does not call `setsid()` or acquire a controlling terminal
 for it. The shell is not a session leader, so job control is not
 available in the recovery shell.
 
-Whether the earlier steps are re-run depends on where the failure came
-from. A recovery entered from a Phase 2 or runtime failure has already
-completed Phase 1 and has registryd running. A recovery entered from a
-Phase 1 failure — a mount that would not mount, an RTC that would not
-read, a control socket that would not bind — skips steps 1 and 3 above:
-it neither completes the remaining Phase 1 steps nor attempts registryd.
+Step 1 runs on every entry. The steps are individually idempotent, so
+completing them and ignoring the failures is what "if they have not been
+reached yet" amounts to in practice — including the step that failed,
+which by the time the operator has a shell may well succeed.
+
+Step 3 runs only if Phase 1 has not already reached its own registryd
+start, and it runs at most once. A recovery entered from a Phase 2,
+provisioning or runtime failure starts no registryd: Phase 1 already
+did, and its activation is retained for the runtime. A recovery entered
+from the registryd start *failing* also starts none — the attempt has
+been made, and a process may have forked before the failure was
+reported. In both cases a second daemon would bind over the first's
+notify socket, which succeeds rather than reporting `EADDRINUSE`
+because the bind unlinks the path first, and would then open the same
+hive files behind the first daemon's back.
+
+Where recovery does start one, it uses the settings this boot parsed, so
+`peios.notifysocket=` and `peios.quiet` apply to it.
 
 > [!NOTE]
 > Recovery mode is not a degraded boot; it is a maintenance environment.
