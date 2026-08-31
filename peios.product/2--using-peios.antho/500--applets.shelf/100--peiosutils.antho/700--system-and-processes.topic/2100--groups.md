@@ -16,7 +16,7 @@ groups [USERNAME]...
 
 ```
 $ groups
-Authenticated Users Administrators
+Authenticated Users Everyone Administrators Local
 
 $ groups jack
 jack : Authenticated Users Administrators
@@ -24,42 +24,27 @@ jack : Authenticated Users Administrators
 
 With no argument it reports the calling process. Given names, it reports on those.
 
-The two forms reach the answer by different routes — the first reads the calling
-process's credential, the second looks the name up through the [principal
-store](~peios/managing-local-principals/resolving-names) — but both are limited
-by the same thing, so in practice they agree.
+## Those two answers are both correct
 
-## This list is much shorter than the truth
+The example above is not a mistake, and it is the thing worth knowing about this command on Peios.
 
-It is the most important thing to know about this command here, and it is easy to
-miss because the output looks complete.
+**`groups`** reads the calling process's credential — the projection of its [token's](~peios/tokens/overview) group set. That set includes the groups the authority *staples on* when the token is minted: `Everyone` and `Local` are on every token, whoever you are.
 
-A group can only be printed if it has a **group ID**, and most of the SIDs in a
-token do not have one. The two groups above are the whole of what projects. The
-same token also holds:
+**`groups jack`** looks the name up through the [principal store](~peios/managing-local-principals/resolving-names), which returns **recorded** memberships — the ones something actually wrote down.
 
-- `Everyone` and `Local` — you are in both, always, and neither has a group ID.
-- `Interactive`, `Network`, `Batch` and `Service` — **unnumbered on purpose**.
-  They describe *how* you signed in rather than who you are, which is what lets a
-  rule like "network logons cap at Low" be written at all. You are in
-  `Interactive` at the console and not over the network, so there is no static
-  answer to record.
-- Your **logon session** SID, which is minted fresh for each sign-in.
-- Your own user SID, which appears as a group so it can be named in an entry.
+The stapled groups are not recorded anywhere, because membership in them is a **rule**, not a stored fact. Everyone is in `Everyone`; nothing needs to record it, and nothing can enumerate it. So they appear in the first answer and not the second.
 
-So a typical administrator's token holds seven groups and `groups` prints two.
+On other Unixes these two forms differ only in the order they print.
 
-This matters more than a cosmetic omission, because `Everyone` **grants real
-access**. A rule that allows `Everyone` to connect to a socket is granting *you*,
-through a group this command will tell you that you are not in. If you are
-working out why an access succeeded or failed, `groups` is the wrong tool.
+## What cannot appear
 
-A group's **attributes** are not representable either. A deny-only group — one
-that can block access through a deny entry but grant nothing through an allow
-entry — is printed exactly like an ordinary membership.
+Both forms are lossy in the same way, and unavoidably so — a group can only be listed if it has a group ID, and some deliberately do not:
 
-[`token show --all`](~peios/tokens/token-command) is the lossless view, with every
-SID and its attributes. Reach for it whenever the answer matters.
+- `Interactive`, `Network`, `Batch` and `Service` are **unnumbered on purpose**. They describe *how* you signed in rather than who you are, which is what lets a rule like "network logons cap at Low" be written at all. You are in `Interactive` at the console and not over the network, so there is no static answer to record.
+- Your **logon session** SID is minted fresh for each sign-in and has no number either.
+- A group's **attributes** are not representable. A deny-only group — one that can block access through a deny entry but grant nothing through an allow entry — is printed exactly like an ordinary membership.
+
+[`token show --all`](~peios/tokens/token-command) is the lossless view, with every SID and its attributes.
 
 ## Exit status
 
