@@ -40,14 +40,29 @@ on the extended wait expiring with no READY=1:
 ```
 
 The two-second window is a constant and is not configurable through the
-registry. It is bounded from above by the operation's own deadline, so a
-service whose `StartTimeout` is under two seconds gets the shorter of
-the two.
+registry, directly or otherwise. It is not clamped to the operation's
+own deadline: a service configured with a short `StartTimeout`, which is
+a reasonable thing to do for something that starts fast, still gets its
+full two seconds to answer a reload. The reload operation's own lifetime
+already bounds the whole thing.
 
 The extended-wait expiry means the service announced a reload and never
-finished one. The outcome is carried in the operation's result, which a
-`wait=true` caller receives; a reload issued without waiting — the
-default — resolves silently.
+finished one. That is what the detection protocol exists to catch — the
+service has wedged mid-reload or lost its handler — so it is reported
+rather than only returned:
+
+```
+peinit: service <service> signalled RELOADING=1 but never completed reload
+```
+
+and audited as a `service.reload_unconfirmed` event. The outcome is
+still carried in the operation's result for a `wait=true` caller, but a
+reload issued without waiting — the default — no longer resolves
+silently.
+
+A detection window expiring is a different thing and stays quiet. A
+service that does not implement the handshake lets it expire on every
+reload, and reporting that would drown the case above.
 
 ## The command path
 
