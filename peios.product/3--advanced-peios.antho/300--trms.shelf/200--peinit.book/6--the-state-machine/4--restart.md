@@ -44,10 +44,17 @@ evaluate_restart(service, cause):
 elapses the service transitions to Starting and the ordinary activation
 sequence begins, with its own fresh `StartTimeout`.
 
-The exit code is available only when peinit observed a process exit. For
-a Simple service that exits before signalling readiness the code is not
-carried into the evaluation, so the `SuccessExitCodes` branch of the
-`OnFailure` policy cannot apply and such a service is always restarted.
+The exit code is available only when peinit observed a process exit, and
+it is carried into the evaluation wherever there was one — including the
+pre-readiness exit, where a Simple service exits before signalling
+`READY=1`. So `SuccessExitCodes` means the same thing on both sides of
+readiness: a service that legitimately concludes "nothing to do" during
+startup and exits with a listed code is not restarted.
+
+Failures with no process exit behind them — a hook that never ran, a
+readiness deadline, a dependency failure — carry no code, and the
+`SuccessExitCodes` branch cannot apply to them. That is not a gap: a
+success code is a statement about how the service's own process ended.
 
 ## The policies
 
