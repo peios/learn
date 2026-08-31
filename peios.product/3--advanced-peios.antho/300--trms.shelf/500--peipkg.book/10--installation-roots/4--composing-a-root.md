@@ -32,8 +32,17 @@ roots.
 ## The lock
 
 Resolution writes a lock: the pinned closure, with each package's
-source, absolute URL, hash, and root. It carries a digest of the
-manifest, so that building against a stale lock is caught.
+source, absolute URL, hash, root, and the compressed and installed sizes
+its repository index advertised. It carries a digest of the manifest, so
+that building against a stale lock is caught.
+
+The lock also records, per repository the closure draws from, that
+repository's signature policy and the trust set resolution established
+for it — each key's fingerprint, public bytes, status, and any expiry.
+Trust is established once, at resolve time; recording it is what lets
+the build phase verify signatures without repeating the ceremony. A lock
+naming a repository package whose source it records no trust state for
+is rejected as malformed.
 
 The digest covers the packages, their constraints, and their repository
 pins. It does not cover root declarations or per-package root placement,
@@ -57,18 +66,25 @@ then runs against an **empty installed set**.
 Elevated actions the plan implies are printed as warnings and the build
 proceeds, because compose runs unattended with nobody to authorise them.
 
-**Fetch** downloads every package, checks its bytes against the hash the
-lock recorded, validates its format, and cross-checks the archive's own
-manifest against the lock entry. Every package is verified before any is
-extracted.
+**Fetch** downloads every package within the bound the lock's
+`size_compressed` sets, checks its bytes against the hash the lock
+recorded, verifies its inline signature against the trust set the lock
+carries for its source, validates its format, and cross-checks the
+archive's own manifest against the lock entry. Every package is verified
+before any is extracted.
 
-What is not checked is the inline signature against a trust set. The
-resolve phase performs the trust ceremony and then discards the trust
-state with the temporary database it was built in, so the build phase
-has hashes but no keys. The chain that remains is: the index was signed,
-the lock records the index's hash, the bytes match the hash. A package
-whose signing key has since been **revoked** is accepted by that chain
-and refused by peipkg.
+Signature verification applies the source's recorded policy: under
+`required` an unsigned package is refused, and under either policy a
+signature made by a key the repository has since marked **revoked**, or
+by a transitioning key past its expiry, is refused as well. Key status is
+evaluated against the clock at build time, not at lock time, so a key
+revoked after the lock was written stops verifying — a build from an
+unchanged lock can begin to fail, and that is the intent.
+
+Decompression is bounded by the `size_installed` the lock carries from
+the index, and the archive's manifest must declare the same figure. The
+manifest is inside the stream being bounded, so it cannot supply the
+bound.
 
 **Assemble** buckets packages by root and, per root, validates the
 payload layout against the fetched bytes, resolves claims, seeds the
@@ -105,7 +121,8 @@ No side effects — a composed root's library cache, module dependency
 cache, and man index are never built. No security descriptor
 materialisation. No audit events. No repository trust state or index
 cache in the output, so the composed system performs its own trust
-ceremony on first use.
+ceremony on first use. The trust state the lock carries is an input to
+the build, not something the build writes into the root.
 
 ## Layout enforcement
 

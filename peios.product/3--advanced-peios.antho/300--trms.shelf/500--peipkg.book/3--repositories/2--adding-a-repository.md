@@ -45,11 +45,19 @@ minimum acceptable index version alongside its anchors lets peipkg
 refuse an add whose first index falls below it; without one the floor is
 whatever the first fetch returned.
 
-Adding a repository writes the floor unconditionally, including for a
-repository already configured. Because the configured form of the
-command needs no arguments and reads as idempotent, re-running it is the
-route by which a recorded floor is replaced by whatever the current
-fetch returns.
+Adding a repository that is already configured does **not** reset the
+recorded floor. The configured form of the command needs no arguments
+and reads as idempotent, so a convergence loop or a re-provisioning
+script runs it routinely; it re-runs the anchor ceremony and adopts the
+served descriptor's trust state, but the served index passes the same
+freshness gate a refresh applies (§3.4). An index below the recorded
+floor is refused, and one exactly at it counts as no progress, so the
+last-refresh time does not advance either.
+
+Removing a repository is the only route that clears a floor, and it
+clears the whole recorded trust state with it. That is what makes
+lowering a floor an explicit operator act rather than the side effect of
+a command that looks like a no-op.
 
 ## Fetching keys before verifying
 

@@ -16,12 +16,14 @@ Composition runs in two phases, and they can be run separately.
 
 **Resolve** performs the full repository trust ceremony, resolves the
 requested package set against the configured repositories' indexes, and
-writes a **lock**: the pinned closure, with each package's URL and hash.
+writes a **lock**: the pinned closure, with each package's URL, hash and
+declared sizes, and the trust state of every repository it draws from.
 
 **Build** reads the lock, fetches each package, checks its bytes against
-the hash the lock recorded, and assembles the tree — extracting payload,
-materialising claim links, and seeding a package database so that the
-resulting image knows what it contains.
+the hash the lock recorded, verifies its signature against the trust
+state the lock carries for its source, and assembles the tree —
+extracting payload, materialising claim links, and seeding a package
+database so that the resulting image knows what it contains.
 
 Chapter 10 describes composition in detail, including what it does not
 do that an installed system's peipkg would.

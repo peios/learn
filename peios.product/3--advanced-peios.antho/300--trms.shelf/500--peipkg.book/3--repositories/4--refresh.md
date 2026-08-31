@@ -37,8 +37,19 @@ the maximum-trusted-age check below meaningful. An attacker serving the
 same signed index indefinitely does not get to keep a consumer's clock
 ticking forward.
 
-The checks apply to the active index. The archive index is verified for
-signature and identity but is not subjected to the freshness floor.
+The same floor applies to the archive index. A repository publishes both
+indexes at one `index_version` and one generation timestamp, precisely
+because a consumer records one floor per repository rather than one per
+index, so an archive index below the floor is a replay and is refused.
+Fetching an archive index at exactly the recorded floor is ordinary —
+that is the current archive — and it never advances the floor, which the
+active index owns.
+
+Without this check an attacker who can substitute `archive.json` replays
+an old signed revision, and the archive index is the candidate source
+for every downgrade and pin: a request for a fixed version finds no
+candidate, and the operator is steered back onto a version that is still
+listed.
 
 ## Maximum trusted age
 
