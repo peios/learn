@@ -43,37 +43,51 @@ record.
 ## Collisions
 
 Before materialising a link, peipkg checks that no installed package
-owns the claim path.
+owns the claim path — judged against the state the transaction will
+**produce**, not the state it started from.
 
-The check reads the ownership table as it stands *before* the
-transaction's own rows are written, which happens at commit. So a
-transaction that installs both a package owning a path and a provider
-claiming that same path sees no owner, queues both a payload operation
-and a claim operation for one destination, and commits both — leaving
-the database holding an ownership row and a claim-link row for one path.
+The distinction is load-bearing in both directions. An in-flight
+package's ownership rows are not written until commit, so reading the
+table directly would let a transaction that installs both a package
+owning a path and a provider claiming it see no owner, queue a payload
+operation and a claim operation for one destination, and commit both.
+And it would refuse the legal case: uninstalling the owner in the same
+transaction that materialises the claim.
 
-A package that owns a **directory** at the claim path is waved through
-rather than treated as a collision, and the directory is renamed aside
-and replaced with the link.
+That freed-path case works. The removal's own file operation is dropped
+and the claim's takes over the displacement, because two operations on
+one path would journal two rows for one destination and contend for one
+backup name.
 
-The reverse direction is unguarded: nothing stops a package payload
-installing over an existing claim link. The link is renamed aside, the
-payload file takes the path, and the claim-link row survives — after
-which reconciliation compares its record against its own desired set,
-finds them equal, and never notices the link is gone.
+A package owning a **directory** at the claim path is a hard collision.
+A link cannot occupy a directory path, and treating it as permissible
+meant renaming the package's directory aside to make room — relocating
+it and its contents, after which the non-empty backup could not be
+removed at commit and was left behind.
+
+The reverse direction is guarded too. A package payload whose
+destination is a live claim path is refused, naming the role. Allowing
+it would have been unrepairable: reconciliation compares its record of
+the link set against its own desired set, finds them equal, and never
+looks at disk, so a link displaced by a payload was gone permanently
+with the database still asserting it. The link belongs to the manager,
+placed because a role names it; a package that wants the path is in
+conflict with the role rather than entitled to take it.
 
 ## Repointing
 
 A holder swap repoints every one of the role's links, within a single
-transaction.
-
-Each repoint is performed as two renames: the old link is renamed aside
-as a backup, then the new link is renamed into place. The path is absent
-between the two.
+transaction, and **each repoint is atomic**. The new link replaces the
+old in one step, and the displaced link is then moved to the backup path
+a rollback restores from.
 
 > [!NOTE]
 > Atomic repoint matters because a claim path is typically on the
 > critical path of a running system — a contended daemon binary may be
-> executed at any moment. A single rename that replaces the old link
-> outright closes the window; two renames leave it open for a full
-> rename round-trip, on every link of the role.
+> executed at any moment. Two renames leave the path absent for a full
+> rename round-trip, on every link of the role, which is long enough for
+> a supervisor to get ENOENT from an exec.
+>
+> The payload path deliberately keeps backup-by-rename instead. There
+> the displacement has to happen *before* the new content lands, because
+> the displaced original is what a rollback restores.

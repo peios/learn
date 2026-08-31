@@ -30,9 +30,14 @@ transaction per root, sharing a cross-root identifier. Locks are
 acquired for every participating root, in resolved-path order, so that
 two concurrent cross-root operations cannot deadlock against each other.
 
-Each root's transaction is prepared and committed in sequence. That has
-a consequence for verification (§5.1): one root's payload is in place
-before the next root's packages have been fetched.
+Every package of every participating root is fetched and verified before
+any root is prepared. Verify-all-before-extract (§5.1) is an obligation
+across the whole operation rather than within one root of it: a package
+extracted into one root is as present on the filesystem as one extracted
+into another, so preparing root by root would put one root's payload in
+place before the next root's signatures had been looked at.
+
+Each root's transaction is then prepared and committed in sequence.
 
 Recovery for a cross-root transaction is described in §7.8, and is the
 one place where roll-forward exists.

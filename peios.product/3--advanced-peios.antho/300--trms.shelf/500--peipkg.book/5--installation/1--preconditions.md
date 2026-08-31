@@ -37,9 +37,8 @@ package's payload is extracted.
 > Verifying everything first means extraction operates on a known-good
 > set of payloads.
 
-Within a single root, the guarantee holds: every package is provided and
-verified before the first is materialised.
-
-Across roots it does not. A cross-root transaction prepares and applies
-each root in sequence, so one root's payload is on disk in its final
-location before the next root's packages have been fetched or verified.
+The guarantee spans every root the operation touches. A cross-root
+transaction fetches and verifies every participating root's packages
+before preparing any of them, because a package extracted into one root
+is as present on the filesystem as one extracted into another — the
+attack above works just as well with A and B in different roots.

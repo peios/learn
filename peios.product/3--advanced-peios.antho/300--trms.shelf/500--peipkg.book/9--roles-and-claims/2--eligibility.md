@@ -23,20 +23,27 @@ Claim paths and targets are checked for structural sanity: absolute,
 within the length limit, lexically clean, with a non-empty first
 component.
 
+## Targets are checked against the package's own payload
+
+A provider's target must name a path the declaring package itself
+installs, and peipkg checks that at install time against the payload it
+actually received. The producer-side library offers the same check and
+pekit runs it, but a producer-side check is a lint: it says nothing
+about a package built anywhere else, which the format explicitly
+contemplates.
+
+The check also constrains targets by destination for free. A target that
+must be a payload path inherits the payload path rules, because those
+are enforced on the same entries.
+
 ## What peipkg does not check
 
-Neither a target nor a claim path is checked against the permitted
-install destinations, and neither is subject to the payload path-syntax
-constraints — normalisation form, control characters, backslashes,
-component length.
+A claim **path** is not checked against the permitted install
+destinations, and neither a path nor a target is subject to the payload
+path-syntax constraints — normalisation form, control characters,
+backslashes, component length. The one absolute exception is
+`/lcl/policy`, which no claim path may reach (§5.14).
 
-A target is not checked against the declaring package's own payload
-either. The producer-side library offers that check and pekit runs it,
-but peipkg does not run it at install time, so a package built by
-anything else can declare a target it does not ship.
-
-The visible consequences, in order of severity: a claim path outside the
-managed tree is materialised there, displacing whatever was at that path
-into a backup that the commit then discards; a target naming a path the
-package does not own produces a link pointing at whatever is there; and
-a target naming nothing produces a dangling link.
+The visible consequence is that a claim path outside the managed tree is
+materialised there, displacing whatever was at that path into a backup
+that the commit then discards.

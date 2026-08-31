@@ -24,14 +24,18 @@ package's files manifest.
 | **Untouched** | In both, with identical content hash | Left alone |
 | **Removed** | In the old set, not the new | Renamed aside |
 
-peipkg does not compute the untouched category. Every payload entry of
-the new version is staged and renamed into place, whether or not its
-content differs from what is already there.
+An untouched file keeps its inode: nothing is staged for it and no
+rename runs. It still gets an ownership row under the new version, so
+the upgrade's file set is complete and a later uninstall removes it.
 
-The effects are an upgrade that rewrites and backs up its whole payload
-rather than the changed part of it, inode and timestamp churn on files
-that did not change, and the configuration-file consequence described in
-§6.2.
+Two conditions narrow the category, both of them cases where a file's
+content is not the only thing being installed at that path:
+
+- The file must actually be present. One the operator deleted is not
+  untouched, and an upgrade is the right moment to put it back.
+- A path carrying a signature sidecar or a §3.3.5 descriptor override
+  is always rewritten. Both are applied to the staged inode, so the path
+  needs one even when its content has not moved.
 
 ## Ordering at commit
 
