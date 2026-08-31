@@ -9,12 +9,18 @@ next depends on whether anything is running.
 
 ## Not running
 
-An entry in Inactive, Failed, Completed, Skipped or Abandoned is
-discarded immediately. There is no process to consider.
+An entry in Inactive, Failed, Completed, Skipped, Abandoned or **Backoff**
+is discarded immediately. There is no process to consider.
+
+Backoff belongs in this list rather than the next one, which is not
+obvious: a service between restart attempts looks like it has something
+pending. It does not. It has no process, and once the definition is gone
+there is nothing left to restart it from, so there is neither an instance
+to supervise nor a restart to wait for.
 
 ## Running
 
-An entry in Active, Starting, Reloading, Backoff or Stopping is **not**
+An entry in Active, Starting, Reloading or Stopping is **not**
 killed. The running process is a job, and a job's lifecycle is
 independent of the definition that produced it — removing a definition
 stops future management, it does not terminate work in progress.
@@ -41,7 +47,10 @@ state of its own. The state machine (§6.1) and the command × state
 matrix (§10.3) are unchanged by it.
 
 Once the instance exits or is stopped, the entry — including anything in
-its fd store (§10.6) — is discarded. A dependent that `Requires` the
+its fd store (§10.6) — is discarded. A crash counts: the exit is routed
+to Failed rather than into a restart, because there is no policy left to
+apply. The fd store goes with it, which a crash would otherwise preserve
+for the restart that is not going to happen. A dependent that `Requires` the
 removed service keeps being satisfied while the instance runs; after the
 entry is discarded, the dependent's next start sees an unresolved
 dependency and takes the ordinary validation path.
