@@ -3,13 +3,6 @@ title: Readiness Levels
 description: How a service waits for a condition inside another service — Requires = ["netd:routed"] — and why a level is exact, per-publisher and never stale.
 ---
 
-> [!WARNING]
-> **Incomplete in this version.** Publishing works and the syntax is
-> accepted, but the start gate does **not** yet hold: a service whose
-> required level never arrives starts anyway. Do not rely on
-> `Requires = ["<service>:<level>"]` to keep a service back. See
-> [what is not finished](#what-is-not-finished).
-
 `network-online.target` on systemd is famously meaningless, because
 "online" has no single definition. A service needing a default route and
 a service needing only a loopback address want different things, and one
@@ -86,22 +79,35 @@ mechanism exists to prevent.
 Because peinit is the process that notices a service exiting, this needs
 no timeout and no liveness check.
 
-## What is not finished
+## How the gate holds
 
-The gate does not hold yet, and a service declaring a level it will never
-get starts regardless.
+A level is settled at dispatch, not at planning. The plan decides *what*
+to start; whether a level is met is a live question — it can arrive after
+the target's own start completed (netd is active long before DHCP
+finishes) and be retracted while a dependent is still waiting — so the
+[execution graph](~peios/advanced-peios/peinit/dependencies/graph-execution)
+re-checks it against the service table every time it considers releasing
+the dependent, and holds the start until the answer is yes.
 
-The reason is structural rather than a missing check. peinit's start plan
-has three answers about a dependency — *satisfied* (proceed), *startable*
-(start it, then proceed), *missing* (block) — and an unmet level is none
-of them. It is a condition that may arrive later, on a service that is
-already running and that starting again would not help. The ordinary
-`Requires` wait works because peinit starts the target and waits for it to
-reach Active; a level has no equivalent event in the plan, so the
-dependent has to be re-checked at dispatch rather than decided at plan
-time.
+That check runs even when there is nothing to start. An already-active
+target is not part of the start plan, but the condition on it still is:
+the graph keeps a level edge to a service it is not starting, which is
+what makes `Requires = ["netd:routed"]` hold when netd is up and merely
+not routed yet.
 
-Until that lands, treat a level as documentation of intent.
+Two events re-open the question. A `LEVEL=` arriving from the publisher
+releases every dependent held on it — this is the only thing that can
+open a `Requires` or `BindsTo` gate, which take the exact level and
+nothing else. And the publisher leaving a state that satisfies dependents
+releases `Wants` waiters: a soft dependency waits only while someone is
+running who could still publish the level, and proceeds once nobody is —
+which keeps `Wants` failure-tolerant, the property that defines it.
+
+A held start does not time out. `Requires = ["netd:no-such-level"]`
+holds the dependent indefinitely: the service stays inactive and the
+start operation stays pending, visible in `svctl status` as an operation
+that has not completed. That is the declared semantics, not a hang — the
+condition was never met, so the start never happened.
 
 ## What happens on a drop
 

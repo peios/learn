@@ -14,6 +14,7 @@ define (§4.17).
 | `READY` | `1` | Startup is complete and the service is serving. |
 | `RELOADING` | `1` | Configuration reload has begun. |
 | `STOPPING` | `1` | Graceful shutdown has begun. |
+| `LEVEL` | free text | The readiness level the service is currently at. Empty retracts it. |
 
 **`READY=1`** is what a service using notification readiness sends when
 it is genuinely able to serve, not when its process exists. Anything
@@ -32,6 +33,25 @@ A manager that receives it MUST NOT send a further termination signal to
 that service. It MUST NOT extend or reset the stop timeout: the service
 still has to exit within it, and a service needing longer sends
 `EXTEND_TIMEOUT_USEC`.
+
+**`LEVEL`** names the condition the service currently satisfies, in the
+service's own vocabulary — netd sends `LEVEL=routed` when the machine
+gains a default route. The manager MUST retain the most recent value
+against the sending service, MUST treat an empty value as retracting it,
+and MUST discard it whenever the service leaves a state that satisfies
+dependents: a level is a claim made by a running process, and one that
+outlived its process would hold the claim open with nobody keeping it.
+
+The retained level is what a level-conditioned dependency waits on
+(`Requires = ["netd:routed"]` in a service definition): the manager MUST
+NOT treat such a dependency as satisfied unless the target is in a
+dependent-satisfying state **and** its retained level is exactly the
+named one. Levels are opaque and per-publisher; a manager MUST NOT
+assume an ordering between them.
+
+The value SHOULD be a single token of at most 64 printable ASCII
+characters. A value outside that shape is not an error, but a dependency
+condition cannot name it, so nothing can ever wait on it.
 
 ## Health
 

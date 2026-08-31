@@ -32,6 +32,13 @@ execute_graph(graph, max_parallel):
 `MaxParallelStarts` bounds the concurrency, counted per context as the
 members currently running.
 
+The events are not only member completions. A dependency naming a
+[readiness level](~peios/advanced-peios/peinit/dependencies/readiness-levels)
+is settled against the live service table rather than the graph's own
+bookkeeping, and the arrival of a `LEVEL=` — or the publisher leaving a
+dependent-satisfying state — re-runs the release for every context
+holding an edge on that service.
+
 ## Execution contexts
 
 A graph execution is a retained object, not a transient loop. peinit
