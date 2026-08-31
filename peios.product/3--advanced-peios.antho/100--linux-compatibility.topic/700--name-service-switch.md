@@ -29,6 +29,23 @@ It also closes an extension point Peios does not want. Naming a module in `nsswi
 
 `hosts` is fixed the same way, for the same reason, to a different module: `libnss_peios_net.so.2`, which forwards to `resolvd`, the stub resolver. A `files dns` line would be a second resolver with none of resolvd's routing — and a second answer to *which address is `git.corp`*. There is no `/etc/hosts`; static names live in the registry and resolvd answers them at every door. See [name resolution](~peios/networking/name-resolution). `services`, `networks` and the rest are untouched.
 
+## Certificates are not in a directory you write to
+
+The same shape appears again for TLS trust, and for the same reason. Other
+systems have `update-ca-certificates` and a directory to drop a `.crt`
+into; Peios has neither. What the machine trusts is composed by
+[trustd](~peios/trust/overview) from the roots the `ca-certificates`
+package ships and the decisions under `Machine\System\Trust`, and
+rendered to `/etc/ssl`.
+
+So `/etc/ssl/certs/ca-certificates.crt`, `/etc/ssl/cert.pem` and the
+hashed `/etc/ssl/certs/` directory all exist and hold what you would
+expect — OpenSSL, curl, Go and Python find them where they look — but they
+are **generated**. Adding a certificate to one of them lasts until the next
+change and no longer. `trust add` writes the registry instead, where the
+question "who may widen what this machine trusts" is an access check
+rather than a matter of who can write to a directory.
+
 ## There is no `/etc/passwd`
 
 No `files` entry, and nothing behind the authority to fall back to.
