@@ -96,8 +96,10 @@ the one that most looks like it deserves one. Local in-memory diagnostic
 counters and rate-limited standard-error output are permitted by §3.4.
 
 A producer that changes a metric's type is misconfigured, and the
-misconfiguration is permanent and invisible: every sample is discarded
-for as long as the series exists. The only signal available to an
-operator is that the series stopped advancing while the producer
-reported no error, and the only diagnosis is to query the series and
-read its `type` (§3.25).
+misconfiguration is permanent: every sample is discarded for as long as
+the series exists, and the producer receives no response. Peios eventd
+increments an in-memory total, retains the latest conflicting metric name
+and expected and received types, emits at most one coalesced
+standard-error warning per minute, and includes the total and latest
+conflict in its `SIGQUIT` diagnostic dump. None of those signals is part
+of the query interface or grows in proportion to rejected input.

@@ -89,9 +89,11 @@ active set larger than the series cache can still thrash ingestion.
 
 The type is fixed when the series is first seen and is **immutable**. A
 sample that resolves to an existing series but declares a different type
-is discarded (§3.12), permanently and without notification. A producer
-that changes the type of a metric it already emits has stopped emitting
-it, and the only visible symptom is that the series stops advancing.
+is discarded (§3.12), permanently and without a response to the
+producer. A producer that changes the type of a metric it already emits
+has stopped emitting it. The mainline collector counts these conflicts,
+retains the latest metric name and expected and received types in memory,
+and may report them through its bounded operator diagnostics (§3.12).
 
 ### Counter
 

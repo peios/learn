@@ -21,21 +21,27 @@ For each valid record:
    series that does not exist is inserted into `series` with the
    record's type, and the cache is updated.
 3. **Check the type.** If the record's type differs from the resolved
-   series' type, the record is dropped silently. The type is set at
-   creation and is immutable; a series never changes type.
+   series' type, the record is dropped without replying to the producer.
+   The type is set at creation and is immutable; a series never changes
+   type.
 4. **Insert the sample** into `samples` with the resolved `series_id`,
    the timestamp and the value. SQLite assigns `samples.id`, which is
    the deterministic tiebreaker among samples sharing a timestamp
    (§5.2). A histogram's data is encoded as the canonical MessagePack
    sample map and stored in `histogram_data`.
 
-Step 3 is the failure that leaves no trace. A producer that changes a
-metric's type has silently stopped emitting it — every sample discarded,
-no event, no counter, nothing in any log — and the only symptom is a
-series that stopped advancing. Authentication identifies the producer;
-it does not make reactions proportional to its bad input safe. PSPU
-§3.4 still forbids a durable response because it is an amplification
-vector.
+The transaction result counts step-3 failures and carries the most recent
+conflict's metric name and expected and received types. The metric thread
+adds the count to an in-memory diagnostic total, retains that conflict,
+and emits a coalesced standard-error warning at most once per minute.
+`SIGQUIT` includes both the total and latest conflict (§8.5).
+
+There is still no response to the producer and no event per failure.
+Authentication identifies the producer; it does not make reactions
+proportional to its bad input safe. The one-minute global bound is what
+keeps the warning from becoming the amplification vector PSPU §3.4
+forbids. A valid transaction takes only the existing zero-mismatch branch
+and performs no diagnostic allocation or synchronization.
 
 ## Out-of-order samples
 

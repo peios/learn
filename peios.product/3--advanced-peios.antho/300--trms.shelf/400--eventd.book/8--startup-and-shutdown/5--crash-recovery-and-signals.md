@@ -57,6 +57,8 @@ least:
 - the metric series cache occupancy
 - metric datagrams missing identity, truncated, denied by name policy or
   rejected by an authorization error
+- the cumulative metric type-mismatch count and the latest conflicting
+  metric name and expected and received types, where one exists
 - the last observed write error for each store, where one exists
 
 The format is not a stable machine interface and its wording may change.
