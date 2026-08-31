@@ -200,10 +200,31 @@ missing its trailing newline is replaced: peinit draws 128 bits from the
 kernel CSPRNG and writes a valid file atomically, through a temporary
 file and a rename, with the result flushed.
 
-Any failure of this step — an unreadable file, a CSPRNG failure, or an
-unwritable path — sends peinit to recovery. The write does not create
-parent directories, so an image that ships without `/lcl/etc/` present
-fails here rather than at first use.
+The write creates `/lcl/etc/` if it is not there. This step runs before
+the path-provisioning machinery of step 7, and `/lcl` is a StrataFS view
+the initramfs assembled, so whether the directory exists is a property of
+the image rather than something peinit can assume.
+
+Only a **CSPRNG failure** sends peinit to recovery. If the kernel cannot
+produce random bytes, nothing else on the machine can be trusted either.
+
+An unreadable file or an unwritable path does not. The boot continues
+with an identifier valid for this boot only, and says so:
+
+```
+peinit warning: machine-id not persisted (<reason>); using an identifier
+for this boot only
+```
+
+A read failure takes the same path as finding no file, because it leaves
+peinit in the same position — unable to say whether a valid identifier is
+on disk. It is reported rather than treated as a clean generation,
+because it may have replaced something valid.
+
+This is deliberately fail-soft. The identifier is a local opaque install
+ID and not an authorisation input, so failing a boot over it would be
+disproportionate — and an ephemeral ID is already the defined behaviour
+for a stateless live boot.
 
 Images and templates are expected to ship with no machine ID, or with an
 empty file as a reset marker. Clone tooling that wants a new identity
