@@ -113,10 +113,21 @@ with cause `RestartBudgetExhausted`. peinit then applies `ErrorControl`:
 - **Critical** — peinit syncs the filesystems and reboots immediately.
   The reboot takes precedence over `OnFailure`.
 
-The reboot is driven from the paths that observe a terminal outcome for
-a running service: the main job ending, a health check failing or timing
-out, and the watchdog expiring. A budget exhausted purely by startup
-failures — repeated `ReadinessTimeout`, repeated `PreHookFailure` — does
-not reach one of those paths, so a Critical service that can never get
-as far as running settles in Failed rather than rebooting, and its
-`OnFailure` handler is suppressed as well.
+The reboot does not depend on how the budget was exhausted. The paths
+that observe a terminal outcome for a running service — the main job
+ending, a health check failing or timing out, the watchdog expiring —
+raise it directly. Every other route reaches it through a check made
+once per runtime turn, which asks a single question of the service
+table: is a Critical service Failed with cause `RestartBudgetExhausted`?
+That covers a budget exhausted purely by startup failures — repeated
+`ReadinessTimeout`, `PreHookFailure`, `ParentSetupFailure` — where a
+service that can never get as far as running would otherwise have
+settled in Failed with neither escalation.
+
+The `OnFailure` suppression asks the same question rather than
+inspecting `ErrorControl` itself, so the handler is skipped exactly when
+a reboot is owed and never on the strength of one that was not
+scheduled.
+
+A failure during a shutdown reboots nothing (§12.2 step 2), and the
+handler is not started either — the machine is already going down.
