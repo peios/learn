@@ -36,12 +36,16 @@ every other event the system emits.
 | `repo` | The repository, for repository operations |
 | `detail` | The rejection reason, the operation count, or the authorised action |
 | `timestamp` | RFC 3339, UTC |
-| `packages` | Name, version, and architecture per package |
+| `packages` | Name, version, architecture, and source repository per package |
+
+The source repository is per package rather than per event, because one
+plan can draw from several. An empty value means one of three things,
+which the event type tells apart: a removal has no source, a raw
+local-file install has no repository, and an orphaned package's origin
+is no longer configured.
 
 ## Where events do not appear
 
-- An install or upgrade event carries no source repository, although one
-  is known.
 - A committed cross-root operation's success event carries no
   transaction identifier.
 - Automatic recovery at the head of an ordinary operation emits nothing.

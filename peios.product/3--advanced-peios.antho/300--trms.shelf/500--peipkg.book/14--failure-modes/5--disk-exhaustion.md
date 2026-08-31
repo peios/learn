@@ -1,11 +1,13 @@
 ---
 title: Disk Exhaustion
-description: peipkg does not check free space first — where in the operation the write fails decides how bad it is.
+description: Free space is checked per filesystem before staging — and what happens if a write still fails, depending on where in the operation it does.
 ---
 
-peipkg does not check free space before it starts. Exhaustion is
-discovered when a write fails, and where in the operation that happens
-decides how bad it is.
+peipkg checks free space before it stages anything, so exhaustion
+normally arrives as a refusal that costs nothing. A write can still fail
+— another process can consume the space in between, and the estimate is
+of payload rather than of the metadata the filesystem writes alongside
+it — and where in the operation that happens decides how bad it is.
 
 ## During staging
 
@@ -33,14 +35,24 @@ there leaves the transaction uncommitted, and rollback proceeds
 normally — but a database that cannot write is a database that cannot
 record a rollback, which is where §14.2 begins.
 
-## Planning ahead
+## The check
 
-A transaction's additional requirement is the staged new and changed
-content, aggregated across every operation. Backups cost nothing.
+A transaction's requirement is the incoming file content of its added
+and replaced entries, aggregated across every operation. Backups cost
+nothing, because they are renames rather than copies, and a removal
+frees rather than consumes. A replaced file's old bytes are not
+subtracted: they are still on disk under the backup name until the
+commit succeeds, which is exactly when the space is needed.
 
-Because a transaction can span several filesystems — installation roots
-and destinations within a root can be separate mounts — the useful
-figure is per filesystem rather than a single total.
+The figure is computed **per filesystem**, not as a single total,
+because a transaction can span several — installation roots and
+destinations within a root can be separate mounts. Destinations are
+grouped by the filesystem id their directory reports, so the mount table
+never has to be read.
 
-Nothing computes either figure. The manifest's declared installed size
-is available and is used to bound decompression, not to plan space.
+The comparison is against the blocks available to an unprivileged
+writer, not the free blocks: the reserved fraction is not peipkg's to
+spend. A 32 MiB margin is left on top, covering the inodes, directory
+entries, journal blocks and tail padding the filesystem writes that the
+payload figure does not include. The check runs before the journal is
+opened, so a refusal leaves nothing to recover from.

@@ -47,12 +47,17 @@ directory permission check does the same. RCU-walk is therefore never
 used on a stratafs mount, and the fallback is taken always rather than
 only where it genuinely cannot proceed.
 
-Each verdict is visible at the `stratafs:stratafs_d_revalidate`
-tracepoint, which records the mount cookie, the merged inode number
-(zero for a negative entry), whether the walk was in RCU mode, and the
-return value — so the refusal, invisible to the caller by design, can
-be confirmed from the trace buffer. Like every PKM tracepoint it never
-records a pathname.
+The refusal, invisible to the caller by design, is visible at two
+tracepoints. `stratafs:stratafs_rcu_walk_refused` marks the directory
+permission check turning a walk back under `MAY_NOT_BLOCK` — in
+practice the first stratafs directory a walk must traverse does this,
+so it is the point that actually takes every walk out of RCU mode.
+`stratafs:stratafs_d_revalidate` records each revalidation verdict —
+mount cookie, merged inode number (zero for a negative entry), whether
+the call was in RCU mode, and the return value — and because the
+permission check fires first, every recorded call arrives already in
+ref-walk mode; its `-ECHILD` branch is the backstop. Like every PKM
+tracepoint, neither records a pathname.
 
 What replaces it, per path component, is one full `filename_lookup` per
 stratum — up to sixteen — plus one merged resolution per proper prefix
