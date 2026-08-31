@@ -31,10 +31,17 @@ closed, so a service using filesystem conditions leaks two per start.
 `EAGAIN` from `clone3` — the PID limit — is also `ParentSetupFailure`
 and restart-eligible.
 
-The one path that leaks processes is the timer last-run write, which
-forks a child per firing (§9.2). The children are short-lived and reaped
-by the ordinary PID 1 reaper, but the fork is real and happens on every
-firing of every persistent timer.
+The one path that forks outside the launch machinery is the timer
+last-run write, one child per firing of a persistent timer (§9.2). The
+children `_exit` as soon as the write returns and peinit matches each
+one's exit status back to its write, so a failure is reported rather
+than discarded — but the fork itself is real and happens on every firing.
+
+It is a fork of PID 1, so the child briefly inherits everything peinit
+holds: every pidfd, the epoll instance, both sockets, every service's
+pipe read end. It uses none of them and exits immediately. Driving the
+write through an asynchronous LCS path instead would remove the fork
+entirely; there is no such path today.
 
 ## Memory
 

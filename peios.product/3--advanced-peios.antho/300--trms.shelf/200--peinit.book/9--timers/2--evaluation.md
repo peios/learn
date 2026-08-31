@@ -54,9 +54,24 @@ Every other state — Backoff, Stopping, Reloading, Abandoned, Skipped —
 records the firing and does nothing.
 
 The last-run write happens in a forked child so that the event loop
-never waits on the registry. The parent returns immediately, and the
-child is reaped as an untracked orphan; a failed write is visible only
-as that child's exit status.
+never waits on the registry — which matters because the registry is
+served by registryd, a service peinit supervises, so a synchronous write
+would let a wedged registryd stall PID 1.
+
+The parent returns immediately with the child's pid, and remembers it.
+When the child is reaped, peinit matches its exit status back to the
+write; a failure is reported:
+
+```
+peinit warning: recording the last run of timer <schedule> for service
+<service> failed; it will run catch-up again after a reboot
+```
+
+The write stays best-effort — nothing is retried and nothing is failed
+over it — but a persistent timer whose timestamp never lands runs its
+catch-up on every boot, and that is otherwise a symptom with no thread
+to pull. The outstanding-write table is bounded, so a child that somehow
+escapes reaping cannot grow it.
 
 ## Oneshot pending runs
 
