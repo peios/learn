@@ -43,10 +43,11 @@ Nothing transient is stored in the registry — not leases, not link state, not 
 A profile gets its addresses three ways, and they combine:
 
 - **DHCPv4**, on by default. netd runs its own client on each interface once it has carrier. The lease's address, gateway, classless routes, DNS servers and MTU are applied; the address is remembered on disk so the next boot asks for the same one first.
-- **Static** addresses in CIDR form, with an optional gateway that overrides DHCP's.
+- **IPv6 autoconfiguration**, on by default. netd solicits routers and acts on their advertisements itself — the kernel's own RA handling is switched off everywhere, so there is exactly one place deciding what an advertisement means. Each advertised prefix yields a **stable-privacy address** (RFC 7217): a keyed digest of the prefix and the interface's identity, so the same machine on the same network keeps its address across boots without ever deriving it from the MAC. When a router asks for it (the M or O flag), netd also asks over stateless DHCPv6 for DNS servers and search domains. A profile can additionally enable **temporary addresses** (RFC 8981) that rotate daily.
+- **Static** addresses in CIDR form, either family, with optional gateways that override DHCP's and the routers'.
 - **Link-local** (169.254/16), self-assigned when DHCP discovery goes unanswered, so two machines on a cable with no server can still talk. Discovery continues, and the link-local address is dropped when a lease arrives.
 
-When a lease expires and cannot be renewed the address is dropped by default: the server may have given it to someone else, and an address conflict is worse than no address. A profile can choose to keep it instead.
+When a lease expires and cannot be renewed the address is dropped by default: the server may have given it to someone else, and an address conflict is worse than no address. A profile can choose to keep it instead. IPv6 lifetimes behave as the RFCs say: an address past its preferred lifetime is kept for standing connections but chosen for nothing new, and one past its valid lifetime is removed — with the two-hour floor that stops a spoofed advertisement from killing an address outright.
 
 ## Readiness is a level, not a boolean
 
@@ -58,7 +59,6 @@ When a lease expires and cannot be renewed the address is dropped by default: th
 - **Firewalling.** Traffic policy is a separate component.
 - **Port ownership.** Who may bind a port is a kernel decision under `Machine\System\Network\TcpIp\PortReservations`.
 - **WiFi association.** A wireless supplicant brings the link up; netd treats the result like any other interface.
-- **IPv6 autoconfiguration.** The kernel's own router-advertisement handling applies for now.
 
 ## Where to start
 

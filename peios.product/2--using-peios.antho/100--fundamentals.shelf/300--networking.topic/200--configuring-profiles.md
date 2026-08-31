@@ -82,10 +82,28 @@ interface claims that only when it carries the default route).
 interface's servers are consulted for anything — the "ultimate
 protection" a VPN wants, and the setting that stops a hostile LAN from
 advertising the VPN's own domain. See [name resolution](~peios/networking/name-resolution).
+
+To hold a DHCP address across a server outage:
+
+```
 reg set Machine/System/Network/Profiles/ethernet/Address OnLeaseExpiry Keep
 ```
 
 `OnLeaseExpiry Keep` trades the risk of an address conflict for continuity; the default `Drop` is the safe choice.
+
+## IPv6
+
+On by default, nothing to configure: on a network with router advertisements the interface gets a stable-privacy address per advertised prefix, the advertised default route, and DNS from RDNSS or stateless DHCPv6. Three values change that:
+
+```
+reg set Machine/System/Network/Profiles/office/Address IPv6 dword:0
+reg set Machine/System/Network/Profiles/laptop/Address IPv6Temporary dword:1
+reg set Machine/System/Network/Profiles/office/Address Gateway6 fe80::1
+```
+
+`IPv6` off stops router discovery on matched interfaces — static IPv6 addresses in `Static` (e.g. `fd00::5/64`) still apply. `IPv6Temporary` adds daily-rotating temporary addresses beside the stable one, for machines whose traffic should not correlate over days; the stable address remains for inbound. `Gateway6` pins the default router — usually a link-local address — instead of believing advertisements.
+
+The stable address is a keyed digest of the prefix and the interface's identity, not the MAC: it survives reboots and reinstalls that keep `/var/state/netd`, and a different network sees a different, unlinkable address.
 
 ## Prefer a cable over WiFi
 
