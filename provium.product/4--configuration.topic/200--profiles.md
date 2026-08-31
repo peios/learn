@@ -132,12 +132,12 @@ A profile that names no `initrd` boots the agent overlay alone: the agent is PID
 
 ```toml
 # profiles/kernel-only/profile.provium.toml
-# `--out` must not already exist, and Provium never wipes {out} —
-# clearing it is the build's own job.
-build   = "rm -rf {out}/root && peiso root ../../peiso.toml peiso.toml --out {out}/root"
+build   = "./build.sh {out}"
 root    = "{out}/root"
 cmdline = "console=hvc0 quiet panic=1"
 ```
+
+The build is a script beside the profile rather than a `peiso root` one-liner because Provium runs it on [every invocation](~provium/configuration/dynamic-profiles#making-a-builder-incremental): `--out` must not already exist, Provium never wipes `{out}`, and composing unconditionally can cost far more than the tests do.
 
 No `kernel` either: Provium finds it inside the composed root. Tests then drive the kernel directly, through the agent's syscall interface rather than through any command:
 

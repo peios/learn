@@ -105,6 +105,46 @@ Provium does not try to decide whether your image is up to date. It runs the `bu
 
 The practical consequence: if your builder does a full rebuild every time, `provium` pays that cost every time. That's usually fine — Provium tends to be the *last* gate you run, where a clean build is what you want anyway — but if it bites, make the builder incremental (or use `--no-build` between source changes). Don't expect Provium to shortcut it.
 
+### Making a builder incremental
+
+Some builders have no incremental mode to reach for. `peiso root` is one: it composes from scratch and refuses a `--out` that already exists, so the obvious command has to clear its own output first —
+
+```toml
+build = "rm -rf {out}/root && peiso root shared.toml peiso.toml --out {out}/root"
+```
+
+— and that is a full compose on every `provium test`, however small the change. Where the tests themselves take a second, the build can be most of a minute of it.
+
+The fix is a script beside the profile that decides for itself:
+
+```sh
+#!/bin/sh
+# ./build.sh {out}
+set -eu
+out="$1"; root="$out/root"; stamp="$out/.build-stamp"
+
+# Whatever the composition depends on. Name, size and mtime rather than
+# content: a rebuilt package always moves one of them, and hashing a
+# kernel package on every test run would defeat the point.
+fingerprint() { cat shared.toml peiso.toml; ls -lL ../../pkgs/out/; }
+
+new=$(fingerprint | sha256sum)
+[ -d "$root" ] && [ "$new" = "$(cat "$stamp" 2>/dev/null)" ] && exit 0
+
+rm -f "$stamp"          # an interrupted compose must not leave a stamp
+rm -rf "$root"          # claiming the tree beside it is current
+peiso root shared.toml peiso.toml --out "$root"
+printf '%s' "$new" > "$stamp"
+```
+
+```toml
+build = "./build.sh {out}"
+```
+
+A [discovered profile](~provium/configuration/profiles#one-directory-per-profile) runs its build in its own directory, so `./build.sh` and the paths inside it mean what they say where they are written.
+
+Two details matter. Remove the stamp *before* the work rather than only writing it after, so a compose interrupted halfway is not mistaken for a current one on the next run. And keep the fingerprint cheap enough to run unconditionally — it is paid on every invocation, including the ones that do nothing.
+
 ## Fixtures rebuild when the image changes
 
 Provium's [fixture cache](~provium/running-tests/fixtures-and-dependencies) keys each snapshot partly on the kernel and initrd's path, size, and modification time. A dynamic profile rebuilds its image every run, which usually changes those timestamps — so fixtures captured against the old image are treated as stale and rebuilt. That's correct (a freshly built kernel can behave differently), but it does mean a dynamic profile plus a large fixture tree pays a fixture rebuild each run on top of the image build. If that's too slow for the inner loop, `--no-build` keeps the image — and therefore its fixtures — warm between source changes.
