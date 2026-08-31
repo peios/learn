@@ -28,7 +28,15 @@ new one is skipped and nothing is counted. A check exceeding
 failure.
 
 A launch failure — a token that could not be materialised, a fork that
-failed — is also counted as a failure and escalates immediately.
+failed — is **not** counted. The invocation is recorded and the next
+interval schedules normally, and nothing about the service changes.
+
+The distinction is between "the probe ran and said the service is
+unhealthy" and "the probe could not be run". Only the first is evidence
+about the service. Collapsing them meant a transient authd unavailability
+could kill a service outright: with `HealthCheckRetries=1`, a reasonable
+setting for a probe an operator trusts, one failed token materialisation
+exhausted the budget and restarted it.
 
 ## Failure
 
@@ -59,9 +67,15 @@ definition can arrive. At boot, a violating service is blocked with
 cause `ValidationError` and never started. On reload-config, it is a
 validation finding, and a finding rejects the entire reload.
 
-The constraint is checked for any service that declares a `HealthCheck`,
-including a Oneshot — even though health checks are scheduled only for
-Simple services, so the check being constrained would never run.
+The constraint applies only where a check will actually run, which means
+Simple services. A Oneshot cannot flap through health checks because it
+never runs one.
+
+A Oneshot that declares a `HealthCheck` is still rejected — but for
+declaring one at all, not for its timing. That is the thing actually
+wrong with the definition; reporting it as timing arithmetic let an
+operator adjust `RestartWindow`, see the definition validate, and still
+have a `HealthCheck` that does nothing.
 
 > [!NOTE]
 > Active health checks on `ErrorControl=Critical` services deserve
