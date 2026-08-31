@@ -22,12 +22,14 @@ An implementation MAY cache a verdict by stable token identity, token
 modification identity, metric name and policy generation.
 
 The channel works exactly as the log channel does, for the reasons given
-there: a declared datagram ceiling, truncated datagrams discarded whole,
-a receive queue of at most four times the ceiling, no backpressure, no
-notification, and no way for a producer to discover the ceiling (§3.6).
+there: the 262144-byte portable datagram ceiling, truncated datagrams
+discarded whole, a receive queue of at most four times the collector's
+declared ceiling, no backpressure and no notification (§3.6). A
+collector MUST accept at least the portable ceiling and a portable
+producer MUST bound its encoded datagrams to it.
 
 > [!NOTE]
-> §3.A gives the mainline value and adjustable range
+> §3.A gives the mainline value and upward-adjustable range
 > for this bound and every other in this chapter.
 
 ## A sink, not a collector of its own

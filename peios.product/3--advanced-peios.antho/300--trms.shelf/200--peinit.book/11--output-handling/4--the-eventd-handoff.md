@@ -36,9 +36,12 @@ described below.
 
 peinit sends a msgpack array of one or more records in each datagram.
 It takes the largest ordered prefix that fits
-`Machine\System\eventd\MaxLogDatagramBytes`; the default ceiling is
-262144 bytes. A successful datagram advances the replay buffer by the
-whole array, while a failed datagram advances it by nothing.
+the PSPU portable ceiling of 262144 encoded bytes. It deliberately does
+not read eventd's larger local ceiling: fixing the producer boundary
+avoids registry work and means an eventd configuration change cannot
+invalidate peinit's batches. A successful datagram advances the replay
+buffer by the whole array, while a failed datagram advances it by
+nothing.
 
 Each record is a msgpack map:
 

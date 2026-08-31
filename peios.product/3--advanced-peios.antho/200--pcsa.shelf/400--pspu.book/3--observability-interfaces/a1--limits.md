@@ -15,8 +15,8 @@ configuration is catalogued in the eventd TRMP §A.
 
 | Bound | Mainline value | Mainline range | Key | Section |
 |---|---|---|---|---|
-| Log datagram ceiling | 262144 B | 4096 – 1048576 | `MaxLogDatagramBytes` | §3.6 |
-| Metric datagram ceiling | 262144 B | 4096 – 1048576 | `MaxMetricDatagramBytes` | §3.9 |
+| Log datagram ceiling | 262144 B | 262144 – 1048576 | `MaxLogDatagramBytes` | §3.6 |
+| Metric datagram ceiling | 262144 B | 262144 – 1048576 | `MaxMetricDatagramBytes` | §3.9 |
 | Receive queue, either socket | ≤ 4 × the ceiling | — | — | §3.6 |
 
 ## Queries

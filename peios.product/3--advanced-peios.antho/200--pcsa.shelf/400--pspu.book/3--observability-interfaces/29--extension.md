@@ -93,18 +93,18 @@ four existing ones can express.
 
 ## Limits are not the interface
 
-The declared bounds — the datagram ceilings (§3.6, §3.9), the query
-request ceiling and response target (§3.15), the concurrency and timeout
-bounds (§3.14, §3.16), the existence window and lookback limit (§3.26)
-— are configuration, and an administrator may change any of them.
+The declared bounds — the datagram ceilings above their portable floor
+(§3.6, §3.9), the query request ceiling and response target (§3.15), the
+concurrency and timeout bounds (§3.14, §3.16), the existence window and
+lookback limit (§3.26) — are configuration, and an administrator may
+change any of them within its stated range.
 
 A collector MUST behave identically at any value in its supported range.
 A producer or client MUST NOT infer a bound from having exceeded one, or
 from not having exceeded one, and MUST NOT depend on the mainline
 defaults quoted in this chapter.
 
-The one place this bites is the log and metric datagram ceilings, which
-a producer cannot discover and which silently discard what exceeds them
-(§3.6). Lowering either is a change to the contract with every producer
-on the system, and there is no mechanism by which any of them will find
-out.
+The 262144-byte log and metric datagram floor is different: it is part
+of the interface. A collector may raise its declared ceiling but MUST
+NOT lower it below that floor, and a portable producer does not discover
+or depend on the raised value (§3.6).

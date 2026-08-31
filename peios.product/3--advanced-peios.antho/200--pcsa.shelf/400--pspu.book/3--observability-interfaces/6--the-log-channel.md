@@ -9,8 +9,14 @@ ingestion, protected by a Security Descriptor as §3.3 requires.
 ## The datagram ceiling
 
 A collector declares a maximum accepted datagram size, the **log
-datagram ceiling**. A collector MUST receive log datagrams into a buffer
-of at least that size, and MUST discard a datagram the kernel reports as
+datagram ceiling**. The portable ceiling is **262144 bytes**. Every
+collector MUST accept a whole datagram up to that size, and every
+portable producer MUST bound its encoded datagrams to that size without
+discovering collector configuration. A collector MAY accept more, but a
+producer MUST NOT depend on that when implementing this interface.
+
+A collector MUST receive log datagrams into a buffer of at least its
+declared ceiling, and MUST discard a datagram the kernel reports as
 truncated rather than storing the prefix that fitted.
 
 A producer MUST NOT send a log datagram larger than the ceiling. One
@@ -18,16 +24,13 @@ that does is discarded whole, taking every record in it, and the
 producer is not told (§3.4).
 
 > [!NOTE]
-> §3.A gives the mainline value and adjustable range
+> §3.A gives the mainline value and upward-adjustable range
 > for this bound and every other in this chapter.
 
-**There is no mechanism by which a producer can learn the ceiling.** A
-datagram channel has no reply, so a producer either knows the value out
-of band or assumes the mainline default. A collector that lowers the
-ceiling below the mainline value MUST expect producers to keep sending
-at the old one, and silently losing what they send. Raising it is safe;
-lowering it is a change to the contract with every producer on the
-system.
+No capability exchange is needed. The 262144-byte floor is part of the
+wire contract rather than a tunable assumption shared out of band.
+Raising a collector's ceiling is a local extension; lowering it below
+the portable ceiling is non-conforming.
 
 ## The receive queue is the buffer
 

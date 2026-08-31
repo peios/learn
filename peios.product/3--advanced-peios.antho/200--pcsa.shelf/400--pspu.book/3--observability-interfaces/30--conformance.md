@@ -62,8 +62,9 @@ lookback (§3.14, §3.15, §3.16, §3.26, §3.27).
 **Send well-formed records** and accept that malformed ones vanish
 without notice (§3.8, §3.12).
 
-**Stay within the datagram ceiling**, batched or not — and know that you
-cannot discover it (§3.6).
+**Stay within the 262144-byte portable datagram ceiling**, batched or
+not. Do not add discovery or depend on a collector's larger local
+setting (§3.6).
 
 **Choose a stable, conforming metric name.** It must match the identifier
 grammar, name the producer distinguishably and use dots for hierarchy,
