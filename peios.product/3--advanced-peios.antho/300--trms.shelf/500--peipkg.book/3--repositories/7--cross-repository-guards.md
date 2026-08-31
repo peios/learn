@@ -48,9 +48,37 @@ higher-priority candidate to fail.
 
 Each of these guards compares the priority of the repository a package
 came from against the priority of the repository acting on it. A package
-whose originating repository has since been removed has no configured
-priority to compare, and peipkg skips the comparison — and with it the
-guard — rather than treating the unknown origin as maximally trusted.
+whose originating repository has since been removed — an **orphan** — has
+no configured priority to compare, so it carries a priority below every
+configurable value instead. Every guard that compares priorities
+therefore treats an orphan as at least as trusted as anything still
+configured, with no special case of its own.
 
-The consequence is worth stating plainly: for packages left behind by a
-removed repository, the two gates above do not fire.
+That direction is the only safe one. Skipping the comparison, which is
+what an unset priority produced, meant a newly added low-trust
+repository could declare `replaces` against an orphaned ex-official
+package and take it over with no confirmation — so removing a
+repository *lowered* the protection on the packages it left behind.
+Removing a repository because its keys were stolen is exactly when that
+must not happen.
+
+An orphan is not the same as a package with no origin. A raw local-file
+install never had a repository to lose, and is not treated as maximally
+trusted.
+
+## Orphaned packages
+
+`list` marks an orphan and names the repository that is gone; `info`
+says so in the origin line. Neither is refreshed, and no trust state
+stands behind either any longer.
+
+An upgrade of an orphan is refused unless a configured repository now
+serves a candidate under its own name. A *named* upgrade errors — the
+alternative is reporting success having done nothing, since an unclaimed
+orphan produces no upgrade operation at all. An every-package upgrade
+warns per orphan and carries on, because one orphan must not stop the
+rest of the system moving.
+
+A `replaces` from another package can still move an orphan aside. That
+is a takeover rather than an upgrade, and it is gated as an elevated
+action by the rule above.
