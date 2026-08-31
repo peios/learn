@@ -18,13 +18,17 @@ cause. `submit` is refused for the rest of the shutdown; `status`,
 `wait`, `stop` and `signal` keep answering, as do the control socket's
 `job-status`, `job-list` and `job-stop`.
 
-Timer triggers are not disarmed. A calendar timer that fires during the
-shutdown window is still classified and acted on: for a service in
-Inactive, Completed or Failed — precisely the states step 3 classifies
-as not participating — that means creating a start operation and
-starting the service. The shutdown plan was fixed when the shutdown
-began, so a service started this way is in no wave, is not waited for,
-and is not reached by the global-timeout sweep.
+Timer triggers are disarmed. The timerfds stay armed and keep firing —
+peinit gates the handler rather than the fd, matching how every other
+event source is handled — but a firing during the shutdown window is
+classified as a no-op and nothing is started or queued.
+
+The gate matters more than the rule reads. The states a timer firing
+would start from are Inactive, Completed and Failed, precisely the
+states step 3 classifies as not participating, so a firing would create
+a service after the plan was fixed: in no wave, not waited for, and not
+reached by the global-timeout sweep, still holding files open when
+peinit reaches the unmount step.
 
 ## Step 2: Suspend Critical failure semantics
 
