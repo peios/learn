@@ -68,8 +68,23 @@ A member whose dependent resolves without ever needing it is **pruned**
 start that turns out not to need half its closure does not start that
 half.
 
-Contexts are not retired. A context and its operation associations
-persist for the lifetime of the process.
+A context is **retired** once every member has reached a terminal status
+— satisfied, failed or pruned — which is exactly when no further graph
+event can be dispatched through it. Its operation associations go with
+it, except where an operation is also associated with a context that is
+still live.
+
+Retirement happens on the operation-maintenance sweep rather than at the
+moment the last member goes terminal. The callers of a terminal outcome
+walk the graph events it produced and release the contexts those events
+name, so dropping a context inline would pull it out from under the rest
+of the same turn's work.
+
+Without this a context and its associations persisted for the lifetime
+of the process. The memory was the smaller half: dispatching a terminal
+outcome walks every context associated with the operation, so on a
+long-lived machine where services are started regularly the terminal
+path grew steadily slower, in PID 1's single thread.
 
 ## Failure propagation
 
