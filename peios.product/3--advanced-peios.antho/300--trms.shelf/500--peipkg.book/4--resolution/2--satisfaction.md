@@ -50,11 +50,14 @@ effective architecture, or is `noarch`.
 For a `noarch` depender the effective architecture is the system's
 primary architecture — a script's dependency on its interpreter resolves
 against the concrete system being assembled. peipkg applies that rule
-when checking a plan for consistency. It does not apply it while
-selecting a candidate for a `noarch` package's dependency, where the
-architecture test is skipped entirely.
+while selecting a candidate, not only when checking the finished plan.
 
-The visible consequence is a plan that could have been satisfied being
-rejected instead: a foreign-architecture candidate wins selection, and
-the consistency check then rejects the whole resolution rather than the
-one candidate.
+Skipping the test during selection made any architecture satisfy a
+`noarch` depender, a foreign one included. That candidate entered the
+matching set, could win on version, was placed, and was caught only by
+the consistency check — which rejects the whole resolution rather than
+the one candidate. So a plan that a `noarch` candidate would have
+satisfied failed outright.
+
+Candidate selection for a dependency also filters by installability now,
+as selection for a goal and for a name already did.

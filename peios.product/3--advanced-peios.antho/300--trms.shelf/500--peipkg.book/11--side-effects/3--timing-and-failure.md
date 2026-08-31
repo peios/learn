@@ -39,11 +39,17 @@ declares it — reaches the correct state.
 > every one of those failure modes is recoverable by running the tool
 > again.
 
-## What does not schedule
+## Removals schedule too
 
-An operation that only removes files schedules nothing, so removing the
-last package that owned a shared library or a kernel module leaves the
-corresponding cache naming something that no longer exists (§7.6).
+A side effect runs when a transaction removes files whose absence
+affects its target, as well as when it adds them. Removing the last
+package that owned a kernel release's modules reindexes that release;
+removing a package that shipped man pages reindexes the man database.
 
-An upgrade does schedule effects implied by the files it removed, as
-well as those the new version declares.
+A removal declares nothing at the time — it has no incoming manifest —
+so the declaration is read from the manifest stored for the package
+being removed, and `depmod`'s affected release comes from that package's
+ownership rows rather than from a payload.
+
+An upgrade schedules effects implied by the files it removed as well as
+those the new version declares.
