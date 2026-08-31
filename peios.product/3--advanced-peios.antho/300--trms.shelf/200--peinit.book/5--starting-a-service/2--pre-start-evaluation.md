@@ -27,6 +27,15 @@ gates further progress instead. A restart whose conditions no longer
 hold therefore passes through Starting on its way to Skipped, where a
 fresh start would not.
 
+An assert failing takes the same route to Failed on both paths, and on
+both it propagates: dependents in the same graph context hear that the
+dependency failed (§7.3). This matters more on the restart leg than
+elsewhere, because an `AssertionError` is never restarted — where a
+running dependent is deliberately unaffected by a dependency *crashing*
+(§7.1), since a crash is transient and the restart policy handles it, a
+failed assert means the dependency is not coming back without
+intervention.
+
 ## Two check kinds, two mechanisms
 
 `registry:` checks resolve against the in-memory model. Since a
