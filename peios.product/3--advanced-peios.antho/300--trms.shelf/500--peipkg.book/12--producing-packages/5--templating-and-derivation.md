@@ -22,9 +22,15 @@ registered root rather than something derived from a version.
 
 The components come from pekit's own upstream version model, not from
 the package version model. For a package version carrying a Peios
-revision, the revision lands in `{{prerelease}}`; for a version carrying
-an epoch or a tilde, the model does not parse it and the components
-render empty.
+revision, the revision lands in `{{prerelease}}`.
+
+A version the model does not parse — one carrying an epoch or a tilde —
+has no components at all, and every token but `{{version}}` is then
+refused with an error naming the version. `{{version}}` still renders,
+from the raw string, so a definition that uses only it is unaffected.
+Substituting an empty string instead produced a silently wrong result: a
+publish destination missing its major number, with no diagnostic
+anywhere.
 
 The idiom for "this package depends on its sibling at this build's
 version" is a templated constraint:

@@ -54,13 +54,17 @@ rule that distinguishes two candidates decides.
 6. **Ties break on the candidate's package name**, by byte order, and
    then on its repository name.
 
-## When the rules run out
+## Two versions of one package
 
-Rules 1 to 6 do not order two *different versions of the same package*
-matched through an unversioned `provides`: they carry no role version to
-compare at rule 4, and they agree on name and repository at rule 6. Such
-a pair is a complete tie, and the candidate enumerated first wins.
+Rules 1 to 6 as stated do not order two *different versions of the same
+package* matched through an unversioned `provides`: they carry no role
+version to compare at rule 4 — a `provides` entry states the role's
+version, not the package's — and they agree on name and on repository at
+rule 6.
 
-The outcome is therefore an artefact of the order the index was read in
-rather than a consequence of the rules — which means the same index
-served in a different order can install a different version.
+peipkg breaks that tie on the candidate's own package version, newest
+first, applied between rule 4 and rule 6 and only between candidates of
+the same name. Distinct providers still separate by name, so it does not
+override rule 6; what it removes is a case where the winner was the
+candidate the index happened to list first, and the same index served in
+a different order installed a different version.

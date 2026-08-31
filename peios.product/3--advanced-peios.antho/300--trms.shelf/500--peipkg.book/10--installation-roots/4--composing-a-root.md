@@ -44,11 +44,12 @@ the build phase verify signatures without repeating the ceremony. A lock
 naming a repository package whose source it records no trust state for
 is rejected as malformed.
 
-The digest covers the packages, their constraints, and their repository
-pins. It does not cover root declarations or per-package root placement,
-so a manifest edit that only moves a package between roots, or changes
-where a root lives, produces the same digest — and a build without an
-explicit update silently reproduces the previous placement.
+The digest covers the packages, their constraints, their repository
+pins, the `[[root]]` declarations and each package's root placement —
+everything that influences resolution. Moving a package between roots,
+or changing where a root lives, changes the digest, so a build refuses
+the stale lock rather than silently reproducing the previous
+placement.
 
 The lock's `root` key is a **path** relative to the output, while the
 manifest's `root` key of the same name is a **name**. A lock is
@@ -145,7 +146,8 @@ than something the composer invents.
 
 ## Roots with nothing in them
 
-A declared root that no package is placed in is registered but never
-created. The registration points at a directory that does not exist, and
-addressing that root on the composed system fails when peipkg tries to
-open its database.
+A declared root that no package is placed in is created anyway, with its
+own database holding nothing. A declared empty root is a reasonable
+thing to want — somewhere to install into later — and the alternative,
+registering a root whose directory does not exist, made `--root <name>`
+on the composed system fail when peipkg tried to open its database.

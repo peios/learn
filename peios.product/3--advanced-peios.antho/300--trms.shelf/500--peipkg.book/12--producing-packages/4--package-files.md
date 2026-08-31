@@ -38,6 +38,32 @@ license, homepage, `default_root`, and `special_system_package`.
 `special_system_package` waives the layout check at pack time — but not
 the side-effect check — and grants nothing at install or compose time.
 
+## Claims
+
+`[claims.provides.<role>.<slot>]` and
+`[claims.dependencies.<role>.<slot>]` are checked at recipe load, and
+the two sides are not interchangeable: a provides slot names the
+`target` this package ships and may add a default `path`; a dependencies
+slot names only the `path` the role is reached at. peipkg enforces that
+asymmetry at install, so accepting the wrong shape here would mean a
+successful build, a signed package, and a failure on somebody else's
+machine.
+
+A `[claims.*]` stanza naming a role the package neither provides nor
+depends on is an error. Claims are attached by role name, so a mistyped
+role would otherwise simply not appear in the shipped manifest, with no
+diagnostic — the one place a typo escaped pekit's unknown-key
+rejection, because the key is a role name rather than a schema field.
+
+## Field rules
+
+Pack encodes the manifest and decodes it back through the consumer's own
+validators before emitting anything, so a package violating a §5.18
+field rule — the name grammar, the version form, the printable-ASCII
+`description`, the array limits — fails at the farm rather than at each
+consumer's install. The farm has the recipe, the maintainer and a fast
+feedback loop; the install has none of them.
+
 ## Relationships
 
 Dependencies take either of two forms:
