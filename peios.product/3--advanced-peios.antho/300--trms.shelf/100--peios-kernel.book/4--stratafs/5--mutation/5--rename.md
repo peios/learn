@@ -122,6 +122,13 @@ Unknown `flags` bits are neither rejected nor masked; they pass through
 to the VFS. [*rename.unknown-flags-pass-through] Where the two provider-level names resolve to one inode the
 rename is a no-op returning success. [*rename.same-inode-is-a-noop] A dentry whose private state is
 missing, or whose provider identity no longer matches, yields `ESTALE`. [*rename.stale-dentry-estale]
+That refusal is per attempt, and the VFS heals it: `ESTALE` from a
+rename makes the syscall retry once with a fresh walk, whose rebuilt
+dentry carries the current provider identity, so the caller usually
+observes the retry's outcome — a rename of the object now at the name —
+rather than the errno. The refusal itself is recorded at the
+`stratafs:stratafs_rename_stale` tracepoint, with the walk-time and
+found inode numbers.
 Because the filesystem sets `FS_RENAME_DOES_D_MOVE`, stratafs performs
 the `d_move` or `d_exchange` itself, together with swapping the
 dentries' recorded relative paths.
