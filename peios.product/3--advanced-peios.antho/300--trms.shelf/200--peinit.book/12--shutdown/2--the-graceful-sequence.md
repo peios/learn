@@ -89,11 +89,26 @@ evidence retained from the stop path that put the service in Stopping:
 peinit requires the evidence to be present, to belong to a service
 actually in Stopping, to carry a cause matching the service's current
 cause, to name one of those four causes, and not to describe a deadline
-earlier than its own start. Evidence that is missing, stale or
-ambiguous **fails closed** rather than being guessed at — and it fails
-the whole shutdown, not just that participant, so a shutdown command
-with one such service is refused, and one discovered on a later wave
-ends the runtime loop.
+earlier than its own start.
+
+Evidence that is missing, stale or ambiguous **fails closed** rather
+than being guessed at. A stop that began before the shutdown has already
+spent part of its own clock, and inventing a fresh budget here would
+hand the service a second full `StopTimeout`.
+
+Failing closed costs that one participant, not the shutdown. A service
+whose evidence cannot substantiate a deadline is given no graceful
+period at all: its deadline is already due, so the timeout scan
+escalates it to SIGKILL on its wave, and the console says which way the
+evidence was unusable:
+
+```
+peinit: shutdown cannot substantiate a stop timeout for <service>
+(<reason>); killing it without a graceful period
+```
+
+Every other participant keeps its full `StopTimeout`, and the shutdown
+runs to completion.
 
 An operation whose lifetime expires while it is still Pending — a
 later-wave stop waiting for its dependencies — fails that operation and
