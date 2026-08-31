@@ -9,7 +9,7 @@ related:
 
 Every build writes to one directory, named for what was resolved: `dist/peios-<edition>-<version>/`, with `-dwe` appended for a development medium. The version is the edition package's without its packaging revision — `2026.8`, not `2026.8-1`. The directory is relative to where peiso is run; `peiso root --out` overrides the root's location only.
 
-A build refuses to run if `root/` already exists. Remove the directory (or `make clean`) to rebuild.
+A build refuses to run if `root/` already exists; `--overwrite` replaces it (only a composed root or an empty directory — never anything else the output path may name). `make iso` passes the flag, so rebuilding in place is its normal behaviour.
 
 | Entry | Written by | |
 |---|---|---|
