@@ -114,6 +114,16 @@ its post-installation token could not do.
 A `clone3` failure means no child exists: `ParentSetupFailure`, with
 `EMFILE`/`ENFILE`, `EAGAIN` and `ENOMEM` the usual causes.
 
+peinit does not take the atomicity on trust. If `clone3` reports success
+without setting the pidfd, or the pidfd cannot be made close-on-exec,
+peinit writes to `cgroup.kill` through the `main/` directory descriptor
+before returning `ParentSetupFailure` — because by then a child does
+exist, running in the service's cgroup with the service's token, and the
+parent has no handle on it. Walking away would leave a process peinit
+cannot supervise, cannot stop, and has no record of, which the
+zero-delay cleanup that follows a `ParentSetupFailure` would then record
+as a leaked tree rather than kill.
+
 Immediately after `clone3` returns, in the parent and on either outcome,
 peinit closes the token descriptor and the `main/` cgroup descriptor,
 exactly once each. The child relies on close-on-exec and its own exit
