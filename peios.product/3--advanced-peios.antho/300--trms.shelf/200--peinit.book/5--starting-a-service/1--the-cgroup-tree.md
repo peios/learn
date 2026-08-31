@@ -43,22 +43,34 @@ The id is internal. The name a user sees is unchanged.
 ## Generations
 
 A cgroup whose processes survived SIGKILL cannot be removed — `rmdir` on
-it fails with `EBUSY`. When peinit detects that a service's tree still
-has live processes after the post-kill deadline, it records the leak and
-increments the service's cgroup generation. The next start uses a fresh tree:
+it fails with `EBUSY`. peinit records the leak and moves the service to a
+fresh tree:
 
 ```
-/sys/fs/cgroup/peinit/<cgroup-id>.gen<N>/
+/sys/fs/cgroup/peinit/<cgroup-id>%gen<N>/
 ```
 
 Old leaked trees persist until the next reboot.
 
-The generation counter advances once per recorded leak rather than once
-per restart, and leaks are deduplicated by path and kind. A single
-failed start can record two — one for `hooks/` and one for the service
-tree — so the number can advance by more than one at a time.
+Two conditions record a leak, and both are needed because they answer
+different questions. `cgroup.events` reporting `populated` at the
+post-kill deadline says live processes remain. `rmdir` returning `EBUSY`
+says the tree cannot be given up, which covers that case *and* the ones
+where nothing is running but the directory still will not go. Acting on
+only the first left the second reusing a tree that already existed and
+was not empty.
 
-Because `.` is a legal character in a service name and the generational
-suffix uses one, the tree *path* is not injective the way the id is: a
-service literally named `app.gen1` and generation 1 of a service named
-`app` resolve to the same directory.
+The generation advances **once per tree**, not once per leak recorded
+against it. A single failed start records two cleanup deadlines — one for
+`hooks/`, one for the service tree — and a tree cleanup can report
+`main/`, `hooks/`, `health/` and the root separately; all of those are
+the same tree, so the first advances the generation and the rest find
+themselves already behind it. Leaks are still deduplicated by path and
+kind, so each is recorded once.
+
+The separator is `%gen`, not `.gen`. `.` is in the safe set and service
+names permit it, so a service literally named `app.gen1` would have
+shared a directory with generation 1 of a service named `app`. `%`
+self-escapes and the encoder only ever emits it followed by two uppercase
+hex digits, so `%g` cannot occur inside an encoded id — which makes the
+whole path injective, not just the id.

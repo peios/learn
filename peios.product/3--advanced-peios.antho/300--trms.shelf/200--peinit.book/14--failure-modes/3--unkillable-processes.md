@@ -64,7 +64,7 @@ a process — see §6.2.
 
 A leaked cgroup cannot be removed, so the next start would collide with
 it. Recording a leak increments the service's cgroup generation, and the
-next start builds a fresh tree at `.gen<N>` (§5.1). Old trees persist
+next start builds a fresh tree at `%gen<N>` (§5.1). Old trees persist
 until reboot.
 
 That is what lets a service recover from a leak at all: peinit cannot
