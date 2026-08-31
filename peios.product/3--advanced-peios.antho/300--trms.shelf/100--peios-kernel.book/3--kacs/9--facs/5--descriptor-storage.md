@@ -57,6 +57,24 @@ and the cache disagree. Readers are never blocked, and no reader sees
 a partially written object — the exposure is which of two racing
 writes lands, not a torn state.
 
+Invalidation is also driven from the **other end**, by the write
+itself: any canonical descriptor xattr landing on an inode drops that
+inode's cached entry, whoever wrote it and by whatever path. The
+set-security path above then publishes the new parsed object as usual;
+for anything else, the next reader re-reads the authoritative bytes.
+
+This is keyed on the xattr rather than on the writer, because the
+writer is not always the one holding the cache. A descriptor set
+through a stacking filesystem reaches **two** inodes — the one the
+caller named, and the real one beneath, which the write is re-entered
+on. Only the first is refreshed by the set-security path. The second
+is not merely cold: a stacking filesystem resolves and caches
+descriptors during its own metadata work on an inode it has just
+created, so it can hold an entry from the moment the object existed
+and keep serving it after the xattr underneath has changed. Keying on
+the xattr closes that without either side needing to know the other is
+there.
+
 ## Mount policy classes
 
 The superblock policy object carries the class (§3.9.1) and, for
