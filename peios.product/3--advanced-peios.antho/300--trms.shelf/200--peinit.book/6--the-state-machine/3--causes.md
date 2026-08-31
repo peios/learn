@@ -122,9 +122,26 @@ will not start one already in the set, and it will not follow the chain
 past a fixed depth of 16. When either trips, peinit records an
 `on_failure.loop_suppressed` event naming which, and stops.
 
-The chain is cleared when a handler reaches Completed, Inactive, Skipped
-or Abandoned. A handler that starts and *stays running* keeps its entry,
-so it continues to occupy a slot of that originating failure's budget.
+A chain entry is retired two ways.
+
+**The handler stopped needing tracking.** Completed, Inactive, Skipped or
+Abandoned — it ended, gave up, or became unkillable.
+
+**The handler arrived.** It has been dependent-satisfying for its
+`RestartWindow` — the same window that resets a restart budget (§6.4).
+That is peinit's existing test for a service having genuinely taken over
+rather than merely come up, and it is what ends the originating failure:
+a later failure of that handler is a new one, starting a fresh chain.
+
+The distinction matters in both directions. Without the second rule, a
+handler that runs healthily for days holds a slot forever, so a
+degradation path handing off through several healthy layers exhausts its
+own depth budget by working. But retiring on `Active` alone would break
+the guard entirely: `Readiness=Alive` reports Active the instant the
+process spawns, so two services naming each other as handlers would hand
+off forever, with no delay and no cost — an `OnFailure` start is not a
+restart and spends no restart budget. Only a handler that *held* is
+treated as having arrived.
 
 ## The logging contract
 
