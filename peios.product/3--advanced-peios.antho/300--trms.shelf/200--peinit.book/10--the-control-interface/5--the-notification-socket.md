@@ -129,12 +129,22 @@ to a submitted job — and which are ignored for one, since a job has no
 reload, watchdog or store — is in §8.5, along with `PROGRESS=` and
 `PROGRESS_UNIT=`, which only a submitted job retains.
 
-Three are event-emitting. `STATUS=`, `ERRNO=` and `EXIT_STATUS=` are
+Four are event-emitting. `STATUS=`, `ERRNO=` and `EXIT_STATUS=` are
 authenticated and then emitted as KMES events — `notify.status`,
 `notify.errno`, `notify.exit_status` — whose payloads carry the service
 name, the job identifier, the operation identifier and the activation
 generation, alongside the value. They take the same path as job and
 operation events, not a forward to eventd.
+
+`STOPPING=1` emits `notify.stopping`, carrying the same attribution and
+no value. It is there because the field's only effect is the *absence*
+of an action — peinit suppresses the SIGTERM (§12.2) — and an absence
+cannot be inferred from what happened afterwards. Without the event, a
+service that was stopping and correctly received no SIGTERM looks
+identical to one that should have received it and did not.
+
+`READY=1` and `RELOADING=1` emit nothing, deliberately: both are
+observable through the state transitions they cause.
 
 `STATUS=` is additionally stored on the service's runtime state and
 exposed as `status_text` in a status query. It is cleared to null at the

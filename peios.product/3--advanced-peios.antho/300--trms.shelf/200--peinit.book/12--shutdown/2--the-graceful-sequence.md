@@ -72,7 +72,9 @@ stops in waves:
 
 A service that sent `STOPPING=1` does not receive a SIGTERM at all: it
 has already said it is shutting down, and peinit goes straight to the
-stop deadline.
+stop deadline. The notification is acknowledged as a `notify.stopping`
+event (§10.5), which is what makes the suppressed SIGTERM legible
+afterwards rather than looking like one peinit failed to send.
 
 ### Timing an already-stopping service
 
