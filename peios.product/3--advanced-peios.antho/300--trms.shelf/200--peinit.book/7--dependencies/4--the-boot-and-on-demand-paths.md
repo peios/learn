@@ -9,7 +9,7 @@ differences are worth having in one place.
 | | Boot | On-demand |
 |---|---|---|
 | Members | Every boot-triggered root plus its closure | One requested service plus its closure |
-| A missing hard-dependency target | Blocks the dependent, in Full mode only | Blocks the dependent |
+| A missing hard-dependency target | Blocks the dependent | Blocks the dependent |
 | A disabled hard-dependency target | Blocks the dependent | Starts it |
 | A validation finding | The service is failed, others continue | The start fails |
 | Multiple findings on one service | Only the highest-precedence one is reported | — |

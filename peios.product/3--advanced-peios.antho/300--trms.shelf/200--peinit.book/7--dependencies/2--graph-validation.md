@@ -30,9 +30,13 @@ rebooting would find it again.
 | `Wants` | Silently dropped. |
 | `Conflicts` | Silently dropped. |
 
-Detection is a Full-mode behaviour. In Safe mode a hard-dependency
-target that is missing, disabled, or not Safe-mode-eligible does not
-block the dependent, which is started with the dependency unmet.
+This holds in every mode. Safe mode drops a hard dependency on a service
+it *excluded* — that is its own rule (§2.6), and without it excluding a
+service would fail everything downstream and Safe mode could start
+almost nothing. Only that case drops. A target missing from the registry
+or disabled by an administrator is a configuration error rather than a
+Safe mode exclusion, and blocks the dependent in Safe mode exactly as in
+Full.
 
 ## Validation errors
 
