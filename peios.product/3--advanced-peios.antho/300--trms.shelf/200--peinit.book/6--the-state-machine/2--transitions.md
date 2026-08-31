@@ -72,6 +72,27 @@ there, so a restarting service is briefly observable as Inactive.
 before signalling readiness is a `ProcessCrash` from Starting, and is
 restart-eligible like any other, rather than a terminal startup failure.
 
+**A process can outlive its service's state.** Most states are reached by
+the main process exiting, but not all of them: a watchdog timeout, a
+health check escalation and the post-kill give-up all move a service on
+while its process is still running. The exit that follows arrives for a
+service in Backoff, Abandoned or another state that no longer expects
+one.
+
+peinit records that exit and performs no transition. The service keeps
+the state it had, any pending restart deadline stands, and the console
+reports it:
+
+```
+peinit: service <service> main process exited in state <state>; no action taken
+```
+
+This is deliberately not a fatal condition. A supervised service
+producing an unexpected sequence costs that service; it does not cost
+the machine. Treating it as a broken invariant of the runtime loop meant
+one crash-looping service dropped PID 1 into recovery mode and killed
+every session on the box.
+
 ## Reset from Abandoned
 
 Resetting an Abandoned service re-checks its `main/` sub-cgroup. If it

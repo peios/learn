@@ -37,6 +37,29 @@ tree and the service returns to Inactive. If it is still populated, the
 service returns to Inactive anyway, the cgroup stays leaked, and both the
 acknowledgement and the console carry a warning saying so.
 
+## When the process finally dies
+
+Abandoning a service does not close its main job. The process is still
+there, so there is still something to reap, and peinit keeps the job open
+against the possibility that it eventually exits — which it often does,
+once the I/O it was blocked on completes.
+
+That exit arrives for a service already in Abandoned, a state that has
+stopped expecting a process. peinit records it and does nothing else: no
+transition, no restart, no operation update. The service stays
+Abandoned, the stop stays failed, and the console reports the exit:
+
+```
+peinit: service <service> main process exited in state Abandoned; no action taken
+```
+
+The exit is news about the process, not a retroactive success for the
+stop that gave up on it. Recovering the service still takes a `reset`,
+which is also what cleans up the cgroup the process was holding.
+
+The same handling covers a late exit in any state that no longer expects
+a process — see §6.2.
+
 ## The generational escape
 
 A leaked cgroup cannot be removed, so the next start would collide with
