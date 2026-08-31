@@ -39,6 +39,12 @@ Cancelled and Aborted are the same idea at different points: never ran
 versus was running. Why it happened is a property of the event, not of
 the state.
 
+Two things reach Aborted. A conflicting operation superseding this one,
+and a Restart whose target's definition is withdrawn while its stop leg
+is draining — the stop still finishes, but there is nothing to start, so
+the operation is aborted with the reason
+`definition_removed_during_restart_stop_leg` (§3.8).
+
 ## Fields
 
 ```

@@ -46,6 +46,14 @@ While an entry is definition-removed:
 state of its own. The state machine (§6.1) and the command × state
 matrix (§10.3) are unchanged by it.
 
+A `restart` already in its stop phase is a case of its own. The stop
+phase still drains the existing instance; the start phase does not
+begin, because there is nothing to start from. When the instance exits,
+the operation is aborted with the reason
+`definition_removed_during_restart_stop_leg` and the entry takes the
+ordinary removal discard. This is the window a package upgrade opens —
+remove the definition, then restart the service.
+
 Once the instance exits or is stopped, the entry — including anything in
 its fd store (§10.6) — is discarded. A crash counts: the exit is routed
 to Failed rather than into a restart, because there is no policy left to
