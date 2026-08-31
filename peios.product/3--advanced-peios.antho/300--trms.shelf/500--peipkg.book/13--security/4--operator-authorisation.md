@@ -16,7 +16,7 @@ in the audit stream.
 | A low-trust provider filling a high-trust role | A per-action prompt, audited |
 | A foreign `replaces` against a higher-priority package | A per-action prompt, audited |
 | Proceeding on stale trust state | The `--allow-stale` flag, audited, no prompt |
-| Installing unsigned content under an `optional` policy | Not gated, not audited |
+| Installing unsigned content under an `optional` policy | Warned per package on every operation; not gated, not audited |
 | Enabling insecure transport | Not gated, not audited |
 | Resolving an interrupted transaction | Not gated, not audited |
 

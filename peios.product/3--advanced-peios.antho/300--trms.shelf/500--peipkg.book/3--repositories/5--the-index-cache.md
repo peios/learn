@@ -35,12 +35,17 @@ generation timestamp disagrees with what was recorded.
 
 ## When the cache fails
 
-A cached index that fails to load or fails to verify produces a warning,
-and resolution proceeds without that repository.
+A cached index that fails to load or fails to verify **fails the
+operation**, naming the repository and saying to refresh it or remove it
+from the configuration.
 
-For a repository the system depends on, that means a package the
-operator expected to come from it is instead resolved from wherever else
-it is available, at a lower priority.
+Proceeding without the repository would resolve against a different set
+than the operator configured, and that is worse than losing candidates:
+a package the operator expected from the highest-trust source would come
+from wherever else it is available, and the cross-repository guards
+compare priorities against what is *configured*, so a repository absent
+from the resolution contributes nothing to them either. An escalation
+dressed as a warning.
 
 ## Protection
 

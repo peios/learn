@@ -30,12 +30,19 @@ the freshness check.
 ## The local handle
 
 A repository has a name in the descriptor and a handle in the local
-configuration. They are conventionally the same. peipkg identifies a
-repository internally by the local handle, and compares an index's
-declared repository name against that handle — so a configuration whose
-handle differs from the descriptor's name produces a repository that
-adds successfully and is then skipped at every install, with a warning
-rather than an error.
+configuration. They are conventionally the same, and nothing requires
+them to be: peipkg identifies a repository internally by the local
+handle, and compares an index's declared repository name against the
+**descriptor's** name, which it records when it verifies the descriptor.
+
+Comparing against the handle instead made a configuration whose handle
+differed from the descriptor's name add successfully, write a valid
+cache, and then fail its cached-index check on every later operation —
+permanently, and with the repository dropped from resolution.
+
+A repository recorded before the descriptor name was kept — or one in
+unsigned mode, whose descriptor was never verified — has none to compare
+against, and falls back to the handle it was recorded under.
 
 ## Transport
 
