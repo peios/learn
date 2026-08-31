@@ -111,9 +111,19 @@ Starting a service explicitly resolves its dependencies first:
 A service already in a satisfying state — Active, Completed or Skipped —
 is not restarted. Its dependency is already met.
 
-The on-demand path treats a **disabled** hard-dependency target
-differently from the boot path: where boot blocks the dependent, an
-on-demand start includes the disabled target and starts it.
+A **disabled** hard-dependency target blocks the dependent, on both
+paths. `Disabled` suppresses automatic activation and the service may
+still be started explicitly (§3.2) — but nobody started *this* one
+explicitly. Something that requires it did, and its administrator took it
+out of service deliberately, so starting it to satisfy someone else's
+dependency would defeat the flag by a route its description does not
+consider.
+
+Starting the disabled service itself still works. That is the escape
+hatch, and it is unchanged.
+
+A disabled `Wants` target is skipped rather than blocking anything: a
+soft dependency is advisory, so there is nothing to fail.
 
 ## Shutdown ordering
 
