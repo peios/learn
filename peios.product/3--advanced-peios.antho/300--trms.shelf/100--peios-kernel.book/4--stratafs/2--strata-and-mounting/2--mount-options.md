@@ -83,15 +83,23 @@ Locking and synchronising are unaffected. Neither modifies an object,
 neither consults the superblock's read-only state, and a reader of a
 merged tree may need both. [*mount.locking-unaffected-by-read-only]
 
-## Remount [*mount.remount-rejects-strata]
+## Remount [*mount.remount-rejects-a-changed-stack]
 
-A remount may alter generic mount flags. It may not alter the stack:
-any remount that supplies `strata=` at all is refused with `EINVAL`.
+A remount may alter generic mount flags. It may not alter the stack: a
+remount supplying a `strata=` whose value differs from the mounted
+one's is refused with `EINVAL`.
 
-The check is on the presence of the parameter rather than on its value,
-so a remount that replays the current stack byte-for-byte is refused
-too — which matters, because that is what a tool reconstructing options
-from the mount table will do.
+The test is on the value, not on the presence of the parameter, so a
+remount that replays the current stack byte-for-byte is accepted — it
+adds, removes, reorders and re-flags nothing. [*mount.remount-accepts-an-identical-stack] That is what makes
+option-string replay work: a tool reconstructing the whole option
+string from the mount table and handing it back is doing exactly this,
+and flipping a stratafs mount read-only would otherwise fail on a
+`strata=` that changed nothing.
+
+The comparison is of the stored option string (§4.2.2, below), which is
+why that string being reported without a second escaping layer is what
+lets a replayed stack compare equal at all.
 
 ## The mount table [*mount.options-reported-verbatim]
 

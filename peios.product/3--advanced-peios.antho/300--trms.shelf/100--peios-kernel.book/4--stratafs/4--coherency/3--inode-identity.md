@@ -41,22 +41,25 @@ false equality, so it fails rather than lying. And the stored number
 and `i_ino` are `unsigned long` while the counter is 64-bit, so on a
 32-bit build the number truncates.
 
-### The mount root [*inode.root.number-fixed-attributes-live]
+### The mount root [*inode.root.follows-live-provider]
 
-The root inode is created once, when the superblock is filled, and its
-number is never recomputed — `d_revalidate` returns 1 for the root, so
-it is never replaced. Its provider *is* re-resolved live on every use,
-so the root's mode, owner and timestamps are always current; only the
-number is not.
+The root inode is created once, when the superblock is filled, and the
+root dentry is never replaced — `d_revalidate` returns 1 for it. Its
+provider is nevertheless re-resolved live on every use, and the number
+follows: resolving the root's provider looks the provider inode up in
+the identity map and writes the result to the root inode's number.
+Mode, owner, timestamps and number are therefore all current.
 
-When the root's provider changes — a higher-precedence stratum root
-appears, or the mount-time one is removed — `stat` on the mount point
-keeps reporting the number allocated for the mount-time provider. Where
-no stratum root existed at mount, it reports a bare counter value
-corresponding to no provider object at all. If the root's current
-provider is also reachable at some other merged path, that path reports
-the object's mapped number while the root reports its stale one, so two
-paths naming one object disagree. This is tracked as a defect.
+That the number follows is what keeps §4.4.3's identity rule true at
+the root. The map is keyed by provider inode, so the number the root
+reports is the number every other merged path to that same provider
+reports; without it, a root whose provider is also reachable elsewhere
+would report a different number from that other path — two paths naming
+one object, unequal. [*inode.root.agrees-with-other-paths-to-its-provider] That is the false-inequality direction, the one
+that breaks hard-link detection.
+
+Where no stratum root exists, there is no provider to map and the root
+keeps the bare counter value allocated for it. [*inode.root.bare-counter-without-a-provider]
 
 ## Attributes of merged directories [*inode.merged-dir.attributes-from-provider]
 

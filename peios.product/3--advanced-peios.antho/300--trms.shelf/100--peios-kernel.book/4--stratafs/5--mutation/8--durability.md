@@ -63,18 +63,17 @@ Storage consumed by an object created through the mount, or copied up
 into the create stratum, is consumed on the create stratum's filesystem
 and accounted there. [*durability.storage-charged-to-create-stratum]
 
-Which principal it is accounted to is not what the specification
-describes. Disk quota keys on the POSIX owner, and copy-up does not
-preserve it: the staged object is created with the calling task's
-credentials, and the metadata copy transfers only the mode and the
-modification time. [*durability.copy-up-copies-mode-and-mtime] A copy is therefore accounted to the caller who
-caused it, not to the owner of the object it was copied from. [*durability.copy-up-accounted-to-the-caller]
+Disk quota keys on the POSIX owner, and copy-up preserves it (§4.5.2):
+the staged object is created with the calling task's credentials, and
+the ownership is then set to the source's under the mount's own
+credential. [*durability.copy-up-preserves-posix-owner] A copy is therefore accounted to the owner of the object
+it was copied from, not to the caller who caused it. [*durability.copy-up-accounted-to-preserved-owner]
 
-What *is* preserved is the KACS security descriptor, including its
-owner SID (§4.6.3), so the descriptor-level owner is the source's. [*durability.copy-up-preserves-owner-sid] The
-two notions of owner diverge here, and only the descriptor one behaves
-as §4.6.3 requires. This is tracked as a defect.
+The KACS security descriptor, including its owner SID (§4.6.3), is
+preserved alongside it. [*durability.copy-up-preserves-owner-sid] The two notions of owner agree, and both
+name the object rather than whoever provoked the copy — which is what
+§4.6.2 relies on when it permits a caller to cause a copy into a
+directory they hold no rights over.
 
-No code alters ownership to redirect accounting; the divergence is one
-of omission. The audit record of §4.6.5 is where the causing caller is
-recorded.
+Ownership is what accounting follows; the caller who caused the copy is
+recorded in the audit record of §4.6.5 instead.

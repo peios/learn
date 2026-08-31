@@ -59,21 +59,30 @@ the copy-up, as does a listing that fails or exceeds `XATTR_LIST_MAX`;
 in every case the error reported is `EIO`, whatever the underlying one
 was. [*copy-up.xattr-failure-aborts-with-eio]
 
-Modification timestamps are preserved for regular files and for
-directories, and **not** for symbolic links, which receive the current
-time. [*copy-up.mtime-preserved-except-symlinks] That is a divergence from the specification's `SHOULD` and is
-tracked as a defect. Access and change times are not preserved for any
-type. [*copy-up.atime-ctime-not-preserved]
+Modification timestamps are preserved for every type, symbolic links
+included. [*copy-up.mtime-preserved] The mode is carried across too, except for a symbolic
+link, whose mode is fixed by the VFS and not the caller's to set. [*copy-up.mode-preserved-except-symlinks]
+Access and change times are not preserved for any type. [*copy-up.atime-ctime-not-preserved]
 
-**Ownership is not preserved.** The staged object is created with the
-calling task's credentials, and the metadata copy transfers only the
-mode and the modification time — there is no uid or gid transfer
-anywhere. The KACS security descriptor, including its owner SID, *is*
-preserved, so the descriptor-level owner is the source's; the POSIX
-owner is the caller's. [*copy-up.posix-ownership-not-preserved] Since disk quota keys on the POSIX owner, a copy
-is accounted to the caller who caused it rather than to the owner of
-the object it was copied from, which is the opposite of what §4.5.8
-describes. This is tracked as a defect.
+**Ownership is preserved.** The staged object is created with the
+calling task's credentials, so it begins owned by the caller; where
+that differs from the source's uid or gid, a second `notify_change`
+sets both to the source's. [*copy-up.posix-ownership-preserved] The KACS security descriptor, including
+its owner SID, is preserved as well (§4.6.3), so both notions of owner
+name the object's owner rather than whoever provoked the copy.
+
+The chown runs under the **mount's own credential** — the same
+resolution context stratafs uses to reach providers the caller cannot
+(§4.2.1) — because setting another uid needs authority the caller does
+not have. [*copy-up.ownership-chown-runs-under-resolution-credential] It is a separate change from the mode and timestamp
+above, which are the caller's to set and stay that way.
+
+Because disk quota keys on the POSIX owner, a copy is accounted to the
+owner of the object it was copied from and not to the caller. [*copy-up.accounted-to-preserved-owner] That is
+what makes §4.6.2's exemption sound: a caller who may write a file in a
+stratum that will not accept modification can cause an entry to appear
+in the create stratum without holding rights over it, gaining neither
+access nor space.
 
 Hard links are not preserved: an object with several links in its
 stratum is copied up as a single independent object, and the other

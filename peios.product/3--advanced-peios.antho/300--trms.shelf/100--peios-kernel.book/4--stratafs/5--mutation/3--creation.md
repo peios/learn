@@ -110,13 +110,22 @@ Because the attempt has no caller to report to, any failure is audited
 only the arrangement errors §4.6.5 covers for ordinary refusals. The
 object is left in place.
 
-One part of the model is not implemented as specified. The right to
-delete an entry is checked when the delete-on-close request is armed,
-against the requesting token, which is correct. But it is checked
-against the **merged** parent directory rather than against the
-directory of the stratum where the entry actually lives, and no check
-is made at deletion time. The specification requires the check to name
-that stratum's directory specifically. This is tracked as a defect.
+The right to delete the entry is checked against the directory of the
+**stratum where the entry lives**, not against the merged parent, and
+it is checked at deletion time rather than only at arm. [*create.deferred-delete-checked-against-the-providing-stratum]
+
+Arm time could not do it. The authorizer there holds a `struct file`,
+and which stratum provides the entry is stratafs-internal — the
+provider index and the parent's relative path are not visible to KACS.
+stratafs computes that directory before removing anything, so the check
+happens there, where the answer exists.
+
+The token is the one that requested the deferred deletion, not the
+credentials of whoever closes the descriptor. That requires it to
+outlive the arm: the file's blob takes a reference when armed and
+releases it in `->file_release`, on both the armed and unarmed exits.
+The file is the thing that was armed, so its lifetime is the right
+one — arm and close may be far apart and in different tasks. [*create.deferred-delete-token-outlives-the-arm]
 
 Deferred deletion is restricted to non-directories, and at arm time to
 regular files on a managed mount.

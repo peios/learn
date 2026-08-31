@@ -18,7 +18,7 @@ authoritative for the conditions themselves.
 | A stratum carries both `create` and `ro` | `EINVAL` |
 | The same directory appears twice in the stack | `EINVAL` |
 | Any malformed `strata=` value (§4.2.2) | `EINVAL` |
-| `strata=` supplied on a remount | `EINVAL` |
+| A remount's `strata=` differs from the mounted stack (§4.2.2) | `EINVAL` |
 | An allocation failure while parsing | `ENOMEM` |
 | A create-bearing stack established outside the initial user namespace, or without `CAP_SYS_ADMIN` there | `EPERM` |
 | A stratum path names a non-directory | `ENOTDIR` |

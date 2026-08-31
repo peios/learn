@@ -64,21 +64,26 @@ authorisation for creating into it is evaluated against the descriptor
 that directory will carry once materialised, which is the corresponding
 provider directory's (§4.6.2).
 
-## Symbolic links and participation [*resolution.merge-participant-set-follows-final-component]
+## Symbolic links and participation [*resolution.merge-participant-set-resolves-like-lookup]
 
 Two resolution entry points disagree about the final component of a
 stratum path, and the difference is visible.
 
 Ordinary lookup resolves without following the final component, so a
 symbolic link at a name resolves to the link itself and the VFS follows
-it. Building the participant set for a merged directory follows the
-final component, and so do the emptiness scan, the foreign-entry scan,
-the permission check and directory `fsync`.
+it. Every site that builds the participant set resolves the same way —
+the set itself, the emptiness scan, the foreign-entry scan, the
+permission check and directory `fsync`.
 
-The consequence is that a stratum holding a name as a symlink to a
-directory **participates** in the merged directory, contributing the
-target's entries to the merged listing and to emptiness tests, while a
-stratum holding a dangling symlink at that name participates in
-resolution but not in the participant set. Whether that is intended is
-an open question against the specification, which describes a stratum
-holding a non-directory as masked; it is tracked as a defect.
+A symlink is a non-directory, so a stratum holding a name as one is
+masked entirely, exactly as §4.3.3 has it: it does not participate,
+contributes no entries to the merged listing or to emptiness tests, and
+masks whatever the strata below hold at that name. A dangling symlink
+is the same, and for the same reason. [*resolution.symlink-masks-like-any-non-directory]
+
+The two views agreeing is what closes a confused-deputy shape. Were the
+participant set to follow the final component while lookup did not, a
+stratum owner who replaced a directory with a symlink would change
+which real directory contributed entries to another stratum's merged
+view, and the permission check would run against a target the mounter
+never named.

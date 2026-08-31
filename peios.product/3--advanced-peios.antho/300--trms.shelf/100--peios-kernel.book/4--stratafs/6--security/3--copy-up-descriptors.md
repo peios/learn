@@ -85,8 +85,8 @@ object's descriptor, so making the caller the owner would reintroduce
 the escalation this section exists to prevent by a slightly longer
 route.
 
-The POSIX owner is a different matter, and is *not* preserved — §4.5.8
-records what follows.
+The POSIX owner is preserved separately and for a different reason —
+§4.5.2 covers the chown and §4.5.8 what it means for accounting.
 
 ## What "the source's descriptor" means [*security.copy-up-pins-effective-descriptor]
 

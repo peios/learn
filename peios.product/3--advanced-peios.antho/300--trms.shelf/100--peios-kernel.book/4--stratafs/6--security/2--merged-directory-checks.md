@@ -122,9 +122,9 @@ working there.
 What remains is a resource consideration rather than an access one: a
 caller entitled to write a file in a stratum that will not accept
 modification can cause an entry to appear in the create stratum without
-holding rights over that directory. They gain no access by it — though
-they do gain the space, since §4.5.8 records that the copy is accounted
-to them rather than to the preserved owner.
+holding rights over that directory. They gain neither access nor space
+by it: §4.5.8 records that the copy is accounted to the preserved owner
+rather than to them.
 
 That exemption is only enforceable because KACS provides a copy-up
 context; without it the access-control layer would check the caller
