@@ -29,7 +29,7 @@ Compose is given the composer's half of the Special System Package exemption: `f
 
 The installer swaps the live boot packages for the disk ones on the target, and it takes `disk-boot` and `disk-boot-irf` from a repository carried on the medium — a live image cannot carry them installed, because `live-boot-irf` and `disk-boot-irf` conflict in the initramfs.
 
-peiso resolves those two packages from the same sources (so the same versions win), publishes them into `repo/` with a key generated for this build, and writes `root/lcl/conf/peipkg/peios-medium.repo` naming that key as the trust anchor and `file:///media/peios/repo` as the base URL — where `live-boot` mounts the medium.
+peiso resolves those two packages against the same source scan the root's lock came from — not merely the same source declarations, the same gathered universe, so a package republished mid-build cannot give the root and the medium different revisions. It publishes them into `repo/` with a key generated for this build, and writes `root/lcl/conf/peipkg/peios-medium.repo` naming that key as the trust anchor and `file:///media/peios/repo` as the base URL — where `live-boot` mounts the medium.
 
 The key is a throwaway and its private half is never written anywhere. A key shipped beside the repository it signs proves nothing about it — tampering with the ISO tampers with both — so its only job is to satisfy the "required" signature policy that peipkg rightly insists on. The repository's descriptor also lists the keys the *packages* were signed with (`keys` in the spec): a repository accepts a package only if its signer is in the descriptor.
 
