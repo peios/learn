@@ -1,7 +1,7 @@
 ---
 title: Profiles
 type: how-to
-description: Patterns for multiple profiles — kernel-version testing, debug builds, feature-flag gating, and what happens to the fixture cache when profiles change.
+description: Patterns for multiple profiles — kernel-version testing, debug builds, kernel-only VMs, one directory per profile, feature-flag gating, and what happens to the fixture cache when profiles change.
 related:
   - provium/configuration/provium-toml
   - provium/configuration/dynamic-profiles
@@ -9,7 +9,7 @@ related:
   - provium/running-tests/fixtures-and-dependencies
 ---
 
-A profile is one named `(kernel, initrd, cmdline, guest_os)` tuple in `provium.toml`. Tests pick a profile by name when they create a VM. This page covers the practical patterns.
+A profile names what a VM boots — a kernel, an initramfs, a command line, a guest OS — in `provium.toml`. Tests pick a profile by name when they create a VM. This page covers the practical patterns.
 
 The configuration field reference is on [provium.toml](~provium/configuration/provium-toml). A profile can also *build* its own artifacts before booting rather than pointing at files already on disk — see [Dynamic profiles](~provium/configuration/dynamic-profiles).
 
@@ -69,6 +69,32 @@ test("stable client can talk to mainline server", function(t)
 end)
 ```
 
+## One directory per profile
+
+Profiles do not have to be written in `provium.toml` at all. `[profiles] from_dir` reads them from a directory, one subdirectory each:
+
+```toml
+[provium]
+roots = ["tests"]
+
+[profiles]
+from_dir = "profiles"
+```
+
+```text
+profiles/
+  kernel-only/
+    profile.provium.toml     # the profile
+    peiso.toml               # whatever else it needs, beside it
+  full-system/
+    profile.provium.toml
+    peiso.toml
+```
+
+Everything a discovered profile names is relative to its own directory, and its `build` runs there. So a profile directory is self-contained: it can be moved, copied or renamed without rewriting what is inside it, and adding one is `mkdir` rather than an edit to a central list.
+
+Prefer this when profiles carry files of their own — an image spec, a package manifest, a vendored initrd — and especially when the repository's purpose is holding many of them. Prefer inline blocks when a profile is three lines pointing at paths that already exist.
+
 ## Profile choice patterns
 
 ### Default vs debug
@@ -99,6 +125,28 @@ end)
 ```
 
 Tag these `cross-version` and gate via `--no-tag cross-version` in the dev loop. CI runs them on a nightly cadence with `--include-slow`.
+
+### Booting only a kernel
+
+A profile that names no `initrd` boots the agent overlay alone: the agent is PID 1 and there is no userspace at all. Paired with a `root` composed to hold nothing but the kernel, that gives a VM in which the only thing a test can reach is the kernel — so a failure is attributable to it and not to something in userspace that happened to be installed.
+
+```toml
+# profiles/kernel-only/profile.provium.toml
+# `--out` must not already exist, and Provium never wipes {out} —
+# clearing it is the build's own job.
+build   = "rm -rf {out}/root && peiso root ../../peiso.toml peiso.toml --out {out}/root"
+root    = "{out}/root"
+cmdline = "console=hvc0 quiet panic=1"
+```
+
+No `kernel` either: Provium finds it inside the composed root. Tests then drive the kernel directly, through the agent's syscall interface rather than through any command:
+
+```lua
+test("stratafs refuses a duplicate stratum", function(t)
+    local vm = provium:vm("v", "kernel-only"):boot()
+    -- … mount(2) via the agent, assert on errno …
+end)
+```
 
 ### Feature-flag gating
 

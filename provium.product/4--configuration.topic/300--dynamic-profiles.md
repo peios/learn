@@ -59,7 +59,7 @@ Now `provium` builds `peios-full` before the suite runs, and tests boot exactly 
 local vm = provium:vm("v", "peios-full"):boot()
 ```
 
-The command runs with `sh -c`, from Provium's working directory, inheriting your environment and streaming its output straight to the terminal. Reference inputs (the manifest above) relative to the suite so the suite stays portable across checkouts — there is deliberately no "build working directory" knob to tie it to one machine's layout.
+The command runs with `sh -c`, inheriting your environment and streaming its output straight to the terminal. It runs from Provium's working directory — or, for a profile discovered via [`from_dir`](~provium/configuration/provium-toml#from-dir), from that profile's own directory. Either way, reference inputs (the manifest above) relative to that directory, so the suite stays portable across checkouts; there is deliberately no "build working directory" knob to tie it to one machine's layout.
 
 ## `{out}`: one directory, no drift
 

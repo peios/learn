@@ -1,7 +1,7 @@
 ---
 title: provium.toml
 type: reference
-description: Every field in provium.toml — the [provium] section (roots, cache_dir, cache_max_size) and the [profiles.<name>] blocks (kernel, initrd, cmdline, guest_os).
+description: Every field in provium.toml — the [provium] section (roots, cache_dir, cache_max_size), the [profiles.<name>] blocks (kernel, root, initrd, cmdline, guest_os), and discovering profiles from a directory.
 related:
   - provium/configuration/profiles
   - provium/configuration/dynamic-profiles
@@ -94,9 +94,26 @@ kernel = "/build/peios/bzImage"
 
 | Type | Required | Description |
 |---|---|---|
-| path string | yes | Path to a bzImage-format kernel image. Booted via QEMU's `-kernel` option. |
+| path string | one of `kernel` / `root` | Path to a bzImage-format kernel image. Booted via QEMU's `-kernel` option. |
 
 Path validation (does the file actually exist?) happens at VM-boot time, not config-load time. This lets a single `provium.toml` be portable across machines that have different kernel layouts.
+
+May be omitted when [`root`](#root) names a composed Peios root, in which case the kernel is found inside it.
+
+### `root`
+
+```toml
+[profiles.kernel-only]
+root = "{out}/root"
+```
+
+| Type | Required | Description |
+|---|---|---|
+| path string | one of `kernel` / `root` | A composed Peios root — what `peiso root` writes. The kernel is taken from `usr/lib/modules/<release>/vmlinuz-<release>` inside it. |
+
+Set this instead of `kernel` when the profile's [`build`](#build) composes a root, so the profile does not also have to know where in that root a kernel lands. A kernel version bump then moves nothing in the config. `kernel`, when set, wins.
+
+Resolution happens at VM-boot time, after the build has run — which is the only order that works, since the build is what produces the root. Two kernels in one root is an error rather than a choice made quietly: set `kernel` to say which.
 
 ### `initrd`
 
@@ -107,7 +124,7 @@ initrd = "/build/peios/initrd.cpio.gz"
 
 | Type | Required | Description |
 |---|---|---|
-| path string | yes | Path to an initramfs. Booted via QEMU's `-initrd`. |
+| path string | no | Path to an initramfs. Booted via QEMU's `-initrd`. Omit it to boot the agent overlay alone — see [No initrd at all](#no-initrd-at-all). |
 
 By default, Provium injects the `provium-agent` binary at `/sbin/provium-agent` by concatenating a small overlay cpio onto your initrd at launch (the kernel unpacks concatenated gzip cpios into a single rootfs). The agent boots as PID 1 and forks immediately: the child becomes the vsock listener, the parent execs your initrd's `/init`, which therefore takes over PID 1. In this chained layout the agent deliberately mounts nothing first — your init owns the mount and pivot sequence exactly as it would alone. (Only on an agent-only initrd, with no user `/init`, does the agent perform the pseudo-FS mounts itself.) Userspace runs as it would have on its own; the agent runs alongside as PID 2.
 
@@ -118,6 +135,14 @@ Three consequences:
 - **The merged initrd is content-hash cached** under `<scratch_root>/agent-overlay-cache/<sha256>.cpio.gz`. Subsequent boots of the same `(initrd, overlay)` pair pay nothing.
 
 To opt out (e.g. when your initrd already bundles an agent at the path Provium would set), set `inject_agent = false` on the profile.
+
+#### No initrd at all
+
+Omitting `initrd` means the VM has no userspace of its own: the agent overlay *is* the whole initramfs. Nothing is concatenated and nothing is cached — the overlay file is handed to QEMU as it stands. It carries the agent but no `/init`, so the agent comes up as PID 1 in its standalone mode and performs the pseudo-FS mounts itself.
+
+That is the shape a kernel conformance suite wants, where the point is that nothing but the kernel is reachable from a test. It also saves such a project vendoring an initrd cpio it would never otherwise need.
+
+`inject_agent = false` with no `initrd` is rejected: without injection there is no overlay to stand in for the missing file, and so nothing to boot.
 
 ### `inject_agent`
 
@@ -231,6 +256,52 @@ When unset, the default base is resolved like the fixture cache — `$PROVIUM_BU
 ## Multiple profiles
 
 You can declare any number of `[profiles.<name>]` blocks; tests pick one by name per VM. Patterns for multi-profile setups (debug builds, cross-version testing, feature-flag gating) are on [Profiles](~provium/configuration/profiles).
+
+### `from_dir`
+
+```toml
+[profiles]
+from_dir = "profiles"
+```
+
+Reads profiles from a directory instead of writing them inline. Each subdirectory holding a `profile.provium.toml` is one profile, named after the directory:
+
+```text
+provium.toml
+profiles/
+  kernel-only/
+    profile.provium.toml
+  full-system/
+    profile.provium.toml
+```
+
+gives the profiles `kernel-only` and `full-system`. A subdirectory *without* that file is not a profile and is skipped rather than rejected, so a profile directory may keep whatever else it needs beside its config. A `from_dir` that names a directory holding no profile at all is an error.
+
+The file's contents are the fields above — everything from `[profiles.<name>]` except the name, which the directory supplies.
+
+Adding a testset becomes `mkdir`, with nothing central to keep in sync. That matters most for a repository whose whole purpose is holding many of them.
+
+`from_dir` and inline blocks may both appear. A discovered profile whose name collides with an inline one is an error, not a silent winner.
+
+#### What a discovered profile's paths are relative to
+
+Its own directory — both the paths it names and the directory its `build` runs in. An inline profile keeps resolving against Provium's current directory, as it always has.
+
+This is the rule that makes a profile directory self-contained: it can be moved, copied or renamed and still mean what it says. It also means the same relative path means the same thing whether it is written in the shared config or in a profile beside it, which is not true if everything resolves against one directory.
+
+`{out}` paths are exempt, since a build-output directory is absolute and has nothing to do with where the profile lives.
+
+```toml
+# profiles/kernel-only/profile.provium.toml
+#
+# Both specs are named relative to this directory, and the command runs
+# here, so `../../peiso.toml` is the repository's.
+# `--out` must not already exist, and Provium never wipes {out} —
+# clearing it is the build's own job.
+build   = "rm -rf {out}/root && peiso root ../../peiso.toml peiso.toml --out {out}/root"
+root    = "{out}/root"
+cmdline = "console=hvc0 quiet panic=1"
+```
 
 **Important:** the fixture cache key folds in EVERY profile's kernel + initrd identifier. Adding a new profile invalidates the entire fixture cache. This is intentional: a new kernel could behave differently, so existing fixtures are no longer trustworthy. See [Profiles — What happens to the cache when profiles change](~provium/configuration/profiles#what-happens-to-the-cache-when-profiles-change).
 
