@@ -38,7 +38,7 @@ Machine\Generic\Authn\Policy
 
 Keyed by principal rather than by privilege on purpose. One key shows the totality of a principal's authority — `reg ls` on `\Administrators` answers "what can an administrator do on this machine?" completely. Authority scattered across twenty per-privilege values is authority nobody audits: a right granted somewhere unexpected does not surface when you look at the principal, and you would have to know to check every other place.
 
-It is also the only shape that holds more than privileges. Integrity, the default owner and the default DACL live on the same record, and logon rights will when they arrive.
+It is also the only shape that holds more than privileges. Integrity, the default owner, the default DACL and the logon types a peer may originate all live on the same record.
 
 ### Naming a principal
 
@@ -151,6 +151,27 @@ SDDL rather than raw bytes because the whole argument for policy living in the r
 
 A value that does not parse is dropped with a warning and the system default applies — a typo costs the customisation, not the session.
 
+### `LogonTypes` — `REG_MULTI_SZ`
+
+The logon types this principal may **originate** — request of `authd` over `/run/logon.sock` on somebody else's behalf. This is a statement about the asker, not about the account being signed in: `login` originates `Interactive` logons for whoever is at the console, a graphical greeter would too, and a web console would originate `Network` ones.
+
+```
+\S-1-5-80-…-…   (a greeter's service SID)
+    LogonTypes  REG_MULTI_SZ  ["Interactive"]
+```
+
+The names are `Interactive`, `Network`, `Batch`, `Service`, `NetworkCleartext` and `NewCredentials`, matched case-sensitively; an unrecognised name is dropped with a warning and the rest still applies.
+
+The proposed logon type is not cosmetic. It selects a group SID the minted token carries — `Interactive` puts `S-1-5-4` on it — and policy records can key on those SIDs, so the type must be what the *peer* is permitted, never merely what it proposed. A greeter granted `["Interactive"]` cannot mint itself a network-shaped token, nor the reverse.
+
+A principal with no `LogonTypes` originates nothing. `SYSTEM` is the exception and is permitted every type unconditionally — it administers this very key, so a registry constraint on it would enforce nothing, and `authd` does not pretend otherwise.
+
+An empty list revokes: it is "may originate nothing", distinct from the value being absent only in that it says so on the record.
+
+### `LogonSocketDescriptor` — `REG_SZ`, on the `Policy` key itself
+
+The security descriptor `/run/logon.sock` carries, as SDDL, read once at `authd` startup. The built-in value admits `SYSTEM` and `Administrators`. Admitting a new originator takes both edits on purpose: widen this descriptor so the peer can connect (connect access is `FILE_WRITE_DATA`; `0x100082` grants it with stat and sync), and give the peer's record a `LogonTypes` list so the connection can do something. The descriptor is the outer gate; the record is what the widening means.
+
 ## Locking a machine down
 
 To forbid a privilege regardless of what any record says:
@@ -164,7 +185,7 @@ That is one edit, in one place, that a record you have not read cannot defeat. R
 
 ## What this cannot express yet
 
-**Whether a principal may sign in at all.** Policy decides what a session gets, not whether one happens. `lps disable` covers the blunt case; per-logon-type restriction — allowed over the network but not at the console — is not built.
+**Whether a principal may sign in at all.** Policy decides what a session gets, not whether one happens. `lps disable` covers the blunt case; per-logon-type restriction of the *account* — this user may sign in over the network but not at the console — is not built. (`LogonTypes` above is the other side of the conversation: it constrains what the asking service may request, not what the named account may be signed in to.)
 
 **Two privileges the kernel enforces but nothing can name.** `SeTakeOwnershipPrivilege` and `SeRelabelPrivilege` are honoured by the access check and appear in audit records, but are absent from the published ABI, so no policy can grant them. `SeSystemProfilePrivilege` is in the same position on current builds. Until that is resolved, a Peios machine has no way to grant take-ownership — which means the documented escape hatch for a file whose DACL excludes you is not currently reachable.
 
