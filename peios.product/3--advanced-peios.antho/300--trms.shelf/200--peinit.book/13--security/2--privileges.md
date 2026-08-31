@@ -16,11 +16,27 @@ system. What it actually exercises is narrower.
 | Signal delivery | SIGTERM and SIGKILL to managed processes. |
 | Mount operations | The Phase 1 virtual filesystems. |
 
-peinit does not verify at startup that it holds any of these. A missing
-`SeCreateTokenPrivilege` surfaces as an `EPERM` from the first token
-mint, which is the first service start.
+peinit verifies the two privileges at startup, before Phase 1 does
+anything that needs them, and fails to recovery naming which is missing:
 
-`SeImpersonatePrivilege` is not used. peinit passes the peer's token
+```
+peinit: required privileges are not held: Token("peinit is missing
+required privilege(s): SeCreateTokenPrivilege")
+```
+
+Present *and* enabled — a privilege the token carries but has not
+enabled is not usable, and would fail identically to being absent.
+
+The check earns its place by what it replaces. A missing
+`SeCreateTokenPrivilege` used to surface as an `EPERM` from the first
+token mint, which is the first service start — registryd, in Phase 1
+step 6. So a peinit that could not mint tokens entered recovery
+reporting what read as a registryd problem, and nothing anywhere named
+the privilege.
+
+`SeImpersonatePrivilege` is **not required and not checked**, even
+though it appears in the requirement list peinit was specified against.
+It is not used. peinit passes the peer's token
 descriptor to AccessCheck directly rather than impersonating the caller
 and evaluating as them, so the privilege that would be needed to
 impersonate is not needed at all. The same holds on the jobs socket:
