@@ -38,7 +38,8 @@ untouched, for any of the following.
 - a label key does not match the identifier grammar
 - a label value contains `=` or `,`
 - a label key is repeated within the record
-- a label key is one of `timestamp`, `boot_id`, `name`, `type`, `value`
+- a label key is one of `timestamp`, `boot_id`, `name`, `type`, `value`,
+  `overflow`
 
 **Timestamp**
 

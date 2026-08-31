@@ -82,16 +82,19 @@ written:
    `MIN_OVER`, `MAX_OVER`, `SUM_OVER`). At most one per query;
    specifying both a scalar and a window aggregation is a parse error.
 
-The pipeline operates on scalars throughout. Counter and gauge samples
-are already scalar; a histogram sample is not scalar until a percentile
-function has been applied. A collector MUST therefore reject, at
+The pipeline ordinarily operates on scalars throughout. Counter and gauge
+samples are already scalar; a histogram sample is not scalar until a
+percentile function has been applied. The sole exceptional result is a
+tagged percentile overflow, whose propagation is defined below. A collector
+MUST therefore reject, at
 execution time when the type is known, a query that resolves to a
 histogram series without a percentile function, or that applies `RATE`,
 `DELTA`, or any scalar or window aggregation directly to one.
 
-Every output is a **finite** binary64. If any computation would produce
-NaN or an infinity, the query MUST fail with an error rather than
-returning it.
+Every numeric output is a **finite** binary64. If any computation would
+produce NaN or an infinity, the query MUST fail with an error rather than
+returning it. The null in a tagged percentile-overflow result is not a
+numeric output.
 
 ## Transforms
 
@@ -131,11 +134,12 @@ Evaluation is nearest-rank over the sample's cumulative counts: for
 percentile `q`, compute `rank = ceil(q × total_count)`, and take the
 first boundary whose cumulative count is at least `rank`.
 
-A sample with `total_count == 0` yields no value. A sample whose rank
+A sample with `total_count == 0` yields no record. A sample whose rank
 falls **above the final cumulative count** — meaning the percentile lies
-in the overflow region above the highest boundary — also yields no
-value, because the distribution does not record where in that region it
-lies.
+in the overflow region above the highest boundary — yields a record with
+`value` null and `overflow` true. The distribution proves that the
+percentile exceeds the highest boundary but does not record a finite value
+for it. `overflow` is absent from ordinary percentile results.
 
 ```text
 METRIC request.duration P95
@@ -143,14 +147,10 @@ METRIC request.duration[origin="loregd"] SINCE 1h ago P99
 ```
 
 > [!NOTE]
-> The overflow rule is why a producer's highest bucket boundary matters
-> (§3.10). A `P99` over a histogram where more than one observation in a
-> hundred exceeds the top boundary returns *no record*, which a client
-> cannot distinguish from no data. The alternatives are worse — reporting
-> the top boundary understates the answer, and reporting an infinity
-> violates the finiteness rule — but the failure is silent, and an
-> operator seeing an empty high percentile beside a populated low one is
-> seeing a mis-provisioned histogram.
+> The overflow marker is why a producer's highest bucket boundary still
+> matters (§3.10). It prevents a `P99` above that boundary from looking like
+> no data, but it cannot recover the value the histogram did not locate. An
+> operator seeing `overflow: true` is seeing a mis-provisioned histogram.
 
 ## Scalar aggregations
 
@@ -183,6 +183,10 @@ If nothing contributes to an aggregation, the query returns no record
 for that output group. Otherwise the output timestamp is the greatest
 contributing timestamp — for `RATE` and `DELTA`, the later sample of the
 contributing pair.
+
+If any contributing percentile result has `overflow` true, a scalar
+aggregation MUST conservatively return `value` null and `overflow` true.
+It MUST NOT ignore the result and compute from the remaining finite values.
 
 ### Why unbracketed plus SINCE needs a window
 
@@ -221,6 +225,10 @@ treat them as synonyms: `AVG` produces one value for the range,
 For raw and percentile-transformed values, a window contains the scalars
 whose timestamps fall inside it, and the function is applied to those.
 No interpolation is performed.
+
+If a window contains a percentile result with `overflow` true, its output
+MUST also carry `value` null and `overflow` true. This propagation applies
+again when per-series window results are combined.
 
 For `RATE` and `DELTA` with a window aggregation, each series first
 produces **at most one scalar per window**: the window `DELTA` is the
@@ -266,13 +274,14 @@ itself partitioned by boot.
 ## Results
 
 One record per raw sample; one per valid pair for `RATE` and `DELTA`,
-timestamped at the later sample; one per histogram sample that yields a
-percentile; one per window for window aggregations; one for a scalar
-aggregation.
+timestamped at the later sample; one per non-empty histogram sample after
+a percentile transform, including an explicit overflow record; one per
+window for window aggregations; one for a scalar aggregation.
 
-A histogram result carries only the percentile in `value`. The
-boundaries, counts, total and sum are **not** returned by the query
-language in this revision, in any mode.
+A finite histogram result carries only the percentile in `value`. An
+overflow result carries `value` null and `overflow` true. The boundaries,
+counts, total and sum are **not** returned by the query language in this
+revision, in any mode.
 
 ```text
 {timestamp: 1714000000000000000, boot_id: "{550e8400-…}", name: "cpu.usage", type: "gauge", core: "0", value: 42.7}

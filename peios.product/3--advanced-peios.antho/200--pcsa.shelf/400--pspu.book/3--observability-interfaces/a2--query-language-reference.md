@@ -107,7 +107,7 @@ There is no `NOT` and no `=`.
 |---|---|---|
 | EVENTS | `timestamp` `cpu_id` `sequence` `origin_class` `event_type` `effective_token_guid` `true_token_guid` `process_guid` `boot_id` | a flattened payload path, or null |
 | LOGS | `timestamp` `origin` `is_error` `message` `boot_id` `job_id` | a parse error |
-| METRIC | `timestamp` `boot_id` `name` `type` `value` | a label, or null |
+| METRIC | `timestamp` `boot_id` `name` `type` `value` `overflow` | a label, or null |
 
 ## Aliases
 

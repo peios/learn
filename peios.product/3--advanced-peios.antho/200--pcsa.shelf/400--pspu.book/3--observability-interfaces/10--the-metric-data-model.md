@@ -56,8 +56,9 @@ Label keys and values MUST be non-empty UTF-8 strings. A key MUST match
 the identifier grammar above; a value MUST NOT contain `=` (0x3D) or `,`
 (0x2C), which are reserved as delimiters in the collector's canonical
 representation of a label set (§3.13). A key MUST NOT be repeated within
-one sample, and MUST NOT be any of the five fixed field names a metric
-result carries — `timestamp`, `boot_id`, `name`, `type`, `value` —
+one sample, and MUST NOT be any of the six fixed field names a metric
+result carries — `timestamp`, `boot_id`, `name`, `type`, `value`,
+`overflow` —
 because labels and fixed fields share one flat namespace in a result
 record (§3.22) and a collision would make the record ambiguous.
 
@@ -142,15 +143,17 @@ every count and the sum MUST be zero.
 > [!NOTE]
 > Observations above the highest boundary are counted but not located.
 > A reader asking for a high percentile of a distribution whose tail
-> overflows gets no answer rather than a wrong one (§3.25), so a producer
-> SHOULD choose a highest boundary above the values it expects to see.
+> overflows gets an explicit overflow result rather than a wrong numeric
+> answer (§3.25), so a producer SHOULD choose a highest boundary above
+> the values it expects to see.
 
 ## Values are floating point
 
 Numeric input MAY be a MessagePack integer or a MessagePack float; both
 are converted to binary64 with round-to-nearest, ties-to-even. Every
-value a collector stores and every value a query returns is a finite
-binary64.
+value a collector stores and every numeric value a query returns is a
+finite binary64. The null value in an explicit percentile-overflow result
+is not a numeric metric value (§3.25).
 
 Non-finite values are refused rather than stored: a record whose value
 converts to NaN or to either infinity is discarded (§3.12). There is no

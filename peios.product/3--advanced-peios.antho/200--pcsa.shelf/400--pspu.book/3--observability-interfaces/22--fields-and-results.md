@@ -84,14 +84,19 @@ field, which may legitimately be absent from a given record.
 
 ## Metric fields
 
-`timestamp`, `boot_id`, `name`, `type`, `value`
+`timestamp`, `boot_id`, `name`, `type`, `value`, `overflow`
 
 Every other name resolves to a label. Ingestion refuses labels colliding
-with these five (§3.10), so the flat namespace is unambiguous by
+with these six (§3.10), so the flat namespace is unambiguous by
 construction rather than by a precedence rule.
 
 `type` is the series type as a string: `"counter"`, `"gauge"` or
 `"histogram"`.
+
+`overflow` is an output-only boolean marker. It is present and true only
+when a histogram percentile cannot be located below the series' highest
+boundary (§3.25); otherwise it is absent. Predicates and label selectors
+therefore see it as null, like any other output not yet computed.
 
 ## What a record contains
 
@@ -101,13 +106,16 @@ flattened payload field, as top-level keys.
 **Log records** carry the log fields.
 
 **Raw metric sample records** carry `timestamp`, `boot_id`, `name`,
-`type`, `value`, and the series' labels as top-level keys.
+`type`, `value`, and the series' labels as top-level keys. A
+percentile-overflow result additionally carries `overflow`.
 
 **Aggregated metric results** carry `name`, `type` and `value`, plus
 labels when the result belongs to one label set. They carry `boot_id`
 only when the query restricted the samples to exactly one boot by a
 `boot_id` equality predicate, in which case the value is that boot ID; a
-result that could span boots omits it rather than picking one.
+result that could span boots omits it rather than picking one. An
+aggregate tainted by a percentile overflow additionally carries
+`overflow` (§3.25).
 
 **Aggregation results** in event and log mode carry the group key fields
 and the aggregate output, with the fixed schemas of §3.23.
