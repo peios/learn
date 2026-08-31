@@ -222,6 +222,12 @@ METRIC request.duration P95 SINCE 1h ago AVG_OVER 5m
 treat them as synonyms: `AVG` produces one value for the range,
 `AVG_OVER` one per window.
 
+A collector MAY cache aligned, complete window results as an implementation
+optimisation. Such a cache MUST be transparent: freshness must be proved from
+the authoritative samples before reuse, partial windows must retain their
+ordinary semantics, and a missing, stale or disabled cache MUST produce exactly
+the same result as direct evaluation.
+
 For raw and percentile-transformed values, a window contains the scalars
 whose timestamps fall inside it, and the function is applied to those.
 No interpolation is performed.

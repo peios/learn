@@ -120,6 +120,7 @@ an access-control field, or a reserved label key (PSPU §3.28).
 ## Schema version
 
 A `metadata` table with the same structure as the other stores' (§3.1).
-Version 1 comprises `series`, `samples` and `metadata`; the current value
-is in §B. eventd checks it at startup, applies the lifecycle rules of
-§5.4, and does not migrate.
+Version 1 comprises `series`, `samples` and `metadata`. Version 2 adds the
+disposable `rollups` query cache (§5.6); it does not change raw series or sample
+storage. The current value is in §B. eventd checks it at startup and applies the
+lifecycle and migration rules of §5.4.

@@ -95,6 +95,14 @@ No compiled-in defaults. A missing or invalid value fails startup
 | `MaxQueryRequestBytes` | REG_DWORD | 65536 | 1024–16777216 | Hard maximum query request payload. |
 | `QueryResponseTargetBytes` | REG_DWORD | 65536 | 1024–16777216 | Soft response batching target; one complete record may exceed it (§6). |
 
+## Adaptive metric rollups
+
+| Key | Type | Default | Range | Description |
+|---|---|---|---|---|
+| `AdaptiveRollupMinSamples` | REG_DWORD | 1000 | 100–1000000 | Minimum raw inputs an eligible window query must scan before it may seed rollups. |
+| `AdaptiveRollupBatchRows` | REG_DWORD | 512 | 16–4096 | Maximum missing windows submitted in one bounded writer command. |
+| `AdaptiveRollupMaxRows` | REG_DWORD | 100000 | 0–10000000 | Global rollup-cache row cap. 0 disables cache reads and writes without changing results. |
+
 ## Cross-type filtering
 
 | Key | Type | Default | Range | Description |

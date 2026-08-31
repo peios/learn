@@ -21,15 +21,16 @@ directory handle.
 1. WAL mode.
 2. `PRAGMA synchronous=NORMAL` — the log store's reasoning, for the same
    reason: metric loss on power failure is acceptable (§4.1).
-3. The `series`, `samples` and `metadata` tables (§5.2).
+3. The `series`, `samples`, `rollups` and `metadata` tables (§5.2, §5.6).
 4. Every write-time index.
 5. The `schema_version` and `created_at` entries.
 
 ## Opening
 
 1. Open in WAL mode with synchronous NORMAL.
-2. Verify the schema version. Missing or unrecognised is a **startup
-   failure**; no migration.
+2. Verify the schema version. Version 1 is migrated transactionally to version
+   2 by adding the adaptive-rollup cache. Missing or unrecognised versions are
+   a **startup failure**.
 3. Verify structural integrity — required tables and indexes present.
    Failing this, with SQLite reporting no corruption, is a **startup
    failure**.
@@ -48,9 +49,9 @@ After opening or creation the series cache is empty and fills on demand
 
 Exactly one read-write connection, owned by the metric writer thread,
 and any number of read-only query and maintenance connections. WAL mode
-permits readers alongside the writer. Retention and later maintenance
-features plan with read-only connections and submit bounded commands to
-the writer; they never open another read-write connection (§3.6).
+permits readers alongside the writer. Retention and adaptive rollups plan or
+compute with read-only connections and submit bounded commands to the writer;
+they never open another read-write connection (§3.6, §5.6).
 
 The single-writer property is load-bearing here in a way it is not for
 the other stores: series resolution checks for an existing row and then

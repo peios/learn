@@ -139,7 +139,7 @@ string or blob (§5.2).
 |---|---|
 | Event shard | 1 |
 | Log store | 1 |
-| Metric store | 1 |
+| Metric store | 2 |
 | `eventd-meta.db` | 1 |
 
 An unrecognised version is never migrated. For a required store it fails

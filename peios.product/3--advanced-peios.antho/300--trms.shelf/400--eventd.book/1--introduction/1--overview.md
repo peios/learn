@@ -58,9 +58,10 @@ recorded rather than hidden (§2.5).
 
 Adaptive indexing watches which fields event queries filter on and
 maintains indexes for them, shedding those indexes under write pressure
-because ingestion throughput outranks query latency (§3.4). Metric
-queries read raw samples in v0.23; adaptive rollups are deferred until a
-later schema can prove cached aggregates current (§5.6).
+because ingestion throughput outranks query latency (§3.4). Repeated wide
+metric-window queries can seed bounded adaptive rollups, but eventd proves each
+cached result current against raw samples and never maintains it on the
+ingestion path (§5.6).
 
 Everything eventd holds is readable only through access checks that KACS
 performs, per event type, per log origin, per metric name, and per field

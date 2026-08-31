@@ -59,8 +59,8 @@ shard is quiet and diverge from it under pressure (§3.4).
 **Shedding**: dropping secondary indexes to protect write throughput
 (§3.4).
 
-**Rollup**: a possible future pre-computed metric aggregate. v0.23 has
-no rollup table or registry and answers from raw samples (§5.6).
+**Rollup**: a disposable, pre-computed metric-window result whose freshness is
+proved against authoritative raw samples before reuse (§5.6).
 
 **Series cache**: the bounded in-memory map from series identity to
 series row, which keeps metric ingestion off SQLite in the common case
