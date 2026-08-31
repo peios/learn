@@ -99,11 +99,17 @@ The asymmetry that falls out is the useful one. *Which groups is this principal 
 
 ## Every lookup is live
 
-There is no cache yet. Each lookup is a fresh round trip to the source that holds the answer.
+The authority holds no cache. Each lookup it receives is a fresh round trip to the source that holds the answer.
 
-That is a deliberate first step rather than an oversight: a cache is invisible on both sides of the wire, so adding one later changes nothing about how any of this behaves. What it means today is that listing a very large directory is slower than it will be.
+That is a deliberate first step rather than an oversight: a cache is invisible on both sides of the wire, so adding one later changes nothing about how any of this behaves. Sources already declare what one will need — whether they can push a change notification, and how long an answer may be held — so the contract is in place before the thing that uses it.
 
-Sources already declare what a cache will need — whether they can push a change notification, and how long an answer may be held — so the contract is in place before the thing that uses it.
+One thing does cache, and only within a single command. Turning a SID into a name for display — the owner column of `ls -l`, and the same rendering everywhere else in the userland — remembers what it has already asked **for the lifetime of that one process**, so listing a large directory owned by a handful of principals costs a handful of lookups rather than one per file.
+
+It is scoped that way on purpose. Two separate commands share nothing, so an account renamed between them shows its new name on the very next one, and there is no stale answer to invalidate because there is nothing that outlives the command. This is what a Linux system already does for `getpwuid`, so `ls` behaves the way its users expect.
+
+Names that are fixed by specification rather than held by any source — `Everyone`, `Local System`, `BUILTIN\Administrators` and the rest — are answered from a table built into the renderer and never asked about at all. There is nothing a source could add to them, and asking would mean a large listing querying the authority thousands of times about `Everyone`, and printing something different depending on whether the authority happened to be running.
+
+Name service switch lookups — `getpwnam` and friends — are not cached anywhere. Each is its own connection and its own round trip.
 
 ## Where to go next
 
