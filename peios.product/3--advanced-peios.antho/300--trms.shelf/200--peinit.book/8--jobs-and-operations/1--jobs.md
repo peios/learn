@@ -72,6 +72,16 @@ make a job record trustworthy:
 - `pid` and `pidfd` land on the record only once exec success is
   confirmed by EOF on the error pipe. Until then they are held in
   pending setup state and the job is Created.
+- **An exit observed during that window is held, not applied.** peinit
+  resolves a reaped child to a job by PID, and inside this window no job
+  carries the PID yet — a short-lived process can be gone before the
+  error pipe is read. The exit is kept against its PID and replayed once
+  the job has been started and can receive it. Discarding it would be
+  unrecoverable: the job would be started against a PID that is already
+  dead and reaped, and no second `SIGCHLD` is coming, so it would stay
+  Running for ever. A reaped PID that matches no job *and* no pending
+  setup is genuinely not peinit's — PID 1 reaps orphans it never
+  started — and is ignored.
 - A setup failure takes the job straight from Created to Failed.
   `ended_at_ns` records the **classification** time, `failure_cause`
   records what went wrong, and `pid`, `pidfd`, `started_at_ns`,
