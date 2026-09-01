@@ -109,7 +109,8 @@ stratafs is built by `CONFIG_STRATAFS_FS`, a boolean option, so what it
 builds is linked into `vmlinux` rather than loaded. It depends on
 `CONFIG_SECURITY_PKM` and selects `FS_STACK`. Its sources are staged
 into the kernel tree as `fs/stratafs`, separate from PKM's own
-`security/pkm`. `CONFIG_STRATAFS_KUNIT_TEST` builds the in-kernel unit tests.
+`security/pkm`. `CONFIG_STRATAFS_FS_TEST_HOOKS` compiles the test rendezvous and fail points (§4.A.2),
+inert unless the kernel is booted with `stratafs.test_hooks=1`. `CONFIG_STRATAFS_KUNIT_TEST` builds the in-kernel unit tests.
 
 The translation units are:
 
