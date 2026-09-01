@@ -9,7 +9,7 @@ boundary (§2.4). Its failure semantics are correspondingly simpler
 than a subsystem like LCS that spans the kernel-userspace boundary in
 both directions.
 
-## Ring overrun
+## Ring overrun [*failure.overrun-is-normal]
 
 When events are emitted faster than consumers drain them, the buffer
 fills and KMES overwrites the oldest events. The write path is never
@@ -25,7 +25,7 @@ Two bulk-loss cases sit outside that model. The tail resynchronisation
 guard (§2.5) can discard an entire surviving window at once when a
 size field reads back implausibly, and a shrinking capacity swap drops
 the oldest events that do not fit the new ring. Neither itemises the
-discarded events in the drop counter, though both are traced.
+discarded events in the drop counter, though both are traced. [*failure.bulk-loss-outside-drop-counter]
 
 ## Event drop
 
@@ -41,7 +41,7 @@ drop appears as a sequence gap; the emitting subsystem is not
 notified, since emission is fire-and-forget. For syscall emitters
 validation completes before the write phase, so no sequence number is
 consumed and no gap appears — the drop is visible only to the caller,
-as the syscall's error return.
+as the syscall's error return. [*failure.drop-visibility-differs]
 
 Events emitted before KMES initialisation completes are discarded with
 no sequence consumed and no counter incremented, and are therefore
@@ -51,7 +51,7 @@ The internal per-CPU dropped-event counter aggregates structural drops
 and overwrite losses together. It is not exposed in the ring metadata
 and is reachable only through the KUnit test interface.
 
-## Consumer crash
+## Consumer crash [*failure.consumer-crash-contained]
 
 A crashed consumer's mappings are cleaned up by the ordinary kernel
 path when its file descriptors close on process exit, and the rings
@@ -72,14 +72,14 @@ generation changes, and consumers are unaffected. A
 capacities (§2.6). KMES does not retry; the next configuration write
 or a reboot triggers another attempt.
 
-## LCS unavailable
+## LCS unavailable [*failure.lcs-never-required]
 
 If no source ever registers, KMES runs indefinitely on compiled-in
 defaults with the boot-time rings live and the configuration watch
 never armed. This is a valid operating mode, not a failure — the only
 consequence is that the parameters cannot be tuned.
 
-## Clock discontinuity
+## Clock discontinuity [*failure.clock-jump-reorders-timestamps-only]
 
 Timestamps come from `CLOCK_REALTIME`, so an NTP adjustment can move
 them forward or backward and consumers sorting by timestamp will see
@@ -94,9 +94,9 @@ limiting is immune, being driven by the monotonic clock.
 System suspend and hibernate are special cases of the same thing. Ring
 contents survive suspend to RAM, and are restored from the hibernate
 image on resume; in both cases the clock jumps forward by the sleep
-duration, so consumers see a wall-clock gap with no sequence gap.
+duration, so consumers see a wall-clock gap with no sequence gap. [*failure.suspend-no-sequence-gap]
 
-## CPU topology
+## CPU topology [*failure.topology-fixed-at-init]
 
 The set of rings is fixed at initialisation from the kernel's
 possible-CPU set, and topology changes are not handled dynamically.
@@ -108,7 +108,7 @@ outside the possible-CPU set has no ring, and `kmes_attach` rejects
 that index; KMES neither creates rings for such CPUs nor publishes
 topology-change notifications. A CPU taken offline through `cpu_online` keeps its ring,
 and a consumer draining it simply sleeps indefinitely, unable to
-distinguish a quiet CPU from a departed one. Hot-add is the realistic
+distinguish a quiet CPU from a departed one. [*failure.offline-cpu-ring-quiet] Hot-add is the realistic
 case — hypervisors adding vCPUs to a running guest — while hot-remove
 is rare outside mainframes.
 
@@ -134,7 +134,7 @@ naming the logical CPU.
 
 Ring memory in steady state is `num_cpus × BufferCapacity` for the
 fixed CPU count fixed at initialisation, plus two metadata pages per CPU and one shmem page
-per ring that has ever been attached. During a capacity swap old and
+per ring that has ever been attached. [*failure.steady-state-memory] During a capacity swap old and
 new rings coexist until every mapping of the old generation is
 released.
 

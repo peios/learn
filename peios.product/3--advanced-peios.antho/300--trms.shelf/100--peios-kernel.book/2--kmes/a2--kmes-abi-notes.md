@@ -36,7 +36,7 @@ failure.
 
 The PKM syscall range is 1090–1099; KMES uses the first three.
 
-## Privilege requirements
+## Privilege requirements [*syscalls.privileges-by-name]
 
 `kmes.h` gives these as bit masks so it can stand alone. The names
 belong to the KACS privilege catalogue, and the bit index is what the
@@ -50,7 +50,7 @@ two agree on.
 
 Holding a privilege is not enough: it must be *enabled*, and KMES marks
 it used before proceeding. A failure to record the used state is itself
-an `EPERM`, because an unrecorded privilege use is an audit gap.
+an `EPERM`, because an unrecorded privilege use is an audit gap. [*syscalls.privilege-enabled-and-recorded]
 
 SeTcbPrivilege is checked but not required — an emitter that holds it
 enabled is exempt from the per-process rate limit, and one that does not
@@ -107,7 +107,7 @@ of one read, so a configuration with five bad keys reports four.
 
 ## Error codes
 
-### `kmes_emit`
+### `kmes_emit` [*emit.errors]
 
 | Errno | Condition |
 |---|---|
@@ -118,7 +118,7 @@ of one read, so a configuration with five bad keys reports four.
 | `ENOSPC` | Event exceeds `MaxEventSize` or 50% of ring capacity. |
 | `ENOMEM` | Staging buffer allocation failed, or KMES not initialised. |
 
-### `kmes_emit_batch`
+### `kmes_emit_batch` [*batch.errors]
 
 | Errno | Condition |
 |---|---|
@@ -129,7 +129,7 @@ of one read, so a configuration with five bad keys reports four.
 | `ENOSPC` | The failing entry exceeds `MaxEventSize` or 50% of ring capacity. |
 | `ENOMEM` | Kernel allocation failed, or KMES not initialised. |
 
-### `kmes_attach`
+### `kmes_attach` [*attach.errors]
 
 | Errno | Condition |
 |---|---|
@@ -139,7 +139,7 @@ of one read, so a configuration with five bad keys reports four.
 | `ENOMEM` | Kernel allocation failed, or KMES not initialised. |
 
 A `KMES_ATTACH_QUERY_SLOTS` call takes the same `EPERM`, `EFAULT` and
-`ENOMEM` conditions and cannot return `EINVAL`.
+`ENOMEM` conditions and cannot return `EINVAL`. [*attach.query-slots-errors]
 
 The ring array is sized by `nr_cpu_ids`, not by the number of rings
 allocated. On a machine with a sparse possible-CPU mask the two differ,
@@ -148,7 +148,7 @@ as an index beyond the array does. A consumer therefore enumerates
 against the slot count from `KMES_ATTACH_QUERY_SLOTS` and skips the
 `EINVAL` slots rather than stopping at the first one; see §2.4.
 
-## Build configuration
+## Build configuration [*build.config-security-pkm]
 
 KMES is built by `CONFIG_SECURITY_PKM`, a boolean option, so it is
 linked into `vmlinux` rather than loaded. `CONFIG_RUST=y` is required:
@@ -160,6 +160,6 @@ The three syscall numbers are added to the syscall table by
 `kernel/patches/arch/syscall-table-pkm.patch`, which patches both
 `arch/x86/entry/syscalls/syscall_64.tbl` and the copy of it that ships
 under `tools/perf/`. They are registered `common`, so they are reachable
-from the x32 ABI as well as from x86-64.
+from the x32 ABI as well as from x86-64. [*build.syscalls-registered-common]
 
 `CONFIG_SECURITY_PKM_KUNIT` compiles in the in-kernel test harness.

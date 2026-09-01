@@ -7,14 +7,15 @@ Every name, value, offset and size in this appendix is generated from
 `pkm/uapi/pkm/kmes.h` by `pkm/tools/gen-kmes-abi.py`, with struct
 layouts measured by compiling a probe against the real header.
 Regenerate it whenever the ABI changes; do not edit it by hand. The
-names here are the ones a program actually compiles against.
+names here are the ones a program actually compiles
+against. [*abi.generated-from-source]
 
 What a compiler cannot measure -- the error vocabulary of each
 syscall, the privilege each requires by name, what the configuration
 keys do, and the implementation bounds that are not in the header --
 is in the notes appendix, §2.B, which this generator does not touch.
 
-## Syscall numbers
+## Syscall numbers [*abi.syscall-numbers]
 
 Signatures are read from the `SYSCALL_DEFINE` sites in `pkm/kmes/`.
 
@@ -28,7 +29,7 @@ Signatures are read from the `SYSCALL_DEFINE` sites in `pkm/kmes/`.
 
 Offsets and sizes are measured, not declared.
 
-### `struct kmes_emit_entry`
+### `struct kmes_emit_entry` [*abi.struct-kmes-emit-entry]
 
 Total size 32 bytes.
 
@@ -45,7 +46,7 @@ Total size 32 bytes.
 
 Grouped as the header groups them.
 
-*Event origin class — kmes_event_header.origin_class.*
+*Event origin class — kmes_event_header.origin_class.* [*abi.origin-class-values]
 
 | Constant | Value |
 |---|---|
@@ -54,7 +55,7 @@ Grouped as the header groups them.
 | `KMES_ORIGIN_KACS` | `2` |
 | `KMES_ORIGIN_LCS` | `3` |
 
-*Ring-slot discovery.*
+*Ring-slot discovery.* [*abi.ring-slot-discovery]
 
 Ring slots are indexed by logical CPU id and the array is sized by the
 kernel's nr_cpu_ids, so a slot inside the array holds no ring when that
@@ -74,13 +75,13 @@ by CONFIG_NR_CPUS, which cannot reach 2^32-1.
 |---|---|
 | `KMES_ATTACH_QUERY_SLOTS` | `0xFFFFFFFF` |
 
-*Largest entry count a single SYS_KMES_EMIT_BATCH call accepts.*
+*Largest entry count a single SYS_KMES_EMIT_BATCH call accepts.* [*abi.batch-max-entries]
 
 | Constant | Value |
 |---|---|
 | `KMES_BATCH_MAX_ENTRIES` | `256` |
 
-*Runtime configuration registry location and keys.*
+*Runtime configuration registry location and keys.* [*abi.config-constants]
 
 Type values match the LCS REG_\* constants: REG_DWORD is 4 and REG_QWORD
 is 11. They are repeated here so &lt;pkm/kmes.h&gt; remains standalone.
@@ -113,7 +114,7 @@ is 11. They are repeated here so &lt;pkm/kmes.h&gt; remains standalone.
 | `KMES_CONFIG_MAX_EMIT_RATE_PER_PROCESS_MIN` | `100` |
 | `KMES_CONFIG_MAX_EMIT_RATE_PER_PROCESS_MAX` | `1000000` |
 
-*Privilege requirements.*
+*Privilege requirements.* [*abi.privilege-masks]
 
 Values mirror the corresponding KACS privilege bits while keeping this
 header standalone.
@@ -123,7 +124,7 @@ header standalone.
 | `KMES_EMIT_REQUIRED_PRIVILEGE` | `0x0000000000200000` (1ULL << 21) |
 | `KMES_ATTACH_REQUIRED_PRIVILEGE` | `0x0000000000000100` (1ULL << 8) |
 
-*On-wire event header.*
+*On-wire event header.* [*abi.event-header-layout]
 
 Every event in a ring begins with a fixed 77-byte header, followed by
 event_type_len bytes of type string and then the msgpack payload. Events
@@ -173,13 +174,13 @@ not the end of the type string, to find the payload.
 |---|---|
 | `KMES_EVENT_GUID_SIZE` | `16` |
 
-*Byte size of the fixed event header — the offset at which the type string begins.*
+*Byte size of the fixed event header — the offset at which the type string begins.* [*abi.header-base-size]
 
 | Constant | Value |
 |---|---|
 | `KMES_EVENT_HEADER_BASE_SIZE` | `77` |
 
-*Ring-buffer metadata layout.*
+*Ring-buffer metadata layout.* [*abi.ring-mapping-layout]
 
 An attached ring is mmap'd as:
 
@@ -202,7 +203,7 @@ The producer metadata page begins with KMES_RING_MAGIC.
 | `KMES_MAPPING_CONSUMER_OFFSET` | `4096` |
 | `KMES_MAPPING_DATA_OFFSET` | `8192` |
 
-*Field offsets within the producer metadata page.*
+*Field offsets within the producer metadata page.* [*abi.producer-page-offsets]
 
 | Constant | Value |
 |---|---|
@@ -216,7 +217,7 @@ The producer metadata page begins with KMES_RING_MAGIC.
 | `KMES_PRODUCER_TAIL_POS_OFFSET` | `72` |
 | `KMES_PRODUCER_FUTEX_COUNTER_OFFSET` | `128` |
 
-*Field offset within the consumer metadata page.*
+*Field offset within the consumer metadata page.* [*abi.consumer-page-offset]
 
 | Constant | Value |
 |---|---|
@@ -228,9 +229,9 @@ From `uapi/pkm/trace.h`. These are a diagnostic contract for
 ftrace, perf and eBPF consumers, letting a tool decode a `kmes:`
 event's `reason`, `op` or `state` field without recompiling
 against a specific kernel. No KMES syscall accepts or returns
-them, and values are append-only.
+them, and values are append-only. [*abi.trace.diagnostic-contract]
 
-*kmes_drop reason — why the KMES ring machinery lost an event.*
+*kmes_drop reason — why the KMES ring machinery lost an event.* [*abi.trace.drop-reasons]
 
 RING_FULL is a normal overwrite; TAIL_RESYNC is the silent corruption-
 recovery path that discards ALL pending events; VALIDATE is a kernel-
@@ -245,7 +246,7 @@ kmes:kmes_drop. No event payload bytes.
 | `KMES_DROP_VALIDATE` | `2` | single kernel-emit size/type reject |
 | `KMES_DROP_BATCH_STRUCT_INVALID` | `3` | kernel-batch entry structurally invalid |
 
-*kmes_swap reason — a bounded ring capacity swap lifecycle marker.*
+*kmes_swap reason — a bounded ring capacity swap lifecycle marker.* [*abi.trace.swap-reasons]
 
 BEGIN and COMPLETE/FAILED are whole-topology (cpu field is U16_MAX);
 MIGRATE_SKIP is per-CPU and carries the skipped byte count in `ret`.
@@ -258,7 +259,7 @@ Emitted by kmes:kmes_swap.
 | `KMES_SWAP_MIGRATE_SKIP` | `2` | shrink: old event too large, skipped (ret=bytes) |
 | `KMES_SWAP_FAILED` | `3` | swap aborted; ret is the errno |
 
-*kmes_rate reason — the per-process token-bucket backpressure signal.*
+*kmes_rate reason — the per-process token-bucket backpressure signal.* [*abi.trace.rate-reasons]
 
 THROTTLE is an -EAGAIN emit rejection; RECONFIGURE marks an admin rate
 change clamping all buckets. Emitted by kmes:kmes_rate.
@@ -268,7 +269,7 @@ change clamping all buckets. Emitted by kmes:kmes_rate.
 | `KMES_RATE_THROTTLE` | `0` | emit denied -EAGAIN; tokens &lt; requested |
 | `KMES_RATE_RECONFIGURE` | `1` | max emit rate reconfigured for all buckets |
 
-*kmes_wake reason — consumer wakeup machinery.*
+*kmes_wake reason — consumer wakeup machinery.* [*abi.trace.wake-reasons]
 
 NOTE arms a pending wake; FUTEX is the actual futex wake of blocked
 consumers. Emitted by kmes:kmes_wake.
@@ -278,7 +279,7 @@ consumers. Emitted by kmes:kmes_wake.
 | `KMES_WAKE_NOTE` | `0` | wake armed; futex counter incremented |
 | `KMES_WAKE_FUTEX` | `1` | blocked consumers woken |
 
-*kmes_ring_lifecycle reason — a generation-stable ring object transition.*
+*kmes_ring_lifecycle reason — a generation-stable ring object transition.* [*abi.trace.ring-lifecycle]
 
 `ret` is the outcome. Emitted by kmes:kmes_ring_lifecycle.
 
@@ -289,7 +290,7 @@ consumers. Emitted by kmes:kmes_wake.
 | `KMES_RING_PRODUCER_PAGE` | `2` | producer shmem/meta page attached |
 | `KMES_RING_CONSUMER_FD` | `3` | consumer anon-inode fd created |
 
-*kmes_ingress_reject reason — why an emit request was rejected before the ring.*
+*kmes_ingress_reject reason — why an emit request was rejected before the ring.* [*abi.trace.ingress-reject-reasons]
 
 OVER_MAX/OVER_CAP_HALF/SIZE_OVERFLOW are declared-size rejects;
 EMIT_OVERSIZE is a staged event too large at ring-write time;
@@ -304,7 +305,7 @@ Emitted by kmes:kmes_ingress_reject.
 | `KMES_INGRESS_EMIT_OVERSIZE` | `3` | staged event exceeds live capacity/2 at emit |
 | `KMES_INGRESS_BATCH_PARTIAL` | `4` | batch staged fewer entries than requested |
 
-*kmes_validate reason — the C-boundary result of the Rust staged-event validator.*
+*kmes_validate reason — the C-boundary result of the Rust staged-event validator.* [*abi.trace.validate-reasons]
 
 The Rust side collapses its structural checks into one nonzero return;
 only visible type/payload lengths and `ret` are recorded here. Emitted

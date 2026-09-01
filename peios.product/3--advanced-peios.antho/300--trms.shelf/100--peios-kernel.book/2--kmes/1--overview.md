@@ -5,7 +5,7 @@ description: KMES is the sole event emission path in Peios, used by kernel subsy
 
 The Kernel Mediated Event Subsystem is the sole event emission path in
 Peios. Kernel subsystems and userspace processes alike emit events
-exclusively through KMES — there is no alternative path. KMES stamps
+exclusively through KMES — there is no alternative path. [*event.sole-emission-path] KMES stamps
 each event with trusted metadata at emission time, buffers it in
 per-CPU shared memory ring buffers, and delivers it to userspace
 consumers that map those buffers directly. It does not persist, index,
@@ -45,23 +45,23 @@ access rights, which is the impersonation token when the thread is
 impersonating), the **true token GUID** (the process's primary token,
 regardless of impersonation), and the **process GUID** (assigned by
 KACS at fork and unchanged across exec). The **null GUID** — sixteen
-zero bytes — stamps an identity field whose value is unavailable.
+zero bytes — stamps an identity field whose value is unavailable. [*event.null-guid-means-unavailable]
 
 The **sequence number** is a per-CPU, per-boot monotonic 64-bit
 counter. Each CPU counts independently; the counter starts at zero
 when PKM loads and is incremented before its value is taken, so the
 first event on each CPU carries sequence number 1 and sequence 0 is
-never assigned. A gap in one CPU's sequence indicates lost events. The
+never assigned. [*event.sequence-starts-at-one] A gap in one CPU's sequence indicates lost events. The
 pair (`cpu_id`, `sequence`) uniquely identifies an event within a
-boot; there is no global sequence.
+boot; there is no global sequence. [*event.sequence-scoped-per-cpu]
 
 The **origin class** is a header byte identifying the emission path:
 userspace (0), KMES itself (1), KACS (2), or LCS (3). Values 4–255 are
-unassigned.
+unassigned. [*event.origin-classes-assigned]
 
 The **event type** is a length-prefixed UTF-8 string in the header
 identifying the kind of event. KMES imposes no structure on it and
-compares nothing against it; types are consumer vocabulary.
+compares nothing against it; types are consumer vocabulary. [*event.type-opaque]
 
 A **ring buffer** is a per-CPU shared memory region — producer
 metadata page, consumer metadata page, and a data region — created
@@ -70,4 +70,4 @@ userspace process that maps one or more ring buffers and drains events
 from them, typically with one thread per CPU. **Boot-time ring
 buffers** are the ordinary per-CPU buffers created at module load
 using compiled-in defaults; they are the live consumer-facing buffers
-from the first instant, not a separate class.
+from the first instant, not a separate class. [*ring.boot-buffers-ordinary]
