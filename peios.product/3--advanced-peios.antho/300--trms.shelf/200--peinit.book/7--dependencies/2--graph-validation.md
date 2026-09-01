@@ -58,6 +58,12 @@ Logged, and do not prevent boot:
   hard. `Alive` readiness means the process exists, which is no
   guarantee it is functional, so anything waiting on it is waiting on
   the wrong thing.
+- Services that need a role no service fills — in practice `authn`,
+  needed by every service whose `Identity` is not `SYSTEM`. Warned about
+  rather than failed, because a missing hard dependency rejects the whole
+  reload transaction, and that would prevent reloading the very
+  definition that installs the missing provider. See
+  [§7.6](~peios/advanced-peios/peinit/dependencies/derived-dependencies).
 
 ## Multiple findings
 

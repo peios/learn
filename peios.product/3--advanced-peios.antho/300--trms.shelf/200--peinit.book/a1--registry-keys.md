@@ -14,6 +14,7 @@ referenced.
 | `Machine\System\Services\SchemaVersion` | Schema version guard. `REG_DWORD`, currently 1. Created by peinit if absent. | §2.3, §3.2 |
 | `Machine\System\Services\ServiceSecurity` | The descriptor inherited by definitions that carry none. `REG_BINARY`. | §4.6 |
 | `Machine\System\Services\<name>` | One service definition. | §3.2 |
+| `Machine\System\Services\<name>\Provides` | Roles this service fills. `REG_MULTI_SZ`. Read at boot and on reload. | §7.6 |
 | `Machine\System\Services\<name>\LastTimerRun` | Last-run timestamp for a single-trigger persistent timer. `REG_QWORD`, written by peinit. | §9.3 |
 | `Machine\System\Services\<name>\TimerState\` | Per-trigger timestamps for a multi-trigger service. Each value is named by the percent-encoded schedule and holds a `REG_QWORD`. | §9.3 |
 

@@ -24,6 +24,7 @@ both is a duplicate, not two fields.
 | Wants | multi_string | — | Soft dependencies. §7.1 |
 | BindsTo | multi_string | — | Runtime coupling. §7.1 |
 | Conflicts | multi_string | — | Mutual exclusion. §7.1 |
+| Provides | multi_string | — | Roles this service fills, for dependencies peinit derives. §7.6 |
 | OnFailure | string | — | Service to start when this one fails. §6.3 |
 | ErrorControl | dword | 0 (Normal) | 0 Normal, 1 Critical. |
 | RemainAfterExit | dword | 0 | Oneshot only: stay Completed after a successful exit. |

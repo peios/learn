@@ -74,6 +74,20 @@ Every non-SYSTEM service start depends on authd being reachable, and
 every one of them fails if it is not. Platform services are unaffected,
 because they never take this route.
 
+peinit *orders* around that dependency rather than merely suffering it.
+The authority declares `Provides = ["authn"]`, and peinit derives a hard
+dependency on whoever fills that role for every service whose `Identity`
+— or whose `HookIdentity`, where it has hooks — is not `SYSTEM`
+([§7.6](~peios/advanced-peios/peinit/dependencies/derived-dependencies)).
+Nothing is written on the consumer side: the edge comes from the same
+field that creates the requirement, so a new service cannot forget it.
+
+Until that existed the ordering was left to each definition, and all
+three `LocalService` definitions in the tree omitted it — so a service
+needing a token routinely reached this code before the socket was bound
+and failed its launch with `ENOENT`, on most boots, recovering only
+through its restart policy.
+
 This is the intended behaviour rather than a limitation. The client that
 preceded it returned a freshly minted SYSTEM token whenever it could not
 do better, so a service declaring `LocalService` ran with peinit's entire
