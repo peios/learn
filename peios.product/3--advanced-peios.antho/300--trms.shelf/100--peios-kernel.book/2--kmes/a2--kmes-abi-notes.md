@@ -159,7 +159,10 @@ which also stages `<trace/events/kmes.h>` so the tracepoints resolve.
 The three syscall numbers are added to the syscall table by
 `kernel/patches/arch/syscall-table-pkm.patch`, which patches both
 `arch/x86/entry/syscalls/syscall_64.tbl` and the copy of it that ships
-under `tools/perf/`. They are registered `common`, so they are reachable
-from the x32 ABI as well as from x86-64. [*build.syscalls-registered-common]
+under `tools/perf/`. They are registered `common` in the table, but the
+kernel is built without `CONFIG_X86_X32_ABI`, so the only entry point
+that exists is x86-64: an x32 invocation (the number with bit 30 set)
+fails `ENOSYS` like any other x32 syscall on this
+kernel. [*build.syscalls-registered-common]
 
 `CONFIG_SECURITY_PKM_KUNIT` compiles in the in-kernel test harness.
