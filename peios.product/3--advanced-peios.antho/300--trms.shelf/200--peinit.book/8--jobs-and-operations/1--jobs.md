@@ -115,6 +115,31 @@ like any other, but the jobs system keeps its own entry for a further
 60 seconds so that a submitter polling for the outcome can still read
 it (§8.5). That entry is a retained answer, not a history.
 
+## The launch queues are hints
+
+A job awaiting launch is queued by id, in one of six queues — service
+main, pre-start hook, post-start hook, control, health check and
+submitted. The queues hold **ids**; the store holds the records, and the
+store is the only truth.
+
+They can therefore disagree. Any path that finishes a job in `Created`
+drops the record, and a path that does not also clear the queue leaves an
+id behind pointing at nothing. Requiring every such path to remember was
+a poor trade: there are around a dozen of them, nothing enforced it, and
+the cost of one omission was that peinit's runtime loop ended — which
+ends PID 1.
+
+So a drain that meets an id with no record **discards it and moves on to
+the next**, rather than treating it as an error. A live entry behind a
+stale one still launches, so one bad id cannot stall a queue. This is why
+the ordering rule is worth stating plainly: keeping the queue in step is
+a tidiness obligation, not a correctness one.
+
+Discarded entries are counted and reported on the work pump's turn, so a
+bookkeeping fault shows up as a number rather than disappearing. A count
+that is not zero means some path finished a job without clearing its
+queue entry, and that path is a defect even though it is no longer fatal.
+
 ## Ownership
 
 | Concern | Owner |
