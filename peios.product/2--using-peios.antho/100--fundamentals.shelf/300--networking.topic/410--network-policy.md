@@ -90,9 +90,10 @@ opened is `out` for its whole life, replies included.
 A sentence answers for the flow until one of two things makes it stale.
 **The policy changes**: a new generation re-judges every flow on its
 next packet, so a rule that now forbids a running connection cuts it
-then — with a TCP reset, if the rule says `REJECT`. PNP does not
-grandfather old connections past a new policy; the registry always says
-what is enforced. **The clock moves**: a rule that consulted `Time.Hour`
+then — with a TCP reset to whichever end sent that packet, if the rule
+says `REJECT`; the other end gets its reset the next time it speaks. PNP
+does not grandfather old connections past a new policy; the registry
+always says what is enforced. **The clock moves**: a rule that consulted `Time.Hour`
 (matched or not — a higher-priority rule that missed only on the hour
 may match later) makes the sentence expire at the moment that condition
 would next flip, and the flow is re-judged then. So `Time.Hour.Equal` =
