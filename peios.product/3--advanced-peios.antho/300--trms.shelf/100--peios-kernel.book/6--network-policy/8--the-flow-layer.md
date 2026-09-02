@@ -98,7 +98,13 @@ packet — an idle flow past a policy change is killed when it next
 speaks, or conntrack times it out; there are no timers and no walk of
 the table at publication. Grandfathering was rejected: the registry must
 not lie about what is enforced, and a `REJECT` rule must be able to
-reject something already running (on TCP, that is an RST to both ends).
+reject something already running. Each end learns on its own next
+packet: refusing the local end's outbound packet delivers the forged
+peer reset to the local socket at once (verified live: a viewer stream
+froze the instant its kill rule landed, and conntrack closed the flow),
+and the peer's next inbound packet meets the cached `REJECT` sentence
+and gets its reset then. A peer that stays silent is not told; that is
+the lazy law, not a gap.
 
 The expiry is the evaluation's `expires_at` (§6.4): the earliest moment
 any live-time condition the judgment *consulted* would flip. A forest
