@@ -110,8 +110,21 @@ Three visibility laws are enforced here rather than in the core: a
 `RawPacket` forest is given no tags whatever the flow says (tags flow
 upward only, and RawPacket is the lowest layer; `Packet` and `Flow`
 forests read them); an ingress snapshot has no flow, so no tags exist to
-give; and the flow-only facts (`Related`, `Start.*`) are given to a
-`Flow` forest alone — everywhere else they are absent by law, exactly as
-ingestion's lint says (§6.5). The clock is given to every layer, and so
-is the trace of consulted time conditions (§6.4); only the Flow seat acts
-on it.
+give; and the flow-only facts (`Related`, `Start.*`, and the identity
+facts) are given to a `Flow` forest alone — everywhere else they are
+absent by law, exactly as ingestion's lint says (§6.5). The clock is
+given to every layer, and so is the trace of consulted time conditions
+(§6.4); only the Flow seat acts on it.
+
+## The identity fields
+
+The snapshot's last fields are not extracted from the packet at all.
+The Flow layer's view builder (§6.8) sets them from the flow's
+extension: for the local end, and on loopback for the other end, the
+kind (`program`, `kernel`, `shared`, `none`), the process GUID, pid and
+comm, and a *borrowed* pointer to the KACS token the socket was stamped
+with — the extension holds the reference for the flow's life, so the
+pointer is valid for the hook. The bridge lifts a program end into a
+`Principal` the core's `Local.*` and `Remote.*` conditions question
+(§6.9); every other snapshot leaves the fields zero, which lifts to
+absent.

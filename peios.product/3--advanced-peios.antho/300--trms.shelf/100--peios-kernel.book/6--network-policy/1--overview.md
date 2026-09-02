@@ -83,10 +83,15 @@ collation, so a `COUNT` lands after this packet's own reads and a
   `REPORT`, a prompt), applied by the glue.
 - **Confession** — a counter in the engine status for something the
   engine refused or could not do. Nothing in PNP fails silently.
+- **Owner** — the identity KACS stamps on an inet socket (§3.12.2): the
+  effective token and process facts at the last act that committed the
+  socket to a role. What the Flow layer's `Local.*` facts are read from.
+- **Endpoint kind** — what stands at a local end of a flow: `program`,
+  `kernel`, `shared` or `none` (§6.9).
 
 The chapter follows a packet: the seats it meets (§6.2), the snapshot
 taken of it (§6.3), how the forest judges it (§6.4), where that forest
 came from (§6.5), the stores its effects land in (§6.6), the event that
-records it (§6.7), and what happens when it is the first packet of a
-flow (§6.8). §6.A is the generated ABI of `/dev/peios-pnp`; §6.B is what
-the ABI tables cannot say.
+records it (§6.7), what happens when it is the first packet of a flow
+(§6.8), and who stands at its local end (§6.9). §6.A is the generated
+ABI of `/dev/peios-pnp`; §6.B is what the ABI tables cannot say.

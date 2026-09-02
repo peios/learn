@@ -60,6 +60,7 @@ every condition holds; a condition over a fact the packet lacks is false
 | `LessThan` | integer | A single integer; strictly less. |
 | `Has` | flags | A flag name or list; all listed bits set. |
 | `Hasnt` | flags | A flag name or list; all listed bits clear. |
+| `Present` | all, and `Tag.<name>` / `Counter.<name>` | `1`: the fact exists for this packet or flow; `0`: it does not. The one operator that looks through the absent-fact law. On a fact its layer never has, it refuses the generation rather than becoming an always-true condition. |
 
 Integer values may be written as `REG_DWORD`, `REG_QWORD`, or as decimal
 strings; a list of integers is a `REG_MULTI_SZ` of decimal strings and
@@ -89,6 +90,15 @@ an address, `Has` on a port) refuses the generation.
 | `Related` | integer | `0` or `1`: the flow was expected by another (an ICMP error for a live flow, FTP data) | `Flow` layer only |
 | `Time.Year`, `Time.Month`, `Time.DayOfMonth`, `Time.DayOfWeek`, `Time.Hour`, `Time.Minute`, `Time.Second` | integer | wall clock, UTC; `DayOfWeek` is ISO (1 = Monday .. 7 = Sunday) | always. In `Flow`, a consulted condition expires the sentence at its next flip |
 | `Start.Year`, `Start.Month`, `Start.DayOfMonth`, `Start.DayOfWeek`, `Start.Hour`, `Start.Minute`, `Start.Second` | integer | the wall clock when the flow began, UTC | `Flow` layer only; fixed for the flow's life, never expires a sentence |
+| `Local` | string | `program`, `kernel`, `shared`, `none`: what stands at this machine's end of the flow | `Flow` layer only; always present there |
+| `Local.User` | SID | `S-1-5-19`, or a well-known name (`SYSTEM`, `LocalService`, `NetworkService`, `Everyone`, `Administrators`, `Users`, …) | `Flow`, `Local` is `program` |
+| `Local.Group` | SID set | SIDs or well-known names; *any of* the token's enabled groups (deny-only groups are invisible; the logon SID is among them) | `Flow`, `Local` is `program` |
+| `Local.Integrity` | integer | a level, or `untrusted`, `low`, `medium`, `high`, `system` | `Flow`, `Local` is `program` |
+| `Local.Confinement` | SID | the confinement SID | `Flow`, the program is confined |
+| `Local.Capability` | SID set | *any of* the confinement's capability SIDs | `Flow`, the program is confined |
+| `Local.Service` | SID | a service *name* (`resolvd`), or its `S-1-5-80-…` SID | `Flow`, the program is a service |
+| `Local.Process` | string | the process GUID, `8-4-4-4-12` hex (case-insensitive) | `Flow`, `Local` is `program` |
+| `Remote`, `Remote.*` | as `Local` | the other end of the flow, when it is on this machine too | `Flow`, loopback flows only |
 | `Tag.<name>` | integer | the flow tag's value | the flow carries the tag (`Packet` and `Flow` layers; never `RawPacket`) |
 | `Counter.<name>[(...)]` | integer | a counter view, see below | the packet has the view's key facts and a cell exists |
 
@@ -98,8 +108,30 @@ address and vice versa, so `0.0.0.0/0` does not swallow IPv6.
 A `Flow` fact is one that is identical for every packet of the flow. The
 per-packet facts marked "not a `Flow` fact" are legal in a `Flow` rule
 but never present there, so the condition never holds; the viewer flags
-it. `Related` and `Start.*` are the reverse: never present outside
-`Flow`.
+it. `Related`, `Start.*` and the identity facts are the reverse: never
+present outside `Flow`.
+
+### Who is at this end
+
+`Local` says what answers at this machine's end of a flow: a
+`program` (a socket some process owns — the identity the kernel stamped
+on it at the last act that committed it: creation, bind, listen,
+connect, accept, or an explicit restamp), the `kernel` itself (resets,
+ICMP errors, neighbour discovery, tunnel outers, kernel sockets),
+`shared` (inbound multicast or broadcast, delivered to every socket
+bound to the port — one flow, many receivers), or `none` (nothing
+listens; the stack will refuse it). Only a `program` has `Local.*`
+facts, so `Local.User.Present = 0` is "no program stands here".
+
+Identity is decided once, at the flow's first judgment, and kept for
+the flow's life. A service thread acting for a client is the client
+(the *effective* identity governs, as it does for files); a listener
+handed to another program is governed by the program that last
+committed it. SIDs are written as `S-1-…`; a user or group may instead
+be a well-known name, a service its name — the name is turned into the
+service's SID exactly as the service's token was minted, so the rule
+matches the token, not a string. A misspelt name refuses the
+generation rather than quietly matching nothing.
 
 ### Counter views
 
@@ -171,6 +203,7 @@ no far end to tear down.
 | Order | first inbound, last outbound | between | last inbound (after `Packet`), first outbound (before `Packet`) |
 | `FlowState` | never (the seat stands before conntrack) | yes | never (the layer is the judgment of a flow) |
 | `Related`, `Start.*` | never | never | yes |
+| `Local`, `Local.*`, `Remote.*` | never | never | yes (`Remote` on loopback only) |
 | Per-packet facts (`Length`, `TcpFlags`, `Fragment`, `Ttl`, `Dscp`, `EtherType`, `DstMac`) | yes | yes | never |
 | `Tag.<name>` reads | never | tags `RawPacket` or `Packet` rules write | any tag |
 | `TAG` writes | yes | yes | yes |
@@ -202,7 +235,8 @@ holds no sentence and is evaluated on every packet, counted.
 
 A loopback flow has two local endpoints and two sentences: judged as
 `out` at the outbound seat and as `in` at the inbound seat, and every
-packet of it answers to the stricter of the two.
+packet of it answers to the stricter of the two. Each judgment sees its
+own end as `Local` and the other as `Remote`.
 
 ## Limits
 

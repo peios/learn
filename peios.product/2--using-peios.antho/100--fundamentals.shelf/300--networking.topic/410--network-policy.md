@@ -108,6 +108,21 @@ connection from one local program and an inbound one to another, so the
 flow layer judges it twice, once as `out` and once as `in`, and the flow
 lives only if both said `PASS`.
 
+## Who is speaking
+
+A rule can name the program, not only the address. The `Flow` layer
+knows who stands at this machine's end of every flow — which process,
+under which principal, as which service — because the kernel stamps
+that identity on the socket when the program creates, binds, listens,
+connects or accepts it. `Local.Service.Equal = resolvd` with
+`DstPort.Equal = 53` is "only the resolver asks the world names";
+`Local.User.Present = 0` is "no program stands behind this" (the kernel's
+own traffic, or nothing listening). On a loopback flow both ends are
+known, so "only resolvd may reach the registry's port" is one rule too.
+What is provable is what is stated: a program is its token, never a path
+or a name it claims for itself, and an end the kernel could not
+attribute is confessed in the status rather than guessed.
+
 ## Verdicts and effects
 
 Actions come in two species. **Verdicts** decide the packet's fate:

@@ -17,12 +17,16 @@ An event is the decision and enough of the snapshot to find the packet
 it was about: sequence number, `CLOCK_REALTIME` nanoseconds, the seat
 and layer, the verdict and — when it was a reject — its kind, flags
 (`BACKSTOP`, `FAIL_CLOSED`, `REJECT_DEGRADED`, `REJUDGED` for a Flow
-evaluation that replaced a stale sentence), direction, address family,
+evaluation that replaced a stale sentence, `IDENTITY_UNRESOLVED` for
+one whose endpoint could not be attributed), direction, address family,
 protocol, flow state, interface index, ports, ethertype, both addresses,
 the stack-view length, the effect counts the evaluation yielded packed
 eight bits each (tags, counts, reports, prompts, saturating), and the
 attributing rule's path — the winning rule, or `backstop`, or
-`fail-closed` — truncated to 96 bytes.
+`fail-closed` — truncated to 96 bytes. A `Flow` event also carries both
+endpoints' identities as the judgment read them (§6.9): the kind, the
+process GUID, pid and comm, the user SID and the service SID — binary
+SIDs, so the viewer, not the kernel, turns them into names.
 
 The path is relative to the layer key: `no-inbound/ssh`, not
 `Machine\System\Network\Rules\Packet\no-inbound\ssh`.
@@ -51,7 +55,7 @@ which is the same treatment the wire tap gives its own frames.
 
 `PEIOS_PNP_IOC_STATUS` fills `struct peios_pnp_status`: the ABI version
 (check it before trusting the rest — the ABI is experimental and
-versioned, currently 3), the generation, whether any layer is enforcing,
+versioned, currently 4), the generation, whether any layer is enforcing,
 the ring's confessed drops, and the engine counters. The counters are
 plain 64-bit atomics rather than per-CPU — legibility over throughput
 while the engine is young, to be revisited with a compiled evaluator.
@@ -66,6 +70,7 @@ while the engine is young, to be revisited with a compiled evaluator.
 | The stores | `tag_writes`, `tag_untracked`, `tag_refused`, `count_writes`, `count_key_absent`, `count_refused`, `reports_emitted`, `counter_cells` |
 | The Flow layer | `flow_judged` (evaluations, sentences written), `flow_cached` (packets answered by a current sentence), `flow_rejudged` (stale by generation), `flow_expired` (stale by time edge), `flow_uncached` (flows with no extension to hold a sentence, evaluated per packet) |
 | Refusals | `refusals_emitted` (answers built and sent), `refusals_bypassed` (own refusals waved through a seat), `teardowns_emitted` (far-end resets for refused established TCP flows) |
+| The identity facts | `identity_unresolved` (endpoints that could not be attributed at resolution: a socket with no KACS state, an inet socket nobody stamped, a loopback sender the inbound seat could not see) |
 
 Two invariants a reader can check: `judged` equals the number of
 evaluations against a live forest at any layer (Flow evaluations
@@ -92,6 +97,8 @@ a refusal from a missing effect:
 - a tag it could not write → `tag_untracked` or `tag_refused`;
 - a count it could not land → `count_key_absent` or `count_refused`;
 - a sentence it could not keep → `flow_uncached`;
+- an endpoint it could not attribute → `identity_unresolved`, and the
+  event's flag;
 - a packet it did not judge because a sentence answered → `flow_cached`;
 - a refusal it did not judge because it was its own → `refusals_bypassed`;
 - a generation it could not accept → `last_ingest_error`, and the log;

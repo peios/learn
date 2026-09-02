@@ -25,6 +25,7 @@ packs them (direction, argument size, type `'N'`, number).
 | `PEIOS_PNP_IOC_STATUS` | `0x81604E01` | `_IOR(PEIOS_PNP_IOC_TYPE, PEIOS_PNP_IOC_STATUS_NR, struct peios_pnp_status)` |
 | `PEIOS_PNP_IOC_COUNTERS` | `0xC0184E02` | `_IOWR(PEIOS_PNP_IOC_TYPE, PEIOS_PNP_IOC_COUNTERS_NR, struct peios_pnp_counters_query)` |
 | `PEIOS_PNP_IOC_FLOWS` | `0xC0184E03` | `_IOWR(PEIOS_PNP_IOC_TYPE, PEIOS_PNP_IOC_FLOWS_NR, struct peios_pnp_flows_query)` |
+| `PEIOS_PNP_IOC_LISTENERS` | `0xC0184E04` | `_IOWR(PEIOS_PNP_IOC_TYPE, PEIOS_PNP_IOC_LISTENERS_NR, struct peios_pnp_listeners_query)` |
 
 ## Structure layouts
 
@@ -32,7 +33,7 @@ Offsets and sizes are measured, not declared.
 
 ### `struct peios_pnp_event` [*abi.struct-peios-pnp-event]
 
-Total size 176 bytes.
+Total size 456 bytes.
 
 | Offset | Size | Type | Field |
 |---|---|---|---|
@@ -58,6 +59,21 @@ Total size 176 bytes.
 | 72 | 4 | `__u32` | `effects` |
 | 76 | 96 | `__u8[PEIOS_PNP_EV_ATTR_LEN]` | `attributed` |
 | 172 | 4 | `__u32` | `_pad1` |
+| 176 | 1 | `__u8` | `local_kind` |
+| 177 | 1 | `__u8` | `remote_kind` |
+| 178 | 1 | `__u8` | `local_unresolved` |
+| 179 | 1 | `__u8` | `remote_unresolved` |
+| 180 | 4 | `__s32` | `local_pid` |
+| 184 | 4 | `__s32` | `remote_pid` |
+| 188 | 16 | `__u8[PEIOS_PNP_GUID_LEN]` | `local_guid` |
+| 204 | 16 | `__u8[PEIOS_PNP_GUID_LEN]` | `remote_guid` |
+| 220 | 16 | `__u8[PEIOS_PNP_COMM_LEN]` | `local_comm` |
+| 236 | 16 | `__u8[PEIOS_PNP_COMM_LEN]` | `remote_comm` |
+| 252 | 68 | `__u8[PEIOS_PNP_SID_LEN]` | `local_user` |
+| 320 | 68 | `__u8[PEIOS_PNP_SID_LEN]` | `remote_user` |
+| 388 | 32 | `__u8[PEIOS_PNP_SERVICE_SID_LEN]` | `local_service` |
+| 420 | 32 | `__u8[PEIOS_PNP_SERVICE_SID_LEN]` | `remote_service` |
+| 452 | 4 | `__u32` | `_pad2` |
 
 ### `struct peios_pnp_status` [*abi.struct-peios-pnp-status]
 
@@ -106,7 +122,8 @@ Total size 352 bytes.
 | 304 | 8 | `__u64` | `refusals_emitted` |
 | 312 | 8 | `__u64` | `refusals_bypassed` |
 | 320 | 8 | `__u64` | `teardowns_emitted` |
-| 328 | 24 | `__u64[3]` | `_reserved` |
+| 328 | 8 | `__u64` | `identity_unresolved` |
+| 336 | 16 | `__u64[2]` | `_reserved` |
 
 ### `struct peios_pnp_counter_rec` [*abi.struct-peios-pnp-counter-rec]
 
@@ -143,7 +160,7 @@ Total size 24 bytes.
 
 ### `struct peios_pnp_flow_rec` [*abi.struct-peios-pnp-flow-rec]
 
-Total size 288 bytes.
+Total size 568 bytes.
 
 | Offset | Size | Type | Field |
 |---|---|---|---|
@@ -177,8 +194,52 @@ Total size 288 bytes.
 | 156 | 4 | `__u8[4]` | `_pad1` |
 | 160 | 64 | `__u64[PEIOS_PNP_FLOW_MAX_TAGS]` | `tag_hash` |
 | 224 | 64 | `__u64[PEIOS_PNP_FLOW_MAX_TAGS]` | `tag_value` |
+| 288 | 2 | `__u8[PEIOS_PNP_FLOW_SENTENCES]` | `owner_kind` |
+| 290 | 2 | `__u8[PEIOS_PNP_FLOW_SENTENCES]` | `owner_unresolved` |
+| 292 | 4 | `__u8[4]` | `_pad2` |
+| 296 | 8 | `__s32[PEIOS_PNP_FLOW_SENTENCES]` | `owner_pid` |
+| 304 | 32 | `__u8[32]` | `owner_guid` |
+| 336 | 32 | `__u8[32]` | `owner_comm` |
+| 368 | 136 | `__u8[136]` | `owner_user` |
+| 504 | 64 | `__u8[64]` | `owner_service` |
 
 ### `struct peios_pnp_flows_query` [*abi.struct-peios-pnp-flows-query]
+
+Total size 24 bytes.
+
+| Offset | Size | Type | Field |
+|---|---|---|---|
+| 0 | 8 | `__u64` | `buf` |
+| 8 | 4 | `__u32` | `buf_len` |
+| 12 | 4 | `__u32` | `count` |
+| 16 | 4 | `__u32` | `total` |
+| 20 | 4 | `__u32` | `_pad0` |
+
+### `struct peios_pnp_listener_rec` [*abi.struct-peios-pnp-listener-rec]
+
+Total size 168 bytes.
+
+| Offset | Size | Type | Field |
+|---|---|---|---|
+| 0 | 1 | `__u8` | `family` |
+| 1 | 1 | `__u8` | `protocol` |
+| 2 | 1 | `__u8` | `reuseport` |
+| 3 | 1 | `__u8` | `connected` |
+| 4 | 1 | `__u8` | `v6only` |
+| 5 | 1 | `__u8` | `owner_kind` |
+| 6 | 1 | `__u8` | `owner_unresolved` |
+| 7 | 1 | `__u8` | `_pad0` |
+| 8 | 2 | `__u16` | `port` |
+| 10 | 2 | `__u16` | `_pad1` |
+| 12 | 4 | `__s32` | `ifindex` |
+| 16 | 16 | `__u8[16]` | `addr` |
+| 32 | 4 | `__s32` | `owner_pid` |
+| 36 | 16 | `__u8[PEIOS_PNP_GUID_LEN]` | `owner_guid` |
+| 52 | 16 | `__u8[PEIOS_PNP_COMM_LEN]` | `owner_comm` |
+| 68 | 68 | `__u8[PEIOS_PNP_SID_LEN]` | `owner_user` |
+| 136 | 32 | `__u8[PEIOS_PNP_SERVICE_SID_LEN]` | `owner_service` |
+
+### `struct peios_pnp_listeners_query` [*abi.struct-peios-pnp-listeners-query]
 
 Total size 24 bytes.
 
@@ -216,7 +277,7 @@ design ships (PEI-598). Check `abi` before trusting the rest.
 
 | Constant | Value |
 |---|---|
-| `PEIOS_PNP_ABI_VERSION` | `3` |
+| `PEIOS_PNP_ABI_VERSION` | `4` |
 
 *Which standing seat judged the traversal.* [*abi.seat-values]
 
@@ -276,7 +337,34 @@ design ships (PEI-598). Check `abi` before trusting the rest.
 | `PEIOS_PNP_EV_F_FAIL_CLOSED` | `0x02` | evaluation failed; DROP |
 | `PEIOS_PNP_EV_F_REJECT_DEGRADED` | `0x04` | REJECT emitted as DROP |
 | `PEIOS_PNP_EV_F_REJUDGED` | `0x08` | Flow: a stale sentence re-judged |
+| `PEIOS_PNP_EV_F_IDENTITY_UNRESOLVED` | `0x10` | Flow: an endpoint could not be attributed |
+
+*What stood at an endpoint: the Flow layer's Local / Remote facts (ABI 4).*
+
+| Constant | Value | Notes |
+|---|---|---|
+| `PEIOS_PNP_EV_LOCAL_ABSENT` | `0` | not a Flow event / not local |
+| `PEIOS_PNP_EV_LOCAL_PROGRAM` | `1` | a process's socket |
+| `PEIOS_PNP_EV_LOCAL_KERNEL` | `2` | the stack itself |
+| `PEIOS_PNP_EV_LOCAL_SHARED` | `3` | inbound multicast / broadcast |
+| `PEIOS_PNP_EV_LOCAL_NONE` | `4` | nothing receives it |
 | `PEIOS_PNP_EV_ATTR_LEN` | `96` |  |
+
+A SID's binary form: revision, sub-authority count, a 48-bit authority,
+up to 15 sub-authorities. Self-sized by its count byte; all zero =
+absent.
+
+| Constant | Value |
+|---|---|
+| `PEIOS_PNP_SID_LEN` | `68` |
+
+*A per-service SID (S-1-5-80 + five sub-authorities) is exactly this.*
+
+| Constant | Value |
+|---|---|
+| `PEIOS_PNP_SERVICE_SID_LEN` | `32` |
+| `PEIOS_PNP_COMM_LEN` | `16` |
+| `PEIOS_PNP_GUID_LEN` | `16` |
 
 One counter cell, as the counters dump reports it: the stream and key-
 spec of its table, the key it holds (only the facts the key-spec names
@@ -307,9 +395,8 @@ policy names them.
 | `PEIOS_PNP_FLOW_MAX_TAGS` | `8` |
 | `PEIOS_PNP_FLOW_SENTENCES` | `2` |
 
-The flows dump: fills `buf` with as many records as fit; `count` is how
-many were written, `total` how many live flows the walk saw. A best-
-effort snapshot of a table that changes under the walk.
+The listeners dump: fills `buf` with as many records as fit; `count` is
+how many were written, `total` how many sockets the walk saw.
 
 | Constant | Value |
 |---|---|
@@ -317,3 +404,4 @@ effort snapshot of a table that changes under the walk.
 | `PEIOS_PNP_IOC_STATUS_NR` | `0x00000001` |
 | `PEIOS_PNP_IOC_COUNTERS_NR` | `0x00000002` |
 | `PEIOS_PNP_IOC_FLOWS_NR` | `0x00000003` |
+| `PEIOS_PNP_IOC_LISTENERS_NR` | `0x00000004` |

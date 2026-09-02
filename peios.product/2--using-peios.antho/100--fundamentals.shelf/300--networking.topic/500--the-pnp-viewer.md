@@ -63,6 +63,14 @@ the tree is a visible, deletable permissive statement.
 
 ## The flows tab
 
+Each flow shows its **owner**: the program at this machine's end —
+its comm and pid, and the service or principal it runs as — or what
+stood there instead (the kernel, a shared receiver, nobody). A loopback
+flow shows both ends. Service names are resolved from the service
+definitions in the registry; a SID the viewer cannot name is shown as
+is. Hover a verdict badge to see the same for the judgment that
+produced it.
+
 Every flow conntrack is tracking, refreshed while the tab is open: the
 protocol and both ends (originator first), which side opened it, the
 interface it was judged on, conntrack's state and remaining lifetime, the
@@ -75,6 +83,17 @@ carries are listed by name where the policy mentions them.
 
 A flow with no sentence was never judged: it began under a permissive
 generation, or before the flow layer had a policy.
+
+## The listeners tab
+
+What the machine is prepared to receive right now, without waiting for
+a packet: every TCP socket that is listening and every UDP socket that
+is bound, by protocol, address and port, with the program that owns it
+— comm, pid, and the service or principal it runs as — or "kernel" for
+a socket the kernel opened. Wildcards show as `*`; a member of a
+`SO_REUSEPORT` group is marked as one. This is the attack surface as a
+list, and the first place to look when a rule about a service does not
+match: the stamp shown here is the one the Flow layer will read.
 
 ## The counters tab
 

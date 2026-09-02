@@ -40,9 +40,9 @@ snapshot: a Flow fact is one identical for every packet of the flow, so
 `pnp_flow_view()` builds it from the flow. A reply-direction packet's
 addresses and ports are swapped back to the original tuple (and its
 ICMP type replaced by the tuple's); the direction is the originator's,
-recorded at the first judgment along with the interface, the VLAN and
-the peer's MAC, so a re-judgment on a reply sees exactly the facts the
-first judgment saw. (Found live before the fix: an inbound viewer flow
+recorded at the first judgment along with the interface, the VLAN, the
+peer's MAC and the endpoints' identities (§6.9), so a re-judgment on a
+reply sees exactly the facts the first judgment saw. (Found live before the fix: an inbound viewer flow
 re-judged on its reply packet as `out`, and matched `outbound-ok`.) A
 loopback flow's view takes the slot's direction. The refusal, when the
 verdict is one, answers the packet in hand; the event describes the flow
@@ -138,5 +138,6 @@ changes under it.
   optimisation, invisible to authors.
 - **Effects on first judgment only**: a kill by `REJECT, REPORT(n)` must
   report; the `COUNT` noise is per generation, not per packet.
-- **Identity facts** (`Owner`, `Service`, the listener, the image): rung
-  3, PEI-28.
+- **Identity in the sentence.** The sentence caches the verdict; the
+  identities the judgment read are recorded beside it (§6.9), not
+  re-derived per packet.

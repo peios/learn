@@ -16,8 +16,11 @@ event's `reject_kind`, the store confessions and `counter_cells` and
 `reporting_level` in the status, and the counters ioctl. Version 3 (the
 Flow layer) added the `LOCAL_OUT` seat and `Flow` layer ids, the
 `REJUDGED` event flag, the Flow and refusal counters in the status, and
-the flows ioctl. pnpd and the kernel ship together on the experimental
-edition, so the check is a guard, not a negotiation.
+the flows ioctl. Version 4 (the identity facts) added the endpoints'
+identities to the event and the flow record, the `IDENTITY_UNRESOLVED`
+event flag and the `identity_unresolved` counter (in a reserved slot,
+so the status kept its size). pnpd and the kernel ship together on the
+experimental edition, so the check is a guard, not a negotiation.
 
 ## `/dev/peios-pnp`
 
@@ -31,6 +34,7 @@ A misc device, mode 0600, root-only by ownership.
 | `ioctl(PEIOS_PNP_IOC_STATUS, struct peios_pnp_status *)` | Fills the status snapshot. Cumulative counters since boot. | `EFAULT` |
 | `ioctl(PEIOS_PNP_IOC_COUNTERS, struct peios_pnp_counters_query *)` | `buf`/`buf_len` describe a user buffer of `struct peios_pnp_counter_rec`; on return `count` is how many were written and `total` how many cells exist. A short buffer is not an error — the two numbers disagree. Best-effort snapshot: cells may change between records. | `EFAULT`; `ENOMEM` |
 | `ioctl(PEIOS_PNP_IOC_FLOWS, struct peios_pnp_flows_query *)` | Same contract over `struct peios_pnp_flow_rec`: `count` written, `total` live flows the walk saw. Records are copied out between hash buckets, so the dump is a best-effort picture of a table that changes under it. | `EFAULT`; `ENOMEM` |
+| `ioctl(PEIOS_PNP_IOC_LISTENERS, struct peios_pnp_listeners_query *)` | Same contract over `struct peios_pnp_listener_rec`: every TCP socket in the listening state and every bound UDP / UDP-Lite socket of the root network namespace, with the identity KACS stamped on it (§6.9). `total` is how many the walk saw. | `EFAULT`; `ENOMEM` |
 | other ioctls | — | `ENOTTY` |
 
 Sequence numbers are monotonic per boot. A gap between consecutive
@@ -63,6 +67,16 @@ total.
   `protocol`.
 - `flow_state` 0 means the fact was absent (the ingress seat), not that
   the flow was untracked; untracked is 5.
+- The identity fields (ABI 4) are set on `Flow` events only and zero
+  elsewhere. `local_kind` / `remote_kind` are `PEIOS_PNP_EV_LOCAL_*`:
+  `ABSENT` (0) for a non-Flow event, and for `remote` whenever the
+  other end is not local; `remote` is filled only on a loopback flow.
+  For a `PROGRAM` end, `*_guid`, `*_pid` and `*_comm` are the process
+  facts at the socket's stamp, `*_user` the token's user SID and
+  `*_service` its per-service SID, both binary and self-sized (byte 1
+  is the sub-authority count; all zero = absent — a user program has no
+  service SID). `*_unresolved` says the end could not be attributed and
+  was reported as the kernel's or as absent.
 
 ## Counter records
 
@@ -105,6 +119,27 @@ total.
 - `tag_hash`/`tag_value` hold up to `PEIOS_PNP_FLOW_MAX_TAGS` (8)
   present tags by name hash and value; `n_tags` is the flow's *total*,
   so a value above 8 means some are not listed.
+- The identities (ABI 4) are per sentence slot, recorded at the flow's
+  first judgment and fixed: `owner_kind[slot]` is `PEIOS_PNP_EV_LOCAL_*`
+  (`ABSENT` = not yet resolved); the per-slot arrays are flattened at a
+  fixed stride — `owner_guid` 16 bytes per slot, `owner_comm` 16,
+  `owner_user` 68, `owner_service` 32 — so slot 1's user SID starts at
+  byte 68. Slot 1 is filled only for a loopback flow.
+
+## Listener records
+
+- One record per socket prepared to receive: TCP in `LISTEN`, and UDP /
+  UDP-Lite bound to a port (`connected` when it also has a peer and so
+  receives from one address only). `addr` all zero is the wildcard;
+  `ifindex` is `SO_BINDTODEVICE`, 0 for any; `reuseport` marks a member
+  of a `SO_REUSEPORT` group, of which each member is listed. `v6only`
+  says an `AF_INET6` socket refuses v4-mapped traffic — a v6 socket
+  without it answers on both families.
+- The owner fields are those of the flow record's slot, for the socket's
+  current stamp: `owner_kind` is `PROGRAM` or `KERNEL` (a socket nobody
+  stamped reads `KERNEL` with `owner_unresolved` set).
+- The walk is the root namespace's tables only, copied out between hash
+  buckets: a best-effort list of a set that changes under it.
 
 ## Bounds not in the header
 
@@ -118,6 +153,7 @@ total.
 | Longest counter window | 86 400 s |
 | Sentences per flow | 2 (slot 1 only for loopback flows) |
 | Flow records batched per copy-out | 32 (kernel-internal) |
+| Listener records batched per copy-out | 32 (kernel-internal) |
 
 ## Build configuration
 

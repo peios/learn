@@ -669,15 +669,22 @@ level: the sender can always attest to what it is. Default 0.
 |---|---|
 | `KACS_SO_PASS_TOKEN` | `3` |
 
-*setsockopt only, on a listening socket.*
+*setsockopt only.*
 
-optval: int, ignored. Replaces the identity the listener conveys to
-connecting clients — captured when listen() was called — with the
-caller's current effective identity, at the listener's level. Self-
-gated: a process can always attest to what it is. For a process that
-receives a listener it did not create (from a descriptor store after a
-restart, or from a broker), so that clients see the process actually
-accepting. -EINVAL if the socket is not listening.
+optval: int, ignored. Self-gated: a process can always attest to what it
+is. On a listening AF_UNIX socket: replaces the identity the listener
+conveys to connecting clients — captured when listen() was called — with
+the caller's current effective identity, at the listener's level. For a
+process that receives a listener it did not create (from a descriptor
+store after a restart, or from a broker), so that clients see the
+process actually accepting. -EINVAL if the socket is not listening. On
+an AF_INET / AF_INET6 socket, in any state: replaces the identity that
+governs the socket's traffic for network policy — stamped at creation,
+bind, listen, connect and accept — with the caller's current effective
+identity, so a socket handed to another program (socket activation,
+descriptor passing) is governed as that program's. The identity is read
+by the network policy engine at the first judgment of each flow and
+fixed for that flow's life.
 
 | Constant | Value |
 |---|---|
@@ -1302,6 +1309,7 @@ otherwise collapse into an indistinguishable -EACCES. Verdict is the
 | `KACS_SOCK_RESTAMP` | `22` | listener identity replaced by KACS_SO_RESTAMP |
 | `KACS_SOCK_PORT_BIND` | `23` | inet bind: port reservation SD verdict |
 | `KACS_SOCK_PORT_TABLE` | `24` | port reservation table load result |
+| `KACS_SOCK_OWNER` | `25` | governing identity stamped on an inet socket |
 
 *kacs_ipc reason — a System V IPC object SD decision (ipc.c).*
 
