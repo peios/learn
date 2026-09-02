@@ -105,7 +105,8 @@ Total size 352 bytes.
 | 296 | 8 | `__u64` | `flow_uncached` |
 | 304 | 8 | `__u64` | `refusals_emitted` |
 | 312 | 8 | `__u64` | `refusals_bypassed` |
-| 320 | 32 | `__u64[4]` | `_reserved` |
+| 320 | 8 | `__u64` | `teardowns_emitted` |
+| 328 | 24 | `__u64[3]` | `_reserved` |
 
 ### `struct peios_pnp_counter_rec` [*abi.struct-peios-pnp-counter-rec]
 

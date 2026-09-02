@@ -65,7 +65,7 @@ while the engine is young, to be revisited with a compiled evaluator.
 | Ingestion | `last_ingest_error`, `last_ingest_t_ns`, `reporting_level` |
 | The stores | `tag_writes`, `tag_untracked`, `tag_refused`, `count_writes`, `count_key_absent`, `count_refused`, `reports_emitted`, `counter_cells` |
 | The Flow layer | `flow_judged` (evaluations, sentences written), `flow_cached` (packets answered by a current sentence), `flow_rejudged` (stale by generation), `flow_expired` (stale by time edge), `flow_uncached` (flows with no extension to hold a sentence, evaluated per packet) |
-| Refusals | `refusals_emitted` (answers built and sent), `refusals_bypassed` (own refusals waved through a seat) |
+| Refusals | `refusals_emitted` (answers built and sent), `refusals_bypassed` (own refusals waved through a seat), `teardowns_emitted` (far-end resets for refused established TCP flows) |
 
 Two invariants a reader can check: `judged` equals the number of
 evaluations against a live forest at any layer (Flow evaluations

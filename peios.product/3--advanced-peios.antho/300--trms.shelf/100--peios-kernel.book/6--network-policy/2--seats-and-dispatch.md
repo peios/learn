@@ -101,6 +101,17 @@ files it as the reply it claims to be), marks it, and delivers it:
   the route the packet was sent with, so the foreign source address
   never meets source validation.
 
+When the refused packet belongs to an **established TCP** flow, the far
+end is torn down too: `peios_pnp_teardown_build()` turns the refused
+packet itself into a reset — same addresses, ports, sequence and
+acknowledgement numbers, `RST` set, no data — marks it, and sends it
+where the packet was going by the same routed path (outbound, to the
+peer on the wire; inbound, to our own socket over loopback). The refused
+end gets the kind's story; the far end gets the only story TCP listens
+to mid-connection. Counted in `teardowns_emitted`. New flows and UDP
+have no far end; a reset is never answered with a reset; the ingress
+seat has no flow facts and never tears down.
+
 The answer is not sent, and the `REJECT` **degrades to `DROP`** (counted
 in `reject_degraded`, flagged `REJECT_DEGRADED` in the event, the kind
 still named), when there is nothing to send: a non-IP frame, a broadcast

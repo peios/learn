@@ -156,7 +156,12 @@ says `REJECT` and names the kind. The refusals PNP sends pass its own
 seats unjudged.
 
 In the `Flow` layer a `REJECT` sentence answers every later packet of
-the flow the same way, so a retransmitted SYN gets its reset too.
+the flow the same way, so a retransmitted SYN gets its reset too. When
+the refused packet belongs to an *established* TCP connection (a flow
+re-judged after a policy change or at a time edge), the other end is
+torn down as well: the refused packet is turned into a reset and sent
+where it was going, so both sockets fail at once. New flows and UDP have
+no far end to tear down.
 
 ## Layers
 
