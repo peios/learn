@@ -1,7 +1,7 @@
 ---
 title: Kernel ABI reference
 type: reference
-description: Where the KACS and LCS kernel ABIs are documented — syscall numbers, ioctls, structure layouts, and constants, generated from uapi.
+description: Where the KACS, LCS and PNP kernel ABIs are documented — syscall numbers, ioctls, structure layouts, and constants, generated from uapi.
 related:
   - peios/wire-formats-reference/overview
   - peios/debugging-the-kernel/overview
@@ -14,6 +14,7 @@ The kernel ABI is documented in the **Peios Kernel TRM**, in two appendices gene
 |---|---|
 | §3.A, KACS ABI Reference | Syscall numbers, ioctls, structure layouts, token query classes, and the KACS constants |
 | §5.A, LCS ABI Reference | The registry ABI — syscalls, ioctls, structure layouts, and the watch record header offsets |
+| §6.A, PNP ABI Reference | The packet engine's `/dev/peios-pnp` ABI — ioctls, the verdict event and status layouts, the counter record, and the seat, layer, verdict and flag constants |
 
 Two more appendices sit alongside them: §3.B lists where the KACS evaluator departs from MS-DTYP, and §3.C lists the audit events KACS emits.
 
