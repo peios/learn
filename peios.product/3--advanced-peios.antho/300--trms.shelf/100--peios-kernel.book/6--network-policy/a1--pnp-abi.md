@@ -8,7 +8,7 @@ Every name, value, offset and size in this appendix is generated from
 layouts measured by compiling a probe against the real header.
 Regenerate it whenever the ABI changes; do not edit it by hand. The
 names here are the ones a program actually compiles
-against. [*abi.generated-from-source]
+against. [*abi.pnp-generated-from-source]
 
 What a compiler cannot measure -- the device's read and poll
 semantics, what each ioctl expects, the error vocabulary, and the
@@ -22,8 +22,9 @@ packs them (direction, argument size, type `'N'`, number).
 
 | Constant | Value | Definition |
 |---|---|---|
-| `PEIOS_PNP_IOC_STATUS` | `0x81204E01` | `_IOR(PEIOS_PNP_IOC_TYPE, PEIOS_PNP_IOC_STATUS_NR, struct peios_pnp_status)` |
+| `PEIOS_PNP_IOC_STATUS` | `0x81604E01` | `_IOR(PEIOS_PNP_IOC_TYPE, PEIOS_PNP_IOC_STATUS_NR, struct peios_pnp_status)` |
 | `PEIOS_PNP_IOC_COUNTERS` | `0xC0184E02` | `_IOWR(PEIOS_PNP_IOC_TYPE, PEIOS_PNP_IOC_COUNTERS_NR, struct peios_pnp_counters_query)` |
+| `PEIOS_PNP_IOC_FLOWS` | `0xC0184E03` | `_IOWR(PEIOS_PNP_IOC_TYPE, PEIOS_PNP_IOC_FLOWS_NR, struct peios_pnp_flows_query)` |
 
 ## Structure layouts
 
@@ -60,7 +61,7 @@ Total size 176 bytes.
 
 ### `struct peios_pnp_status` [*abi.struct-peios-pnp-status]
 
-Total size 288 bytes.
+Total size 352 bytes.
 
 | Offset | Size | Type | Field |
 |---|---|---|---|
@@ -96,7 +97,15 @@ Total size 288 bytes.
 | 232 | 8 | `__u64` | `reports_emitted` |
 | 240 | 8 | `__u64` | `counter_cells` |
 | 248 | 8 | `__u64` | `reporting_level` |
-| 256 | 32 | `__u64[4]` | `_reserved` |
+| 256 | 8 | `__u64` | `seen_local_out` |
+| 264 | 8 | `__u64` | `flow_judged` |
+| 272 | 8 | `__u64` | `flow_cached` |
+| 280 | 8 | `__u64` | `flow_rejudged` |
+| 288 | 8 | `__u64` | `flow_expired` |
+| 296 | 8 | `__u64` | `flow_uncached` |
+| 304 | 8 | `__u64` | `refusals_emitted` |
+| 312 | 8 | `__u64` | `refusals_bypassed` |
+| 320 | 32 | `__u64[4]` | `_reserved` |
 
 ### `struct peios_pnp_counter_rec` [*abi.struct-peios-pnp-counter-rec]
 
@@ -120,6 +129,55 @@ Total size 232 bytes.
 | 168 | 64 | `__u64[PEIOS_PNP_COUNTER_MAX_WINDOWS]` | `window_value` |
 
 ### `struct peios_pnp_counters_query` [*abi.struct-peios-pnp-counters-query]
+
+Total size 24 bytes.
+
+| Offset | Size | Type | Field |
+|---|---|---|---|
+| 0 | 8 | `__u64` | `buf` |
+| 8 | 4 | `__u32` | `buf_len` |
+| 12 | 4 | `__u32` | `count` |
+| 16 | 4 | `__u32` | `total` |
+| 20 | 4 | `__u32` | `_pad0` |
+
+### `struct peios_pnp_flow_rec` [*abi.struct-peios-pnp-flow-rec]
+
+Total size 288 bytes.
+
+| Offset | Size | Type | Field |
+|---|---|---|---|
+| 0 | 4 | `__u32` | `id` |
+| 4 | 1 | `__u8` | `family` |
+| 5 | 1 | `__u8` | `protocol` |
+| 6 | 1 | `__u8` | `direction` |
+| 7 | 1 | `__u8` | `loopback` |
+| 8 | 1 | `__u8` | `seen_reply` |
+| 9 | 1 | `__u8` | `assured` |
+| 10 | 1 | `__u8` | `related` |
+| 11 | 1 | `__u8` | `judged` |
+| 12 | 4 | `__s32` | `ifindex` |
+| 16 | 4 | `__u32` | `timeout_secs` |
+| 20 | 16 | `__u8[16]` | `src_addr` |
+| 36 | 16 | `__u8[16]` | `dst_addr` |
+| 52 | 2 | `__u16` | `src_port` |
+| 54 | 2 | `__u16` | `dst_port` |
+| 56 | 1 | `__u8` | `icmp_type` |
+| 57 | 1 | `__u8` | `icmp_code` |
+| 58 | 1 | `__u8` | `n_tags` |
+| 59 | 5 | `__u8[5]` | `_pad0` |
+| 64 | 8 | `__u64` | `start_secs` |
+| 72 | 16 | `__u64[2]` | `packets` |
+| 88 | 16 | `__u64[2]` | `bytes` |
+| 104 | 16 | `__u64[PEIOS_PNP_FLOW_SENTENCES]` | `sentence_generation` |
+| 120 | 16 | `__s64[PEIOS_PNP_FLOW_SENTENCES]` | `sentence_expires_at` |
+| 136 | 16 | `__u64[PEIOS_PNP_FLOW_SENTENCES]` | `sentence_rule_hash` |
+| 152 | 2 | `__u8[PEIOS_PNP_FLOW_SENTENCES]` | `sentence_verdict` |
+| 154 | 2 | `__u8[PEIOS_PNP_FLOW_SENTENCES]` | `sentence_reject_kind` |
+| 156 | 4 | `__u8[4]` | `_pad1` |
+| 160 | 64 | `__u64[PEIOS_PNP_FLOW_MAX_TAGS]` | `tag_hash` |
+| 224 | 64 | `__u64[PEIOS_PNP_FLOW_MAX_TAGS]` | `tag_value` |
+
+### `struct peios_pnp_flows_query` [*abi.struct-peios-pnp-flows-query]
 
 Total size 24 bytes.
 
@@ -157,7 +215,7 @@ design ships (PEI-598). Check `abi` before trusting the rest.
 
 | Constant | Value |
 |---|---|
-| `PEIOS_PNP_ABI_VERSION` | `2` |
+| `PEIOS_PNP_ABI_VERSION` | `3` |
 
 *Which standing seat judged the traversal.* [*abi.seat-values]
 
@@ -166,6 +224,7 @@ design ships (PEI-598). Check `abi` before trusting the rest.
 | `PEIOS_PNP_EV_SEAT_INGRESS` | `1` |
 | `PEIOS_PNP_EV_SEAT_EGRESS` | `2` |
 | `PEIOS_PNP_EV_SEAT_LOCAL_IN` | `3` |
+| `PEIOS_PNP_EV_SEAT_LOCAL_OUT` | `4` |
 
 *Which rules layer.* [*abi.layer-values]
 
@@ -173,6 +232,7 @@ design ships (PEI-598). Check `abi` before trusting the rest.
 |---|---|
 | `PEIOS_PNP_EV_LAYER_PACKET` | `0` |
 | `PEIOS_PNP_EV_LAYER_RAWPACKET` | `1` |
+| `PEIOS_PNP_EV_LAYER_FLOW` | `2` |
 
 *The verdict, in strictness order.* [*abi.verdict-values]
 
@@ -214,6 +274,7 @@ design ships (PEI-598). Check `abi` before trusting the rest.
 | `PEIOS_PNP_EV_F_BACKSTOP` | `0x01` | nothing yielded; DROP |
 | `PEIOS_PNP_EV_F_FAIL_CLOSED` | `0x02` | evaluation failed; DROP |
 | `PEIOS_PNP_EV_F_REJECT_DEGRADED` | `0x04` | REJECT emitted as DROP |
+| `PEIOS_PNP_EV_F_REJUDGED` | `0x08` | Flow: a stale sentence re-judged |
 | `PEIOS_PNP_EV_ATTR_LEN` | `96` |  |
 
 One counter cell, as the counters dump reports it: the stream and key-
@@ -234,12 +295,24 @@ of every window the table answers.
 | `PEIOS_PNP_KEY_DST_ADDR` | `0x02` |
 | `PEIOS_PNP_KEY_INTERFACE` | `0x04` |
 
-The counters dump: fills `buf` with as many records as fit; `count` is
-how many were written, `total` how many cells exist (so a short buffer
-is visible).
+One live flow, as the flows dump reports it (ABI 3): conntrack's view of
+the flow (original-direction tuple, state, remaining lifetime,
+accounting), PNP's extension (start time, the interface and direction at
+first judgment, the sentences, the tags). Tags are reported by hash; the
+policy names them.
+
+| Constant | Value |
+|---|---|
+| `PEIOS_PNP_FLOW_MAX_TAGS` | `8` |
+| `PEIOS_PNP_FLOW_SENTENCES` | `2` |
+
+The flows dump: fills `buf` with as many records as fit; `count` is how
+many were written, `total` how many live flows the walk saw. A best-
+effort snapshot of a table that changes under the walk.
 
 | Constant | Value |
 |---|---|
 | `PEIOS_PNP_IOC_TYPE` | `0x0000004E` |
 | `PEIOS_PNP_IOC_STATUS_NR` | `0x00000001` |
 | `PEIOS_PNP_IOC_COUNTERS_NR` | `0x00000002` |
+| `PEIOS_PNP_IOC_FLOWS_NR` | `0x00000003` |

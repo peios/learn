@@ -14,6 +14,22 @@ against the snapshot. Conditions are a conjunction; a value written as a
 list is a disjunction *within* that one field. A disabled rule never
 matches, so its subtree is unreachable.
 
+Conditions are evaluated in the order ingestion stored them, which puts
+live-time conditions (`Time.*`) **last**, and the conjunction stops at
+the first false one. Every live-time condition actually reached — true
+or false — is *consulted*, and `Rule::matches_traced()` records into a
+`MatchTrace` the moment it would next flip (`Condition::next_flip()`):
+for hour, minute, second and day-of-week, the value sequence is scanned
+one cycle ahead with the condition's own operator, so `Time.Hour.Equal
+9-17` at 10:30 flips at 18:00 and `Time.Hour.LessThan 24` never does;
+day-of-month, month and year answer "next midnight", since exact flips
+need calendar arithmetic nobody has asked for. A false condition is
+consulted too: a higher-priority rule that missed only on the clock may
+match later. A rule whose address or port conditions fail first never
+consults its clock and contributes nothing. The earliest consulted flip
+is the evaluation's `expires_at` — the Flow layer's sentence expiry
+(§6.8); the per-packet layers compute it and ignore it.
+
 ## 2. The trigger set
 
 The walk descends each tree from its root. A node **triggers** iff it
@@ -69,11 +85,11 @@ therefore a visible rule.
 ## The evaluation as data
 
 `Evaluation` carries the winning verdict, its attribution, the backstop
-flag, every effect to apply, and every candidate (winners and losers
-alike) for observability. Effects reference their stores by name *and*
-hash: `Effect::Tag { hash, op }`, `Effect::Count { hash, amount }` with
-the amount already resolved (`Length` becomes the packet length, or 0
-when the packet has none), `Effect::Report { rule, level }`,
+flag, every effect to apply, every candidate (winners and losers alike)
+for observability, and `expires_at`. Effects reference their stores by
+name *and* hash: `Effect::Tag { hash, op }`, `Effect::Count { hash,
+amount }` with the amount already resolved (`Length` becomes the packet
+length, or 0 when the packet has none), `Effect::Report { rule, level }`,
 `Effect::PromptIssued { rule, handler }`.
 
 ## The bridge
@@ -83,11 +99,13 @@ when the packet has none), `Effect::Report { rule, level }`,
 
 1. lifts the C snapshot (§6.3) and resolves the forest's machinery facts
    through the stores — `peios_pnp_tag_lookup()` for every tag name the
-   forest mentions (Packet layer only), `peios_pnp_counter_read()` for
-   every view;
+   forest mentions (`Packet` and `Flow` layers; `RawPacket` reads none),
+   `peios_pnp_counter_read()` for every view — and gives a `Flow` forest
+   its own facts, `Related` and `Start.*`;
 2. evaluates with `EvalContext { reporting_level }`;
-3. writes the verdict, the reject kind, the backstop flag and the
-   truncated attribution into `struct peios_pnp_outcome`;
+3. writes the verdict, the reject kind, the backstop flag, the truncated
+   attribution and `expires_at` (0 = never) into `struct
+   peios_pnp_outcome`;
 4. **then** applies the effects — `peios_pnp_tag_apply()`,
    `peios_pnp_counter_add()`, `peios_pnp_report_emit()` with the verdict
    it just computed — counting each species into the outcome.

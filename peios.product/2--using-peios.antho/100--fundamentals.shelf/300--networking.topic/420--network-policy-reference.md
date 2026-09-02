@@ -17,16 +17,18 @@ table.
 ```text
 Machine\System\Network\Rules
     CurrentReportingLevel        REG_DWORD 1..6   (optional; absent = 1)
-    Packet\                      the packet layer's forest
+    RawPacket\                   the wire-side layer's forest
+        <rule>\
+    Packet\                      the per-packet layer's forest
         <rule>\                  one tree root
             <exception>\         a subkey: narrower region, same laws
                 ...
-    RawPacket\                   the wire-side layer's forest
+    Flow\                        the flow layer's forest
         <rule>\
 ```
 
 A rule key's name is its attribution handle and may not contain `\` or
-`/`. Layer keys other than `Packet` and `RawPacket` are ignored.
+`/`. Layer keys other than `RawPacket`, `Packet` and `Flow` are ignored.
 
 ### Rule values
 
@@ -68,27 +70,36 @@ an address, `Has` on a port) refuses the generation.
 
 | Fact | Family | Values | Present when |
 |---|---|---|---|
-| `Direction` | string | `in`, `out` | always |
-| `Interface` | string | interface name, e.g. `eth0` | always |
-| `EtherType` | integer | number, or `ipv4`, `ipv6`, `arp` | always |
-| `SrcMac`, `DstMac` | MAC | `aa:bb:cc:dd:ee:ff` | frame has an Ethernet header |
-| `Vlan` | integer | VLAN id | frame is VLAN-tagged |
+| `Direction` | string | `in`, `out` | always. `Flow`: the originator's side, for the flow's whole life |
+| `Interface` | string | interface name, e.g. `eth0` | always. `Flow`, outbound: the route's device |
+| `EtherType` | integer | number, or `ipv4`, `ipv6`, `arp` | always. Not a `Flow` fact (a flow's family is its addresses') |
+| `SrcMac` | MAC | `aa:bb:cc:dd:ee:ff` | frame has an Ethernet header; at the IP seats outbound, the machine's own device address |
+| `DstMac` | MAC | `aa:bb:cc:dd:ee:ff` | frame has an Ethernet header. Not a `Flow` fact |
+| `Vlan` | integer | VLAN id | the frame is VLAN-tagged (device seats) or the interface is a VLAN device (IP seats) |
 | `SrcAddr`, `DstAddr` | address | exact (`10.0.0.5`, `fd00::1`), CIDR (`10.0.0.0/8`, `fd00::/64`), IPv4 range (`10.0.0.1-10.0.0.99`) | IP packet |
 | `Protocol` | integer | number, or `tcp`, `udp`, `icmp`, `icmpv6`, `sctp` | IP packet |
-| `Ttl` | integer | TTL / hop limit | IP packet |
-| `Dscp` | integer | 0..63 | IP packet |
-| `Fragment` | integer | `0` or `1` | IP packet (only ever 1 before defragmentation, i.e. at the RawPacket seat) |
+| `Ttl` | integer | TTL / hop limit | IP packet. Not a `Flow` fact |
+| `Dscp` | integer | 0..63 | IP packet. Not a `Flow` fact |
+| `Fragment` | integer | `0` or `1` | IP packet (only ever 1 before defragmentation, i.e. at the RawPacket seat). Not a `Flow` fact |
 | `SrcPort`, `DstPort` | integer | 0..65535 | TCP, UDP or SCTP |
-| `TcpFlags` | flags | `FIN`, `SYN`, `RST`, `PSH`, `ACK`, `URG`, `ECE`, `CWR` | TCP |
+| `TcpFlags` | flags | `FIN`, `SYN`, `RST`, `PSH`, `ACK`, `URG`, `ECE`, `CWR` | TCP. Not a `Flow` fact |
 | `IcmpType`, `IcmpCode` | integer | ICMP / ICMPv6 type and code | ICMP or ICMPv6 |
-| `Length` | integer | packet length in bytes at the seat (stack view) | always |
-| `FlowState` | string | `new`, `established`, `related`, `invalid`, `untracked` | Packet layer at its proper seat; never at the RawPacket layer |
-| `Time.Year`, `Time.Month`, `Time.DayOfMonth`, `Time.DayOfWeek`, `Time.Hour`, `Time.Minute`, `Time.Second` | integer | wall clock, UTC; `DayOfWeek` is ISO (1 = Monday .. 7 = Sunday) | always |
-| `Tag.<name>` | integer | the flow tag's value | the flow carries the tag (Packet layer only) |
+| `Length` | integer | packet length in bytes at the seat (stack view) | always. Not a `Flow` fact |
+| `FlowState` | string | `new`, `established`, `related`, `invalid`, `untracked` | Packet layer at its proper seat; never at the RawPacket or Flow layers |
+| `Related` | integer | `0` or `1`: the flow was expected by another (an ICMP error for a live flow, FTP data) | `Flow` layer only |
+| `Time.Year`, `Time.Month`, `Time.DayOfMonth`, `Time.DayOfWeek`, `Time.Hour`, `Time.Minute`, `Time.Second` | integer | wall clock, UTC; `DayOfWeek` is ISO (1 = Monday .. 7 = Sunday) | always. In `Flow`, a consulted condition expires the sentence at its next flip |
+| `Start.Year`, `Start.Month`, `Start.DayOfMonth`, `Start.DayOfWeek`, `Start.Hour`, `Start.Minute`, `Start.Second` | integer | the wall clock when the flow began, UTC | `Flow` layer only; fixed for the flow's life, never expires a sentence |
+| `Tag.<name>` | integer | the flow tag's value | the flow carries the tag (`Packet` and `Flow` layers; never `RawPacket`) |
 | `Counter.<name>[(...)]` | integer | a counter view, see below | the packet has the view's key facts and a cell exists |
 
 Address families are strict: an IPv4 pattern never matches an IPv6
 address and vice versa, so `0.0.0.0/0` does not swallow IPv6.
+
+A `Flow` fact is one that is identical for every packet of the flow. The
+per-packet facts marked "not a `Flow` fact" are legal in a `Flow` rule
+but never present there, so the condition never holds; the viewer flags
+it. `Related` and `Start.*` are the reverse: never present outside
+`Flow`.
 
 ### Counter views
 
@@ -134,23 +145,59 @@ three above all refuse the generation.
 
 ### Where a REJECT can speak
 
-A refusal can only be sent from the inbound IP seat. A `REJECT` decided
-at a device seat — every outbound packet, and non-IP frames — is applied
-as a `DROP` and counted as *degraded*; the verdict event still says
-`REJECT` and names the kind.
+Everywhere, for IP traffic. Inbound, the refusal goes back to the peer.
+Outbound, the answer the peer would have sent is delivered to the local
+socket, so the program's connect fails at once with *connection refused*
+(`Refused`, TCP) or *host unreachable* (`Prohibited`, or any UDP
+refusal). Only a packet with no refusal vocabulary — ARP and other
+non-IP frames, a broadcast or multicast destination, a fragment — is
+applied as a `DROP` and counted as *degraded*; the verdict event still
+says `REJECT` and names the kind. The refusals PNP sends pass its own
+seats unjudged.
+
+In the `Flow` layer a `REJECT` sentence answers every later packet of
+the flow the same way, so a retransmitted SYN gets its reset too.
 
 ## Layers
 
-| | `Packet` | `RawPacket` |
-|---|---|---|
-| Judged | once per traversal, at the richest seat | at the device seats, for all traffic |
-| `FlowState` | yes | never (the seat stands before conntrack) |
-| `Tag.<name>` reads | yes | never — tags flow upward only |
-| `TAG` writes | yes | yes |
-| `Fragment` | always 0 | may be 1 |
+| | `RawPacket` | `Packet` | `Flow` |
+|---|---|---|---|
+| Judged | at the device seats, for all traffic, per packet | once per traversal, at the richest seat, per packet | once per flow (per local endpoint), at the IP seats, on the flow's first packet |
+| Order | first inbound, last outbound | between | last inbound (after `Packet`), first outbound (before `Packet`) |
+| `FlowState` | never (the seat stands before conntrack) | yes | never (the layer is the judgment of a flow) |
+| `Related`, `Start.*` | never | never | yes |
+| Per-packet facts (`Length`, `TcpFlags`, `Fragment`, `Ttl`, `Dscp`, `EtherType`, `DstMac`) | yes | yes | never |
+| `Tag.<name>` reads | never | tags `RawPacket` or `Packet` rules write | any tag |
+| `TAG` writes | yes | yes | yes |
+| `Fragment` | may be 1 | always 0 | — |
+| Effects run | per packet | per packet | per evaluation of the flow |
+| Verdict scope | the packet | the packet | the flow: cached as its sentence |
 
-A `RawPacket` rule conditioned on `FlowState` or a tag is legal but can
-never match; the viewer flags it.
+A rule conditioned on a fact its layer never has is legal but can never
+match; the viewer flags it. A `Packet` or `RawPacket` rule that reads a
+tag a `Flow` rule writes is a downward read and refuses the generation.
+
+### Sentences
+
+The `Flow` layer's verdict for a flow is cached on the flow with the
+policy generation that judged it and an expiry. A packet of a flow whose
+sentence is current is not evaluated (and emits no event). A sentence is
+stale, and the flow re-judged on its next packet, when:
+
+- the policy generation has changed since the judgment, or
+- a live-time condition (`Time.*`) the judgment consulted — true or
+  false — would have flipped by now. Hour, minute, second and day-of-week
+  conditions flip exactly when their value would next change the
+  condition's answer; day-of-month, month and year conditions
+  re-judge daily at midnight UTC.
+
+A re-judgment is a full evaluation: effects run again. A flow that
+conntrack could not give an extension (allocation failure at creation)
+holds no sentence and is evaluated on every packet, counted.
+
+A loopback flow has two local endpoints and two sentences: judged as
+`out` at the outbound seat and as `in` at the inbound seat, and every
+packet of it answers to the stricter of the two.
 
 ## Limits
 
@@ -163,23 +210,42 @@ never match; the viewer flags it.
 | Rule nesting depth | 12 | the generation is refused |
 | Rules per layer | 4096 | the generation is refused |
 | Attribution path in events | 96 bytes | truncated |
+| Tags reported per flow in the flows dump | 8 | the rest are counted, not listed |
 
 ## The development baseline
 
-Experimental images ship a seed policy under `Rules\Packet` so a fresh
-machine works while still dropping unsolicited inbound traffic:
+Experimental images ship a seed policy so a fresh machine works while
+still refusing unsolicited inbound connections. The compiled-in backstop
+is `DROP` in every layer; each line below is a visible, deletable yes.
+
+`Rules\RawPacket`:
 
 | Rule | Conditions | Actions |
 |---|---|---|
+| `all` | — | `PASS` |
+
+`Rules\Packet` — passes every tracked packet through to `Flow`, and the
+untracked housekeeping a host needs:
+
+| Rule | Conditions | Actions |
+|---|---|---|
+| `tracked` | `FlowState.Equal` = `new`, `established`, `related` | `PASS` |
 | `outbound-ok` | `Direction.Equal` = `out` | `PASS` |
-| `established` | `FlowState.Equal` = `established`, `related` | `PASS` |
 | `loopback` | `Interface.Equal` = `lo` | `PASS` |
 | `arp` | `EtherType.Equal` = `arp` | `PASS` |
 | `icmpv6-housekeeping` | `Protocol.Equal` = `icmpv6`, `IcmpType.Equal` = `130-137`, `143` | `PASS` |
 | `dhcp-client` | `Protocol.Equal` = `udp`, `SrcPort.Equal` = `67`, `DstPort.Equal` = `68` | `PASS` |
+
+`Rules\Flow` — the decisions:
+
+| Rule | Conditions | Actions |
+|---|---|---|
+| `outbound-ok` | `Direction.Equal` = `out` | `PASS` |
+| `loopback` | `Interface.Equal` = `lo` | `PASS` |
 | `dev-viewer-ports` | `Direction.Equal` = `in`, `Protocol.Equal` = `tcp`, `DstPort.Equal` = `8080`, `8081` | `PASS` |
 
-Everything else inbound meets the backstop.
+Every other inbound flow meets the `Flow` backstop, once, on its first
+packet; untracked inbound packets meet the `Packet` backstop.
 
 ## Worked examples
 
@@ -214,5 +280,44 @@ Rules\Packet\egress-bytes   Direction.Equal = out
                             Actions = COUNT(egress, Length)
 Rules\Packet\egress-cap     Direction.Equal = out
                             Counter.egress(1m, SrcAddr).GreaterThan = 104857600
+                            Actions = DROP
+```
+
+**A connection-level allow** — let the machine connect out, accept SSH
+in from the LAN, and refuse every other inbound connection with a reset,
+each decided once per flow:
+
+```text
+Rules\Flow\outbound-ok      Direction.Equal = out
+                            Actions = PASS
+Rules\Flow\inbound          Direction.Equal = in
+                            Actions = REJECT
+Rules\Flow\inbound\ssh-lan  Protocol.Equal = tcp, DstPort.Equal = 22
+                            SrcAddr.Equal = 10.0.0.0/8
+                            Actions = PASS
+```
+
+**A curfew that lets downloads finish** — no new outbound connections
+between 22:00 and 06:00 UTC, existing ones run on:
+
+```text
+Rules\Flow\curfew           Direction.Equal = out
+                            Start.Hour.Equal = 22-23, 0-5
+                            Priority = 10
+                            Actions = REJECT(Prohibited), REPORT(3)
+```
+
+Written with `Time.Hour` instead of `Start.Hour`, the same rule cuts
+every running outbound connection at 22:00 — on its next packet, with
+an ICMP admin-prohibited — and the report says which rule did it.
+
+**Connection rate limiting** — count connections, not packets, by
+counting in the flow layer:
+
+```text
+Rules\Flow\conn-count       Direction.Equal = in, Protocol.Equal = tcp
+                            Actions = COUNT(conns)
+Rules\Flow\conn-flood       Direction.Equal = in, Protocol.Equal = tcp
+                            Counter.conns(1m, SrcAddr).GreaterThan = 100
                             Actions = DROP
 ```

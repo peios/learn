@@ -39,8 +39,9 @@ snapshot from an `sk_buff` (`snapshot.c`), RCU publication of policy
 generations (`policy.c`), walking the registry into the builder
 (`ingest.c`), the three machinery stores — flow tags on a conntrack
 extension (`tags.c`), counter tables (`counters.c`), report emission into
-KMES (`report.c`) — and the verdict event ring behind `/dev/peios-pnp`
-(`events.c`).
+KMES (`report.c`) — the Flow layer's sentence cache and dispatch
+(`flow.c`), the refusals a `REJECT` sends (`refuse.c`), and the verdict
+event ring behind `/dev/peios-pnp` (`events.c`).
 
 **`pnp-core` (Rust, `pkm/crates/pnp-core`)** owns everything the policy
 *means*: the action language, the fact vocabulary and operators,
@@ -62,9 +63,14 @@ collation, so a `COUNT` lands after this packet's own reads and a
 
 - **Traversal** — one packet passing one direction through the machine.
 - **Seat** — a netfilter hook PNP stands at: the device *ingress* and
-  *egress* seats (per interface) and the *IP inbound* seat (`LOCAL_IN`).
-- **Layer** — one of the two rule forests, `Packet` and `RawPacket`,
-  each a registry key under `Machine\System\Network\Rules`.
+  *egress* seats (per interface) and the two IP seats, *inbound*
+  (`LOCAL_IN`) and *outbound* (`LOCAL_OUT`).
+- **Layer** — one of the three rule forests, `RawPacket`, `Packet` and
+  `Flow`, each a registry key under `Machine\System\Network\Rules`.
+- **Flow** — what conntrack tracks: a tuple-identified, bidirectional
+  exchange. The unit the Flow layer judges.
+- **Sentence** — the Flow layer's cached verdict on a flow: verdict,
+  generation, expiry, on the flow's conntrack extension.
 - **Snapshot** — the immutable set of facts one traversal is judged
   against at its seat.
 - **Generation** — one published policy. Advances on every successful
@@ -80,6 +86,7 @@ collation, so a `COUNT` lands after this packet's own reads and a
 
 The chapter follows a packet: the seats it meets (§6.2), the snapshot
 taken of it (§6.3), how the forest judges it (§6.4), where that forest
-came from (§6.5), the stores its effects land in (§6.6), and the event
-that records it (§6.7). §6.A is the generated ABI of `/dev/peios-pnp`;
-§6.B is what the ABI tables cannot say.
+came from (§6.5), the stores its effects land in (§6.6), the event that
+records it (§6.7), and what happens when it is the first packet of a
+flow (§6.8). §6.A is the generated ABI of `/dev/peios-pnp`; §6.B is what
+the ABI tables cannot say.

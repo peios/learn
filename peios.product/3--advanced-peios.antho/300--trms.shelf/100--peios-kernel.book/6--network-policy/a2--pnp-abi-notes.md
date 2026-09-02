@@ -13,9 +13,11 @@ promise until the design ships. `peios_pnp_status.abi` carries
 `PEIOS_PNP_ABI_VERSION`; a consumer checks it before trusting any other
 field or record layout. Version 2 (the machinery slice) added the
 event's `reject_kind`, the store confessions and `counter_cells` and
-`reporting_level` in the status, and the counters ioctl. pnpd and the
-kernel ship together on the experimental edition, so the check is a
-guard, not a negotiation.
+`reporting_level` in the status, and the counters ioctl. Version 3 (the
+Flow layer) added the `LOCAL_OUT` seat and `Flow` layer ids, the
+`REJUDGED` event flag, the Flow and refusal counters in the status, and
+the flows ioctl. pnpd and the kernel ship together on the experimental
+edition, so the check is a guard, not a negotiation.
 
 ## `/dev/peios-pnp`
 
@@ -28,6 +30,7 @@ A misc device, mode 0600, root-only by ownership.
 | `poll()` | `POLLIN \| POLLRDNORM` when at least one event waits. | — |
 | `ioctl(PEIOS_PNP_IOC_STATUS, struct peios_pnp_status *)` | Fills the status snapshot. Cumulative counters since boot. | `EFAULT` |
 | `ioctl(PEIOS_PNP_IOC_COUNTERS, struct peios_pnp_counters_query *)` | `buf`/`buf_len` describe a user buffer of `struct peios_pnp_counter_rec`; on return `count` is how many were written and `total` how many cells exist. A short buffer is not an error — the two numbers disagree. Best-effort snapshot: cells may change between records. | `EFAULT`; `ENOMEM` |
+| `ioctl(PEIOS_PNP_IOC_FLOWS, struct peios_pnp_flows_query *)` | Same contract over `struct peios_pnp_flow_rec`: `count` written, `total` live flows the walk saw. Records are copied out between hash buckets, so the dump is a best-effort picture of a table that changes under it. | `EFAULT`; `ENOMEM` |
 | other ioctls | — | `ENOTTY` |
 
 Sequence numbers are monotonic per boot. A gap between consecutive
@@ -49,6 +52,12 @@ total.
   `PEIOS_PNP_EV_VERDICT_REJECT`; a degraded reject (`flags &
   PEIOS_PNP_EV_F_REJECT_DEGRADED`) still carries the kind the rule
   chose.
+- `PEIOS_PNP_EV_F_REJUDGED` marks a `Flow`-layer evaluation that
+  replaced a stale sentence (policy change or time edge). A packet
+  answered by a current sentence produces no event at all.
+- `layer` 2 is `Flow`; `seat` 4 is `LOCAL_OUT`. A `Flow` event's
+  `direction` is the endpoint judged: the originator's side for a normal
+  flow, each seat's own for a loopback flow's two judgments.
 - Addresses: the first 4 bytes when `addr_family` is 4, all 16 when 6,
   undefined when 0. Ports are 0 when the fact was absent — check
   `protocol`.
@@ -70,6 +79,33 @@ total.
 - The dump lists every table's cells consecutively; group by `(name,
   keyspec)` to reconstruct tables.
 
+## Flow records
+
+- `id` is conntrack's own id for the entry (`nf_ct_get_id()`), stable
+  for the flow's life and the key to use across dumps.
+- `src_addr`/`dst_addr`, the ports and the ICMP fields are the
+  *original-direction* tuple — the originator first. For ICMP, `src_port`
+  carries the echo id and `icmp_type`/`icmp_code` the type and code;
+  `dst_port` is 0.
+- `direction`, `ifindex` and `loopback` are meaningful only when `judged`
+  is 1: they were recorded at the Flow layer's first judgment. A flow
+  with `judged == 0` began under a permissive generation.
+- The sentences are parallel arrays indexed by slot (UAPI records hold
+  scalars only): slot 0 is the flow's sentence; slot 1 is only ever
+  filled for a loopback flow (its inbound endpoint). A slot with
+  `sentence_generation == 0` is empty. `sentence_expires_at` 0 means
+  never. `sentence_rule_hash` is FNV-1a-64 (offset
+  `0xcbf29ce484222325`, prime `0x100000001b3`) of the attributing path
+  relative to the layer key — `backstop` and `fail-closed` hash like any
+  other path.
+- `packets`/`bytes` are conntrack's accounting, original then reply;
+  PNP enables `nf_conntrack_acct` at init.
+- `timeout_secs` is the entry's remaining lifetime as conntrack sees it;
+  `start_secs` is `CLOCK_REALTIME` seconds when conntrack created it.
+- `tag_hash`/`tag_value` hold up to `PEIOS_PNP_FLOW_MAX_TAGS` (8)
+  present tags by name hash and value; `n_tags` is the flow's *total*,
+  so a value above 8 means some are not listed.
+
 ## Bounds not in the header
 
 | Bound | Value |
@@ -80,6 +116,8 @@ total.
 | Distinct tags per flow | 64 (`PEIOS_PNP_TAG_MAX_PER_FLOW`, kernel-internal) |
 | Rule depth / rules per layer | 12 / 4096 (ingestion) |
 | Longest counter window | 86 400 s |
+| Sentences per flow | 2 (slot 1 only for loopback flows) |
+| Flow records batched per copy-out | 32 (kernel-internal) |
 
 ## Build configuration
 

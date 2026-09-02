@@ -1,7 +1,7 @@
 ---
 title: The PNP viewer
 type: concept
-description: pnpd serves the PNP viewer on port 8081 of Experimental images — the wire, the engine's verdicts, the policy editor, and the counter store, live.
+description: pnpd serves the PNP viewer on port 8081 of Experimental images — the wire, the engine's verdicts, the policy editor, the live flows with their sentences, and the counter store.
 related:
   - peios/networking/overview
   - peios/networking/the-net-command
@@ -9,10 +9,10 @@ related:
 
 Experimental editions run **pnpd**, the observation and authoring surface of
 Peios Network Policy (PNP). Browse to port **8081** on a running machine and
-you are looking at its network life four ways at once: every frame on the
+you are looking at its network life five ways at once: every frame on the
 wire, the firewall engine's verdict on every evaluation, the policy that
-produced those verdicts — editable in place — and the counters that policy
-is keeping.
+produced those verdicts — editable in place — every live flow with the
+sentence the flow layer gave it, and the counters that policy is keeping.
 
 pnpd is development-phase tooling, and deliberately *not* part of
 enforcement: the kernel reads its policy from the registry itself. pnpd
@@ -36,15 +36,20 @@ packet renders as its own row, slotted into the timeline by its timestamp —
 for an outbound drop that row is the only possible trace, because the
 transmit tap stands after the filter and never saw the packet.
 
+A packet answered by a flow's cached sentence carries no badge of its own:
+there was no evaluation. The sentence is on the flows tab.
+
 The header shows the engine itself: the policy **generation**, whether it is
 **enforcing** (generation 0 boots loudly permissive), the running
 pass/drop/reject counts, and the machinery stores' own accounting — tag
 writes, counter emissions, reports emitted to the KMES event stream, live
-counter cells, and the active reporting level. Hover a count for what the
-store *refused* (a flow past its tag tripwire, a table at its key cap, a
-packet lacking a view's key fact): refusals are counted, never silent. A
-failed policy ingestion shows as a banner — the previous generation stays
-active, and the banner says so.
+counter cells, the active reporting level, flows judged, and refusals
+sent. Hover a count for what the store *refused* or what it did instead
+(a flow past its tag tripwire, a table at its key cap, a packet lacking a
+view's key fact, packets answered from a cached sentence, flows re-judged
+after a policy change or at a time edge, a REJECT with nothing to send):
+refusals are counted, never silent. A failed policy ingestion shows as a
+banner — the previous generation stays active, and the banner says so.
 
 ## The policy tab
 
@@ -55,6 +60,21 @@ place; every save commits in one registry transaction, the kernel re-walks
 the subtree, and the generation bump — or the refusal — appears in the
 header within a second. The backstop is compiled-in DROP, so everything in
 the tree is a visible, deletable permissive statement.
+
+## The flows tab
+
+Every flow conntrack is tracking, refreshed while the tab is open: the
+protocol and both ends (originator first), which side opened it, the
+interface it was judged on, conntrack's state and remaining lifetime, the
+flow's age, packets and bytes in each direction, and the flow layer's
+**sentence** — the cached verdict, the rule that gave it (resolved from
+the policy by the same hash the kernel keys it by), the generation that
+judged it, and a ⏱ when a consulted time condition will expire it. A
+loopback flow shows two sentences, one per local endpoint. Tags the flow
+carries are listed by name where the policy mentions them.
+
+A flow with no sentence was never judged: it began under a permissive
+generation, or before the flow layer had a policy.
 
 ## The counters tab
 

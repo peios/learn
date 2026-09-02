@@ -49,21 +49,62 @@ priority and strictness, never by which came first. That is what lets
 policy from different sources (a local rule, an organisation's Group
 Policy) coexist without merging.
 
-## Two layers
+## Three layers
 
-Rules live under one of two layer keys:
+Rules live under one of three layer keys, and a packet meets them in
+order:
 
-- `Rules\Packet` — the packet layer proper. Every traversal is judged
-  here exactly once, at its richest point: inbound IP after conntrack
-  has classified the flow, outbound as the frame leaves. Flow state and
-  flow tags are available.
 - `Rules\RawPacket` — the wire-side escape hatch. Judged at the device
   seats for *all* traffic, before conntrack on the way in; it sees
   frames, not flows. Most policy never needs it.
+- `Rules\Packet` — the per-packet layer. Every traversal is judged here
+  exactly once, at its richest point: inbound IP after conntrack has
+  classified the flow, outbound as the frame leaves. It is the cheap
+  filter in front of the flow layer: the shipped policy passes every
+  tracked packet here and leaves the decisions to `Flow`.
+- `Rules\Flow` — the flow layer. A **flow** is what conntrack tracks: a
+  TCP connection, a UDP exchange, an ICMP echo and its reply. The flow
+  layer judges each flow **once**, on its first packet, and remembers the
+  verdict on the flow as its **sentence**; every later packet of the
+  flow, in either direction, reads the sentence instead of being judged.
+  This is where policy about *who may connect to what* lives, and where
+  it stays cheap: a rule here runs once per connection, not once per
+  packet.
 
 Traffic that will never reach the packet layer's proper seat — non-IP
 frames such as ARP, or frames on a bridge-enslaved port — is judged by
 the packet layer at the device seat instead, so nothing escapes it.
+Traffic conntrack does not track (a stray reply, an out-of-window
+segment) never reaches the flow layer; the packet layer's verdict is its
+last word.
+
+## Flows and sentences
+
+The flow layer's facts are the ones that are the same for every packet
+of the flow — addresses, ports, protocol, direction, interface, VLAN —
+plus two of its own: `Related` (the flow was expected by another, like
+an FTP data connection) and `Start.*`, the wall clock at the moment the
+flow began. `Direction` is the originator's side: a flow your machine
+opened is `out` for its whole life, replies included.
+
+A sentence answers for the flow until one of two things makes it stale.
+**The policy changes**: a new generation re-judges every flow on its
+next packet, so a rule that now forbids a running connection cuts it
+then — with a TCP reset, if the rule says `REJECT`. PNP does not
+grandfather old connections past a new policy; the registry always says
+what is enforced. **The clock moves**: a rule that consulted `Time.Hour`
+(matched or not — a higher-priority rule that missed only on the hour
+may match later) makes the sentence expire at the moment that condition
+would next flip, and the flow is re-judged then. So `Time.Hour.Equal` =
+`9-17` → `PASS` cuts a connection at 18:00, on its next packet. If you
+mean *no new connections after 18:00, existing ones may finish*, write
+`Start.Hour` instead: it is fixed for the flow's life and never expires
+a sentence.
+
+Two endpoints, two sentences: a loopback flow is both an outbound
+connection from one local program and an inbound one to another, so the
+flow layer judges it twice, once as `out` and once as `in`, and the flow
+lives only if both said `PASS`.
 
 ## Verdicts and effects
 
@@ -74,7 +115,16 @@ Actions come in two species. **Verdicts** decide the packet's fate:
 reset or ICMP port-unreachable); `REJECT(Prohibited)` admits that policy
 refused the packet (ICMP admin-prohibited). PNP never impersonates a
 routing failure: when it speaks, it does not speak falsely, and `DROP` is
-the option for saying nothing.
+the option for saying nothing. A refusal is sent from every layer and in
+both directions: an outbound `REJECT` fails the local program's connect
+at once with *connection refused* or *host unreachable*, instead of
+leaving it to time out. Only a protocol with no refusal vocabulary (ARP,
+other non-IP frames) drops instead, and says so in the event.
+
+In the flow layer, a verdict applies to the whole flow: a `DROP` or
+`REJECT` sentence refuses every later packet of it too, and effects run
+when the flow is judged, never per packet — `COUNT` there counts
+connections, `REPORT` fires once per connection.
 
 **Effects** never decide anything; they happen alongside whatever is
 decided. `TAG` writes a named number onto the packet's flow, for later
@@ -142,6 +192,21 @@ the *entire* new generation — and the previous one stays in force,
 loudly (the viewer shows a banner; the status reports the error). Policy
 never half-applies.
 
+**Tags flow upward only.** A layer reads tags written at or below its
+own height (`RawPacket` < `Packet` < `Flow`): a `Flow` rule may read a
+tag a `Packet` rule wrote, and the reverse is refused at ingestion. Tags
+themselves live on the flow and survive policy changes.
+
+**A flow is judged once per local endpoint.** The flow layer runs on a
+flow's first packet and its sentence answers for the rest, until the
+policy changes or a consulted time condition flips. A loopback flow has
+two local endpoints and is judged twice.
+
+**PNP does not judge its own refusals.** The reset or ICMP error a
+`REJECT` sends passes every seat unjudged. An outbound rule can never
+drop the refusal an inbound rule asked for, and the forged peer answer
+that fails a local connect is not inbound traffic for the policy to see.
+
 ## Rate limiting without a throttle verb
 
 PNP has no `THROTTLE`. Rate limiting is the pair `COUNT` + a counter
@@ -173,8 +238,11 @@ from. That is exactly what the rule says, and PNP will do it.
 
 Every evaluation emits an event on `/dev/peios-pnp` carrying the verdict,
 the attributing rule's path, the layer and seat, and how many effects
-ran; the [viewer](../500--the-pnp-viewer.md) paints those onto the wire
-and shows the counter store live. `REPORT` effects become KMES
+ran; the [viewer](../500--the-pnp-viewer.md) paints those onto the wire,
+lists every live flow with its sentence, and shows the counter store
+live. A packet answered by a cached sentence emits no event — there was
+no evaluation — and is counted instead. `REPORT` effects become KMES
 `network-report` events for the audit pipeline. Everything the stores
 refuse — a flow past its tag tripwire, a counter table at its key cap, a
-packet lacking a view's key — is counted and shown; nothing is silent.
+packet lacking a view's key, a refusal that could not be sent — is
+counted and shown; nothing is silent.

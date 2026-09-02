@@ -23,16 +23,18 @@ and not defended.
 
 ## Flow tags
 
-A tag is a named unsigned integer on a conntrack entry. The store is a
-**conntrack extension of exactly one pointer** — `NF_CT_EXT_PNP`, `struct
-peios_pnp_ct { struct peios_pnp_tag_table __rcu *tags; }` — added to
-every flow at creation (`init_conntrack()`, by the
-`pnp-conntrack-ext.patch`) and NULL until the flow's first `TAG`. The
-extension *block* of a confirmed conntrack entry is immutable (upstream
-removed post-confirm resizing as an RCU-reader race), and PNP's outbound
-seat runs after confirmation, so the extension must exist before it is
-needed; an eight-byte pointer on every flow is the cheapest way to
-guarantee that, and untagged flows — nearly all of them — pay only that.
+A tag is a named unsigned integer on a conntrack entry. The store is the
+`tags` pointer of PNP's **conntrack extension** — `NF_CT_EXT_PNP`,
+`struct peios_pnp_ct` (`include/linux/peios_pnp.h`), added to every flow
+at creation (`init_conntrack()`, by the `pnp-conntrack-ext.patch`), with
+the pointer NULL until the flow's first `TAG`. The extension *block* of
+a confirmed conntrack entry is immutable (upstream removed post-confirm
+resizing as an RCU-reader race), and PNP's egress seat runs after
+confirmation, so the extension must exist before it is needed; a fixed
+extension on every flow is the cheapest way to guarantee that. Since the
+Flow slice the extension also holds the flow's start time and its two
+sentences (§6.8) — 88 bytes per flow, most of it the sentences — while
+untagged flows, nearly all of them, still pay nothing for a table.
 
 The first `TAG` allocates (`GFP_ATOMIC`) a table of eight `(hash, value,
 present)` entries; a full table is replaced by one twice the size —
