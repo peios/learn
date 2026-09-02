@@ -35,6 +35,19 @@ tracked packet reads its flow's **sentence**:
 No Flow forest at all (generation 0, or no `Flow` key) is permissive,
 counted, and caches nothing.
 
+What the Flow forest judges is the **flow view**, not the packet's
+snapshot: a Flow fact is one identical for every packet of the flow, so
+`pnp_flow_view()` builds it from the flow. A reply-direction packet's
+addresses and ports are swapped back to the original tuple (and its
+ICMP type replaced by the tuple's); the direction is the originator's,
+recorded at the first judgment along with the interface, the VLAN and
+the peer's MAC, so a re-judgment on a reply sees exactly the facts the
+first judgment saw. (Found live before the fix: an inbound viewer flow
+re-judged on its reply packet as `out`, and matched `outbound-ok`.) A
+loopback flow's view takes the slot's direction. The refusal, when the
+verdict is one, answers the packet in hand; the event describes the flow
+as judged.
+
 A normal flow has one local endpoint and one sentence, slot 0, written
 at the originator's seat on the first packet; the reply direction, and
 every later packet, reads it. `Direction` in the judgment is the

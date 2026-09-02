@@ -90,7 +90,9 @@ With the flow come two facts that exist only on a flow: `flow_related`
 flow's start time, read from the extension's `start_secs` (stamped when
 conntrack created the entry) through the same `time64_to_tm()` lowering
 as the clock, into the `s_*` fields (`HAS_START`). These are the Flow
-layer's `Related` and `Start.*` facts.
+layer's `Related` and `Start.*` facts. `flow_reply` says whether this
+packet travels in the flow's reply direction — the Flow layer's view
+builder (§6.8) uses it to turn the packet's tuple back into the flow's.
 
 ## What the core sees
 
