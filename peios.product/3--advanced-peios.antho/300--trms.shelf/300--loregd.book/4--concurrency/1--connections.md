@@ -59,7 +59,15 @@ connection when one is bound: `RSI_LOOKUP`, `RSI_ENUM_CHILDREN`,
 `RSI_READ_KEY`, and `RSI_QUERY_VALUES`.
 
 `RSI_DELETE_LAYER` and `RSI_FLUSH` take the hive's write connection
-directly rather than through the transaction-aware path. They do not
-consult the request's transaction id, so they neither join a caller's
-transaction nor decline a read-only one, and they open and commit work of
-their own.
+directly rather than through the transaction-aware path, and open and
+commit work of their own. Neither can join a caller's transaction:
+`RSI_FLUSH` checkpoints a hive, and `RSI_DELETE_LAYER` spans every
+registered hive while a transaction binds to exactly one.
+
+They do still consult the request's transaction id, for the two answers
+that do not require joining. A read-only transaction is declined with
+`RSI_INVALID`, as it is on every other mutating path. And because each
+hive allows a single write connection, `RSI_DELETE_LAYER` declines with
+`RSI_TXN_BUSY` while any transaction holds a pinned write connection
+rather than blocking on it forever — the same answer `RSI_FLUSH` gives
+for its own hive.

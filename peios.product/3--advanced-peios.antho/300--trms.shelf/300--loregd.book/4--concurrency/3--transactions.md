@@ -60,9 +60,10 @@ mechanism: a volatile read inside a read-only transaction observes the
 live store.
 
 A mutating operation carrying a read-only transaction id is rejected with
-`RSI_INVALID` before any state changes — for the nine operations that
-route through the write path. `RSI_DELETE_LAYER` and `RSI_FLUSH` do not
-check (§4.1).
+`RSI_INVALID` before any state changes. The nine operations that route
+through the write path get this from the routing itself;
+`RSI_DELETE_LAYER` and `RSI_FLUSH` cannot route that way and ask
+directly, for the same answer (§4.1).
 
 ## Committing and aborting
 
