@@ -74,16 +74,19 @@ An env file must declare **at least one** of `[env]`, `[wrap]`, or
 ### `--env <name>` selection
 
 The active env file is chosen from the `--env <name>` flag (default `main`),
-resolved relative to the recipe root:
+resolved at the workspace root and then the recipe root:
 
-| `--env` value | File loaded | Must exist? |
+| `--env` value | File loaded at each root | Must exist? |
 | --- | --- | --- |
-| *(unset)* or `main` | `env.pekit.toml` | no (silently absent) |
+| *(unset)* or `main` | `env.pekit.toml` | no (silently absent at either root) |
 | `none` | *(no env file loaded)* | n/a |
-| any other `<name>` | `<name>.env.pekit.toml` | **yes** — a missing file is an error |
+| any other `<name>` | `<name>.env.pekit.toml` | **yes** — in at least one root |
 
-So `--env prod` loads `prod.env.pekit.toml`, and it must exist. The default
-`env.pekit.toml` is optional.
+When both files exist, the workspace file is the base and the recipe file
+overlays it for `[env]`, `[wrap]`, and `dependency_provider`. Outside a
+workspace only the recipe root is searched. The default `env.pekit.toml` is
+optional everywhere. When both paths resolve to the same underlying file, it is
+loaded only once.
 
 ### `[env]` table
 
@@ -95,7 +98,7 @@ Shared by `workspace.pekit.toml`, `env.pekit.toml`, and the recipe's own
 | Value type | Every value must be a string. |
 | Name grammar | Names must match `^[A-Za-z_][A-Za-z0-9_]*$`. |
 | Reserved prefix | User env may not set any `PEKIT_*` name — those are pekit-managed. A `PEKIT_`-prefixed name is rejected at build time (`reserved_env`). |
-| Layering | Applied workspace → (delegated source) → recipe → env file, later layers overriding earlier ones. |
+| Layering | Applied workspace → workspace env file → (delegated source) → recipe → recipe env file, later layers overriding earlier ones. |
 | Expansion | Values are shell expressions, not literals. `$NAME` expands when the target runs, so a value may reference a managed `PEKIT_*` variable or an env value declared before it. Values are word-split-safe: spaces are preserved, so a flag list needs no quoting of its own. |
 
 ```toml

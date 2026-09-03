@@ -31,7 +31,7 @@ When a target runs, pekit composes three maps and overlays them in a fixed order
 | --- | --- | --- |
 | Managed | Set by pekit (recipe/source roots, output paths, version parts, dependency outputs) | `PEKIT_*` |
 | Keyring | Keyring files and `--keyring.x.y=` literals | `PEKIT_KEYRING_*` |
-| User | `[env]` in the workspace, recipe, and selected env file | Any valid shell name |
+| User | `[env]` in the workspace, selected workspace env file, recipe, and selected recipe env file | Any valid shell name |
 
 The overlay order is **managed, then keyring, then user** — so in principle a later
 layer overwrites an earlier one on a key collision. In practice the three
@@ -61,25 +61,26 @@ Keys must be valid environment-variable names — they match
 `^[A-Za-z_][A-Za-z0-9_]*$`. A non-string value, or a name outside that grammar, is
 a parse error. Declaration order is preserved from the file.
 
-`[env]` may appear in three places, each contributing to the user layer:
+`[env]` may appear in these places, each contributing to the user layer:
 
 - the **workspace** file (applies to every member),
+- the selected env file at the **workspace root** (applies to every member),
 - the **recipe** (`pekit.toml`),
-- the **selected env file** (see below).
+- the selected env file beside the **recipe** (see below).
 
 ### Composition and override
 
 Within the user layer the sources are applied in this order, and a later source
 overrides an earlier one on the same variable name:
 
-1. workspace `[env]`
+1. workspace `[env]`, then the selected workspace env file
 2. delegated source recipe `[env]`, then that source's env file (only when the
    recipe delegates env — see [Recipe anatomy](~pekit/recipes/anatomy))
 3. recipe `[env]`
-4. the selected env file's `[env]`
+4. the selected recipe env file's `[env]`
 
 So a variable set in the recipe overrides the same variable inherited from the
-workspace, and the selected env file has the final say.
+workspace profile, and the selected recipe env file has the final say.
 
 ### Shell expansion of `[env]` values
 
@@ -102,17 +103,23 @@ values literal if your target uses the array form without a wrapper.)
 
 ## Env files and `--env`
 
-An **env file** is a supporting file that lives next to the recipe and carries an
-`[env]` block, a `[wrap]` wrapper, a `dependency_provider`, or any combination of
-the three. It lets you keep environment- or profile-specific settings out of the
-recipe proper. An env file must declare at least one of those keys; the only
-recognised top-level keys are `env`, `wrap`, and `dependency_provider`.
+An **env file** is a supporting file at the workspace root or beside a recipe. It
+carries an `[env]` block, a `[wrap]` wrapper, a `dependency_provider`, or any
+combination of the three. It lets you keep environment- or profile-specific
+settings out of the recipe proper. An env file must declare at least one of
+those keys; the only recognised top-level keys are `env`, `wrap`, and
+`dependency_provider`.
 
 Which env file is loaded is controlled by `--env <name>`. The default is `main`,
 so `env.pekit.toml` is picked up automatically when present and silently skipped
-when absent. Passing `--env none` disables env-file loading entirely. Any other
-name selects a named profile such as `release.env.pekit.toml` (`--env release`),
-which **must** exist — a missing named file is an error.
+when absent. Any other name selects a profile such as `release.env.pekit.toml`
+(`--env release`). In a workspace, pekit loads that file from the workspace root
+and then from the recipe directory; either may be absent, but a named profile
+must exist in at least one location. A recipe-local file overlays the workspace
+profile. Outside a workspace, the recipe-local file retains the same semantics.
+If both paths resolve to the same underlying file (for example through a legacy
+member symlink), pekit applies it only once. Passing `--env none` disables both
+layers.
 
 ```toml
 # release.env.pekit.toml
@@ -160,12 +167,13 @@ several places, and the **last non-empty one wins**, in this order (lowest to
 highest precedence):
 
 1. workspace `[wrap]`
-2. delegated source env file `[wrap]` (only when the recipe delegates wrap)
-3. recipe `[wrap]`
-4. the selected env file's `[wrap]`
+2. selected workspace env file `[wrap]`
+3. delegated source env file `[wrap]` (only when the recipe delegates wrap)
+4. recipe `[wrap]`
+5. selected recipe env file `[wrap]`
 
-So a recipe wrapper overrides the workspace's, and the selected env file's wrapper
-overrides the recipe's.
+So a recipe wrapper overrides the workspace profile's, and the selected recipe
+env file's wrapper overrides the recipe's.
 
 ## `dependency_provider`
 
@@ -173,10 +181,10 @@ Env files may also set `dependency_provider`, a single string naming which of a
 target's declared `[build.<target>.dependencies.<provider>]` blocks is exported
 to the build environment (`PEKIT_DEPENDENCIES`, `PEKIT_DEPENDENCY_PROVIDER`,
 `PEKIT_DEPENDENCIES_FILE`). It is not an environment variable; it selects a
-declared provider block by name. When both a delegated source env file and the
-recipe's own env file set it, the recipe's env file wins. See
-[Dependencies and claims](~pekit/recipes/dependencies-and-claims) for what the
-selection exports.
+declared provider block by name. The precedence is the same as for wrappers:
+selected workspace profile, delegated source env file, then selected recipe env
+file. The last non-empty value wins. See [Dependencies and
+claims](~pekit/recipes/dependencies-and-claims) for what the selection exports.
 
 ## Keyrings
 

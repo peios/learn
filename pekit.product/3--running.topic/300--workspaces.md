@@ -290,4 +290,9 @@ For the recipes a workspace's members are, read [Anatomy of a recipe](~pekit/rec
 
 For how workspace `[env]` and `[wrap]` compose with a recipe's own, read [Environments and keyrings](~pekit/recipes/environments-and-keyrings).
 
+Named env files are workspace defaults too. A selected
+`<name>.env.pekit.toml` at the workspace root applies to every member; a
+same-named file beside one recipe overlays it. This lets a workspace define
+shared build rungs without per-member symlinks.
+
 For the full flag surface and remote locators, read [Invocation and flags](~pekit/running/invocation).
