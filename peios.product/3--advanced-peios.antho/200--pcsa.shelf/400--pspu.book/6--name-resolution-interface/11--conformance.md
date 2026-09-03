@@ -63,7 +63,7 @@ chapter. This section collects them by role.
 
 20. Subscribe; replace scopes on every snapshot; reconnect with backoff;
     keep answering while disconnected (§6.9).
-21. Read only `Machine\System\Network\Resolver` from the registry (§6.9).
+21. Read only `Machine\System\Network\Dns` from the registry (§6.9).
 
 ## Network manager obligations
 

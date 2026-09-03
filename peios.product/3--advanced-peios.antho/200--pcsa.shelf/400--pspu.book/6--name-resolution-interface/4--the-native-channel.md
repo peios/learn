@@ -50,7 +50,7 @@ perform an access check of that right against its **control object**
 using the token of the connecting peer — the peer's real token, as the
 kernel would judge it, never a numeric credential read from the socket.
 
-The control object's descriptor is `Machine\System\Network\Resolver
+The control object's descriptor is `Machine\System\Network\Dns
 ControlSecurity` when that value holds a valid self-relative descriptor,
 else the resolver's compiled default. The default MUST grant
 `RESOLVER_QUERY` to Everyone and `RESOLVER_ALL_ACCESS` to SYSTEM and

@@ -44,6 +44,6 @@ description: Every NRI request and reply by name, the rights and values, and the
 | Native socket | `/run/resolvd/resolv.sock` |
 | Stub listener | `127.0.0.53:53`, UDP and TCP |
 | Network manager socket | `/run/netd/control.sock` |
-| Registry key | `Machine\System\Network\Resolver` |
+| Registry key | `Machine\System\Network\Dns` |
 | Shim | `libnss_peios_net.so.2` |
 | Compat file | `/usr/etc/resolv.conf`, constant |

@@ -12,7 +12,7 @@ order to try them, search domains, the interface's addresses, whether it
 claims unmatched names (`default_route`), whether it is exclusive, and
 its metric. Scopes arrive from the network manager (§6.9); the resolver
 holds them and nothing else about the network. The **fallback scope** is
-`Machine\System\Network\Resolver Servers` and `SearchDomains`.
+`Machine\System\Network\Dns FallbackServers` and `ExtraSearchDomains`.
 
 ## Routing
 
@@ -66,7 +66,7 @@ Before any network, a resolver MUST answer:
 - `localhost` and any name under it: `127.0.0.1` and `::1`;
 - the machine's hostname: every unicast address of every interface at
   `addressed` or better, or loopback when there are none;
-- every name under `Machine\System\Network\Resolver\Hosts`, exactly and
+- every name under `Machine\System\Network\Dns\Hosts`, exactly and
   case-insensitively: its addresses. A static name wins over DNS;
 - the reverse of loopback (`localhost`), of a static name's address
   (the name), and of the machine's own addresses (the hostname);

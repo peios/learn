@@ -43,7 +43,7 @@ Machine\System\Network
         RequestedAddress         REG_SZ           shared: IPv4 to ask for next
         Status\                  netd-only: Kind, Server, Gateway, Router,
                                  Prefixes, DnsServers, LastSeen, LastInterface
-    Resolver\                    resolvd's, see name resolution
+    Dns\                         name resolution's machine values, see name resolution
 ```
 
 A rule key's name is its attribution handle and may not contain `\` or

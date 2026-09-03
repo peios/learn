@@ -63,19 +63,22 @@ A name goes to **one** interface's servers, never to all of them:
 
 That is what stops a VPN's names leaking to the coffee-shop network.
 Only when *no* interface supplies servers does resolvd use
-`Machine\System\Network\Resolver Servers`.
+`Machine\System\Network\Dns FallbackServers`.
 
 A single-label name is only ever asked with a search domain appended;
 with none to apply it is simply not found, and no query leaves the
-machine. A name with a dot in it is never expanded.
+machine. A name with a dot in it is never expanded. The domains tried
+are the interface's own, then any in `ExtraSearchDomains` on the same
+key — an addition, unlike `FallbackServers`, which is consulted only
+when nobody offers.
 
 ## Static names
 
 There is no `/etc/hosts`. Put static names in the registry:
 
 ```
-reg new Machine/System/Network/Resolver/Hosts
-reg set Machine/System/Network/Resolver/Hosts printer 10.0.2.9
+reg new Machine/System/Network/Dns/Hosts
+reg set Machine/System/Network/Dns/Hosts printer 10.0.2.9
 ```
 
 resolvd answers `printer` at every door — including the DNS door, so
@@ -112,7 +115,8 @@ outage is not remembered as a fact.
 
 ## What is not there yet
 
-DNSSEC validation, DNS over TLS and mDNS are not in this version;
-`Resolver\Policy` is reserved for them. Per-program resolution policy
-is not either — the native socket knows who is asking, so it can be
-added without changing the wire.
+DNSSEC validation, DNS over TLS and mDNS are not in this version.
+When they arrive they will most likely be profile values, since whether
+to encrypt is a question about the network an interface stands on.
+Per-program resolution policy is not there either — the native socket
+knows who is asking, so it can be added without changing the wire.
