@@ -26,6 +26,36 @@ peipkg install <package|file.peipkg>...
 
 Each argument is either the **name** of a package to fetch from a configured repository, or the **path** of a local `.peipkg` file (recognised by its `.peipkg` suffix). You can mix the two in one command.
 
+### Canonical package names
+
+New Peios catalogue packages use canonical reverse-DNS names. The leading
+segments identify the upstream namespace and the final segment preserves the
+familiar package name, even when that deliberately repeats part of the
+namespace:
+
+```
+com.amd.amd-ucode
+org.gnu.bash
+org.peios.peinit
+```
+
+Peios-built packages of third-party software retain the upstream namespace;
+Peios-owned software and Peios-specific integration packages use `org.peios`.
+The name identifies the packaged software, while the repository signature and
+build provenance identify who packaged it. It does not imply that upstream
+signed or endorsed a downstream package.
+
+For now, commands require the complete canonical name:
+
+```
+peipkg install com.amd.amd-ucode
+```
+
+References to concrete packages in package metadata likewise record complete
+canonical names; virtual capability names remain unqualified. Unqualified-name
+resolution may be added in future when the final component identifies exactly
+one package, but it is not part of the current command contract.
+
 Installing a package rarely means installing just that package. peipkg works out everything the request implies — the dependencies the package needs, and the dependencies of those in turn — and presents the whole set. How that set is computed is the subject of [Dependency resolution](~peios/package-management/dependency-resolution); this page is about the flow around it.
 
 ### The plan-and-confirm flow

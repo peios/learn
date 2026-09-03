@@ -49,6 +49,16 @@ provenance. It is a JSON document at `.peipkg/manifest.json`.
 
 A manifest missing any required field MUST be rejected.
 
+The package format treats `name` as an opaque canonical identifier within the
+§5.3 grammar; it does not derive or authenticate namespace ownership. Peios
+catalogues assign reverse-DNS names whose leading segments identify the
+upstream namespace and whose final segment is the familiar package name, such
+as `com.amd.amd-ucode`. Peios-originated packages use `org.peios`. Dependency
+and package-operation inputs that identify a concrete package carry the
+complete canonical name; virtual capabilities retain their own names.
+Repository signatures and build provenance, rather than the spelling of
+`name`, establish who produced a particular package.
+
 ## Optional fields
 
 | Field | Type | Description | Absent means |
