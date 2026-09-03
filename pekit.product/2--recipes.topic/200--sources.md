@@ -46,7 +46,7 @@ enumerated or requested versions, and a `tag_regex` used when enumerating tags
 url = "https://github.com/example/widget.git"
 ref = "v{{version}}"
 versions = ">=2.0.0"
-tag_regex = "^v([0-9]+\\.[0-9]+\\.[0-9]+)$"
+tag_regex = "^v(?P<version>[0-9]+\\.[0-9]+\\.[0-9]+)$"
 ```
 
 If `ref` renders empty (for example, a bare `{{version}}` with no version
@@ -329,8 +329,15 @@ Reproducible sources can list the versions they offer upstream; this feeds
 [Versions](~pekit/recipes/versions)).
 
 - **git**: `git ls-remote --tags <url>`, with tags optionally filtered by
-  `tag_regex`. If the regex has a capture group, group 1 is the version;
-  otherwise an embedded `MAJOR.MINOR.PATCH` is extracted.
+  `tag_regex`. A named `version` capture supplies the complete version. Named
+  `major`, `minor`, and `patch` captures instead compose a dotted version;
+  optional `prerelease` and `buildmeta` captures are appended. For example,
+  `ref = "{{major}}{{minor}}{{patch}}"` with
+  `tag_regex = '^(?P<major>\d{4})(?P<minor>\d{2})(?P<patch>\d{2})$'` maps the
+  tag `20260810` to version `2026.08.10` and renders it back to the same ref.
+  Without named version captures, pekit extracts the version from the ref
+  template or an embedded `MAJOR.MINOR.PATCH`; unnamed capture groups only
+  filter tags.
 - **url**: fetch the directory listing derived from the `url` template (the part
   before the first `{{…}}`, up to the last `/`), filter entries by `file_regex`,
   and extract versions from the matches.

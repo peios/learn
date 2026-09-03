@@ -154,7 +154,7 @@ trust-on-first-use in the recipe's machine-written
 | `url` | string | **yes** | Git remote URL to clone. |
 | `ref` | string | no | Ref (tag/branch/commit) to check out. Templated. Default `"{{version}}"`. |
 | `versions` | string | no | Version **cap**: a constraint string filtering enumerated or requested versions (see [Versions](~pekit/recipes/versions)). |
-| `tag_regex` | string | no | Regex extracting version numbers from tag names during enumeration. |
+| `tag_regex` | string | no | Regex filtering tags during enumeration. A named `version` capture supplies the complete version; named `major`, `minor`, and `patch` captures compose a dotted version (with optional `prerelease` and `buildmeta`). Unnamed captures have no extraction semantics. |
 
 #### `[source.url]`
 

@@ -88,7 +88,7 @@ command = "nix develop --command sh -c {{command}}"
 url = "https://github.com/BurntSushi/ripgrep.git"
 ref = "{{version}}"
 versions = ">=13.0.0, <=14.1.1"
-tag_regex = '^(\d+\.\d+\.\d+)$'
+tag_regex = '^(?P<version>\d+\.\d+\.\d+)$'
 
 # Borrow selected behaviour from a pekit.toml inside the fetched source.
 [delegate]
