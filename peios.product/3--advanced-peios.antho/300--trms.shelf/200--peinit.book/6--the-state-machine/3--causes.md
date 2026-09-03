@@ -112,6 +112,21 @@ actually scheduled.
 so start a minimal emergency endpoint. It is not for monitoring or
 alerting, which is eventd's job.
 
+### A handler that is already running
+
+If the named handler is already Active — or Reloading, on its way back to
+Active — the failure starts nothing. A running service has no state to
+transition into on being started again, and it is already doing the job
+the failure would have asked of it, so the start resolves as satisfied:
+no operation is created, and no loop-guard chain entry is recorded for a
+cascade that did not happen.
+
+This is the same answer the control interface gives an administrator who
+starts an already-running service, and it is deliberately the same test.
+A handler in any other state is started normally — so a Oneshot handler
+that ran for an earlier failure runs again for a new one, and a handler
+that has since failed is restarted.
+
 ### The loop guard
 
 An `OnFailure` handler can fail and carry its own `OnFailure`, so a
