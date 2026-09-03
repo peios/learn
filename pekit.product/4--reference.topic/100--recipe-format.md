@@ -124,9 +124,9 @@ An omitted `command` yields an empty wrap (no wrapping).
 
 ### `[source]`
 
-Selects and configures the source tree. It has three sub-tables. At most one
-**reproducible** source (`git` or `url`) may be present — declaring both is a
-`mixed_source` error. A `local` source may be combined with a reproducible one
+Selects and configures the source tree. It has four sub-tables. At most one
+**reproducible** source (`git`, `url`, or `pypi`) may be present — declaring
+more than one is a `mixed_source` error. A `local` source may be combined with a reproducible one
 (the local path acts as an override). Unknown keys directly under `[source]`
 are rejected.
 
@@ -134,6 +134,7 @@ are rejected.
 | --- | --- |
 | `[source.git]` | Clone from a git repository. |
 | `[source.url]` | Download from a URL (optionally an archive). |
+| `[source.pypi]` | Discover and download a standardized PyPI source distribution. |
 | `[source.local]` | Use a directory on disk. |
 
 One direct key is accepted alongside the sub-tables:
@@ -143,7 +144,7 @@ One direct key is accepted alongside the sub-tables:
 | `patches` | string | no | Name of a recipe-root directory (a single path segment) whose `series` file pekit applies to the materialised source tree before any target runs. Requires a reproducible source (`patches_source` otherwise). See [Patches](~pekit/recipes/sources#patches). |
 
 See [Sources](~pekit/recipes/sources) for materialisation, caching, and
-provenance behaviour. Resolved git and url sources are pinned
+provenance behaviour. Resolved git, url, and PyPI sources are pinned
 trust-on-first-use in the recipe's machine-written
 [`pekit.lock`](~pekit/reference/supporting-files#pekitlock).
 
@@ -167,6 +168,21 @@ trust-on-first-use in the recipe's machine-written
 | `file_regex` | string | no | Regex extracting version numbers when enumerating from a listing. |
 | `checksum` | string **or** table | no | Expected checksum. A bare string applies to all versions; a table maps version → checksum. |
 | `signature` | table | no | Upstream signature verification — see `[source.url.signature]` below. |
+
+#### `[source.pypi]`
+
+| Key | Type | Required | Meaning |
+| --- | --- | --- | --- |
+| `project` | string | **yes** | PyPI project name. Must start and end with an ASCII letter or digit and otherwise contain only letters, digits, `.`, `_`, or `-`. |
+| `artifact` | string | **yes** | Distribution kind. Currently must be exactly `"sdist"`. |
+| `versions` | string | no | Version **cap**: a constraint string filtering enumerated or requested versions (see [Versions](~pekit/recipes/versions)). |
+
+Pekit requests `https://pypi.org/simple/<normalized-project>/` as
+`application/vnd.pypi.simple.v1+json`. It accepts one non-yanked, stable,
+Pekit-compatible, PEP 625 `.tar.gz` sdist per version, requires that entry's
+SHA-256, extracts its standardized root, and records the exact URL and digest
+in `pekit.lock`. Wheels and legacy sdist formats are not candidates. There is
+no configurable index URL in this source kind.
 
 #### `[source.url.signature]`
 

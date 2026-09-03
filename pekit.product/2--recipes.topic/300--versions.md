@@ -101,8 +101,9 @@ rejected with `--version, --latest, and --all-versions are mutually exclusive`.
 | *(none)*                | an unversioned build (no `{{version}}` available)             | no                          |
 
 **Enumerable sources** are those pekit can list versions for: a `[source.git]`
-source (via `git ls-remote --tags`) or a `[source.url]` source (by fetching the
-listing directory). `--latest`, `--all-versions`, and any constraint require one;
+source (via `git ls-remote --tags`), a `[source.url]` source (by fetching the
+listing directory), or a `[source.pypi]` source (from the project's JSON Simple
+API page). `--latest`, `--all-versions`, and any constraint require one;
 against a non-enumerable source they fail with `selected source cannot enumerate
 versions`.
 
@@ -165,6 +166,11 @@ elided. The ladder is also **skipped entirely** when the version carries a
 prerelease or build-metadata tail: `1.21.0-rc.1` is only ever matched as written.
 If no candidate is available (or the source is not reproducible/enumerable), the
 version you wrote is used verbatim.
+
+PyPI exact selectors are the exception: they are used literally and do not
+consult the live index for ladder matching. This lets an exact version rebuild
+solely from its pinned URL and SHA-256 when PyPI is unavailable. PyPI automatic
+selectors already use the exact version spellings enumerated by the index.
 
 The ladder applies to the exact-selector path only. `--latest`,
 `--all-versions`, and constraints work on the enumerated set directly and do not

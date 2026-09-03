@@ -1,7 +1,7 @@
 ---
 title: Sources
 type: concept
-description: "How a recipe gets its source tree: the git, url, and local kinds, materialisation and caching, the lockfile, patches, enumeration, and delegation."
+description: "How a recipe gets its source tree: the git, url, PyPI, and local kinds, materialisation and caching, the lockfile, patches, enumeration, and delegation."
 related:
   - pekit/recipes/anatomy
   - pekit/recipes/versions
@@ -20,16 +20,16 @@ source tree.
 Sources are declared under `[source.*]` in the recipe. A recipe may have:
 
 - **no external source** (sourceless) — the recipe directory itself is the tree;
-- **one reproducible source** — either `[source.git]` **or** `[source.url]`,
-  never both;
+- **one reproducible source** — one of `[source.git]`, `[source.url]`, or
+  `[source.pypi]`, never more than one;
 - **optionally a local override** — `[source.local]`, on its own or alongside a
   reproducible source.
 
-A source is **reproducible** when it is git or url — those pin to exact
-bytes. Declaring two reproducible tables is an error (`mixed_source`:
+A source is **reproducible** when it is git, url, or PyPI — those pin to exact
+bytes. Declaring multiple reproducible tables is an error (`mixed_source`:
 "exactly one reproducible source table is allowed").
 
-## The three source kinds
+## The four source kinds
 
 ### `[source.git]`
 
@@ -99,6 +99,42 @@ upstream maintainer's release-signing key: pekit fetches the detached
 signature beside the artifact and verifies it before anything is locked or
 built, closing the trust-on-first-use gap for brand-new versions. The full
 schema is in the [recipe format reference](~pekit/reference/recipe-format).
+
+### `[source.pypi]`
+
+Selects a project source distribution from PyPI's standardized JSON Simple
+API. This is the low-maintenance choice for recipes that should automatically
+discover new PyPI releases:
+
+```toml
+[source.pypi]
+project = "asciidoc"
+artifact = "sdist"
+versions = ">= 10.2.1"
+```
+
+All three fields are declarative rather than URL templates. `project` is the
+PyPI project name; `artifact` is required and currently must be exactly
+`"sdist"`; and `versions` is the usual optional source version cap. Pekit
+normalizes the project name for the `/simple/<project>/` request, asks for the
+versioned JSON representation, and considers only
+[standardized `.tar.gz` sdists](https://packaging.python.org/en/latest/specifications/source-distribution-format/#source-distribution-file-name).
+
+Automatic discovery deliberately excludes yanked files, prereleases, wheels,
+legacy non-standard sdist filenames, and versions outside Pekit's version
+grammar. A release must expose exactly one eligible sdist with a valid SHA-256:
+none is `pypi_sdist_missing` when requested exactly, while multiple candidates
+are `pypi_sdist_ambiguous`. Pekit never guesses between files.
+
+The selected file's index-advertised SHA-256 is verified on download, and its
+exact file URL and digest are written through the ordinary
+[`pekit.lock`](#the-lockfile) mechanism. Once locked, an exact-version rebuild
+does not need the live project index: it replays the pinned URL and hash from
+the lock (using the artifact cache when present). `--latest`, constraints, and
+`--all-versions` still consult the index so they can discover newly published
+versions. A release that is yanked after it was locked therefore remains
+rebuildable by exact version but is not selected during a fresh automatic
+discovery.
 
 ### `[source.local]`
 
@@ -211,6 +247,12 @@ re-materialised from that cached artifact on each run when a checksum is set
 (the pinned content is deterministic anyway); without a checksum the tree is
 reused as long as the recorded manifest still matches.
 
+**PyPI** (`pypi`). Pekit first selects the one eligible sdist for the chosen
+version as described above, then uses the URL materialisation path: the
+advertised hash is verified, the pristine `.tar.gz` is cached, its standardized
+top-level directory is extracted, patches are applied, and the exact file is
+locked. Provenance is `pypi:<normalized-project>@<version>#sha256:<hash>`.
+
 ### Caching and `--refresh-source`
 
 Pekit does not expose configurable cache policies. Caching is exactly the
@@ -220,8 +262,8 @@ discards the cache and rebuilds from scratch:
 
 - git: removes the mirror repo **and** the checkout scope, forcing a fresh
   `clone --mirror` and checkout.
-- url: removes the cached artifact **and** the materialised scope, forcing a
-  re-download and re-extract.
+- url / PyPI: removes the cached artifact **and** the materialised scope,
+  forcing a re-download and re-extract.
 - local / sourceless: nothing to refresh.
 
 A refresh does not relax the lock: the fresh download is still verified
@@ -232,8 +274,8 @@ against the lockfile, so `--refresh-source` is how you *check* upstream and
 
 Fetched inputs are pinned **trust-on-first-use** in a machine-written
 `pekit.lock` beside `pekit.toml`. The first time a source resolves for a
-version, pekit records what it fetched — the artifact's SHA-256 for a url
-source, the resolved commit for a git source — and every later resolve
+version, pekit records what it fetched — the artifact's SHA-256 for a url or
+PyPI source, the resolved commit for a git source — and every later resolve
 verifies against that entry instead, cache hits included. A mismatch is a hard
 `lock_mismatch` stop: upstream's published bytes (or a tag) changed under a
 version that was already pinned. Accepting such a change is an explicit
@@ -300,9 +342,9 @@ follows the source kind:
 - **git** sources re-apply the series on every resolve: the checkout is
   reset to the pinned commit and cleaned first, so an edited patch takes
   effect on the next run.
-- **url** sources materialise once per patch-set content: the series' hash
-  joins the materialisation scope, so an edited patch extracts and patches a
-  fresh tree.
+- **url and PyPI** sources materialise once per patch-set content: the series'
+  hash joins the materialisation scope, so an edited patch extracts and
+  patches a fresh tree.
 - **local** sources are never patched — a local tree is your own working
   state, often with the series already applied or mid-rework. pekit emits a
   warning and continues.
@@ -341,10 +383,13 @@ Reproducible sources can list the versions they offer upstream; this feeds
 - **url**: fetch the directory listing derived from the `url` template (the part
   before the first `{{…}}`, up to the last `/`), filter entries by `file_regex`,
   and extract versions from the matches.
+- **PyPI**: fetch the project's standardized JSON Simple API page once per
+  invocation and enumerate the eligible sdists described under
+  [`[source.pypi]`](#sourcepypi).
 
 Local and sourceless recipes cannot enumerate
 (`version_enumeration_unavailable`) — they require an exact version. The
-`versions` field on a git or url source acts as a **cap** applied to the
+`versions` field on a git, url, or PyPI source acts as a **cap** applied to the
 enumerated (or requested) set; version selection itself is documented on the
 [Versions](~pekit/recipes/versions) page.
 
@@ -363,8 +408,9 @@ materialised:
 | url (checksummed) | `url:<url>#<checksum>` |
 | url (locked, no checksum) | `url:<url>#sha256:<hash>` |
 | url (no checksum, no lock entry) | `url:<url>` (marked **unanchored** — reachable only in a dry run, since a real resolve locks) |
+| PyPI | `pypi:<normalized-project>@<version>#sha256:<hash>` |
 
-For git and url sources the provenance is also written to a `source.pekit.json`
+For git, url, and PyPI sources the provenance is also written to a `source.pekit.json`
 manifest beside the materialised tree, and pekit emits it as a `source` event
 under `--verbose`.
 

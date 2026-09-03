@@ -227,8 +227,8 @@ Each `[[source]]` entry carries the keys for its source kind:
 | Key | Set for | Meaning |
 | --- | --- | --- |
 | `version` | all | The locked version. Empty for a versionless url fetch. |
-| `url` | url sources | The rendered URL fetched at lock time. Provenance only — the hash, not the address, is the assertion. |
-| `sha256` | url sources | SHA-256 of the fetched artifact. |
+| `url` | url and PyPI sources | The rendered or selected URL fetched at lock time. Provenance only — the hash, not the address, is the assertion. |
+| `sha256` | url and PyPI sources | SHA-256 of the fetched artifact. |
 | `ref` | git sources | The rendered ref the version resolved through. |
 | `commit` | git sources | The commit the ref resolved to — the assertion. |
 | `signature_key` | url sources with `[source.url.signature]` | Hex fingerprint of the pinned upstream key that verified the artifact at lock time. |
