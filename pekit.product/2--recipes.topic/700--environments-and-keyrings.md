@@ -257,6 +257,13 @@ packages unless you pass `--allow-unsigned`. The exact behaviour and the
 accepted key encodings are in
 [Supporting files](~pekit/reference/supporting-files#well-known-entries).
 
+A `[publish.peipkg]` target may similarly select any keyring leaf with a
+`keyring:<dotted.entry>` `signing_key` value. The leaf contains the path to the
+Ed25519 private key used to sign repository metadata; the conventional name is
+`signing.repository_key`. This is target-selected rather than a second
+well-known entry because different publish destinations may use different
+repository keys.
+
 ### Binary signing
 
 A build target's [`sign` table](~pekit/reference/recipe-format#target-sign)

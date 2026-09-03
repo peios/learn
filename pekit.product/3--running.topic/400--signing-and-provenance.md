@@ -54,6 +54,18 @@ Two failure behaviours are deliberate:
   development), but `publish` refuses peipkg-format packages with
   `unsigned_publish` unless you pass `--allow-unsigned`.
 
+A `[publish.peipkg]` target additionally needs the private key that signs its
+repository descriptor and indexes. Its `signing_key` may name a key file
+directly or use `keyring:<dotted.entry>` to read a key-file path from a keyring,
+for example `keyring:signing.repository_key`. This is deliberately separate
+from the well-known `signing.package_key`: one key may perform both roles, but
+the repository publisher also supports distinct package and metadata keys.
+
+When Pekit initializes a repository it records both public keys when they
+differ. When publishing to an existing repository, that repository's signed
+descriptor must already trust the relevant keys; Pekit never widens an
+existing trust set as a side effect of publishing.
+
 ## Signing binaries for PIP
 
 Package signing protects the artifact in transit; it says nothing to the
@@ -218,6 +230,10 @@ recipe-side schema is in the
   `publish_collision`; across workspace members, the
   [publish preflight](~pekit/running/workspaces#cross-member-publish-collision-detection)
   catches the same collision before any member ships anything.
+- **A Peipkg repository publication verifies every package before changing its
+  indexes.** An untrusted package signer, duplicate package identity, damaged
+  artifact, or unusable repository metadata key is a
+  `peipkg_repository_publish` error.
 
 ## Where to go next
 

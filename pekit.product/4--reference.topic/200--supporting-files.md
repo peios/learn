@@ -372,10 +372,12 @@ Any reference containing a `:` that is not one of the `@`-prefixed roots is a
 
 ## Publish targets
 
-The `publish` command copies a package's built artifact to declared destinations. There is
-exactly one publish kind: `localdir`. Any other `[publish.*]` key is rejected
-(`unknown_key`). A package selected for publishing that declares no target is an
-error.
+The `publish` command sends a package's freshly built artifact to its declared
+destinations. There are two publish kinds: `localdir` and `peipkg`. Any other
+`[publish.*]` key is rejected (`unknown_key`). A package selected for publishing
+that declares no target is an error.
+
+### `localdir`
 
 Targets are an array of tables:
 
@@ -397,6 +399,51 @@ Resolution details:
 | Base root | The workspace root when building in a workspace, otherwise the recipe root. `path` is joined onto it. |
 | Final destination | `<base>/<path>/<artifact-filename>`. |
 | Collisions | Two instances resolving to the same destination is an error (`publish_collision`) unless they are the same artifact. |
+
+### `peipkg`
+
+The singular `[publish.peipkg]` target publishes all peipkg artifacts selected
+for one package/version plan that name the same directory as one batch through
+the Peipkg repository publisher:
+
+```toml
+[publish.peipkg]
+path = "dist/repository"
+name = "experimental"
+signing_key = "keyring:signing.repository_key"
+```
+
+| Key | Type | Required | Meaning |
+| --- | --- | --- | --- |
+| `path` | string | **yes** | Repository state directory, relative to the base root. It is not package-instance templated. |
+| `name` | string | no | Stable repository name used only when initializing `path`. Defaults to the final path component. An existing repository's signed descriptor is authoritative. |
+| `signing_key` | string | **yes** | Ed25519 private key used to sign the repository indexes. A bare value is a key-file path. `keyring:<dotted.entry>` reads a key-file path from that keyring leaf. |
+
+A direct relative `signing_key` path resolves from the base root. A path read
+from a keyring resolves from the invocation's working directory, like
+`signing.package_key`. Both raw 32-byte Ed25519 seeds and PKCS#8 PEM files are
+accepted.
+
+If the directory named by `path` is absent or empty, Pekit initializes a
+complete repository there: signed descriptor, public keys, and empty active and
+archive indexes. The repository metadata key becomes a trust key. When the
+freshly built packages use a different `signing.package_key`, its public half
+is also recorded as a trusted key, so consumers can verify those packages. An
+existing repository is never reinitialized or given new trust implicitly; its
+descriptor must already trust both the metadata-signing key and the
+package-signing key.
+
+Pekit then publishes that batch into the repository's canonical
+`p/<name>/<version>/` tree and regenerates both signed indexes once for the
+batch. Separate selected versions and workspace members are serialized but
+remain separate repository publications. The target rejects non-peipkg
+artifacts and already-published name/version/architecture identities. Workspace
+members sharing one repository are serialized so their whole-index updates
+cannot overwrite each other.
+
+The directory is the repository and can be served or copied verbatim. This
+target does not upload it to remote storage; combine deployment with a separate
+step when the serving tree is not locally mounted.
 
 <a id="selectors"></a>
 

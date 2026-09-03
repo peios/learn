@@ -567,8 +567,8 @@ See [Multi-package recipes](~pekit/recipes/multi-package).
 
 ### `[publish]`
 
-Where finished artifacts are copied. The only accepted target is `localdir`,
-written as an **array of tables**:
+Where finished artifacts are published. `localdir` copies an artifact by
+basename and is written as an **array of tables**:
 
 ```toml
 [[publish.localdir]]
@@ -582,6 +582,29 @@ Each entry accepts only `path` and `overwrite`:
 | --- | --- | --- | --- |
 | `path` | string | **yes** | Destination directory, relative to the workspace root (or recipe root outside a workspace). Templated. The artifact keeps its own filename. |
 | `overwrite` | bool | no | Allow replacing an existing file at the destination. Default `true`. |
+
+`peipkg` publishes peipkg-format artifacts into a complete signed repository
+and is written as one table:
+
+```toml
+[publish.peipkg]
+path = "dist/repository"
+name = "experimental"
+signing_key = "keyring:signing.repository_key"
+```
+
+| Key | Type | Required | Meaning |
+| --- | --- | --- | --- |
+| `path` | string | **yes** | Repository state directory, relative to the workspace root (or recipe root outside a workspace). |
+| `name` | string | no | Name written into a newly initialized repository's signed descriptor. Defaults to the final component of `path`; it does not alter an existing repository. |
+| `signing_key` | string | **yes** | Repository metadata signing key. A normal value is a key-file path; `keyring:<dotted.entry>` reads the path from that keyring leaf. |
+
+If the directory named by `path` is absent or empty, it is initialized before
+the first package batch is published. A non-empty directory that is not already
+publisher state is refused rather than overwritten. Only peipkg-format
+artifacts may use this target. See
+[Publish targets](~pekit/reference/supporting-files#publish-targets) for key
+resolution, batching, and repository semantics.
 
 ### `[claims]`
 
