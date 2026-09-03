@@ -1,19 +1,22 @@
 ---
 title: Network policy
 type: concept
-description: How Peios Network Policy (PNP) decides what a packet may do — rules as registry keys, a forest of trees, verdicts and effects, and the laws an author can rely on.
+description: How Peios Network Policy (PNP) decides what a packet may do and how an interface joins a network — rules as registry keys, a forest of trees, verdicts and effects, profiles, and the laws an author can rely on.
 related:
   - peios/networking/overview
   - peios/networking/network-policy-reference
   - peios/networking/the-pnp-viewer
 ---
 
-Peios Network Policy (PNP) is the machine's packet filter, and it is
-configured the way everything else on Peios is: as registry keys. There
-is no rule language file, no `iptables`-style command, and no daemon in
-the path — the kernel reads its policy from
-`Machine\System\Network\Rules` itself, and every change there becomes a
-new **policy generation** within a fraction of a second. The
+Peios Network Policy (PNP) is the machine's networking policy: the
+packet filter, and the statement of how each interface joins a network.
+It is configured the way everything else on Peios is: as registry keys
+under `Machine\System\Network`. There is no rule language file, no
+`iptables`-style command, and for the packet layers no daemon in the path
+— the kernel reads them from `Machine\System\Network\Rules` itself, and
+every change there becomes a new **policy generation** within a fraction
+of a second. The interface layer is judged by netd, the network manager,
+from the same key and by the same rules. The
 [PNP viewer](../500--the-pnp-viewer.md) is the place to watch that
 happen and to write rules by hand; the
 [reference](../420--network-policy-reference.md) lists every fact,
@@ -49,10 +52,10 @@ priority and strictness, never by which came first. That is what lets
 policy from different sources (a local rule, an organisation's Group
 Policy) coexist without merging.
 
-## Three layers
+## Three layers, and a fourth
 
-Rules live under one of three layer keys, and a packet meets them in
-order:
+Rules live under one of four layer keys. Three are the kernel's, and a
+packet meets them in order:
 
 - `Rules\RawPacket` — the wire-side escape hatch. Judged at the device
   seats for *all* traffic, before conntrack on the way in; it sees
@@ -77,6 +80,9 @@ the packet layer at the device seat instead, so nothing escapes it.
 Traffic conntrack does not track (a stray reply, an out-of-window
 segment) never reaches the flow layer; the packet layer's verdict is its
 last word.
+
+The fourth, `Rules\Interface`, is about interfaces rather than packets:
+see [Joining a network](#joining-a-network).
 
 ## Flows and sentences
 
@@ -123,6 +129,56 @@ What is provable is what is stated: a program is its token, never a path
 or a name it claims for itself, and an end the kernel could not
 attribute is confessed in the status rather than guessed.
 
+## Joining a network
+
+An **interface** is a place a network can be attached — an Ethernet
+socket, a radio, later a tunnel. It exists from the moment the hardware
+is found, cable or no cable; plugging in gives it a link, and then there
+is a **network** on the other side, which the machine did not choose and
+cannot see all of. What it can see is the network's **offer**: an address
+for you, a way out, servers that turn names into addresses, sometimes a
+name for you. The offer is claims. Nothing checks them.
+
+For each interface, PNP decides one thing: join the network found there,
+or do not; and if joining, what to accept from the offer and what to
+dictate instead. That decision is split along its natural seam.
+
+**Which interfaces** is a rule in the `Interface` layer, conditioned on
+facts about the interface — `Interface.Kind`, `Interface.Path`,
+`Interface.Id` — and, once a network has been identified on it, about the
+network: `Network.Name`, `Network.Trust`. Its verdicts are `JOIN(profile)`,
+`IGNORE` (never touch it; something else owns it) and `DOWN` (keep it
+dark). Every rule law below holds: exceptions are subkeys, the most
+specific rule speaks, priority collates, the backstop answers when nothing
+does — and the backstop is `IGNORE`. An interface is in exactly one
+profile, or ignored, or down. Rules never carry settings.
+
+**How to stand there** is a **profile** under `Profiles\`: a key of flat
+dotted values, `Address.Offered`, `Dns.Servers`, `Route.Gateway`, with
+no match block. Every value is a decision, and the important ones are
+trust: nothing the network offers is believed unless a bundle's `Offered`
+says so, so a profile's posture is visible by counting its Offereds — a
+hardened server has none. A subkey is a derived profile: it inherits
+every value above it and overrides what it names, so `office\london\db1`
+says only what differs. The friendly behaviour a laptop wants lives in the
+shipped `default` profile, deletable like everything else.
+
+The split is what makes the laptop possible: one radio, at home and in the
+office and in a cafe, is one interface with three correct profiles, and
+"which one now" is a condition over the network — a rule, in the place
+PNP already answers questions.
+
+The `Interface` layer is not the kernel's. Its executor is netd, which
+builds and judges the forest with the kernel's own rules engine, writes
+what it found and decided under `Interfaces\<id>\Status` and
+`Networks\<id>\Status` (keys only it may write, so a hand edit is refused
+rather than reverted), and reconciles the kernel to the result. Each
+executor refuses its own layers: a `JOIN` that names no profile keeps netd
+on its last good forest and never stalls the firewall. Joining needs
+netd's own DHCP and router-discovery traffic to pass the packet layers,
+and PNP grants that nothing implicitly — the permission is a visible rule
+of the shipped baseline.
+
 ## Verdicts and effects
 
 Actions come in two species. **Verdicts** decide the packet's fate:
@@ -165,7 +221,9 @@ verdict for a packet, it is dropped, and the drop is attributed to
 `backstop`. Every permissive statement is therefore a visible, deletable
 rule. An empty forest drops everything; a machine boots *without* any
 policy loaded is loudly permissive (generation 0) until its first
-generation ingests.
+generation ingests. The interface layer's backstop is `IGNORE`: an
+interface no rule speaks for is left as the kernel left it, which is the
+same posture — nothing happens that no rule said.
 
 **A condition over a fact the packet does not have is false.** An ARP
 frame has no `DstPort`; `DstPort.Equal` = `22` simply does not match it

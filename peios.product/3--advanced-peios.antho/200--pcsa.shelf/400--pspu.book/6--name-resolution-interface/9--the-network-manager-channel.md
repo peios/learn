@@ -34,8 +34,8 @@ Each scope:
 | `servers` | array of string | The profile's static servers, then the lease's when the profile takes them |
 | `domains` | array of string | The profile's search domains, then the lease's search list or domain |
 | `addresses` | array of string | Every unicast address, CIDR form |
-| `default_route` | bool | The profile's `DNSDefaultRoute`; unset, whether the interface carries a default route |
-| `exclusive` | bool | The profile's `DNSExclusive` |
+| `default_route` | bool | The profile's `Dns.Default`; unset, whether the interface carries a default route |
+| `exclusive` | bool | The profile's `Dns.Exclusive` |
 | `metric` | uint | The route metric |
 | `level` | string | `link`, `addressed`, `routed` |
 

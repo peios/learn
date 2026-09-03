@@ -54,8 +54,8 @@ eth0  metric 100  [default-route]
 
 A name goes to **one** interface's servers, never to all of them:
 
-1. an *exclusive* interface, if one is up (a VPN with
-   `DNSExclusive = 1` takes everything);
+1. an *exclusive* interface, if one is up (a VPN whose profile says
+   `Dns.Exclusive = 1` takes everything);
 2. the interface whose search domain the name ends with — `git.corp`
    goes to the VPN that supplied `corp`;
 3. for a reverse lookup, the interface whose subnet holds the address;

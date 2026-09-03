@@ -1,7 +1,7 @@
 ---
 title: Network policy reference
 type: reference
-description: Every registry key, value, fact, operator, action and limit of Peios Network Policy, with the value forms the kernel accepts.
+description: Every registry key, value, fact, operator, action and limit of Peios Network Policy — the packet layers the kernel reads and the interface layer netd executes — with the value forms each accepts.
 related:
   - peios/networking/network-policy
   - peios/networking/the-pnp-viewer
@@ -15,20 +15,44 @@ table.
 ## Registry layout
 
 ```text
-Machine\System\Network\Rules
-    CurrentReportingLevel        REG_DWORD 1..6   (optional; absent = 1)
-    RawPacket\                   the wire-side layer's forest
-        <rule>\
-    Packet\                      the per-packet layer's forest
-        <rule>\                  one tree root
-            <exception>\         a subkey: narrower region, same laws
-                ...
-    Flow\                        the flow layer's forest
-        <rule>\
+Machine\System\Network
+    Hostname                     REG_SZ           operator
+    Readiness                    REG_SZ           netd: absent | link | addressed | routed
+    Duid                         REG_SZ           shared: DHCPv6 identifier, hex
+    Rules\
+        CurrentReportingLevel    REG_DWORD 1..6   (optional; absent = 1)
+        RawPacket\               the wire-side layer's forest
+            <rule>\
+        Packet\                  the per-packet layer's forest
+            <rule>\              one tree root
+                <exception>\     a subkey: narrower region, same laws
+                    ...
+        Flow\                    the flow layer's forest
+            <rule>\
+        Interface\               the interface layer's forest (netd's)
+            <rule>\
+    Profiles\                    how an interface stands on a network
+        <profile>\               flat dotted values, see Profiles
+            <derived>\           a subkey inherits and overrides
+    Interfaces\<id>\             the inventory, one key per interface seen
+        ClientId                 REG_SZ           shared: DHCPv4 client identifier
+        Status\                  netd-only: Name, Kind, Mac, Path, Driver,
+                                 Verdict, Rule, Profile, Readiness, LastNetwork
+    Networks\<id>\               one key per network stood on
+        Name, Trust              REG_SZ           operator
+        RequestedAddress         REG_SZ           shared: IPv4 to ask for next
+        Status\                  netd-only: Kind, Server, Gateway, Router,
+                                 Prefixes, DnsServers, LastSeen, LastInterface
+    Resolver\                    resolvd's, see name resolution
 ```
 
 A rule key's name is its attribution handle and may not contain `\` or
-`/`. Layer keys other than `RawPacket`, `Packet` and `Flow` are ignored.
+`/`. The kernel reads `RawPacket`, `Packet` and `Flow`; `Interface` is
+read by netd, the interface layer's executor (see [Layers](#layers)); any
+other layer key is ignored by both. *Shared* values are written by netd
+when absent and may be set by the operator; `Status` keys carry a
+descriptor that lets only netd write, so a hand edit is refused rather
+than silently reverted.
 
 ### Rule values
 
@@ -99,6 +123,15 @@ an address, `Has` on a port) refuses the generation.
 | `Local.Service` | SID | a service *name* (`resolvd`), or its `S-1-5-80-…` SID | `Flow`, the program is a service |
 | `Local.Process` | string | the process GUID, `8-4-4-4-12` hex (case-insensitive) | `Flow`, `Local` is `program` |
 | `Remote`, `Remote.*` | as `Local` | the other end of the flow, when it is on this machine too | `Flow`, loopback flows only |
+| `Interface.Kind` | string | `wired`, `wireless`, `loopback`, `tunnel`, `bridge`, `other` | `Interface` layer only; always |
+| `Interface.Id` | string | the stable interface id (the inventory key name) | `Interface` layer only; always |
+| `Interface.Mac` | MAC | `aa:bb:cc:dd:ee:ff` | `Interface` layer only; the interface has a hardware address |
+| `Interface.Path` | string | bus position, e.g. `pci-0000:00:03.0` | `Interface` layer only; it is hardware |
+| `Interface.Driver` | string | kernel driver | `Interface` layer only; it is hardware |
+| `Network.Id` | string | the network record's key name under `Networks\` | `Interface` layer only; a network has been identified on the link |
+| `Network.Name` | string | the operator's `Name` on the record | `Interface` layer only; the record has one |
+| `Network.Trust` | string | the operator's `Trust` on the record | `Interface` layer only; the record has one |
+| `Network.Kind` | string | the `Interface.Kind` the network was seen on | as `Network.Id` |
 | `Tag.<name>` | integer | the flow tag's value | the flow carries the tag (`Packet` and `Flow` layers; never `RawPacket`) |
 | `Counter.<name>[(...)]` | integer | a counter view, see below | the packet has the view's key facts and a cell exists |
 
@@ -109,7 +142,11 @@ A `Flow` fact is one that is identical for every packet of the flow. The
 per-packet facts marked "not a `Flow` fact" are legal in a `Flow` rule
 but never present there, so the condition never holds; the viewer flags
 it. `Related`, `Start.*` and the identity facts are the reverse: never
-present outside `Flow`.
+present outside `Flow`. The `Interface.*` and `Network.*` families exist
+only at the `Interface` layer, where `Interface` (the name) is the one
+packet fact shared with them; a packet fact in an `Interface` rule is
+likewise dead. `Tag.*` and `Counter.*` do not exist at the `Interface`
+layer at all — there is no store behind them — and refuse the generation.
 
 ### Who is at this end
 
@@ -170,6 +207,16 @@ verdict results (the strictest listed).
 | `COUNT(Name[, n])` | effect | Emit `n` (default 1) into stream `Name`. |
 | `COUNT(Name, Length)` | effect | Emit the packet's byte length — the bandwidth primitive. |
 | `REPORT(level)` | effect | Emit a `network-report` audit event, level 1..5, if the level clears `CurrentReportingLevel`. One report per rule per evaluation, at the highest level listed. |
+| `JOIN(profile)` | verdict, `Interface` layer | Bring the interface up and stand in the named profile: a path under `Profiles\`, `/`- or `\`-separated. |
+| `IGNORE` | verdict, `Interface` layer | Never touch the interface; something else owns it. |
+| `DOWN` | verdict, `Interface` layer | Keep the interface administratively down. |
+
+The three interface verdicts are legal only in the `Interface` layer,
+and that layer speaks nothing but them, `NULL` and `REPORT`; either way
+round refuses the generation. Their strictness order is `DOWN` > `IGNORE`
+> `JOIN`. `JOIN` must name a profile that exists (a path that names no
+key refuses the generation); naming a *disabled* profile makes the rule
+abstain, as if its action were `NULL`.
 
 Unknown action names, wrong argument counts, negative or non-integer
 operands, unminted `REJECT` kinds, and a `TAG` operation other than the
@@ -215,6 +262,44 @@ A rule conditioned on a fact its layer never has is legal but can never
 match; the viewer flags it. A `Packet` or `RawPacket` rule that reads a
 tag a `Flow` rule writes is a downward read and refuses the generation.
 
+### The interface layer
+
+`Rules\Interface` is the fourth layer, and the one the kernel does not
+read. Its subject is an interface, not a packet: a rule is judged for each
+interface (loopback excepted) whenever an interface appears or changes,
+whenever a network is identified on it, and whenever a generation lands.
+Its executor is netd, which builds and judges the forest with the same
+engine the kernel uses, so a rule means the same thing in every layer.
+
+| | `Interface` |
+|---|---|
+| Judged | per interface, by netd, on interface and generation change |
+| Facts | `Interface`, `Interface.*`, `Network.*` |
+| Verdicts | `JOIN(profile)`, `IGNORE`, `DOWN`; strictness in that order, rising |
+| Effects | `REPORT` only |
+| Backstop | `IGNORE`: an interface no rule speaks for is left as the kernel left it |
+| Result | an interface is in exactly one profile, or ignored, or down |
+
+The collation laws are the packet layers': highest priority wins, ties
+go to the strictest verdict, a subkey is an exception, an abstaining rule
+hands up its parentage. One case has no packet-layer analogue: two rules
+tied on priority naming *different* profiles for one interface. That is a
+conflict, not a choice, and it refuses the generation; `net status` names
+both rules.
+
+**Executor independence.** A generation is one registry state read by
+two executors. Each validates and refuses its own layers on its own: a
+dangling `JOIN` keeps netd on its last good interface forest and never
+stalls the firewall, and a bad `Flow` rule never stops an interface
+joining.
+
+**The executor's own traffic.** Joining needs netd to send and receive
+DHCP and router discovery, and PNP grants that nothing implicitly: the
+permission is the `dhcp-client` and `icmpv6-housekeeping` rules of the
+baseline below, ordinary and deletable. netd cannot yet read the verdict
+stream to name a rule that refused it (the stream has one reader, the
+viewer); `net status` reports an unanswered request as a warning.
+
 ### Sentences
 
 The `Flow` layer's verdict for a flow is cached on the flow with the
@@ -237,6 +322,56 @@ A loopback flow has two local endpoints and two sentences: judged as
 `out` at the outbound seat and as `in` at the inbound seat, and every
 packet of it answers to the stricter of the two. Each judgment sees its
 own end as `Local` and the other as `Remote`.
+
+## Profiles
+
+`Profiles\<path>` is how an interface stands on a network, named by a
+`JOIN`. A profile is a key with flat dotted values and no match block.
+
+**Inheritance.** A subkey inherits every value of its ancestors and
+overrides those it names — per value name, wholesale: a list replaces a
+list, never appends. A present-but-empty value means *none*; an absent
+value means *inherit*. This is the same law as in `Rules\`: a subkey
+specialises its parent. A locally written profile may nest under one
+pushed by policy. `Enabled` = `0` makes a key and its subtree invisible.
+
+**Vocabulary.** Bundles are the claims a network can make; each has an
+`Offered` that says whether to believe it. Every compiled default is
+"believe nothing, do nothing": a bare profile brings the link up and
+nothing else. Unknown value names refuse the generation.
+
+| Bundle | Value | Type | Meaning | Default |
+|---|---|---|---|---|
+| `Address` | `Offered` | 0/1 | take the address the network offers (DHCPv4, IPv6 autoconfiguration) | 0 |
+| | `Families` | list | `ipv4`, `ipv6`: which families the bundle deals in at all; filters `Static` too | both |
+| | `Static` | list | CIDR addresses, either family | none |
+| | `LinkLocal` | 0/1 | self-assign 169.254/16 while nobody answers; dropped when a lease arrives | 0 |
+| | `Temporary` | 0/1 | add daily-rotating IPv6 privacy addresses beside the stable one | 0 |
+| | `OnExpiry` | `Drop` / `Keep` | an offered address the network stops renewing | `Drop` |
+| `Route` | `Offered` | 0/1 | take the way out, and extra routes, the network offers | 0 |
+| | `Gateway` | list | pinned way out, either family | none |
+| | `Metric` | number | rank of this interface's way out | 100 wired, 600 wireless |
+| `Dns` | `Offered` | 0/1 | take the servers and search domains the network offers, after our own | 0 |
+| | `Servers` | list | own servers, in order | none |
+| | `Domains` | list | domains these servers answer for | none |
+| | `Default` | 0/1/absent | take names no domain claims; absent follows the default route | absent |
+| | `Exclusive` | 0/1 | while up, nobody else's servers are consulted | 0 |
+| `Hostname` | `Offered` | 0/1 | adopt the network's name for us if `Hostname` is unset | 0 |
+| | `Announce` | 0/1 | tell the network our name | 0 |
+| `Mtu` | `Offered` | 0/1 | take the packet size limit the network offers | 0 |
+| | `Value` | number, 68+ | pin it | leave alone |
+
+The `Dns` bundle is provisional until the name-resolution pass of PNP.
+
+**The laws of `JOIN`**, whatever the profile says: the executor owns
+every address on a joined interface and only the routes it added itself;
+exactly one place decides what a router advertisement means (the
+executor; the kernel's own handling is off); a link-local address is
+dropped the moment a real lease arrives; IPv6 lifetimes follow the RFCs
+with the two-hour floor; `Route.Metric` defaults by kind; the network's
+`RequestedAddress` is asked for first; a manual change to a joined
+interface lasts until the next reconcile; restarting the executor
+changes nothing visible.
 
 ## Limits
 
@@ -285,6 +420,17 @@ untracked housekeeping a host needs:
 
 Every other inbound flow meets the `Flow` backstop, once, on its first
 packet; untracked inbound packets meet the `Packet` backstop.
+
+`Profiles` and `Rules\Interface` — every wired interface joins the network
+it is plugged into, taking what it offers:
+
+| Key | Values |
+|---|---|
+| `Profiles\default` | `Address.Offered` = 1, `Address.LinkLocal` = 1, `Route.Offered` = 1, `Dns.Offered` = 1 |
+| `Rules\Interface\wired` | `Interface.Kind.Equal` = `wired`, `Priority` = 10, `Actions` = `JOIN(default)` |
+
+Wireless is not in the baseline until a supplicant exists. An interface
+no rule speaks for meets the `Interface` backstop, `IGNORE`.
 
 ## Worked examples
 
@@ -349,6 +495,50 @@ Rules\Flow\curfew           Direction.Equal = out
 Written with `Time.Hour` instead of `Start.Hour`, the same rule cuts
 every running outbound connection at 22:00 — on its next packet, with
 an ICMP admin-prohibited — and the report says which rule did it.
+
+**A static server as an exception** — every wired interface takes what
+the network offers, except the card in slot 3, which stands in a derived
+profile that changes only the address and the way out:
+
+```text
+Profiles\default                 Address.Offered = 1, Address.LinkLocal = 1
+                                 Route.Offered = 1, Dns.Offered = 1
+Profiles\default\db1             Address.Offered = 0, Address.Static = 10.0.0.5/24
+                                 Route.Offered = 0, Route.Gateway = 10.0.0.1
+Rules\Interface\wired            Interface.Kind.Equal = wired
+                                 Actions = JOIN(default)
+Rules\Interface\wired\db1        Interface.Path.Equal = pci-0000:00:03.0
+                                 Actions = JOIN(default/db1)
+```
+
+`default/db1` still takes the network's name servers: `Dns.Offered` is
+inherited.
+
+**The laptop** — one radio, three configurations, chosen by the network
+on the other side:
+
+```text
+Rules\Interface\radio            Interface.Kind.Equal = wireless
+                                 Actions = JOIN(untrusted)
+Rules\Interface\radio\home       Network.Name.Equal = palfrey-home
+                                 Actions = JOIN(home)
+Rules\Interface\radio\office     Network.Trust.Equal = corporate
+                                 Actions = JOIN(corp)
+```
+
+`Network.Name` and `Network.Trust` are what the operator wrote on the
+record under `Networks\`; until a network has been identified on the
+link they are absent, so the radio stands in `untrusted` first.
+
+**A card that stays dark, and one another program owns:**
+
+```text
+Rules\Interface\dead-card        Interface.Id.Equal = 3f2a1b8e-…
+                                 Priority = 100
+                                 Actions = DOWN
+Rules\Interface\tap              Interface.Equal = tap0
+                                 Actions = IGNORE
+```
 
 **Connection rate limiting** — count connections, not packets, by
 counting in the flow layer:

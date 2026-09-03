@@ -35,7 +35,9 @@ sequence and layer view, then:
    (`REG_DWORD`, `REG_DWORD_BIG_ENDIAN` or `REG_QWORD`; 1..6; absent =
    1; anything else refuses);
 2. enumerates its children for the layer keys `Packet`, `RawPacket` and
-   `Flow` (other names are ignored — someone else's future);
+   `Flow` (`Interface` is netd's — the interface layer is built and judged
+   in userspace with the same `pnp-core`, and the kernel never reads it;
+   any other name is ignored);
 3. for each present layer, opens a builder and walks the layer key's
    subkeys as rule roots. Each rule is one `RSI_QUERY_VALUES` round trip
    (its effective, layering-resolved values, delivered in the batch
