@@ -63,6 +63,12 @@ Conflicts is for true mutual exclusion — two services binding the same port, o
 | **BindsTo** | target first; dependent fails if target fails | Yes (and auto-recovers) | Yes (and auto-recovers) |
 | **Conflicts** | starting one evicts the other | n/a | n/a |
 
+### Waiting for a condition, not just a service
+
+A target may carry a **readiness level** after a colon. `Requires = ["network:routed"]` waits not merely for the network manager to be active but for it to have published the level `routed` — a default route in place — and holds the start until it does. Levels are exact (`addressed` is not satisfied by `routed`) and never stale (peinit clears one the moment its publisher leaves a satisfying state).
+
+`network` there is a **role**, not a service: the service that fills it declares `Provides = ["network"]`, and peinit rewrites the entry to that service before anything else looks at it. Write the role, not the daemon. The levels `link`, `addressed` and `routed` are defined by [network policy](~peios/networking/overview), so the definition keeps meaning the same thing whichever executor an image ships. `svctl status` shows the resolved dependency, `netd:routed` on a standard image.
+
 ## Graph validation
 
 Before peinit starts *anything*, it builds the dependency graph and validates it. Validation runs once per graph build — at boot for the whole boot graph, and per request for an [on-demand start](#on-demand-starts)'s transitive closure. It is not incremental.

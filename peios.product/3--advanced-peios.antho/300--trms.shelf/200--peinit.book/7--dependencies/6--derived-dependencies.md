@@ -45,6 +45,17 @@ readiness level. `netd:routed` names a condition *on a service*, and a
 role is not a service, so there would be nothing for the level to
 qualify; a level on a `Provides` entry is rejected rather than ignored.
 
+The *other* side of a dependency may name a role, with or without a
+level. `Requires = ["network:routed"]` is rewritten to one entry per
+service providing `network`, the level carried across, before the
+definition set becomes a service table — the same pass, at boot and on
+every reload, that derives the edges below. `Requires`, `Wants` and
+`BindsTo` are rewritten; a real service name is never mistaken for a
+role, a provider never gains a dependency on its own role, and a role no
+service fills is left as written for validation to report. See
+[§7.5](~peios/advanced-peios/peinit/dependencies/readiness-levels) for
+why the network is declared this way.
+
 ## What peinit derives
 
 Before a definition set becomes a service table — at boot and on every
@@ -120,7 +131,14 @@ Logon §2.19, which §2.1 says MUST have at most one occupant. There is
 exactly one thing it can mean, and what a dependent gets is the same
 thing it would get by naming the service directly.
 
+`network:routed` passes the same test from the other direction. The role
+`network` is a position too — the executor of Peios Network Policy's
+interface layer — and `routed` is not peinit's word for "online" but the
+specification's word for one exact condition, a default route. The
+ambiguity that sinks `network-online.target` is absent because the
+condition is named, not the target.
+
 The rule the two share: peinit does not invent vocabulary for conditions
 inside another service. A readiness level is the publisher's own word for
-its own state; a role is a name for a *position* in a protocol peinit
-already speaks. Neither is a target.
+its own state, or its specification's; a role is a name for a *position*
+in a protocol peinit already speaks. Neither is a target.

@@ -37,6 +37,34 @@ A trailing colon — `"netd:"` — reads as a plain dependency on `netd`. It
 is a typo, and treating it as a request for the empty level would produce
 a condition nothing could ever satisfy.
 
+## Through a role
+
+The service side of the syntax may be a role instead of a name:
+
+```
+Requires = ["network:routed"]
+```
+
+`network` is filled by whichever service declares `Provides = ["network"]`
+— netd, on a shipped image — and peinit rewrites the entry to
+`netd:routed` before anything reads it, exactly as
+[§7.6](~peios/advanced-peios/peinit/dependencies/derived-dependencies)
+resolves a role. The level rides across unchanged. Everything downstream
+— validation, the graph, `svctl status` — sees a level dependency on a
+service, and never learns a role was involved.
+
+This is the form a definition should use for the network. The role is
+"the executor of Peios Network Policy's interface layer", and the levels
+are not the executor's own words but the specification's: PNP defines
+readiness as `link`, `addressed` and `routed`, and whichever service
+fills the role publishes those. A definition that says `network:routed`
+survives netd being replaced; one that says `netd:routed` does not.
+
+Several services may fill a role; the entry then resolves to one level
+dependency per provider, and a `Requires` waits for all of them. A role
+no service fills is left as written and fails validation as the missing
+hard dependency it is, naming the role the definition wrote.
+
 ## How a level gets there
 
 The service publishes it on the notification channel it already has, as
@@ -129,9 +157,10 @@ not exist yet and so cannot subscribe to anything at all.
 
 | Publisher | Levels |
 |---|---|
-| [netd](~peios/networking/overview) | `link` → `addressed` → `routed` |
+| [netd](~peios/networking/overview), as the role `network` | `link` → `addressed` → `routed`, defined by Peios Network Policy |
 | [timed](~peios/time/overview) | `unsynchronised`, `settling`, `synchronised`, `spike` |
 
 Any service may publish a level; nothing about the mechanism is specific
-to these two. The vocabulary is the publisher's own, and needs no
-registration.
+to these two. The vocabulary is the publisher's own — or, where the
+publisher fills a role a specification defines, the specification's —
+and needs no registration.

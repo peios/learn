@@ -60,7 +60,7 @@ The address a network last leased is remembered on its record as `RequestedAddre
 
 ## Readiness is a level, not a boolean
 
-"The network is up" means different things to different services. netd reports each joined interface at one of four **levels** — `absent`, `link` (up with carrier), `addressed` (has an address), `routed` (has a default route) — and the machine's readiness is the highest among them. Both are written to the registry as `Readiness`, on `Machine\System\Network` and on each interface's `Status`, for services and scripts to watch; `net wait routed` blocks until there is a default route.
+"The network is up" means different things to different services. netd reports each joined interface at one of four **levels** — `absent`, `link` (up with carrier), `addressed` (has an address), `routed` (has a default route) — and the machine's readiness is the highest among them. Both are written to the registry as `Readiness`, on `Machine\System\Network` and on each interface's `Status`, for services and scripts to watch; `net wait routed` blocks until there is a default route. A service that needs the network says so in its definition, `Requires = ["network:routed"]`: `network` is the role netd fills, so the dependency names PNP's vocabulary rather than the daemon, and peinit holds the start until the level is published.
 
 ## What netd does not do
 
