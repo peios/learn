@@ -59,6 +59,10 @@ contains the daemon, tools, rules and Peios service integration;
 and pkg-config metadata. Installing libudev for an application therefore does
 not pull in the system device manager.
 
+FIGlet is installed as `org.figlet.figlet`. Its commands, font catalogue and
+manuals form one small runtime package; detached debugging symbols and sources
+use the conventional `-debuginfo` and `-debugsource` suffixes.
+
 For now, commands require the complete canonical name:
 
 ```
