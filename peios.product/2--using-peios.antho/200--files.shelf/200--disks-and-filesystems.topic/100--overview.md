@@ -28,10 +28,10 @@ So Peios packages e2fsprogs from upstream and carries a patch series for the one
 
 | Package | Contents |
 |---|---|
-| `e2fsprogs` | The tools below. |
-| `e2fsprogs-devel` | Headers, linker symlinks and pkg-config files for building against the libraries. |
-| `e2fsprogs-static` | Static archives. |
-| `libext2fs`, `libe2p`, `libcom-err`, `libss`, `libuuid` | The runtime shared libraries, packaged separately so a consumer can depend on one without pulling the tools. |
+| `net.sourceforge.e2fsprogs` | The tools below. |
+| `net.sourceforge.e2fsprogs-devel` | Headers, linker symlinks and pkg-config files for building against the libraries. |
+| `net.sourceforge.e2fsprogs-static` | Static archives. |
+| `net.sourceforge.e2fsprogs-libext2fs`, `net.sourceforge.e2fsprogs-libe2p`, `net.sourceforge.e2fsprogs-libcom-err`, `net.sourceforge.e2fsprogs-libss`, `net.sourceforge.e2fsprogs-libuuid` | The runtime shared libraries, packaged separately so a consumer can depend on one without pulling the tools. |
 
 The tools themselves:
 
@@ -48,7 +48,7 @@ The tools themselves:
 | `chattr`, `lsattr` | Read and set ext2/3/4 inode attributes. |
 | `uuidgen` | Generate a UUID. |
 
-`libuuid` comes from e2fsprogs; `libblkid` comes from the util-linux libraries. The split is arbitrary but fixed — each library has exactly one owning package, so the two sources never both ship the same file.
+`net.sourceforge.e2fsprogs-libuuid` comes from e2fsprogs; `libblkid` comes from the util-linux libraries. The split is arbitrary but fixed — each library has exactly one owning package, so the two sources never both ship the same file.
 
 From `dosfstools`:
 
