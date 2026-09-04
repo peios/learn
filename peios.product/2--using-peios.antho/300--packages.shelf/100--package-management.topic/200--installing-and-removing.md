@@ -101,6 +101,12 @@ Java, C#, Emacs and terminal-styling integrations are not included. The
 optional `po-fetch` and AI-assisted `spit` helpers are also omitted until their
 complete runtime dependencies are available as Peios packages.
 
+GNU gperf is installed as `org.gnu.gperf`. Its generated C and C++ source has
+no gperf runtime dependency, so no development or runtime-library subpackage
+is needed; debugging symbols and their matching source are available through
+the conventional `org.gnu.gperf-debuginfo` and `org.gnu.gperf-debugsource`
+packages.
+
 For now, commands require the complete canonical name:
 
 ```
