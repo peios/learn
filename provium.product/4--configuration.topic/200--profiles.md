@@ -186,6 +186,14 @@ vm:boot({kernel_cmdline = "console=ttyS0 quiet maxcpus=1 isolcpus=0"})
 
 This is useful for one-off testing of cmdline-sensitive features. For cmdline configurations you use repeatedly, declare a dedicated profile.
 
+To add a parameter rather than restate the whole line, `kernel_cmdline_append` keeps the profile's tokens and puts yours after them:
+
+```lua
+vm:boot({kernel_cmdline_append = "maxcpus=1"})
+```
+
+Where an appended token repeats one the profile already sets, the kernel takes the last occurrence, so the appended value wins.
+
 ## Default profile selection
 
 A few CLI subcommands take an optional profile arg — when omitted, they fall back to "the first profile in `provium.toml` sorted by name":

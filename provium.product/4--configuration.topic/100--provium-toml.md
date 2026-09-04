@@ -181,7 +181,7 @@ cmdline = "console=ttyS0 quiet"
 |---|---|---|
 | string | one of `cmdline` / `cmdline_file` | Inline kernel command line. May be empty or omitted **when `cmdline_file` is set** — the two compose. A profile with neither a non-empty `cmdline` nor a `cmdline_file` is rejected with `profile \`<name>\` has empty cmdline and no \`cmdline_file\`; set at least one`. |
 
-`vm:boot({kernel_cmdline = "..."})` overrides the whole command line for one boot.
+`vm:boot({kernel_cmdline = "..."})` overrides the whole command line for one boot; `vm:boot({kernel_cmdline_append = "..."})` keeps it and adds tokens after it.
 
 Provium **always appends `console=ttyS0`** if absent. The kernel happily uses multiple `console=` directives, so any user-set values are preserved alongside. The reason: the QEMU command wires the serial port into Provium's console capture, so the kernel's printk needs to land there for failure diagnostics to be visible. Without `console=ttyS0`, PID 1's `/dev/console` may resolve to a device QEMU doesn't capture, and writes to stderr can fail and crash userspace.
 
@@ -357,5 +357,5 @@ This declares three profiles (production, mainline, debug), centralises the cach
 ## See also
 
 - [Project structure](~provium/getting-started/project-structure) — the broader project layout.
-- [VM reference](~provium/reference/vm) — `boot_opts.kernel_cmdline` overrides.
+- [VM reference](~provium/reference/vm) — `boot_opts.kernel_cmdline` overrides and `kernel_cmdline_append`.
 - [Profiles](~provium/configuration/profiles) — patterns for using multiple profiles.
