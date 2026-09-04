@@ -84,6 +84,18 @@ holder exited cleanly, crashed, was stopped by an administrator or was
 evicted by a conflict — all four free the device, and the waiter is
 wanted after a crash more than after a clean exit, not less.
 
+Which terminal was released is recorded **on the transition**, not looked
+up afterwards, and that is load-bearing rather than tidy. A service whose
+definition has been removed loses its table entry the moment it reaches a
+state that does not retain one (§3.8) — the same moment it releases its
+terminal. Asking afterwards which `TTYPath` it had gets nothing.
+
+That is not a corner case. It is precisely what a service that retires
+itself does: remove its own definition so it never runs again, then exit.
+First-boot setup is exactly that, and before the release rode on the
+transition it ended by telling the operator they could log in, on a
+console it had just vacated and nobody had been given.
+
 One winner per release, chosen by precedence. Starting the whole queue
 would have every loser immediately skipped again by the rule above:
 the same outcome, reached noisily, with a skipped-looking service for
