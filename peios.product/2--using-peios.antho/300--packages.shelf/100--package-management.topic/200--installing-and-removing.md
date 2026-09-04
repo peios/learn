@@ -75,6 +75,12 @@ Peipkg normalizes POSIX ownership and mode metadata, `find` predicates such as
 `-user`, `-group` and `-perm` inspect that compatibility metadata; they do not
 query KACS policy and must not be used as authorization checks.
 
+The Flex scanner generator is `io.github.westes.flex`; its `flex++` frontend
+is included with the command. The independently usable libfl runtime is
+`io.github.westes.flex-libs`, while `io.github.westes.flex-devel` adds the C++
+header, static archive and linker name without folding those development files
+into either runtime package.
+
 For now, commands require the complete canonical name:
 
 ```
