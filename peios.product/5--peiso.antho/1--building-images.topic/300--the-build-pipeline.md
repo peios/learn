@@ -73,7 +73,7 @@ A recorded signature whose file is not in the root is an error: a stale record m
 
 ## 7. Author the ISO
 
-`root/boot/efi/` becomes a FAT32 image (`mkfs.vfat` + `mcopy`, no mount), which `xorriso` appends to the ISO as a GPT EFI System Partition. The ISO's data area carries `rootfs.squashfs` and `repo/`. The result is `peios-<edition>-<version>[-dwe].iso`, label `PEIOS`, which UEFI firmware boots directly: the UKI's initramfs runs `live-boot`, which finds the medium by that label, mounts the squashfs over an overlay, and pivots.
+`root/boot/efi/` becomes a FAT32 image (`mkfs.vfat` + `mcopy`, no mount) at `boot/efi.img` inside the ISO's data area, beside `rootfs.squashfs` and `repo/`. `xorriso` names that one file twice: as the El Torito boot image, which is how firmware boots an optical drive (a physical disc, or an ISO a hypervisor attaches as a CD-ROM), and as the EFI System Partition in a GPT, which is how firmware boots the same bytes written to a USB stick or attached as a disk. The image has to sit inside the ISO9660 volume rather than be appended after it: El Torito cannot record a boot image larger than 32 MiB, and firmware reads the missing size as "to the end of the volume" — an appended partition starts exactly there and comes to nothing. The result is `peios-<edition>-<version>[-dwe].iso`, label `PEIOS`, which UEFI firmware boots directly either way: the UKI's initramfs runs `live-boot`, which finds the medium by that label, mounts the squashfs over an overlay, and pivots.
 
 ## What each stage needs
 
