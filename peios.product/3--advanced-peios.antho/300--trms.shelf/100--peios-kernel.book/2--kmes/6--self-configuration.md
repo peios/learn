@@ -35,14 +35,18 @@ using. [*config.invalid-rejected-not-clamped] Validation happens twice: once whe
 and again in C before the plan is applied, so an out-of-range field
 reaching the second gate fails the whole application with `EINVAL`. [*config.validated-twice]
 
-Applying a plan is all or nothing, and the capacity swap runs first.
-A `BufferCapacity` change that cannot be applied therefore also
-prevents `MaxEventSize`, `MaxNestingDepth`, and
-`MaxEmitRatePerProcess` from being applied in the same pass, even
-though those three are valid and would otherwise take effect
-immediately for subsequent syscalls. [*config.apply-all-or-nothing] A `MaxEmitRatePerProcess` change
-additionally reconfigures every live rate bucket, clamping any bucket
-holding more tokens than the new capacity (§2.4).
+The capacity swap runs first, and a `BufferCapacity` change that
+cannot be applied rolls back the capacity and nothing else:
+`MaxEventSize`, `MaxNestingDepth`, and `MaxEmitRatePerProcess` still
+commit in the same pass, against the capacity that is actually live,
+so the stored configuration describes the running system rather than
+the requested one. The situation that makes a swap fail — memory
+pressure — is exactly the one in which an administrator raising
+`MaxEventSize` and `BufferCapacity` together needs the `MaxEventSize`
+change to survive. [*config.swap-failure-rolls-back-capacity-only] A
+`MaxEmitRatePerProcess` change additionally reconfigures every live
+rate bucket, clamping any bucket holding more tokens than the new
+capacity (§2.4).
 
 A valid `BufferCapacity` different from the current one triggers a
 ring buffer swap (§2.5). [*config.capacity-change-swaps]

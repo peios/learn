@@ -66,7 +66,7 @@ gap.
 ## Buffer swap failure
 
 If replacement rings cannot be allocated, the existing rings stay live
-at their current size, the configuration change is not applied, no
+at their current size, the capacity change is not applied, no
 generation changes, and consumers are unaffected. A
 `KMES_BUFFER_SWAP_FAILED` event records the requested and retained
 capacities (§2.6). KMES does not retry; the next configuration write
