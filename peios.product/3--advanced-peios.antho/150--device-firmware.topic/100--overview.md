@@ -124,8 +124,8 @@ video processors, Rockchip, Amlogic, NXP i.MX), datacentre switches and
 SmartNICs (Mellanox, Netronome), InfiniBand and crypto accelerators. None
 of it is packaged: Peios is x86-64, and a family is only added when there is
 hardware to use it. CPU microcode is a separate mechanism entirely —
-`intel-ucode` and `amd-ucode` are early-loaded from the initramfs before the
-firmware loader exists.
+`intel-ucode` and `com.amd.amd-ucode` are early-loaded from the initramfs
+before the firmware loader exists.
 
 Nothing under `/usr/lib/firmware` is needed to reach a root filesystem
 (NVMe, AHCI, USB and virtio storage need no blobs), so the initramfs carries
