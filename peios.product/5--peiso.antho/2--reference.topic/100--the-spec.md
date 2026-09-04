@@ -29,7 +29,7 @@ add    = []
 remove = []
 
 [[package]]
-name    = "bash"
+name    = "org.gnu.bash"
 version = ">= 5.2"
 root    = ""
 

@@ -16,7 +16,7 @@ This page goes through the additions in the order the build applies them. All of
 
 ```toml
 [[package]]
-name    = "bash"
+name    = "org.gnu.bash"
 version = ">= 5.2"        # optional
 ```
 

@@ -232,6 +232,7 @@ Each `[[source]]` entry carries the keys for its source kind:
 | `ref` | git sources | The rendered ref the version resolved through. |
 | `commit` | git sources | The commit the ref resolved to — the assertion. |
 | `signature_key` | url sources with `[source.url.signature]` | Hex fingerprint of the pinned upstream key that verified the artifact at lock time. |
+| `[[source.patch]]` | url sources with `[source.url.patch_series]` | Ordered patch inputs applied for this version. Each carries `url`, `sha256`, and optional `signature_key` with the same meanings as the base artifact fields. |
 | `locked_at` | all | UTC timestamp of the pinning run (RFC 3339). |
 
 ### Worked example
@@ -245,6 +246,11 @@ schema = 1
   sha256 = "6a474ac46e8b0b32916c4c60df694c82058d3297d8b385b74508030ca4a8f28a"
   signature_key = "9f0b7ddc1325a3e2c40e5f0a88b1c62f3d94ab07"
   locked_at = "2026-08-10T11:00:00Z"
+
+  [[source.patch]]
+    url = "https://example.org/dash-0.5-patches/dash05-001"
+    sha256 = "9b44d9f7a36d1a20537817f92da72bf10eb81f66df860f23298b2d4e830a6d8d"
+    signature_key = "9f0b7ddc1325a3e2c40e5f0a88b1c62f3d94ab07"
 
 [[source]]
   version = "1.2.0"

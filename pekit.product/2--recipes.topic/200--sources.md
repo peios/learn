@@ -100,6 +100,41 @@ signature beside the artifact and verifies it before anything is locked or
 built, closing the trust-on-first-use gap for brand-new versions. The full
 schema is in the [recipe format reference](~pekit/reference/recipe-format).
 
+Some upstreams publish one `major.minor` archive and then maintain it as an
+incremental numbered patch series. `[source.url.patch_series]` models that
+scheme without fetching anything from a build script:
+
+```toml
+[source.url]
+url = "https://ftp.example.org/widget/widget-{{version}}.tar.gz"
+extract = true
+root = "widget-{{version}}"
+versions = ">= 5.3.0"
+file_regex = 'widget-[0-9]+\.[0-9]+\.tar\.gz'
+
+[source.url.patch_series]
+url = "https://ftp.example.org/widget/widget-{{major}}.{{minor}}-patches/widget{{major}}{{minor}}-{{patch}}"
+patch_width = 3
+strip = 0
+```
+
+For a selected `5.3.15`, the primary `url`, `root`, checksum lookup, and base
+signature render with base version `5.3`; patch URLs render from `001` through
+`015`. The resulting version is the base archive plus that ordered prefix.
+Enumeration exposes `5.3.0`, `5.3.1`, …, `5.3.15`, so ordinary runs select the
+latest while `--all-versions` can reproduce the complete patchlevel history.
+The patch listing must be contiguous from 1; a missing number is
+`url_patch_gap`. A missing patch directory represents a new base release at
+patchlevel zero.
+
+`[source.url.patch_series.signature]` accepts the same fields and has the same
+required-verification semantics as `[source.url.signature]`. Each patch is
+downloaded, verified, and recorded in the selected version's lock entry before
+that entry is written, so failure anywhere in the chain leaves no partial
+lock. `file_regex` is optional; when present it must contain a named `patch`
+capture. `patch_width` controls zero-padding and `strip` is the non-negative
+path-component count passed to `patch -p` (both default to zero).
+
 ### `[source.pypi]`
 
 Selects a project source distribution from PyPI's standardized JSON Simple
@@ -226,9 +261,10 @@ branch or tag.
    user-agent).
 2. If a `checksum` is set, verify it; on mismatch, re-download once and verify
    again before failing.
-3. Verify the artifact against the version's [lockfile entry](#the-lockfile),
-   cache hits included — or create the entry on first resolve, verifying the
-   upstream signature first when `[source.url.signature]` is configured.
+3. For a remote patch series, download patches 1 through the selected
+   patchlevel. Verify the base and every patch against the version's
+   [lockfile entry](#the-lockfile), cache hits included — or atomically create
+   the entry, verifying all configured upstream signatures first.
 4. Materialise the tree at `<out_dir>/url-<hash>/source`: if `extract` is set,
    extract the archive to a temporary directory, then promote the `root`
    subdirectory (which must exist, else `missing_source_root`); otherwise copy
@@ -237,7 +273,8 @@ branch or tag.
    outputs are newer than their inputs" in timestamps, and losing that
    fires autotools maintainer rebuild rules in environments without the
    maintainer tools.
-5. Apply the recipe's [patch series](#patches), when one is declared. The
+5. Apply remote patches in numeric order with `patch`, no fuzz, then apply the
+   recipe's [patch series](#patches), when one is declared. The
    series' content hash joins the materialisation scope, so an edited patch
    lands in a fresh extraction.
 6. Write a `source.pekit.json` manifest.
@@ -275,8 +312,9 @@ against the lockfile, so `--refresh-source` is how you *check* upstream and
 Fetched inputs are pinned **trust-on-first-use** in a machine-written
 `pekit.lock` beside `pekit.toml`. The first time a source resolves for a
 version, pekit records what it fetched — the artifact's SHA-256 for a url or
-PyPI source, the resolved commit for a git source — and every later resolve
-verifies against that entry instead, cache hits included. A mismatch is a hard
+PyPI source, every ordered remote-patch URL and SHA-256 when present, or the
+resolved commit for a git source — and every later resolve verifies against
+that entry instead, cache hits included. A mismatch is a hard
 `lock_mismatch` stop: upstream's published bytes (or a tag) changed under a
 version that was already pinned. Accepting such a change is an explicit
 ceremony, never automatic:
@@ -360,6 +398,11 @@ version control. The whole directory ships in the recipe's
 [source package](#source-packages) under `patches/` — the shipped series is
 the applied series by construction.
 
+This recipe-owned series is distinct from
+[`[source.url.patch_series]`](#sourceurl), whose patches are upstream inputs:
+remote patches are signature-verified and locked, ship below
+`upstream/patches/`, and are applied before any recipe-owned patches.
+
 Rebasing on a version bump is deliberately manual: a stale patch fails
 loudly, so materialise the new tree (`pekit lock --version <v>` is enough),
 fix the patch, and run again.
@@ -407,6 +450,7 @@ materialised:
 | git | `git:<url>@<commit>` |
 | url (checksummed) | `url:<url>#<checksum>` |
 | url (locked, no checksum) | `url:<url>#sha256:<hash>` |
+| url with remote patches | the locked url ref above plus `+patches:sha256:<series-hash>` |
 | url (no checksum, no lock entry) | `url:<url>` (marked **unanchored** — reachable only in a dry run, since a real resolve locks) |
 | PyPI | `pypi:<normalized-project>@<version>#sha256:<hash>` |
 

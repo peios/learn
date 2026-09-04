@@ -168,6 +168,12 @@ trust-on-first-use in the recipe's machine-written
 | `file_regex` | string | no | Regex extracting version numbers when enumerating from a listing. |
 | `checksum` | string **or** table | no | Expected checksum. A bare string applies to all versions; a table maps version → checksum. |
 | `signature` | table | no | Upstream signature verification — see `[source.url.signature]` below. |
+| `patch_series` | table | no | Incremental upstream patch series layered over each `major.minor` base archive — see `[source.url.patch_series]` below. |
+
+When `patch_series` is present, the selected version must be stable
+`major.minor.patch`. The primary `url`, `root`, checksum-table lookup, and
+signature render against `major.minor`; the complete selected version remains
+the package version.
 
 #### `[source.pypi]`
 
@@ -199,6 +205,25 @@ Verification is in-process OpenPGP — no host `gpg` is involved.
 | `url` | string | no | Signature URL template. `{{source_url}}` expands to the rendered artifact URL; version variables are also available. Default `"{{source_url}}.sig"`. |
 | `of` | string | no | What the signature covers: `"artifact"` (the published file, default) or `"decompressed"` (its decompressed content — kernel.org's `.tar.sign` signs the uncompressed tar). Any other value is `invalid_signature`. |
 | `fingerprints` | string array | no | Allowlist of signer fingerprints (hex; spaces and `0x` ignored, case-insensitive). When set, a valid signature by any other pinned key is `signature_untrusted_key`. |
+
+#### `[source.url.patch_series]`
+
+Optional sub-table of `[source.url]` for upstreams that publish a base archive
+and numbered incremental patches. Version `major.minor.N` materialises the
+base plus patches 1 through N. Enumeration always exposes patchlevel zero and
+every contiguous published patchlevel; a gap is `url_patch_gap`.
+
+| Key | Type | Required | Meaning |
+| --- | --- | --- | --- |
+| `url` | string | **yes** | Patch artifact URL template. Must contain `{{patch}}`; `{{major}}`, `{{minor}}`, and other version variables are available. |
+| `file_regex` | string | no | Regex used against the patch-directory listing. Must contain a named `patch` capture. When omitted, Pekit derives the matcher from `url`. |
+| `patch_width` | integer | no | Zero-pad `{{patch}}` to this width. Default `0` (no padding). |
+| `strip` | integer | no | Non-negative path-component count passed to `patch -p`. Default `0`. |
+| `signature` | table | no | Per-patch detached-signature verification. Uses the `[source.url.signature]` schema and defaults its URL to `{{source_url}}.sig`. |
+
+Patches are applied in order using the host `patch` command with batch mode,
+forward-only application, and fuzz disabled. All patch hashes and configured
+signatures are verified before Pekit writes the version's lock entry.
 
 #### `[source.local]`
 
