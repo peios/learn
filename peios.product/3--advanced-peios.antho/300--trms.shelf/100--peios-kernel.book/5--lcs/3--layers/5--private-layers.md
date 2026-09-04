@@ -56,9 +56,16 @@ possibly in another process. `MaxScopeGUIDsPerToken` shares the check
 and the errno. A missing token is still `EACCES`, because that one is an
 access decision.
 
-KACS also deduplicates private layer names using ASCII case-insensitive
-comparison, where LCS matches them with Unicode Simple Case Folding.
-Two names that LCS would treat as one layer can both sit on a token.
+KACS deduplicates the private layer names it parses with the same
+Unicode Simple Case Folding LCS matches them by, so a name that LCS
+treats as one layer is one layer here too.
+
+It did not always: an ASCII case-insensitive comparison let two names
+differing only in a non-ASCII case relation — `ROLEs` and `roles`, since
+U+017F folds to `s` — both sit on one token, spending two of the token's
+`MaxPrivateLayersPerToken` slots on a single layer. Resolution still
+folded correctly on the LCS side, so the layer activated once, but the
+two sides of one identity contract disagreed.
 
 ## The privilege that is not checked
 

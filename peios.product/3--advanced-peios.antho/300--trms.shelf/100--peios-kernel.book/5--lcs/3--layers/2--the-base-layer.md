@@ -52,9 +52,16 @@ Administrators `KEY_ALL_ACCESS`, so writes into the base layer are
 possible from the very beginning. The compiled-in default is replaced by
 the real descriptor as soon as seed restore creates the key.
 
-## `base` is matched two ways
+## `base` is matched like every other layer name
 
-The check for whether a name is the base layer is implemented twice in
-the kernel: once using Unicode Simple Case Folding like every other
-name comparison, and once using ASCII case-insensitive comparison, on
-two of its call sites. For the literal string `base` the two agree.
+The reserved name is recognised with Unicode Simple Case Folding, the
+same algorithm and the same table used for every other layer-name
+comparison.
+
+There was a second, ASCII case-insensitive comparator beside it, used on
+two call sites. For the literal string `base` the two agreed — a length
+pre-check made a non-ASCII case pair fail before folding could matter —
+so the divergence was latent rather than absent, and would have become
+live the moment anything about the reserved name changed. It is gone;
+both call sites now take the folding comparator and propagate its error
+rather than collapsing it into a `bool`.
