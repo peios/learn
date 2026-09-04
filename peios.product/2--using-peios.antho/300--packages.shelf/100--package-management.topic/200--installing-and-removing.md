@@ -81,6 +81,14 @@ is included with the command. The independently usable libfl runtime is
 header, static archive and linker name without folding those development files
 into either runtime package.
 
+GNU Awk is installed as `org.gnu.gawk` and provides both the `gawk` and `awk`
+command names. Loadable extensions and the password/group lookup helpers stay
+with the interpreter, reusable Awk libraries and manuals are in
+`org.gnu.gawk-common`, and `org.gnu.gawk-devel` provides `gawkapi.h` for
+building additional extensions. Arbitrary-precision MPFR arithmetic and
+persistent arrays are enabled; interactive debugger line editing will be
+enabled once the catalogue has a production Readline package.
+
 For now, commands require the complete canonical name:
 
 ```
