@@ -80,6 +80,18 @@ The practical effect: a thread impersonating a client opens a file. The Linux ke
 
 Without the patch, `current_fsuid()` would return `cred->fsuid`, which might be the service's own UID — and the file's metadata would be inconsistent with the file's actual KACS owner.
 
+### Creates through a stacking filesystem
+
+Reading the projection rather than `cred->fsuid` has one consequence worth knowing about, because it inverts an assumption the rest of Linux makes.
+
+A stacking filesystem — overlayfs, which the live root is — does not perform a create as the calling process. It switches to the credential it captured when it was mounted, because writing the upper layer needs authority the caller may not have. To keep the new file owned by the caller rather than by the mounter, it assigns the caller's ids to that credential's `fsuid` and `fsgid` and lets the underlying filesystem read them back.
+
+On Peios that assignment decides nothing, because `current_fsuid()` reads the projection instead of the field. The credential the stacking filesystem prepared still carries the *mounter's* token, so the underlying filesystem would stamp the mounter's ids on every file, whoever created it.
+
+The kernel therefore hands the projection across explicitly, through the `dentry_create_files_as` LSM hook that exists for this purpose: KACS gives the prepared credential the calling principal's projected ids. Only the projection moves — the token stays the mounter's, which is what the stacking filesystem needs in order to write at all, so no access decision is affected. The descriptor stamped on the new file is computed separately, from the caller's token.
+
+Two things follow. A filesystem that creates under the caller's own credentials, as StrataFS does, needs none of this. And ownership set this way is decided at creation: it is the projection of whoever created the file, captured then, not a value re-derived afterwards.
+
 ## The one-way rule
 
 **The projection flows token → cred. Never cred → token.**
