@@ -35,6 +35,17 @@ Both first-boot setup and the [login prompt](~peios/signing-in/overview) want `/
 
 When setup's surface exits, the console is released and the login prompt's `tty:released` trigger brings it up. That happens however setup ended: finished, abandoned with Esc, or crashed. The console is never left with nobody on it.
 
+### How big the form is
+
+A serial console cannot say how large it is. There is no geometry in a byte stream, so the kernel leaves the terminal at no size at all and a hypervisor has nothing to pass through — which is why a form on one used to be drawn 80 columns by 24 rows in the corner of whatever window was really there.
+
+So the surface asks. It moves the cursor past the bottom-right corner, where the terminal stops it at the real edge, and reads back where it ended up. The form is then drawn to that. The installer's surface does the same thing, being the same renderer.
+
+Two consequences worth knowing:
+
+- **The size is taken once, when the form starts.** Resizing the window after that changes nothing, because the guest is never told. Reboot, or accept the shape you have.
+- **A console that does not answer gets 80x24**, the old behaviour — a real serial port with nothing on the far end, or output captured to a file.
+
 ## It runs once
 
 On success `oobed` removes both service definitions — its own and the surface's — and exits. The second boot has no setup to do and nothing left over to explain.

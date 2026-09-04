@@ -89,6 +89,18 @@ building additional extensions. Arbitrary-precision MPFR arithmetic and
 persistent arrays are enabled; interactive debugger line editing will be
 enabled once the catalogue has a production Readline package.
 
+GNU Gettext's catalog commands are installed as `org.gnu.gettext`, with
+manuals, extraction rules, project templates and the commands' translated
+messages in `org.gnu.gettext-common`. Project maintainers install
+`org.gnu.gettext-devel` for `autopoint`, `gettextize`, the Autoconf macros and
+public headers. The independently usable `libasprintf`, `libgettextpo` and
+`libtextstyle` ABIs are separate runtime packages. Glibc supplies Peios's
+`libintl`; Gettext therefore does not install a competing implementation,
+while its commands and shell integration retain full native-language support.
+Java, C#, Emacs and terminal-styling integrations are not included. The
+optional `po-fetch` and AI-assisted `spit` helpers are also omitted until their
+complete runtime dependencies are available as Peios packages.
+
 For now, commands require the complete canonical name:
 
 ```
