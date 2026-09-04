@@ -107,6 +107,13 @@ is needed; debugging symbols and their matching source are available through
 the conventional `org.gnu.gperf-debuginfo` and `org.gnu.gperf-debugsource`
 packages.
 
+GNU GMP's C runtime is `org.gnu.gmp`; the C++ wrapper is the independently
+installable `org.gnu.gmp-c++`, so C-only consumers do not acquire libstdc++.
+Headers and linker names are in `org.gnu.gmp-devel`, while static archives are
+in `org.gnu.gmp-static`. Builds use GMP's generic x86-64 runtime dispatch
+rather than instructions selected from the package builder's CPU, so the
+published libraries remain portable across Peios x86-64 systems.
+
 For now, commands require the complete canonical name:
 
 ```
