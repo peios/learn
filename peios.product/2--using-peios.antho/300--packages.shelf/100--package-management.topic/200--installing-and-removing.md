@@ -63,6 +63,11 @@ FIGlet is installed as `org.figlet.figlet`. Its commands, font catalogue and
 manuals form one small runtime package; detached debugging symbols and sources
 use the conventional `-debuginfo` and `-debugsource` suffixes.
 
+The file-identification command is `com.darwinsys.file`. Its libmagic ABI,
+architecture-independent format database and development interface are split
+as `com.darwinsys.file-libmagic`, `com.darwinsys.file-magic` and
+`com.darwinsys.file-devel`, so library consumers do not acquire the command.
+
 For now, commands require the complete canonical name:
 
 ```
