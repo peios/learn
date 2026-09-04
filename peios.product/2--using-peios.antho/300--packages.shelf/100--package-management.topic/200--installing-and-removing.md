@@ -127,6 +127,13 @@ and `uncompress`; its manuals are in `org.gnu.gzip-common`. The optional
 command dependencies. `zless` and `zmore` are omitted until the catalogue has
 a pager provider, so installing the utilities never leaves unusable commands.
 
+The Integer Set Library runtime is installed as `io.sourceforge.libisl.isl`.
+Headers, the linker name and pkg-config metadata are in
+`io.sourceforge.libisl.isl-devel`; the static archive and its static GMP
+closure are in `io.sourceforge.libisl.isl-static`. Published builds use ISL's
+portable mode rather than selecting instructions from the package builder's
+CPU.
+
 For now, commands require the complete canonical name:
 
 ```
