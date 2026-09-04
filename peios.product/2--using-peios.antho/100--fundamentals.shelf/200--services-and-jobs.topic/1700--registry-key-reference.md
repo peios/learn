@@ -38,6 +38,7 @@ Every service is a key under `Machine\System\Services\<name>`; these are the val
 | `Arguments` | multi_string | — | Command-line arguments. |
 | `WorkingDirectory` | string | `/` | Working directory (non-empty absolute path). |
 | `TTYPath` | string | — | Absolute path to a terminal to attach as the service's stdio and controlling terminal, e.g. `/dev/console` or `/dev/tty1`. Absent or empty means the daemon default (`/dev/null` stdin, captured output). Attaching a terminal suppresses log capture. |
+| `TTYPrecedence` | dword | 0 | Who wins that terminal when several services want it at the same moment. Higher wins; ties break on service name. Rejected without a `TTYPath`. See [Triggers and timers](~peios/services-and-jobs/triggers-and-timers). |
 | `Environment` | multi_string | — | `KEY=VALUE` pairs added to the environment. |
 | `RuntimeDirectories` | multi_string | — | Directories created directly under `/run` just before the main process starts, each secured for SYSTEM, Administrators, and the service's own SID. |
 | `LimitNOFILE` | dword | — | `RLIMIT_NOFILE`. |

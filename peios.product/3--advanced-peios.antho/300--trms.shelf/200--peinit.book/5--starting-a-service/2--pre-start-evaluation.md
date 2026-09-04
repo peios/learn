@@ -7,13 +7,18 @@ Before anything is forked, peinit evaluates the service's conditions and
 asserts (§3.5). The definition comes from the in-memory cache, so this
 never touches the registry.
 
-1. Conditions are evaluated. Any failure transitions the service to
+1. If the service names a `TTYPath` and another service is holding that
+   terminal, it goes to Skipped with cause `TtyUnavailable` and the
+   start is abandoned (§11.6). Asked first because a terminal is a fact
+   about the machine right now, and evaluating conditions ahead of it
+   would fork a check helper for a start that was never going to happen.
+2. Conditions are evaluated. Any failure transitions the service to
    Skipped and abandons the start. Skipped satisfies dependents.
-2. If every condition passed and the service has asserts, they are
+3. If every condition passed and the service has asserts, they are
    evaluated. Any failure transitions the service to Failed with cause
    `AssertionError` and abandons the start.
 
-Only when both pass does the pre-exec sequence continue.
+Only when all three pass does the pre-exec sequence continue.
 
 ## Where the transition happens
 
@@ -47,6 +52,10 @@ helper. peinit clones it with `CLONE_PIDFD | CLONE_INTO_CGROUP` into the
 service's `checks/` sub-cgroup, exactly as it launches anything else.
 The helper stats the paths and writes the results to a non-blocking
 pipe; peinit watches the pipe and the helper's pidfd through epoll.
+
+The terminal is re-checked when the helper's results come back, rather
+than the earlier answer being carried over: the helper ran in between,
+and a terminal can change hands while it did.
 
 `PreStartCheckTimeout` bounds the helper, at 5 seconds by default. On
 expiry every check still outstanding is marked **not satisfied** — the

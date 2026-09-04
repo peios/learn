@@ -48,8 +48,8 @@ It carries a path rather than a flag because which terminal is a per-service que
 
 > [!WARNING]
 > Attaching a terminal **suppresses log capture** — the pipes eventd would read are closed, so the service's output goes to the terminal and nowhere else. Don't set `TTYPath` on a service whose output you expect to find in the logs.
->
-> Two services pointed at the same terminal will fight over it: both read the same input, and neither is told about the other. peinit does not currently detect this. Until it does, treat "one service per terminal" as a rule you enforce yourself, or declare a `Conflicts` between them.
+
+Two services pointed at the same terminal do not fight over it. peinit gives the device to one of them and **skips** the rest — highest `TTYPrecedence` wins — and a skipped service can ask to be started when the terminal frees, with the `tty:released` trigger. See [Queueing for a terminal](~peios/services-and-jobs/triggers-and-timers).
 
 ## The environment
 

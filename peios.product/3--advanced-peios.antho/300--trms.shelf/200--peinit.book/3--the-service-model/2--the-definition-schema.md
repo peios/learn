@@ -53,6 +53,7 @@ both is a duplicate, not two fields.
 | Environment | multi_string | — | `KEY=VALUE` pairs added to the environment. §5.5 |
 | WorkingDirectory | string | `/` | Working directory for the process. |
 | TTYPath | string | — | Terminal to attach as the standard streams and controlling terminal. §5.4 |
+| TTYPrecedence | dword | 0 | Who wins that terminal when several services want it at once. Higher wins. Refused without a `TTYPath`. §11.6 |
 | RuntimeDirectories | multi_string | — | Private directories under `/run`, created before the main process. |
 | LimitNOFILE | dword | — | `RLIMIT_NOFILE`. |
 | LimitCORE | dword | — | `RLIMIT_CORE`, in bytes. |

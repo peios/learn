@@ -39,6 +39,7 @@ behaviour, and what an administrator is told.
 | `ValidationError` | Failed | The definition failed graph validation. |
 | `AssertionError` | Failed | A start-time assert failed. |
 | `ConditionSkipped` | Skipped | A start-time condition failed. |
+| `TtyUnavailable` | Skipped | Another service was holding the terminal this one names in `TTYPath`. §11.6 |
 | `ProcessUnkillable` | Abandoned | Processes survived SIGKILL. |
 
 ## Restart eligibility
@@ -79,8 +80,8 @@ was stopped because its dependency went away.
 `ExplicitStop`, `ExplicitReset`, `ShutdownWave`, `ConflictEviction`,
 `BindsToPropagation`, `ProcessUnkillable`, `RestartBudgetExhausted`,
 `ValidationError`, `CycleDetected`, `DependencyFailure`,
-`AssertionError`, `ConditionSkipped`. Retrying cannot help with any of
-them.
+`AssertionError`, `ConditionSkipped`, `TtyUnavailable`. Retrying cannot
+help with any of them.
 
 ## OnFailure
 

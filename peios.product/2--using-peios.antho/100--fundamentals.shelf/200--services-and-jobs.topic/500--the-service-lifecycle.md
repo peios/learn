@@ -109,6 +109,7 @@ Every transition carries a cause. peinit keeps the cause of the *most recent* tr
 | `DependencyFailure` | A `Requires` dependency entered Failed or does not exist. |
 | `AssertionError` | A start-time `Assert` failed. |
 | `ConditionSkipped` | A start-time `Condition` was not met → Skipped (this is *not* a failure). |
+| `TtyUnavailable` | Another service was holding the `TTYPath` this one names → Skipped (also *not* a failure). See [Triggers and timers](~peios/services-and-jobs/triggers-and-timers). |
 | `ProcessUnkillable` | The process survived SIGKILL (D-state) → Abandoned. |
 | `ExplicitReset` | An administrator cleared Failed/Abandoned/Skipped without starting. |
 

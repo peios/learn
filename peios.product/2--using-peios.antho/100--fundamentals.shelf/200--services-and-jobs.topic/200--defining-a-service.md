@@ -53,7 +53,7 @@ A definition is a set of typed registry values. Rather than list all of them in 
 
 | Field | Default | Purpose |
 |---|---|---|
-| `Triggers` | — | `boot` and/or `timer:<schedule>`. Absent = demand-only. |
+| `Triggers` | — | `boot`, `boot:settled`, `timer:<schedule>`, `tty:released`. Absent = demand-only. |
 | `Disabled` | 0 | If 1, triggers must not activate the service (manual start still allowed). |
 | `SafeMode` | 0 | If 1, attempt to start in [Safe mode](~peios/services-and-jobs/boot-and-boot-modes). |
 | `Conditions`, `Asserts` | — | Start-time checks. A failed condition *skips*; a failed assert *fails*. |

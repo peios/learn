@@ -15,6 +15,7 @@ A **trigger** decides *when* a service starts on its own. A service's triggers a
 | Trigger | Form | Meaning |
 |---|---|---|
 | **Boot** | `boot` | Start during the Phase 2 [boot](~peios/services-and-jobs/boot-and-boot-modes) sequence, in dependency order. |
+| **Terminal handover** | `tty:released` | Start when the terminal this service names in `TTYPath` is let go of. See [below](#queueing-for-a-terminal). |
 | **Timer** | `timer:<schedule>` | Start on a schedule. The schedule is a [calendar expression](#calendar-expressions). |
 
 A service with **no** triggers is **demand-only**: it never starts itself, and is brought up only by an explicit [control command](~peios/services-and-jobs/controlling-services) or because another service [depends](~peios/services-and-jobs/dependencies) on it. Many services are demand-only by design.
@@ -32,11 +33,37 @@ A `boot:settled` service is deliberately **not** part of the boot plan. It does 
 > [!NOTE]
 > Reach for this only to keep console output legible. If a service genuinely needs something to be running first, that is a [dependency](~peios/services-and-jobs/dependencies) — say so with `Requires`. A console login uses both: `boot:settled` for *when*, and `Requires` on its authority for *what must be true*.
 
+## Queueing for a terminal
+
+A terminal has one owner at a time. Two services writing to the same `TTYPath` do not fail — they interleave, which on a console means a login prompt with a progress line through the middle of it. So peinit gives the device to one of them and skips the rest, and `tty:released` is how the ones that were skipped get their turn.
+
+The whole arrangement is three fields. A first-boot setup flow and a login prompt, both on the console:
+
+| Service | `TTYPath` | `TTYPrecedence` | `Triggers` |
+|---|---|---|---|
+| `oobe` | `/dev/console` | 100 | `boot:settled` |
+| `login-console` | `/dev/console` | *(0)* | `boot:settled`, `tty:released` |
+
+On a first boot both are deferred, `oobe` outranks the login prompt on `TTYPrecedence`, so `oobe` takes the console and `login-console` is **skipped** with cause `TtyUnavailable`. When `oobe` finishes — or crashes, or is stopped; all three free the device — `tty:released` starts the login prompt. On every later boot `oobe` is gone, nothing is holding the console, and the login prompt starts straight away.
+
+A few rules worth knowing:
+
+- **Higher `TTYPrecedence` wins**, and equal precedence breaks on service name, so the outcome is the same on every boot. The default is 0.
+- **Nobody is preempted.** Precedence decides between services starting at the same moment; a service already using a terminal keeps it.
+- **A service that stops is not offered its own terminal back.** Relaunching it is `RestartPolicy`'s job, not this.
+- **Both fields need a `TTYPath`.** `tty:released` or `TTYPrecedence` without one is rejected when the definition is read, rather than quietly doing nothing.
+- **`tty:released` on its own starts nothing** until somebody takes the terminal and lets it go. Give a service that must come up either way a `boot` or `boot:settled` trigger as well, as `login-console` has above — otherwise a machine with no `oobe` installed never gets a login prompt.
+
+Being skipped is not a failure: a skipped service satisfies anything that depends on it, exactly as a service skipped by a `Conditions` entry does.
+
+> [!NOTE]
+> This is deliberately not `Conflicts`, which fails **both** services — and the services that want a terminal are the interactive ones, so that answer is a machine you cannot log into. It is not a dependency either: a login prompt does not need first-boot setup to have *run*, it needs the console to be free.
+
 You can list more than one trigger, including more than one of the same type. `["timer:*-*-* 02:00:00", "timer:*-*-* 14:00:00"]` runs at 2 am and 2 pm. The model is built to grow — future trigger types (path, device, event) will slot into the same list without a schema change.
 
 ## The Disabled flag
 
-`Disabled=1` suppresses **automatic activation**. A disabled service will not be started by *any* trigger — boot, timer, or anything added later — but it can still be started by hand through the control interface. It is the switch for "configured, but not running on its own right now."
+`Disabled=1` suppresses **automatic activation**. A disabled service will not be started by *any* trigger — boot, timer, terminal handover, or anything added later — but it can still be started by hand through the control interface. It is the switch for "configured, but not running on its own right now."
 
 Two related controls are easy to confuse with it:
 
