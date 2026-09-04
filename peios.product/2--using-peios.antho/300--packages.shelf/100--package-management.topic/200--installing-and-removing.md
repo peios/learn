@@ -36,6 +36,7 @@ namespace:
 ```
 com.amd.amd-ucode
 org.gnu.bash
+org.sourceware.elfutils
 org.peios.peinit
 ```
 
@@ -44,6 +45,12 @@ Peios-owned software and Peios-specific integration packages use `org.peios`.
 The name identifies the packaged software, while the repository signature and
 build provenance identify who packaged it. It does not imply that upstream
 signed or endorsed a downstream package.
+
+Related payloads retain that canonical base. For example,
+`org.sourceware.elfutils-libs` carries libdw and libasm,
+`org.sourceware.elfutils-libelf` carries libelf, and
+`org.sourceware.elfutils-devel` carries their development interfaces without
+requiring the command-line tools to be installed.
 
 For now, commands require the complete canonical name:
 
