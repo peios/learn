@@ -68,6 +68,13 @@ architecture-independent format database and development interface are split
 as `com.darwinsys.file-libmagic`, `com.darwinsys.file-magic` and
 `com.darwinsys.file-devel`, so library consumers do not acquire the command.
 
+GNU `find` and `xargs` are installed as `org.gnu.findutils`; their manuals are
+in `org.gnu.findutils-common`. The `locate` and `updatedb` tools are omitted
+until Peios has a service design for maintaining their global index. Because
+Peipkg normalizes POSIX ownership and mode metadata, `find` predicates such as
+`-user`, `-group` and `-perm` inspect that compatibility metadata; they do not
+query KACS policy and must not be used as authorization checks.
+
 For now, commands require the complete canonical name:
 
 ```
