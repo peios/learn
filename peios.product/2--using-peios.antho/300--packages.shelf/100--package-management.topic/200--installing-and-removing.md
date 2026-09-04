@@ -114,6 +114,12 @@ in `org.gnu.gmp-static`. Builds use GMP's generic x86-64 runtime dispatch
 rather than instructions selected from the package builder's CPU, so the
 published libraries remain portable across Peios x86-64 systems.
 
+GNU Grep is installed as `org.gnu.grep` and provides the `grep`, `egrep` and
+`fgrep` command names. Its manuals and translated messages are in
+`org.gnu.grep-common`. Basic, extended and fixed-string regular expressions
+are supported; Perl-compatible `grep -P` matching is deliberately unavailable
+until the catalogue has a production PCRE2 package.
+
 GNU gzip is installed as `org.gnu.gzip`, containing `gzip`, `gunzip`, `zcat`
 and `uncompress`; its manuals are in `org.gnu.gzip-common`. The optional
 `org.gnu.gzip-utils` package adds the non-interactive shell helpers such as
