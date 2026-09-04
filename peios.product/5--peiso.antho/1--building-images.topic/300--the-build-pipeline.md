@@ -35,9 +35,21 @@ The key is a throwaway and its private half is never written anywhere. A key shi
 
 ## 3. Stage the registry seeds
 
-Packages ship registry seed masters under `/usr/share/regim/`, and installing a package applies none of them: which seeds a system runs is policy, not payload. The edition states that policy in `/usr/share/peios/release.toml`. peiso reads it from the composed root, applies the spec's `[registry] add` and `remove`, adds `dwed-service` for a DWE medium, and copies each named seed into `root/lcl/policy/autoapply.d/`. It also places the autorun script that drains that queue — `reg apply --dir /lcl/policy/autoapply.d --once-delete` — which peinit runs at boot before it plans its services, so the services the seeds define start on the very boot that creates them.
+Packages ship registry seed masters under `/usr/share/regim/`, and installing a package applies none of them: which seeds a system runs is policy, not payload. The edition states that policy in [`/usr/share/peios/release.toml`](~peios/peiso/editions-and-upgrades/release-toml). peiso reads it from the composed root, applies the spec's `[registry] add` and `remove`, and copies each named seed into one of three queues under `root/lcl/policy/`:
 
-A seed the spec names that no package in the root ships is an error, not a warning.
+| Queue | From | Applied by |
+|---|---|---|
+| `autoapply.d/` | `autoapply` | every system |
+| `autoapply.live.d/` | `live_autoapply`, plus `dwed-service` for a DWE medium | the boot medium only |
+| `autoapply.install.d/` | `install_autoapply` | the installed machine only |
+
+Three, not one, because an installer copies the shipped image verbatim: what is staged for the medium arrives on the disk unless something takes it off again. A development account whose password ships in the image belongs on one and not the other; so does first-boot setup, the other way round.
+
+peiso also places the autorun script that drains the first two — `reg apply --dir /lcl/policy/autoapply.d --once-delete`, then the same for `autoapply.live.d` — which peinit runs at boot before it plans its services, so the services the seeds define start on the very boot that creates them. Base before live, so a live seed can override a value the base one set.
+
+`autoapply.install.d/` is deliberately absent from the drain: applying it on the medium would start a first-boot flow on a machine nobody has installed yet. The installer promotes it into the target's `autoapply.d/` and deletes `autoapply.live.d/`.
+
+A seed the spec names that no package in the root ships is an error, not a warning. So is a seed named in two queues.
 
 ## 4. Pack the initramfs
 

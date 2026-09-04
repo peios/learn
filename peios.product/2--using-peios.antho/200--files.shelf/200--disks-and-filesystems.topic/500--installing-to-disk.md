@@ -80,7 +80,9 @@ reg del 'Machine\System\Services\lpsd-first-account'
 Note *which* registry. It removes the key from the **live** system it is running on, not from the target — the registry is a live database served by `registryd`, and the only thing that can safely edit it is the `registryd` currently holding it open, so the removal happens at the source and the copy never carries it. Running the installer again, or running it from an already-installed system, finds nothing to remove and says so. The removal is checked afterwards and a failure stops the install, which happens before either partition is formatted and therefore costs nothing.
 
 > [!CAUTION]
-> One thing this deliberately does not solve: the account arrives with the password it had, and on an image that shipped a development account that password is in the image and therefore public. Until installation can prompt for a new one, treat a freshly installed system as carrying a known credential and change it — `lps` is the tool — before the machine is anywhere it matters.
+> One thing this deliberately does not solve: the account arrives with the password it had, and on an image that shipped a development account that password is in the image and therefore public. Treat a system installed this way as carrying a known credential and change it — `lps` is the tool — before the machine is anywhere it matters.
+
+`installerd`, the installer this page's script is being replaced by, does not have the problem at all. It copies the **shipped image** rather than the running root, so no live session's accounts come across; the development account's seed is staged for the boot medium alone and never reaches the disk; and the machine asks for a real account and password the first time it boots. See [First boot](~peios/disks-and-filesystems/first-boot-setup).
 
 ## Use UUIDs, not device names
 
