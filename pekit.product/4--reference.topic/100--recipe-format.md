@@ -162,6 +162,7 @@ trust-on-first-use in the recipe's machine-written
 | Key | Type | Required | Meaning |
 | --- | --- | --- | --- |
 | `url` | string | **yes** | URL to download. Templated with the version. |
+| `listing_url` | string | no | Explicit URL to fetch when enumerating versions. Use when releases are listed separately from their download paths; default is derived from `url`. |
 | `extract` | bool | no | Treat the download as an archive and extract it. Default `false`. |
 | `root` | string | no | Sub-directory within the extracted tree to use as the source root. Default `"."`. |
 | `versions` | string | no | Version **cap**: a constraint string filtering enumerated or requested versions (see [Versions](~pekit/recipes/versions)). |
@@ -198,6 +199,11 @@ against the pinned keys before a version is locked or built. A missing
 signature is `signature_missing`; a failed verification is
 `signature_invalid`; either aborts the run and writes no lock entry.
 Verification is in-process OpenPGP — no host `gpg` is involved.
+
+Key expiry is evaluated at the signature's signed creation time, so a later
+key expiry does not invalidate an older release. Current key revocations and
+explicit signature expiry are still enforced, and a signature dated after key
+expiry or materially in the future is rejected.
 
 | Key | Type | Required | Meaning |
 | --- | --- | --- | --- |

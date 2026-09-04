@@ -63,9 +63,10 @@ Downloads a file over HTTP(S), optionally extracting it as an archive. The
 required `url` is templated with the selected version; `extract` (default
 `false`) treats the download as an archive, with `root` naming the subdirectory
 **inside the archive** to promote as the source tree; `versions` is a version
-cap (as for git); `file_regex` is used when enumerating a URL listing; and
-`checksum` pins the download to an expected digest — a single string or a
-per-version table (see below). The full schema is in the
+cap (as for git); `listing_url` can name a release page when the download
+template does not live in a browsable directory; `file_regex` is used when
+enumerating that listing; and `checksum` pins the download to an expected
+digest — a single string or a per-version table (see below). The full schema is in the
 [recipe format reference](~pekit/reference/recipe-format).
 
 ```toml
@@ -99,6 +100,12 @@ upstream maintainer's release-signing key: pekit fetches the detached
 signature beside the artifact and verifies it before anything is locked or
 built, closing the trust-on-first-use gap for brand-new versions. The full
 schema is in the [recipe format reference](~pekit/reference/recipe-format).
+
+A signing key that expires later does not invalidate an immutable historical
+release: Pekit accepts the signature only when its signed creation time falls
+within the key's validity period. A present-time key revocation, an explicitly
+expired signature, a signature created after key expiry, or a materially
+future-dated signature remains a hard failure.
 
 Some upstreams publish one `major.minor` archive and then maintain it as an
 incremental numbered patch series. `[source.url.patch_series]` models that
@@ -423,9 +430,9 @@ Reproducible sources can list the versions they offer upstream; this feeds
   Without named version captures, pekit extracts the version from the ref
   template or an embedded `MAJOR.MINOR.PATCH`; unnamed capture groups only
   filter tags.
-- **url**: fetch the directory listing derived from the `url` template (the part
-  before the first `{{…}}`, up to the last `/`), filter entries by `file_regex`,
-  and extract versions from the matches.
+- **url**: fetch `listing_url` when set, otherwise derive a directory listing
+  from the `url` template (the part before the first `{{…}}`, up to the last
+  `/`); filter entries by `file_regex`, and extract versions from the matches.
 - **PyPI**: fetch the project's standardized JSON Simple API page once per
   invocation and enumerate the eligible sdists described under
   [`[source.pypi]`](#sourcepypi).

@@ -52,6 +52,13 @@ Related payloads retain that canonical base. For example,
 `org.sourceware.elfutils-devel` carries their development interfaces without
 requiring the command-line tools to be installed.
 
+The eudev family follows the same rule: `io.github.eudev-project.eudev`
+contains the daemon, tools, rules and Peios service integration;
+`io.github.eudev-project.eudev-libudev` contains the runtime library; and
+`io.github.eudev-project.eudev-devel` contains the public header, linker name
+and pkg-config metadata. Installing libudev for an application therefore does
+not pull in the system device manager.
+
 For now, commands require the complete canonical name:
 
 ```
