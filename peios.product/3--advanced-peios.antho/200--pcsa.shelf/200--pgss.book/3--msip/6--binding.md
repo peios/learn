@@ -72,7 +72,15 @@ connection unbound:
 | `access_denied` | The access check of §3.4 failed. |
 | `unknown_kind` | `Start` named a kind this daemon does not offer, or `Attach` named a conversation that does not exist or has ended. |
 | `unsupported_elements` | The conversation needs element types the surface did not declare. |
+| `unavailable` | The daemon offers this kind but could not open a conversation. |
 
 A daemon SHOULD prefer `unknown_kind` over `access_denied` for a
 conversation the caller may not know exists, and MUST NOT use
 `Refused` for anything but a binding attempt.
+
+`unavailable` is the daemon's own failure and nothing to do with the
+surface: the kind exists, the caller may have it, and the surface can
+render it. A daemon SHOULD say what went wrong in `message`. Without
+this reason such a daemon can only hang up, and a surface cannot tell
+a broken daemon from a slow one — it waits on a turn that will never
+come, showing nothing.

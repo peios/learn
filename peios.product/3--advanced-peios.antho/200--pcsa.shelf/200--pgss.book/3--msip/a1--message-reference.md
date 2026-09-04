@@ -43,7 +43,7 @@ seq}`.
 (opt bool, default false).
 
 **Refused** (§3.6): `reason` (`access_denied` | `unknown_kind` |
-`unsupported_elements`), `message` (opt string).
+`unsupported_elements` | `unavailable`), `message` (opt string).
 
 **Turn** (§3.7): `seq` (number), `id` (opt string), `name` (opt
 string), `class` (opt array of string), `elements` (array of element
