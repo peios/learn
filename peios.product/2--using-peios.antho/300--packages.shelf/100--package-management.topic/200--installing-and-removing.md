@@ -114,6 +114,13 @@ in `org.gnu.gmp-static`. Builds use GMP's generic x86-64 runtime dispatch
 rather than instructions selected from the package builder's CPU, so the
 published libraries remain portable across Peios x86-64 systems.
 
+GNU gzip is installed as `org.gnu.gzip`, containing `gzip`, `gunzip`, `zcat`
+and `uncompress`; its manuals are in `org.gnu.gzip-common`. The optional
+`org.gnu.gzip-utils` package adds the non-interactive shell helpers such as
+`zgrep`, `zdiff`, `zforce`, `znew` and `gzexe` together with their declared
+command dependencies. `zless` and `zmore` are omitted until the catalogue has
+a pager provider, so installing the utilities never leaves unusable commands.
+
 For now, commands require the complete canonical name:
 
 ```
