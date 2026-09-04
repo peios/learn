@@ -58,7 +58,7 @@ stores per byte. The contiguity guarantee is a property of the
 consumer's view, produced by the mmap layout rather than by the
 writer.
 
-## Write protocol [*ring.lock-free-single-writer]
+## Write protocol
 
 Each ring has exactly one writer — its CPU — and the write path takes
 no locks and performs no cross-CPU atomics. For a single kernel

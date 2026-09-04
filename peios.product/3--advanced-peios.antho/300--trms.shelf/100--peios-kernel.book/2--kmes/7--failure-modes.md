@@ -134,7 +134,7 @@ naming the logical CPU.
 
 Ring memory in steady state is `num_cpus × BufferCapacity` for the
 fixed CPU count fixed at initialisation, plus two metadata pages per CPU and one shmem page
-per ring that has ever been attached. [*failure.steady-state-memory] During a capacity swap old and
+per ring that has ever been attached. During a capacity swap old and
 new rings coexist until every mapping of the old generation is
 released.
 

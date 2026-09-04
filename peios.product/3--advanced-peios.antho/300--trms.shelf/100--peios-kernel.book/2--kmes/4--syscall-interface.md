@@ -133,12 +133,12 @@ errno of the failing entry. [*batch.partial-failure-reporting] Failed entries ne
 numbers, so batch validation failures leave no consumer-visible gap. [*batch.no-gap-on-failure]
 The final `emitted_out` store is a second write to userspace; if it
 faults, the syscall reports `EFAULT` even though the prefix was
-already emitted. [*batch.emitted-out-fault-after-emit]
+already emitted.
 
 Every staged entry is held in kernel memory simultaneously until the
 write phase completes, so a batch's transient allocation is bounded by
 `count × MaxEventSize` — up to 1 GB at the maximum settings — rather
-than by a single event. [*batch.staging-held-simultaneously]
+than by a single event.
 
 ## kmes_attach
 

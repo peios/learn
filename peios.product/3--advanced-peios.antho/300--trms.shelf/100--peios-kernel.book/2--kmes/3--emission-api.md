@@ -25,7 +25,7 @@ which guarantees the emitting thread cannot migrate mid-write and
 preserves the single-writer-per-buffer invariant. For kernel emitters
 this covers the full path, timestamp capture through ring write; the
 payloads are small and trusted, and the non-preemptible window is a
-few hundred nanoseconds. [*kernel-emit.preemption-disabled-throughout]
+few hundred nanoseconds.
 
 Construction proceeds in order: capture the wall clock timestamp;
 increment the CPU's sequence counter and take the new value; capture
@@ -80,7 +80,7 @@ applied to the whole batch, an array of event descriptors (type
 pointer and length, payload pointer and length each), and a count.
 There is no upper bound on the kernel batch count — unlike the syscall
 batch, which caps at 256 entries — so the non-preemptible window is
-bounded only by the caller's restraint. [*kernel-emit.batch-unbounded]
+bounded only by the caller's restraint.
 
 The batch executes as one preemption-disabled section:
 
