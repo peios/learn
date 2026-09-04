@@ -69,10 +69,15 @@ everything present. It is a superset of what is needed rather than a
 substitute for it.
 
 The same arming covers every key the kernel reads for itself, not only
-LCS's own: KMES configuration and the port reservation table
+LCS's own: KMES configuration, the port reservation table
 (`Machine\System\Network\TcpIp\PortReservations\`, see the KACS
-chapter on network objects) are discovered in the same refresh and get
-the same targeted-or-fallback treatment.
+chapter on network objects) and the network policy key
+(`Machine\System\Network\`, whose rules and inventory the packet
+engine reads — see the network policy chapter) are discovered in the
+same refresh and get the same targeted-or-fallback treatment. The
+policy watch is the one depth-unbounded, every-mutation watch: rules
+are keys and exceptions are subkeys, so anything written anywhere
+beneath the key may be policy.
 
 **A refresh that fails still arms the fallback.** A stage can fail
 transiently — a source answering a lookup while a concurrent write has

@@ -37,7 +37,8 @@ Machine\System\Network
     Interfaces\<id>\             the inventory, one key per interface seen
         ClientId                 REG_SZ           shared: DHCPv4 client identifier
         Status\                  netd-only: Name, Kind, Mac, Path, Driver,
-                                 Verdict, Rule, Profile, Readiness, LastNetwork
+                                 Verdict, Rule, Profile, Readiness,
+                                 Network, LastNetwork
     Networks\<id>\               one key per network stood on
         Name, Trust              REG_SZ           operator
         RequestedAddress         REG_SZ           shared: IPv4 to ask for next
@@ -49,7 +50,10 @@ Machine\System\Network
 A rule key's name is its attribution handle and may not contain `\` or
 `/`. The kernel reads `RawPacket`, `Packet` and `Flow`; `Interface` is
 read by netd, the interface layer's executor (see [Layers](#layers)); any
-other layer key is ignored by both. *Shared* values are written by netd
+other layer key is ignored by both. The kernel also reads the inventory
+— each interface's `Status Network` and the `Name` and `Trust` on the
+record it names — as the [network context](#the-network-context) of the
+packet layers. *Shared* values are written by netd
 when absent and may be set by the operator; `Status` keys carry a
 descriptor that lets only netd write, so a hand edit is refused rather
 than silently reverted.
@@ -128,9 +132,9 @@ an address, `Has` on a port) refuses the generation.
 | `Interface.Mac` | MAC | `aa:bb:cc:dd:ee:ff` | `Interface` layer only; the interface has a hardware address |
 | `Interface.Path` | string | bus position, e.g. `pci-0000:00:03.0` | `Interface` layer only; it is hardware |
 | `Interface.Driver` | string | kernel driver | `Interface` layer only; it is hardware |
-| `Network.Id` | string | the network record's key name under `Networks\` | `Interface` layer only; a network has been identified on the link |
-| `Network.Name` | string | the operator's `Name` on the record | `Interface` layer only; the record has one |
-| `Network.Trust` | string | the operator's `Trust` on the record | `Interface` layer only; the record has one |
+| `Network.Id` | string | the network record's key name under `Networks\` | every layer: a network has been identified on the interface the packet crossed (see [the network context](#the-network-context)) |
+| `Network.Name` | string | the operator's `Name` on the record | every layer; the record has one |
+| `Network.Trust` | string | the operator's `Trust` on the record | every layer; the record has one |
 | `Network.Kind` | string | the `Interface.Kind` the network was seen on | as `Network.Id` |
 | `Tag.<name>` | integer | the flow tag's value | the flow carries the tag (`Packet` and `Flow` layers; never `RawPacket`) |
 | `Counter.<name>[(...)]` | integer | a counter view, see below | the packet has the view's key facts and a cell exists |
@@ -251,6 +255,7 @@ no far end to tear down.
 | `FlowState` | never (the seat stands before conntrack) | yes | never (the layer is the judgment of a flow) |
 | `Related`, `Start.*` | never | never | yes |
 | `Local`, `Local.*`, `Remote.*` | never | never | yes (`Remote` on loopback only) |
+| `Network.Id`, `Network.Name`, `Network.Trust` | yes | yes | yes |
 | Per-packet facts (`Length`, `TcpFlags`, `Fragment`, `Ttl`, `Dscp`, `EtherType`, `DstMac`) | yes | yes | never |
 | `Tag.<name>` reads | never | tags `RawPacket` or `Packet` rules write | any tag |
 | `TAG` writes | yes | yes | yes |
@@ -274,7 +279,7 @@ engine the kernel uses, so a rule means the same thing in every layer.
 | | `Interface` |
 |---|---|
 | Judged | per interface, by netd, on interface and generation change |
-| Facts | `Interface`, `Interface.*`, `Network.*` |
+| Facts | `Interface`, `Interface.*`, `Network.*` (`Network.Id`, `Network.Name` and `Network.Trust` are the packet layers' too; the rest is this layer's alone) |
 | Verdicts | `JOIN(profile)`, `IGNORE`, `DOWN`; strictness in that order, rising |
 | Effects | `REPORT` only |
 | Backstop | `IGNORE`: an interface no rule speaks for is left as the kernel left it |
@@ -322,6 +327,55 @@ A loopback flow has two local endpoints and two sentences: judged as
 `out` at the outbound seat and as `in` at the inbound seat, and every
 packet of it answers to the stricter of the two. Each judgment sees its
 own end as `Local` and the other as `Remote`.
+
+### The network context
+
+Which network the machine is on is one fact, told once. netd
+identifies the network on a link and writes the record's id to the
+interface's `Status Network`; the kernel reads that, and the `Name` and
+`Trust` on the record it names, into a table keyed by interface, and
+every traversal carries its interface's entry as `Network.Id`,
+`Network.Name` and `Network.Trust`. So the three facts the interface
+layer conditions on to choose a profile are the same three a packet
+rule conditions on to open or close a door, read from the same record:
+
+```text
+Rules\Flow\no-ssh               Direction.Equal = in
+                                 Protocol.Equal = tcp, DstPort.Equal = 22
+                                 Actions = DROP
+Rules\Flow\no-ssh\home          Network.Trust.Equal = home
+                                 Actions = PASS
+```
+
+is "SSH answers only on the network I called home", and it is true on
+every interface at once: a wired card at home and a radio at a cafe each
+carry their own context, and a flow sees the context of the interface
+it actually uses.
+
+The facts are absent on an interface no network has been identified on
+— before the first offer, after the carrier goes, on the loopback, on an
+`IGNORE`d or `DOWN` interface — so a rule about a network is simply
+false there and the rules that say nothing about networks apply
+unchanged: an unrecognised network gets the baseline, never a door
+opened for a network that is not there. `Network.Id.Present = 0` is the
+honest "not on any known network".
+
+**A change of network is a change of policy.** When the context of any
+interface changes — a network identified, the carrier lost, the operator
+editing `Trust` — the kernel publishes a new generation, and every flow
+is re-judged on its next packet exactly as after a rule change: a
+connection the new context forbids is refused then, with the same
+`REJECT` teardown, and one it now permits goes through. netd rewriting
+an interface's `Status` without changing its network costs nothing; a
+generation is published only when the table differs. The context is not
+policy and cannot refuse a generation: a record the kernel could not
+read is an interface without a context.
+
+`Trust` is the operator's word, exactly as written, with no vocabulary
+yet: `home`, `corporate`, `untrusted` are conventions, and a rule that
+conditions on it is stating that the operator accepts the
+identification. The trust pass gives it evidence later; the rules will
+not change.
 
 ## Profiles
 
@@ -528,7 +582,21 @@ Rules\Interface\radio\office     Network.Trust.Equal = corporate
 
 `Network.Name` and `Network.Trust` are what the operator wrote on the
 record under `Networks\`; until a network has been identified on the
-link they are absent, so the radio stands in `untrusted` first.
+link they are absent, so the radio stands in `untrusted` first. The
+same two facts open the doors, in the flow layer:
+
+```text
+Rules\Flow\no-inbound           Direction.Equal = in
+                                 Actions = DROP
+Rules\Flow\no-inbound\at-home   Network.Trust.Equal = home
+                                 Protocol.Equal = tcp
+                                 DstPort.Equal = 22, 5900
+                                 Actions = PASS
+```
+
+Walk into the cafe and the record on the other side of the radio is a
+different one, with no `Trust` written: the exception is false, the
+parent drops, and the SSH session from home is reset on its next packet.
 
 **A card that stays dark, and one another program owns:**
 

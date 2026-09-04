@@ -42,7 +42,7 @@ Nothing is "activated". A rule that matches two interfaces puts both in its prof
 
 netd writes what it finds under `Machine\System\Network\Interfaces\<id>\Status`: the kernel name, kind, MAC, bus path, driver, and its verdict — which rule spoke, which profile it stands in, and its readiness. The **interface id** is derived from the bus path and MAC, so the same card in the same slot keeps the same key across boots however the kernel names it. Only netd may write a `Status` key; a hand edit is refused rather than silently reverted.
 
-Every network the machine has stood on gets a record under `Networks\<id>`, identified for now by the DHCP server that answered and the subnet it handed out (or the advertising router and its prefix). Two values on it are yours: `Name`, a label, and `Trust`, your word on it. Those are the `Network.*` facts rules condition on. What the network showed is under its own `Status`.
+Every network the machine has stood on gets a record under `Networks\<id>`, identified for now by the DHCP server that answered and the subnet it handed out (or the advertising router and its prefix). Two values on it are yours: `Name`, a label, and `Trust`, your word on it. Those are the `Network.*` facts rules condition on — in the interface layer to choose how to stand there, and in the packet layers to decide what may flow there, so `Network.Trust.Equal = home` means the same network in both. What the network showed is under its own `Status`.
 
 Nothing transient is stored in the registry — not leases, not link state, not what a network offered. `net status` shows those.
 

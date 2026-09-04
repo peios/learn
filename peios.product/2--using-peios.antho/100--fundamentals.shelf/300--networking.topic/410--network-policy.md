@@ -94,7 +94,9 @@ flow began. `Direction` is the originator's side: a flow your machine
 opened is `out` for its whole life, replies included.
 
 A sentence answers for the flow until one of two things makes it stale.
-**The policy changes**: a new generation re-judges every flow on its
+**The policy changes** — a rule written or deleted, or the network on
+the other side of an interface changing, which PNP treats as the same
+event: a new generation re-judges every flow on its
 next packet, so a rule that now forbids a running connection cuts it
 then — and if the rule says `REJECT`, a TCP connection is reset at both
 ends at once: the end that sent the packet is refused, and the other end
@@ -146,7 +148,11 @@ dictate instead. That decision is split along its natural seam.
 **Which interfaces** is a rule in the `Interface` layer, conditioned on
 facts about the interface — `Interface.Kind`, `Interface.Path`,
 `Interface.Id` — and, once a network has been identified on it, about the
-network: `Network.Name`, `Network.Trust`. Its verdicts are `JOIN(profile)`,
+network: `Network.Name`, `Network.Trust`. Those two, and `Network.Id`,
+are the packet layers' facts as well: the network netd identified on an
+interface is carried by every packet that crosses it, so "which network
+am I on" is told once, and the rule that chooses a profile for the home
+network and the rule that opens SSH there read the same record. Its verdicts are `JOIN(profile)`,
 `IGNORE` (never touch it; something else owns it) and `DOWN` (keep it
 dark). Every rule law below holds: exceptions are subkeys, the most
 specific rule speaks, priority collates, the backstop answers when nothing

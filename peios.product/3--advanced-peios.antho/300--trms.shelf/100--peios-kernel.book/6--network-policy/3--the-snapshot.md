@@ -16,7 +16,7 @@ is.
 Many facts have meaningful zero values (port 0, TTL 0, VLAN 0), so
 presence is carried separately in `has`, a bitmask of `PEIOS_PNP_HAS_*`:
 ethertype, MACs, source MAC alone, VLAN, TTL, DSCP, fragment, ports, TCP
-flags, ICMP, time, and the flow's start time. Address facts use
+flags, ICMP, time, the flow's start time, and the network context. Address facts use
 `addr_family` (0, 4 or 6) as their validity; the protocol is valid iff a
 family is. Flow state uses its own `ABSENT` value; `flow_related` is
 valid iff `flow` is. The bridge turns each clear bit into `None` on the
@@ -25,9 +25,10 @@ false.
 
 ## Extraction
 
-Seat facts first: seat, direction, interface (`ifindex` and name),
-whether the device is the loopback (`IFF_LOOPBACK` — the flow dispatch's
-"two endpoints" test), the packet length as the stack sees it
+Seat facts first: seat, direction, interface (`ifindex` and name), the
+network context of that interface (below), whether the device is the
+loopback (`IFF_LOOPBACK` — the flow dispatch's "two endpoints" test),
+the packet length as the stack sees it
 (`skb->len` — not the wire length), and the wall clock
 (`ktime_get_real_seconds()` through `time64_to_tm()`, UTC, with
 `tm_wday` re-based so the `DayOfWeek` fact is ISO: 1 = Monday .. 7 =
@@ -115,6 +116,27 @@ facts) are given to a `Flow` forest alone — everywhere else they are
 absent by law, exactly as ingestion's lint says (§6.5). The clock is
 given to every layer, and so is the trace of consulted time conditions
 (§6.4); only the Flow seat acts on it.
+
+## The network context
+
+Three string fields are not read from the packet either:
+`network_id`, `network_name` and `network_trust`, the `Network.*` facts.
+`peios_pnp_context_fill()` (`context.c`) looks the device's name up in
+the active context table — the kernel's reading of netd's inventory,
+one entry per interface standing on an identified network, built by
+ingestion (§6.5) and published under RCU — and copies the entry's three
+strings in, setting `HAS_NETWORK`. The bridge lifts the id whenever the
+bit is set, and the name and trust only when non-empty (a record the
+operator has not labelled). No entry, no bit: an interface no network
+has been identified on carries no context, and every condition over the
+three facts is false there. The strings are bounded (40, 64 and 32
+bytes, `PEIOS_PNP_NETWORK_*_LEN`); a longer registry value is truncated
+at ingestion and the truncation logged once.
+
+The fields are the same as the interface layer's (§6.1): netd fills
+them from the interface record when it judges an interface, the kernel
+from the table when it judges a packet, so `Network.Trust.Equal` reads
+the same record in either layer.
 
 ## The identity fields
 

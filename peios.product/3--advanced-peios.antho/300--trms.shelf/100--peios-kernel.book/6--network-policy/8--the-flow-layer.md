@@ -92,7 +92,9 @@ a sentence and is evaluated on every packet (`flow_uncached`).
 
 ## Staleness
 
-A sentence is stale when its generation is not the current one or
+A sentence is stale when its generation is not the current one (a
+policy published, or a network context published — §6.5 — both advance
+the one counter) or
 `t_secs >= expires_at`. Both are checked lazily, on the flow's next
 packet — an idle flow past a policy change is killed when it next
 speaks, or conntrack times it out; there are no timers and no walk of
