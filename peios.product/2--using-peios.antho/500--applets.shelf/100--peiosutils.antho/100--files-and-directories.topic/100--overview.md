@@ -32,6 +32,7 @@ This page names every command, and then explains the one theme that runs through
 | [`du`](~peios/files-and-directories/du) | Report how much space files and directories use. |
 | [`truncate`](~peios/files-and-directories/truncate) | Shrink or extend a file to an exact size. |
 | [`mktemp`](~peios/files-and-directories/mktemp) | Create a temporary file or directory with a safely unique name. |
+| [`mkexec`](~peios/files-and-directories/mkexec) | Mark a regular file as a program, so the kernel is willing to run it. |
 
 ## Every file has a security descriptor
 
