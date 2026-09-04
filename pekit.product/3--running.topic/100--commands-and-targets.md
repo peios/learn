@@ -186,6 +186,32 @@ target_cycle: build dependency cycle: a -> b -> a
 `--no-build` may name already-staged build targets to skip re-running them;
 naming a build target that does not exist is likewise a `missing_target` error.
 
+### Stages that did not finish
+
+A stage directory on its own says nothing about whether the target that wrote
+it completed, so pekit records the outcome beside it. A target marks its stage
+as running before it touches anything and complete only after it succeeds, and
+the marker lives in the work base's `.pekit/` metadata rather than inside the
+stage, which becomes a package payload.
+
+`--no-build` reuses a stage marked complete. A stage whose target failed, or
+was interrupted, is refused:
+
+```text
+stage_incomplete: build:source: stage .../out/build/source is left over from a
+run that did not finish; drop "source" from --no-build to re-stage it
+```
+
+Without that, a failed stage is silently reused and the run fails later
+somewhere unrelated — a clean that gave up part-way leaves a tree too full to
+replace, and a fetch that failed leaves one too empty to reuse, and neither
+names the stage as the cause.
+
+A stage staged before this tracking existed has no marker at all. That is
+treated as unknown rather than failed and is still reused, with a note saying
+its state is unverified — refusing it would turn an explicit `--no-build` into
+a rebuild, which is the opposite of what the flag asks for.
+
 ## `clean`
 
 `clean` has two independent effects, gated by two mutually exclusive mode flags:
