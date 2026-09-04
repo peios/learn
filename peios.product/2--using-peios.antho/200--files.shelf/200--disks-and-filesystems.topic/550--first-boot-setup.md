@@ -46,6 +46,14 @@ Two consequences worth knowing:
 - **The size is taken once, when the form starts.** Resizing the window after that changes nothing, because the guest is never told. Reboot, or accept the shape you have.
 - **A console that does not answer gets 80x24**, the old behaviour — a real serial port with nothing on the far end, or output captured to a file.
 
+### The console goes quiet while a form is open
+
+The kernel writes to `/dev/console` too, and it does not take turns: a message lands wherever the cursor is, and one landing on the bottom row scrolls the screen. A surface repaints only the cells it believes changed, so it never learns what the kernel did, and the damage stays until something forces a full repaint.
+
+So `oobed` lowers the kernel's console output for as long as a conversation is open, and puts it back when the conversation ends — however it ends, the daemon dying included. The engine does this rather than the surface because it needs privilege and the surface deliberately has none. `installerd` does the same for the installer.
+
+Only `KERN_EMERG` still prints, so a panic is never hidden. And only the *kernel* is quieted — peinit and the services write to the console themselves and are unaffected, which is why a page change repaints in full and why **Ctrl-L** repaints on demand.
+
 ## It runs once
 
 On success `oobed` removes both service definitions — its own and the surface's — and exits. The second boot has no setup to do and nothing left over to explain.
