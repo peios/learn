@@ -134,6 +134,53 @@ closure are in `io.sourceforge.libisl.isl-static`. Published builds use ISL's
 portable mode rather than selecting instructions from the package builder's
 CPU.
 
+Kernel module administration commands are installed as `org.kernel.kmod`;
+the independently usable libkmod runtime is `org.kernel.kmod-libs`. Headers
+and pkg-config metadata are in `org.kernel.kmod-devel`, with the static archive
+in `org.kernel.kmod-static`. The tools support gzip-, xz- and zstd-compressed
+modules and PKCS#7 signature reporting. `depmod` is a machine-facing command
+at `/libexec/depmod`; package transactions invoke it when a kernel-module
+payload changes.
+
+The Linux capabilities runtimes libcap and libpsx are installed as
+`org.kernel.libcap`. Capability inspection and file-capability commands are in
+`org.kernel.libcap-tools`, development interfaces in
+`org.kernel.libcap-devel`, and both static archives in
+`org.kernel.libcap-static`. Go and PAM integrations are not included in this
+package family.
+
+Libconfig's C runtime is installed as `io.github.hyperrealm.libconfig`; its
+self-contained C++ runtime is `io.github.hyperrealm.libconfig-c++`. Headers,
+linker names, pkg-config and CMake metadata for both interfaces are in
+`io.github.hyperrealm.libconfig-devel`, while the static archives are in
+`io.github.hyperrealm.libconfig-static`.
+
+The libnl protocol-library family is installed as
+`io.github.thom311.libnl`. Its command suite, CLI support library, dynamically
+loaded traffic-control modules and lookup databases are in
+`io.github.thom311.libnl-tools`. Install `io.github.thom311.libnl-devel` for
+the complete public header and pkg-config surface, and
+`io.github.thom311.libnl-static` for the seven static libraries.
+
+The hardware performance-event discovery and encoding runtime is
+`net.sourceforge.perfmon2.libpfm`. Its public headers, linker name and API/PMU
+manuals are in `net.sourceforge.perfmon2.libpfm-devel`; the static encoder is
+in `net.sourceforge.perfmon2.libpfm-static`. Python bindings are not included.
+
+GNU Libtool's command-line tools, macros and support files are installed as
+`org.gnu.libtool`. The independently usable libltdl runtime is
+`org.gnu.libtool-ltdl`; its headers and linker metadata are in
+`org.gnu.libtool-ltdl-devel`, with the static archive in
+`org.gnu.libtool-ltdl-static`.
+
+GNU M4 is installed as `org.gnu.m4`. The package includes the command,
+localised messages and manual; matching source, debuginfo and debugsource
+packages are published alongside it.
+
+GNU Make is installed as `org.gnu.make`. Its `gnumake.h` loadable-module
+interface is included with the command; Guile integration is not included.
+Recipes use Peios' `/usr/bin/sh` system-shell path by default.
+
 For now, commands require the complete canonical name:
 
 ```
