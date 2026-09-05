@@ -200,6 +200,12 @@ linker names, pkg-config metadata and API manuals are in
 `org.gnu.ncurses-devel`; static libraries are in `org.gnu.ncurses-static`.
 Narrow-character, C++ and Ada compatibility surfaces are not included.
 
+The Ninja build executor is installed as `org.ninja-build.ninja`. Its Bash and
+Zsh completions, Vim syntax file, README and source manual are included with
+the command. Ninja uses the system shell to execute build rules, so the
+package depends on `dash`; matching source, debuginfo and debugsource packages
+are published alongside it.
+
 For now, commands require the complete canonical name:
 
 ```
