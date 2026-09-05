@@ -271,8 +271,9 @@ precedes decompression. [*sig.firmware.hashes-compressed-bytes]
 Policy is `CONFIG_SECURITY_PKM_FIRMWARE_SIG_ENFORCE`, overridable for
 one boot with `kacs_fwsig=enforce` or `kacs_fwsig=log` on the kernel
 command line; there is no runtime switch. [*sig.firmware.cmdline-override] Under `enforce` an unsigned,
-tampered or under-tier file is refused with `-EPERM`, which the loader
-reports to the driver as an ordinary load failure. [*sig.firmware.enforce-eperm] Under `log` the
+tampered or under-tier file is refused with `-EPERM`; the loader logs
+that against the path it was refused at, moves on to its remaining
+search paths, and reports the driver an ordinary load failure. [*sig.firmware.enforce-eperm] Under `log` the
 verdict goes to a rate-limited warning and the `kacs:kacs_firmware_load`
 tracepoint and the load proceeds. [*sig.firmware.log-mode] **2026.8 ships in log mode**: the
 firmware set is being signed for the first time, and a blob the
