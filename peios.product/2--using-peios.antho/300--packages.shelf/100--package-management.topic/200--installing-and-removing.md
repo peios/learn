@@ -206,6 +206,13 @@ the command. Ninja uses the system shell to execute build rules, so the
 package depends on `dash`; matching source, debuginfo and debugsource packages
 are published alongside it.
 
+The numactl command suite is installed as `io.github.numactl.numactl`. The
+shared libnuma runtime is `io.github.numactl.libnuma`; its headers, linker
+name, pkg-config metadata and API manuals are in
+`io.github.numactl.libnuma-devel`, while the static archive and its static
+libatomic closure are in `io.github.numactl.libnuma-static`. Matching source,
+debuginfo and debugsource packages are published alongside the family.
+
 For now, commands require the complete canonical name:
 
 ```
