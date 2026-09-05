@@ -75,6 +75,8 @@ Open a [Tail](~provium/reference/streams) stream subscribed to captured stdout /
 
 The returned Tail's `StreamMeta` is pre-filled with `kind="proc_stdout_stream"` (or `"proc_stderr_stream"`) and the process handle id, so snapshot diagnostics show meaningful detail.
 
+Not available for a process a [worker](~provium/reference/worker#workerrun_asynccmd-opts) spawned: its output is captured in the worker, and the worker channel cannot carry a stream. `proc:wait` returns it.
+
 ### `proc:close()`
 
 Auto-close hook. If `:wait()` already happened, this is a no-op. Otherwise, sends SIGTERM, then waits up to 2 seconds for exit (the agent escalates to SIGKILL on its own timeout).

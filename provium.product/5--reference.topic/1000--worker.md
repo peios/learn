@@ -11,7 +11,7 @@ related:
 
 A Worker is what `vm:spawn_worker()` returns: a sub-agent connection to the same VM. It exposes the same VM-style API for running commands, opening files, and issuing syscalls — handles allocated under it live in the worker's own namespace on the agent side.
 
-Workers are not a hard isolation boundary. They're bookkeeping namespaces — handles are routable from outside the worker, but the agent tracks per-worker membership for cleanup. Enforced per-worker isolation is not currently supported; treat workers as parallelism, not security.
+A worker is a real, separate guest process: a re-exec'd copy of the agent that the main agent relays ops to over a socket pair. Its syscalls run with its own credentials — its own kernel token, privileges and process security block — so a test can stand up two distinct security principals in one VM: a caller and the target of a process check, an unprivileged caller against a privileged operation, two peers on a socket. Handles a worker allocates live in its own table; the main agent routes them, so from the test's side they look like any other handle.
 
 ## Constructing
 
@@ -32,7 +32,11 @@ Synchronous exec. Same call shape as [`vm:run`](~provium/reference/vm#vmruncmd-o
 
 Async spawn. Returns a [Process](~provium/reference/process). Like `vm:run_async`, the `timeout` opt is rejected — pass it to `proc:wait` instead.
 
-The returned Process is auto-registered with the test's resource registry, so the scope walker SIGTERMs and reaps it at scope end. Without this, a worker-spawned child would leak past the test boundary.
+The child is forked and exec'd *by the worker*, so it starts life with the worker's credentials: whatever token the worker installed, whatever privileges it adjusted, is what the new program runs under. That is what makes exec-time behaviour testable from a principal the test minted — a token surviving or being relabelled at exec, a descriptor without `FD_CLOEXEC` crossing into the new image, a child's identity after its parent impersonated. `proc:pid()` gives the child's pid for the main agent to inspect from outside.
+
+`proc:wait`, `proc:kill`, `proc:pid`, `proc:status` and the stdin methods all work; the main agent relays them to the worker. `proc:stdout_stream()` and `proc:stderr_stream()` do not — a stream owns its connection for its lifetime and the worker channel is a request/reply pipe — so read a worker-spawned child's output from the `RunResult` that `proc:wait` returns.
+
+The returned Process is auto-registered with the test's resource registry, so the scope walker SIGTERMs and reaps it at scope end. Without this, a worker-spawned child would leak past the test boundary. Joining the worker first orphans any child still running: it is reparented to PID 1 and the Process handle no longer reaches it.
 
 ### `worker:open_file(path, mode_table)`
 
