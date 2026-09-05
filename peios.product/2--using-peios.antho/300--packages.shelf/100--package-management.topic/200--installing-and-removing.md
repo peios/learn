@@ -254,6 +254,21 @@ lookups, kernel-module lookup through libkmod and udev HWDB fallback. Matching
 source, debuginfo and debugsource packages are published alongside the family,
 using release archives authenticated by maintainer Martin Mares's OpenPGP key.
 
+Perl is installed as `org.perl.perl`, which also provides the `perl` virtual
+capability used by existing build dependencies. Architecture-independent core
+modules are in `org.perl.perl-modules`; the shared embedding library and XS
+modules are in `org.perl.libperl`; and public CORE headers and linker names are
+in `org.perl.perl-devel`. Language, utility and module manuals are split into
+`org.perl.perl-doc`. The threaded interpreter uses stable major.minor module
+paths so a patch update does not abandon locally installed modules, and links
+the catalogue's zlib and bzip2 rather than bundled copies. Crypt, GDBM and DB
+extensions remain disabled until their libraries have production packages.
+Matching source, debuginfo and debugsource packages are published alongside the
+family. CPAN currently offers Sigstore bundles rather than a detached OpenPGP
+signature Pekit can verify, so discovered releases become immutable through
+their Pekit SHA-256 lock after HTTPS retrieval until Sigstore verification is
+available.
+
 For now, commands require the complete canonical name:
 
 ```
