@@ -42,7 +42,7 @@ conflict. [*param.hard-ceilings-match-range-maxima]
 
 ## Where a configured value does not fully bind
 
-Three of the nineteen do not do everything their range suggests.
+Two of the nineteen do not do everything their range suggests.
 
 `MaxTotalLayers` may be configured up to 65536, but the in-memory layer
 table is a fixed array sized at compile time for 1023 dynamic layers
@@ -54,9 +54,6 @@ then layer creation fails `ENOSPC` at 1023 regardless. Values below
 is not enforced at attachment. KACS applies its own hard cap of 256 and
 LCS applies the configured value later, at use, with `E2BIG` (§5.3.5).
 `MaxScopeGUIDsPerToken` behaves the same way.
-
-`SymlinkDepthLimit` is honoured on most of the walk but two call sites
-use the compiled-in default of 16 instead of the configured value.
 
 ## Validation
 

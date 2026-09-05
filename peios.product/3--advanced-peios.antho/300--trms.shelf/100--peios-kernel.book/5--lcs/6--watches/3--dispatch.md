@@ -80,7 +80,7 @@ The path components handed to a subtree watcher are sliced out of the
 resolved path already stored on the mutating fd.
 
 Dispatch runs under a single global registry lock, so it is serialised
-across the whole system rather than per hive or per source. [*watch.dispatch.serialised-under-the-global-registry-lock]
+across the whole system rather than per hive or per source.
 
 ## Depth
 

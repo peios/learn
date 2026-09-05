@@ -74,10 +74,6 @@ apply, private hives included, for the resolving thread.
 Symlink resolution is bounded by `SymlinkDepthLimit`, default 16,
 configurable from 1 to 64. Exceeding it is `ELOOP`. [*symlink.depth.exceeding-the-limit-is-eloop]
 
-Two paths in the walk use the compiled-in default rather than the
-configured value, so a `SymlinkDepthLimit` other than 16 is not honoured
-everywhere. [*symlink.depth.limit-not-honoured-on-two-paths]
-
 ## Opening the link itself
 
 `REG_OPEN_LINK` on `reg_open_key` opens the symlink key rather than
