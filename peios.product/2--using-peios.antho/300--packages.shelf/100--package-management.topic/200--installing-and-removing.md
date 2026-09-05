@@ -193,6 +193,13 @@ archive and its static GMP closure are in `org.gnu.mpfr-static`. The library is
 built with thread-safe storage and publishes matching source, debuginfo and
 debugsource packages.
 
+ncurses terminal-information utilities are installed as `org.gnu.ncurses`.
+The wide-character ABI 6 libraries are in `org.gnu.ncurses-libs`, while the
+terminal database and tabset files are in `org.gnu.ncurses-terminfo`. Headers,
+linker names, pkg-config metadata and API manuals are in
+`org.gnu.ncurses-devel`; static libraries are in `org.gnu.ncurses-static`.
+Narrow-character, C++ and Ada compatibility surfaces are not included.
+
 For now, commands require the complete canonical name:
 
 ```
