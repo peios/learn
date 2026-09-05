@@ -114,7 +114,7 @@ size field produces no event. [*config.swap-failed-event]
    at a higher-precedence layer — the watch fires and KMES re-reads,
    validates, and applies or rejects.
 
-## Access to the configuration [*config.keys-inherit-machine-root-sd]
+## Access to the configuration
 
 The configuration keys inherit the Machine hive root security
 descriptor, which grants `KEY_ALL_ACCESS` to SYSTEM and
