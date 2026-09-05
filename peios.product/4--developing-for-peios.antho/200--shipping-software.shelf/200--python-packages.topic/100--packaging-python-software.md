@@ -23,14 +23,20 @@ There is no separate pure-Python location and no `dist-packages`. Ask the interp
 
 Two things follow from the path. It is **versioned**, so a package built for Python 3.14 is not visible to 3.15, and every Python package declares that in its dependencies (see [The interpreter pin](#the-interpreter-pin)). And it sits inside the triplet directory, so a Python package is `architecture = "x86_64"` even when it contains no compiled code.
 
+The system interpreter is the `org.python.python3` package. Its standard
+library and shared runtime are in `org.python.python3-libs`; headers and
+embedding metadata are in `org.python.python3-devel`; and the static embedding
+library is in `org.python.python3-static`. Applications that only run Python do
+not need the development or static packages.
+
 ## Libraries and applications
 
 Everything in site-packages is importable by every Python program on the system, which makes installing there an interface decision, not a filing one. Peios draws the line by what the software is for:
 
 | The package is… | Modules go to | Package name |
 |---|---|---|
-| a **library** — other packages import it (`docutils`, `flit_core`) | site-packages | `python3-<name>` |
-| an **application** — people run it (`meson`) | `/usr/lib/x86_64-linux-peios/<name>/` | `<name>` |
+| a **library** — other packages import it (`docutils`, `flit_core`) | site-packages | the project's reverse-DNS package name |
+| an **application** — people run it (`meson`) | `/usr/lib/x86_64-linux-peios/<name>/` | the project's reverse-DNS package name |
 
 An application's modules are private: nothing else can `import mesonbuild`, so its internals never become an accidental API, and two applications cannot disagree about which version of a dependency site-packages may hold. The application's launcher is the one program that knows the address — it prepends the private directory to `sys.path` before importing. Site-packages stays on the path, so a private application uses shared libraries normally; privacy governs only whether its own modules are offered outward.
 
@@ -40,7 +46,7 @@ Some projects are both — docutils is a library that also ships `rst2man`. Clas
 
 A recipe replaces pip with three steps that pip would otherwise do behind the scenes.
 
-**Build the wheel** by calling the project's PEP 517 backend directly. The backend is named in the project's `pyproject.toml`; the pool packages `python3-flit-core` and `python3-setuptools`, and each is a build dependency of the recipe, not of the resulting package:
+**Build the wheel** by calling the project's PEP 517 backend directly. The backend is named in the project's `pyproject.toml`; the pool packages Flit Core and Setuptools, and each is a build dependency of the recipe, not of the resulting package:
 
 ```sh
 python3 -c 'import sys, flit_core.buildapi as b; b.build_wheel(sys.argv[1])' "$PEKIT_OUT/wheel"
@@ -92,11 +98,17 @@ python3 = ">= 3.14, < 3.15"
 
 Bytecode carries a per-version magic number, extension modules carry the interpreter's ABI tag in their file names, and site-packages itself is a versioned path — so nothing in the package survives a minor-version bump. The pin makes that a resolver fact: peipkg will not move the interpreter until rebuilt packages exist. An interpreter bump on Peios is a rebuild of every Python package, which is one pekit sweep.
 
-The interpreter ships PEP 668's `EXTERNALLY-MANAGED` marker in its standard library. Nothing on the system reads it — there is no pip — but a pip an operator installs for their own use will find it and refuse to write into `/usr`, pointing at a virtual environment or `/lcl` instead.
+The Python recipe follows upstream maintenance releases automatically within
+the current feature line. Its soft floor is Python 3.14 and its upper bound is
+3.15: a 3.14 bug-fix release can be locked and rebuilt unattended, while 3.15
+deliberately waits for the coordinated package sweep required by the ABI and
+path change.
+
+The interpreter ships PEP 668's `EXTERNALLY-MANAGED` marker in its standard library. Nothing on the system reads it — there is no pip — but a pip an operator installs for their own use will find it and refuse to write into `/usr`, pointing at a virtual environment or `/lcl` instead. The interpreter also omits `ensurepip` and its bundled wheel. Create an environment with `python3 -m venv --without-pip`; install packaged Python software through peipkg.
 
 ## A recipe, end to end
 
-The `python3-docutils` recipe in the pool is the reference for a library with console scripts: it builds through flit_core, runs the upstream test suite against a copy of the tree, extracts the wheel, generates eleven launchers from `entry_points.txt`, and compiles the bytecode. `meson` is the reference for a private application, and `python3-flit-core` for the smallest possible case — a backend that builds itself.
+The Docutils recipe in the pool is the reference for a library with console scripts: it builds through flit_core, runs the upstream test suite against a copy of the tree, extracts the wheel, generates eleven launchers from `entry_points.txt`, and compiles the bytecode. Meson is the reference for a private application, and Flit Core for the smallest possible case — a backend that builds itself.
 
 ## See also
 
