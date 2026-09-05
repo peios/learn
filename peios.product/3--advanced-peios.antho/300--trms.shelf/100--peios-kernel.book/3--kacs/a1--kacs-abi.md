@@ -630,11 +630,11 @@ unreadable/unwritable optval.
 *getsockopt only.* [*kacs-abi.so-peer-token]
 
 optval: int — a new token fd, carrying fixed TOKEN_QUERY |
-TOKEN_IMPERSONATE access and opened O_CLOEXEC, for this end's conveyed-
-identity register: the peer identity associated with the data this end
-has consumed so far. The register is initialised at connect() — on the
-accepted end with the client's identity, on the connecting end with the
-listener's identity as captured at listen() (at
+TOKEN_IMPERSONATE | TOKEN_DUPLICATE access and opened O_CLOEXEC, for
+this end's conveyed-identity register: the peer identity associated with
+the data this end has consumed so far. The register is initialised at
+connect() — on the accepted end with the client's identity, on the
+connecting end with the listener's identity as captured at listen() (at
 KACS_IMLEVEL_IDENTIFICATION unless the listener set its own level) — and
 advanced by each KACS_SCM_TOKEN the reader's position passes (a token
 still queued but unread is not yet visible). Every call returns a fresh
@@ -692,19 +692,19 @@ fixed for that flow's life.
 
 *Ancillary message type, at cmsg_level SOL_KACS.* [*kacs-abi.scm-token]
 
-Data: one int. Received: a token fd (TOKEN_QUERY | TOKEN_IMPERSONATE,
-O_CLOEXEC) for the identity the kernel attests sent the accompanying
-data. Delivered when the receive buffer has room for it and the conveyed
-identity differs from the reader's register; a receiver that reads no
-ancillary data still has the register (KACS_SO_PEER_TOKEN). Sent: a
-token fd the sender wishes to attach to the data. The kernel gates the
-send as if the sender were impersonating that token: the two-gate model
-runs with the sender as installer, and an attach that would lower the
-token's level fails with -EPERM rather than downgrading. A primary token
-is derived to an impersonation token at this end's level. The fd must
-carry TOKEN_IMPERSONATE (-EACCES otherwise); at most one per message
-(-EINVAL). Attaching is exactly equivalent to impersonating the token
-for the duration of the send.
+Data: one int. Received: a token fd (TOKEN_QUERY | TOKEN_IMPERSONATE |
+TOKEN_DUPLICATE, O_CLOEXEC) for the identity the kernel attests sent the
+accompanying data. Delivered when the receive buffer has room for it and
+the conveyed identity differs from the reader's register; a receiver
+that reads no ancillary data still has the register
+(KACS_SO_PEER_TOKEN). Sent: a token fd the sender wishes to attach to
+the data. The kernel gates the send as if the sender were impersonating
+that token: the two-gate model runs with the sender as installer, and an
+attach that would lower the token's level fails with -EPERM rather than
+downgrading. A primary token is derived to an impersonation token at
+this end's level. The fd must carry TOKEN_IMPERSONATE (-EACCES
+otherwise); at most one per message (-EINVAL). Attaching is exactly
+equivalent to impersonating the token for the duration of the send.
 
 | Constant | Value |
 |---|---|
