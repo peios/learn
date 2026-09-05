@@ -78,3 +78,12 @@ A service with a `TTYPath` has all three streams on its terminal, and
 both pipe pairs are closed in the child (§5.4). Its output is not
 captured at all — it goes to the terminal, which is what asking for one
 means.
+
+peinit opens the terminal with read data, write data **and read
+attributes**. The last matters because the descriptor is inherited by
+every process the service starts, and a KACS handle answers `fstat`
+only if that right is on it: without it a session can read and write
+its terminal but not name it — `ttyname()` fails, `tty` reports "not a
+tty", and a program choosing `TERM` cannot tell a serial line from a
+virtual console. `isatty()` is an ioctl and works either way, which is
+why the gap is easy to miss.
