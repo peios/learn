@@ -1,6 +1,6 @@
 ---
 title: Element Types
-description: The initial element-type set — state fields and answer encodings for text, string, boolean, select, progress, log and action.
+description: The element-type set — state fields and answer encodings for text, string, boolean, select, table, progress, log and action.
 ---
 
 The initial set. Each type lists its state fields (beyond the common
@@ -45,6 +45,26 @@ Choose from what the daemon offers.
 
 Answer value: one choice's `value`; with `multiple`, an array of
 them. Values are compared as exact JSON values.
+
+## `table` — input
+
+Choose among rows that have more to say than a name: a `select`
+whose choices are records. Disks, network interfaces, existing
+installations — anything a person compares on several facts before
+picking one.
+
+| State | Meaning |
+|---|---|
+| `columns` | Array of `{key, name, align?}`, in display order. `align` is `left` (default) or `right`; numbers and sizes read better right-aligned. |
+| `rows` | Array of `{value, cells, enabled?, note?}`, in display order. `cells` maps a column `key` to display text; a key a row omits renders empty. `enabled` defaults to true; a false row is listed but is not an acceptable answer. `note` is a short remark shown with the row — typically why it is disabled. |
+| `empty` | Text shown in place of the rows when there are none. |
+
+Answer value: one enabled row's `value`. Values are compared as exact
+JSON values.
+
+A surface that cannot fit every column SHOULD drop columns from the
+right rather than truncate every cell, so the daemon's column order
+is also its priority order.
 
 ## `progress` — output
 
