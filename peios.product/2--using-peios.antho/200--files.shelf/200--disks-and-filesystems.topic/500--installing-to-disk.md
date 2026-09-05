@@ -13,7 +13,23 @@ related:
 
 A live Peios runs from a read-only squashfs with a tmpfs stacked on top, so every write it accepts is discarded at reboot. Installing to disk replaces that arrangement with a writable filesystem that survives — and, less obviously, replaces a security policy chosen at *mount* time with one the filesystem carries itself.
 
-Installation is five steps and one retirement. Nothing about it is magic, and all of it can be done by hand.
+Installation is five steps and one retirement. Nothing about it is magic, and all of it can be done by hand — the installer on the medium does exactly these steps, and so does the `peios-install` script it succeeds.
+
+## The installer
+
+Boot the medium and the installer is on the console: a form, driven from the keyboard, that asks three things — what to do, which disk, and whether you mean it — and then shows the work as it happens.
+
+It is two programs. `installerd` runs as SYSTEM and does everything that touches a disk; `install-tui` draws the form and holds no privilege at all. They speak [MSIP](~peios/services-and-jobs/overview), which is why closing the form does not stop an installation (the daemon owns it, and another surface can attach and watch it finish) and why the same form can be driven from a script with `msip-drive`.
+
+**Keys.** Tab and Shift+Tab move between fields; Up and Down walk a list, and step to the next field at its ends; Enter presses the highlighted action, or moves on from a field; Space toggles a checkbox. Esc asks before leaving. F1 lists all of this. Ctrl+L repaints the screen, for when something else has written on the console.
+
+Things that are greyed out can still be reached with Tab, and the footer says why they are greyed. A page opens with the cursor on the first thing that can be answered.
+
+**The disk page** is a table — device, model, size, bus — rather than a list of names, because a disk is chosen on several facts at once. The medium you booted from is listed and marked, so you know where it went, and cannot be chosen. A removable disk is marked too.
+
+**The console.** The form is drawn to the size of the terminal, read once when it starts, and the kernel is kept quiet on the console while it is open; the [first-boot](~peios/disks-and-filesystems/first-boot-setup) page explains both. On a serial line the renderer assumes a modern terminal emulator — rounded corners, ticks, a spinner. On a real machine's console it detects the Linux VT and uses only what the kernel's font can draw, and sets the VT's sixteen colours to the same palette an emulator would have, so the two look alike. `--plain` forces the conservative set, for a serial terminal that really is one.
+
+First-boot setup is the same renderer with a different daemon, so all of this holds there too.
 
 ## Two ways to invoke it
 

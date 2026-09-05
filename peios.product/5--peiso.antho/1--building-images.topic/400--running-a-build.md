@@ -38,6 +38,7 @@ There is no `--version`, `--edition` or `--dwe` flag. Everything that shapes an 
 | `make boot-cd` | boot the newest plain build with the medium attached as an optical drive, the way a hypervisor attaches an ISO |
 | `make boot-dwe` | boot the newest DWE build with a vsock device (`DWE_CID`, default 3) |
 | `make boot-quiet` / `boot-break` | add `peios.quiet=2` / `rd.break` to the command line via SMBIOS |
+| `make boot-vga` | boot with the framebuffer in a window and `console=tty0` last, so the surface is drawn on a VT — what a real machine shows. The serial log stays on stdio. Combine with any target by hand: `make boot-installed GRAPHICS='-display gtk -vga std' SMBIOS=…` |
 | `make boot-install` | boot the DWE build with a blank 8 GiB `disk.img` attached as `/dev/vdb` |
 | `make boot-installed` | boot `disk.img` alone — no medium |
 | `make clean-disk` / `make clean` | start the install test over / remove every build directory |
