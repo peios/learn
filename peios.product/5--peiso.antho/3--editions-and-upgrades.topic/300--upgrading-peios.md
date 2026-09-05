@@ -31,6 +31,10 @@ That is the whole procedure. It is safe to run again at any time: an interrupted
 | `--yes`, `-y` | Pass `--yes` to peipkg. |
 | `--root DIR` | Operate on the Peios rooted at `DIR` rather than `/`. Implies `--on-reboot`, since `reg` acts on the live registry only; peipkg is run with `--root DIR`. |
 
+## From the medium
+
+A machine with no reachable repository is upgraded from an image instead: boot it from the new medium with its disk attached and choose **Upgrade an installation** in the [installer](~peios/disks-and-filesystems/installing-to-disk). That runs the same procedure against the mounted disk — the edition with the bypass, `--seeds-only` for the seeds, then everything else the medium carries — and rewrites the boot files. It is the same procedure with one difference: the medium's repository index is fixed at manufacture, so the installer passes peipkg `--allow-stale` where this command cannot.
+
 ## Why not `peipkg upgrade`
 
 `peipkg upgrade` upgrades every package it can and **holds the edition back**, printing the edition's message:

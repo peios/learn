@@ -137,6 +137,23 @@ This is the substantive difference between the two, and it is easy to check on a
 
 No `ID` flag on either ACE. `ID` is `INHERITED_ACE`, so its absence means this descriptor is *explicit* — stored on the root inode by `mke2fs`, not derived from an ancestor and not synthesised at mount. The filesystem's access policy is a property of the filesystem.
 
+## Upgrading from the medium
+
+The first page also offers **Upgrade an installation**: move a system already on a disk to the release this medium carries, without a network and without erasing anything. It is the same procedure as [`upgrade-peios`](~peios/peiso/editions-and-upgrades/upgrading-peios) run against a mounted disk, and it is how a test machine takes a build made somewhere else — build the image, boot the machine from it with its disk attached, upgrade, reboot.
+
+Choose the disk and the confirmation page says what the disk holds and what the medium carries, both as edition and full package version. The **Upgrade** button is live only when the medium is newer, by peipkg's own ordering, revision included. Otherwise it is greyed and the footer says why: already current, the disk holds something newer, a different edition, or not a Peios system at all. Reading the disk to say this mounts it read-only and unmounts it again, so backing out of the page leaves the disk exactly as it was.
+
+The upgrade itself, on the mounted target:
+
+1. **The edition**, with peipkg's alternate-upgrade bypass — the step `upgrade-peios` would take, taken here so the medium's fixed repository index can be declared stale-but-expected. Its closure comes with it.
+2. **The release's seeds**, staged for the next boot by `upgrade-peios --seeds-only`. Only the shared `autoapply` list: first-boot setup does not run again on an upgraded machine.
+3. **Everything else** the medium carries a newer revision of, in every root under the target, the initramfs included. The edition floors its dependencies rather than pinning them, so this is what brings a whole fresh build across.
+4. **The boot files**, rewritten from the upgraded disk exactly as the repair does, so the new kernel is what boots.
+
+The medium's repository is removed from the target whether or not the upgrade got through. Nothing under `/lcl` is touched.
+
+**Nothing moves without a revision bump.** peipkg orders by version and then revision, and a package rebuilt under the same revision is invisible to any upgrade. For the edition that is the whole gate: an image whose edition package has the same version as the disk's is "already current" however much else changed. A build meant to be taken by upgrade bumps the edition, and every package it wants seen.
+
 ## Repairing an installed system
 
 The first page offers **Repair an existing system** beside the install. Choose the disk holding it and the repair menu offers three operations, each on the same disk the install writes and never on the medium.
