@@ -57,7 +57,9 @@ contains the daemon, tools, rules and Peios service integration;
 `io.github.eudev-project.eudev-libudev` contains the runtime library; and
 `io.github.eudev-project.eudev-devel` contains the public header, linker name
 and pkg-config metadata. Installing libudev for an application therefore does
-not pull in the system device manager.
+not pull in the system device manager. The device-manager package uses
+`peiosutils` for the core applets in its coldplug hook; it does not install the
+GNU Coreutils bootstrap package into the running system.
 
 FIGlet is installed as `org.figlet.figlet`. Its commands, font catalogue and
 manuals form one small runtime package; detached debugging symbols and sources
