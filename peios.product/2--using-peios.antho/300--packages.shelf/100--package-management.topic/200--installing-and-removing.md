@@ -254,6 +254,15 @@ lookups, kernel-module lookup through libkmod and udev HWDB fallback. Matching
 source, debuginfo and debugsource packages are published alongside the family,
 using release archives authenticated by maintainer Martin Mares's OpenPGP key.
 
+Standard network-name databases are installed as `org.debian.netbase`. The
+package places the protocol, service, RPC and Ethernet-type registries in
+`/usr/etc`; Peios's merged configuration view exposes those vendor defaults as
+`/etc/protocols`, `/etc/services`, `/etc/rpc` and `/etc/ethertypes` for libc and
+networking tools. Locally managed configuration can therefore override them
+without modifying the package payload. Perl's shared runtime depends on the
+databases because its Socket, IO and Net::Ping modules perform named protocol
+and service lookups.
+
 Perl is installed as `org.perl.perl`, which also provides the `perl` virtual
 capability used by existing build dependencies. Architecture-independent core
 modules are in `org.perl.perl-modules`; the shared embedding library and XS
