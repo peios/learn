@@ -181,6 +181,12 @@ GNU Make is installed as `org.gnu.make`. Its `gnumake.h` loadable-module
 interface is included with the command; Guile integration is not included.
 Recipes use Peios' `/usr/bin/sh` system-shell path by default.
 
+Meson is installed as `com.mesonbuild.meson`. The package includes the
+`meson` command and manual, and declares Ninja as a runtime dependency because
+Meson's normal build workflow invokes it. Meson's Python implementation is
+private to the application rather than exposed as a system-wide Python
+library.
+
 For now, commands require the complete canonical name:
 
 ```
