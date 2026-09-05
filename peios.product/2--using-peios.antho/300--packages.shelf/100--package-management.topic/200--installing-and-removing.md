@@ -225,6 +225,15 @@ names, pkg-config and CMake metadata, and API manuals are in
 Peios's merged configuration view. Matching source, debuginfo and debugsource
 packages are published alongside the family.
 
+The kernel DWARF and BTF tool suite is installed as `org.kernel.pahole`. It
+includes `pahole` and the accompanying dwarves inspection tools, shell
+utilities and runtime data. The public libdwarves ABI is split into
+`org.kernel.libdwarves`, with headers and linker names in
+`org.kernel.libdwarves-devel`, so library consumers do not acquire the command
+suite. Release builds use upstream's signed tarballs because those contain the
+embedded libbpf sources needed for a complete build; matching source,
+debuginfo and debugsource packages are published alongside the family.
+
 For now, commands require the complete canonical name:
 
 ```
