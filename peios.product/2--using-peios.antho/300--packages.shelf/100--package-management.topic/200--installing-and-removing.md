@@ -287,6 +287,17 @@ pkg-config metadata are in `org.pkgconf.libpkgconf-devel`, with the static
 archive in `org.pkgconf.libpkgconf-static`. Matching source, debuginfo and
 debugsource packages are published alongside the family.
 
+Rsync is installed as `org.samba.rsync`, which also provides and replaces the
+earlier `rsync` package name. The main package supports IPv6, iconv, generic
+extended attributes, OpenSSL-accelerated checksums, xxHash, zstd and rolling
+checksum SIMD. POSIX ACL support is omitted because Peios uses KACS DACLs.
+The TLS transport wrapper is in `org.samba.rsync-ssl`, and the Python-based
+restricted SSH-command wrapper is in `org.samba.rrsync`, so ordinary local
+transfers do not acquire either interpreter. The command can be invoked in
+daemon mode manually, but Peios does not currently install an rsync peinit
+service. Matching source, debuginfo and debugsource packages are published
+alongside the family.
+
 For now, commands require the complete canonical name:
 
 ```
