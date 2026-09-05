@@ -7,33 +7,33 @@ description: What the PSB does across fork, exec and CLONE_THREAD, and how it fe
 
 The child receives a copy of the parent's PSB with a single exception:
 `process_guid` is not copied, and the child is given a new
-kernel-generated one. Everything else — the PIP fields, the
+kernel-generated one. [*psb.fork.new-guid] Everything else — the PIP fields, the
 mitigations, and any active restrictions — is inherited, so a
 Protected process's children start Protected and PIP propagates across
-fork.
+fork. [*psb.fork.inherits-rest]
 
 The child also receives a new default process descriptor. Its owner is
 the forking thread's **primary** token's user SID, not the
 impersonation token's, even when the thread is impersonating at the
-time. The DACL follows the default template.
+time. [*psb.fork.sd-owner-primary-token] The DACL follows the default template.
 
 ## Exec
 
 The PIP fields are reset at exec from the new binary's cryptographic
 signature. A Protected parent that execs an unsigned binary loses PIP
-protection: protection follows the binary, not the lineage.
+protection: protection follows the binary, not the lineage. [*psb.exec.pip-reset-from-binary]
 
 The mitigation flags — `lsv`, `wxp`, `tlp`, `cfif`, `cfib`, `pie`,
 `sml`, `ui_access` — are not reset. They persist across exec
 unchanged, so a mitigation set between fork and exec survives whatever
-binary is subsequently loaded. `no_child_process` persists in the same
+binary is subsequently loaded. [*psb.exec.mitigations-persist] `no_child_process` persists in the same
 way: a process restricted from creating children stays restricted no
-matter what it execs.
+matter what it execs. [*psb.exec.no-child-process-persists]
 
 `process_guid` is not reset either, because it identifies the process
-— the scheduling entity — rather than the binary.
+— the scheduling entity — rather than the binary. [*psb.exec.guid-preserved]
 
-The process descriptor is not reset. Exec preserves it unchanged. It
+The process descriptor is not reset. Exec preserves it unchanged. [*psb.exec.sd-preserved] It
 was initialised at fork from the forking thread's primary token and
 reflects the process creation context, or a later explicit management
 context, rather than the binary being executed. Primary token
@@ -42,7 +42,7 @@ replace or modify it only under their own rules (§3.2.3).
 
 ## Clone with CLONE_THREAD
 
-Threads share the process's PSB. Thread creation is unaffected by
+Threads share the process's PSB. [*psb.clone-thread.shares-psb] Thread creation is unaffected by
 `no_child_process`, which blocks new processes only.
 
 ## Relationship to AccessCheck
@@ -54,7 +54,7 @@ are invisible to it.
 PIP is the exception. The pipeline includes a PIP enforcement step
 reading `pip_type` and `pip_trust`, which come from the PSB rather
 than from any token: the enforcement layer extracts them and passes
-them to AccessCheck as explicit parameters.
+them to AccessCheck as explicit parameters. [*psb.accesscheck.pip-from-psb]
 
 The asymmetry between MIC and PIP follows from that. **MIC** uses the
 effective token, so impersonation changes how it evaluates — which is

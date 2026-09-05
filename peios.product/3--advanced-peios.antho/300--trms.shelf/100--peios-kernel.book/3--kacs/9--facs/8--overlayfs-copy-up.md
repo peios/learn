@@ -28,9 +28,9 @@ on it came out owned by SYSTEM, and every inherited `CREATOR OWNER` ACE
 resolved to SYSTEM rather than to the principal that created the object.
 
 KACS resolves the descriptor **before** the create, while both inputs
-are still right, and hands the answer down.
+are still right, and hands the answer down. [*facs.ovl-copy-up.resolve-before-create]
 
-## The descriptor rides on a credential
+## The descriptor rides on a credential [*facs.ovl-copy-up.descriptor-on-credential]
 
 The kernel offers two hooks for this, and both work the same way: they
 hand the LSM a credential to fill in, and overlayfs then performs the
@@ -38,35 +38,35 @@ creation under it.
 
 | Hook | Fires for | KACS resolves |
 |---|---|---|
-| `security_inode_copy_up` | A lower object being materialised in the upper layer | The source object's own effective descriptor |
-| `security_dentry_create_files_as` | An ordinary create, mkdir, mknod, symlink or tmpfile | Inheritance from the overlay parent, for the calling principal |
+| `security_inode_copy_up` | A lower object being materialised in the upper layer | The source object's own effective descriptor [*facs.ovl-copy-up.copy-up-hook-resolves-source] |
+| `security_dentry_create_files_as` | An ordinary create, mkdir, mknod, symlink or tmpfile | Inheritance from the overlay parent, for the calling principal [*facs.ovl-copy-up.create-hook-resolves-inheritance] |
 
 Either way the result is attached to that credential, and the inode
-creation path prefers it over computing inheritance itself.
+creation path prefers it over computing inheritance itself. [*facs.ovl-copy-up.creation-prefers-attached]
 
 The credential is what makes the lifetime sound, and it is the reason
 this needs no context of its own:
 
 - Overlayfs installs the credential with `override_creds()` and reverts
-  it through a scope guard, on every exit path including errors.
-- Each scope wraps exactly one creation and nothing else. A create over
+  it through a scope guard, on every exit path including errors. [*facs.ovl-copy-up.credential-reverted-on-every-path]
+- Each scope wraps exactly one creation and nothing else. [*facs.ovl-copy-up.one-creation-per-scope] A create over
   a whiteout makes one temporary object and then *renames* it over the
   whiteout, rather than creating a second.
-- Releasing the credential releases the descriptor.
+- Releasing the credential releases the descriptor. [*facs.ovl-copy-up.release-frees-descriptor]
 
 So there is nothing to arm and nothing to disarm. Outside that scope the
 credential is simply not current.
 
 A credential *derived* from one carrying a pending descriptor does not
-inherit it. Without that rule the descriptor would escape its create and
+inherit it. [*facs.ovl-copy-up.derived-credential-does-not-inherit] Without that rule the descriptor would escape its create and
 be stamped on the next unrelated object the task made.
 
-## A copied-up object keeps its own descriptor
+## A copied-up object keeps its own descriptor [*facs.ovl-copy-up.copy-up-preserves-descriptor]
 
 A copy-up is not a new object, and inheritance is the wrong answer for
 it even from the right parent: the object already had a descriptor.
 KACS carries the source's across, whether that descriptor was stored on
-the lower inode or synthesized for it under a mount policy (§9.5).
+the lower inode or synthesized for it under a mount policy (§9.5). [*facs.ovl-copy-up.source-descriptor-may-be-synthesised]
 
 Without this the defect runs in both directions. An object with a
 deliberately narrow descriptor is widened by the act of writing to it,
@@ -76,27 +76,27 @@ else's write. The principal doing the writing already held write access;
 nothing about that should re-decide the object's policy for everyone
 else.
 
-## An ordinary create inherits from the overlay
+## An ordinary create inherits from the overlay [*facs.ovl-copy-up.create-inherits-from-overlay]
 
 A genuinely new object has nothing to preserve, so it inherits — but
 from the merged directory the caller named and as the caller, which is
 what it would have got had overlayfs not been in the way. The parent's
 descriptor is read through the overlay inode, so a descriptor set at
 runtime governs the children created after it, and `CREATOR OWNER`
-resolves to the principal making the object.
+resolves to the principal making the object. [*facs.ovl-copy-up.creator-owner-resolves-to-caller]
 
 A creator descriptor supplied explicitly to a native create (§9.2) is
-picked up here for the same reason. The request records the parent the
+picked up here for the same reason. [*facs.ovl-copy-up.supplied-descriptor-honoured] The request records the parent the
 caller resolved — an overlay inode — so a match attempted at inode
 creation time, where only the backing inode is visible, could never
 fire, and the descriptor the caller asked for would be silently replaced
 by inheritance.
 
 A caller with no token is left alone rather than denied here, so the
-inode creation path reaches its own denial. Two places must not decide
+inode creation path reaches its own denial. [*facs.ovl-copy-up.no-token-passes-through] Two places must not decide
 the same thing differently.
 
-## The descriptor xattr is not copied
+## The descriptor xattr is not copied [*facs.ovl-copy-up.canonical-xattr-discarded]
 
 On copy-up the canonical descriptor xattr is discarded during the xattr
 copy rather than replicated, because the credential above already
@@ -105,7 +105,7 @@ same answer. It could not be copied through that path in any case — the
 canonical xattr is not readable or writable as an ordinary xattr, since
 descriptor mutation is the dedicated interface's job (§9.6).
 
-## Failure
+## Failure [*facs.ovl-copy-up.resolve-failure-fails-create]
 
 Failing to resolve a descriptor fails the create. That holds for both
 hooks: a source whose descriptor cannot be read fails the copy-up, and a
@@ -117,4 +117,4 @@ backing directory as the mounter, which is the outcome this exists to
 prevent, and which leaves nothing behind to find later.
 
 An object on an unmanaged mount is the one case that passes through
-untouched: there is nothing there to preserve or to inherit.
+untouched: there is nothing there to preserve or to inherit. [*facs.ovl-copy-up.unmanaged-untouched]

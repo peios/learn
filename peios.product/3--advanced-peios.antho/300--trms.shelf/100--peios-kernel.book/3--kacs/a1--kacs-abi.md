@@ -8,14 +8,14 @@ from `pkm/uapi/pkm/` by `pkm/tools/gen-kacs-abi.py`, with struct
 layouts measured by compiling a probe against the real headers.
 Regenerate it whenever the ABI changes; do not edit it by hand.
 
-The names here are the ones a program actually compiles against.
+The names here are the ones a program actually compiles against. [*kacs-abi.generated-from-source]
 Everything about the ABI a compiler cannot measure -- token query
 payload shapes, the specification spellings that differ from these
 names, what is documented elsewhere, and the kernel configuration
 -- is in the notes appendix, §3.D, which this generator does not
 touch.
 
-## Syscall numbers
+## Syscall numbers [*kacs-abi.syscall-numbers]
 
 Signatures are read from the `SYSCALL_DEFINE` sites in `pkm/kacs/`.
 
@@ -39,11 +39,11 @@ Signatures are read from the `SYSCALL_DEFINE` sites in `pkm/kacs/`.
 | 1027 | `SYS_KACS_SET_MOUNT_POLICY` | `kacs_set_mount_policy(int fd, struct kacs_mount_policy_args __user *uargs, size_t argsize)` |
 
 `uapi/pkm/syscall.h` also registers the KMES and LCS numbers,
-1090–1102, documented in their own chapters.
+1090–1102, documented in their own chapters. [*kacs-abi.sibling-syscall-range]
 
 ## Structure layouts
 
-### `struct kacs_query_args`
+### `struct kacs_query_args` [*kacs-abi.struct-kacs-query-args]
 
 Total size 16 bytes.
 
@@ -53,7 +53,7 @@ Total size 16 bytes.
 | 4 | 4 | `__u32` | `buf_len` |
 | 8 | 8 | `__u64` | `buf_ptr` |
 
-### `struct kacs_adjust_privs_args`
+### `struct kacs_adjust_privs_args` [*kacs-abi.struct-kacs-adjust-privs-args]
 
 Total size 24 bytes.
 
@@ -64,7 +64,7 @@ Total size 24 bytes.
 | 8 | 8 | `__u64` | `data_ptr` |
 | 16 | 8 | `__u64` | `previous_enabled` |
 
-### `struct kacs_priv_entry`
+### `struct kacs_priv_entry` [*kacs-abi.struct-kacs-priv-entry]
 
 Total size 8 bytes.
 
@@ -73,7 +73,7 @@ Total size 8 bytes.
 | 0 | 4 | `__u32` | `luid` |
 | 4 | 4 | `__u32` | `attributes` |
 
-### `struct kacs_adjust_groups_args`
+### `struct kacs_adjust_groups_args` [*kacs-abi.struct-kacs-adjust-groups-args]
 
 Total size 144 bytes.
 
@@ -84,7 +84,7 @@ Total size 144 bytes.
 | 8 | 8 | `__u64` | `data_ptr` |
 | 16 | 128 | `__u64``[16]` | `previous_state` |
 
-### `struct kacs_duplicate_args`
+### `struct kacs_duplicate_args` [*kacs-abi.struct-kacs-duplicate-args]
 
 Total size 16 bytes.
 
@@ -95,7 +95,7 @@ Total size 16 bytes.
 | 8 | 4 | `__u32` | `impersonation_level` |
 | 12 | 4 | `__s32` | `result_fd` |
 
-### `struct kacs_group_entry`
+### `struct kacs_group_entry` [*kacs-abi.struct-kacs-group-entry]
 
 Total size 8 bytes.
 
@@ -104,7 +104,7 @@ Total size 8 bytes.
 | 0 | 4 | `__u32` | `index` |
 | 4 | 4 | `__u32` | `enable` |
 
-### `struct kacs_adjust_default_args`
+### `struct kacs_adjust_default_args` [*kacs-abi.struct-kacs-adjust-default-args]
 
 Total size 16 bytes.
 
@@ -115,7 +115,7 @@ Total size 16 bytes.
 | 12 | 2 | `__u16` | `owner_index` |
 | 14 | 2 | `__u16` | `group_index` |
 
-### `struct kacs_restrict_args`
+### `struct kacs_restrict_args` [*kacs-abi.struct-kacs-restrict-args]
 
 Total size 40 bytes.
 
@@ -130,7 +130,7 @@ Total size 40 bytes.
 | 32 | 4 | `__s32` | `result_fd` |
 | 36 | 4 | `__u32` | `_pad` |
 
-### `struct kacs_link_tokens_args`
+### `struct kacs_link_tokens_args` [*kacs-abi.struct-kacs-link-tokens-args]
 
 Total size 16 bytes.
 
@@ -140,7 +140,7 @@ Total size 16 bytes.
 | 4 | 4 | `__s32` | `filtered_fd` |
 | 8 | 8 | `__u64` | `logon_session_id` |
 
-### `struct kacs_get_linked_token_args`
+### `struct kacs_get_linked_token_args` [*kacs-abi.struct-kacs-get-linked-token-args]
 
 Total size 4 bytes.
 
@@ -148,7 +148,7 @@ Total size 4 bytes.
 |---:|---:|---|---|
 | 0 | 4 | `__s32` | `result_fd` |
 
-### `struct kacs_access_check_args`
+### `struct kacs_access_check_args` [*kacs-abi.struct-kacs-access-check-args]
 
 Total size 136 bytes.
 
@@ -181,7 +181,7 @@ Total size 136 bytes.
 | 120 | 8 | `__u64` | `continuous_audit_out_ptr` |
 | 128 | 8 | `__u64` | `staging_mismatch_out_ptr` |
 
-### `struct kacs_object_type_entry`
+### `struct kacs_object_type_entry` [*kacs-abi.struct-kacs-object-type-entry]
 
 Total size 20 bytes.
 
@@ -191,7 +191,7 @@ Total size 20 bytes.
 | 2 | 2 | `__u16` | `_reserved` |
 | 4 | 16 | `__u8``[16]` | `guid` |
 
-### `struct kacs_node_result`
+### `struct kacs_node_result` [*kacs-abi.struct-kacs-node-result]
 
 Total size 8 bytes.
 
@@ -200,7 +200,7 @@ Total size 8 bytes.
 | 0 | 4 | `__u32` | `granted` |
 | 4 | 4 | `__s32` | `status` |
 
-### `struct kacs_open_how`
+### `struct kacs_open_how` [*kacs-abi.struct-kacs-open-how]
 
 Total size 32 bytes.
 
@@ -214,7 +214,7 @@ Total size 32 bytes.
 | 24 | 4 | `__u32` | `sd_len` |
 | 28 | 4 | `__u32` | `__pad` |
 
-### `struct kacs_mount_policy_args`
+### `struct kacs_mount_policy_args` [*kacs-abi.struct-kacs-mount-policy-args]
 
 Total size 32 bytes.
 
@@ -228,7 +228,7 @@ Total size 32 bytes.
 | 24 | 4 | `__u32` | `template_sd_len` |
 | 28 | 4 | `__u32` | `__pad1` |
 
-### `struct kacs_generic_mapping`
+### `struct kacs_generic_mapping` [*kacs-abi.struct-kacs-generic-mapping]
 
 Total size 16 bytes.
 
@@ -243,13 +243,13 @@ Total size 16 bytes.
 
 From `uapi/pkm/token.h`.
 
-*kacs_open_self_token (SYS_KACS_OPEN_SELF_TOKEN) flags.*
+*kacs_open_self_token (SYS_KACS_OPEN_SELF_TOKEN) flags.* [*kacs-abi.open-self-token-flags]
 
 | Constant | Value |
 |---|---|
 | `KACS_TOKEN_OPEN_REAL` | `0x01` (1) |
 
-*Per-handle token rights (the low 16 bits of a token access mask).*
+*Per-handle token rights (the low 16 bits of a token access mask).* [*kacs-abi.token-access-rights]
 
 | Constant | Value |
 |---|---|
@@ -264,39 +264,39 @@ From `uapi/pkm/token.h`.
 | `KACS_TOKEN_ADJUST_INTERACTIVITY_SCOPE` | `0x0100` (256) |
 | `KACS_TOKEN_ALL_ACCESS` | `0x000F01FF` |
 
-*Token ioctl interface identifier.*
+*Token ioctl interface identifier.* [*kacs-abi.token-ioctl-magic]
 
 | Constant | Value |
 |---|---|
 | `KACS_IOC_MAGIC` | `0x4B` (75) |
 
-*kacs_priv_entry.attributes bits.*
+*kacs_priv_entry.attributes bits.* [*kacs-abi.privilege-attributes]
 
 | Constant | Value |
 |---|---|
 | `KACS_PRIVILEGE_ATTR_ENABLED` | `0x00000002` (2) |
 | `KACS_PRIVILEGE_ATTR_REMOVED` | `0x00000004` (4) |
 
-*kacs_adjust_privs bulk-reset flag (not a per-entry attribute).*
+*kacs_adjust_privs bulk-reset flag (not a per-entry attribute).* [*kacs-abi.privilege-reset-all-defaults]
 
 | Constant | Value |
 |---|---|
 | `KACS_PRIVILEGE_RESET_ALL_DEFAULTS` | `0x80000000` |
 
-*kacs_restrict_args.flags bits.*
+*kacs_restrict_args.flags bits.* [*kacs-abi.restrict-flags]
 
 | Constant | Value |
 |---|---|
 | `KACS_TOKEN_RESTRICT_WRITE_RESTRICTED` | `0x00000001` (1) |
 
-*Token type (KACS_TOKEN_CLASS_TYPE).*
+*Token type (KACS_TOKEN_CLASS_TYPE).* [*kacs-abi.token-types]
 
 | Constant | Value |
 |---|---|
 | `KACS_TOKEN_TYPE_PRIMARY` | `0x01` (1) |
 | `KACS_TOKEN_TYPE_IMPERSONATION` | `0x02` (2) |
 
-*Impersonation level (KACS_TOKEN_CLASS_IMPERSONATION_LEVEL).*
+*Impersonation level (KACS_TOKEN_CLASS_IMPERSONATION_LEVEL).* [*kacs-abi.impersonation-levels]
 
 | Constant | Value |
 |---|---|
@@ -305,7 +305,7 @@ From `uapi/pkm/token.h`.
 | `KACS_IMLEVEL_IMPERSONATION` | `0x02` (2) |
 | `KACS_IMLEVEL_DELEGATION` | `0x03` (3) |
 
-*Elevation type (KACS_TOKEN_CLASS_ELEVATION_TYPE).*
+*Elevation type (KACS_TOKEN_CLASS_ELEVATION_TYPE).* [*kacs-abi.elevation-types]
 
 | Constant | Value |
 |---|---|
@@ -313,7 +313,7 @@ From `uapi/pkm/token.h`.
 | `KACS_ELEVATION_FULL` | `0x02` (2) |
 | `KACS_ELEVATION_LIMITED` | `0x03` (3) |
 
-*Mandatory-policy bits (KACS_TOKEN_CLASS_MANDATORY_POLICY).*
+*Mandatory-policy bits (KACS_TOKEN_CLASS_MANDATORY_POLICY).* [*kacs-abi.mandatory-policy-bits]
 
 | Constant | Value |
 |---|---|
@@ -322,7 +322,7 @@ From `uapi/pkm/token.h`.
 
 Per-token audit-policy bits — the create-token spec `audit_policy` field
 (KACS_TOKEN_SPEC_OFF_AUDIT_POLICY). They select which access-check
-outcomes the token's object accesses generate audit events for.
+outcomes the token's object accesses generate audit events for. [*kacs-abi.audit-policy-bits]
 
 | Constant | Value |
 |---|---|
@@ -331,7 +331,7 @@ outcomes the token's object accesses generate audit events for.
 | `KACS_AUDIT_POLICY_PRIVILEGE_USE_SUCCESS` | `0x00000004` (4) |
 | `KACS_AUDIT_POLICY_PRIVILEGE_USE_FAILURE` | `0x00000008` (8) |
 
-*Logon type (KACS_TOKEN_CLASS_LOGON_TYPE).*
+*Logon type (KACS_TOKEN_CLASS_LOGON_TYPE).* [*kacs-abi.logon-types]
 
 | Constant | Value |
 |---|---|
@@ -342,19 +342,19 @@ outcomes the token's object accesses generate audit events for.
 | `KACS_LOGON_TYPE_NETWORK_CLEARTEXT` | `8` |
 | `KACS_LOGON_TYPE_NEW_CREDENTIALS` | `9` |
 
-*Maximum number of groups a token may carry.*
+*Maximum number of groups a token may carry.* [*kacs-abi.token-max-groups]
 
 | Constant | Value |
 |---|---|
 | `KACS_TOKEN_MAX_GROUPS` | `1024` |
 
-*Number of 64-bit words in a group enabled-state bitmask (KACS_TOKEN_MAX_GROUPS / 64).*
+*Number of 64-bit words in a group enabled-state bitmask (KACS_TOKEN_MAX_GROUPS / 64).* [*kacs-abi.token-group-mask-words]
 
 | Constant | Value |
 |---|---|
 | `KACS_TOKEN_GROUP_MASK_WORDS` | `16` |
 
-*kacs_create_token (SYS_KACS_CREATE_TOKEN) spec wire format.*
+*kacs_create_token (SYS_KACS_CREATE_TOKEN) spec wire format.* [*kacs-abi.token-spec-wire-format]
 
 The (spec, len) buffer the syscall consumes is a fixed
 KACS_TOKEN_SPEC_HEADER_BYTES-byte header followed by variable-length
@@ -415,7 +415,7 @@ header and section scalars are little-endian.
 | `KACS_TOKEN_SPEC_MIN_BYTES` | `192` |
 | `KACS_TOKEN_SPEC_MAX_BYTES` | `65536` |
 
-*Byte offsets of the fixed token-spec header fields.*
+*Byte offsets of the fixed token-spec header fields.* [*kacs-abi.token-spec-offsets]
 
 | Constant | Value |
 |---|---|
@@ -466,7 +466,7 @@ header and section scalars are little-endian.
 | `KACS_TOKEN_SPEC_OFF_INTERACTIVITY_SCOPE` | `184` |
 | `KACS_TOKEN_SPEC_OFF_LCS_CREDENTIALS_OFFSET` | `188` |
 
-*Byte length of the fixed token-source-name field.*
+*Byte length of the fixed token-source-name field.* [*kacs-abi.token-source-name-bytes]
 
 | Constant | Value |
 |---|---|
@@ -484,7 +484,7 @@ then private_layer_count little-endian __u32 name byte lengths, then the
 concatenated UTF-8 layer names. Scope GUIDs must be non-nil and unique;
 layer names must be 1.. KACS_TOKEN_LCS_MAX_LAYER_NAME_BYTES bytes, must
 not contain '\\', '/', or NUL, and must be unique under case-insensitive
-matching.
+matching. [*kacs-abi.token-lcs-extension]
 
 | Constant | Value |
 |---|---|
@@ -495,7 +495,7 @@ matching.
 | `KACS_TOKEN_LCS_MAX_PRIVATE_LAYERS` | `256` |
 | `KACS_TOKEN_LCS_MAX_LAYER_NAME_BYTES` | `255` |
 
-*Byte offsets of the fixed LCS-extension header fields.*
+*Byte offsets of the fixed LCS-extension header fields.* [*kacs-abi.token-lcs-extension-offsets]
 
 | Constant | Value |
 |---|---|
@@ -504,7 +504,7 @@ matching.
 | `KACS_TOKEN_LCS_EXT_OFF_SCOPE_COUNT` | `8` |
 | `KACS_TOKEN_LCS_EXT_OFF_PRIVATE_LAYER_COUNT` | `12` |
 
-*kacs_create_logon_session (SYS_KACS_CREATE_LOGON_SESSION) spec wire format.*
+*kacs_create_logon_session (SYS_KACS_CREATE_LOGON_SESSION) spec wire format.* [*kacs-abi.logon-session-spec-wire-format]
 
 The (spec, len) buffer the syscall consumes is, in order: __u8
 logon_type one of KACS_LOGON_TYPE_* above __le16 auth_pkg_len byte
@@ -519,7 +519,7 @@ kernel assigns the session ID and derives the logon SID from it.
 | `KACS_LOGON_SESSION_SPEC_MIN_BYTES` | `15` |
 | `KACS_LOGON_SESSION_SPEC_MAX_BYTES` | `4096` |
 
-*Byte offsets of the fixed-position session-spec fields.*
+*Byte offsets of the fixed-position session-spec fields.* [*kacs-abi.logon-session-spec-offsets]
 
 | Constant | Value |
 |---|---|
@@ -527,7 +527,7 @@ kernel assigns the session ID and derives the logon SID from it.
 | `KACS_LOGON_SESSION_SPEC_OFF_AUTH_PKG_LEN` | `1` |
 | `KACS_LOGON_SESSION_SPEC_OFF_AUTH_PKG` | `3` |
 
-*Token-handle ioctls.*
+*Token-handle ioctls.* [*kacs-abi.token-ioctls]
 
 | Constant | Value |
 |---|---|
@@ -543,7 +543,7 @@ kernel assigns the session ID and derives the logon SID from it.
 | `KACS_IOC_ADJUST_DEFAULT` | `0x40104B09` |
 | `KACS_IOC_ADJUST_INTERACTIVITY_SCOPE` | `0x40044B0A` |
 
-*Token information classes (kacs_query_args.token_class).*
+*Token information classes (kacs_query_args.token_class).* [*kacs-abi.token-information-classes]
 
 | Constant | Value |
 |---|---|
@@ -574,7 +574,7 @@ kernel assigns the session ID and derives the logon SID from it.
 
 Privileges, as single-bit masks within a token's 64-bit privilege word
 (present / enabled / enabled-by-default / used are each one such word).
-Named for the Windows privilege identifiers (SeTcbPrivilege, …).
+Named for the Windows privilege identifiers (SeTcbPrivilege, …). [*kacs-abi.privilege-bits]
 
 | Constant | Value |
 |---|---|
@@ -606,7 +606,7 @@ Named for the Windows privilege identifiers (SeTcbPrivilege, …).
 
 From `uapi/pkm/socket.h`.
 
-*KACS socket options — peer identity on local sockets.*
+*KACS socket options — peer identity on local sockets.* [*kacs-abi.sol-kacs]
 
 KACS captures a connecting client's identity onto the accepted end of an
 AF_UNIX SOCK_STREAM / SOCK_SEQPACKET connection at connect(). This
@@ -627,7 +627,7 @@ unreadable/unwritable optval.
 |---|---|
 | `SOL_KACS` | `4096` |
 
-*getsockopt only.*
+*getsockopt only.* [*kacs-abi.so-peer-token]
 
 optval: int — a new token fd, carrying fixed TOKEN_QUERY |
 TOKEN_IMPERSONATE access and opened O_CLOEXEC, for this end's conveyed-
@@ -646,7 +646,7 @@ if nothing has been conveyed yet.
 |---|---|
 | `KACS_SO_PEER_TOKEN` | `1` |
 
-*getsockopt / setsockopt.*
+*getsockopt / setsockopt.* [*kacs-abi.so-impersonation-level]
 
 optval: __u32 KACS_IMLEVEL_* — the maximum impersonation level at which
 identity leaving this end may be captured: at connect(), and at each
@@ -658,7 +658,7 @@ never rewrites one already made.
 |---|---|
 | `KACS_SO_IMPERSONATION_LEVEL` | `2` |
 
-*getsockopt / setsockopt.*
+*getsockopt / setsockopt.* [*kacs-abi.so-pass-token]
 
 optval: int (0/1) — sender-side automation: while set, every send from
 this end carries the sender's effective identity as a KACS_SCM_TOKEN,
@@ -669,7 +669,7 @@ level: the sender can always attest to what it is. Default 0.
 |---|---|
 | `KACS_SO_PASS_TOKEN` | `3` |
 
-*setsockopt only.*
+*setsockopt only.* [*kacs-abi.so-restamp]
 
 optval: int, ignored. Self-gated: a process can always attest to what it
 is. On a listening AF_UNIX socket: replaces the identity the listener
@@ -690,7 +690,7 @@ fixed for that flow's life.
 |---|---|
 | `KACS_SO_RESTAMP` | `4` |
 
-*Ancillary message type, at cmsg_level SOL_KACS.*
+*Ancillary message type, at cmsg_level SOL_KACS.* [*kacs-abi.scm-token]
 
 Data: one int. Received: a token fd (TOKEN_QUERY | TOKEN_IMPERSONATE,
 O_CLOEXEC) for the identity the kernel attests sent the accompanying
@@ -722,7 +722,7 @@ consulted (CAP_IPC_OWNER is in KACS's always-allow set). The key
 namespace is claim-on-create: the descriptor protects the object,
 nothing protects the name. Object-specific rights (low 16 bits); the
 standard rights (DELETE, READ_CONTROL, WRITE_DAC, WRITE_OWNER —
-<pkm/access.h>) apply as on every KACS object.
+<pkm/access.h>) apply as on every KACS object. [*kacs-abi.ipc-access-rights]
 
 | Constant | Value | Notes |
 |---|---|---|
@@ -737,7 +737,7 @@ WRITE_OWNER (one command carries mode, uid and gid); the mode, uid and
 gid it writes are informational (ipcs, IPC_STAT) and never decide
 access. Addressing a SysV object's descriptor with kacs_get_sd /
 kacs_set_sd: pass one of these in `flags`, the object id in `dirfd`, and
-a NULL path. The object is looked up in the caller's IPC namespace.
+a NULL path. The object is looked up in the caller's IPC namespace. [*kacs-abi.sysv-sd-selectors]
 
 | Constant | Value |
 |---|---|
@@ -750,44 +750,44 @@ a NULL path. The object is looked up in the caller's IPC namespace.
 
 From `uapi/pkm/access.h`.
 
-*Full size of kacs_access_check_args the current kernel copies.*
+*Full size of kacs_access_check_args the current kernel copies.* [*kacs-abi.access-check-args-size]
 
 | Constant | Value |
 |---|---|
 | `KACS_ACCESS_CHECK_ARGS_SIZE` | `136` |
 
-*Minimum caller_size the kernel accepts (the v1 / v0.20 layout).*
+*Minimum caller_size the kernel accepts (the v1 / v0.20 layout).* [*kacs-abi.access-check-args-v1-size]
 
 | Constant | Value |
 |---|---|
 | `KACS_ACCESS_CHECK_ARGS_V1_SIZE` | `40` |
 
-*Byte size of one kacs_object_type_entry in the object-type tree array.*
+*Byte size of one kacs_object_type_entry in the object-type tree array.* [*kacs-abi.object-type-entry-size]
 
 | Constant | Value |
 |---|---|
 | `KACS_OBJECT_TYPE_ENTRY_SIZE` | `20` |
 
-*Largest object-audit-context buffer the kernel accepts.*
+*Largest object-audit-context buffer the kernel accepts.* [*kacs-abi.max-audit-context-len]
 
 | Constant | Value |
 |---|---|
 | `KACS_ACCESS_CHECK_MAX_AUDIT_CONTEXT_LEN` | `4096` |
 
-*Largest @Local claims blob the kernel accepts (local_claims_ptr).*
+*Largest @Local claims blob the kernel accepts (local_claims_ptr).* [*kacs-abi.max-local-claims-len]
 
 | Constant | Value |
 |---|---|
 | `KACS_ACCESS_CHECK_MAX_LOCAL_CLAIMS_LEN` | `65536` |
 
-*Largest object-type tree entry count the kernel accepts.*
+*Largest object-type tree entry count the kernel accepts.* [*kacs-abi.max-object-type-count]
 
 | Constant | Value |
 |---|---|
 | `KACS_ACCESS_CHECK_MAX_OBJECT_TYPE_COUNT` | `1024` |
 
 Claim value types — the discriminant of one attribute in the @Local
-claims array (local_claims_ptr).
+claims array (local_claims_ptr). [*kacs-abi.claim-value-types]
 
 | Constant | Value |
 |---|---|
@@ -798,7 +798,7 @@ claims array (local_claims_ptr).
 | `KACS_CLAIM_TYPE_BOOLEAN` | `0x0006` (6) |
 | `KACS_CLAIM_TYPE_OCTET` | `0x0010` (16) |
 
-*Claim attribute flags.*
+*Claim attribute flags.* [*kacs-abi.claim-attribute-flags]
 
 | Constant | Value |
 |---|---|
@@ -824,7 +824,7 @@ prefixed field uses a little-endian __u32 length and is bounded by
 KACS_CAAP_MAX_FIELD_BYTES; ACL payloads additionally parse under the
 security-descriptor size limit (KACS_CAAP_MAX_ACL_BYTES). ACLs use the
 binary ACL format from <pkm/sd.h>; applies_to is conditional-ACE
-bytecode.
+bytecode. [*kacs-abi.caap-spec-wire-format]
 
 | Constant | Value |
 |---|---|
@@ -834,14 +834,14 @@ bytecode.
 | `KACS_CAAP_MAX_FIELD_BYTES` | `65536` |
 | `KACS_CAAP_MAX_ACL_BYTES` | `65535` |
 
-*Byte offsets of the fixed CAAP-spec prefix fields.*
+*Byte offsets of the fixed CAAP-spec prefix fields.* [*kacs-abi.caap-spec-offsets]
 
 | Constant | Value |
 |---|---|
 | `KACS_CAAP_SPEC_OFF_VERSION` | `0` |
 | `KACS_CAAP_SPEC_OFF_RULE_COUNT` | `1` |
 
-*Byte length of the fixed CAAP-spec prefix (version + rule_count).*
+*Byte length of the fixed CAAP-spec prefix (version + rule_count).* [*kacs-abi.caap-spec-prefix-bytes]
 
 | Constant | Value |
 |---|---|
@@ -851,14 +851,14 @@ bytecode.
 
 From `uapi/pkm/file.h`.
 
-*Minimum caller-supplied size accepted for each argument block.*
+*Minimum caller-supplied size accepted for each argument block.* [*kacs-abi.arg-block-min-sizes]
 
 | Constant | Value |
 |---|---|
 | `KACS_OPEN_HOW_MIN_SIZE` | `16` |
 | `KACS_MOUNT_POLICY_ARGS_MIN_SIZE` | `16` |
 
-*Create dispositions (kacs_open_how.create_disposition).*
+*Create dispositions (kacs_open_how.create_disposition).* [*kacs-abi.create-dispositions]
 
 | Constant | Value |
 |---|---|
@@ -869,21 +869,21 @@ From `uapi/pkm/file.h`.
 | `KACS_DISPOSITION_OVERWRITE` | `4` |
 | `KACS_DISPOSITION_OVERWRITE_IF` | `5` |
 
-*Create options (kacs_open_how.create_options).*
+*Create options (kacs_open_how.create_options).* [*kacs-abi.create-options]
 
 | Constant | Value |
 |---|---|
 | `KACS_CREATE_OPT_DIRECTORY` | `0x0001` (1) |
 | `KACS_CREATE_OPT_DELETE_ON_CLOSE` | `0x0002` (2) |
 
-*kacs_open_how.flags bits.*
+*kacs_open_how.flags bits.* [*kacs-abi.open-how-flags]
 
 | Constant | Value |
 |---|---|
 | `KACS_BACKUP_INTENT` | `0x00000001` (1) |
 | `KACS_RESTORE_INTENT` | `0x00000002` (2) |
 
-*File and directory object-specific access rights (the low 16 bits of a file access mask).*
+*File and directory object-specific access rights (the low 16 bits of a file access mask).* [*kacs-abi.file-access-rights]
 
 The directory aliases name the same bit as the file right it acts as for
 a directory object.
@@ -904,7 +904,7 @@ a directory object.
 | `KACS_FILE_ADD_FILE` | `2` |
 | `KACS_FILE_ADD_SUBDIRECTORY` | `4` |
 
-*Mount-policy values (kacs_mount_policy_args.policy).*
+*Mount-policy values (kacs_mount_policy_args.policy).* [*kacs-abi.mount-policy-values]
 
 | Constant | Value |
 |---|---|
@@ -913,7 +913,7 @@ a directory object.
 | `KACS_MOUNT_POLICY_SYNTHESIZE_EPHEMERAL` | `3` |
 | `KACS_MOUNT_POLICY_SYNTHESIZE_PERSISTENT` | `4` |
 
-*Status word kacs_open writes back, describing what happened to the file.*
+*Status word kacs_open writes back, describing what happened to the file.* [*kacs-abi.open-status-values]
 
 | Constant | Value |
 |---|---|
@@ -926,7 +926,7 @@ a directory object.
 
 From `uapi/pkm/process.h`.
 
-*KACS process object-specific access rights (the low 16 bits of a process access mask).*
+*KACS process object-specific access rights (the low 16 bits of a process access mask).* [*kacs-abi.process-access-rights]
 
 Named for the Windows process rights; an access check folds the generic
 bits (<pkm/sd.h>) into these via the process generic mapping.
@@ -947,7 +947,7 @@ bits (<pkm/sd.h>) into these via the process generic mapping.
 
 From `uapi/pkm/psb.h`.
 
-*Process Security Block (PSB) process-mitigation bits.*
+*Process Security Block (PSB) process-mitigation bits.* [*kacs-abi.mitigation-bits]
 
 The `mitigations` argument of kacs_set_psb (SYS_KACS_SET_PSB) is a
 bitmask of these flags. Setting a bit is activation-backed: KACS either
@@ -972,7 +972,7 @@ and KACS_MIT_CFIB, and the alias bit itself is not retained.
 | `KACS_MIT_PIE` | `0x100` (256) | reject non-PIE binaries at exec |
 | `KACS_MIT_SML` | `0x200` (512) | speculation mitigation lock |
 
-*All valid mitigation bits OR'd together — the accepted-request mask.*
+*All valid mitigation bits OR'd together — the accepted-request mask.* [*kacs-abi.mitigation-all-mask]
 
 | Constant | Value |
 |---|---|
@@ -982,14 +982,14 @@ and KACS_MIT_CFIB, and the alias bit itself is not retained.
 
 From `uapi/pkm/sd.h`.
 
-*Byte length of the self-relative security-descriptor header.*
+*Byte length of the self-relative security-descriptor header.* [*kacs-abi.sd-header-bytes]
 
 | Constant | Value |
 |---|---|
 | `KACS_SD_HEADER_BYTES` | `20` |
 
 SECURITY_INFORMATION selector bits — which components of a security
-descriptor a kacs_get_sd / kacs_set_sd call reads or writes.
+descriptor a kacs_get_sd / kacs_set_sd call reads or writes. [*kacs-abi.security-information-bits]
 
 | Constant | Value |
 |---|---|
@@ -999,7 +999,7 @@ descriptor a kacs_get_sd / kacs_set_sd call reads or writes.
 | `KACS_SECINFO_SACL` | `0x00000008` (8) |
 | `KACS_SECINFO_LABEL` | `0x00000010` (16) |
 
-*SECURITY_DESCRIPTOR_CONTROL bits — the SD header `control` field.*
+*SECURITY_DESCRIPTOR_CONTROL bits — the SD header `control` field.* [*kacs-abi.sd-control-bits]
 
 | Constant | Value |
 |---|---|
@@ -1020,7 +1020,7 @@ descriptor a kacs_get_sd / kacs_set_sd call reads or writes.
 | `KACS_SD_RM_CONTROL_VALID` | `0x4000` (16384) |
 | `KACS_SD_SELF_RELATIVE` | `0x8000` (32768) |
 
-*Access-mask bits — standard rights (bits 16-24) and generic rights (bits 28-31).*
+*Access-mask bits — standard rights (bits 16-24) and generic rights (bits 28-31).* [*kacs-abi.standard-and-generic-rights]
 
 The low 16 bits of a mask are object-class specific; see <pkm/file.h>
 and <pkm/token.h> for those.
@@ -1039,7 +1039,7 @@ and <pkm/token.h> for those.
 | `KACS_ACCESS_GENERIC_WRITE` | `0x40000000` |
 | `KACS_ACCESS_GENERIC_READ` | `0x80000000` |
 
-*ACE types — the `ace_type` byte of an ACE header (MS-DTYP 2.4.4.1).*
+*ACE types — the `ace_type` byte of an ACE header (MS-DTYP 2.4.4.1).* [*kacs-abi.ace-types]
 
 | Constant | Value |
 |---|---|
@@ -1066,7 +1066,7 @@ and <pkm/token.h> for those.
 | `KACS_ACE_TYPE_SYSTEM_PROCESS_TRUST_LABEL` | `0x14` (20) |
 | `KACS_ACE_TYPE_SYSTEM_ACCESS_FILTER` | `0x15` (21) |
 
-*ACE header `ace_flags` byte — inheritance and audit control.*
+*ACE header `ace_flags` byte — inheritance and audit control.* [*kacs-abi.ace-flags]
 
 | Constant | Value |
 |---|---|
@@ -1083,7 +1083,7 @@ KACS_ACE_TYPE_SYSTEM_MANDATORY_LABEL ACE. They control which DACL-
 granted rights a caller whose integrity level does not dominate the
 object's label (the "up" direction) is denied. Each bit suppresses the
 rights mapped from the corresponding generic class; unknown bits MUST be
-ignored.
+ignored. [*kacs-abi.mandatory-label-policy-bits]
 
 | Constant | Value |
 |---|---|
@@ -1093,7 +1093,7 @@ ignored.
 
 Object-ACE body `Flags` field — the __le32 at object-ACE body offset 8,
 distinct from the 1-byte `ace_flags` header field above. Indicates which
-optional GUIDs the object-ACE body carries.
+optional GUIDs the object-ACE body carries. [*kacs-abi.object-ace-flags]
 
 | Constant | Value |
 |---|---|
@@ -1104,19 +1104,19 @@ optional GUIDs the object-ACE body carries.
 
 From `uapi/pkm/sid.h`.
 
-*Largest sub_authority_count a valid SID may declare.*
+*Largest sub_authority_count a valid SID may declare.* [*kacs-abi.sid-max-sub-authorities]
 
 | Constant | Value |
 |---|---|
 | `KACS_SID_MAX_SUB_AUTHORITIES` | `15` |
 
-*Encoded byte length of a SID with the given sub-authority count.*
+*Encoded byte length of a SID with the given sub-authority count.* [*kacs-abi.sid-byte-len]
 
 | Constant | Value |
 |---|---|
 | `KACS_SID_BYTE_LEN(count)` | `(8 + 4 * (count))` |
 
-*SID_AND_ATTRIBUTES "Attributes" bits (MS-DTYP 2.4.4).*
+*SID_AND_ATTRIBUTES "Attributes" bits (MS-DTYP 2.4.4).* [*kacs-abi.sid-attribute-bits]
 
 These describe how a group or restricted SID participates in an access
 check. MS-DTYP names them for groups; they apply to any
@@ -1138,7 +1138,7 @@ SID_AND_ATTRIBUTES entry.
 
 From `uapi/pkm/trace.h`.
 
-*kacs_access_decision reason — why a KACS access hook took the return path it did.*
+*kacs_access_decision reason — why a KACS access hook took the return path it did.* [*kacs-abi.trace.access-decision-reasons]
 
 Emitted by the kacs:kacs_file_access / _file_open / _native_open
 _inode_file_access / _inode_permission events. Verdict (allow vs deny)
@@ -1162,7 +1162,7 @@ is a separate signal, read from the `ret` field (0 == allow).
 | `KACS_TR_CHANGE_NOTIFY_PRIV` | `13` | traverse via CHANGE_NOTIFY priv |
 | `KACS_TR_CHANGE_NOTIFY_PRIV_EXHAUSTED` | `14` | CHANGE_NOTIFY priv use exhausted |
 
-*kacs_sd_cache reason — the inode security-descriptor cache outcome.*
+*kacs_sd_cache reason — the inode security-descriptor cache outcome.* [*kacs-abi.trace.sd-cache-reasons]
 
 The lookup miss codes disambiguate the three cache-absent paths that
 were previously an indistinguishable NULL return (no cache / stale
@@ -1182,7 +1182,7 @@ kacs_process_access reason — the outcome of a cross-process access
 decision (signal, ptrace, scheduler/attribute, prlimit). The reason
 distinguishes the paths that all surface as -EACCES: an SD denial, a
 PIP-based denial, a denial rescued (or not) by SeDebugPrivilege, and a
-PIP-dominance failure. Emitted by kacs:kacs_process_access.
+PIP-dominance failure. Emitted by kacs:kacs_process_access. [*kacs-abi.trace.process-access-reasons]
 
 | Constant | Value | Notes |
 |---|---|---|
@@ -1196,7 +1196,7 @@ PIP-dominance failure. Emitted by kacs:kacs_process_access.
 | `KACS_PA_DEBUG_DENIED` | `7` | denied; no usable SeDebugPrivilege |
 | `KACS_PA_PIP_DOMINANCE` | `8` | caller PIP does not dominate target |
 
-*kacs_exec reason — an exec/bprm credential or PIP transition.*
+*kacs_exec reason — an exec/bprm credential or PIP transition.* [*kacs-abi.trace.exec-reasons]
 
 Distinguishes the uid/gid-change gate outcomes, the exec primary-token
 derivation paths and their failures, the exec file integrity-label
@@ -1228,7 +1228,7 @@ kacs_signing reason — code-signature verification outcomes and the
 distinct reject reasons of the signing-material probe. Only source enum,
 verified flag, PIP tier codes, file length, reason, and ret are recorded
 — never key, signature, xattr, or file bytes. Emitted by
-kacs:kacs_signing_verify _crypto / _probe.
+kacs:kacs_signing_verify _crypto / _probe. [*kacs-abi.trace.signing-reasons]
 
 | Constant | Value | Notes |
 |---|---|---|
@@ -1261,7 +1261,7 @@ or refused (kacs/firmware.c, PEI-493). Firmware is code that runs on a
 device with DMA into host memory, so it is held to the PeiosTcb tier:
 the same bar as a usermodehelper exec. `ret` is the verdict handed to
 the loader; under log mode it is 0 whatever the reason. Emitted by
-kacs:kacs_firmware_load. No path, key, or signature bytes are recorded.
+kacs:kacs_firmware_load. No path, key, or signature bytes are recorded. [*kacs-abi.trace.firmware-reasons]
 
 | Constant | Value | Notes |
 |---|---|---|
@@ -1272,7 +1272,7 @@ kacs:kacs_firmware_load. No path, key, or signature bytes are recorded.
 | `KACS_FW_UNVERIFIABLE` | `4` | verification could not run (crypto unavailable) |
 | `KACS_FW_PROBE_FAILED` | `5` | reading the signature material failed |
 
-*kacs_socket reason — the outcome of an AF_UNIX socket SD / impersonation hook.*
+*kacs_socket reason — the outcome of an AF_UNIX socket SD / impersonation hook.* [*kacs-abi.trace.socket-reasons]
 
 Distinguishes the guard, not-applicable, and verdict paths that
 otherwise collapse into an indistinguishable -EACCES. Verdict is the
@@ -1297,7 +1297,7 @@ otherwise collapse into an indistinguishable -EACCES. Verdict is the
 | `KACS_SOCK_LEVEL_SET` | `14` | impersonation level updated |
 | `KACS_SOCK_OPEN_TOKEN` | `15` | open peer-token fd result |
 
-*16 was KACS_SOCK_IMPERSONATE (kacs_impersonate_peer); retired, not reused.*
+*16 was KACS_SOCK_IMPERSONATE (kacs_impersonate_peer); retired, not reused.* [*kacs-abi.trace.socket-reason-16-retired]
 
 | Constant | Value | Notes |
 |---|---|---|
@@ -1311,7 +1311,7 @@ otherwise collapse into an indistinguishable -EACCES. Verdict is the
 | `KACS_SOCK_PORT_TABLE` | `24` | port reservation table load result |
 | `KACS_SOCK_OWNER` | `25` | governing identity stamped on an inet socket |
 
-*kacs_ipc reason — a System V IPC object SD decision (ipc.c).*
+*kacs_ipc reason — a System V IPC object SD decision (ipc.c).* [*kacs-abi.trace.ipc-reasons]
 
 | Constant | Value | Notes |
 |---|---|---|
@@ -1322,7 +1322,7 @@ otherwise collapse into an indistinguishable -EACCES. Verdict is the
 | `KACS_IPC_SD_SET` | `4` | kacs_set_sd on the object |
 | `KACS_IPC_NO_SD` | `5` | object carries no SD; fail closed |
 
-*kacs_namespace stage — which sub-decision of a namespace-mutation hook a record describes.*
+*kacs_namespace stage — which sub-decision of a namespace-mutation hook a record describes.* [*kacs-abi.trace.namespace-stages]
 
 Single-decision ops report PRIMARY; multi-stage ops (link, rename,
 delete fallback) tag each distinct verdict. Verdict is the `ret` field.
@@ -1339,7 +1339,7 @@ Never records a pathname. Emitted by the kacs:kacs_inode_* events.
 kacs_psb reason — which process-security-baseline path an event marks:
 mitigation activation (apply) or a W^X / LSV / PIE / prctl-lock
 enforcement denial. The ok-vs-deny verdict is read from `ret`. Emitted
-by kacs:kacs_psb_*.
+by kacs:kacs_psb_*. [*kacs-abi.trace.psb-reasons]
 
 | Constant | Value | Notes |
 |---|---|---|
@@ -1360,7 +1360,7 @@ by kacs:kacs_psb_*.
 | `KACS_PSB_PRCTL_CFIB` | `14` | prctl blocked by shadow-stack (CFIB) lock |
 | `KACS_PSB_PRCTL_PIP` | `15` | prctl set-dumpable blocked by process PIP |
 
-*kacs_token_ioctl cmd — which token-fd ioctl verb a record describes.*
+*kacs_token_ioctl cmd — which token-fd ioctl verb a record describes.* [*kacs-abi.trace.token-ioctl-cmds]
 
 The verdict (allow vs deny) is read from the `ret` field (0 == allow);
 the access-mask-gate rejections surface as ret == -EACCES. `token` is an
@@ -1381,7 +1381,7 @@ opaque numeric id (never token bytes). Emitted by kacs:kacs_token_ioctl.
 | `KACS_TOK_ADJUST_INTERACTIVITY_SCOPE` | `10` | KACS_IOC_ADJUST_INTERACTIVITY_SCOPE |
 | `KACS_TOK_UNKNOWN` | `11` | unrecognised ioctl verb (-ENOTTY) |
 
-*kacs_token_ref reason — a token-fd reference lifecycle transition.*
+*kacs_token_ref reason — a token-fd reference lifecycle transition.* [*kacs-abi.trace.token-ref-reasons]
 
 TO_FD is a token installed into a fresh anon-inode handle; RELEASE is
 the handle teardown that drops the token ref; BIND clones a token onto
@@ -1396,7 +1396,7 @@ Emitted by kacs:kacs_token_ref.
 | `KACS_TREF_BIND` | `2` | token cloned + bound onto an existing file |
 | `KACS_TREF_OPEN` | `3` | token cloned for a token-open path |
 
-*kacs_logon_session reason — a session/token creation-surface outcome.*
+*kacs_logon_session reason — a session/token creation-surface outcome.* [*kacs-abi.trace.logon-session-reasons]
 
 The *_DENIED codes name the privilege-gate rejections (the value); the
 plain op codes mark the successful op. Verdict is also in `ret`. No
@@ -1416,7 +1416,7 @@ prepare/transfer/alloc/free, explicit token-ref install, the clone-time
 primary-token lifecycle (CLONE_THREAD share vs fork deep-copy), and the
 project-linux-cred rejection paths. old_token/new_token are opaque token
 pointer ids (0 when absent); clone_flags is set only on the clone paths.
-Verdict/outcome is the `ret` field. Emitted by kacs:kacs_cred.
+Verdict/outcome is the `ret` field. Emitted by kacs:kacs_cred. [*kacs-abi.trace.cred-reasons]
 
 | Constant | Value | Notes |
 |---|---|---|
@@ -1436,7 +1436,7 @@ kacs_setid reason — the KACS gate on a Linux setid projection
 denials that otherwise collapse: NO_TOKEN (-EACCES, no effective subject
 token) and PRIV_GATE (-EOPNOTSUPP, holder of ASSIGN_PRIMARY_TOKEN
 privilege). `flags` is the LSM_SETID_* mask (0 for setgroups). Emitted
-by kacs:kacs_setid.
+by kacs:kacs_setid. [*kacs-abi.trace.setid-reasons]
 
 | Constant | Value | Notes |
 |---|---|---|
@@ -1447,7 +1447,7 @@ by kacs:kacs_setid.
 | `KACS_SETID_SETGROUPS_NO_TOKEN` | `4` | setgroups gate: no subject token |
 | `KACS_SETID_SETGROUPS_PRIV_GATE` | `5` | setgroups gate: ASSIGN_PRIMARY priv |
 
-*kacs_task reason — a task-security lifecycle transition.*
+*kacs_task reason — a task-security lifecycle transition.* [*kacs-abi.trace.task-reasons]
 
 task_alloc reports a NO_CHILD-mitigation clone block, a process-state
 inherit ENOMEM, or success; task_free marks teardown. `process_state` is
@@ -1461,7 +1461,7 @@ on the alloc paths. Outcome is `ret`. Emitted by kacs:kacs_task.
 | `KACS_TASK_ALLOC` | `2` | task_alloc completed |
 | `KACS_TASK_FREE` | `3` | task_free teardown |
 
-*kacs_primary_install reason — a primary-token / impersonation credential transition.*
+*kacs_primary_install reason — a primary-token / impersonation credential transition.* [*kacs-abi.trace.primary-install-reasons]
 
 Distinguishes the install commit, the user-SID-change process-SD
 reallocation and its ENOMEM, the commit_creds apply, the impersonation
@@ -1488,7 +1488,7 @@ the no-target-token path, the process access-check denial, the self vs
 cross inspection verdicts, and the successful open.
 subject_token/target_token are opaque token identity ids (0 when unknown
 at the emit site); access_mask is the requested mask. Verdict is `ret`
-(>=0 fd == allow). Emitted by kacs:kacs_process_token_open.
+(>=0 fd == allow). Emitted by kacs:kacs_process_token_open. [*kacs-abi.trace.process-token-open-reasons]
 
 | Constant | Value | Notes |
 |---|---|---|
@@ -1500,7 +1500,7 @@ at the emit site); access_mask is the requested mask. Verdict is `ret`
 | `KACS_PTO_SELF` | `5` | self-target inspection allowed |
 | `KACS_PTO_CROSS` | `6` | cross-process inspection authorized |
 
-*kacs_process_state reason — a process-state / process-SD lifecycle or PIP transition.*
+*kacs_process_state reason — a process-state / process-SD lifecycle or PIP transition.* [*kacs-abi.trace.process-state-reasons]
 
 Covers process-state alloc/free, the CLONE_THREAD share vs fork
 inheritance split, the no-child clone block, the pending-exec-PIP
@@ -1527,7 +1527,7 @@ No token or SD bytes. Emitted by kacs:kacs_process_state.
 | `KACS_PST_SD_REPLACE` | `12` | process SD replaced on state |
 | `KACS_PST_SOCKET_SD_ALLOC` | `13` | default socket SD allocated |
 
-*kacs_mount_policy reason — the outcome of a mount-policy set (TCB-gated) or get.*
+*kacs_mount_policy reason — the outcome of a mount-policy set (TCB-gated) or get.* [*kacs-abi.trace.mount-policy-reasons]
 
 SET_OK marks a committed policy change (generation bumped); the guard
 codes name the pre-commit rejects that otherwise collapse into a bare
@@ -1552,7 +1552,7 @@ kacs_sd_syscall target_kind — which SD-bearing object a query/set record
 describes, resolved by the get_sd/set_sd syscall target-kind
 fallthrough. ACCESS_CHECK tags the AccessCheck ingress events
 (kacs_access_check*), whose other scalar fields are 0 at the ingress
-boundary.
+boundary. [*kacs-abi.trace.sd-syscall-target-kinds]
 
 | Constant | Value | Notes |
 |---|---|---|
@@ -1562,7 +1562,7 @@ boundary.
 | `KACS_SDS_KIND_PATH` | `3` | path-resolved file target |
 | `KACS_SDS_KIND_ACCESS_CHECK` | `4` | AccessCheck ingress (not an SD get/set) |
 
-*kacs_sd_syscall reason — the outcome of an SD query/set core.*
+*kacs_sd_syscall reason — the outcome of an SD query/set core.* [*kacs-abi.trace.sd-syscall-reasons]
 
 QUERY_OK/SET_OK are the success paths; the remaining codes name the
 guard / denial paths that otherwise surface as an indistinguishable
@@ -1584,7 +1584,7 @@ kacs_access_check reason — the AccessCheck kernel-ingress outcome, above
 the closed Slice 15 ABI bridge. OK is a completed ingress; the remaining
 codes name the ingress-time rejects (token-eval-context gate, token
 resolution, and caap-cache lock acquisition). Verdict is also in `ret`.
-Emitted by kacs:kacs_access_check / _list.
+Emitted by kacs:kacs_access_check / _list. [*kacs-abi.trace.access-check-reasons]
 
 | Constant | Value | Notes |
 |---|---|---|
@@ -1593,7 +1593,7 @@ Emitted by kacs:kacs_access_check / _list.
 | `KACS_ACK_TOKEN_RESOLVE` | `2` | token/args resolution failed |
 | `KACS_ACK_CAAP_LOCK_FAIL` | `3` | caap-cache lock acquisition failed |
 
-*kacs_file_snapshot op — which snapshot-grant file operation an event marks.*
+*kacs_file_snapshot op — which snapshot-grant file operation an event marks.* [*kacs-abi.trace.file-snapshot-ops]
 
 The allow-vs-deny verdict is read from `ret`; `reason` names why a deny
 path was taken. Emitted by kacs:kacs_file_snapshot (file_access.c).
@@ -1612,7 +1612,7 @@ path was taken. Emitted by kacs:kacs_file_snapshot (file_access.c).
 | `KACS_FSOP_WRITE_INTENT` | `9` | write-intent snapshot |
 | `KACS_FSOP_SYSFS_WRITE_GATE` | `10` | unmanaged sysfs write gate |
 
-*kacs_file_snapshot reason — why a snapshot-grant op took its return path.*
+*kacs_file_snapshot reason — why a snapshot-grant op took its return path.* [*kacs-abi.trace.file-snapshot-reasons]
 
 DECISION is the resolved allow/deny (verdict in `ret`); the remaining
 codes name the distinct deny causes. Emitted by kacs:kacs_file_snapshot.
@@ -1626,7 +1626,7 @@ codes name the distinct deny causes. Emitted by kacs:kacs_file_snapshot.
 | `KACS_FSR_UNMANAGED_SYSFS` | `4` | unmanaged fd: sysfs write gate applied |
 | `KACS_FSR_AUDIT_EMIT_FAIL` | `5` | continuous-audit emit failed |
 
-*kacs_metadata reason — the file-metadata (getattr/setattr/xattr/getsecurity) decision path.*
+*kacs_metadata reason — the file-metadata (getattr/setattr/xattr/getsecurity) decision path.* [*kacs-abi.trace.metadata-reasons]
 
 DECISION/CONSUME_HIT/BEGIN_BUSY mark the begin/consume decision
 lifecycle; the remaining codes name the distinct deny reasons of the
@@ -1652,7 +1652,7 @@ kacs_native_open_ext reason — a widening decision inside the native
 validation reject buckets of pkm_kacs_prepare_native_open; RESOLVE /
 BUILD_CREATED_SD DELETE_ON_CLOSE_ARM name the later stage outcomes
 (verdict in `ret`). Emitted by kacs:kacs_native_open_ext
-(native_open.c).
+(native_open.c). [*kacs-abi.trace.native-open-ext-reasons]
 
 | Constant | Value | Notes |
 |---|---|---|
@@ -1666,7 +1666,7 @@ BUILD_CREATED_SD DELETE_ON_CLOSE_ARM name the later stage outcomes
 | `KACS_NOX_BUILD_CREATED_SD` | `7` | build-created-file-SD outcome |
 | `KACS_NOX_DELETE_ON_CLOSE_ARM` | `8` | delete-on-close arm outcome |
 
-*kacs_object reason — which object-lifecycle verdict a record marks.*
+*kacs_object reason — which object-lifecycle verdict a record marks.* [*kacs-abi.trace.object-reasons]
 
 Only the high-value transitions are traced (pure inode/file/sb
 alloc/free are not). `ret` is the outcome (0 == ok). Emitted by
@@ -1678,7 +1678,7 @@ kacs:kacs_object.
 | `KACS_OBJ_SIGNED_EXEC_PIN` | `1` | inode pinned as signed-exec (immutable) |
 | `KACS_OBJ_SIGNED_EXEC_MUTATION_BLOCKED` | `2` | content mutation of a signed-exec-pinned inode denied |
 
-*kacs_securityfs reason — which securityfs endpoint path a record marks.*
+*kacs_securityfs reason — which securityfs endpoint path a record marks.* [*kacs-abi.trace.securityfs-reasons]
 
 The sessions_read codes disambiguate the deny rungs that otherwise
 collapse into an errno; open_self / init report the endpoint outcome.
@@ -1692,7 +1692,7 @@ Verdict is `ret`. Emitted by kacs:kacs_securityfs.
 | `KACS_SFS_OPEN_SELF` | `3` | open of kacs/self self-token file outcome |
 | `KACS_SFS_INIT` | `4` | securityfs kacs/ endpoint init outcome |
 
-*kacs_caap reason — which CAAP policy-cache path a record marks.*
+*kacs_caap reason — which CAAP policy-cache path a record marks.* [*kacs-abi.trace.caap-reasons]
 
 SET carries the post-set cache_len (an insert grows it; an evict/replace
 may shrink it); INIT/DESTROY are cache lifecycle; TCB_GATE is the
@@ -1711,7 +1711,7 @@ capability LSM-hook outcomes. ALLOW_GRANT is an auto-granted allow-cap;
 HARD_DENY is the SETPCAP/SETFCAP/MAC_OVERRIDE hard block;
 PRIV_NOT_ENABLED USE_MARK_FAIL are the mapped-privilege gate failures;
 CAPSET / PRCTL_GUARD CAPABLE / CAPGET report the corresponding hook
-outcome. Emitted by kacs:kacs_capability. Verdict is `ret`.
+outcome. Emitted by kacs:kacs_capability. Verdict is `ret`. [*kacs-abi.trace.capability-reasons]
 
 | Constant | Value | Notes |
 |---|---|---|
@@ -1730,7 +1730,7 @@ token/zero-mask guard; NOT_ENABLED / USE_MARK_FAIL are the gate
 failures; CHANGE_NOTIFY marks the open_by_handle_at
 SeChangeNotifyPrivilege check outcome; RCU_ENOMEM_ FALLBACK marks the
 deferred-free ENOMEM synchronize_rcu fallback. Emitted by
-kacs:kacs_privilege. Verdict is `ret`.
+kacs:kacs_privilege. Verdict is `ret`. [*kacs-abi.trace.privilege-reasons]
 
 | Constant | Value | Notes |
 |---|---|---|
@@ -1740,7 +1740,7 @@ kacs:kacs_privilege. Verdict is `ret`.
 | `KACS_PRIV_CHANGE_NOTIFY` | `3` | open_by_handle_at CHANGE_NOTIFY gate outcome |
 | `KACS_PRIV_RCU_ENOMEM_FALLBACK` | `4` | deferred-free kmalloc failed; sync-rcu fallback |
 
-*kacs_tlp reason — the trusted-launch-path decisions.*
+*kacs_tlp reason — the trusted-launch-path decisions.* [*kacs-abi.trace.tlp-reasons]
 
 CHECK_PATH marks a no-prefix-match executable-transition deny (path_len
 + prefix_count only, NEVER path or prefix bytes); REPLACE marks a

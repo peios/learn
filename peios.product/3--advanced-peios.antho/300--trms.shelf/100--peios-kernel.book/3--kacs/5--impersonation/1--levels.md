@@ -16,30 +16,30 @@ no API that bypasses that choice.
 connection carries no identity information: both token inspection and
 impersonation yield a token whose user SID is Anonymous (`S-1-5-7`),
 which carries Everyone as an enabled group and does not carry
-Authenticated Users.
+Authenticated Users. [*imp.anonymous.no-identity-conveyed]
 
 **Identification.** The server can identify the caller — read SIDs,
 query groups, inspect privileges — but cannot act as them. An
 Identification-level token is barred from AccessCheck against
 resources: a server thread impersonating one and attempting to open a
-file simply fails the check.
+file simply fails the check. [*imp.identification.barred-from-accesscheck]
 
 **Impersonation.** The server can act as the caller for all local
 operations, including ones that cross local IPC boundaries. If service
 A impersonates client B at this level and connects to local service C,
-C sees B's identity — identity cascades freely across local services.
+C sees B's identity — identity cascades freely across local services. [*imp.impersonation.cascades-across-local-services]
 This is the default.
 
 **Delegation.** Locally identical to Impersonation. The distinction
 activates at the network boundary, where a Delegation-level token
 carries authorization for the server to forward the client's identity
-to services on other machines through Kerberos. KACS enforces the
+to services on other machines through Kerberos. [*imp.delegation.network-boundary-only] KACS enforces the
 level; authd is what acts on it.
 
 The level is set by the client through a KACS syscall on the socket
-before `connect()`, and defaults to Impersonation.
+before `connect()`, and defaults to Impersonation. [*imp.level.socket-default-impersonation]
 
-## The level is a ratchet
+## The level is a ratchet [*imp.level.ratchet-only-down]
 
 Every token carries an impersonation level, and on every token it
 means the same thing: *identity derived from this token may act at no
@@ -47,17 +47,21 @@ more than this level*. An impersonation token acts at its level. A
 primary token's level is the ceiling on everything the process
 carrying it can convey — what a peer captures at connect, what
 `KACS_SO_PASS_TOKEN` attaches, what `KACS_IOC_DUPLICATE` produces in
-either direction.
+either direction. [*imp.level.primary-is-conveyance-ceiling]
 
-The level only ever goes down. Socket capture and `KACS_SCM_TOKEN`
-attach store the lower of the socket's level and the source token's
-own; DuplicateToken refuses a result above its source, whatever the
-types involved; fork, exec, `NEW_PROCESS_MIN`, FilterToken and primary
-installation copy it unchanged. The one way to a higher level is a
-fresh token from CreateToken, which takes `SeCreateTokenPrivilege`.
-authd mints logon tokens at Delegation and the bootstrap SYSTEM token
-is Delegation, so an identity starts at the top and each hop can only
-lower it.
+The level only ever goes down:
+
+- Socket capture and `KACS_SCM_TOKEN` attach store the lower of the
+  socket's level and the source token's own; [*imp.level.capture-takes-lower]
+- DuplicateToken refuses a result above its source, whatever the types
+  involved;
+- fork, exec, `NEW_PROCESS_MIN`, FilterToken and primary installation
+  copy it unchanged. [*imp.level.derivation-copies-unchanged]
+
+The one way to a higher level is a fresh token from CreateToken, which
+takes `SeCreateTokenPrivilege`. [*imp.level.raise-only-via-create-token] authd mints logon tokens at Delegation
+and the bootstrap SYSTEM token is Delegation, so an identity starts at
+the top and each hop can only lower it.
 
 This is what makes the client's choice hold across any number of
 hops and process boundaries. A client that connects at Impersonation
@@ -66,4 +70,4 @@ primary and launches a process with it (§3.2.4) produces a process
 capped at Impersonation; and nothing that process captures, conveys
 or duplicates can ever be Delegation — so authd, which reads the
 level to decide whether to forward the client's credentials, is never
-shown a Delegation flag the client did not grant.
+shown a Delegation flag the client did not grant. [*imp.level.holds-across-hops]

@@ -7,40 +7,44 @@ The preceding sections describe what each layer of AccessCheck does.
 This one describes how they compose, and is the definitive statement
 of the evaluation order.
 
-## Pipeline overview
+## Pipeline overview [*check.algorithm.pipeline-order]
 
 Before the pipeline proper, two things are checked and can fail the
-call outright. The token's own invariants are validated — a
-`write_restricted` token without `user_deny_only` is rejected as
-invalid — and, in the orchestrator, a null descriptor is rejected and
-`AccessCheckResultList` is required to have been given an object type
-list. A null descriptor presented by an Identification-level token
+call outright.
+
+- The token's own invariants are validated — a `write_restricted`
+  token without `user_deny_only` is rejected as invalid. [*check.algorithm.write-restricted-needs-deny-only]
+- In the orchestrator, a null descriptor is rejected and
+  `AccessCheckResultList` is required to have been given an object
+  type list. [*check.algorithm.null-descriptor-rejected]
+
+A null descriptor presented by an Identification-level token
 therefore fails as an invalid parameter rather than as access denied,
-because the null check runs first.
+because the null check runs first. [*check.algorithm.null-check-runs-first]
 
 The pipeline then runs in this order:
 
 0. **Impersonation level gate.** An impersonation token at
-   Identification level is denied immediately. Anonymous tokens
-   proceed through the full pipeline.
-1. **Input validation.** Reject a descriptor with no owner. A null
-   group SID is valid and has no direct effect on the decision.
+   Identification level is denied immediately. [*check.algorithm.identification-denied] Anonymous tokens
+   proceed through the full pipeline. [*check.algorithm.anonymous-allowed]
+1. **Input validation.** Reject a descriptor with no owner. [*check.algorithm.no-owner-rejected] A null
+   group SID is valid and has no direct effect on the decision. [*check.algorithm.null-group-valid]
 2. **Generic mapping.** Map generic bits in the desired mask to
-   object-specific bits; strip `MAXIMUM_ALLOWED`.
+   object-specific bits; strip `MAXIMUM_ALLOWED`. [*check.algorithm.desired-mask-mapped]
 3. **Effective privileges.** Clear the backup and restore bits when
-   the corresponding intent flag is absent.
+   the corresponding intent flag is absent. [*check.algorithm.intent-gates-backup-restore]
 4. **Privilege grants.** Resolve `ACCESS_SYSTEM_SECURITY`, backup and
-   restore. Seed `decided`, `granted` and `privilege_granted`.
+   restore. Seed `decided`, `granted` and `privilege_granted`. [*check.algorithm.privilege-seeding]
 5. **Pre-SACL walk.** Extract the mandatory integrity label, the PIP
    trust label, resource attributes and scoped policy SIDs from the
-   SACL, then enforce MIC and PIP.
+   SACL, then enforce MIC and PIP. [*check.algorithm.pre-sacl-walk]
 6. **Virtual group resolution.** `S-1-3-4` and `S-1-5-10` become
    matchable where the caller is the owner or the object's principal.
-7. **Tree initialisation.** Seed each node from the scalar state.
+7. **Tree initialisation.** Seed each node from the scalar state. [*check.algorithm.tree-seeded-from-scalar]
 8. **Normal DACL evaluation.** Owner implicit rights, then the walk.
 9. **Post-DACL WRITE_OWNER override.** `SeTakeOwnershipPrivilege`
    grants `WRITE_OWNER` if the DACL did not and no mandatory
-   mechanism blocked it.
+   mechanism blocked it. [*check.algorithm.take-ownership-override]
 10. **Restricted token pass**, with intersection and privilege
     restoration.
 11. **Confinement pass**, with absolute intersection.
@@ -52,13 +56,13 @@ The pipeline then runs in this order:
 
 Object type lists are validated at parse time rather than at step 1 —
 non-empty, one level-0 node first, no level gaps, no duplicate GUIDs —
-so a malformed list never reaches the pipeline. Step 1 re-checks only
+so a malformed list never reaches the pipeline. [*check.algorithm.list-validated-before-pipeline] Step 1 re-checks only
 emptiness.
 
 Reserved access-mask bits (`0x0CE0_0000`) are rejected wherever a mask
-is mapped. That applies to the caller's desired mask *and* to every
+is mapped. [*check.algorithm.reserved-bits-rejected] That applies to the caller's desired mask *and* to every
 ACE mask, so a single ACE carrying a reserved bit aborts the entire
-check rather than being skipped.
+check rather than being skipped. [*check.algorithm.reserved-bit-ace-aborts-check]
 
 ## EvaluateSecurityDescriptor
 
@@ -190,7 +194,7 @@ EvaluateSecurityDescriptor(
 
 The returned `privilege_granted` is **narrowed** by what actually
 survived the pass — it is intersected with the root's granted mask on
-return, and the orchestrator narrows it again against the CAAP result.
+return, and the orchestrator narrows it again against the CAAP result. [*check.algorithm.privilege-granted-narrowed]
 A privilege-granted bit that the write-restricted merge or the
 confinement intersection removed is therefore no longer part of it,
 which matters in two places: the CAAP error escape hatch (§3.8.8) has
@@ -213,7 +217,7 @@ contributes its effective result to both.
 After all policies, the staged and effective totals are compared and
 any difference sets the staging mismatch flag. In result-list mode a
 per-node delta sets it too — and so does a scalar delta, since the
-comparison is not mode-branched.
+comparison is not mode-branched. [*check.algorithm.scalar-delta-sets-flag]
 
 **Step 13, privilege-use auditing.** For each of the five provenance
 masks — security, backup, restore, take-ownership and relabel:
@@ -229,7 +233,7 @@ used on the token, and emit a success event under
 exercised but did not survive: do **not** mark it used, and emit a
 failure event under `PRIVILEGE_USE_FAILURE`. Both zero means no event.
 In result-list mode the comparison folds across nodes — success if the
-bits survive on any node, failure only if they survive on none.
+bits survive on any node, failure only if they survive on none. [*check.algorithm.privilege-use-folds-across-nodes]
 
 The whole step is skipped in `MAXIMUM_ALLOWED` mode, so such a request
 marks nothing used and emits nothing.
@@ -241,7 +245,7 @@ restricted merge nor preserved by the CAAP error hatch.
 
 **Step 14, audit emission.** Walk the object's SACL, then each CAAP
 effective SACL, accumulating audit events and ORing alarm masks into
-the continuous audit mask. This is read-only with respect to
+the continuous audit mask. [*check.algorithm.sacl-walk-order] This is read-only with respect to
 `granted`.
 
 The staged comparison then walks the object's SACL again followed by
@@ -249,7 +253,7 @@ the staged SACLs. That second walk is driven by the **staged** granted
 total rather than the effective one, so the success and failure
 classification of staged audit events reflects the staged access
 result — which is what makes the flag sensitive to descriptors whose
-staged and effective grants differ.
+staged and effective grants differ. [*check.algorithm.staged-audit-walk-uses-staged-grant]
 
 **Step 14b, forced auditing.** With
 `success = (granted & mapped_desired) == mapped_desired or
@@ -262,7 +266,7 @@ failure event additively, regardless of what the SACL matched.
 
 `AccessCheck` takes the **root node's** granted mask when a tree is
 present, then computes `allowed` as `mapped_desired == 0` or every
-requested bit granted. The root's mask equals the intersection across
+requested bit granted. [*check.algorithm.allowed-computation] The root's mask equals the intersection across
 all nodes by construction rather than by computation: upward denial
 propagation (§3.8.5) forces every descendant's denial into all of its
 ancestors, so the root can never grant what a descendant denies.
@@ -271,11 +275,11 @@ ancestors, so the root can never grant what a descendant denies.
 mask and status, each node judged against `mapped_desired`
 independently.
 
-Neither wrapper filters the returned `granted` to the requested mask.
+Neither wrapper filters the returned `granted` to the requested mask. [*check.algorithm.granted-not-filtered]
 Privilege seeding at step 4 ORs bits in regardless of what was asked
 for, so a caller that requested only `READ_CONTROL` while holding
 backup can see read bits it never requested. The file enforcement path
-does filter its result; the generic query path does not.
+does filter its result; the generic query path does not. [*check.algorithm.file-path-filters-result]
 
 ## Helpers
 
@@ -308,12 +312,12 @@ MapGenericBits(mask, mapping) -> ACCESS_MASK
 ```
 
 All four generic bits are cleared before any is expanded, so a mask
-naming several generics maps every one of them.
+naming several generics maps every one of them. [*check.algorithm.all-generics-expand]
 
 **Virtual group resolution.** There is no enrichment step producing a
 modified token. `S-1-3-4` and `S-1-5-10` are resolved at each lookup
 instead, in the DACL walk, the SACL walk and conditional membership
-alike. `S-1-5-10` resolves through the ordinary polarity rules against
+alike. [*check.algorithm.virtual-groups-per-lookup] `S-1-5-10` resolves through the ordinary polarity rules against
 `self_sid`, and `S-1-3-4` through the ordinary polarity rules against
 the object's owner SID. Both are computed once per walk — the owner is
 fixed while the polarity is per ACE — so each carries its allow and
@@ -321,10 +325,10 @@ deny answers together.
 
 **`EvaluateSACL`** walks in a fixed order per ACE: SID match with deny
 polarity, then object-type scoping against the tree, then the
-condition, then the mask overlap against `mapped_desired`. Audit ACEs
+condition, then the mask overlap against `mapped_desired`. [*check.algorithm.sacl-ace-check-order] Audit ACEs
 need all four; alarm ACEs deliberately skip the overlap test and
 contribute their mask on a SID match alone. Inherit-only ACEs are
-skipped throughout.
+skipped throughout. [*check.algorithm.sacl-inherit-only-skipped]
 
 **`synthetic_sd`** builds a CAAP rule's descriptor from the original's
 owner and optional group with the rule's DACL substituted, and the
@@ -332,17 +336,17 @@ SACL copied with every scoped policy ACE stripped — which is what
 prevents recursion. The MIC and PIP labels are preserved, so a rule is
 evaluated under the same mandatory constraints as the object. The
 control bits and the stripped SACL's revision are recomputed rather
-than copied.
+than copied. [*check.algorithm.synthetic-recomputes-control-bits]
 
 ## Provenance masks
 
 | Variable | Set at | Meaning |
 |---|---|---|
-| `security_granted` | Step 4 | `SeSecurityPrivilege` granted `ACCESS_SYSTEM_SECURITY`. |
-| `backup_granted` | Step 4 | `SeBackupPrivilege` granted read bits. |
-| `restore_granted` | Step 4 | `SeRestorePrivilege` granted write and metadata bits. |
-| `take_ownership_granted` | Step 9 | `SeTakeOwnershipPrivilege` granted `WRITE_OWNER`. |
-| `relabel_granted` | Step 5 | `SeRelabelPrivilege` added `WRITE_OWNER` to the MIC allowed set. |
+| `security_granted` | Step 4 | `SeSecurityPrivilege` granted `ACCESS_SYSTEM_SECURITY`. [*check.algorithm.provenance.security] |
+| `backup_granted` | Step 4 | `SeBackupPrivilege` granted read bits. [*check.algorithm.provenance.backup] |
+| `restore_granted` | Step 4 | `SeRestorePrivilege` granted write and metadata bits. [*check.algorithm.provenance.restore] |
+| `take_ownership_granted` | Step 9 | `SeTakeOwnershipPrivilege` granted `WRITE_OWNER`. [*check.algorithm.provenance.take-ownership] |
+| `relabel_granted` | Step 5 | `SeRelabelPrivilege` added `WRITE_OWNER` to the MIC allowed set. [*check.algorithm.provenance.relabel] |
 
 Each records which bits that privilege contributed, and step 13
 compares each against the requested mask and the final result.

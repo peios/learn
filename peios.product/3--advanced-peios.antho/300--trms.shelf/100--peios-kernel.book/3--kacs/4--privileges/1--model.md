@@ -21,12 +21,12 @@ the subject.
 A privilege is **assigned by policy** when authd creates the token,
 resolving the principal's assignments from security policy once, at
 creation. There are no runtime grants: a privilege absent at creation
-can never be added later.
+can never be added later. [*priv.lifecycle.no-runtime-grants]
 
 The privilege then sits on the token in whatever enabled state it was
 created with. The kernel accepts any enabled set that is a subset of
 the present set, and takes the creation-time enabled set as the
-enabled-by-default set. authd issues every privilege it grants already
+enabled-by-default set. [*priv.enabled-subset-of-present] authd issues every privilege it grants already
 enabled, on the reasoning that a privilege the holder had to enable
 before it worked would be a grant in name only — so the
 present-but-disabled resting state exists in the model and is
@@ -38,31 +38,35 @@ enabling** it through AdjustPrivileges.
 
 When the privilege is **exercised**, the kernel checks that it is both
 present and enabled — a single mask test against both words — permits
-the operation, and records it as used.
+the operation, and records it as used. [*priv.check.enabled-not-just-present]
 
 For a standalone gate, "exercised" means the gate accepted that bit,
 and the used bit is meant to be recorded even when a later independent
 check — a process descriptor, PIP, or a malformed-input test — denies
-the operation afterwards. Where the shared privilege helper performs
+the operation afterwards. [*priv.used.recorded-despite-later-denial] Where the shared privilege helper performs
 the check, it marks the bit immediately, and the impersonation gate
-does the same. Three gates mark later and therefore record nothing
-when a subsequent check fails: token creation marks after the token
-has been constructed and its descriptor allocated, so a malformed
-specification leaves the bit unset; primary token installation marks
-after the same-user and same-LogonSession gate; and the `CAP_SYS_BOOT`
-mapping marks after the remote-shutdown origin gate.
+does the same. [*priv.used.helper-marks-immediately] Three gates mark later and therefore record nothing
+when a subsequent check fails:
+
+- token creation marks after the token has been constructed and its
+  descriptor allocated, so a malformed specification leaves the bit
+  unset; [*priv.used.create-token-marks-late]
+- primary token installation marks after the same-user and
+  same-LogonSession gate; [*priv.used.install-marks-late]
+- and the `CAP_SYS_BOOT` mapping marks after the remote-shutdown
+  origin gate. [*priv.used.cap-sys-boot-marks-late]
 
 Used-state for the AccessCheck-influencing privileges follows the
 provenance rules of §3.8 instead.
 
 Recording the used bit is not merely bookkeeping. Every gate treats a
 failure to record it as a failure of the operation itself and returns
-`EPERM` or `EACCES`.
+`EPERM` or `EACCES`. [*priv.used.record-failure-fails-operation]
 
 Afterwards the privilege may be **disabled**, returning to rest, or
 **removed permanently**, which clears it from the present, enabled,
 and enabled-by-default states while preserving the `used` bit for
-audit.
+audit. [*priv.remove.preserves-used-bit]
 
 ## Two enforcement categories
 
@@ -83,9 +87,9 @@ post-DACL fallback; `SeBackupPrivilege` grants all read access;
 `SeRestorePrivilege` grants all write access plus `WRITE_DAC`,
 `WRITE_OWNER`, `DELETE` and `ACCESS_SYSTEM_SECURITY`; and
 `SeRelabelPrivilege` loosens MIC's constraint on `WRITE_OWNER` for
-non-dominant callers. §3.8 gives the exact mechanics.
+non-dominant callers. [*priv.accesscheck.five-privileges] §3.8 gives the exact mechanics.
 
-## Intent gating
+## Intent gating [*priv.intent-gating]
 
 `SeBackupPrivilege` and `SeRestorePrivilege` are intent-gated. Other
 AccessCheck-influencing privileges are self-scoping —
@@ -124,7 +128,7 @@ privileges for its whole lifetime.
 ## Auditing
 
 Every exercise sets the token's monotonic used state for that
-privilege, and every standalone gate emits an ftrace event.
+privilege, and every standalone gate emits an ftrace event. [*priv.audit.ftrace-per-standalone-gate]
 
 KMES audit events are emitted only for the five AccessCheck-influencing
 privileges, and only when the token's `audit_policy` opts in through
@@ -134,10 +138,10 @@ mask and the final granted mask. For `SeSecurityPrivilege` and
 `SeTakeOwnershipPrivilege` that intersection is genuinely
 counterfactual — `ACCESS_SYSTEM_SECURITY` is pre-decided by the
 privilege, and take-ownership contributes only when `WRITE_OWNER` was
-not already granted — so an event means the privilege was load-bearing.
+not already granted — so an event means the privilege was load-bearing. [*priv.audit.security-takeownership-counterfactual]
 Backup and restore seed their bits unconditionally, without asking
 whether the DACL would have granted the same access, so their events
-also fire for accesses the DACL alone would have permitted.
+also fire for accesses the DACL alone would have permitted. [*priv.audit.backup-restore-not-counterfactual]
 
 A `MAXIMUM_ALLOWED` request short-circuits this accounting entirely,
 recording no used bits and emitting no privilege-use events for any

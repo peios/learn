@@ -5,7 +5,7 @@ description: Where KACS departs from MS-DTYP despite using its binary formats, a
 
 KACS uses the binary formats MS-DTYP specifies, so a descriptor
 authored by a Windows domain controller and replicated through Samba
-is evaluated without translation. PCDS specifies those formats
+is evaluated without translation. [*dtyp.binary-formats-untranslated] PCDS specifies those formats
 normatively.
 
 Evaluator behaviour is a separate question. Given the same token,
@@ -16,23 +16,23 @@ the following places.
 
 | Area | Departure | Why |
 |---|---|---|
-| Conditional ACE `@Local.` | Resolved from an AccessCheck parameter rather than a token field | The context is per-call and varies between checks. |
-| Virtual groups in expressions | `Member_of({S-1-3-4})` returns true for the owner | Keeps the SID matcher and the expression evaluator semantically consistent. |
-| INT64/UINT64 promotion | Relational operators promote between the two | Without promotion, `UINT64` claims cannot be used in conditions at all. |
-| `Member_of` filtering | Filtered by ACE polarity, so deny-only groups do not satisfy allow-ACE conditions | Consistent with deny-only group semantics everywhere else. |
-| `Exists` scope | Extended to all four attribute namespaces | No reason to restrict existence tests to Local and Resource. |
-| ACE mask mapping | ACE masks are mapped through GenericMapping at evaluation time | Required for `GENERIC_ALL` in central access policy recovery ACEs (§3.8.8). |
-| `MAXIMUM_ALLOWED` | First-writer-wins for targeted *and* maximum-allowed requests | Eliminates disagreement between "what can I do?" and "can I do this?" on a non-canonically ordered DACL. |
-| Zero desired mask | Succeeds rather than returning access denied | "Asked for nothing, got nothing" is a valid answer. |
-| Alarm ACEs | Repurposed for continuous per-operation auditing (§3.8.9) | Reserved but never implemented in the reference model. |
-| Multiple scoped policy ACEs | Several permitted per SACL | AND semantics make composition safe. |
-| Mandatory policy mutability | `mandatory_policy` is immutable on the token (§3.2.2) | A mutable policy reduces MIC to advisory. |
-| Impersonation integrity ceiling | Enforced unconditionally; `SeImpersonatePrivilege` does not bypass it (§3.5.2) | MIC is a real boundary precisely because the mandatory policy is immutable. |
-| Impersonation origin check | Dropped | Eliminates hidden impersonation paths. |
-| Impersonation level on primaries | Meaningful and queryable: a ratchet every token carries, bounding everything derived from it (§3.5.1). Windows rejects `TokenImpersonationLevel` on a primary. | Delegation here is a flag authd enforces rather than a property of the credential cache, so the flag itself has to be unforgeable across duplication. |
-| PIP determination | Kernel-only, from the binary signature, with no parent input (§3.3.2) | One input, one answer, no ambiguity. |
-| Object type list validation | Duplicate GUIDs and level gaps rejected (§3.8.5) | Prevents node lookup returning the wrong node and propagation becoming undefined. |
-| Composite equality | Element-wise ordered comparison | Never over-grants. |
+| Conditional ACE `@Local.` | Resolved from an AccessCheck parameter rather than a token field | The context is per-call and varies between checks. [*dtyp.local-from-accesscheck-parameter] |
+| Virtual groups in expressions | `Member_of({S-1-3-4})` returns true for the owner | Keeps the SID matcher and the expression evaluator semantically consistent. [*dtyp.member-of-owner-virtual-group] |
+| INT64/UINT64 promotion | Relational operators promote between the two | Without promotion, `UINT64` claims cannot be used in conditions at all. [*dtyp.int64-uint64-promotion] |
+| `Member_of` filtering | Filtered by ACE polarity, so deny-only groups do not satisfy allow-ACE conditions | Consistent with deny-only group semantics everywhere else. [*dtyp.member-of-ace-polarity] |
+| `Exists` scope | Extended to all four attribute namespaces | No reason to restrict existence tests to Local and Resource. [*dtyp.exists-all-namespaces] |
+| ACE mask mapping | ACE masks are mapped through GenericMapping at evaluation time | Required for `GENERIC_ALL` in central access policy recovery ACEs (§3.8.8). [*dtyp.ace-mask-generic-mapping] |
+| `MAXIMUM_ALLOWED` | First-writer-wins for targeted *and* maximum-allowed requests | Eliminates disagreement between "what can I do?" and "can I do this?" on a non-canonically ordered DACL. [*dtyp.maximum-allowed-first-writer-wins] |
+| Zero desired mask | Succeeds rather than returning access denied | "Asked for nothing, got nothing" is a valid answer. [*dtyp.zero-desired-mask-succeeds] |
+| Alarm ACEs | Repurposed for continuous per-operation auditing (§3.8.9) | Reserved but never implemented in the reference model. [*dtyp.alarm-ace-continuous-audit] |
+| Multiple scoped policy ACEs | Several permitted per SACL | AND semantics make composition safe. [*dtyp.multiple-scoped-policy-aces] |
+| Mandatory policy mutability | `mandatory_policy` is immutable on the token (§3.2.2) | A mutable policy reduces MIC to advisory. [*dtyp.mandatory-policy-immutable] |
+| Impersonation integrity ceiling | Enforced unconditionally; `SeImpersonatePrivilege` does not bypass it (§3.5.2) | MIC is a real boundary precisely because the mandatory policy is immutable. [*dtyp.impersonation-ceiling-unconditional] |
+| Impersonation origin check | Dropped | Eliminates hidden impersonation paths. [*dtyp.impersonation-origin-check-dropped] |
+| Impersonation level on primaries | Meaningful and queryable: a ratchet every token carries, bounding everything derived from it (§3.5.1). Windows rejects `TokenImpersonationLevel` on a primary. | Delegation here is a flag authd enforces rather than a property of the credential cache, so the flag itself has to be unforgeable across duplication. [*dtyp.impersonation-level-on-primaries] |
+| PIP determination | Kernel-only, from the binary signature, with no parent input (§3.3.2) | One input, one answer, no ambiguity. [*dtyp.pip-kernel-only-determination] |
+| Object type list validation | Duplicate GUIDs and level gaps rejected (§3.8.5) | Prevents node lookup returning the wrong node and propagation becoming undefined. [*dtyp.object-type-list-validation] |
+| Composite equality | Element-wise ordered comparison | Never over-grants. [*dtyp.composite-equality-elementwise] |
 
 ## Features handled elsewhere
 

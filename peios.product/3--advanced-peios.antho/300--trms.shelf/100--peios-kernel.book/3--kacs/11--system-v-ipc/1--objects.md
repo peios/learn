@@ -13,16 +13,16 @@ protects each with a nine-bit mode in `struct ipc_perm`, checked by
 On Peios that mode is inert. `CAP_IPC_OWNER` is in KACS's always-allow
 set (§3.10.2), so `ipcperms()` never denies on the mode and always
 reaches `security_ipc_permission()`; there KACS decides, against a
-security descriptor the object carries.
+security descriptor the object carries. [*sysvipc.mode-inert]
 
 ## The descriptor
 
 Each object gets a descriptor when it is created, built from the
 creator's effective token: owner and group from the token; the
 creator's user SID, `BUILTIN\Administrators` and `SYSTEM` at
-`GENERIC_ALL`. It is held on the object's LSM blob for the object's
+`GENERIC_ALL`. [*sysvipc.default-descriptor] It is held on the object's LSM blob for the object's
 life — persisting with the object across the creator's exit, as SysV
-objects do — and released when the object is removed.
+objects do — and released when the object is removed. [*sysvipc.descriptor-lifetime]
 
 The rights are those of `<pkm/ipc.h>`:
 
@@ -39,7 +39,7 @@ The rights are those of `<pkm/ipc.h>`:
 The generic mapping: `GENERIC_READ` is read plus query and
 `READ_CONTROL`; `GENERIC_WRITE` is write plus set-information and
 `READ_CONTROL`; `GENERIC_EXECUTE` is query and `READ_CONTROL`;
-`GENERIC_ALL` is everything above.
+`GENERIC_ALL` is everything above. [*sysvipc.generic-mapping]
 
 ## Where the checks run
 
@@ -47,17 +47,17 @@ The generic mapping: `GENERIC_READ` is read plus query and
 operation would have needed — read, write or both — and
 `security_ipc_permission()` maps them to `KACS_IPC_READ` and
 `KACS_IPC_WRITE` and runs AccessCheck for the caller's effective token,
-under the caller's PIP context, against the object's descriptor. The
+under the caller's PIP context, against the object's descriptor. [*sysvipc.data-ops-access-check] The
 `*get` path with an existing key goes through the same check with the
-requested mode. The control operations go through the per-object
+requested mode. [*sysvipc.get-existing-key-checked] The control operations go through the per-object
 `shmctl`, `msgctl` and `semctl` hooks, which map the command to the
 right in the table above; commands that address no object
-(`IPC_INFO`, `SHM_INFO`, `MSG_INFO`, `SEM_INFO`) need nothing.
+(`IPC_INFO`, `SHM_INFO`, `MSG_INFO`, `SEM_INFO`) need nothing. [*sysvipc.info-commands-unchecked]
 
 Linux's own ownership check on `IPC_SET` and `IPC_RMID` — that the
 caller's effective UID matches the object's creator or owner, or holds
 `CAP_SYS_ADMIN` — still runs first, on the projected UID, and cannot be
-relaxed by the descriptor: the hooks only ever further restrict. So an
+relaxed by the descriptor: the hooks only ever further restrict. [*sysvipc.linux-owner-check-first] So an
 administrator who is not the object's creator needs both the
 descriptor's `DELETE` (which the default grants Administrators) and
 `SeTcbPrivilege` (what `CAP_SYS_ADMIN` maps to) to remove it. The
@@ -70,8 +70,8 @@ as file mode bits are under FACS.
 A SysV object has no fd and no path, so `kacs_get_sd` and `kacs_set_sd`
 address it by kind and id: one of `KACS_SD_AT_SYSV_SHM`,
 `KACS_SD_AT_SYSV_MSG` or `KACS_SD_AT_SYSV_SEM` in `flags`, the object
-id in `dirfd`, and a NULL path. The object is looked up in the caller's
-IPC namespace; an unknown id is `EINVAL` and a removed one `EIDRM`.
+id in `dirfd`, and a NULL path. [*sysvipc.sd-addressing] The object is looked up in the caller's
+IPC namespace; an unknown id is `EINVAL` and a removed one `EIDRM`. [*sysvipc.sd-lookup-errors]
 Reading needs the rights the requested `SECURITY_INFORMATION` implies
 (`READ_CONTROL` for owner, group and DACL; `ACCESS_SYSTEM_SECURITY`
 for the SACL), changing needs `WRITE_DAC` or `WRITE_OWNER` as for any
@@ -83,7 +83,7 @@ component by component, as for a process descriptor (§3.3.3).
 The key namespace is claim-on-create: whoever calls `*get` with
 `IPC_CREAT` on a free key owns the object, and nothing prevents a
 process from claiming a key another program expected to create — the
-same shape as the abstract socket namespace and `/dev/shm`. The
+same shape as the abstract socket namespace and `/dev/shm`. [*sysvipc.key-claim-on-create] The
 descriptor protects the object once it exists; it cannot protect the
 name. A program that needs a specific key uses `IPC_EXCL` and treats a
 failure as a signal, and a program that needs identity-carrying

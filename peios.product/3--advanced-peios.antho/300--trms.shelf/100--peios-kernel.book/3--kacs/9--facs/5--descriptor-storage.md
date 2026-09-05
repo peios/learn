@@ -3,7 +3,7 @@ title: File Descriptor Storage
 description: Where a file's descriptor lives and why raw xattr access is denied in all three directions — plus caching, mount policy classes and boot artifacts.
 ---
 
-## Xattr protection
+## Xattr protection [*facs.storage.xattr-protection]
 
 FACS intercepts every raw xattr operation on the canonical descriptor
 xattr — `security.peios.sd`, or `system.ntfs_security` on NTFS — and
@@ -12,7 +12,7 @@ denies all three directions.
 **Writes** are denied: all modification goes through the set-security
 interface. **Removal** is denied: a descriptor is never detached from
 a file. And **reads** are denied, which is the least obvious of the
-three and the most important. The raw xattr holds the entire
+three and the most important. [*facs.storage.xattr-read-denied] The raw xattr holds the entire
 descriptor including the SACL, so allowing a read under
 `READ_CONTROL` alone would leak SACL content that properly requires
 `ACCESS_SYSTEM_SECURITY`. All reads go through `kacs_get_sd`, which
@@ -23,11 +23,11 @@ distinguishes the two.
 A validated, parsed descriptor object is cached in the inode's LSM
 blob, holding immutable self-relative bytes together with a
 prevalidated component layout — enough for AccessCheck readers never
-to reparse untrusted storage bytes.
+to reparse untrusted storage bytes. [*facs.storage.cache-parsed-in-inode-blob]
 
 **Readers** on the AccessCheck path use the RCU-published pointer.
 Once a current entry exists, a reader does not take the inode mutex
-merely to run AccessCheck. It either completes the evaluation inside
+merely to run AccessCheck. [*facs.storage.readers-rcu-no-mutex] It either completes the evaluation inside
 an RCU read-side critical section, or pins the object with a refcount
 while still under RCU and drops the RCU lock before doing anything
 that can allocate, sleep or emit an audit event. A pin is acquired
@@ -35,31 +35,31 @@ with a non-zero refcount check and dropped afterwards.
 
 **Writers** allocate a new object, swap the pointer atomically, and
 free the old one after a grace period and after reader pins have
-drained. No partial read is possible.
+drained. [*facs.storage.writers-rcu-swap] No partial read is possible.
 
 **Population** is lazy, on first access. The xattr is read through an
 internal kernel path that bypasses the read-denial hook, and the
 parsed result is installed by compare-and-swap; a thread that loses
-the race frees its own copy.
+the race frees its own copy. [*facs.storage.population-lazy-cas]
 
 **Eviction** frees the cached descriptor when the inode is evicted,
 through an RCU-safe callback with the same pin draining, so in-flight
-permission checks complete before the object goes away.
+permission checks complete before the object goes away. [*facs.storage.eviction-rcu-safe]
 
 **Invalidation** happens on write, but not atomically with it. The
 set-security path deliberately releases the inode security lock across
 the xattr write and re-acquires it afterwards to publish the new
 parsed object, because holding it across the write would invert the
-`i_rwsem` ordering the access path requires. Two concurrent
+`i_rwsem` ordering the access path requires. [*facs.storage.setsd-releases-lock-across-write] Two concurrent
 set-security calls on one inode are therefore last-writer-wins rather
 than serialised end to end, and there is a window in which the xattr
-and the cache disagree. Readers are never blocked, and no reader sees
+and the cache disagree. [*facs.storage.concurrent-setsd-last-writer-wins] Readers are never blocked, and no reader sees
 a partially written object — the exposure is which of two racing
 writes lands, not a torn state.
 
 Invalidation is also driven from the **other end**, by the write
 itself: any canonical descriptor xattr landing on an inode drops that
-inode's cached entry, whoever wrote it and by whatever path. The
+inode's cached entry, whoever wrote it and by whatever path. [*facs.storage.xattr-write-drops-cache] The
 set-security path above then publishes the new parsed object as usual;
 for anything else, the next reader re-reads the authoritative bytes.
 
@@ -67,7 +67,7 @@ This is keyed on the xattr rather than on the writer, because the
 writer is not always the one holding the cache. A descriptor set
 through a stacking filesystem reaches **two** inodes — the one the
 caller named, and the real one beneath, which the write is re-entered
-on. Only the first is refreshed by the set-security path. The second
+on. [*facs.storage.stacking-two-inodes] Only the first is refreshed by the set-security path. The second
 is not merely cold: a stacking filesystem resolves and caches
 descriptors during its own metadata work on an inode it has just
 created, so it can hold an entry from the moment the object existed
@@ -83,27 +83,27 @@ synthesise-class mounts, an optional mount-level default template.
 The default classifier maps from the superblock's filesystem magic.
 `PROC_SUPER_MAGIC` and `SYSFS_MAGIC` are **unmanaged**: these expose
 kernel state through inode-shaped handles with no on-disk identity and
-no descriptor to consult. `NULL_FS_MAGIC` is unmanaged too — nullfs is
+no descriptor to consult. [*facs.storage.proc-sysfs-unmanaged] `NULL_FS_MAGIC` is unmanaged too — nullfs is
 the immutable, permanently empty filesystem the kernel mounts as the
 mount-namespace root, with the mutable rootfs mounted on top of it. It
 declares no xattr support at all, so it can never carry a descriptor,
 and its single root inode is immutable and childless: nothing to stamp
-and nothing to protect.
+and nothing to protect. [*facs.storage.nullfs-unmanaged]
 
 `STRATAFS_SUPER_MAGIC` is fixed at **`facs_deny_missing`** for the
 superblock's lifetime, because StrataFS delegates every check to
 current provider objects and must never synthesise a descriptor for
-its merged namespace. An attempt to change it fails with
+its merged namespace. [*facs.storage.stratafs-fixed-deny-missing] An attempt to change it fails with
 `EOPNOTSUPP`.
 
 `RAMFS_MAGIC`, `NFS_SUPER_MAGIC`, `MSDOS_SUPER_MAGIC`,
 `EXFAT_SUPER_MAGIC`, `ISOFS_SUPER_MAGIC` and `CGROUP2_SUPER_MAGIC` are
 **`facs_synthesize_ephemeral`** — either no persistent backing at all,
-or storage with no native descriptor slot.
+or storage with no native descriptor slot. [*facs.storage.ephemeral-magics]
 
 Everything else, including `TMPFS_MAGIC`, `SQUASHFS_MAGIC`,
 `EXT4_SUPER_MAGIC` and `BTRFS_SUPER_MAGIC`, defaults to
-**`facs_deny_missing`**. These can all carry the descriptor xattr
+**`facs_deny_missing`**. [*facs.storage.default-deny-missing] These can all carry the descriptor xattr
 natively and are expected to on every inode that participates in
 access checks.
 
@@ -111,7 +111,7 @@ access checks.
 instances established before any userspace runs. The latter are not
 exempt from the default; they are handled by seeding.
 
-## Kernel-internal mounts
+## Kernel-internal mounts [*facs.storage.kernel-internal-mounts]
 
 Two filesystems are mounted by the kernel before any userspace process
 exists and before anything can call `kacs_set_mount_policy` or
@@ -128,20 +128,20 @@ they become reachable. To make the class viable the kernel seeds one.
 
 The rootfs root is seeded inside `init_mount_tree`, immediately after
 `vfs_kern_mount` returns and before the mount is published into
-`init_mnt_ns`, with the inode's `i_rwsem` held. The devtmpfs root is
+`init_mnt_ns`, with the inode's `i_rwsem` held. [*facs.storage.rootfs-seed-timing] The devtmpfs root is
 seeded inside `devtmpfs_init`, after `vfs_kern_mount` and before
-`kdevtmpfs` starts, likewise under `i_rwsem`. The nullfs root is not
-seeded — it is unmanaged, empty, and incapable of xattr storage.
+`kdevtmpfs` starts, likewise under `i_rwsem`. [*facs.storage.devtmpfs-seed-timing] The nullfs root is not
+seeded — it is unmanaged, empty, and incapable of xattr storage. [*facs.storage.nullfs-not-seeded]
 
 The seeded descriptor is byte-for-byte identical in both places: owner
 and group SYSTEM (`S-1-5-18`), a DACL of one `ACCESS_ALLOWED` ACE
 granting `GENERIC_ALL` to SYSTEM flagged
 `OBJECT_INHERIT_ACE | CONTAINER_INHERIT_ACE` so that inheritance
 derives a child descriptor for every inode created on the mount
-afterwards, and no SACL.
+afterwards, and no SACL. [*facs.storage.seeded-descriptor-contents]
 
 The writes go through the kernel-internal xattr path, bypassing both
-the FACS denial hooks and the LSM setxattr permission hook. They
+the FACS denial hooks and the LSM setxattr permission hook. [*facs.storage.seed-writes-bypass-hooks] They
 consult no token — at the point either runs there may be no meaningful
 subject — and the seeded descriptor is the sole authority for the
 mount until trusted userspace replaces it. They depend on nothing
@@ -149,9 +149,9 @@ beyond the LSM scaffold that allocates inode and superblock blobs.
 
 These are not exempt from later management: trusted userspace can
 overwrite the per-inode descriptor or change the superblock's class
-once it holds the privileges.
+once it holds the privileges. [*facs.storage.seeded-mounts-still-manageable]
 
-## Boot artifacts
+## Boot artifacts [*facs.storage.boot-artifacts-not-seeded]
 
 A filesystem shipped as a boot artifact — a squashfs concatenated into
 the initrd, a vendor squashfs delivered as a package, a flashed
@@ -169,36 +169,36 @@ every missing descriptor on a `facs_deny_missing` mount as a
 corruption indicator and denies. The operator path is to rebuild the
 artifact, or to adopt the superblock under a synthesise class.
 
-## Administration
+## Administration [*facs.storage.set-mount-policy]
 
 Trusted userspace adopts a mounted filesystem by calling
 `kacs_set_mount_policy` on a descriptor naming any object on the
 target superblock; `O_PATH` descriptors are valid targets. The change
 applies to the superblock, not the pathname used to reach it.
 
-The call requires enabled `SeTcbPrivilege` and marks it used. The
+The call requires enabled `SeTcbPrivilege` and marks it used. [*facs.storage.set-mount-policy-privilege] The
 public ABI accepts only the three managed classes; `unmanaged`,
 unknown values, nonzero reserved flags and malformed arguments all
-fail closed.
+fail closed. [*facs.storage.set-mount-policy-input-validation]
 
-The optional template is accepted only with a synthesise class. It is
+The optional template is accepted only with a synthesise class. [*facs.storage.template-requires-synthesise] It is
 a complete self-relative descriptor rather than a subset, passes
-structural validation, and is at most 65535 bytes. A null pointer with
-zero length clears it. Setting `facs_deny_missing` clears it and
-rejects non-empty template input. Pointer and length mismatches and
+structural validation, and is at most 65535 bytes. [*facs.storage.template-validation] A null pointer with
+zero length clears it. [*facs.storage.template-null-clears] Setting `facs_deny_missing` clears it and
+rejects non-empty template input. [*facs.storage.deny-missing-clears-template] Pointer and length mismatches and
 invalid bytes fail before any state changes.
 
 Policy changes are **lazy**. They do not walk the filesystem and do
-not stamp anything. The superblock carries a monotonic generation
+not stamp anything. [*facs.storage.policy-change-lazy] The superblock carries a monotonic generation
 counter, incremented on every successful policy or template
-replacement. Missing-descriptor, ephemeral-synthetic and
+replacement. [*facs.storage.generation-counter] Missing-descriptor, ephemeral-synthetic and
 not-yet-written-back persistent-synthetic cache entries record the
 generation they came from and are discarded and repopulated when it
-changes. Xattr-backed and corrupt-descriptor caches are not made valid
+changes. [*facs.storage.generation-discards-synthetic] Xattr-backed and corrupt-descriptor caches are not made valid
 by a policy change, and open file descriptions keep their immutable
-masks.
+masks. [*facs.storage.policy-change-keeps-xattr-caches]
 
-## Missing descriptors
+## Missing descriptors [*facs.storage.deny-missing-denies]
 
 Under **`facs_deny_missing`**, no descriptor means deny. Two
 exceptions keep the repair path open. `SeChangeNotifyPrivilege`
@@ -207,37 +207,37 @@ descriptor, though not explicit `chdir()`, `chroot()` or `fchdir()`
 use-time checks. And `O_PATH` opens bypass the open hook entirely, so
 a file with a missing descriptor can still be acquired as an `O_PATH`
 reference — which is exactly the repair route: `open(path, O_PATH)`
-then `kacs_set_sd` with `AT_EMPTY_PATH` under `SeRestorePrivilege`.
+then `kacs_set_sd` with `AT_EMPTY_PATH` under `SeRestorePrivilege`. [*facs.storage.missing-repair-route]
 
 Under the **synthesise classes**, a missing descriptor is generated
-from two sources in order. First, **inheritance from the parent**: if
+from two sources in order. [*facs.storage.synthesis-order] First, **inheritance from the parent**: if
 the parent has one, the inheritance algorithm runs as though a new
 file were being created. Otherwise the **mount-level template**,
 applied where there is no parent descriptor — typically only at the
 mount root. With no template configured, the fallback grants
 `GENERIC_ALL` to SYSTEM and `BUILTIN\Administrators` and
 `GENERIC_READ | GENERIC_EXECUTE` to Everyone, owned by SYSTEM with
-SYSTEM as group.
+SYSTEM as group. [*facs.storage.synthesis-fallback-descriptor]
 
 Because these files already exist, the accessor is not their creator.
 Where inheritance needs creator inputs — owner, primary group, default
 DACL — a synthetic system-policy creator supplies them: the template's
 owner, group and DACL if one exists, the fallback's otherwise. **The
 accessor's token never affects the synthesised descriptor**, and the
-synthesis path takes no subject token at all.
+synthesis path takes no subject token at all. [*facs.storage.synthesis-ignores-accessor]
 
 Inheritance is recursive — a parent whose own descriptor is missing is
 synthesised first, walking toward the mount root where the template
-terminates it. The walk is bounded at 32 ancestor levels; a target
+terminates it. [*facs.storage.synthesis-recursive] The walk is bounded at 32 ancestor levels; a target
 nested deeper than that below the nearest resolvable ancestor fails
-closed with `EACCES` rather than synthesising.
+closed with `EACCES` rather than synthesising. [*facs.storage.synthesis-depth-limit]
 
 An **ephemeral** synthesis is cached in the inode blob only and never
-written back, leaving the original filesystem unmodified. A
+written back, leaving the original filesystem unmodified. [*facs.storage.ephemeral-not-written-back] A
 **persistent** one is additionally written to the xattr so the medium
-acquires durable descriptors — but never inline.
+acquires durable descriptors — but never inline. [*facs.storage.persistent-written-back]
 
-## Deferred write-back
+## Deferred write-back [*facs.storage.write-back-deferred]
 
 Synthesis runs holding the FACS inode lock, and writing the xattr
 takes the inode's `i_rwsem`. Doing that inline would acquire `i_rwsem`
@@ -247,12 +247,12 @@ operation whose VFS caller already holds `i_rwsem`. Write-back
 therefore runs with no FACS or VFS lock held.
 
 Synthesis caches the descriptor immediately and marks the entry
-pending. The access decision is correct from that cached value the
+pending. [*facs.storage.synthesis-marks-pending] The access decision is correct from that cached value the
 instant synthesis completes — correctness never depends on the xattr
 reaching disk. The write-back runs later from a task-work callback
 firing as the triggering syscall returns to userspace, so a persistent
 descriptor is normally on disk by the time the operation that first
-observed it missing returns.
+observed it missing returns. [*facs.storage.write-back-task-work]
 
 A pending entry is generation-tagged exactly like an ephemeral one, so
 a policy or template change before the write-back discards it and
@@ -264,18 +264,18 @@ the on-disk xattr is a cache of a recomputable value, not unique
 state. If it does not happen, because the entry was evicted or the
 task exited first, the identical descriptor is re-synthesised on next
 access and retried. A failed or skipped write-back never fails the
-operation that triggered synthesis. Kernel threads, and a failure to
+operation that triggered synthesis. [*facs.storage.write-back-best-effort] Kernel threads, and a failure to
 queue the callback, fall back to re-synthesis the same way.
 
 Once written, the next cache miss reads it back as an ordinary
 xattr-backed descriptor: durable, no longer generation-tagged, and
-never synthesised again.
+never synthesised again. [*facs.storage.written-back-becomes-ordinary]
 
 An ancestor synthesised only to supply inheritance inputs for a
 descendant is itself pending, and persists under the same rules when
-it is next accessed in its own right.
+it is next accessed in its own right. [*facs.storage.ancestor-also-persists]
 
-## Corrupt descriptors
+## Corrupt descriptors [*facs.storage.corrupt-fails-closed]
 
 A descriptor xattr that exists but fails structural validation is
 corrupt, and the policy is fail-closed: deny all access, do not call
@@ -283,13 +283,13 @@ AccessCheck, and never treat a truncated DACL as an empty one.
 
 Every encounter emits an audit event, fired exactly once per inode per
 cache population rather than per access, so a hot corrupt inode does
-not flood the log.
+not flood the log. [*facs.storage.corrupt-audit-once-per-population]
 
 Recovery is a process holding `SeRestorePrivilege` calling
 set-security to overwrite it. Offline repair tools can also rewrite
 xattrs directly on an unmounted filesystem.
 
-## NFS client mounts
+## NFS client mounts [*facs.storage.nfs-dual-authority]
 
 NFS is the one managed class where the sole-authority guarantee does
 not hold. The server enforces its own access control independently:

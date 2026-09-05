@@ -5,7 +5,7 @@ description: MIC restricts what the DACL is allowed to grant along a vertical tr
 
 MIC is a mandatory constraint that restricts which rights the DACL is
 allowed to grant, along a vertical trust hierarchy. It is evaluated
-**before** the DACL walk, in the pre-SACL phase.
+**before** the DACL walk, in the pre-SACL phase. [*check.mic.before-dacl]
 
 Every token carries an integrity level, and every object may carry a
 mandatory label — a `SYSTEM_MANDATORY_LABEL_ACE` in its SACL. MIC
@@ -15,27 +15,27 @@ whole categories of access whatever the DACL says.
 The default is **no-write-up**. A lower-integrity process can read and
 execute a higher-integrity object but cannot write to it, and the
 object's label may additionally block reads or execution for callers
-beneath it.
+beneath it. [*check.mic.default-no-write-up]
 
 An object with no mandatory label ACE in its SACL — or no SACL at all
 — is treated as Medium integrity with no-write-up, so Low and
-Untrusted processes cannot write to unlabelled objects.
+Untrusted processes cannot write to unlabelled objects. [*check.mic.unlabelled-is-medium]
 
 A caller whose level is greater than or equal to the object's label
 **dominates** it, and MIC pre-decides nothing: the DACL handles
-authorization normally.
+authorization normally. [*check.mic.dominant-no-effect]
 
 ## What MIC does and does not touch
 
 MIC constrains what the DACL can grant. It does not revoke what
 privileges have already granted, because it mutates only `decided` and
-never touches `granted` or `privilege_granted`.
+never touches `granted` or `privilege_granted`. [*check.mic.never-revokes-privileges]
 
 `ACCESS_SYSTEM_SECURITY` is outside its reach for a structural reason:
 the bits MIC can decide are bounded by
 `MapGenericBits(GENERIC_ALL, mapping)`, which does not include it. The
 right is privilege-granted rather than DACL-granted, so MIC never
-blocks it. PIP is stricter and does revoke it for non-dominant callers
+blocks it. [*check.mic.access-system-security-untouched] PIP is stricter and does revoke it for non-dominant callers
 — explicitly ORing it into the set of bits it can take away — which is
 the mechanism by which objects stay protected even from
 administrators.
@@ -43,15 +43,15 @@ administrators.
 `SeRelabelPrivilege` has one specific interaction: it lets the DACL
 grant `WRITE_OWNER` even when an integrity mismatch would otherwise
 block it, so a privileged administrator can take ownership of a
-higher-integrity object as the first step in modifying it. The bit
+higher-integrity object as the first step in modifying it. [*check.mic.relabel-allows-write-owner] The bit
 granted this way is recorded under its own provenance and is
 deliberately **not** part of `privilege_granted`, so it is not
 restored after the restricted merge and is not preserved by the CAAP
-error escape hatch.
+error escape hatch. [*check.mic.relabel-not-privilege-granted]
 
 Enforcement is gated on the token's `mandatory_policy`: with
 `NO_WRITE_UP` set — the default — the rule applies, and with it clear
-MIC is effectively disabled for that token. The field is fixed at
+MIC is effectively disabled for that token. [*check.mic.mandatory-policy-gate] The field is fixed at
 creation (§3.2.2), which is what makes MIC a boundary rather than a
 suggestion.
 
@@ -59,11 +59,11 @@ suggestion.
 
 An object's SACL may carry more than one mandatory label ACE. Only the
 first non-inherit-only one is used; inherit-only labels do not apply
-to the object carrying them.
+to the object carrying them. [*check.mic.first-non-inherit-only-label]
 
 The SID in a mandatory label ACE has the Mandatory Label authority
 (`S-1-16`) and exactly one sub-authority, and that sub-authority value
-*is* the integrity level, compared as an unsigned integer. Any
+*is* the integrity level, compared as an unsigned integer. [*check.mic.label-sid-shape] Any
 `S-1-16-X` is therefore valid.
 
 | SID | Level | Name |
@@ -77,25 +77,25 @@ The SID in a mandatory label ACE has the Mandatory Label authority
 Peios tooling and authd use these five, but intermediate values such
 as `S-1-16-2048` or `S-1-16-8448` are valid and compared numerically,
 which is what allows Windows-originated descriptors carrying
-non-standard levels to be evaluated without translation.
+non-standard levels to be evaluated without translation. [*check.mic.nonstandard-levels-accepted]
 
 A label ACE whose SID falls outside the `S-1-16` authority — wrong
 identifier authority, or the wrong sub-authority count — is
 malformed, and so is one that is not a plain single-SID ACE. Either
 causes AccessCheck to reject the whole descriptor with an error rather
-than ignore the label.
+than ignore the label. [*check.mic.malformed-label-rejects-descriptor]
 
 ## Policy bits
 
 | Bit | Value | Meaning |
 |---|---|---|
-| `SYSTEM_MANDATORY_LABEL_NO_READ_UP` | 0x00000001 | Non-dominant callers receive no read-mapped rights from the DACL. |
-| `SYSTEM_MANDATORY_LABEL_NO_WRITE_UP` | 0x00000002 | Non-dominant callers receive no write-mapped rights from the DACL. |
-| `SYSTEM_MANDATORY_LABEL_NO_EXECUTE_UP` | 0x00000004 | Non-dominant callers receive no execute-mapped rights from the DACL. |
+| `SYSTEM_MANDATORY_LABEL_NO_READ_UP` | 0x00000001 | Non-dominant callers receive no read-mapped rights from the DACL. [*check.mic.policy.no-read-up] |
+| `SYSTEM_MANDATORY_LABEL_NO_WRITE_UP` | 0x00000002 | Non-dominant callers receive no write-mapped rights from the DACL. [*check.mic.policy.no-write-up] |
+| `SYSTEM_MANDATORY_LABEL_NO_EXECUTE_UP` | 0x00000004 | Non-dominant callers receive no execute-mapped rights from the DACL. [*check.mic.policy.no-execute-up] |
 
-Unknown bits in a label mask are ignored.
+Unknown bits in a label mask are ignored. [*check.mic.unknown-policy-bits-ignored]
 
-## The algorithm
+## The algorithm [*check.mic.algorithm]
 
 ```
 EnforceMIC(ace, token, mapping, &decided):

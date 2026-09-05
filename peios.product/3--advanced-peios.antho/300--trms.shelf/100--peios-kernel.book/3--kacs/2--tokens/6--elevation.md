@@ -12,7 +12,7 @@ administrative groups set to deny-only and dangerous privileges
 stripped, produced from the elevated token by FilterToken.
 
 Both tokens belong to the same LogonSession, are both primary tokens,
-and carry the same user SID. The filtered token is installed as the
+and carry the same user SID. [*token.link.pair-invariants] The filtered token is installed as the
 LogonSession's default; the elevated token exists but is not directly
 reachable by unprivileged processes.
 
@@ -21,7 +21,7 @@ A token never assigned a linked-pair role has
 object to Full or Limited, that role is sticky on that object. If the
 pair is later replaced or destroyed the token has no active partner
 and `KACS_IOC_GET_LINKED_TOKEN` returns an error, but the token goes
-on reporting its last assigned elevation type.
+on reporting its last assigned elevation type. [*token.link.stale-partner-errors-role-persists]
 
 ## What KACS does
 
@@ -36,11 +36,11 @@ objects.
 Establishing a pair is a TCB operation: the caller holds
 `SeTcbPrivilege` on its **primary** token — an impersonating thread's
 effective token does not satisfy it — and holds `TOKEN_DUPLICATE` on
-*both* of the token handles being linked. The two handles have to name
+*both* of the token handles being linked. [*token.link.gates] The two handles have to name
 distinct token objects, and both have to belong to the LogonSession
-named in the request, which itself has to be published. The ioctl
+named in the request, which itself has to be published. [*token.link.handles-distinct-same-published-session] The ioctl
 ignores the handle it was issued on entirely; only the two named
-handles matter.
+handles matter. [*token.link.issuing-handle-ignored]
 
 **Elevation type classification** puts `elevation_type` on each token
 so a consumer can tell which side it is holding.
@@ -51,10 +51,10 @@ Identification impersonation level. The clone follows DuplicateToken
 semantics — a new token object, a new `token_id`, `modified_id`
 initialised to it, a fresh default descriptor — except that it
 preserves the partner's `elevation_type`, and it is always returned
-through a `TOKEN_QUERY`-only handle. The caller can inspect the
+through a `TOKEN_QUERY`-only handle. [*token.link.query-returns-identification-clone] The caller can inspect the
 elevated token but cannot use it for an access decision. A caller
 holding `SeTcbPrivilege` receives a full handle to the actual linked
-token instead.
+token instead. [*token.link.tcb-gets-real-handle]
 
 Returning a copy through `TOKEN_QUERY` is a deliberate exception to
 the normal access-right model, where `TOKEN_DUPLICATE` would be
@@ -71,7 +71,7 @@ the pair and restricts unprivileged access to it.
 
 Beyond enforcing the LogonSession, token-type and same-user
 invariants, KACS does not verify that the filtered token really is a
-FilterToken-derived reduction of the elevated one. That correspondence
+FilterToken-derived reduction of the elevated one. [*token.link.no-reduction-check] That correspondence
 is authd's to get right.
 
 ## Lifecycle
@@ -81,7 +81,7 @@ destroyed while any token fd, credential, pair slot, or other
 reference keeps one of its token objects live. When the last external
 reference is released and only the linked-pair's own references
 remain, KACS destroys the LogonSession, removes the linkage, and drops
-the pair's references to both tokens. After that cleanup no token
+the pair's references to both tokens. [*token.link.pair-released-with-last-external-ref] After that cleanup no token
 object from the session remains live purely because it was linked.
 
 Stale-role tokens can exist before final destruction — for instance
@@ -89,7 +89,7 @@ when `KACS_IOC_LINK_TOKENS` replaces a LogonSession's active pair
 while an old token object is still held by an fd or credential. Fork
 produces them too: the deep copy a child receives preserves the
 parent's elevation type, so a forked child can hold a Full or Limited
-token that was never linked to anything. Once a
+token that was never linked to anything. [*token.link.fork-preserves-elevation-type] Once a
 token is no longer the active member of the pair, querying its linked
 token returns an error, because the partner relationship no longer
 exists for it. Such survivors keep their sticky Full or Limited

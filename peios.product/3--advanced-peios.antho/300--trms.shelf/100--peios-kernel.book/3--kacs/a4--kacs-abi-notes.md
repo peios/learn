@@ -15,7 +15,7 @@ overwrites §3.A wholesale on every run, so anything written there is
 lost the next time the ABI changes — which is exactly what happened to
 two sections of this one before they were moved here.
 
-## ACE types with no evaluator behaviour
+## ACE types with no evaluator behaviour [*abi-notes.opaque-ace-types]
 
 Two of the ACE type constants in §3.A have a constant and nothing
 behind it. The ACE parser in `kacs-core` dispatches on 0x00–0x03,
@@ -27,19 +27,19 @@ can put a name to the byte. libpeios' SDDL codec does, printing 0x15 as
 `OTHER(0x04)` and `OTHER(0x15)`. PCDS §5.4 records the same state
 normatively.
 
-## Token query payloads
+## Token query payloads [*abi-notes.token-query-payloads]
 
 The class numbers come from the header and are tabulated in §3.A;
 these are the payloads each one returns. Sizes are in bytes; a variable-length payload uses
-the shapes below. An invalid class returns `EINVAL`.
+the shapes below. An invalid class returns `EINVAL`. [*abi-notes.token-query-invalid-class]
 
 Two repeating shapes appear throughout. A **SID array** is
 `[count:u32le]` followed by `count` entries of
 `[sid_len:u32le][sid_bytes][attributes:u32le]`, and reports a count of
-zero when the array is empty rather than an empty payload. A **claims
+zero when the array is empty rather than an empty payload. [*abi-notes.sid-array-shape] A **claims
 array** is `[count:u32le]` followed by `count` entries of
-`[entry_len:u32le][entry_bytes]`. A bare SID is the SID bytes alone,
-and an absent optional SID or ACL is zero bytes.
+`[entry_len:u32le][entry_bytes]`. [*abi-notes.claims-array-shape] A bare SID is the SID bytes alone,
+and an absent optional SID or ACL is zero bytes. [*abi-notes.absent-optional-is-zero-bytes]
 
 | Class | Payload |
 |---|---|
@@ -48,7 +48,7 @@ and an absent optional SID or ACL is zero bytes.
 | `PRIVILEGES` | 32 bytes: present, enabled, enabled-by-default and used, four `u64` in that order. |
 | `TYPE` | `u32`, 4 bytes. |
 | `INTEGRITY_LEVEL` | The mandatory-label SID `S-1-16-<level>`, 12 bytes. |
-| `OWNER` | Bare SID, resolved through the owner index: 0 is the user SID, N is `groups[N-1]`. |
+| `OWNER` | Bare SID, resolved through the owner index: 0 is the user SID, N is `groups[N-1]`. [*abi-notes.owner-index-resolution] |
 | `PRIMARY_GROUP` | Bare SID, resolved the same way. |
 | `INTERACTIVITY_SCOPE` | `u32`, 4 bytes. |
 | `RESTRICTED_SIDS` | SID array; count 0 on an unrestricted token. |
@@ -68,11 +68,11 @@ and an absent optional SID or ACL is zero bytes.
 | `DEVICE_CLAIMS` | Claims array. |
 | `PROJECTED_SUPPLEMENTARY_GIDS` | `[count:u32le]` followed by `count` `u32` GIDs. |
 
-Nine token fields have no query class at all: `created_at`,
+Several token fields have no query class at all: `created_at`,
 `token_guid`, `audit_policy`, `write_restricted`, `user_deny_only`,
 `isolation_boundary`, `confinement_exempt`, the projected UID and GID
 — only the supplementary GIDs are reportable —
-`restricted_device_groups`, and the LCS registry credentials.
+`restricted_device_groups`, and the LCS registry credentials. [*abi-notes.fields-without-query-class]
 
 ## Names that differ from the specifications
 
@@ -98,7 +98,7 @@ have. This table maps those onto the headers.
 The PIP tiers have no public names at all. The Protected type (512)
 and the `PeiosTcb` trust level (8192) exist only as kernel-private
 constants, and nothing in `uapi/pkm/` defines None, Protected or
-Isolated. A program reasoning about tiers compares the numbers
+Isolated. [*abi-notes.pip-tiers-kernel-private] A program reasoning about tiers compares the numbers
 (§3.7).
 
 ## Socket options and retired syscall numbers
@@ -109,10 +109,10 @@ level `SOL_KACS` (4096), its options `KACS_SO_PEER_TOKEN`,
 `KACS_SO_IMPERSONATION_LEVEL`, `KACS_SO_PASS_TOKEN` and
 `KACS_SO_RESTAMP`, and the ancillary message type `KACS_SCM_TOKEN`,
 which travels at
-`cmsg_level SOL_KACS` (§3.A). The kernel dispatches the option level
+`cmsg_level SOL_KACS` (§3.A). [*abi-notes.scm-token-cmsg-level] The kernel dispatches the option level
 in `net/socket.c` ahead of the protocol's own handlers (patch
 `net/socket-sol-kacs-dispatch.patch`), so the options reach KACS on
-every socket family and KACS decides which it supports. The ancillary
+every socket family and KACS decides which it supports. [*abi-notes.sol-kacs-dispatch-all-families] The ancillary
 message is carried per skb on AF_UNIX: `net/scm-kacs-token.patch`
 gives `struct scm_cookie` a counted token reference and parses
 `SOL_KACS` control messages; `net/af_unix-kacs-token.patch` carries
@@ -125,14 +125,14 @@ System V IPC objects carry descriptors of their own (§3.11); their
 rights are `uapi/pkm/ipc.h`, and the same header defines the
 `KACS_SD_AT_SYSV_*` flags that let `kacs_get_sd` and `kacs_set_sd`
 address such an object by kind and id (`dirfd` carries the id, the
-path is NULL). The lookup is `ipc_lsm_with_object`, exported from
+path is NULL). [*abi-notes.sysv-sd-at-addressing] The lookup is `ipc_lsm_with_object`, exported from
 `ipc/util.c` by `ipc/util-lsm-with-object.patch`; the hooks themselves
 are the LSM's own IPC hooks and need no patch.
 
 Three syscall numbers are retired and left as permanent holes:
 1010 (`kacs_open_peer_token`), 1011 (`kacs_impersonate_peer`) and
 1013 (`kacs_set_impersonation_level`). A binary built against them
-gets `ENOSYS`. The first became `getsockopt(SOL_KACS,
+gets `ENOSYS`. [*abi-notes.retired-syscalls-enosys] The first became `getsockopt(SOL_KACS,
 KACS_SO_PEER_TOKEN)`, the third `setsockopt(SOL_KACS,
 KACS_SO_IMPERSONATION_LEVEL)`, and the second was a fusion of the
 first with `KACS_IOC_IMPERSONATE` that now lives in libpeios as
@@ -155,14 +155,16 @@ reason, operation and state codes intended for tooling.
 
 `CONFIG_SECURITY_PKM=y` and `CONFIG_RUST=y` are required, as are
 `CONFIG_STRICT_DEVMEM=y` and `CONFIG_MODULE_SIG_FORCE=y` -- the last
-two enforced at initialisation rather than only at build (§3.7).
+two enforced at initialisation rather than only at build (§3.7). [*abi-notes.build.runtime-enforced-configs]
 `CONFIG_SECURITY_SELINUX`, `_APPARMOR`, `_SMACK` and `_TOMOYO` are
 refused by Kconfig dependency; `CONFIG_BPF_LSM` is refused only at
 runtime, so a kernel enabling both configures and builds and then
-fails to initialise. `CONFIG_LSM` is never parsed.
+fails to initialise. [*abi-notes.build.bpf-lsm-refused-at-runtime] `CONFIG_LSM` is never parsed. [*abi-notes.build.config-lsm-never-parsed]
 
 Two further symbols gate large bodies of code:
-`CONFIG_SECURITY_PKM_KUNIT`, which compiles in the test harness and,
-in the signing path, a different and publicly known verification key
-(§3.6); and `CONFIG_STRATAFS_FS`, without which the copy-up API of
-§3.9.7 is inert.
+
+- `CONFIG_SECURITY_PKM_KUNIT`, which compiles in the test harness and,
+  in the signing path, a different and publicly known verification key
+  (§3.6). [*abi-notes.build.kunit-test-key]
+- `CONFIG_STRATAFS_FS`, without which the copy-up API of §3.9.7 is
+  inert. [*abi-notes.build.stratafs-gates-copy-up]

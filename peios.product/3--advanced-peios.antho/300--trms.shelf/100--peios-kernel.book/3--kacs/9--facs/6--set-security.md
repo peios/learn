@@ -10,47 +10,47 @@ values.
 
 | Flag | Component | Required right |
 |---|---|---|
-| `OWNER_SECURITY_INFORMATION` | Owner SID | `WRITE_OWNER` |
+| `OWNER_SECURITY_INFORMATION` | Owner SID | `WRITE_OWNER` [*facs.set-sd.owner-requires-write-owner] |
 | `GROUP_SECURITY_INFORMATION` | Group SID | `WRITE_OWNER` |
-| `DACL_SECURITY_INFORMATION` | Discretionary ACL | `WRITE_DAC` |
-| `SACL_SECURITY_INFORMATION` | System ACL | `ACCESS_SYSTEM_SECURITY` |
-| `LABEL_SECURITY_INFORMATION` | Mandatory integrity label | `WRITE_OWNER`, plus the integrity constraints below |
+| `DACL_SECURITY_INFORMATION` | Discretionary ACL | `WRITE_DAC` [*facs.set-sd.dacl-requires-write-dac] |
+| `SACL_SECURITY_INFORMATION` | System ACL | `ACCESS_SYSTEM_SECURITY` [*facs.set-sd.sacl-requires-access-system-security] |
+| `LABEL_SECURITY_INFORMATION` | Mandatory integrity label | `WRITE_OWNER`, plus the integrity constraints below [*facs.set-sd.label-requires-write-owner] |
 
 The blob is validated structurally — parseable, well-formed ACEs,
 valid SIDs, at most 65535 bytes — and then only the indicated
 components are merged into the existing descriptor. Unindicated
-components are preserved unchanged.
+components are preserved unchanged. [*facs.set-sd.merge-preserves-unindicated]
 
 The input is always one self-relative descriptor subset, never a raw
 SID or ACL fragment. `SACL_SECURITY_INFORMATION` and
 `LABEL_SECURITY_INFORMATION` cannot be combined in one call, because
 both target the SACL field with incompatible meanings; the pair fails
-with `EINVAL`.
+with `EINVAL`. [*facs.set-sd.sacl-label-exclusive]
 
 A `SACL_SECURITY_INFORMATION` write replaces the object's **entire**
-SACL. A `LABEL_SECURITY_INFORMATION` write interprets the input SACL
+SACL. [*facs.set-sd.sacl-write-replaces-all] A `LABEL_SECURITY_INFORMATION` write interprets the input SACL
 as the label subset only: no SACL component removes the explicit
 mandatory label and returns the object to the default unlabelled
 state; a present SACL contains exactly one non-inherit-only
 `SYSTEM_MANDATORY_LABEL_ACE` and nothing else; and the object's
-non-label SACL ACEs are preserved.
+non-label SACL ACEs are preserved. [*facs.set-sd.label-write-subset]
 
 After merging, the result still has a non-null owner — the group SID
-may be null — and a merge that would leave no owner fails.
+may be null — and a merge that would leave no owner fails. [*facs.set-sd.owner-must-remain]
 
 MIC and PIP apply to these checks. A low-integrity caller cannot
 modify a high-integrity file's descriptor even where the DACL grants
-`WRITE_OWNER`.
+`WRITE_OWNER`. [*facs.set-sd.mic-pip-apply]
 
-## Ownership
+## Ownership [*facs.set-sd.ownership]
 
 A new owner may be set only to the caller's own SID, or to a group SID
 on the token carrying `SE_GROUP_OWNER`. `SeTakeOwnershipPrivilege`
 allows setting ownership to the caller's own SID regardless of what
 the current descriptor says, and `SeRestorePrivilege` allows any
-arbitrary SID.
+arbitrary SID. [*facs.set-sd.take-ownership-and-restore]
 
-## Integrity labels
+## Integrity labels [*facs.set-sd.label-level-constraint]
 
 Without `SeRelabelPrivilege` a caller may set a label only at or below
 its own integrity level; with it, any level.
@@ -60,25 +60,25 @@ subset, and a label ACE embedded in a full SACL write. A SACL write
 whose ACL contains a mandatory label ACE raising integrity above the
 caller's level requires `SeRelabelPrivilege` exactly as the label path
 does, even though the SACL component itself is gated only by
-`ACCESS_SYSTEM_SECURITY`.
+`ACCESS_SYSTEM_SECURITY`. [*facs.set-sd.label-constraint-via-sacl]
 
 ## The SeRestorePrivilege bypass
 
 `SeRestorePrivilege` fires inside the AccessCheck pipeline, so it
 bypasses the check only where `kacs_set_sd` runs a **live** one: an
 `O_PATH` descriptor with `AT_EMPTY_PATH`, a pidfd, a token descriptor
-with `AT_EMPTY_PATH`, or a path. On those paths it grants every
+with `AT_EMPTY_PATH`, or a path. [*facs.set-sd.restore-bypass-live-only] On those paths it grants every
 requested right, `WRITE_OWNER`, `WRITE_DAC` and
 `ACCESS_SYSTEM_SECURITY` included.
 
 Called on an ordinary file descriptor the required rights are checked
 against the cached mask instead, no AccessCheck runs, and the
-privilege has no effect at all. A caller needing the bypass has to use
+privilege has no effect at all. [*facs.set-sd.restore-no-effect-on-fd] A caller needing the bypass has to use
 the `O_PATH` route — which is the mechanism behind backup restoration,
 administrative repair, and the missing-descriptor repair path
 (§3.9.5).
 
-## Mandatory resource attributes
+## Mandatory resource attributes [*facs.set-sd.mandatory-attribute-requires-tcb]
 
 When a caller modifies the SACL, the existing and new SACLs are
 compared for changes to `SYSTEM_RESOURCE_ATTRIBUTE_ACE` entries. An
@@ -91,8 +91,8 @@ rather than silently dropping the change.
 
 The updated descriptor is serialised to self-relative binary form and
 written to the xattr through an internal kernel path bypassing the
-denial hook, and the in-memory cache is updated. An audit event is
-emitted if the file's SACL carries a matching audit ACE.
+denial hook, and the in-memory cache is updated. [*facs.set-sd.write-bypasses-denial-hook] An audit event is
+emitted if the file's SACL carries a matching audit ACE. [*facs.set-sd.audit-on-matching-ace]
 
 The cache update is not atomic with the xattr write; §3.9.5 describes
 the lock ordering that forces this and the last-writer-wins window it

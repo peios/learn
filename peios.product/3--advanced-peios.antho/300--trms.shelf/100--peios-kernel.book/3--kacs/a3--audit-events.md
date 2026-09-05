@@ -3,7 +3,7 @@ title: Audit Event Schemas
 description: The audit records KACS emits through KMES — the event families, their shared payload records, and how they are delivered.
 ---
 
-KACS emits its audit records through KMES with origin class 2 (§2.2).
+KACS emits its audit records through KMES with origin class 2 (§2.2). [*audit-events.origin-class-two]
 Each event's payload is a msgpack map; the shared `subject` and
 `process` sub-maps are attached at emission time from the resolved
 call context rather than by the evaluation pipeline (§3.8.9).
@@ -17,41 +17,43 @@ canonical for them.
 
 | Event type | Emitted by |
 |---|---|
-| `access-audit` | The SACL walk, and token audit-policy forcing. |
-| `continuous-audit` | Enforcement points, per operation, against a handle's continuous audit mask. |
-| `privilege-use` | Privilege-use auditing, for the five AccessCheck-influencing privileges. |
-| `caap-policy-diagnostic` | A CAAP rule SACL error, or a staged-versus-effective mismatch. |
-| `logon-session-destroyed` | LogonSession teardown (§3.2.7). |
-| `corrupt-sd` | A descriptor xattr that exists but fails structural validation (§3.9.5). |
-| `STRATAFS_COPY_UP` | StrataFS copy-up lifecycle and failure (§3.9.7). |
-| `STRATAFS_MUTATION_REFUSED` | A StrataFS arrangement refusal. |
+| `access-audit` | The SACL walk, and token audit-policy forcing. [*audit-events.access-audit-record] |
+| `continuous-audit` | Enforcement points, per operation, against a handle's continuous audit mask. [*audit-events.continuous-audit-record] |
+| `privilege-use` | Privilege-use auditing, for the five AccessCheck-influencing privileges. [*audit-events.privilege-use-record] |
+| `caap-policy-diagnostic` | A CAAP rule SACL error, or a staged-versus-effective mismatch. [*audit-events.caap-policy-diagnostic-record] |
+| `logon-session-destroyed` | LogonSession teardown (§3.2.7). [*audit-events.logon-session-destroyed-record] |
+| `corrupt-sd` | A descriptor xattr that exists but fails structural validation (§3.9.5). [*audit-events.corrupt-sd-record] |
+| `STRATAFS_COPY_UP` | StrataFS copy-up lifecycle and failure (§3.9.7). [*audit-events.stratafs-copy-up-record] |
+| `STRATAFS_MUTATION_REFUSED` | A StrataFS arrangement refusal. [*audit-events.stratafs-mutation-refused-record] |
 
 The `privilege` field of a `privilege-use` event carries a canonical
 name, and only five are representable — `SeSecurityPrivilege`,
 `SeTakeOwnershipPrivilege`, `SeBackupPrivilege`, `SeRestorePrivilege`
-and `SeRelabelPrivilege`. Any other bit fails the encoder closed
+and `SeRelabelPrivilege`. [*audit-events.privilege-five-canonical-names] Any other bit fails the encoder closed
 rather than emitting an unnamed privilege, which is consistent with
 those being the only five that can produce such an event at all
-(§3.4.1).
+(§3.4.1). [*audit-events.privilege-encoder-fails-closed]
 
 `continuous-audit` carries an `operation` naming the enforcement
 point: `file.access`, `file.mmap`, `file.mprotect`, `file.permission`,
 `file.write`, `file.ioctl`, `file.lock`, `file.fcntl`, `file.truncate`
-and `file.fallocate`. Its `object_context` field is always nil.
+and `file.fallocate`. [*audit-events.continuous-operation-names] Its `object_context` field is always nil. [*audit-events.continuous-object-context-nil]
 
 ## Delivery
 
 Audit and privilege-use events are delivered **before** any result is
 written back to the caller, and a delivery failure fails the syscall
-with `EIO` or `EOPNOTSUPP`. An audit event cannot be suppressed by
+with `EIO` or `EOPNOTSUPP`. [*audit-events.delivered-before-result] An audit event cannot be suppressed by
 handing the call a bad output pointer.
 
 Three emissions are best-effort by contrast, and drop silently rather
 than failing the operation that caused them:
-`logon-session-destroyed` where the authentication package name is not
-valid UTF-8; the two StrataFS events on an allocation failure or an
-over-long operation string; and any self-emitted payload that would
-exceed its encoding buffer.
+
+- `logon-session-destroyed` where the authentication package name is
+  not valid UTF-8. [*audit-events.best-effort-logon-session-utf8]
+- The two StrataFS events on an allocation failure or an over-long
+  operation string. [*audit-events.best-effort-stratafs]
+- Any self-emitted payload that would exceed its encoding buffer. [*audit-events.best-effort-oversize-payload]
 
 The transport itself — ring buffer delivery, buffering and drop
 accounting — is KMES's (§2.5, §2.7).

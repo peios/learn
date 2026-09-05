@@ -16,7 +16,7 @@ The `setuid` family — `setuid`, `setgid`, `setresuid`, `setresgid`,
 **Without `SeAssignPrimaryTokenPrivilege`**, which is the common case,
 the call is a silent no-op. It returns success, and every credential
 field is restored from the old credential: UIDs, GIDs, supplementary
-groups, capabilities. Neither the credential nor the token changes,
+groups, capabilities. [*cred.setuid.unprivileged-noop] Neither the credential nor the token changes,
 and the process's authority before and after is identical.
 
 The silent success preserves consistency between the visible UID and
@@ -30,7 +30,7 @@ to obtain a token for the target UID's principal, so that both token
 and credential change together.
 
 That is not what happens. A caller holding the privilege receives
-`EOPNOTSUPP` and the call **fails**. There is no authd redirect
+`EOPNOTSUPP` and the call **fails**. [*cred.setuid.privileged-eopnotsupp] There is no authd redirect
 anywhere in the LSM. The practical effect is that the privileged path
 is unavailable rather than dangerous: a TCB component cannot change
 identity this way, and has to install a token directly instead
@@ -44,16 +44,16 @@ to the file owner's on exec.
 **Without the privilege**, the Linux-visible UID and GID slots change
 to the file owner's identity while the token is untouched — a cosmetic
 escalation in which the process sees `geteuid() == 0` while KACS
-continues to enforce the original token. Concretely `uid` and `suid`
+continues to enforce the original token. [*cred.setuid.exec-bit-cosmetic] Concretely `uid` and `suid`
 are set from `euid`, the GID counterparts mirror that, `fsuid` and
 `fsgid` are carried over unchanged from the old credential, and the
-token is cloned as-is.
+token is cloned as-is. [*cred.setuid.exec-bit-slot-values]
 
 **With the privilege**, the design calls for the slots *and* the token
 to change — genuine escalation. As with the syscall, this is not
 implemented: an exec that would change UID or GID under a token
 holding `SeAssignPrimaryTokenPrivilege` returns `EOPNOTSUPP` and the
-exec fails.
+exec fails. [*cred.setuid.exec-privileged-eopnotsupp]
 
 The asymmetry between the two mechanisms is intentional in the design.
 `setuid()` is de-escalation, so leaving everything unchanged is the
@@ -73,11 +73,11 @@ The kernel calls `current_fsuid()` whenever it needs a UID for a
 filesystem operation — file creation ownership, quota tracking,
 keyring lookup, NFS credentials. KACS redefines it, along with
 `current_fsgid()` and `current_fsuid_fsgid()`, to return the projected
-value from the effective token rather than `cred->fsuid`.
+value from the effective token rather than `cred->fsuid`. [*cred.setuid.fsuid-patch]
 
 So files are created owned by the projected UID, quotas track against
 it, per-user keyrings are keyed by it, and an NFS server sees the real
-identity rather than UID 0.
+identity rather than UID 0. [*cred.setuid.fsuid-consequences]
 
 ## Compatibility gaps
 
@@ -97,16 +97,16 @@ under it, an exec cannot raise the process's PIP label (§3.7).
 
 **`setfsuid()`** is a no-op for filesystem purposes, since
 `current_fsuid()` ignores `cred->fsuid`; and cosmetic setuid-bit exec
-transitions do not flow into the projected values either.
+transitions do not flow into the projected values either. [*cred.setuid.setfsuid-noop]
 
 **`access()` and `faccessat()`** use the effective token rather than
 the real credential — the entire native credential-override machinery
-those calls normally use is compiled out. The concept of a "real
+those calls normally use is compiled out. [*cred.setuid.access-uses-effective-token] The concept of a "real
 identity" separate from the acting one does not exist in KACS.
 
 **`SO_PEERCRED`** returns projected UIDs rather than token
 information, and because the switchboard allows `CAP_SETUID`, cosmetic
-UID forgery in `SCM_CREDENTIALS` is possible. Both are Linux
+UID forgery in `SCM_CREDENTIALS` is possible. [*cred.setuid.so-peercred-projected] Both are Linux
 compatibility metadata, not peer-token authorities: a service needing
 authoritative identity uses stream or seqpacket peer-token capture, or
 explicit token descriptor passing (§3.5.3).
@@ -116,7 +116,7 @@ replaces Linux audit for security-relevant logging.
 
 A `uid0` utility — running a program with `cred->uid` forced to 0 for
 legacy programs that refuse to start otherwise — is described in the
-design and does not exist in the tree. The kernel-side guarantee it
+design and does not exist in the tree. [*cred.setuid.uid0-utility-absent] The kernel-side guarantee it
 would rely on does hold: `current_fsuid()` ignores `cred->uid`
 entirely, so even with such a utility active, filesystem operations
 would use the projected UID and files would be owned by the real user.

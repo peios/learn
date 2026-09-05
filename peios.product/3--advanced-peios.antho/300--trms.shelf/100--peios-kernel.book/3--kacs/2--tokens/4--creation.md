@@ -12,7 +12,7 @@ FilterToken produces a strictly weaker copy.
 Mints a new token from scratch. The caller supplies the
 security-meaningful content; the kernel generates the internal
 bookkeeping and validates the structural invariants. The operation is
-gated by `SeCreateTokenPrivilege`.
+gated by `SeCreateTokenPrivilege`. [*token.create.privilege-gate]
 
 The caller supplies `user_sid`, `groups` with their attributes,
 privileges as `privs_present` plus `privs_enabled`, `owner_sid_index`,
@@ -32,42 +32,46 @@ responsibility — Everyone (`S-1-1-0`), Authenticated Users
 (`S-1-5-11`), and whatever else the principal's authentication context
 implies, such as `S-1-5-4` Interactive, `S-1-5-6` Service, or
 `S-1-5-15` This Organization. The kernel injects none of these. The
-logon SID is the sole kernel-generated group.
+logon SID is the sole kernel-generated group. [*token.create.no-implicit-groups]
 
 The kernel generates `token_id` as a LUID, `token_guid`, `modified_id`
 initialised to `token_id`, `created_at` as the current time,
 `elevation_type` always Default, the token's own default security
 descriptor (§3.2.7), and `logon_sid`, derived from the LogonSession ID
-as `S-1-5-5-{id >> 32}-{id & 0xFFFFFFFF}`.
+as `S-1-5-5-{id >> 32}-{id & 0xFFFFFFFF}`. [*token.create.kernel-generated-fields]
 
 The logon SID is injected into the groups array carrying
 `SE_GROUP_MANDATORY | SE_GROUP_ENABLED_BY_DEFAULT | SE_GROUP_ENABLED |
-SE_GROUP_LOGON_ID`, appended after the caller's groups. Callers do not
+SE_GROUP_LOGON_ID`, appended after the caller's groups. [*token.create.logon-sid-appended] Callers do not
 include it themselves. Because the injected entry is appended,
 `owner_sid_index` and `primary_group_index` are interpreted relative
 to the caller-supplied groups — 0 for the user SID, 1..N for the
-caller's groups — and not against the array with the logon SID in it.
+caller's groups — and not against the array with the logon SID in it. [*token.create.indices-relative-to-caller-groups]
 
-Validation covers, in turn: that the caller holds
-`SeCreateTokenPrivilege`; that every SID is structurally well-formed;
-that the owner SID is the user SID or a group carrying
-`SE_GROUP_OWNER`, resolved to `owner_sid_index`; that the primary
-group SID is the user SID or a group on the token, resolved to
-`primary_group_index`; that `auth_id` references an existing
-LogonSession; that a Primary token carries impersonation level
-Impersonation or Delegation (see below); that `user_deny_only` is
-true whenever `write_restricted`
-is; that `confinement_sid` is present whenever `isolation_boundary`
-is; that the wire format's `elevation_type` field is 0, since the
-kernel always sets Default itself; and that the caller's group count
-plus the injected logon SID fits the 1024-entry limit.
+Validation covers, in turn:
+
+- that the caller holds `SeCreateTokenPrivilege`;
+- that every SID is structurally well-formed; [*token.create.validate.sids-well-formed]
+- that the owner SID is the user SID or a group carrying
+  `SE_GROUP_OWNER`, resolved to `owner_sid_index`; [*token.create.validate.owner-sid]
+- that the primary group SID is the user SID or a group on the token,
+  resolved to `primary_group_index`; [*token.create.validate.primary-group-sid]
+- that `auth_id` references an existing LogonSession; [*token.create.validate.auth-id-exists]
+- that a Primary token carries impersonation level Impersonation or
+  Delegation (see below); [*token.create.validate.primary-level-floor]
+- that `user_deny_only` is true whenever `write_restricted` is; [*token.create.validate.deny-only-with-write-restricted]
+- that `confinement_sid` is present whenever `isolation_boundary` is; [*token.create.validate.isolation-needs-confinement]
+- that the wire format's `elevation_type` field is 0, since the kernel
+  always sets Default itself; [*token.create.validate.elevation-type-zero]
+- and that the caller's group count plus the injected logon SID fits
+  the 1024-entry limit. [*token.create.validate.group-limit]
 
 The optional LCS registry credential extension, when present, has to
 use the version and layout of §3.A, and carries at most 256 scope
 GUIDs and at most 256 private layer names, with no nil scope GUID, no
 duplicate scope GUIDs, no empty or overlong layer names, and no
-duplicate layer names under LCS case-insensitive matching. Malformed
-LCS credentials fail the whole call closed.
+duplicate layer names under LCS case-insensitive matching. [*token.create.lcs-extension-limits] Malformed
+LCS credentials fail the whole call closed. [*token.create.lcs-malformed-fails-closed]
 
 The impersonation level on a primary is the ceiling for everything
 derived from it (§3.5.1), so a minter chooses it deliberately: authd
@@ -87,18 +91,18 @@ caller trusted, and that trust is total.
 
 The call returns a token file descriptor. Since CreateToken takes no
 desired-access parameter, the returned handle always carries a cached
-access mask of `TOKEN_ALL_ACCESS`.
+access mask of `TOKEN_ALL_ACCESS`. [*token.create.returns-all-access]
 
 ## DuplicateToken
 
 Creates an independent copy of an existing token, requiring
-`TOKEN_DUPLICATE` access on the source.
+`TOKEN_DUPLICATE` access on the source. [*token.duplicate.requires-token-duplicate]
 
 Two things may change during duplication. The **token type** may go
-from primary to impersonation or the reverse. The **impersonation
+from primary to impersonation or the reverse. [*token.duplicate.type-may-change] The **impersonation
 level** is chosen by the caller and is a ratchet: whatever the types
 involved, the new level has to be equal to or lower than the source's,
-and asking for more fails with `EINVAL`. A primary minted at
+and asking for more fails with `EINVAL`. [*token.duplicate.level-ratchet] A primary minted at
 Delegation can be duplicated to an impersonation token at any level; a
 primary at Impersonation cannot yield a Delegation-level token; an
 Identification-level token cannot be duplicated up to Impersonation or
@@ -113,15 +117,15 @@ client captured at Impersonation is itself capped at Impersonation and
 so is every process and token descended from it. The kernel refuses a
 Primary result below Impersonation: an Identification-level token
 cannot pass AccessCheck and Anonymous is the singleton identity, so a
-process could never be either.
+process could never be either. [*token.duplicate.primary-result-floor]
 
 On the new token, `token_id` and `token_guid` are fresh, `modified_id`
 is initialised to the new `token_id`, and `elevation_type` resets to
-Default because the copy belongs to no linked pair. `token_type` and
+Default because the copy belongs to no linked pair. [*token.duplicate.fresh-fields] `token_type` and
 `impersonation_level` are as the caller specified, within the rules
 above. The token's own descriptor is a fresh default (§3.2.7): no
 custom descriptor can be supplied at duplication time, and changing it
-afterwards means using `WRITE_DAC` on the new handle.
+afterwards means using `WRITE_DAC` on the new handle. [*token.duplicate.fresh-default-sd]
 
 Everything else is copied from the source: `user_sid`,
 `user_deny_only`, `logon_sid`; `groups` with all per-group attributes;
@@ -133,59 +137,59 @@ enabled, enabled-by-default **and used** states; `integrity_level` and
 `device_claims`, `device_groups`, `restricted_device_groups`;
 `lcs_scope_guids` and `lcs_private_layers`; `confinement_sid`,
 `confinement_capabilities`, `confinement_exempt`; and the three
-projection fields.
+projection fields. [*token.duplicate.copies-everything-else]
 
 One target is not a copy at all. Duplicating to **Impersonation at
 Anonymous level** discards the source entirely and returns a fresh
 token of the boot Anonymous shape — user SID `S-1-5-7`, Everyone as
 its only group, no privileges, Untrusted integrity, and LogonSession
-998 rather than the source's. None of the copied-field rules above
+998 rather than the source's. [*token.duplicate.anonymous-is-fresh-shape] None of the copied-field rules above
 apply to it. Assuming Anonymous is an identity boundary rather than a
 level change, so the operation constructs the minimal identity instead
 of narrowing the caller's.
 
-The original token is unaffected.
+The original token is unaffected. [*token.duplicate.source-unaffected]
 
 ## FilterToken
 
 Creates a restricted copy, requiring `TOKEN_DUPLICATE` access on the
-source. Filtering only ever weakens: there is no parameter that grants
+source. [*token.filter.requires-token-duplicate] Filtering only ever weakens: there is no parameter that grants
 anything.
 
 It can **remove privileges**, deleting them permanently from the new
 token by clearing them from the present, enabled, and
-enabled-by-default states at once. It can **set groups to deny-only**,
+enabled-by-default states at once. [*token.filter.remove-privileges] It can **set groups to deny-only**,
 giving them `SE_GROUP_USE_FOR_DENY_ONLY` so they block access through
 deny ACEs but never grant it through allow ACEs — permanently, with no
-way back. It can **add restricted SIDs**, a secondary list that makes
+way back. [*token.filter.deny-only-groups] It can **add restricted SIDs**, a secondary list that makes
 AccessCheck evaluate the DACL twice, granting access only when the
-normal SIDs and the restricted SIDs independently both pass. And it
+normal SIDs and the restricted SIDs independently both pass. [*token.filter.restricted-sids-double-evaluation] And it
 can **enable write-restricted mode**, limiting that second evaluation
 to write operations so reads use the normal list alone; enabling it
-forces `user_deny_only` true on the new token.
+forces `user_deny_only` true on the new token. [*token.filter.write-restricted-forces-deny-only]
 
 Input validation is all-or-nothing — a single malformed entry means no
-token is created. The deny-only list uses zero-based group indices
+token is created. [*token.filter.validation-all-or-nothing] The deny-only list uses zero-based group indices
 into the source's group array, and a duplicate or out-of-range index
-is invalid. The restricting SID blob has to parse exactly as the
-declared packed SID list, with no truncated or trailing bytes. If the
+is invalid. [*token.filter.deny-only-index-rule] The restricting SID blob has to parse exactly as the
+declared packed SID list, with no truncated or trailing bytes. [*token.filter.sid-blob-exact] If the
 source token is already restricted and the intersection of its
 restricted SID list with the supplied list is empty, the request is
-invalid and nothing is created.
+invalid and nothing is created. [*token.filter.empty-intersection-invalid]
 
 On the new token, `token_id` and `token_guid` are fresh, `modified_id`
 is initialised to the new `token_id`, and `elevation_type` resets to
-Default. The privilege states are the source's modified by the removal
+Default. [*token.filter.fresh-fields] The privilege states are the source's modified by the removal
 list, except that **`used` resets to 0** — unlike duplication, which
-carries it across. `groups` keeps the source's SIDs with attributes
-modified per the deny-only list, adding and removing nothing.
+carries it across. [*token.filter.used-resets] `groups` keeps the source's SIDs with attributes
+modified per the deny-only list, adding and removing nothing. [*token.filter.groups-unchanged-except-attributes]
 `restricted_sids` is the supplied list, or its intersection with the
-source's when the source was already restricted. `write_restricted` is
-sticky: set if requested or if the source had it. `user_deny_only` is
+source's when the source was already restricted. [*token.filter.restricted-sids-intersection] `write_restricted` is
+sticky: set if requested or if the source had it. [*token.filter.write-restricted-sticky] `user_deny_only` is
 true when write-restricted is enabled and otherwise copied.
 `user_sid`, `logon_sid`, `integrity_level`, `mandatory_policy`,
 `token_type` and `impersonation_level` are copied, as are `auth_id`,
 `origin`, `source`, `created_at`, `expiration`, `audit_policy`,
 `default_dacl`, `owner_sid_index`, `primary_group_index`, the claims
 and device group arrays, the LCS credentials, the confinement fields,
-and the projection fields. The token's descriptor is a fresh default.
+and the projection fields. The token's descriptor is a fresh default. [*token.filter.copies-everything-else]

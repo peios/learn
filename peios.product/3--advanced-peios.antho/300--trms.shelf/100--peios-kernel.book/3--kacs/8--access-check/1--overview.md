@@ -20,21 +20,21 @@ the specification.
 
 **AccessCheck** is the common case. It returns the granted access
 mask, whether the request succeeded, a continuous audit mask derived
-from SACL alarm ACEs, and a CAAP staging mismatch flag. When an object
+from SACL alarm ACEs, and a CAAP staging mismatch flag. [*check.accesscheck.returns] When an object
 type list is supplied, success requires every listed node to pass and
 the returned mask is the intersection across them. The staging
 mismatch flag is set when the staged scalar result differs from the
 effective scalar result, when any per-node staged grant differs from
 the effective per-node grant, or when staged auditing differs from
-effective auditing.
+effective auditing. [*check.staging-flag.accesscheck]
 
 **AccessCheckResultList** is the per-property variant and requires an
-object type list. It returns a separate verdict for each node, so a
+object type list. [*check.result-list.requires-tree] It returns a separate verdict for each node, so a
 denial on one property fails that property alone rather than the whole
-request. It returns the same continuous audit mask and staging
+request. [*check.result-list.returns] It returns the same continuous audit mask and staging
 mismatch flag, with the flag set when any node's staged granted mask
 differs from that node's effective granted mask, or when staged
-auditing differs from effective auditing. Directory services use it,
+auditing differs from effective auditing. [*check.staging-flag.result-list] Directory services use it,
 because one operation there may touch several properties with
 independent access rules. Privilege-use auditing in this variant takes
 the same per-node view: a privilege counts as successfully used if its
@@ -53,7 +53,7 @@ later ACE in the same walk changes its outcome. Pipeline layers that
 operate on top of the DACL result — restricted token intersection,
 confinement intersection, PIP revocation, CAAP intersection — may
 still revoke granted bits. Those layers narrow the result; they do not
-re-open decided bits for re-evaluation through the DACL.
+re-open decided bits for re-evaluation through the DACL. [*check.state.narrow-not-reopen]
 
 **`granted`** records which bits resolved to yes. During the walk it
 is a subset of `decided`. Afterwards the later layers may remove bits

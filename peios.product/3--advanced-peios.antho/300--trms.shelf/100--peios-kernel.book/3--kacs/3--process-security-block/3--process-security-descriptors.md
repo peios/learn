@@ -13,15 +13,15 @@ descriptor evaluation.
 
 | Right | Value | Meaning |
 |---|---|---|
-| `PROCESS_TERMINATE` | 0x0001 | Send signals whose default action is termination. |
-| `PROCESS_SIGNAL` | 0x0002 | Send informational signals whose default action is to ignore: `SIGCHLD`, `SIGURG`, `SIGWINCH`. |
-| `PROCESS_VM_READ` | 0x0010 | Read process memory — ptrace peek, `/proc/<pid>/mem`, `process_vm_readv`. |
-| `PROCESS_VM_WRITE` | 0x0020 | Write process memory — ptrace poke, `/proc/<pid>/mem`, `process_vm_writev`. Includes debugger attach. |
-| `PROCESS_DUP_HANDLE` | 0x0040 | Extract file descriptors from the process through `pidfd_getfd`. |
-| `PROCESS_SET_INFORMATION` | 0x0200 | Change priority, CPU affinity, I/O priority, resource limits, process group membership where Linux permits it, timer slack, memory-placement policy or pages, and mutable `/proc/<pid>` task state — `sched`, `autogroup`, `timens_offsets`, `timerslack_ns`, `coredump_filter`, `oom_adj`, `oom_score_adj`, `make-it-fail`, `fail-nth`, `latency` and `clear_refs`, plus write intent on the coupled `uid_map`, `gid_map`, `projid_map` and `setgroups` seq files. |
-| `PROCESS_QUERY_INFORMATION` | 0x0400 | Inspect the process's token; read the detailed `/proc/<pid>/*` files — `cmdline`, `status`, `io`, `limits`, `sched`, `autogroup`, `timens_offsets`, `personality`, `syscall`, `latency`, `timers`, `timerslack_ns`, `mounts`, `mountinfo`, `mountstats`, `coredump_filter`, `oom_adj`, `oom_score_adj`, `loginuid`, `make-it-fail`, `fail-nth`, `seccomp_cache`, `ksm_merging_pages` and `ksm_stat` — plus read intent on the coupled `uid_map`, `gid_map`, `projid_map` and `setgroups` seq files; query Linux compatibility capability state through `capget(pid)`; and query detailed scheduler, CPU-affinity and I/O-priority state. |
-| `PROCESS_SUSPEND_RESUME` | 0x0800 | Send signals whose default action is to stop or continue. |
-| `PROCESS_QUERY_LIMITED` | 0x1000 | Read basic process information: PID, process group ID, session ID, image name, state, CPU and memory usage — `stat`, `statm`, `comm`, `wchan`, `schedstat`, `cpuset`, `cgroup`, `cpu_resctrl_groups`, `oom_score`, `sessionid`, `patch_state`, `stack_depth` and `arch_status`. This is what `ps` and `top` show, it covers `/proc/<pid>/stat`, and it is the right required for `pidfd_open()` and for `kill(pid, 0)` existence probes. |
+| `PROCESS_TERMINATE` | 0x0001 | Send signals whose default action is termination. [*psb.right.terminate] |
+| `PROCESS_SIGNAL` | 0x0002 | Send informational signals whose default action is to ignore: `SIGCHLD`, `SIGURG`, `SIGWINCH`. [*psb.right.signal] |
+| `PROCESS_VM_READ` | 0x0010 | Read process memory — ptrace peek, `/proc/<pid>/mem`, `process_vm_readv`. [*psb.right.vm-read] |
+| `PROCESS_VM_WRITE` | 0x0020 | Write process memory — ptrace poke, `/proc/<pid>/mem`, `process_vm_writev`. Includes debugger attach. [*psb.right.vm-write] |
+| `PROCESS_DUP_HANDLE` | 0x0040 | Extract file descriptors from the process through `pidfd_getfd`. [*psb.right.dup-handle] |
+| `PROCESS_SET_INFORMATION` | 0x0200 | Change priority, CPU affinity, I/O priority, resource limits, process group membership where Linux permits it, timer slack, memory-placement policy or pages, and mutable `/proc/<pid>` task state — `sched`, `autogroup`, `timens_offsets`, `timerslack_ns`, `coredump_filter`, `oom_adj`, `oom_score_adj`, `make-it-fail`, `fail-nth`, `latency` and `clear_refs`, plus write intent on the coupled `uid_map`, `gid_map`, `projid_map` and `setgroups` seq files. [*psb.right.set-information] |
+| `PROCESS_QUERY_INFORMATION` | 0x0400 | Inspect the process's token; read the detailed `/proc/<pid>/*` files — `cmdline`, `status`, `io`, `limits`, `sched`, `autogroup`, `timens_offsets`, `personality`, `syscall`, `latency`, `timers`, `timerslack_ns`, `mounts`, `mountinfo`, `mountstats`, `coredump_filter`, `oom_adj`, `oom_score_adj`, `loginuid`, `make-it-fail`, `fail-nth`, `seccomp_cache`, `ksm_merging_pages` and `ksm_stat` — plus read intent on the coupled `uid_map`, `gid_map`, `projid_map` and `setgroups` seq files; query Linux compatibility capability state through `capget(pid)`; and query detailed scheduler, CPU-affinity and I/O-priority state. [*psb.right.query-information] |
+| `PROCESS_SUSPEND_RESUME` | 0x0800 | Send signals whose default action is to stop or continue. [*psb.right.suspend-resume] |
+| `PROCESS_QUERY_LIMITED` | 0x1000 | Read basic process information: PID, process group ID, session ID, image name, state, CPU and memory usage — `stat`, `statm`, `comm`, `wchan`, `schedstat`, `cpuset`, `cgroup`, `cpu_resctrl_groups`, `oom_score`, `sessionid`, `patch_state`, `stack_depth` and `arch_status`. This is what `ps` and `top` show, it covers `/proc/<pid>/stat`, and it is the right required for `pidfd_open()` and for `kill(pid, 0)` existence probes. [*psb.right.query-limited] |
 | `READ_CONTROL` | 0x20000 | Read the process's own descriptor. |
 | `WRITE_DAC` | 0x40000 | Modify the process's DACL. |
 | `WRITE_OWNER` | 0x80000 | Change the descriptor's owner. |
@@ -31,21 +31,21 @@ Three `/proc` entries are not where the right names suggest.
 `PROCESS_QUERY_INFORMATION`: they keep their upstream
 `PTRACE_MODE_READ_FSCREDS` gating, which maps to **`PROCESS_VM_READ`**
 — reading a process's memory map is treated as reading its memory,
-which is defensible but is not what the right's name implies. And
+which is defensible but is not what the right's name implies. [*psb.proc.maps-fd-environ-are-vm-read] And
 `cgroup` sits in the **`PROCESS_QUERY_LIMITED`** set rather than the
-detailed one.
+detailed one. [*psb.proc.cgroup-in-query-limited]
 
-## Signal classification
+## Signal classification [*psb.signal.by-default-action]
 
 Each Linux signal maps to a process access right according to its
 default action.
 
 Signal 0 is not delivered at all. A `kill()`, `tkill()`, or `tgkill()`
 call with signal 0 is an existence and permission probe, requiring
-`PROCESS_QUERY_LIMITED` on the target plus PIP dominance.
+`PROCESS_QUERY_LIMITED` on the target plus PIP dominance. [*psb.signal.zero-is-probe]
 
 **`PROCESS_TERMINATE`** — default action terminate, or terminate with
-a core dump:
+a core dump: [*psb.signal.terminate-set]
 
 | Signal | # | Default | Notes |
 |---|---|---|---|
@@ -73,7 +73,7 @@ a core dump:
 | `SIGPWR` | 30 | Terminate | Power failure |
 | `SIGSYS` | 31 | Terminate + core | Bad syscall |
 
-**`PROCESS_SUSPEND_RESUME`** — default action stop or continue:
+**`PROCESS_SUSPEND_RESUME`** — default action stop or continue: [*psb.signal.suspend-resume-set]
 
 | Signal | # | Default | Notes |
 |---|---|---|---|
@@ -83,7 +83,7 @@ a core dump:
 | `SIGTTOU` | 22 | Stop | Background write to terminal |
 | `SIGCONT` | 18 | Continue | Resume a stopped process |
 
-**`PROCESS_SIGNAL`** — default action ignore:
+**`PROCESS_SIGNAL`** — default action ignore: [*psb.signal.ignore-set]
 
 | Signal | # | Default | Notes |
 |---|---|---|---|
@@ -92,7 +92,7 @@ a core dump:
 | `SIGWINCH` | 28 | Ignore | Window resize |
 
 The real-time signals, `SIGRTMIN` through `SIGRTMAX` (32–64), default
-to terminate and therefore require `PROCESS_TERMINATE`.
+to terminate and therefore require `PROCESS_TERMINATE`. [*psb.signal.realtime-terminate]
 
 ### What bypasses the check
 
@@ -101,12 +101,12 @@ This classification applies only to signals sent by userspace through
 hardware faults such as `SIGSEGV`, `SIGBUS` and `SIGFPE`, `SIGCHLD`
 from a child exiting, `SIGPIPE` from a broken pipe — are delivered by
 the kernel and bypass the process descriptor check entirely, because
-the `task_kill` LSM hook does not fire for kernel-originated delivery.
+the `task_kill` LSM hook does not fire for kernel-originated delivery. [*psb.signal.kernel-generated-bypass]
 
 Terminal-generated job control signals are kernel-originated under
 that rule and bypass the check the same way: `SIGINT`, `SIGQUIT` and
 `SIGTSTP` from the tty driver's `isig` handling, and `SIGHUP` on
-hangup. This is intentional. Authorization for keyboard-driven signals
+hangup. [*psb.signal.tty-isig-bypass] This is intentional. Authorization for keyboard-driven signals
 is possession of the controlling terminal, which was gated by the
 terminal's file descriptor at open time — so Ctrl-C reaches the whole
 foreground process group even when a member of it is more privileged
@@ -115,12 +115,12 @@ cannot accept that exposure must not attach to an untrusted
 controlling terminal.
 
 The `si_uid` in a delivered signal's `siginfo_t` is the sender's
-projected UID (§3.10), captured at send time. Like every projected
+projected UID (§3.10), captured at send time. [*psb.signal.si-uid-projected] Like every projected
 credential surface it is informational only and is not an
 authorization input; `si_pid` carries the same caveat and is subject
 to PID reuse besides.
 
-## Generic mapping
+## Generic mapping [*psb.generic-mapping]
 
 | Generic right | Maps to |
 |---|---|
@@ -129,7 +129,7 @@ to PID reuse besides.
 | `GENERIC_EXECUTE` | `PROCESS_TERMINATE \| PROCESS_SUSPEND_RESUME \| PROCESS_QUERY_LIMITED` |
 | `GENERIC_ALL` | every process right above, together with `READ_CONTROL`, `WRITE_DAC` and `WRITE_OWNER` |
 
-## The default process descriptor
+## The default process descriptor [*psb.sd.default-template]
 
 Every process receives a default descriptor at creation:
 
@@ -151,15 +151,15 @@ restricted to the process itself, administrators, and SYSTEM.
 
 A service can modify its own descriptor at runtime with
 `kacs_set_sd`, which requires `WRITE_DAC` — granted to the process
-itself by the default DACL. Requesting a custom descriptor *at launch*
+itself by the default DACL. [*psb.sd.set-sd-requires-write-dac] Requesting a custom descriptor *at launch*
 through a service definition is not implemented: the only descriptor
 creation path always builds the default template, so every process
-starts from it and any deviation is a subsequent write.
+starts from it and any deviation is a subsequent write. [*psb.sd.no-custom-at-launch]
 
 ## How PIP relates to it
 
 PIP and the process descriptor are complementary, and both checks have
-to pass. The descriptor controls *who* may operate on the process; PIP
+to pass. [*psb.pip.both-checks-must-pass] The descriptor controls *who* may operate on the process; PIP
 controls *what trust level* is required for invasive access to a
 protected one. AccessCheck evaluates the caller's token against the
 target's descriptor for the requested right, and PIP evaluates the
@@ -175,6 +175,6 @@ The converse — a process with no PIP protection carrying a restrictive
 descriptor that denies even administrators — holds with one
 qualification. When a descriptor check denies access and PIP was not
 the deciding factor, an enabled `SeDebugPrivilege` on the caller
-grants the access anyway and is marked used. The privilege therefore
+grants the access anyway and is marked used. [*psb.sd.sedebug-overrides-denial] The privilege therefore
 rescues a descriptor denial while remaining unable to cross a PIP
 boundary, which is exactly the split §3.4.2 describes for it.

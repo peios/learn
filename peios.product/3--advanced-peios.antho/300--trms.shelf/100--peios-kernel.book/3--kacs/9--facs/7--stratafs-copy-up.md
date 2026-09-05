@@ -13,9 +13,9 @@ The context exempts **KACS caller authorization only**. It does not
 replace credentials, borrow an identity, grant a privilege, bypass
 another LSM, neutralise an underlying filesystem check, make a
 read-only mount writable, or suppress immutable, append-only, quota,
-space, I/O or format errors. Every exemption is a return before the
+space, I/O or format errors. [*facs.stratafs-copy-up.exempts-kacs-only] Every exemption is a return before the
 authorize call, and every mutation still goes through the ordinary
-`vfs_*` path under `mnt_want_write()`.
+`vfs_*` path under `mnt_want_write()`. [*facs.stratafs-copy-up.mutations-via-vfs]
 
 ## Admission and lifetime
 
@@ -23,12 +23,12 @@ Only the in-kernel StrataFS implementation can create or enter a
 context. There is no userspace surface of any kind — no ABI, file
 descriptor, token, ioctl, syscall or securityfs control — and the
 copy-up API is declared in a kernel-private header with no exported
-symbols.
+symbols. [*facs.stratafs-copy-up.no-userspace-surface]
 
 A context is created only after the StrataFS operation requiring
 copy-up has passed its complete outer authorization. KACS does not
 verify that: the context creation call performs no check, and the
-ordering is satisfied by StrataFS calling in the right order. The
+ordering is satisfied by StrataFS calling in the right order. [*facs.stratafs-copy-up.creation-performs-no-check] The
 context is not itself an alternative authorization path.
 
 The exemption covers namespace creation the outer handle authorises
@@ -44,26 +44,26 @@ descriptor delegation cannot reintroduce acting-task authorization.
 Reconfiguration cannot re-supply the strata list.
 
 A context attaches to at most one task, and a task carries at most
-one. It is not inherited by `fork()`, `clone()` or `execve()` — exec
-explicitly clears it. A refcounted context can be transferred to a
-kernel worker, but the originating task leaves it first. Leaving,
+one. [*facs.stratafs-copy-up.one-context-per-task] It is not inherited by `fork()`, `clone()` or `execve()` — exec
+explicitly clears it. [*facs.stratafs-copy-up.not-inherited] A refcounted context can be transferred to a
+kernel worker, but the originating task leaves it first. [*facs.stratafs-copy-up.worker-transfer] Leaving,
 task exit, every error path, and completion all remove the attachment
-and clear any armed phase.
+and clear any armed phase. [*facs.stratafs-copy-up.detach-clears-phase]
 
 The interface fails closed on nesting, concurrent attachment, a stale
-phase, or an object mismatch. A mismatched operation is evaluated
-normally and neither consumes nor broadens the armed exemption.
+phase, or an object mismatch. [*facs.stratafs-copy-up.fails-closed-on-misuse] A mismatched operation is evaluated
+normally and neither consumes nor broadens the armed exemption. [*facs.stratafs-copy-up.mismatch-evaluated-normally]
 
 ## Object and phase binding
 
 Creation pins the exact provider path, its current inode, a complete
 validated copy of its effective descriptor, and the provider-visible
-`security.capability` value or its absence. Every later positive path
+`security.capability` value or its absence. [*facs.stratafs-copy-up.creation-pins-provider] Every later positive path
 is paired with a pinned inode as well — retaining a dentry alone is
 insufficient, because an unlink followed by recreation can
-reinstantiate it over a different inode.
+reinstantiate it over a different inode. [*facs.stratafs-copy-up.paths-paired-with-inode]
 
-One phase is armed at a time:
+One phase is armed at a time: [*facs.stratafs-copy-up.one-phase-armed]
 
 | Phase | Objects admitted |
 |---|---|
@@ -79,47 +79,47 @@ One phase is armed at a time:
 Path, dentry, inode, parent, object type and operation kind are all
 compared wherever the hook supplies them — and path comparison
 includes the mount, so the same dentry reached through a different
-mount of the same superblock does not match. An inode-only hook can
+mount of the same superblock does not match. [*facs.stratafs-copy-up.match-includes-mount] An inode-only hook can
 match the pinned inode, but that does not authorize a pathname
 operation on another dentry, and a phase never acts as a wildcard for
-other objects of the same filesystem or directory.
+other objects of the same filesystem or directory. [*facs.stratafs-copy-up.no-wildcard-matching]
 
 The staged binding stays valid only while its dentry names the pinned
 inode under the pinned staging parent, and that parent still names its
 own pinned inode. A rename or parent substitution invalidates the
 populate, protected-metadata and publish exemptions even when the
-staged dentry and inode are themselves unchanged.
+staged dentry and inode are themselves unchanged. [*facs.stratafs-copy-up.rename-invalidates-binding]
 
-Named creation is bound to the exact final component. Anonymous
+Named creation is bound to the exact final component. [*facs.stratafs-copy-up.named-creation-exact-component] Anonymous
 creation is bound to its parent, expected object type, the attached
 task, and the single armed create phase — and once created, the
 anonymous object has to be bound as the staged object before populate,
-publish or cleanup can use it.
+publish or cleanup can use it. [*facs.stratafs-copy-up.anonymous-must-be-bound]
 
 Where the destination is a stacking filesystem creating a real inode
 below the armed destination dentry, the transition is authenticated at
 the exact outer dentry, and only the one subsequent real-inode
 security initialisation of the expected type receives the pinned
-provider descriptor. The real inode is not the staged binding: the
+provider descriptor. [*facs.stratafs-copy-up.stacking-transition-authenticated] The real inode is not the staged binding: the
 outer inode is separately anchored, through the matching post-create
 event for an anonymous object or an explicit confirmation of the exact
 positive outer dentry for a named one. A missing, repeated, mismatched
 or out-of-order transition fails closed, and an inner post-create
 event from the real filesystem is rejected as the outer anchor by
-superblock comparison.
+superblock comparison. [*facs.stratafs-copy-up.transition-out-of-order-fails]
 
 KACS retains the exact path, inode, parent path and parent inode of
 every named object whose creation it admits. Cleanup can be armed only
 for one of those or for the exact bound staging object; an unrelated
-positive dentry fails with `ESTALE`. The cleanup setup call is not
+positive dentry fails with `ESTALE`. [*facs.stratafs-copy-up.cleanup-victim-restricted] The cleanup setup call is not
 itself authority to choose a deletion victim.
 
 After an atomic rename or link publishes the staged inode, the staging
 identity can be rebound to the published path, but only while mount,
-inode, parent dentry and pinned parent inode all still match. The
+inode, parent dentry and pinned parent inode all still match. [*facs.stratafs-copy-up.rebind-conditions] The
 rebind API exists and is **not called** by StrataFS: the link case is
 rebound internally by the publish path, and the rename case relies on
-publish preserving the dentry. That holds because publication always
+publish preserving the dentry. [*facs.stratafs-copy-up.rebind-unused] That holds because publication always
 renames within a single parent. A cross-directory publish rename would
 silently invalidate the staging binding, since the rename-publish
 entry point does not require the destination parent to equal the
@@ -127,18 +127,18 @@ staging parent — currently unreachable, but the guard is the caller's
 discipline rather than the interface's.
 
 Named staging entries carry `security.peios.stratafs_staging`.
-Caller-originated writes and removals of it are denied. A write or
+Caller-originated writes and removals of it are denied. [*facs.stratafs-copy-up.staging-marker-writes-denied] A write or
 removal is admitted only on the exact bound staging inode during
 populate, or on the exact orphan-marker object during authenticated
 recovery — where the predicate admits a *write* as well as a removal,
-being shared between the setxattr and removexattr hooks. Probing the
+being shared between the setxattr and removexattr hooks. [*facs.stratafs-copy-up.staging-marker-admission] Probing the
 marker for recovery is a kernel-only raw read conveying no caller
 authority, and orphan deletion is bound to the exact dentry, inode,
 parent dentry and parent inode supplied when the phase was armed, so
-an arbitrary name sharing the staging prefix never matches. Recovery
+an arbitrary name sharing the staging prefix never matches. [*facs.stratafs-copy-up.orphan-deletion-exact-binding] Recovery
 processes at most 128 entries per batch.
 
-## Exempt operations
+## Exempt operations [*facs.stratafs-copy-up.exempt-operations]
 
 For a matching object in a matching phase, the ordinary AccessCheck,
 cached-grant check, privilege check and caller-access audit decision
@@ -154,29 +154,29 @@ are omitted at these points:
 | Remove staging or roll back materialised entries | `security_inode_permission` on the exact parent, then `security_inode_unlink` or `security_inode_rmdir` |
 
 A `security_inode_permission` or `security_file_permission` match also
-matches the requested mask. Provider access is
+matches the requested mask. [*facs.stratafs-copy-up.mask-must-match] Provider access is
 read-only — write, append and non-directory execute requests never
-match it. Staging access is limited to the read, write and append
+match it. [*facs.stratafs-copy-up.provider-read-only] Staging access is limited to the read, write and append
 masks population needs, plus execute and chdir for directories, and
 namespace parents to the write and traverse masks the one armed action
-needs, plus open and chdir. Unknown mask bits fail closed.
+needs, plus open and chdir. [*facs.stratafs-copy-up.staging-mask-limits] Unknown mask bits fail closed. [*facs.stratafs-copy-up.unknown-mask-fails-closed]
 
 The list is exhaustive. The context does not exempt execution, memory
 mapping, ioctl, locking, arbitrary `fcntl`, device access, process
 access, socket access, mount operations, or operations on a descriptor
 installed into a userspace file table — each verified by the absence
-of any copy-up branch on those paths. Internal copy-up files are
-additionally denied `statfs`, `truncate`, `fsync` and `fallocate`.
+of any copy-up branch on those paths. [*facs.stratafs-copy-up.list-exhaustive] Internal copy-up files are
+additionally denied `statfs`, `truncate`, `fsync` and `fallocate`. [*facs.stratafs-copy-up.internal-file-denied-ops]
 
 A file opened internally under the exemption is marked
-copy-up-internal in its blob and carries a granted mask of zero. It is
+copy-up-internal in its blob and carries a granted mask of zero. [*facs.stratafs-copy-up.internal-file-zero-mask] It is
 usable without a cached caller grant only while the same context is
 attached and its phase admits that exact file. Use after phase
 completion, from another task, or after transfer through `SCM_RIGHTS`
-fails closed. Each armed phase has a distinct monotonically increasing
+fails closed. [*facs.stratafs-copy-up.internal-file-scope] Each armed phase has a distinct monotonically increasing
 generation — overflowing it fails closed — and an internal file is
 sealed to the generation it was opened in, so a later phase of the
-same kind after a worker transfer cannot reactivate an older file.
+same kind after a worker transfer cannot reactivate an older file. [*facs.stratafs-copy-up.generation-seal]
 Final release drops the context reference.
 
 The one exception is the read-only provider-directory cursor used by
@@ -186,101 +186,101 @@ re-entering the same context and arming a new source-read phase. Only
 a directory file already marked internal for that exact context, still
 naming the pinned provider path and inode, opened for read without
 write, execute or path-only mode, and inside that attached
-source-read phase, resumes; it is then resealed to the new generation.
+source-read phase, resumes; it is then resealed to the new generation. [*facs.stratafs-copy-up.directory-cursor-resume]
 Between phases it is unusable and conveys no deletion authority.
 
-## Backing-file adoption
+## Backing-file adoption [*facs.stratafs-copy-up.backing-adoption]
 
 Once a regular-file copy is published, one exact copy-up-internal
 backing file can become the backing file for the outer StrataFS open
 description. The staging binding is verified, and the backing file's
 recorded user path is confirmed to be that same outer description;
 the outer description's immutable granted and continuous-audit
-snapshot is then copied across and the internal marker removed. This
+snapshot is then copied across and the internal marker removed. [*facs.stratafs-copy-up.adoption-copies-snapshot] This
 is a transfer of authority already attached to the descriptor, not a
 new AccessCheck against the task that caused the copy-up, which is
 what preserves descriptor delegation when that task is not the opener.
-It is one-shot, and requires the backing file mode.
+It is one-shot, and requires the backing file mode. [*facs.stratafs-copy-up.adoption-one-shot]
 
 The ordering is worth noting: StrataFS performs the adoption **before**
 publishing the anonymous staged object rather than after, so what is
 verified is the still-bound staging binding rather than a published
-one.
+one. [*facs.stratafs-copy-up.adoption-before-publish]
 
-## Deferred deletion
+## Deferred deletion [*facs.stratafs-copy-up.deferred-deletion]
 
 Delete-on-close is authorized when armed and recorded on the open file
 description (§3.9.2). At final close there is no re-authorization
-against the closing task. Instead a synchronous, non-nesting internal
+against the closing task. [*facs.stratafs-copy-up.close-no-reauth] Instead a synchronous, non-nesting internal
 deletion scope is armed for that exact outer file, and StrataFS binds
 it once to the exact provider parent, dentry and inode selected from
-the descriptor's settled provider. Only the corresponding outer and
+the descriptor's settled provider. [*facs.stratafs-copy-up.deletion-scope-binding] Only the corresponding outer and
 lower unlink calls match, and the scope is cleared on every return.
 
 The mechanism never turns an ordinary close into deletion authority,
 never admits a different provider entry, and never permits unlinking
-an entry that no longer names the descriptor's inode. If the original
+an entry that no longer names the descriptor's inode. [*facs.stratafs-copy-up.deletion-identity-check] If the original
 entry has disappeared or changed identity, the deletion is already
 complete and no exemption is used.
 
-## Exact protected-metadata cloning
+## Exact protected-metadata cloning [*facs.stratafs-copy-up.descriptor-cloning]
 
 KACS owns descriptor cloning rather than StrataFS raw-xattr code.
 Before a create phase is armed, the provider's complete effective
 descriptor is resolved and pinned using the ordinary mount-policy and
 corrupt-descriptor rules (§3.9.5). A missing, corrupt, unresolvable,
 oversized or unsupported descriptor fails the phase before the
-destination is created.
+destination is created. [*facs.stratafs-copy-up.unresolvable-descriptor-fails-phase]
 
 For a matching inode security initialisation, an exact byte-for-byte
 copy of the pinned descriptor is installed instead of inheritance
-running. The canonical xattr is installed as part of inode creation
+running. [*facs.stratafs-copy-up.exact-copy-not-inheritance] The canonical xattr is installed as part of inode creation
 and the inode's validated parsed cache is seeded from identical bytes
-before the inode becomes usable. Failure to allocate, validate or
+before the inode becomes usable. [*facs.stratafs-copy-up.xattr-and-cache-seeded] Failure to allocate, validate or
 install either representation fails creation — there is no window in
 which a named staging inode carries an inherited or otherwise weaker
-descriptor.
+descriptor. [*facs.stratafs-copy-up.no-weak-window]
 
 On a stacking destination the same applies to the real inode created
 below the outer dentry, with the authenticated outer transition as the
 only authority to redirect installation there. The pinned bytes are
 installed and cached during the real inode's creation, before the
 outer object is confirmed or bound; inheriting the parent's descriptor
-and repairing it afterwards would not be conforming.
+and repairing it afterwards would not be conforming. [*facs.stratafs-copy-up.stacking-real-inode-install]
 
 The canonical descriptor is not copied by ordinary xattr enumeration —
 it is reported as cancelled so a stacking filesystem discards it — and
 raw canonical getxattr and setxattr stay denied even inside the
-context, with the hook-side denial evaluated before any phase match.
+context, with the hook-side denial evaluated before any phase match. [*facs.stratafs-copy-up.canonical-xattr-cancelled]
 The context does not override the unconditional denial of POSIX ACL
-mutation either.
+mutation either. [*facs.stratafs-copy-up.posix-acl-still-denied]
 
 Raw setxattr, including through an internal copy-up file, remains
-unable to install `security.capability`. Where the provider has one,
+unable to install `security.capability`. [*facs.stratafs-copy-up.raw-setcap-denied] Where the provider has one,
 StrataFS calls the dedicated clone entry point during populate, after
 any operation that might clear file capabilities. That call accepts
 only a kernel buffer exactly matching the pinned value, under the same
-user namespace it was pinned in, for the still-bound staged inode. It
+user namespace it was pinned in, for the still-bound staged inode. [*facs.stratafs-copy-up.clone-call-preconditions] It
 re-reads the provider immediately before installing and fails with
-`ESTALE` if the value or its presence changed.
+`ESTALE` if the value or its presence changed. [*facs.stratafs-copy-up.clone-estale-on-change]
 
 The call copies the caller's buffer before comparing, and installs
 with `XATTR_CREATE` through the ordinary VFS path, so mount-idmap
 conversion, xattr validation, filesystem permission and format checks
-and other LSM checks all still apply. The otherwise-dead
+and other LSM checks all still apply. [*facs.stratafs-copy-up.clone-through-vfs] The otherwise-dead
 `CAP_SETFCAP` gate is satisfied only synchronously inside that
 validated call, and the corresponding setxattr re-entry is admitted
-only after the first hook matches the exact staged inode. The
+only after the first hook matches the exact staged inode. [*facs.stratafs-copy-up.setfcap-synchronous-only] The
 capability answer targets only the pinned caller namespace or the
 staged inode's filesystem namespace, and the condition is cleared on
 every return. Nothing is installed when the provider had no attribute,
-a different one, or an unreadable or invalid one. The exception does
+a different one, or an unreadable or invalid one. [*facs.stratafs-copy-up.no-install-on-mismatch] The exception does
 not revive exec-time file-capability grants.
 
 There is one asymmetry here: the removal path does not reject
 `security.capability` the way the set path does, so an internal
 copy-up descriptor can remove it from the staged object during
-populate.
+populate. [*facs.stratafs-copy-up.removal-path-asymmetry]
 
 Other eligible provider xattrs follow StrataFS's replication rules
 while KACS's caller checks on their source and staging objects are
@@ -288,14 +288,14 @@ exempted as above. An ineligible xattr that cannot be replicated
 triggers StrataFS's ordinary copy-up failure rule rather than being
 silently omitted.
 
-## Auditing
+## Auditing [*facs.stratafs-copy-up.auditing]
 
 The outer authorized handle operation remains subject to ordinary
 audit. No second caller AccessCheck or privilege-use audit is emitted
 for an exempt internal sub-operation, since that would attribute
 StrataFS mechanics to a caller decision that never happened — and
 internal files carry a continuous-audit mask of zero, so they generate
-no per-operation events either. The `CAP_SETFCAP` satisfaction path
+no per-operation events either. [*facs.stratafs-copy-up.no-second-audit] The `CAP_SETFCAP` satisfaction path
 returns before the capability check that would record privilege use.
 
 StrataFS decides when its own copy-up lifecycle and failure events
@@ -303,7 +303,7 @@ occur; KACS supplies the kernel-only emitter, so KMES stamps each
 event with the effective token of the task whose operation caused it
 (§2.2). Two of those emissions are best-effort: an allocation failure,
 or an operation string that is empty or over 64 bytes, drops the event
-silently.
+silently. [*facs.stratafs-copy-up.emission-best-effort]
 
 Denied mismatches, and operations performed with no active matching
 context, follow the ordinary authorization and audit paths.

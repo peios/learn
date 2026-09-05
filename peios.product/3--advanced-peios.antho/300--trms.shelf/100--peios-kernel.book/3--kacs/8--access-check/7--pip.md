@@ -4,40 +4,40 @@ description: How a trust label ACE is evaluated — the label SID, the privilege
 ---
 
 An object opts in to PIP protection by carrying a
-`SYSTEM_PROCESS_TRUST_LABEL_ACE` in its SACL. The ACE's SID encodes
+`SYSTEM_PROCESS_TRUST_LABEL_ACE` in its SACL. [*check.pip.opt-in-via-sacl-ace] The ACE's SID encodes
 the required type and trust, and its access mask names exactly the
 rights a non-dominant caller may still have.
 
 A caller that **dominates** — `pip_type` and `pip_trust` both greater
-than or equal to the ACE's — is unrestricted by PIP. A caller that
+than or equal to the ACE's — is unrestricted by PIP. [*check.pip.ace-dominance-test] A caller that
 does not dominate is limited to the ACE mask, and everything else is
-denied.
+denied. [*check.pip.non-dominant-limited-to-ace-mask]
 
 Unlike MIC, PIP has **no default**. An object with no trust label is
-unrestricted, reachable by any process whatever its PIP identity.
+unrestricted, reachable by any process whatever its PIP identity. [*check.pip.no-default]
 
 ## The label SID
 
 A trust label SID has the form `S-1-19-{type}-{trust}` — the Process
-Trust authority, exactly two sub-authorities. Both axes are compared
+Trust authority, exactly two sub-authorities. [*check.pip.label-sid-shape] Both axes are compared
 numerically. The conventional type values are 0 (None), 512
 (Protected) and 1024 (Isolated), but they are labels rather than a
 closed enum: any other numeric type is valid and compared by the same
-dominance rule.
+dominance rule. [*check.pip.nonstandard-type-accepted]
 
 A trust label SID of any other shape — wrong authority, wrong
 sub-authority count — makes the descriptor malformed, and AccessCheck
-rejects it outright rather than guessing.
+rejects it outright rather than guessing. [*check.pip.malformed-label-rejects-descriptor]
 
 Where a SACL carries more than one trust label ACE, only the first
 non-inherit-only one is used; inherit-only labels do not apply to the
-object carrying them.
+object carrying them. [*check.pip.first-non-inherit-only-label]
 
 ## Privilege revocation
 
 This is the critical difference from MIC. PIP does not merely
 constrain what the DACL may grant — it **revokes rights privileges
-already granted**. A non-dominant caller who used `SeBackupPrivilege`
+already granted**. [*check.pip.revokes-privilege-granted] A non-dominant caller who used `SeBackupPrivilege`
 to obtain read has those bits stripped; `SeTakeOwnershipPrivilege`'s
 `WRITE_OWNER` is stripped; `SeSecurityPrivilege`'s
 `ACCESS_SYSTEM_SECURITY` is stripped.
@@ -51,9 +51,9 @@ There is no escape hatch. PIP has no `SeRelabelPrivilege` equivalent,
 and no privilege compensates for insufficient trust. It is an absolute
 boundary, which is why the enforcement step explicitly ORs
 `ACCESS_SYSTEM_SECURITY` into the set of bits it can take away —
-that right is outside the generic mapping and would otherwise escape.
+that right is outside the generic mapping and would otherwise escape. [*check.pip.revokes-access-system-security]
 
-## The algorithm
+## The algorithm [*check.pip.algorithm]
 
 ```
 EnforcePIP(ace, pip_type, pip_trust, mapping, &decided,
@@ -92,22 +92,22 @@ EnforcePIP(ace, pip_type, pip_trust, mapping, &decided,
 `pip_type` and `pip_trust` are the subject's process trust context and
 are never derived from a token field — the token structure has no PIP
 field at all. They are passed into AccessCheck as explicit parameters
-by whichever layer is enforcing.
+by whichever layer is enforcing. [*check.pip.values-are-parameters]
 
 During enforcement — FACS file access, process boundaries — the values
 are the subject process's PSB, set at exec from the binary's signature
-(§3.6, §3.7).
+(§3.6, §3.7). [*check.pip.enforcement-uses-psb]
 
 The `kacs_access_check` query may instead supply them through its
 arguments, per axis: zero means "use the calling process's PSB value"
-and a nonzero value evaluates against the supplied context. This lets
+and a nonzero value evaluates against the supplied context. [*check.pip.query-supplies-values-per-axis] This lets
 a userspace broker evaluate access under a client's trust level, in
 the same way the query's token argument lets it evaluate a token other
 than its own. The query is advisory and gates nothing in the kernel;
 enforcement always uses the PSB. The same effective values are used
 for the verdict and for the event the check emits, so an audit record
-never disagrees with the decision it describes.
+never disagrees with the decision it describes. [*check.pip.same-values-for-verdict-and-event]
 
 The enforcement step also computes a record of which bits PIP decided.
 Nothing currently consumes it — it is threaded through three
-structures and exported, and no caller reads it.
+structures and exported, and no caller reads it. [*check.pip.decided-record-unconsumed]
