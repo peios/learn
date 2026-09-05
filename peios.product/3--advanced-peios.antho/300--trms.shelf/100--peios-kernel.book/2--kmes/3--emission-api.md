@@ -55,12 +55,14 @@ Two further situations discard kernel events entirely outside this
 accounting:
 
 - Before KMES initialisation completes, emission is a silent no-op: no
-  sequence number is consumed, no counter is incremented, and no gap
-  is visible. Events emitted in this window are simply gone. [*kernel-emit.pre-init-silent]
+  sequence number is consumed, the drop counter is not incremented,
+  and no gap is visible. Events emitted in this window are simply
+  gone. KMES tallies them in a private counter and logs the total once
+  when the rings come up. [*kernel-emit.pre-init-silent]
 - If the ring's recorded CPU identity does not match the executing
-  CPU, single emission treats it as a structural drop (sequence
-  consumed, counter incremented), while both batch paths return early
-  without consuming anything. [*kernel-emit.cpu-mismatch-discard]
+  CPU, the ring selection itself is untrustworthy, so every emission
+  path — single, kernel batch and syscall — returns early without
+  consuming a sequence number or counting a drop. [*kernel-emit.cpu-mismatch-discard]
 
 ## Ring buffer full [*kernel-emit.never-blocks]
 
