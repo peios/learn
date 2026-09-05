@@ -187,6 +187,12 @@ Meson's normal build workflow invokes it. Meson's Python implementation is
 private to the application rather than exposed as a system-wide Python
 library.
 
+GNU MPFR's shared runtime is installed as `org.gnu.mpfr`. Its public headers,
+linker name and pkg-config metadata are in `org.gnu.mpfr-devel`; the static
+archive and its static GMP closure are in `org.gnu.mpfr-static`. The library is
+built with thread-safe storage and publishes matching source, debuginfo and
+debugsource packages.
+
 For now, commands require the complete canonical name:
 
 ```
