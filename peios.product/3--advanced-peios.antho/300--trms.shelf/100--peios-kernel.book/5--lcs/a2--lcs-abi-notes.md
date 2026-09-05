@@ -40,5 +40,5 @@ The three syscall numbers are added to the syscall table by
 `arch/x86/entry/syscalls/syscall_64.tbl` and the copy of it that ships
 under `tools/perf/`. [*lcs-abi-notes.syscall-numbers-added-by-patch]
 
-They are registered `common`, so they are reachable from the x32 ABI as
-well as from x86-64. [*lcs-abi-notes.syscalls-registered-common]
+They are registered `common`, so the same row serves the x32 ABI
+wherever that ABI is built in; the Peios kernel does not build it. [*lcs-abi-notes.syscalls-registered-common]

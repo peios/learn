@@ -24,7 +24,8 @@ makes complete registry isolation possible for a container or a
 sandbox without giving it a differently-named hive to notice.
 
 `MaxScopeGUIDsPerToken`, default 8, bounds the per-syscall iteration
-cost. [*private-hive.scope.max-guids-per-token] Duplicate scope GUIDs on a token are rejected.
+cost; a token above the cap fails every registry operation with `E2BIG`
+(§5.3.5). [*private-hive.scope.max-guids-per-token] Duplicate scope GUIDs on a token are rejected.
 
 ## Scope GUIDs on a token
 

@@ -25,9 +25,9 @@ the request loop: `read()` for requests, `write()` for responses.
 - The root GUIDs within one request are distinct from each other. [*source.register.root-guids-distinct-within-request]
 - A hive without `RSI_HIVE_PRIVATE` carries no scope GUID. [*source.register.scope-guid-only-for-private-hive]
 - No unknown flag bits are set. [*source.register.no-unknown-flag-bits]
-- The hive count is non-zero and within `MaxHivesPerSource` (64), and
-  the source count is within `MaxRegisteredSources` (32). Either is
-  `ENOSPC`. [*source.register.hive-and-source-counts-are-enospc]
+- The hive count is within `MaxHivesPerSource` (64), and the source
+  count is within `MaxRegisteredSources` (32). Either limit is `ENOSPC`;
+  a zero hive count is `EINVAL`. [*source.register.hive-and-source-counts-are-enospc]
 - The reported maximum sequence can be advanced past without
   overflowing 64 bits, or registration fails `EOVERFLOW` and the source
   is never made Active (§5.3.7). [*source.register.max-sequence-overflow-is-eoverflow]

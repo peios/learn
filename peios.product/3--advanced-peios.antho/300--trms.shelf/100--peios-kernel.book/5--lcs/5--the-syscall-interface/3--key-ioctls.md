@@ -117,9 +117,9 @@ requires zero-length data (§5.2.6).
 A non-zero `expected_sequence` makes the write **conditional**. It is
 passed to the source, which atomically verifies that the layer's own
 current entry carries that sequence number before writing, and answers
-`RSI_CAS_FAILED` if not — which LCS returns as `EAGAIN`. There is no
-kernel-side query-then-write: the check is the source's, and it is
-atomic there or nowhere. [*ioctl.set-value.expected-sequence-is-a-cas]
+`RSI_CAS_FAILED` if not — which LCS returns as `EAGAIN`. LCS reads the key's entries before every write, for watch dispatch,
+but there is no kernel-side query-then-write for the condition: the
+check is the source's, and it is atomic there or nowhere. [*ioctl.set-value.expected-sequence-is-a-cas]
 
 The condition is evaluated against the **layer's own entry**, not
 against the effective value. [*ioctl.set-value.cas-tests-the-layers-own-entry] A higher-precedence layer overriding a

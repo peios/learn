@@ -77,7 +77,9 @@ simply refuses to use it. The registry shows what was written; the
 audit log shows what LCS is running on.
 
 Because "missing" is invalid, a first boot before seed restore emits
-nineteen of these events per refresh.
+nineteen of these events per refresh — provided `Machine\System\Registry`
+itself exists. If the key is absent there is nothing to read and
+nothing is reported; the fallback watch of §5.10.4 waits for it.
 
 ## Hot-swap and in-flight operations
 

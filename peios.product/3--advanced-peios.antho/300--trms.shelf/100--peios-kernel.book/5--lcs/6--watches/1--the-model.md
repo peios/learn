@@ -34,9 +34,9 @@ watch armed before the key was orphaned stays armed (§5.2.9).
 Events describe changes to **effective** state, not to layer mechanics.
 A watcher sees that a value changed; it does not see which layer won,
 or that a layer was deleted. [*watch.model.reports-effective-state-not-layer-mechanics]
-Removing a layer whose value was on top produces `VALUE_SET` for the
-value that surfaced underneath. Removing a hiding entry that was
-concealing a lower-precedence key produces `SUBKEY_CREATED`. The layer
+Removing a hiding entry that was concealing a lower-precedence key
+produces `SUBKEY_CREATED`. Removing a whole layer is recovery dispatch
+rather than a diff, and reaches a watcher as `OVERFLOW` (§5.6.3). The layer
 system is not visible through a watch at all.
 
 The events are computed by diffing the effective state before the
@@ -62,9 +62,8 @@ transaction produce nothing; the whole set fires at commit (§5.6.3).
 | `REG_WATCH_KEY_DELETED` | 6 | empty | The watched key itself became invisible. [*watch.model.event-key-deleted] |
 | `REG_WATCH_OVERFLOW` | 7 | empty | Events were dropped; re-read to recover. [*watch.model.event-overflow] |
 
-`VALUE_SET` fires when a value is written, when a tombstone or blanket
-tombstone is removed and a lower-precedence value surfaces, and when a
-layer deletion makes a different value effective. [*watch.model.value-set-fires-on-write-unmask-or-layer-deletion]
+`VALUE_SET` fires when a value is written, and when a tombstone or
+blanket tombstone is removed and a lower-precedence value surfaces. [*watch.model.value-set-fires-on-write-unmask-or-layer-deletion]
 
 `VALUE_DELETED` fires when the last entry for a name goes away, when a
 tombstone masks every entry, and when a blanket tombstone masks this

@@ -53,6 +53,8 @@ The kernel-side effects that correspond to the mutation are applied
 from the retained record: the hive generation increment, watch
 dispatch, the layer metadata cache refresh, and — for a commit — the
 transaction's batch effects and orphan tracking. [*source.late.mutation-applies-retained-effects]
+The watch dispatch takes the recovery form: a watcher receives an
+`OVERFLOW` ahead of the event itself (§5.6.3).
 
 Which mutations can actually be replayed is narrower than the set of
 operations that count as mutating. A replayable effect is recorded for

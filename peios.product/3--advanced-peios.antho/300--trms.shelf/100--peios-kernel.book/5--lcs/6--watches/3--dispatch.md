@@ -104,8 +104,9 @@ mutation log is walked in operation order and the whole set of events
 is queued as one batch, under a single hold of the registry lock, so no
 other operation interleaves with it. [*watch.dispatch.commit-batch-queued-in-operation-order-without-interleaving]
 
-An aborted, failed or timed-out transaction dispatches nothing and its
-log is released.
+An aborted or failed transaction dispatches nothing and its log is
+released. A transaction that timed out after its commit was dispatched
+keeps its log, and a late `RSI_OK` still emits the batch (§5.7.3).
 
 A large transaction — a role installation writing thousands of values —
 could otherwise fill a watcher's queue atomically. So the batch is
