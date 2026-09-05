@@ -110,4 +110,4 @@ never disagrees with the decision it describes. [*check.pip.same-values-for-verd
 
 The enforcement step also computes a record of which bits PIP decided.
 Nothing currently consumes it — it is threaded through three
-structures and exported, and no caller reads it. [*check.pip.decided-record-unconsumed]
+structures and exported, and no caller reads it.

@@ -159,7 +159,7 @@ two enforced at initialisation rather than only at build (§3.7). [*abi-notes.bu
 `CONFIG_SECURITY_SELINUX`, `_APPARMOR`, `_SMACK` and `_TOMOYO` are
 refused by Kconfig dependency; `CONFIG_BPF_LSM` is refused only at
 runtime, so a kernel enabling both configures and builds and then
-fails to initialise. [*abi-notes.build.bpf-lsm-refused-at-runtime] `CONFIG_LSM` is never parsed. [*abi-notes.build.config-lsm-never-parsed]
+fails to initialise. `CONFIG_LSM` is never parsed.
 
 Two further symbols gate large bodies of code:
 

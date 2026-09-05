@@ -180,6 +180,6 @@ safely. [*cred.dac.non-mac-lsms-allowed]
 
 The check is made at initialisation and KACS refuses to activate if it
 fails — but it is a **build-configuration** test rather than an
-inspection of the live LSM stack. [*cred.dac.lsm-check-build-config] It tests whether each conflicting
+inspection of the live LSM stack. It tests whether each conflicting
 LSM is enabled in the kernel config, and never parses `CONFIG_LSM` or
 enumerates what is actually registered.
