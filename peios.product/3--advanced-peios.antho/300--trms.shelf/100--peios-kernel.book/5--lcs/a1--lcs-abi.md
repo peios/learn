@@ -7,13 +7,13 @@ Every name, value, offset and size in this appendix is generated from
 `pkm/uapi/pkm/lcs.h` by `pkm/tools/gen-lcs-abi.py`, with ioctl
 encodings and struct layouts measured by compiling a probe against the
 real header. Regenerate it whenever the ABI changes; do not edit it by
-hand. The names here are the ones a program actually compiles against.
+hand. The names here are the ones a program actually compiles against. [*lcs-abi.generated-from-source]
 
 What a compiler cannot measure -- which properties belong with their
 operations rather than here, and the kernel configuration -- is in the
 notes appendix, §5.B, which this generator does not touch.
 
-## Syscall numbers
+## Syscall numbers [*lcs-abi.syscall-numbers]
 
 Signatures are read from the `SYSCALL_DEFINE` sites in `pkm/lcs/`.
 
@@ -23,7 +23,7 @@ Signatures are read from the `SYSCALL_DEFINE` sites in `pkm/lcs/`.
 | 1101 | `SYS_REG_CREATE_KEY` | `reg_create_key(const struct reg_create_key_args __user *args)` |
 | 1102 | `SYS_REG_BEGIN_TRANSACTION` | `reg_begin_transaction(void)` |
 
-## Ioctls
+## Ioctls [*lcs-abi.ioctl-numbers]
 
 The type byte is `'R'`. Ioctl number namespaces are per fd type, so
 `REG_SRC_REGISTER` (number 0 on the source device) and
@@ -72,7 +72,7 @@ Offsets and sizes are measured, not declared. The header also defines
 a `_SIZE` constant for each of these structures; the two agree by
 construction, and a mismatch fails the build in `uapi/smoke_test.c`.
 
-### `struct reg_create_key_args`
+### `struct reg_create_key_args` [*lcs-abi.struct-reg-create-key-args]
 
 Total size 48 bytes.
 
@@ -88,7 +88,7 @@ Total size 48 bytes.
 | 36 | 4 | `__u32` | `_pad1` |
 | 40 | 8 | `__u64` | `disposition_ptr` |
 
-### `struct reg_query_value_args`
+### `struct reg_query_value_args` [*lcs-abi.struct-reg-query-value-args]
 
 Total size 64 bytes.
 
@@ -107,7 +107,7 @@ Total size 64 bytes.
 | 52 | 4 | `__u32` | `_pad1` |
 | 56 | 8 | `__u64` | `layer_ptr` |
 
-### `struct reg_set_value_args`
+### `struct reg_set_value_args` [*lcs-abi.struct-reg-set-value-args]
 
 Total size 64 bytes.
 
@@ -126,7 +126,7 @@ Total size 64 bytes.
 | 52 | 4 | `__u32` | `_pad2` |
 | 56 | 8 | `__u64` | `expected_seq` |
 
-### `struct reg_delete_value_args`
+### `struct reg_delete_value_args` [*lcs-abi.struct-reg-delete-value-args]
 
 Total size 40 bytes.
 
@@ -141,7 +141,7 @@ Total size 40 bytes.
 | 32 | 4 | `__s32` | `txn_fd` |
 | 36 | 4 | `__u32` | `_pad2` |
 
-### `struct reg_blanket_tombstone_args`
+### `struct reg_blanket_tombstone_args` [*lcs-abi.struct-reg-blanket-tombstone-args]
 
 Total size 24 bytes.
 
@@ -154,7 +154,7 @@ Total size 24 bytes.
 | 17 | 3 | `__u8``[3]` | `_pad1` |
 | 20 | 4 | `__s32` | `txn_fd` |
 
-### `struct reg_query_values_batch_args`
+### `struct reg_query_values_batch_args` [*lcs-abi.struct-reg-query-values-batch-args]
 
 Total size 24 bytes.
 
@@ -166,7 +166,7 @@ Total size 24 bytes.
 | 16 | 4 | `__s32` | `txn_fd` |
 | 20 | 4 | `__u32` | `_pad` |
 
-### `struct reg_enum_value_args`
+### `struct reg_enum_value_args` [*lcs-abi.struct-reg-enum-value-args]
 
 Total size 40 bytes.
 
@@ -181,7 +181,7 @@ Total size 40 bytes.
 | 32 | 4 | `__s32` | `txn_fd` |
 | 36 | 4 | `__u32` | `_pad` |
 
-### `struct reg_enum_subkey_args`
+### `struct reg_enum_subkey_args` [*lcs-abi.struct-reg-enum-subkey-args]
 
 Total size 40 bytes.
 
@@ -196,7 +196,7 @@ Total size 40 bytes.
 | 32 | 4 | `__s32` | `txn_fd` |
 | 36 | 4 | `__u32` | `_pad` |
 
-### `struct reg_query_key_info_args`
+### `struct reg_query_key_info_args` [*lcs-abi.struct-reg-query-key-info-args]
 
 Total size 64 bytes.
 
@@ -217,7 +217,7 @@ Total size 64 bytes.
 | 50 | 6 | `__u8``[6]` | `_pad1` |
 | 56 | 8 | `__u64` | `hive_generation` |
 
-### `struct reg_delete_key_args`
+### `struct reg_delete_key_args` [*lcs-abi.struct-reg-delete-key-args]
 
 Total size 24 bytes.
 
@@ -229,7 +229,7 @@ Total size 24 bytes.
 | 16 | 4 | `__s32` | `txn_fd` |
 | 20 | 4 | `__u32` | `_pad1` |
 
-### `struct reg_hide_key_args`
+### `struct reg_hide_key_args` [*lcs-abi.struct-reg-hide-key-args]
 
 Total size 24 bytes.
 
@@ -241,7 +241,7 @@ Total size 24 bytes.
 | 16 | 4 | `__s32` | `txn_fd` |
 | 20 | 4 | `__u32` | `_pad1` |
 
-### `struct reg_get_security_args`
+### `struct reg_get_security_args` [*lcs-abi.struct-reg-get-security-args]
 
 Total size 16 bytes.
 
@@ -251,7 +251,7 @@ Total size 16 bytes.
 | 4 | 4 | `__u32` | `sd_len` |
 | 8 | 8 | `__u64` | `sd_ptr` |
 
-### `struct reg_set_security_args`
+### `struct reg_set_security_args` [*lcs-abi.struct-reg-set-security-args]
 
 Total size 24 bytes.
 
@@ -263,7 +263,7 @@ Total size 24 bytes.
 | 16 | 4 | `__s32` | `txn_fd` |
 | 20 | 4 | `__u32` | `_pad` |
 
-### `struct reg_notify_args`
+### `struct reg_notify_args` [*lcs-abi.struct-reg-notify-args]
 
 Total size 8 bytes.
 
@@ -273,7 +273,7 @@ Total size 8 bytes.
 | 4 | 1 | `__u8` | `subtree` |
 | 5 | 3 | `__u8``[3]` | `_pad` |
 
-### `struct reg_backup_args`
+### `struct reg_backup_args` [*lcs-abi.struct-reg-backup-args]
 
 Total size 4 bytes.
 
@@ -281,7 +281,7 @@ Total size 4 bytes.
 |---|---|---|---|
 | 0 | 4 | `__s32` | `output_fd` |
 
-### `struct reg_restore_args`
+### `struct reg_restore_args` [*lcs-abi.struct-reg-restore-args]
 
 Total size 4 bytes.
 
@@ -289,7 +289,7 @@ Total size 4 bytes.
 |---|---|---|---|
 | 0 | 4 | `__s32` | `input_fd` |
 
-### `struct reg_txn_status_args`
+### `struct reg_txn_status_args` [*lcs-abi.struct-reg-txn-status-args]
 
 Total size 8 bytes.
 
@@ -298,7 +298,7 @@ Total size 8 bytes.
 | 0 | 4 | `__u32` | `state` |
 | 4 | 4 | `__s32` | `terminal_errno` |
 
-### `struct reg_src_register_args`
+### `struct reg_src_register_args` [*lcs-abi.struct-reg-src-register-args]
 
 Total size 24 bytes.
 
@@ -309,7 +309,7 @@ Total size 24 bytes.
 | 8 | 8 | `__u64` | `max_sequence` |
 | 16 | 8 | `__u64` | `hives_ptr` |
 
-### `struct reg_src_hive_entry`
+### `struct reg_src_hive_entry` [*lcs-abi.struct-reg-src-hive-entry]
 
 Total size 56 bytes.
 
@@ -327,7 +327,7 @@ Total size 56 bytes.
 
 Grouped as the header groups them.
 
-*Syscall and ioctl argument sizes.*
+*Syscall and ioctl argument sizes.* [*lcs-abi.argument-sizes]
 
 | Constant | Value |
 |---|---|
@@ -351,21 +351,7 @@ Grouped as the header groups them.
 | `REG_SRC_REGISTER_ARGS_SIZE` | `24` |
 | `REG_SRC_HIVE_ENTRY_SIZE` | `56` |
 
-*_IOWR, not _IOR: the kernel reads the caller's name_len and name_ptr out of the argument struct before it writes the result back, so the argument crosses in both directions. It was declared _IOR, which put the wrong direction bits in the encoded number -- and since the kernel dispatches on the whole encoded value, correcting it is a wire break, not a relabelling.*
-
-| Constant | Value |
-|---|---|
-| `REG_IOC_QUERY_KEY_INFO` | `0xC0405207` |
-| `REG_IOC_DELETE_KEY` | `0x40185208` |
-| `REG_IOC_HIDE_KEY` | `0x40185209` |
-| `REG_IOC_GET_SECURITY` | `0xC010520A` |
-| `REG_IOC_SET_SECURITY` | `0x4018520B` |
-| `REG_IOC_NOTIFY` | `0x4008520C` |
-| `REG_IOC_FLUSH` | `0x0000520D` |
-| `REG_IOC_BACKUP` | `0x4004520E` |
-| `REG_IOC_RESTORE` | `0x4004520F` |
-
-*Transaction state codes.*
+*Transaction state codes.* [*lcs-abi.txn-state-codes]
 
 | Constant | Value |
 |---|---|
@@ -376,7 +362,7 @@ Grouped as the header groups them.
 | `REG_TXN_TIMED_OUT` | `4` |
 | `REG_TXN_SOURCE_DOWN` | `5` |
 
-*Syscall flags and dispositions.*
+*Syscall flags and dispositions.* [*lcs-abi.syscall-flags-and-dispositions]
 
 | Constant | Value |
 |---|---|
@@ -386,7 +372,7 @@ Grouped as the header groups them.
 | `REG_CREATED_NEW` | `1` |
 | `REG_OPENED_EXISTING` | `2` |
 
-*Registry key access rights.*
+*Registry key access rights.* [*lcs-abi.key-access-rights]
 
 | Constant | Value |
 |---|---|
@@ -413,7 +399,7 @@ Grouped as the header groups them.
 | `REG_VALID_MAPPED_ACCESS_MASK` | `0x010F003F` |
 | `REG_VALID_ACE_ACCESS_MASK` | `0xF10F003F` |
 
-*Security information flags for REG_IOC_GET_SECURITY / SET_SECURITY.*
+*Security information flags for REG_IOC_GET_SECURITY / SET_SECURITY.* [*lcs-abi.security-information-flags]
 
 | Constant | Value |
 |---|---|
@@ -423,7 +409,7 @@ Grouped as the header groups them.
 | `SACL_SECURITY_INFORMATION` | `0x00000008` |
 | `REG_VALID_SECURITY_INFORMATION` | `0x0000000F` |
 
-*Registry value types.*
+*Registry value types.* [*lcs-abi.value-types]
 
 | Constant | Value |
 |---|---|
@@ -441,7 +427,7 @@ Grouped as the header groups them.
 | `REG_QWORD` | `11` |
 | `REG_TOMBSTONE` | `0xFFFF` |
 
-*Watch event types and filters.*
+*Watch event types and filters.* [*lcs-abi.watch-event-types-and-filters]
 
 | Constant | Value |
 |---|---|
@@ -453,7 +439,7 @@ Grouped as the header groups them.
 | `REG_WATCH_KEY_DELETED` | `6` |
 | `REG_WATCH_OVERFLOW` | `7` |
 
-*Watch event raw byte layout.*
+*Watch event raw byte layout.* [*lcs-abi.watch-record-layout]
 
 | Constant | Value |
 |---|---|
@@ -471,7 +457,7 @@ Grouped as the header groups them.
 | `REG_NOTIFY_SD` | `0x04` |
 | `REG_NOTIFY_ALL` | `0x07` |
 
-*RSI common wire layout.*
+*RSI common wire layout.* [*lcs-abi.rsi-wire-layout]
 
 | Constant | Value |
 |---|---|
@@ -491,7 +477,7 @@ Grouped as the header groups them.
 | `RSI_GUID_SIZE` | `16` |
 | `RSI_RESPONSE_BIT` | `0x8000` |
 
-*RSI op codes and response op codes.*
+*RSI op codes and response op codes.* [*lcs-abi.rsi-op-codes]
 
 | Constant | Value |
 |---|---|
@@ -532,7 +518,7 @@ Grouped as the header groups them.
 | `RSI_FLUSH_RESPONSE` | `0x8040` |
 | `RSI_DELETE_LAYER_RESPONSE` | `0x8050` |
 
-*RSI status codes.*
+*RSI status codes.* [*lcs-abi.rsi-status-codes]
 
 | Constant | Value |
 |---|---|
@@ -547,14 +533,14 @@ Grouped as the header groups them.
 | `RSI_CAS_FAILED` | `8` |
 | `RSI_TXN_NOT_SUPPORTED` | `9` |
 
-*RSI path target types.*
+*RSI path target types.* [*lcs-abi.rsi-path-target-types]
 
 | Constant | Value |
 |---|---|
 | `RSI_PATH_TARGET_GUID` | `0` |
 | `RSI_PATH_TARGET_HIDDEN` | `1` |
 
-*RSI_WRITE_KEY field mask bits.*
+*RSI_WRITE_KEY field mask bits.* [*lcs-abi.rsi-write-key-field-mask]
 
 | Constant | Value |
 |---|---|
@@ -562,7 +548,7 @@ Grouped as the header groups them.
 | `RSI_WRITE_KEY_FIELD_LAST_WRITE_TIME` | `0x02` |
 | `RSI_WRITE_KEY_FIELD_KNOWN_MASK` | `0x00000003` |
 
-*RSI transaction modes and source-registration flags.*
+*RSI transaction modes and source-registration flags.* [*lcs-abi.rsi-txn-modes-and-registration-flags]
 
 | Constant | Value |
 |---|---|
@@ -570,7 +556,7 @@ Grouped as the header groups them.
 | `RSI_TXN_READ_ONLY` | `1` |
 | `RSI_HIVE_PRIVATE` | `0x01` |
 
-*Backup record types and magic.*
+*Backup record types and magic.* [*lcs-abi.backup-record-types]
 
 | Constant | Value |
 |---|---|
@@ -598,7 +584,7 @@ read from `ret` (0 == enqueued, -EAGAIN == in-flight at limit /
 backpressure, -EIO == source gone / fd closing, -EOVERFLOW == request-id
 space exhausted, other == build reject). The same op enum tags the
 round-trip begin marker (lcs_rsi_roundtrip). Never records a pathname,
-key name, GUID, or frame bytes — only this op code, ids, counts and ret.
+key name, GUID, or frame bytes — only this op code, ids, counts and ret. [*lcs-abi.trace.rsi-request-ops]
 
 | Constant | Value | Notes |
 |---|---|---|
@@ -628,7 +614,7 @@ UNKNOWN_STATUS are the accept-time rejects that all surface as
 -EINVAL/-EIO; MALFORMED_PAYLOAD is a per-op body validation reject; the
 LATE_* codes mark a response whose deferred effect
 (commit/mutation/begin bookkeeping) failed and took the source DOWN.
-Verdict/outcome is also in `ret`. Never records name/GUID/frame bytes.
+Verdict/outcome is also in `ret`. Never records name/GUID/frame bytes. [*lcs-abi.trace.rsi-response-reasons]
 
 | Constant | Value | Notes |
 |---|---|---|
@@ -641,7 +627,7 @@ Verdict/outcome is also in `ret`. Never records name/GUID/frame bytes.
 | `LCS_RESP_LATE_MUTATION_FAIL` | `6` | mutation late-effect failed; source DOWN |
 | `LCS_RESP_LATE_BEGIN_FAIL` | `7` | begin-txn late-effect failed; source DOWN |
 
-*lcs_source_fd reason — which source-fd lifecycle transition a record marks.*
+*lcs_source_fd reason — which source-fd lifecycle transition a record marks.* [*lcs-abi.trace.source-fd-reasons]
 
 OPEN is a fresh /dev/pkm_registry fd; the remaining codes are the entry
 points that drive a source to the DOWN/closing state. `source_down_id`
@@ -661,7 +647,7 @@ mechanical transitions. No pathname/SD bytes.
 lcs_in_flight reason — an in-flight RSI request table transition (kept
 lean; insert on admission, delivered when handed to the source's read(),
 release on response completion or teardown). `in_flight_count` is the
-post-transition depth. Emitted by lcs:lcs_in_flight.
+post-transition depth. Emitted by lcs:lcs_in_flight. [*lcs-abi.trace.in-flight-reasons]
 
 | Constant | Value | Notes |
 |---|---|---|
@@ -669,7 +655,7 @@ post-transition depth. Emitted by lcs:lcs_in_flight.
 | `LCS_IF_DELIVERED` | `1` | request delivered to source read() |
 | `LCS_IF_RELEASE` | `2` | request released from in-flight table |
 
-*lcs_route op — which resolution the lcs:lcs_route event describes.*
+*lcs_route op — which resolution the lcs:lcs_route event describes.* [*lcs-abi.trace.route-ops]
 
 | Constant | Value | Notes |
 |---|---|---|
@@ -677,7 +663,7 @@ post-transition depth. Emitted by lcs:lcs_in_flight.
 | `LCS_ROUTE_ABSOLUTE_PATH` | `1` | absolute-path -> source/root resolution |
 | `LCS_ROUTE_SYMLINK_TARGET` | `2` | symlink-target -> source/root resolution |
 
-*lcs_registration decision — the source registration path.*
+*lcs_registration decision — the source registration path.* [*lcs-abi.trace.registration-decisions]
 
 NEW/RESUME_DOWN are publish verdicts; COPY is the input-copy stage;
 REPLAY_FAIL/OVERFLOW_FAIL are resume post-publish -EIO paths that mark
@@ -692,7 +678,7 @@ _registration_publish / _registration_copy.
 | `LCS_REG_REPLAY_FAIL` | `3` | resume pending-delete replay failed (EIO) |
 | `LCS_REG_OVERFLOW_FAIL` | `4` | resume overflow dispatch failed (EIO) |
 
-*lcs_bootstrap stage — the phase of a bootstrap / self-config refresh.*
+*lcs_bootstrap stage — the phase of a bootstrap / self-config refresh.* [*lcs-abi.trace.bootstrap-stages]
 
 Emitted by lcs:lcs_bootstrap_refresh / _self_config_refresh /
 _self_config_publish.
@@ -710,7 +696,7 @@ _self_config_publish.
 lcs_runtime_limits field_id — which runtime-limit field a validate
 reject names, or LCS_LIM_ALL for a successful whole-struct publish.
 Emitted by lcs:lcs_limits_validate (-EINVAL, `value` offending) and
-lcs:lcs_limits_publish.
+lcs:lcs_limits_publish. [*lcs-abi.trace.runtime-limit-fields]
 
 | Constant | Value | Notes |
 |---|---|---|
@@ -735,7 +721,7 @@ lcs:lcs_limits_publish.
 | `LCS_LIM_MAX_TRANSACTION_WATCH_EVENT_BURST` | `18` |  |
 | `LCS_LIM_ALL` | `19` | whole-struct publish (success) |
 
-*lcs_audit event_type_id — which LCS audit event a record describes.*
+*lcs_audit event_type_id — which LCS audit event a record describes.* [*lcs-abi.trace.audit-event-types]
 
 Emitted by lcs:lcs_audit_emit and lcs:lcs_audit_emit_failed.
 `result_errno` carries the op-specific numeric. No SD or raw GUID bytes;
@@ -751,7 +737,7 @@ key GUID is a u64 hash.
 | `LCS_AUDIT_VALIDATION_FAILURE` | `5` | source validation-failure audit |
 | `LCS_AUDIT_SELF_CONFIG_INVALID` | `6` | self-config-invalid audit |
 
-*lcs_txn state — the transaction-fd state machine state carried in old_state new_state.*
+*lcs_txn state — the transaction-fd state machine state carried in old_state new_state.* [*lcs-abi.trace.txn-states]
 
 Emitted by lcs:lcs_txn_begin / _first_bind / _bind_mutation _commit /
 _abort / _timeout / _source_down.
@@ -765,7 +751,7 @@ _abort / _timeout / _source_down.
 | `LCS_TXN_ST_TIMED_OUT` | `4` | deadline timer or commit timeout |
 | `LCS_TXN_ST_SOURCE_DOWN` | `5` | bound source marked down |
 
-*lcs_key_fd cmd — the key-fd ioctl verb (also stamped on lcs_key_mutation).*
+*lcs_key_fd cmd — the key-fd ioctl verb (also stamped on lcs_key_mutation).* [*lcs-abi.trace.key-fd-cmds]
 
 LCS_KCMD_NONE is used by publish/release/read. Never records key/name/SD
 bytes. Emitted by lcs:lcs_key_ioctl / _mutation.

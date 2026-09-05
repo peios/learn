@@ -23,17 +23,18 @@ Three rules break all three.
 ## Rule 1: compiled-in defaults
 
 Every operational parameter has a compiled-in default, and LCS runs on
-those defaults from the moment PKM initialises. There is no "waiting
-for configuration" state, no flag, and no wait queue: the limits
-structure is statically initialised at load, the source char device is
-registered without consulting configuration, and the first attempt to
-read configuration happens on a workqueue after a source has already
-registered.
+those defaults from the moment PKM initialises. [*boot.defaults-active-from-init]
+
+There is no "waiting for configuration" state, no flag, and no wait
+queue: the limits structure is statically initialised at load, the
+source char device is registered without consulting configuration, and
+the first attempt to read configuration happens on a workqueue after a
+source has already registered. [*boot.no-waiting-for-configuration-state]
 
 Before any source registers, the routing table is empty, so every
-operation that names a hive returns `ENOENT`. That is the only sense in
-which LCS is not yet useful, and it is not a distinct state — it is
-just an empty table.
+operation that names a hive returns `ENOENT`. [*boot.empty-routing-table-enoent]
+That is the only sense in which LCS is not yet useful, and it is not a
+distinct state — it is just an empty table.
 
 ## Rule 2: the base layer exists unconditionally
 
@@ -47,14 +48,14 @@ database. Persisted metadata under
 `Machine\System\Registry\Layers\base\` may exist and may decorate the
 base layer, but it is not required and cannot contradict it (§5.3.2).
 
-## Rule 3: hot-swap, not restart
+## Rule 3: hot-swap, not restart [*boot.hot-swap-not-restart]
 
 When configuration becomes available, LCS reads it, validates it, and
 swaps the values in place. It does not restart, re-initialise, or
 block. The whole transition from compiled-in defaults to registry-backed
 configuration is driven by the internal self-watch (§5.10.4).
 
-## Source dependencies are the source's problem
+## Source dependencies are the source's problem [*boot.source-dependencies-not-lcs-concern]
 
 LCS neither knows nor cares what a source depends on. A source that
 needs the root filesystem, a SYSTEM token, or a particular kernel

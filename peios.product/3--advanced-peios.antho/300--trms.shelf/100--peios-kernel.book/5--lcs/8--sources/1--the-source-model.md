@@ -9,9 +9,11 @@ source-agnostic: it does not know or care how a source stores anything.
 
 The division is the sixth semantic rule (§5.1). A source stores path
 entries, key records, value entries and blanket tombstones, and returns
-**all** of them on request. It does not evaluate access, resolve layers,
-dispatch watches, interpret paths beyond the parent and child names it
-is given, or see the identity of any caller. LCS does all of that.
+**all** of them on request. [*source.model.returns-all-entries]
+
+It does not evaluate access, resolve layers, dispatch watches, interpret
+paths beyond the parent and child names it is given, or see the identity
+of any caller. LCS does all of that. [*source.model.does-no-policy]
 
 A source may back several hives; a hive is backed by exactly one source
 (§5.2.1).
@@ -32,7 +34,7 @@ and what it does when a source dies or answers late.
 
 Sources are in the TCB. LCS trusts the data a source returns —
 descriptors, values, symlink targets, key metadata — because it has no
-independent copy of any of it.
+independent copy of any of it. [*source.model.lcs-trusts-source-data]
 
 A compromised source therefore has complete control over access
 decisions for its hives. It can return a permissive descriptor for any
@@ -56,8 +58,8 @@ to any layer (§5.3.4).
 **`SeRestorePrivilege` implies descriptor control.** Restore replaces a
 subtree including every descriptor in it, so granting
 `SeRestorePrivilege` effectively grants `WRITE_DAC` and `WRITE_OWNER`
-over everything in reach of a restore. Operators should understand it
-that way.
+over everything in reach of a restore. [*source.model.restore-implies-descriptor-control] Operators should
+understand it that way.
 
 The mitigations are operational rather than architectural: sources run
 with tightly scoped privileges, protected by descriptors on their
@@ -67,7 +69,7 @@ data validation failure. A harder guarantee — checksumming descriptors
 LCS computed during inheritance and verifying them on retrieval — is
 possible but not implemented.
 
-## loregd is not special
+## loregd is not special [*source.model.loregd-is-not-special]
 
 loregd is the first source and the one that provides `Machine\` and
 `Users\` at boot, which puts it on the critical path to a running

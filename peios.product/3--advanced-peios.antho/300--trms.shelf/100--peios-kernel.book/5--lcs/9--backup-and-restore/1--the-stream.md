@@ -10,7 +10,7 @@ disaster recovery and by offline migration.
 
 It is an **LCS-level** format. Sources never see it: LCS serialises
 from source data on the way out and deserialises into RSI operations on
-the way in.
+the way in. [*backup.stream.lcs-level-sources-never-see-it]
 
 Because a third party writes and reads these streams directly — that is
 what migration and recovery mean — the format is a normative
@@ -21,41 +21,42 @@ requirement lives there. This section covers what LCS does with it.
 ## What the design buys
 
 **Streamable.** It is written to an arbitrary fd — a file, a pipe, a
-socket — with no seeking, in a single pass, and read back the same way.
+socket — with no seeking, in a single pass, and read back the same way. [*backup.stream.written-and-read-without-seeking]
 
 **Full layer fidelity.** Every path entry, value, tombstone and blanket
 tombstone is stored with its layer tag, so restoring reconstructs the
-layered state rather than a flattened snapshot of it.
+layered state rather than a flattened snapshot of it. [*backup.stream.entries-carry-their-layer-tag]
 
 **Depth-first pre-order.** A parent always appears before its children,
-so a restore can create keys top-down without buffering a tree.
+so a restore can create keys top-down without buffering a tree. [*backup.stream.depth-first-pre-order]
 
 **Descriptors inline.** Each key record carries its own descriptor with
-no deduplication. Redundancy is external compression's problem; piping
+no deduplication. [*backup.stream.descriptors-inline-without-dedup] Redundancy is external compression's problem; piping
 through zstd handles it.
 
 **Self-verifying.** A trailer carries a record count and a SHA-256 over
-everything before it, so truncation and corruption are detected.
+everything before it, so truncation and corruption are detected. [*backup.stream.trailer-carries-count-and-sha256]
 
 ## Versioning
 
 The header carries a format version and a **minimum reader version**. A
 writer that used only older features sets a lower minimum, letting
-older readers restore the stream; a reader that finds a minimum above
-its own supported version rejects the stream outright, before touching
-anything.
+older readers restore the stream. [*backup.stream.header-carries-version-and-minimum-reader]
 
-Both are 21 in the current implementation, and the reader supports 21.
+A reader that finds a minimum above its own supported version rejects
+the stream outright, before touching anything. [*backup.stream.rejects-minimum-above-supported-version]
+
+Both are 21 in the current implementation, and the reader supports 21. [*backup.stream.current-version-is-21]
 
 Unknown record types are skipped when the minimum reader version allows
-it, and they still count toward the record count and the checksum. A
+it, and they still count toward the record count and the checksum. [*backup.stream.unknown-records-skipped-but-counted] A
 writer that adds a record type a restore genuinely needs must raise the
 minimum reader version, so that an older reader refuses the stream
 rather than restoring an incomplete one.
 
 Extension is by new **record types** only. Existing record payloads
 must be consumed exactly; trailing bytes inside a known record are an
-error. This is the opposite of the RSI's request convention (§5.8.4),
+error. [*backup.stream.trailing-bytes-in-a-record-are-an-error] This is the opposite of the RSI's request convention (§5.8.4),
 and the difference is deliberate: a stream is replayed into mutations
 long after it was written, and a field silently ignored there is data
 silently lost.

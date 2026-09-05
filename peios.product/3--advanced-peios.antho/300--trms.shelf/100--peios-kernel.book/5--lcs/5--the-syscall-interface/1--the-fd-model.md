@@ -8,13 +8,17 @@ within PKM.
 
 **Syscalls** create file descriptors: opening a key, creating a key,
 beginning a transaction. There are three, numbered 1100 to 1102 in the
-PKM range. **Ioctls** operate on a descriptor that already exists —
-eighteen of them, all under type byte `'R'`. **`close()`** releases
-both kinds of fd through the ordinary fd lifecycle.
+PKM range. [*fd.three-syscalls-numbered-1100-to-1102]
+
+**Ioctls** operate on a descriptor that already exists —
+eighteen of them, all under type byte `'R'`. [*fd.eighteen-ioctls-under-type-r]
+
+**`close()`** releases
+both kinds of fd through the ordinary fd lifecycle. [*fd.close-releases-both-kinds]
 
 ## Key fds
 
-A key fd is an anonymous inode created with `O_CLOEXEC`, holding:
+A key fd is an anonymous inode created with `O_CLOEXEC`, holding: [*fd.key-fd-is-an-anonymous-inode-with-cloexec]
 
 | Field | Description |
 |---|---|
@@ -25,7 +29,7 @@ A key fd is an anonymous inode created with `O_CLOEXEC`, holding:
 | Watch state | Armed or not, filter, subtree flag, pending event queue. |
 
 Key fds behave like any other fd: `close()`, close-on-exec,
-`poll`/`epoll`, and passing over Unix sockets with `SCM_RIGHTS`. That
+`poll`/`epoll`, and passing over Unix sockets with `SCM_RIGHTS`. [*fd.key-fds-are-ordinary-fds] That
 last one is what makes them capabilities (§5.4.1).
 
 ## Open-time checking
@@ -47,25 +51,25 @@ walk a subtree.
 ## Transaction fds
 
 A transaction fd is an anonymous inode holding a transaction id and,
-once bound, its source and hive. Transaction lifetime is fd lifetime:
+once bound, its source and hive. [*fd.txn-fd-holds-id-source-and-hive] Transaction lifetime is fd lifetime:
 closing without committing aborts (§5.7.1).
 
 ## Reserved fields
 
 Every syscall and ioctl argument structure uses natural C layout with
-fixed-width fields and explicit padding. Nothing is packed.
+fixed-width fields and explicit padding. Nothing is packed. [*fd.structs-use-natural-c-layout]
 
 Fields named `_pad`, and anything else described as reserved, are ABI
 extension points. **A caller must set them to zero**, and a non-zero
 reserved or padding field fails the operation with `EINVAL` — before
 source dispatch, before transaction enlistment, before sequence
-allocation, and before any output is copied.
+allocation, and before any output is copied. [*fd.non-zero-reserved-field-is-einval]
 
 In the other direction, LCS zeroes every reserved and padding byte of
-an output structure or a watch event before copying it to userspace.
+an output structure or a watch event before copying it to userspace. [*fd.output-padding-is-zeroed]
 
 Flags fields carry only the bits defined for them. An unknown or
-reserved flag bit is `EINVAL` unless a specific field says otherwise.
+reserved flag bit is `EINVAL` unless a specific field says otherwise. [*fd.unknown-flag-bit-is-einval]
 
 The point of all this is that a future version can give a reserved
 field meaning without an older kernel having silently accepted a value
@@ -76,7 +80,7 @@ it did not understand.
 Strings in ioctl structures are **length-delimited, not
 null-terminated**. Each is a `(len, ptr)` pair where `len` is a byte
 count and `ptr` is a `u64` userspace address. LCS reads exactly `len`
-bytes. A terminator is neither required nor expected, and one included
+bytes. [*fd.string-is-a-len-ptr-pair] A terminator is neither required nor expected, and one included
 in the length is a null byte and therefore invalid.
 
 Syscall paths are the exception: they arrive as null-terminated C
@@ -86,24 +90,26 @@ strings and have the terminator stripped before validation (§5.2.8).
 
 Six ioctls return variable-size data — `REG_IOC_QUERY_VALUE`,
 `QUERY_VALUES_BATCH`, `ENUM_VALUES`, `ENUM_SUBKEYS`, `QUERY_KEY_INFO`
-and `GET_SECURITY` — and all six use one convention.
+and `GET_SECURITY` — and all six use one convention. [*fd.six-ioctls-return-variable-size-data]
 
 For each output buffer described by `(length, pointer)`:
 
 - **length 0 is a size probe**, whether the pointer is null or not. The
-  pointer is not dereferenced.
+  pointer is not dereferenced. [*fd.zero-length-is-a-size-probe]
 - **length greater than 0** requires a non-null pointer writable for
-  that many bytes, or the ioctl returns `EFAULT`.
+  that many bytes, or the ioctl returns `EFAULT`. [*fd.non-zero-length-needs-a-writable-pointer]
 
 If any output buffer is too small the ioctl returns `ERANGE` and writes
 **every required size it can determine**, not just the first one that
 failed — so a caller with two undersized buffers learns both sizes from
-one call.
+one call. [*fd.erange-writes-every-determinable-size]
 
 On `ERANGE`, output buffers are **not partially filled**; their
-contents are unspecified. Output scalar metadata is meaningful only on
+contents are unspecified. [*fd.erange-leaves-buffers-unfilled]
+
+Output scalar metadata is meaningful only on
 success, unless an ioctl explicitly documents a field as carrying a
-required size or count on `ERANGE`.
+required size or count on `ERANGE`. [*fd.output-scalars-meaningful-only-on-success]
 
 Input pointer faults return `EFAULT`, validated before source dispatch
-wherever that is possible.
+wherever that is possible. [*fd.input-pointer-fault-is-efault]

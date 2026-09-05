@@ -3,7 +3,7 @@ title: The Boot Sequence
 description: What happens from PKM initialisation to a registered source, on a normal boot and on a first boot, and the contract it establishes.
 ---
 
-## Normal boot
+## Normal boot [*boot.normal-sequence]
 
 ```
 Kernel boots
@@ -24,16 +24,16 @@ Bootstrap refresh is queued
 
 The bootstrap refresh runs on a workqueue after `REG_SRC_REGISTER`
 returns, so registration never blocks on configuration and a source
-that registers can start answering immediately.
+that registers can start answering immediately. [*boot.refresh-on-workqueue-after-register]
 
 The refresh is triggered by the arrival of a **global hive named
-`Machine`**. That name is matched case-insensitively in the kernel and
-is one of the two hive names LCS knows about; the other is `Users`, the
-target of `CurrentUser\` rewriting (§5.2.1). Neither is a routing
-decision — routing is entirely dynamic — but the claim that the kernel
-holds no hive names at all would not be true.
+`Machine`**. [*boot.refresh-triggered-by-machine-hive] That name is matched case-insensitively in the
+kernel and is one of the two hive names LCS knows about; the other is
+`Users`, the target of `CurrentUser\` rewriting (§5.2.1). Neither is a
+routing decision — routing is entirely dynamic — but the claim that the
+kernel holds no hive names at all would not be true.
 
-## First boot
+## First boot [*boot.first-boot-retains-defaults]
 
 An empty source has no `Machine\System\Registry` to read.
 

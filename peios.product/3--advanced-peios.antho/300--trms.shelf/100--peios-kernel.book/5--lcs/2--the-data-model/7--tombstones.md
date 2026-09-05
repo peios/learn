@@ -10,13 +10,15 @@ a higher-precedence layer that can only override cannot say "this value
 must not be configured". Tombstones are how absence is expressed.
 
 Both kinds are per-layer, and both vanish with their layer, restoring
-whatever they were masking.
+whatever they were masking. [*tombstone.per-layer-and-vanish-with-the-layer]
 
 ## Value tombstones
 
 A value tombstone is a layer entry that says the value does not exist
-in this layer and lower-precedence layers are masked. Resolution treats
-a winning tombstone as "not found" without falling through.
+in this layer and lower-precedence layers are masked. [*tombstone.value.masks-lower-precedence-layers]
+
+Resolution treats a winning tombstone as "not found" without falling
+through. [*tombstone.value.winning-tombstone-does-not-fall-through]
 
 In the source's storage it is an entry of type `REG_TOMBSTONE` with no
 data. A caller who wins with one gets `ENOENT`.
@@ -27,45 +29,52 @@ effective again, which is the whole point.
 ## Blanket tombstones
 
 A blanket tombstone is a per-layer marker on a **key** that masks every
-value from lower-precedence layers, whatever its name. Where a value
-tombstone names one value, a blanket names none and covers all —
-including values whose names were not known when the blanket was
-written, which is exactly what `**DelVals` requires.
+value from lower-precedence layers, whatever its name. [*tombstone.blanket.masks-every-value-name]
+
+Where a value tombstone names one value, a blanket names none and
+covers all — including values whose names were not known when the
+blanket was written, which is exactly what `**DelVals`
+requires. [*tombstone.blanket.covers-names-unknown-when-written]
 
 It is stored as a flag on the `(key GUID, layer)` relationship and
-occupies no per-name entry. It has its own sequence number.
+occupies no per-name entry. It has its own sequence
+number. [*tombstone.blanket.stored-as-a-flag-with-its-own-sequence]
 
 ### How it competes
 
 A blanket does not short-circuit resolution. It enters the candidate
 pool as a tombstone candidate **for every value name**, at its own
-`(precedence, sequence)`, and the ordinary rule picks the winner
+`(precedence, sequence)`, [*tombstone.blanket.enters-the-candidate-pool-for-every-name] and the ordinary rule picks the winner
 (§5.3.6).
 
 So a per-value entry that beats the blanket on the tuple overrides it,
-and one that loses is masked. A layer can write a blanket *and* write
-specific values in the same layer: the specific values are visible
-because they were written afterwards and carry higher sequence numbers,
-and everything else from below is masked. That is `**DelVals` followed
-by new writes, expressed without a special case.
+and one that loses is masked. [*tombstone.blanket.per-value-entry-wins-or-loses-on-the-tuple]
+
+A layer can write a blanket *and* write specific values in the same
+layer: the specific values are visible because they were written
+afterwards and carry higher sequence numbers, and everything else from
+below is masked. [*tombstone.blanket.same-layer-writes-after-a-blanket-stay-visible] That is `**DelVals` followed by new writes,
+expressed without a special case.
 
 An exact tie — same precedence *and* same sequence — between a blanket
 and a per-value entry is not resolved in the blanket's favour or
 anyone's. It is malformed source data and the operation fails with
-`EIO` (§5.3.7).
+`EIO` (§5.3.6).
 
 ### Enumeration
 
 Enumerating a key with a blanket applies the same per-name rule to each
 name, so what a caller sees is the set of names whose winning candidate
-is not the blanket. It is not simply "the blanket's layer and above": a
-different layer at the *same* precedence with a higher sequence number
-surfaces, and one with a lower sequence number does not.
+is not the blanket. [*tombstone.blanket.enumeration-applies-the-per-name-rule]
+
+It is not simply "the blanket's layer and above": a different layer at
+the *same* precedence with a higher sequence number surfaces, and one
+with a lower sequence number does not. [*tombstone.blanket.enumeration-surfaces-higher-sequence-at-same-precedence]
 
 ### Removal
 
 Removing a blanket, or the layer holding it, unmasks everything it was
-hiding.
+hiding. [*tombstone.blanket.removal-unmasks-everything-it-hid]
 
 ## What a watcher sees
 

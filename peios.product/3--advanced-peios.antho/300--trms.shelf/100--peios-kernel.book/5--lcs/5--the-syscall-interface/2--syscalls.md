@@ -15,12 +15,12 @@ resolution.
 
 | Parameter | Description |
 |---|---|
-| `parent_fd` | An open key fd to resolve relative to, or -1 for an absolute path. No AccessCheck is performed on the parent. |
-| `path` | A null-terminated registry path — absolute with a hive prefix when `parent_fd` is -1, relative to the parent key otherwise. |
+| `parent_fd` | An open key fd to resolve relative to, or -1 for an absolute path. No AccessCheck is performed on the parent. [*reg-syscall.open-key.parent-fd-or-minus-one] |
+| `path` | A null-terminated registry path — absolute with a hive prefix when `parent_fd` is -1, relative to the parent key otherwise. [*reg-syscall.open-key.path-is-absolute-or-parent-relative] |
 | `desired_access` | Requested rights, raw generic bits, `MAXIMUM_ALLOWED`, or a combination (§5.4.2). Zero and unknown bits are `EINVAL`. |
-| `flags` | `REG_OPEN_LINK` (`0x01`) opens a symlink key rather than following it. Every other bit is reserved and must be zero. |
+| `flags` | `REG_OPEN_LINK` (`0x01`) opens a symlink key rather than following it. Every other bit is reserved and must be zero. [*reg-syscall.open-key.flags-only-reg-open-link] |
 
-The open proceeds as follows.
+The open proceeds as follows. [*reg-syscall.open-key.step-order]
 
 1. Parse and canonicalise the path: normalise separators, reject empty
    components and a trailing separator, check the total length and each
@@ -33,21 +33,21 @@ The open proceeds as follows.
 4. Walk the path component by component through `RSI_LOOKUP`, resolving
    each through the layer stack and following symlinks — except a final
    component when `REG_OPEN_LINK` is set. Collect the ancestor chain as
-   you go.
+   you go. [*reg-syscall.open-key.walks-each-component-through-rsi-lookup]
 5. Run AccessCheck against the final key's descriptor.
 6. Publish an fd holding the key GUID, the granted mask, the resolved
-   path and the ancestor chain.
+   path and the ancestor chain. [*reg-syscall.open-key.fd-holds-guid-mask-path-and-chain]
 
 If the path traversed a symlink, the fd stores the *resolved* path and
 ancestor chain. It refers to the target object.
 
 | Errno | Condition |
 |---|---|
-| `ENOENT` | The key does not exist after layer resolution. |
+| `ENOENT` | The key does not exist after layer resolution. [*reg-syscall.open-key.enoent-key-missing] |
 | `EACCES` | AccessCheck did not grant everything requested. |
 | `EINVAL` | Malformed path; zero or unknown `desired_access` bits; a symlink whose effective default value is not `REG_LINK`; maximum depth exceeded. |
 | `ELOOP` | Symlink depth limit exceeded. |
-| `ENAMETOOLONG` | A component or the total path is too long. |
+| `ENAMETOOLONG` | A component or the total path is too long. [*reg-syscall.open-key.enametoolong] |
 | `ETIMEDOUT` | The source did not answer within `RequestTimeoutMs`. |
 | `EIO` | The source failed or is unavailable. |
 | `ENOMEM` | Kernel allocation failure. |
@@ -59,26 +59,26 @@ int reg_create_key(const struct reg_create_key_args __user *args);
 ```
 
 Opens the key if it exists after layer resolution, creates it with an
-inherited descriptor if not, and reports which happened.
+inherited descriptor if not, and reports which happened. [*reg-syscall.create-key.opens-or-creates]
 
 | Field | Description |
 |---|---|
 | `parent_fd` | As `reg_open_key`. |
 | `path_ptr` | Pointer to a null-terminated path. |
 | `desired_access` | As `reg_open_key`. |
-| `flags` | `REG_OPTION_VOLATILE` (`0x01`), `REG_OPTION_CREATE_LINK` (`0x02`). Other bits reserved. |
-| `layer_ptr` | Pointer to a null-terminated layer name for creation, or null for the base layer. Ignored if the key already exists. |
-| `txn_fd` | A transaction fd, or -1. A non-negative value makes creation a mutating operation that binds or reuses that transaction. |
-| `disposition_ptr` | Receives `REG_CREATED_NEW` (1) or `REG_OPENED_EXISTING` (2). May be null. |
+| `flags` | `REG_OPTION_VOLATILE` (`0x01`), `REG_OPTION_CREATE_LINK` (`0x02`). Other bits reserved. [*reg-syscall.create-key.flags] |
+| `layer_ptr` | Pointer to a null-terminated layer name for creation, or null for the base layer. Ignored if the key already exists. [*reg-syscall.create-key.null-layer-means-base] |
+| `txn_fd` | A transaction fd, or -1. A non-negative value makes creation a mutating operation that binds or reuses that transaction. [*reg-syscall.create-key.txn-fd-makes-creation-transactional] |
+| `disposition_ptr` | Receives `REG_CREATED_NEW` (1) or `REG_OPENED_EXISTING` (2). May be null. [*reg-syscall.create-key.disposition-values] |
 | `_pad0`, `_pad1` | Reserved; must be zero. |
 
 **If the key exists**, this behaves as `reg_open_key`, the layer
-parameter is ignored, and the disposition is `REG_OPENED_EXISTING`.
+parameter is ignored, and the disposition is `REG_OPENED_EXISTING`. [*reg-syscall.create-key.existing-key-is-opened]
 
 **If it does not:**
 
 1. Resolve the parent, which must exist. Check that the parent's depth
-   plus one is within `MaxKeyDepth`.
+   plus one is within `MaxKeyDepth`. [*reg-syscall.create-key.parent-must-exist-and-depth-checked]
 2. AccessCheck the parent for `KEY_CREATE_SUB_KEY`.
 3. Perform layer write authorization against the target layer's
    metadata key (§5.3.4).
@@ -88,12 +88,12 @@ parameter is ignored, and the disposition is `REG_OPENED_EXISTING`.
    record (§5.2.5).
 7. AccessCheck the *new* key's inherited descriptor against
    `desired_access` — an inherited descriptor may not grant everything
-   the creator asked for.
+   the creator asked for. [*reg-syscall.create-key.inherited-descriptor-rechecked]
 8. Publish the fd with the granted mask and disposition
-   `REG_CREATED_NEW`.
+   `REG_CREATED_NEW`. [*reg-syscall.create-key.new-key-reports-created-new]
 
 Intermediate path components are not auto-created. Only the final one
-is.
+is. [*reg-syscall.create-key.no-intermediate-creation]
 
 **Races.** If two callers race, one creates and the other observes the
 key as existing. `RSI_ALREADY_EXISTS` on the path entry is retried as
@@ -105,7 +105,7 @@ kernel disagree about what exists — and fails closed with `EIO`
 
 | Errno | Condition, in addition to `reg_open_key`'s |
 |---|---|
-| `ENOENT` | The parent does not exist, or the named layer is not in the layer table. |
+| `ENOENT` | The parent does not exist, or the named layer is not in the layer table. [*reg-syscall.create-key.enoent-parent-missing] |
 | `EACCES` | The parent denied `KEY_CREATE_SUB_KEY`, the inherited descriptor denied the requested access, or layer write authorization failed. |
 | `EPERM` | `REG_OPTION_CREATE_LINK` without `KEY_CREATE_LINK` on the parent, or without `SeTcbPrivilege` or Administrators. |
 | `ENOSPC` | The per-value layer cap was exceeded. |
@@ -120,4 +120,4 @@ int reg_begin_transaction(void);
 Allocates a transaction id, publishes a transaction fd in state
 `REG_TXN_ACTIVE_UNBOUND`, and starts the lifetime timer. It contacts no
 source and chooses none (§5.7.1). It can fail only with `ENOMEM`,
-`EOVERFLOW` on transaction id exhaustion, or `EINVAL`.
+`EOVERFLOW` on transaction id exhaustion, or `EINVAL`. [*reg-syscall.begin-transaction.failure-set]

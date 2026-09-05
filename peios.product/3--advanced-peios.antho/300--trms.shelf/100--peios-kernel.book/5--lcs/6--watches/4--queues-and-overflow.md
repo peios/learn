@@ -5,36 +5,37 @@ description: Each armed fd has its own bounded queue and delivery is best-effort
 
 Each armed fd has its own event queue, bounded by
 `NotificationQueueSize` — default 256 events, configurable between 16
-and 65536 (§5.10.3).
+and 65536 (§5.10.3). [*watch.overflow.each-fd-has-its-own-bounded-queue]
 
 Delivery is best-effort. A watcher that reads promptly sees every
 change; one that falls behind is told that it has, rather than being
-given a partial history it cannot distinguish from a complete one.
+given a partial history it cannot distinguish from a complete one. [*watch.overflow.delivery-is-best-effort]
 
 ## What happens when the queue is full
 
 When an event arrives for a full queue and no `OVERFLOW` is present:
 
-1. The oldest queued event is dropped.
-2. An `OVERFLOW` record is queued in its place.
-3. The event that triggered this is **discarded**, not queued.
+1. The oldest queued event is dropped. [*watch.overflow.full-queue-drops-the-oldest-event]
+2. An `OVERFLOW` record is queued in its place. [*watch.overflow.full-queue-queues-an-overflow]
+3. The event that triggered this is **discarded**, not queued. [*watch.overflow.triggering-event-is-discarded]
 
 Once an `OVERFLOW` is in the queue, subsequent events queue normally:
 the oldest non-`OVERFLOW` event is dropped to make room and the new
 event is added, so the single `OVERFLOW` is preserved and the queue
-continues to carry the most recent history behind it.
+continues to carry the most recent history behind it. [*watch.overflow.later-events-drop-the-oldest-and-preserve-the-overflow]
 
 A queue therefore holds at most one `OVERFLOW` at a time, and that is
 an enforced invariant rather than a convention — an attempt to queue a
-second is rejected as a bug.
+second is rejected as a bug. [*watch.overflow.at-most-one-overflow-per-queue]
 
 ## What a watcher does about it
 
 `OVERFLOW` means the record it has is incomplete. There is no way to
-learn what was dropped, and no attempt is made to describe it. The
-watcher re-reads the watched key, and its subtree if the watch is a
+learn what was dropped, and no attempt is made to describe it. [*watch.overflow.dropped-events-are-not-described]
+
+The watcher re-reads the watched key, and its subtree if the watch is a
 subtree watch, and continues from the state it finds. Events after the
-`OVERFLOW` are complete again.
+`OVERFLOW` are complete again. [*watch.overflow.events-after-an-overflow-are-complete]
 
 `REG_IOC_QUERY_KEY_INFO` reports a per-hive generation number
 (§5.5.3) that makes this cheaper than it sounds: a watcher that
@@ -48,7 +49,7 @@ There is no registry-specific global cap on watch memory, and none is
 needed. A watch costs at most `NotificationQueueSize` queued events, a
 watch requires an fd, and a process holds at most `RLIMIT_NOFILE` fds.
 The product of the two is the bound, and it is enforced by machinery
-that already exists.
+that already exists. [*watch.overflow.no-global-cap-beyond-queue-size-times-fd-limit]
 
 The same reasoning covers open key state: per-fd overhead — GUID,
 granted mask, ancestor chain, watch state — multiplied by the fd limit.

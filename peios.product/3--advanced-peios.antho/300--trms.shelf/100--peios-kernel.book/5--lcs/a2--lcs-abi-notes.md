@@ -15,24 +15,30 @@ lost the next time the ABI changes.
 The header carries names, numbers and layouts. Everything else about the
 interface is a property of the implementation rather than of the ABI, and
 is documented with the operation it belongs to: the required access right
-for each ioctl and the two-pass output buffer convention in §5.6, the
-error vocabulary in §5.6.4, the RSI payload shapes in the Registry Source
+for each ioctl and the two-pass output buffer convention in §5.5, the
+error vocabulary in §5.5.5, the RSI payload shapes in the Registry Source
 Interface specification, and the backup stream's record payloads in the
 Registry Backup Format specification.
 
-`REG_BACKUP_MAGIC` in §5.A is the eight-byte header magic; the record type
-codes are the framing, not the payloads.
+`REG_BACKUP_MAGIC` in §5.A is the eight-byte header magic; [*lcs-abi-notes.backup-magic-is-eight-byte-header] the record
+type codes are the framing, not the payloads.
 
 ## Build configuration
 
 LCS is built by `CONFIG_SECURITY_PKM`, a boolean option, so it is linked
-into `vmlinux` rather than loaded. `CONFIG_RUST=y` is required: the
-resolution core, the RSI codec, the backup serialiser and the transaction
-log are Rust, staged into the kernel tree as `security/pkm/lcs/lcs_core`.
-`CONFIG_SECURITY_PKM_KUNIT` compiles in the in-kernel test harness.
+into `vmlinux` rather than loaded. [*lcs-abi-notes.built-in-by-config-security-pkm]
+
+`CONFIG_RUST=y` is required: the resolution core, the RSI codec, the
+backup serialiser and the transaction log are Rust, staged into the
+kernel tree as `security/pkm/lcs/lcs_core`. [*lcs-abi-notes.requires-config-rust]
+
+`CONFIG_SECURITY_PKM_KUNIT` compiles in the in-kernel test
+harness. [*lcs-abi-notes.kunit-option-compiles-test-harness]
 
 The three syscall numbers are added to the syscall table by
 `kernel/patches/arch/syscall-table-pkm.patch`, which patches both
 `arch/x86/entry/syscalls/syscall_64.tbl` and the copy of it that ships
-under `tools/perf/`. They are registered `common`, so they are reachable
-from the x32 ABI as well as from x86-64.
+under `tools/perf/`. [*lcs-abi-notes.syscall-numbers-added-by-patch]
+
+They are registered `common`, so they are reachable from the x32 ABI as
+well as from x86-64. [*lcs-abi-notes.syscalls-registered-common]

@@ -9,22 +9,26 @@ same interface.
 
 An internal watch is an entry in the same watch map, taking a reference
 on the same subtree watch set, distinguished only by a kind marker. It
-has **no fd, no granted access mask and no filter**. Events reach it
-through a kernel callback rather than being queued for a `read()`, and
-it is therefore not subject to `NotificationQueueSize`. It is also not
-subject to `MaxSubtreeWatchDepth`, nor to the transaction burst
-suppressor: internal collection happens before either test.
+has **no fd, no granted access mask and no filter**. [*self-watch.no-fd-mask-or-filter]
+
+Events reach it through a kernel callback rather than being queued for
+a `read()`, and it is therefore not subject to
+`NotificationQueueSize`. [*self-watch.exempt-from-notification-queue-size]
+
+It is also not subject to `MaxSubtreeWatchDepth`, nor to the
+transaction burst suppressor: internal collection happens before either
+test. [*self-watch.exempt-from-depth-and-burst-limits]
 
 Because there is no filter, deliverability is decided per target rather
 than by a bitmask. Each internal target admits only the event types it
 cares about: value events on the watched key itself for the
 configuration subtrees, and subkey events at depth 0 or value and
-descriptor events at depth 1 for the layer metadata subtree.
+descriptor events at depth 1 for the layer metadata subtree. [*self-watch.admits-event-types-per-target]
 
 ## What it drives
 
 **Self-configuration.** A change under `Machine\System\Registry\`
-triggers a re-read and validation of the parameters (§5.10.3).
+triggers a re-read and validation of the parameters (§5.10.3). [*self-watch.drives.parameter-re-read]
 
 **The layer table.** A change under `Machine\System\Registry\Layers\`
 marks the affected layer names dirty and drives a bounded refresh of
@@ -32,10 +36,10 @@ their precedence, enabled state, owner and cached descriptor.
 
 **Layer lifecycle.** `SUBKEY_CREATED` and `SUBKEY_DELETED` under
 `Layers\` add and remove layers, except for `base`, which is ignored
-(§5.3.2).
+(§5.3.2). [*self-watch.drives.layer-lifecycle-from-subkey-events]
 
 **KMES configuration.** A third internal watch, on
-`Machine\System\KMES\`, exists for KMES's own parameters. It is not
+`Machine\System\KMES\`, exists for KMES's own parameters. [*self-watch.drives.kmes-configuration] It is not
 LCS configuration, but the registry is where it lives and this is the
 mechanism that notices it change.
 
@@ -46,10 +50,10 @@ dirty. It does not itself publish anything, and it must not: publishing
 a layer means publishing its table entry, metadata key GUID and cached
 descriptor together (§5.3.3), and a callback that published a partial
 entry would create a window in which a layer exists and nobody can be
-authorised against it.
+authorised against it. [*self-watch.callback-does-not-publish]
 
 LCS also does not perform source round trips while holding the
-watch-map or layer-table publication locks. The refresh runs outside
+watch-map or layer-table publication locks. [*self-watch.no-source-round-trip-under-locks] The refresh runs outside
 them, after the mutating operation commits and before the syscall
 returns.
 
@@ -57,16 +61,19 @@ returns.
 
 At bootstrap, LCS resolves the GUIDs for `Machine\System\Registry\` and
 `Machine\System\Registry\Layers\` through `RSI_LOOKUP` and arms
-targeted subtree watches. If either does not exist — first boot, empty
-database — it arms a subtree watch on the `Machine\` hive root instead,
-so that seed restore creating the subtree is noticed. That fallback
-event re-enters the whole bootstrap refresh, which resolves the
-specific GUIDs and arms the targeted watches.
+targeted subtree watches. [*self-watch.arming.targeted-via-rsi-lookup]
+
+If either does not exist — first boot, empty database — it arms a
+subtree watch on the `Machine\` hive root instead, so that seed restore
+creating the subtree is noticed. [*self-watch.arming.fallback-on-machine-root]
+
+That fallback event re-enters the whole bootstrap refresh, which
+resolves the specific GUIDs and arms the targeted watches. [*self-watch.arming.fallback-event-re-enters-refresh]
 
 In practice the kernel arms both: targeted watches for whichever roots
 exist, **plus** the `Machine\` root fallback, until a refresh finds
-everything present. It is a superset of what is needed rather than a
-substitute for it.
+everything present. [*self-watch.arming.mixed-superset] It is a superset of what is needed rather
+than a substitute for it.
 
 The same arming covers every key the kernel reads for itself, not only
 LCS's own: KMES configuration, the port reservation table
@@ -74,10 +81,11 @@ LCS's own: KMES configuration, the port reservation table
 chapter on network objects) and the network policy key
 (`Machine\System\Network\`, whose rules and inventory the packet
 engine reads — see the network policy chapter) are discovered in the
-same refresh and get the same targeted-or-fallback treatment. The
-policy watch is the one depth-unbounded, every-mutation watch: rules
-are keys and exceptions are subkeys, so anything written anywhere
-beneath the key may be policy.
+same refresh and get the same targeted-or-fallback treatment. [*self-watch.arming.covers-every-kernel-read-key]
+
+The policy watch is the one depth-unbounded, every-mutation watch:
+rules are keys and exceptions are subkeys, so anything written anywhere
+beneath the key may be policy. [*self-watch.arming.policy-watch-is-depth-unbounded]
 
 **A refresh that fails still arms the fallback.** A stage can fail
 transiently — a source answering a lookup while a concurrent write has
@@ -86,8 +94,10 @@ simply returned, no watch would exist and no kernel-read key would load
 for the life of the boot. So when any stage before arming fails, LCS
 arms the `Machine\` root fallback alone: the next subkey creation under
 the hive re-enters the refresh, which then arms the targeted watches as
-above. The failure and the fallback arm are both traced by
-`lcs:lcs_bootstrap_refresh`.
+above. [*self-watch.arming.failed-refresh-arms-fallback-alone]
+
+The failure and the fallback arm are both traced by
+`lcs:lcs_bootstrap_refresh`. [*self-watch.arming.failure-is-traced]
 
 ## Bootstrap interaction
 

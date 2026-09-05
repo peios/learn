@@ -4,7 +4,7 @@ description: The two ioctls acting on a transaction fd — commit and status —
 ---
 
 Two ioctls act on a transaction fd. Everything else on that fd is
-`ENOTTY` — there are no savepoint or nesting operations to have.
+`ENOTTY` — there are no savepoint or nesting operations to have. [*txn-ioctl.only-two-others-are-enotty]
 
 The common key fd error table does not apply here.
 
@@ -16,7 +16,7 @@ in each case; in summary:
 | Errno | Condition |
 |---|---|
 | — | Success. The object becomes `COMMITTED`, poll waiters are woken, watch events are delivered, and further use of the fd returns `EINVAL`. |
-| `EINVAL` | Already committed, or never bound to a source. |
+| `EINVAL` | Already committed, or never bound to a source. [*txn-ioctl.commit.einval-when-committed-or-unbound] |
 | `EBUSY` | The source could not take the write lock. The transaction stays `ACTIVE_BOUND`; retry. |
 | `EIO` | The source failed to commit. The transaction stays `ACTIVE_BOUND`. |
 | `ETIMEDOUT` | The transaction timed out before the commit completed. |
@@ -31,7 +31,7 @@ abort.
 Reports the transaction's state and a terminal errno into a
 `reg_txn_status_args`. It reads nothing from the caller, consistent
 with its `_IOR` direction, and can fail only with `EFAULT` on an
-unwritable output pointer.
+unwritable output pointer. [*txn-ioctl.status.efault-is-the-only-failure]
 
 | State | `terminal_errno` |
 |---|---|

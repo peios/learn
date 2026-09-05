@@ -13,29 +13,29 @@ Every open follows the same five steps.
 
 1. **Token capture.** LCS takes the calling thread's effective token —
    the impersonation token if one is set, otherwise the process primary
-   token. This is the same capture KACS performs for every syscall.
+   token. This is the same capture KACS performs for every syscall. [*access-flow.effective-token-capture]
 
 2. **Path resolution.** LCS walks the path through the layer stack,
    following symlinks. **No access check happens during the walk.**
-   Intermediate keys are not evaluated; only the final key matters.
+   Intermediate keys are not evaluated; only the final key matters. [*access-flow.no-check-during-walk]
 
 3. **AccessCheck.** LCS calls KACS AccessCheck with the captured token,
    the final key's Security Descriptor as returned by the source, and
    the desired access mask. Every requested right must be granted or
    the open fails with `EACCES`. There is no partial grant: the caller
-   gets what it asked for or nothing.
+   gets what it asked for or nothing. [*access-flow.all-or-nothing-or-eacces]
 
    `MAXIMUM_ALLOWED` is the exception, and the only way to ask for
    whatever is available. AccessCheck computes the full allowed set and
-   that becomes the granted mask.
+   that becomes the granted mask. [*access-flow.maximum-allowed-grants-what-is-available]
 
-4. **The granted mask is stored on the fd.** It never changes.
+4. **The granted mask is stored on the fd.** It never changes. [*access-flow.granted-mask-fixed-at-open]
 
 5. **Per-ioctl checks are bitmask tests.** Each ioctl has a required
    right; LCS tests the fd's granted mask against it and returns
    `EACCES` without contacting the source if it is absent. The
    Security Descriptor is not re-read and AccessCheck is not
-   re-evaluated.
+   re-evaluated. [*access-flow.per-ioctl-bitmask-test]
 
 ## No traverse checking
 
@@ -65,7 +65,7 @@ membership of Administrators (§5.2.4).
 A key fd can be passed over a Unix socket with `SCM_RIGHTS`, and it
 carries its granted mask with it. The recipient gets the access the
 original opener was granted, whether or not its own token would have
-passed AccessCheck.
+passed AccessCheck. [*access-flow.fd-passing-carries-granted-mask]
 
 This is explicit delegation and it is consistent with how fds work
 everywhere else in Peios. Passing a `KEY_WRITE` fd hands over write
@@ -73,13 +73,13 @@ access.
 
 Opening relative to a parent fd skips path parsing and AccessCheck for
 the parent portion — the caller already proved its access when it
-obtained the parent fd. This is the ordinary way to traverse a subtree.
+obtained the parent fd. This is the ordinary way to traverse a subtree. [*access-flow.parent-fd-skips-check]
 
 ## Changing a descriptor does not revoke a handle
 
 A Security Descriptor change takes effect for future opens. An fd that
 already exists keeps the mask it was granted at open, because that is
-what semantic rule 5 says (§5.1). The recourse for genuinely revoking
+what semantic rule 5 says (§5.1). [*access-flow.descriptor-change-does-not-revoke-fd] The recourse for genuinely revoking
 access is to restart the process holding the fd.
 
 Descriptor changes are also not layer-qualified. They are direct

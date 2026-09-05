@@ -4,8 +4,10 @@ description: How LCS reports failure, and the two errnos worth reading closely b
 ---
 
 Syscalls and ioctls follow the ordinary Linux convention: -1 and
-`errno`. The errno is the whole interface — source-specific error
-detail is never surfaced to a caller.
+`errno`. [*errno.minus-one-and-errno]
+
+The errno is the whole interface — source-specific error
+detail is never surfaced to a caller. [*errno.no-source-detail-surfaced]
 
 | Errno | What it means here |
 |---|---|
@@ -35,7 +37,7 @@ detail is never surfaced to a caller.
 
 **`ETIMEDOUT` means "may or may not have happened."** If the deadline
 expired before an in-flight RSI slot was reserved, no request was sent
-at all. If it expired after dispatch, the source may still apply the
+at all. [*errno.etimedout-before-dispatch-means-nothing-was-sent] If it expired after dispatch, the source may still apply the
 operation and answer later, and LCS will apply the kernel-side effects
 when it does (§5.8.5). A caller that needs certainty checks state
 before retrying. The same applies to a transaction commit.
