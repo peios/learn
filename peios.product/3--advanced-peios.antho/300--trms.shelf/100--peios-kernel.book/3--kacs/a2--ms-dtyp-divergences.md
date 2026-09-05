@@ -32,7 +32,6 @@ the following places.
 | Impersonation level on primaries | Meaningful and queryable: a ratchet every token carries, bounding everything derived from it (§3.5.1). Windows rejects `TokenImpersonationLevel` on a primary. | Delegation here is a flag authd enforces rather than a property of the credential cache, so the flag itself has to be unforgeable across duplication. [*dtyp.impersonation-level-on-primaries] |
 | PIP determination | Kernel-only, from the binary signature, with no parent input (§3.3.2) | One input, one answer, no ambiguity. [*dtyp.pip-kernel-only-determination] |
 | Object type list validation | Duplicate GUIDs and level gaps rejected (§3.8.5) | Prevents node lookup returning the wrong node and propagation becoming undefined. [*dtyp.object-type-list-validation] |
-| Composite equality | Element-wise ordered comparison | Never over-grants. [*dtyp.composite-equality-elementwise] |
 
 ## Features handled elsewhere
 
