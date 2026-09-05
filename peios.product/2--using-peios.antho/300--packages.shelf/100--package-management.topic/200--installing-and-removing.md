@@ -234,6 +234,14 @@ suite. Release builds use upstream's signed tarballs because those contain the
 embedded libbpf sources needed for a complete build; matching source,
 debuginfo and debugsource packages are published alongside the family.
 
+The ELF metadata editor is installed as `org.nixos.patchelf`. It includes the
+`patchelf` command, manual and Zsh completion, with matching source, debuginfo
+and debugsource packages. The command can inspect and change an ELF object's
+interpreter, run path, dynamic dependencies, SONAME and executable-stack
+state. Upstream release archives are not maintainer-signed, so newly
+discovered releases use an explicit HTTPS trust-on-first-use exception and
+become immutable once recorded in Pekit's SHA-256 lock.
+
 For now, commands require the complete canonical name:
 
 ```
