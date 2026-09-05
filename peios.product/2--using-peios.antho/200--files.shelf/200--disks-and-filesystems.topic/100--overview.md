@@ -48,7 +48,10 @@ The tools themselves:
 | `chattr`, `lsattr` | Read and set ext2/3/4 inode attributes. |
 | `uuidgen` | Generate a UUID. |
 
-`net.sourceforge.e2fsprogs-libuuid` comes from e2fsprogs; `libblkid` comes from the util-linux libraries. The split is arbitrary but fixed — each library has exactly one owning package, so the two sources never both ship the same file.
+`net.sourceforge.e2fsprogs-libuuid` comes from e2fsprogs;
+`org.kernel.libblkid` comes from util-linux. The split is arbitrary but fixed:
+each library has exactly one owning package, so the two sources never both ship
+the same file.
 
 From `dosfstools`:
 
