@@ -278,6 +278,15 @@ signature Pekit can verify, so discovered releases become immutable through
 their Pekit SHA-256 lock after HTTPS retrieval until Sigstore verification is
 available.
 
+The system pkg-config implementation is `org.pkgconf.pkgconf`. It provides both
+the `pkgconf` and `pkg-config` command names, the Autoconf `pkg.m4` macros, and
+the `bomtool`, `spdxtool` and `pccritic` metadata utilities. Installing it
+replaces the earlier unqualified `pkgconf` package. The independently usable
+shared library is `org.pkgconf.libpkgconf`; public headers, linker name and
+pkg-config metadata are in `org.pkgconf.libpkgconf-devel`, with the static
+archive in `org.pkgconf.libpkgconf-static`. Matching source, debuginfo and
+debugsource packages are published alongside the family.
+
 For now, commands require the complete canonical name:
 
 ```
