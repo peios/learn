@@ -213,6 +213,18 @@ name, pkg-config metadata and API manuals are in
 libatomic closure are in `io.github.numactl.libnuma-static`. Matching source,
 debuginfo and debugsource packages are published alongside the family.
 
+OpenSSL's general cryptography runtime, providers, engines and vendor
+configuration are installed as `org.openssl.libcrypto`; the TLS runtime is
+`org.openssl.libssl`. The `openssl` command and its user manuals are in
+`org.openssl.openssl`, while certificate-management Perl utilities are in the
+architecture-independent `org.openssl.openssl-perl` package. Headers, linker
+names, pkg-config and CMake metadata, and API manuals are in
+`org.openssl.openssl-devel`; static libraries are in
+`org.openssl.openssl-static`. Package-owned configuration is stored beneath
+`/usr/etc/ssl` and appears at OpenSSL's compiled `/etc/ssl` lookup path through
+Peios's merged configuration view. Matching source, debuginfo and debugsource
+packages are published alongside the family.
+
 For now, commands require the complete canonical name:
 
 ```
