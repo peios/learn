@@ -242,6 +242,16 @@ state. Upstream release archives are not maintainer-signed, so newly
 discovered releases use an explicit HTTPS trust-on-first-use exception and
 become immutable once recorded in Pekit's SHA-256 lock.
 
+PCI inspection and configuration tools are installed as `cz.ucw.pciutils`.
+It includes `lspci`, `setpci`, `pcilmr`, `update-pciids` and their manuals.
+The shared libpci ABI and bundled PCI ID database are in `cz.ucw.libpci`;
+headers, linker input, pkg-config metadata and the API manual are in
+`cz.ucw.libpci-devel`, while the static archive is in
+`cz.ucw.libpci-static`. Builds enable compressed ID files, explicit DNS
+lookups, kernel-module lookup through libkmod and udev HWDB fallback. Matching
+source, debuginfo and debugsource packages are published alongside the family,
+using release archives authenticated by maintainer Martin Mares's OpenPGP key.
+
 For now, commands require the complete canonical name:
 
 ```
