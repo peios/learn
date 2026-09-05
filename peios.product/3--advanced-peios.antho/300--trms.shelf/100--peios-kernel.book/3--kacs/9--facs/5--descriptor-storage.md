@@ -176,7 +176,10 @@ Trusted userspace adopts a mounted filesystem by calling
 target superblock; `O_PATH` descriptors are valid targets. The change
 applies to the superblock, not the pathname used to reach it.
 
-The call requires enabled `SeTcbPrivilege` and marks it used. [*facs.storage.set-mount-policy-privilege] The
+Setting a policy is volume management: the call requires
+`SeManageVolumePrivilege` or `SeTcbPrivilege`, enabled, and marks the
+one it found used; `kacs_get_mount_policy` is gated the same
+way. [*facs.storage.set-mount-policy-privilege] The
 public ABI accepts only the three managed classes; `unmanaged`,
 unknown values, nonzero reserved flags and malformed arguments all
 fail closed. [*facs.storage.set-mount-policy-input-validation]

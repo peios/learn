@@ -30,8 +30,8 @@ The rights are those of `<pkm/ipc.h>`:
 |---|---|
 | `KACS_IPC_READ` | `msgrcv`; `shmat` read-only; `semop` without alter; `GETVAL`, `GETPID`, `GETNCNT`, `GETZCNT`, `GETALL` |
 | `KACS_IPC_WRITE` | `msgsnd`; `shmat` read-write; `semop` with alter; `SETVAL`, `SETALL` |
-| `KACS_IPC_QUERY_INFORMATION` | `IPC_STAT` and the `SHM_STAT`, `MSG_STAT`, `SEM_STAT` families |
-| `KACS_IPC_SET_INFORMATION` | `SHM_LOCK`, `SHM_UNLOCK` |
+| `KACS_IPC_QUERY_INFORMATION` | `IPC_STAT` and the `SHM_STAT`, `MSG_STAT`, `SEM_STAT` families — together with `KACS_IPC_READ`, since Linux's own `ipcperms()` read check runs before the hook |
+| `KACS_IPC_SET_INFORMATION` | `SHM_LOCK`, `SHM_UNLOCK` — `SHM_LOCK` additionally needs `SeLockMemoryPrivilege`, Linux's `CAP_IPC_LOCK` gate |
 | `DELETE` | `IPC_RMID` |
 | `WRITE_DAC` and `WRITE_OWNER` | `IPC_SET` — one command carries mode, uid and gid, so it needs both |
 | `READ_CONTROL` | reading the descriptor with `kacs_get_sd` |
@@ -71,7 +71,10 @@ A SysV object has no fd and no path, so `kacs_get_sd` and `kacs_set_sd`
 address it by kind and id: one of `KACS_SD_AT_SYSV_SHM`,
 `KACS_SD_AT_SYSV_MSG` or `KACS_SD_AT_SYSV_SEM` in `flags`, the object
 id in `dirfd`, and a NULL path. [*sysvipc.sd-addressing] The object is looked up in the caller's
-IPC namespace; an unknown id is `EINVAL` and a removed one `EIDRM`. [*sysvipc.sd-lookup-errors]
+IPC namespace; an unknown id is `EINVAL`, and so is a removed one,
+because `IPC_RMID` drops the id from the namespace in the same step
+that marks the object deleted — `EIDRM` is reserved for a lookup that
+races that removal and finds the object already dead. [*sysvipc.sd-lookup-errors]
 Reading needs the rights the requested `SECURITY_INFORMATION` implies
 (`READ_CONTROL` for owner, group and DACL; `ACCESS_SYSTEM_SECURITY`
 for the SACL), changing needs `WRITE_DAC` or `WRITE_OWNER` as for any

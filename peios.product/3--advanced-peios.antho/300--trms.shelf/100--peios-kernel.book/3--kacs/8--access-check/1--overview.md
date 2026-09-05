@@ -32,9 +32,11 @@ effective auditing. [*check.staging-flag.accesscheck]
 object type list. [*check.result-list.requires-tree] It returns a separate verdict for each node, so a
 denial on one property fails that property alone rather than the whole
 request. [*check.result-list.returns] It returns the same continuous audit mask and staging
-mismatch flag, with the flag set when any node's staged granted mask
-differs from that node's effective granted mask, or when staged
-auditing differs from effective auditing. [*check.staging-flag.result-list] Directory services use it,
+mismatch flag, with the flag set when the staged scalar result differs
+from the effective one, when any node's staged granted mask differs
+from that node's effective granted mask, or when staged auditing
+differs from effective auditing — the scalar comparison is not
+mode-branched. [*check.staging-flag.result-list] Directory services use it,
 because one operation there may touch several properties with
 independent access rules. Privilege-use auditing in this variant takes
 the same per-node view: a privilege counts as successfully used if its

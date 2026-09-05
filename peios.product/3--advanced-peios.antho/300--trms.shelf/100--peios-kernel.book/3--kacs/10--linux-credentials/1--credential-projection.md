@@ -66,7 +66,10 @@ credential, so it yields the client's UID; `getuid()` reads the
 *primary* credential's UID, so it yields the service's. During
 impersonation `getuid()` returns the service and `current_fsuid()`
 returns the client, and that is the intended behaviour rather than an
-inconsistency. [*cred.projection.getuid-vs-fsuid]
+inconsistency. [*cred.projection.getuid-vs-fsuid] Only `getuid()` and `getgid()` are redirected to the
+primary credential; `geteuid()` and `getegid()` keep their Linux
+meaning and follow the effective credential, so during impersonation
+they report the client.
 
 One caveat applies to a credential carrying no token at all — a blank
 credential, or one created before KACS initialised. `current_fsuid()`

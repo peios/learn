@@ -34,7 +34,9 @@ state, or in-flight reference fails with `-EBUSY`. [*token.session.destroy-empty
 A second enumeration surface exists alongside `/proc`:
 `/sys/kernel/security/kacs/sessions` lists every live session, one
 line each, giving the session ID, user SID, logon type, authentication
-package, and creation time. [*token.session.securityfs-listing] Reading it is access-checked against a
+package, and creation time. [*token.session.securityfs-listing] securityfs itself is unclassified by FACS,
+so its objects sit deny-missing until the mount is given a synthesising
+policy (§3.9.5); only then can the file be opened at all. Reading it is access-checked against a
 synthetic descriptor granting read to SYSTEM and the creator, and is
 PIP-checked. [*token.session.securityfs-access-check]
 

@@ -3,7 +3,7 @@ title: Overlayfs Creates
 description: Overlayfs performs a create as the mounter, in a directory the caller never named — so KACS resolves the descriptor before the create and hands it down on a credential.
 ---
 
-Overlayfs is a different problem from the StrataFS context of §9.7.
+Overlayfs is a different problem from the StrataFS context of §3.9.7.
 Nothing here needs an authorization exemption: the caller has already
 been authorized against the merged inode. What has to be corrected is
 the **descriptor** the new object ends up wearing.
@@ -66,7 +66,7 @@ be stamped on the next unrelated object the task made.
 A copy-up is not a new object, and inheritance is the wrong answer for
 it even from the right parent: the object already had a descriptor.
 KACS carries the source's across, whether that descriptor was stored on
-the lower inode or synthesized for it under a mount policy (§9.5). [*facs.ovl-copy-up.source-descriptor-may-be-synthesised]
+the lower inode or synthesized for it under a mount policy (§3.9.5). [*facs.ovl-copy-up.source-descriptor-may-be-synthesised]
 
 Without this the defect runs in both directions. An object with a
 deliberately narrow descriptor is widened by the act of writing to it,
@@ -85,7 +85,7 @@ descriptor is read through the overlay inode, so a descriptor set at
 runtime governs the children created after it, and `CREATOR OWNER`
 resolves to the principal making the object. [*facs.ovl-copy-up.creator-owner-resolves-to-caller]
 
-A creator descriptor supplied explicitly to a native create (§9.2) is
+A creator descriptor supplied explicitly to a native create (§3.9.2) is
 picked up here for the same reason. [*facs.ovl-copy-up.supplied-descriptor-honoured] The request records the parent the
 caller resolved — an overlay inode — so a match attempted at inode
 creation time, where only the backing inode is visible, could never
@@ -103,7 +103,7 @@ copy rather than replicated, because the credential above already
 carries it; copying it as well would overwrite the descriptor with the
 same answer. It could not be copied through that path in any case — the
 canonical xattr is not readable or writable as an ordinary xattr, since
-descriptor mutation is the dedicated interface's job (§9.6).
+descriptor mutation is the dedicated interface's job (§3.9.6).
 
 ## Failure [*facs.ovl-copy-up.resolve-failure-fails-create]
 
