@@ -103,7 +103,9 @@ To turn autologon off, give the principal a password with [`lps password`](~peio
 
 ## The environment your shell starts in
 
-Without `-p`, `login` builds a fresh environment: `HOME`, `SHELL`, `USER`, `LOGNAME`, `PATH=/bin`, and `TERM` carried through from its own. The shell's `argv[0]` gets a leading dash, which every shell reads as "this is a login shell, run the profile files".
+Without `-p`, `login` builds a fresh environment: `HOME`, `SHELL`, `USER`, `LOGNAME`, `PATH=/bin`, and `TERM`. The shell's `argv[0]` gets a leading dash, which every shell reads as "this is a login shell, run the profile files".
+
+`TERM` is carried through if `login` was started with one. Otherwise `login` decides it from the terminal it is on, the way a getty does elsewhere: `linux` on a virtual console (`/dev/tty1` and its siblings, the display), `vt220` on anything else (a serial line, a hypervisor's paravirtual console). `/dev/console` is whichever of those the kernel chose, and `login` resolves it through the kernel's own record of the active console rather than guessing, so one service definition on `/dev/console` gets the right answer on a machine with a display and on one without.
 
 The home directory comes from the profile the authority sent, and **a missing one is not fatal**. `login` reports it and starts you in `/`. Refusing to proceed over an absent directory would turn a cosmetic problem into being locked out.
 
