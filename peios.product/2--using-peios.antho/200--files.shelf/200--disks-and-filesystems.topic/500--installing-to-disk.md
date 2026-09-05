@@ -137,6 +137,18 @@ This is the substantive difference between the two, and it is easy to check on a
 
 No `ID` flag on either ACE. `ID` is `INHERITED_ACE`, so its absence means this descriptor is *explicit* — stored on the root inode by `mke2fs`, not derived from an ancestor and not synthesised at mount. The filesystem's access policy is a property of the filesystem.
 
+## Repairing an installed system
+
+The first page offers **Repair an existing system** beside the install. Choose the disk holding it and the repair menu offers three operations, each on the same disk the install writes and never on the medium.
+
+**Repair boot files** regenerates what a disk boots from: the kernel command line under `lcl/etc/boot/`, the initramfs image, and the UKI on the ESP, all rebuilt from the kernel and initramfs tree already on the disk. It does not reinstall `disk-boot` from the medium — a machine upgraded since it was installed may hold a newer one — and it does not touch the installed system's repository list. The one exception is a half-finished install, where the copy landed and boot setup died: that disk still carries `live-boot`, and the repair finishes the install instead, swapping the packages as an install would. If the kernel or the initramfs tree is what is damaged, this cannot help; that is a reinstall.
+
+**Check the filesystem** runs `e2fsck -pf` on the root: forced, because a filesystem that believes it is clean is exactly the one you chose to check, and preen, because there is nobody to answer questions. It refuses while anything on the disk is mounted. e2fsck reports through its exit status, and the finish message reads it back: the filesystem was clean, problems were found and fixed, or fixed with a reboot wanted before the disk is used. Only problems it could not fix on its own are a failure, and the answer then is a shell and `e2fsck` by hand.
+
+**Reseed security descriptors** re-stamps the descriptor on the root of the tree — the single inheritable one that is the whole tree's access policy, as the last section below explains — with the value the install wrote.
+
+Each ends with a finish screen; press a key and you are back at the shell, and `install-tui` again starts the next one. The three can be run in one boot.
+
 ## What the installer does not do
 
 **It does not choose your partition layout.** `--whole-disk` writes one specific arrangement — a 512 MiB ESP and a root filling everything else — and that is all it will ever write. Anything else is a job for [`part`](~peios/disks-and-filesystems/partitioning) followed by the two-partition form of the installer.
