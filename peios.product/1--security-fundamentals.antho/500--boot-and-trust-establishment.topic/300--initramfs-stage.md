@@ -109,10 +109,19 @@ single entry. On an unseeded `/dev` an administrator cannot list the
 directory, cannot open `/dev/null`, and cannot touch the disk an
 installer is about to format.
 
-So prelude re-stamps the tree with the bootstrap descriptor: SYSTEM and
-Administrators, full control, inheritable. Nodes that appear later — a
-hot-plugged disk, partitions rescanned after a partition table is
-written — inherit that from the root rather than the kernel's.
+So prelude re-stamps the tree with the bootstrap descriptor: full control
+for SYSTEM and for Administrators, both inheritable, and an inherit-only
+entry for CREATOR OWNER. Nodes that appear later — a hot-plugged disk,
+partitions rescanned after a partition table is written — inherit that
+from the root rather than the kernel's.
+
+The third entry is the one that is easy to overlook. Being inherit-only it
+grants nothing on the node it sits on; it applies to whatever is *created*
+beneath it, giving the creator full control of its own object. Without it
+a process that is not SYSTEM can create a file it cannot then read back,
+because the two entries above it are a non-empty ACL naming somebody else,
+and a token's own default is consulted only when inheritance yields
+nothing at all.
 
 **This descriptor is deliberately narrow, and it has to stay narrow.**
 Whatever it grants, it grants on a raw disk nobody has met yet: a read
