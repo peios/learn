@@ -170,6 +170,29 @@ agent_overlay_path = "/usr/local/share/provium/agent-overlay.cpio.gz"
 
 When unset, Provium tries (in order): the `PROVIUM_OVERLAY` env var, then `<provium-binary-dir>/../share/provium/agent-overlay.cpio.gz`, then walks up the binary's directory tree looking for `dist/agent-overlay.cpio.gz` (covers in-development runs from `target/`). Set this field — or the env var — when none of those apply.
 
+### `agent_boot_timeout`
+
+```toml
+[profiles.peios]
+agent_boot_timeout = 8.0
+```
+
+| Type | Default | Description |
+|---|---|---|
+| float (seconds) | `30` | How long `vm:boot` waits for the in-VM agent to answer before declaring the boot failed. Must be positive. |
+
+Thirty seconds is a generous ceiling for a guest that is going to come
+up, and a long time to wait for one that is not. Lower it on a profile
+whose guest boots quickly and whose tests deliberately boot
+configurations that *cannot* reach an agent — an init that halts, an
+image with no init at all — because for those the timeout is not a
+safety margin but the length of every passing test. `vm:boot`'s
+`agent_timeout` overrides it for a single boot.
+
+Raise it instead for a guest that legitimately takes longer than thirty
+seconds: a large image, a slow filesystem check, a host under heavy
+parallel load.
+
 ### `cmdline`
 
 ```toml
