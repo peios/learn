@@ -8,45 +8,55 @@ system from it. Phase 2 is entirely registry-driven.
 
 ## Reading the definitions
 
-peinit reads every key under `Machine\System\Services\`. The reads are
-bounded by LCS's request timeout: if registryd hangs mid-read, peinit
-receives `ETIMEDOUT` and enters recovery.
+peinit reads every key under `Machine\System\Services\`.
+[*phase2.definitions-come-from-the-services-key] The reads are bounded by
+LCS's request timeout: if registryd hangs mid-read, peinit receives
+`ETIMEDOUT` and enters recovery. [*phase2.a-registry-read-timeout-is-recovery]
 
 Decoding is per key. A definition that fails to decode — an invalid
 service name, a malformed trigger, an unclosed quote in a command, a
 `registry:` check naming an uncacheable key, a duplicate known field, an
 unrecognised value for an enumerated dword — fails that service, which
-is marked Failed with cause `ValidationError`. The boot proceeds with
-every other definition, and anything that depended on the failed service
-fails in turn through the ordinary dependency propagation.
+is marked Failed with cause `ValidationError`.
+[*phase2.an-undecodable-definition-fails-only-that-service] The boot
+proceeds with every other definition, and anything that depended on the
+failed service fails in turn through the ordinary dependency propagation.
 
-Only services carrying a `boot` trigger are root candidates. A service
-with no triggers is demand-only and is not a root, though it can still
-be pulled into the boot transaction as somebody's dependency. A service
-with `Disabled=1` is excluded from the boot graph entirely, but its
-definition is still loaded into the in-memory model so it can be started
-by hand later.
+Only services carrying a `boot` trigger are root candidates.
+[*phase2.only-boot-triggered-services-are-roots] A service with no
+triggers is demand-only and is not a root, though it can still be pulled
+into the boot transaction as somebody's dependency.
+[*phase2.a-demand-only-service-can-still-be-pulled-in] A service with
+`Disabled=1` is excluded from the boot graph entirely, but its definition
+is still loaded into the in-memory model so it can be started by hand
+later. [*phase2.a-disabled-service-is-loaded-but-not-booted]
 
 ## Building and validating the graph
 
 The boot graph is every boot-triggered root candidate plus the
 transitive closure of their `Requires`, `BindsTo`, and existing
-non-disabled `Wants` dependencies. `Requires` and `BindsTo` pull their
-target in even if the target has no `boot` trigger. `Wants` targets come
-in as best-effort members; missing or disabled ones are ignored. A
-missing or disabled `Requires` or `BindsTo` target blocks the dependent
-with cause `DependencyFailure`, and that blocking propagates.
+non-disabled `Wants` dependencies.
+[*phase2.the-boot-graph-is-the-roots-transitive-closure] `Requires` and
+`BindsTo` pull their target in even if the target has no `boot` trigger.
+[*phase2.a-hard-dependency-pulls-in-an-untriggered-target] `Wants`
+targets come in as best-effort members; missing or disabled ones are
+ignored. [*phase2.a-missing-wants-target-is-ignored] A missing or
+disabled `Requires` or `BindsTo` target blocks the dependent with cause
+`DependencyFailure`, and that blocking propagates.
+[*phase2.a-missing-hard-dependency-blocks-and-propagates]
 
 peinit topologically sorts the graph and validates it before starting
 anything. The rules are in §7.2; the outcomes that matter here are:
 
 - **A cycle** fails every service in it. A cycle involving a Critical
   service downgrades the boot to Safe mode without rebooting.
+  [*phase2.a-cycle-fails-every-service-in-it]
 - **An unresolvable conflict** fails both services. Same downgrade if
-  either is Critical.
+  either is Critical. [*phase2.a-conflict-fails-both-services]
 - **A missing `Requires` target** fails the dependent.
 - **Warnings** — a `Readiness=Alive` service with dependents that
   require it — are logged and do not prevent boot.
+  [*phase2.a-validation-warning-does-not-prevent-boot]
 
 ## Starting
 
@@ -55,24 +65,28 @@ graph allows, up to a configurable limit:
 
 | Key | Default | Meaning |
 |---|---|---|
-| `Machine\System\Boot\MaxParallelStarts` | 10 | Services starting concurrently. |
+| `Machine\System\Boot\MaxParallelStarts` | 10 | Services starting concurrently. [*phase2.maxparallelstarts-bounds-concurrency] |
 
 An absent key uses the default. A value of zero, a type mismatch, or a
 malformed payload is invalid boot configuration and sends peinit to
-recovery — running the scheduler with an effective limit of zero would
-hang the boot rather than fail it.
+recovery [*phase2.an-invalid-maxparallelstarts-is-recovery] — running the
+scheduler with an effective limit of zero would hang the boot rather than
+fail it.
 
 As each service reaches a dependent-satisfying state — Active for
 Simple, Completed for Oneshot with or without `RemainAfterExit`, Skipped
 for a service whose conditions did not hold — its dependents become
-eligible and join the start queue. A Oneshot without `RemainAfterExit`
-passes through Completed, releasing its dependents, and then goes
-Inactive.
+eligible and join the start queue.
+[*phase2.a-satisfying-state-releases-dependents] A Oneshot without
+`RemainAfterExit` passes through Completed, releasing its dependents, and
+then goes Inactive. [*phase2.a-oneshot-releases-dependents-before-going-inactive]
 
 Dependents blocked on a `Requires` or `BindsTo` target wait for that
-target to reach a satisfying state. Dependents blocked on a `Wants`
-target wait only for it to reach *any* terminal state, satisfying or
-not — which is what makes `Wants` ordering rather than dependency.
+target to reach a satisfying state.
+[*phase2.a-hard-dependent-waits-for-a-satisfying-state] Dependents
+blocked on a `Wants` target wait only for it to reach *any* terminal
+state, satisfying or not — which is what makes `Wants` ordering rather
+than dependency. [*phase2.a-wants-dependent-waits-only-for-a-terminal-state]
 
 ### The typical order
 
@@ -111,32 +125,37 @@ A service whose trigger is `boot:settled` is not part of the boot plan
 at all. It is not a root, it does not consume the parallel-start budget,
 it is not counted towards boot success, and it cannot block or delay
 anything. peinit starts it after the plan, once the boot has stopped
-moving.
+moving. [*settle.a-deferred-service-is-outside-the-boot-plan]
 
 "Stopped moving" is precise: every service in the plan — those that were
 started and those that were blocked — is in a state it will not leave
 without help. Active, Completed, Failed, Skipped, Abandoned and Inactive
-all count as settled. Starting, Reloading, Stopping and **Backoff** do
-not, because a service between restart attempts is going to produce more
-output.
+all count as settled. [*settle.which-states-count-as-settled] Starting,
+Reloading, Stopping and **Backoff** do not, because a service between
+restart attempts is going to produce more output.
+[*settle.backoff-is-not-settled]
 
 A deadline bounds the wait:
 
 | Key | Default | Meaning |
 |---|---|---|
-| `Machine\System\Boot\SettleTimeout` | 5 | Seconds before deferred services start regardless. |
+| `Machine\System\Boot\SettleTimeout` | 5 | Seconds before deferred services start regardless. [*settle.settletimeout-bounds-the-wait] |
 
 The deadline is measured from the moment the plan was observed. An
 absent key uses the default; a type mismatch or a bad length sends
-peinit to recovery. Zero is legal and means "start on the next turn,
-settled or not".
+peinit to recovery. [*settle.an-invalid-settletimeout-is-recovery] Zero
+is legal and means "start on the next turn, settled or not".
+[*settle.a-settletimeout-of-zero-is-legal]
 
 Whichever comes first — the set settling or the deadline expiring — the
-deferred services start, once, each independently. A start that fails is
+deferred services start, once, each independently.
+[*settle.deferred-services-start-once-each] A start that fails is
 recorded and dropped: one refusing service does not stop the others and
-does not affect the boot. The dispatch carries a flag saying whether the
-deadline expired rather than the set settling, so a service that cares
-whether the boot was still moving can be told.
+does not affect the boot.
+[*settle.a-failed-deferred-start-does-not-affect-the-boot] The dispatch
+carries a flag saying whether the deadline expired rather than the set
+settling, so a service that cares whether the boot was still moving can
+be told. [*settle.the-dispatch-says-whether-the-deadline-expired]
 
 > [!NOTE]
 > The motivating case is a console login prompt being scribbled over by
@@ -153,11 +172,12 @@ dependent-satisfying state continuously for a grace period:
 
 | Key | Default | Meaning |
 |---|---|---|
-| `Machine\System\Boot\BootSuccessGrace` | 30 | Seconds of held health before the boot counts. |
+| `Machine\System\Boot\BootSuccessGrace` | 30 | Seconds of held health before the boot counts. [*success.the-grace-period-must-be-held-continuously] |
 
 The criterion is *satisfying*, not Active. A Critical Oneshot reaches
 Completed and never reaches Active, so a test for Active would make such
 a service unable to ever mark a boot successful. Skipped counts too.
+[*success.the-criterion-is-satisfying-not-active]
 
 Success resets the boot attempt counter to zero (§2.7).
 
@@ -165,7 +185,7 @@ Success resets the boot attempt counter to zero (§2.7).
 
 | Failure | Response |
 |---|---|
-| A service definition fails to decode | Recovery |
+| A service definition fails to decode | That service Failed with cause `ValidationError`; the rest of the boot proceeds |
 | A registry read times out | Recovery |
 | Invalid `MaxParallelStarts` or `SettleTimeout` | Recovery |
 | A dependency cycle | All services in it Failed; Safe mode if any is Critical (see below) |

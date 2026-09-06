@@ -19,27 +19,33 @@ the administrator an unrestricted SYSTEM shell on the console.
 
 ## What peinit does
 
-peinit records the reason as a KMES audit event, then:
+peinit records the reason as a KMES audit event
+[*recovery.the-reason-is-audited], then:
 
 1. Completes Phase 1 steps 1–5 if they have not been reached yet.
 2. Ensures the base registry structure exists, so the shell sees a
    normal layout even on a system that has never been provisioned.
+   [*recovery.the-base-registry-structure-is-ensured]
 3. Attempts to start registryd. A failure here is ignored — recovery
    delivers a shell whatever registryd's state.
-4. Skips all Phase 2 services.
+   [*recovery.a-registryd-failure-does-not-prevent-the-shell]
+4. Skips all Phase 2 services. [*recovery.no-phase-2-service-starts]
 5. Starts a shell on `/dev/console` from a compiled-in definition, with
    no registry dependency: `/bin/recsh` if it is present and
-   executable, otherwise `/bin/sh`, running as SYSTEM with a fixed
-   environment of `PATH=/sbin:/bin`, `TERM=linux` and `HOME=/`. peinit
+   executable, otherwise `/bin/sh` [*recovery.recsh-is-preferred-over-sh],
+   running as SYSTEM with a fixed environment of `PATH=/sbin:/bin`,
+   `TERM=linux` and `HOME=/`. [*recovery.the-shells-environment] peinit
    does not care where either binary comes from.
 6. Logs the failure reason to the console.
+   [*recovery.the-reason-reaches-the-console]
 
 If the shell exits, peinit respawns it. Recovery never exits to an
-unmanaged PID 1.
+unmanaged PID 1. [*recovery.the-shell-is-respawned]
 
 If neither `/bin/recsh` nor `/bin/sh` can be exec'd, peinit cannot
 deliver a shell at all. It logs the reason to the console, syncs, and
-halts — PID 1 exiting would panic the kernel. A missing shell is a
+halts — PID 1 exiting would panic the kernel.
+[*recovery.no-shell-at-all-syncs-and-halts] A missing shell is a
 binary-integrity failure and sits outside the boot-attempt machinery's
 remit.
 
@@ -47,14 +53,17 @@ The shell receives `/dev/console` duplicated onto its standard streams,
 but peinit does not call `setsid()` or acquire a controlling terminal
 for it. The shell is not a session leader, so job control is not
 available in the recovery shell.
+[*recovery.the-shell-is-not-a-session-leader]
 
 Step 1 runs on every entry. The steps are individually idempotent, so
 completing them and ignoring the failures is what "if they have not been
 reached yet" amounts to in practice — including the step that failed,
 which by the time the operator has a shell may well succeed.
+[*recovery.phase-1-steps-are-retried-idempotently]
 
 Step 3 runs only if Phase 1 has not already reached its own registryd
-start, and it runs at most once. A recovery entered from a Phase 2,
+start, and it runs at most once.
+[*recovery.recovery-starts-at-most-one-registryd] A recovery entered from a Phase 2,
 provisioning or runtime failure starts no registryd: Phase 1 already
 did, and its activation is retained for the runtime. A recovery entered
 from the registryd start *failing* also starts none — the attempt has
@@ -66,6 +75,7 @@ hive files behind the first daemon's back.
 
 Where recovery does start one, it uses the settings this boot parsed, so
 `peios.notifysocket=` and `peios.quiet` apply to it.
+[*recovery.a-recovery-registryd-uses-this-boots-settings]
 
 > [!NOTE]
 > Recovery mode is not a degraded boot; it is a maintenance environment.

@@ -8,7 +8,7 @@ no registry dependency, because its whole purpose is to reach the point
 where a registry exists. It does the minimum needed to make Phase 2
 possible, and most of its failures are fatal to the boot.
 
-## Step 1: Confirm the root is writable
+## Step 1: Confirm the root is writable [*phase1.root-writability-is-probed]
 
 The initramfs delivers the root mounted read-write. peinit does not
 remount it — mount flags belong to the initramfs, and a redundant
@@ -20,8 +20,9 @@ uniquely named file there — the name is derived from peinit's own PID
 and a namespace identifier, so two probes cannot collide — writes to it,
 and removes it. If any part of that fails, the root is not usable for
 Phase 2 and peinit enters recovery mode.
+[*phase1.an-unwritable-root-is-recovery]
 
-## Step 2: Mount what is missing
+## Step 2: Mount what is missing [*phase1.mounts-only-what-is-absent]
 
 `/proc`, `/sys` and `/dev` are already mounted. peinit does not
 blindly mount them again: a redundant mount stacks a second filesystem
@@ -46,7 +47,8 @@ filesystem type, passes only the listed flags, and passes null mount
 data. Mount points that do not exist are created first.
 
 `/dev/pts` additionally gets a KACS mount policy immediately after it is
-mounted: `SYNTHESIZE_EPHEMERAL`, with a template descriptor granting
+mounted [*phase1.devpts-gets-a-synthesise-ephemeral-policy]:
+`SYNTHESIZE_EPHEMERAL`, with a template descriptor granting
 SYSTEM and Administrators full control and Authenticated Users read,
 write and traverse. devpts cannot store security descriptors, and its
 slave nodes are materialised by the kernel when a terminal opens
@@ -62,14 +64,17 @@ materialisation, and are recorded as future work, not provided here.
 There is a bootstrap wrinkle in reading mountinfo at all: the file lives
 in `/proc`, which is one of the things being checked for. If the read
 fails with `ENOENT` or `ENOTDIR`, peinit mounts `/proc` from the table
-and retries. Any other failure to read or parse mountinfo sends peinit
-to recovery.
+and retries. [*phase1.mountinfo-enoent-retries-after-mounting-proc] Any
+other failure to read or parse mountinfo sends peinit to recovery.
+[*phase1.unreadable-mountinfo-is-recovery]
 
 For the three initramfs-provided rows, an already-mounted filesystem is
-success, and so is an `EBUSY` from an attempted mount. For the four
+success, and so is an `EBUSY` from an attempted mount.
+[*phase1.an-already-mounted-kernel-filesystem-is-success] For the four
 peinit owns, a mount failure sends peinit to recovery.
+[*phase1.a-failed-peinit-owned-mount-is-recovery]
 
-### Seeding descriptors on the new filesystems
+### Seeding descriptors on the new filesystems [*phase1.fresh-mounts-are-seeded]
 
 Three of the four filesystems peinit mounts are fresh and empty:
 `/dev/shm`, `/run` and `/sys/fs/cgroup`. Under KACS an inode with no
@@ -113,7 +118,8 @@ sits on; it is resolved against whoever creates each object, and carried
 onward down each container.
 
 The Everyone ACE is inheritable by containers only, which is the one
-place this descriptor differs from the root filesystem's. What a service needs here
+place this descriptor differs from the root filesystem's.
+[*phase1.seed-everyone-ace-is-container-inherit-only] What a service needs here
 is to walk to its own directory, and container inheritance gives it that
 by itself. Object inheritance would additionally put Everyone-read on
 every *file* anything creates beneath these mounts — a service's runtime
@@ -128,14 +134,16 @@ every ACE is inherited by the next hot-plugged block device, so a read
 ACE for Everyone there would be every filesystem descriptor on the
 machine bypassed by opening the raw disk.
 
-Failure to apply the descriptor sends peinit to recovery. Without it
-every file peinit later creates on that filesystem would be unreachable
-to everything, including peinit.
+Failure to apply the descriptor sends peinit to recovery.
+[*phase1.a-failed-seed-is-recovery] Without it every file peinit later
+creates on that filesystem would be unreachable to everything, including
+peinit.
 
 `/proc`, `/sys` and `/dev` are not stamped: they arrive from the
 initramfs already populated.
+[*phase1.the-initramfs-filesystems-are-not-stamped]
 
-### Device node policy
+### Device node policy [*phase1.device-nodes-get-explicit-descriptors]
 
 `/dev` arrives with that same inheritable descriptor on its root and on
 every node, which is the right default — whatever the root grants, a
@@ -152,17 +160,19 @@ descriptor of its own:
 
 Everyone may open the node for reading and writing and may stat it;
 nobody but SYSTEM and Administrators may change its descriptor. Only the
-DACL is replaced — owner and group stay as the seed left them — and the
-ACEs carry no inheritance flags, because a device node has no children.
+DACL is replaced — owner and group stay as the seed left them
+[*phase1.device-node-stamping-replaces-only-the-dacl] — and the ACEs
+carry no inheritance flags, because a device node has no children.
 `/dev/console` is deliberately not on the list: it is the SYSTEM
-console.
+console. [*phase1.console-is-not-in-the-device-node-list]
 
 The step is advisory. A node that cannot be stamped is reported as a
 warning and stays on the inherited default, usable by administrators
 and denied to everyone else; a node that does not exist is noted and
 skipped. Neither sends peinit to recovery.
+[*phase1.device-node-stamping-is-advisory]
 
-## Step 3: Restore the persisted random seed
+## Step 3: Restore the persisted random seed [*phase1.the-random-seed-is-restored]
 
 peinit restores the seed at `/var/state/peinit/random-seed` once `/dev`
 is available and before registryd starts. The seed is a machine-local
@@ -171,13 +181,17 @@ shipping one in a packaged image, live ISO or VM template would hand
 every instance of that image the same starting entropy.
 
 If the file is absent, that is an ordinary first boot or a stateless
-live boot, and peinit continues silently. When a seed is present peinit
+live boot, and peinit continues silently.
+[*phase1.an-absent-random-seed-is-silent] When a seed is present peinit
 mixes it into the kernel pool, preferring the interface that credits
 entropy for a locally persisted seed; if that fails it mixes the bytes
-without crediting and records the failure. A seed file that is empty, or
-larger than 4096 bytes, is treated as an error.
+without crediting and records the failure.
+[*phase1.a-seed-that-cannot-be-credited-is-still-mixed] A seed file that
+is empty, or larger than 4096 bytes, is treated as an error.
+[*phase1.an-empty-or-oversized-seed-is-an-error]
 
-Nothing in this step can send peinit to recovery. A system with no
+Nothing in this step can send peinit to recovery.
+[*phase1.no-seed-failure-enters-recovery] A system with no
 entropy cache still boots; it just starts with less entropy, which is a
 problem for the image builder to solve with a hardware or virtio RNG
 rather than with a seed baked into the image.
@@ -186,7 +200,7 @@ The initramfs may perform the same restore earlier, once the persistent
 root is mounted. peinit's restore stays as the fallback for initramfs
 images that do not participate and for boots that have no initramfs.
 
-## Step 4: Ensure the local machine ID
+## Step 4: Ensure the local machine ID [*phase1.the-machine-id-is-ensured]
 
 `/lcl/etc/machine-id` holds a stable local install identifier used for
 software compatibility, log correlation and instance identity. It is not
@@ -194,22 +208,27 @@ a security principal: not a credential, not a SID, not an account, and
 not an input to any authorisation decision.
 
 The format is 128 bits as exactly 32 lowercase hexadecimal characters
-followed by one newline. A valid existing file is left alone. A file
+followed by one newline. [*phase1.machine-id-format] A valid existing
+file is left alone. [*phase1.a-valid-machine-id-is-left-alone] A file
 that is absent, empty, all zeroes, the wrong length, not hexadecimal, or
-missing its trailing newline is replaced: peinit draws 128 bits from the
-kernel CSPRNG and writes a valid file atomically, through a temporary
+missing its trailing newline is replaced
+[*phase1.a-malformed-machine-id-is-replaced]: peinit draws 128 bits from
+the kernel CSPRNG and writes a valid file atomically, through a temporary
 file and a rename, with the result flushed.
+[*phase1.a-new-machine-id-is-written-atomically]
 
 The write creates `/lcl/etc/` if it is not there. This step runs before
 the path-provisioning machinery of step 7, and `/lcl` is a StrataFS view
 the initramfs assembled, so whether the directory exists is a property of
 the image rather than something peinit can assume.
 
-Only a **CSPRNG failure** sends peinit to recovery. If the kernel cannot
-produce random bytes, nothing else on the machine can be trusted either.
+Only a **CSPRNG failure** sends peinit to recovery.
+[*phase1.a-csprng-failure-is-recovery] If the kernel cannot produce
+random bytes, nothing else on the machine can be trusted either.
 
 An unreadable file or an unwritable path does not. The boot continues
-with an identifier valid for this boot only, and says so:
+with an identifier valid for this boot only, and says so
+[*phase1.an-unpersistable-machine-id-is-fail-soft]:
 
 ```
 peinit warning: machine-id not persisted (<reason>); using an identifier
@@ -232,21 +251,23 @@ removes or truncates the file and lets the next boot generate one.
 Stateless live boots without a persistent overlay get an ephemeral ID
 for that boot.
 
-## Step 5: Set the clock from the hardware RTC
+## Step 5: Set the clock from the hardware RTC [*phase1.the-clock-is-set-from-the-rtc]
 
 peinit reads the hardware clock and calls `clock_settime()` before
 registryd starts, so that timestamps on registry operations, log entries
 and the boot attempt counter mean something.
 
 It opens `/dev/rtc`, falling back to `/dev/rtc0` if that device is
-absent, and reads it with `RTC_RD_TIME`. The returned `struct rtc_time`
-is interpreted as UTC and converted to `CLOCK_REALTIME` seconds with
-zero nanoseconds.
+absent [*phase1.rtc-falls-back-to-rtc0], and reads it with `RTC_RD_TIME`.
+The returned `struct rtc_time` is interpreted as UTC and converted to
+`CLOCK_REALTIME` seconds with zero nanoseconds.
+[*phase1.the-rtc-is-read-as-utc]
 
 Every failure in this step sends peinit to recovery: no openable RTC
 device, a failed read, a value that is invalid or before the Unix epoch,
 a failed `clock_settime`, and — deliberately — a failure to close the
-descriptor after a successful read. Leaking a descriptor in PID 1 during
+descriptor after a successful read. [*phase1.any-rtc-failure-is-recovery]
+Leaking a descriptor in PID 1 during
 bootstrap is a symptom of something being badly wrong, not a detail to
 swallow.
 
@@ -258,7 +279,7 @@ swallow.
 ## Step 6: Start registryd
 
 peinit holds a compiled-in definition for registryd — the only compiled-in
-service definition there is:
+service definition there is [*phase1.registryd-is-the-only-compiled-in-definition]:
 
 | Field | Value |
 |---|---|
@@ -274,35 +295,42 @@ this is the one service start that cannot consult configuration.
 
 peinit mints a SYSTEM token including registryd's per-service SID,
 creates the cgroup tree, forks with the token installed, and execs
-`/sbin/registryd` through the runtime StrataFS view. Two separate
-timeouts bound the start, both 30 seconds: one on process setup, driven
+`/sbin/registryd` through the runtime StrataFS view.
+[*phase1.registryd-is-started-like-any-service] Two separate timeouts
+bound the start, both 30 seconds: one on process setup, driven
 synchronously because there is no event loop yet, and one on readiness.
+[*phase1.registryd-start-has-two-thirty-second-timeouts]
 
 registryd's `READY=1` means "accepting and serving registry requests",
 not "the process is alive" — it does not signal until its storage
 backend is open, its schema is validated and it can answer a read.
+[*phase1.registryd-readiness-means-serving]
 
-### The schema-version guard
+### The schema-version guard [*phase1.the-schema-version-guard]
 
 After readiness, peinit ensures the base registry structure exists and
 then probes it. Ensuring comes first: peinit creates `Machine\System`,
 `Machine\System\Services` and `Machine\System\Init` if they are absent
 and stamps `Machine\System\Services\SchemaVersion` with the current
 schema version, 1. Only then does it read the value back.
+[*phase1.the-base-registry-structure-is-ensured-then-probed]
 
 The read is what verifies registryd is genuinely serving. A value that
 is present but not a `REG_DWORD`, or that is a `REG_DWORD` of the wrong
-length, fails the probe. A key or value that is absent reads as zero and
-passes — the structure was just created, so absence at this point means
-the write did not take effect, and the failure that matters is the
-provisioning failure, which is reported directly.
+length, fails the probe. [*phase1.a-malformed-schema-version-fails-the-probe]
+A key or value that is absent reads as zero and passes
+[*phase1.an-absent-schema-version-passes] — the structure was just
+created, so absence at this point means the write did not take effect,
+and the failure that matters is the provisioning failure, which is
+reported directly.
 
 The consequence is that the guard is self-healing. An unprovisioned
 first boot, or a registry cleared by the recovery tools, comes up with
 an empty `Machine\System\Services\` and boots into a Phase 2 with no
 services rather than into recovery.
+[*phase1.an-empty-service-key-boots-with-no-services]
 
-### Keeping registryd
+### Keeping registryd [*phase1.registryd-is-retained-as-a-runtime-instance]
 
 When registryd passes readiness and the probe, peinit retains the
 activation as an ordinary runtime service instance: its state, its
@@ -313,24 +341,30 @@ evidence. Ownership is not dropped at the Phase 2 boundary.
 During Phase 2 the registry's own definition of `registryd`, if there is
 one, is merged onto the retained activation. peinit does not create a
 second inactive record and does not restart registryd because a
-definition has appeared. If the registry definition is absent or
-invalid, the ordinary graph validation rules apply.
+definition has appeared.
+[*phase1.a-registry-definition-of-registryd-is-merged-not-restarted] If
+the registry definition is absent or invalid, the ordinary graph
+validation rules apply.
 
 If registryd fails to start, its readiness times out, or the probe
 fails, peinit enters recovery. There is no Phase 2 without a registry.
+[*phase1.no-registryd-is-recovery]
 
-## Step 7: Autorun scripts
+## Step 7: Autorun scripts [*phase1.autorun-scripts-run-between-registryd-and-provisioning]
 
 Between registryd starting and path provisioning, peinit runs every
 non-directory entry in `/lcl/policy/autorun.d`, in sorted order, by
-absolute path, with the working directory `/` and `PATH=/sbin:/bin`.
-Each runs under peinit's own SYSTEM token.
+absolute path [*phase1.autorun-runs-every-entry-in-sorted-order], with
+the working directory `/` and `PATH=/sbin:/bin`
+[*phase1.an-autorun-scripts-environment]. Each runs under peinit's own
+SYSTEM token. [*phase1.autorun-scripts-run-as-system]
 
 The step is fail-open at every point: a missing directory, an unreadable
 directory, a spawn failure and a non-zero exit are all console warnings
-and none of them stops the boot. Its console output bypasses the quiet
-policy (§2.6), because a script that ran this early and went wrong needs
-to be visible.
+and none of them stops the boot. [*phase1.autorun-is-fail-open] Its
+console output bypasses the quiet policy (§2.6), because a script that
+ran this early and went wrong needs to be visible.
+[*phase1.autorun-output-bypasses-the-quiet-policy]
 
 ## Step 8: Provision boot-time paths
 
@@ -343,17 +377,20 @@ Three things, before Phase 2 begins:
 1. **The control socket** at `/run/services/peinit/control.sock`, which
    serves every runtime command for the lifetime of the system, stamped
    for SYSTEM and Administrators (§10.1).
+   [*phase1.the-control-socket-is-created]
 2. **The jobs socket** at `/run/services/peinit/jobs.sock`, on which
    any authenticated principal may submit a job once Phase 2 runs,
    stamped so that connecting is the submission permission (§10.7).
+   [*phase1.the-jobs-socket-is-created]
 3. **Loopback**: peinit brings up `lo` over netlink, because services
-   that bind `127.0.0.1` need it.
+   that bind `127.0.0.1` need it. [*phase1.loopback-is-brought-up]
 
 Either socket failing to bind or to take its descriptor sends peinit to
-recovery — without the first there is no way to administer the system,
-and a jobs socket with the wrong descriptor is either unreachable or
-open to everything. A loopback bring-up failure is a warning that lets
-Phase 2 proceed.
+recovery [*phase1.a-socket-failure-is-recovery] — without the first there
+is no way to administer the system, and a jobs socket with the wrong
+descriptor is either unreachable or open to everything. A loopback
+bring-up failure is a warning that lets Phase 2 proceed.
+[*phase1.a-loopback-failure-is-a-warning]
 
 ## Failure summary
 
@@ -368,7 +405,8 @@ Phase 2 proceed.
 | A device node in the policy list cannot be stamped | Warning; node keeps the inherited default |
 | A device node in the policy list does not exist | Noted; boot continues |
 | Random seed absent, oversized, empty, or unrestorable | Warning; boot continues |
-| Machine ID read, generation, or write fails | Recovery |
+| Machine ID generation fails (CSPRNG) | Recovery |
+| Machine ID unreadable, or unwritable at its path | Warning; boot continues with an identifier for this boot only |
 | Machine ID absent, empty, or malformed | Regenerated; boot continues |
 | Any RTC or clock failure | Recovery |
 | registryd fails to start, or setup times out | Recovery |
