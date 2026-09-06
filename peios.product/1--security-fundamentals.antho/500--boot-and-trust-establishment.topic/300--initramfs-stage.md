@@ -85,13 +85,49 @@ The hook is a single pass and does not stay resident, which is enough for the in
 
 When the kernel starts prelude, it runs one fixed sequence, in order:
 
-1. **Prepare the environment.** prelude mounts the kernel's virtual filesystems — `/proc`, `/sys`, `/dev` — so that it and the hooks can see processes, devices, and kernel state, and arranges the mount environment so the later root switch is unobstructed.
-2. **Determine the target init.** prelude reads the kernel command line for an `init=` value — the program to hand off to on the real root. The shipped image names `/bin/peinit2`. If the command line does not name one, prelude searches `/bin/peinit2`, `/sbin/init`, `/bin/init`, and finally `/bin/sh`. These are target-root runtime paths: the base-topology hook creates their StrataFS views before prelude hands off. Prelude's own initramfs rescue shell remains `/usr/bin/sh`, because that environment has no `/bin` view.
+1. **Prepare the environment.** prelude mounts the kernel's virtual filesystems — `/proc`, `/sys`, `/dev` — so that it and the hooks can see processes, devices, and kernel state, and arranges the mount environment so the later root switch is unobstructed. It then seeds `/dev` with a security descriptor, which is a step with consequences well beyond the initramfs — see [The descriptor prelude puts on /dev](#the-descriptor-prelude-puts-on-dev).
+2. **Determine the target init.** prelude reads the kernel command line for an `init=` value — the program to hand off to on the real root. The shipped image names `/bin/peinit2`. If the command line does not name one, prelude searches `/bin/peinit2`, `/sbin/init`, `/bin/init`, and finally `/bin/sh`. An `init=` does not replace that search, it goes in front of it: a named init that turns out not to be there is passed over, and prelude carries on down the list rather than failing. Only when every candidate has been tried does the boot stop. These are target-root runtime paths: the base-topology hook creates their StrataFS views before prelude hands off. Prelude's own initramfs rescue shell remains `/usr/bin/sh`, because that environment has no `/bin` view.
 3. **Run the hooks.** prelude creates an empty `/mnt/rootfs` directory — the mount point the real root will appear at — and runs the boot hooks in order. The hooks do the deployment-specific work: load drivers, unlock encryption, assemble volumes, and mount the real root onto `/mnt/rootfs`. The packaged `mount-rootfs-stratafs-base.sh` hook (from the `fsbase` package) then mounts the conventional runtime views inside that root. prelude does none of this itself; it runs the hook list. The order was decided when the initramfs was built (see below, and [Boot hooks](~peios/boot-and-trust-establishment/boot-hooks)).
 4. **Verify the real root.** After the hooks have run, prelude checks that `/mnt/rootfs` actually has a filesystem mounted on it. If no hook mounted a root, prelude fails the boot rather than handing off to nothing. This is the one outcome prelude insists on: some hook must have produced a mounted root.
 5. **Hand off.** prelude carries the kernel virtual filesystems into the new root, frees the now-finished in-memory root to reclaim its space, switches `/` to the real root, and executes the target init. From that exec onward, the initramfs is gone and the real system is running.
 
 prelude runs this sequence exactly once. It does not loop, supervise, or stay resident — the moment the real init is exec'd, prelude has ceased to exist; the exec replaces it. Its entire lifetime is the few seconds of the initramfs stage.
+
+## The descriptor prelude puts on /dev
+
+Mounting `/dev` is the smaller half of step 1. The larger half is what
+prelude does immediately afterwards: it runs `seed-sd -r /dev`, stamping
+the devtmpfs root and every node already in it with a security
+descriptor.
+
+That is necessary because of where devtmpfs starts. The kernel gives its
+root a SYSTEM-only descriptor when it initialises, which is plumbing
+rather than policy — it exists so that the kernel's own device thread can
+create nodes at all under `DENY_MISSING`, and SYSTEM-only is the right
+answer for that one job. But every node created since has inherited that
+single entry. On an unseeded `/dev` an administrator cannot list the
+directory, cannot open `/dev/null`, and cannot touch the disk an
+installer is about to format.
+
+So prelude re-stamps the tree with the bootstrap descriptor: SYSTEM and
+Administrators, full control, inheritable. Nodes that appear later — a
+hot-plugged disk, partitions rescanned after a partition table is
+written — inherit that from the root rather than the kernel's.
+
+**This descriptor is deliberately narrow, and it has to stay narrow.**
+Whatever it grants, it grants on a raw disk nobody has met yet: a read
+entry for Everyone on `/dev` is every filesystem ACL on the machine
+bypassed by opening the block device. The permissive exceptions that a
+running system needs — `/dev/null` and its kin, writable by anyone — are
+per-node policy, and stamping them is [peinit](~peios/boot-and-trust-establishment/peinit-pid-1)'s
+job on the real root, not prelude's.
+
+**A failure here does not stop the boot.** prelude reports it and carries
+on. A `/dev` that is still SYSTEM-only is a degraded system rather than an
+unbootable one — the recovery console still works there — and refusing to
+boot would turn a permissions defect into an outage. The console line is
+the only warning, so it is worth reading: it names how far the seeding
+got.
 
 ## When the initramfs stage fails
 
