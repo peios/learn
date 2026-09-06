@@ -327,9 +327,12 @@ file/symlink paths, excludes, claims, multipack `enum.files.path`, publish
 | `{{buildmeta}}` | build-metadata component (after `+`) | Empty string when absent. |
 | `{{multipack}}` | the current multipack instance value | Only available while expanding a multipack package's per-instance values; errors in any non-multipack context. |
 
-A version string parses as `major[.minor[.patch]][-prerelease][+buildmeta]`, so
-`{{minor}}` / `{{patch}}` are only present when the version actually carries
-them.
+A version string has one or more dot-separated numeric components followed by
+optional `-prerelease` and `+buildmeta` tails. `{{version}}` preserves the full
+string. `{{major}}`, `{{minor}}`, and `{{patch}}` expose the first three numeric
+components for compatibility, so `{{minor}}` / `{{patch}}` are only present
+when the version actually carries them; fourth and later components are
+available through `{{version}}` only.
 
 ### Shell targets use `$PEKIT_*` instead
 

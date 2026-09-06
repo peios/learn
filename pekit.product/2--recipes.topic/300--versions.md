@@ -23,26 +23,28 @@ version components into your recipe, and how the `--version`, `--latest`, and
 A version is written as:
 
 ```text
-MAJOR[.MINOR[.PATCH]][-PRERELEASE][+BUILDMETA]
+NUMERIC_COMPONENT[.NUMERIC_COMPONENT...][-PRERELEASE][+BUILDMETA]
 ```
 
-Only `MAJOR` is mandatory. Minor and patch are each optional but ordered — you
-cannot write a patch without a minor. The optional `-PRERELEASE` and `+BUILDMETA`
-tails may each contain digits, ASCII letters, dots, and hyphens.
+The numeric core contains one or more dot-separated decimal components. The
+optional `-PRERELEASE` and `+BUILDMETA` tails may each contain digits, ASCII
+letters, dots, and hyphens.
 
-| Written version    | major | minor | patch | prerelease | buildmeta |
-| ------------------ | ----- | ----- | ----- | ---------- | --------- |
-| `2`                | `2`   |       |       |            |           |
-| `2.43`             | `2`   | `43`  |       |            |           |
-| `2.43.1`           | `2`   | `43`  | `1`   |            |           |
-| `1.21.0-rc.1`      | `1`   | `21`  | `0`   | `rc.1`     |           |
-| `1.21.0+build.5`   | `1`   | `21`  | `0`   |            | `build.5` |
-| `1.21.0-rc.1+bld`  | `1`   | `21`  | `0`   | `rc.1`     | `bld`     |
+| Written version    | major | minor | patch | complete numeric core | prerelease | buildmeta |
+| ------------------ | ----- | ----- | ----- | --------------------- | ---------- | --------- |
+| `2`                | `2`   |       |       | `2`                   |            |           |
+| `2.43`             | `2`   | `43`  |       | `2.43`                |            |           |
+| `2.43.1`           | `2`   | `43`  | `1`   | `2.43.1`              |            |           |
+| `0.5.13.5`         | `0`   | `5`   | `13`  | `0.5.13.5`            |            |           |
+| `1.21.0-rc.1`      | `1`   | `21`  | `0`   | `1.21.0`              | `rc.1`     |           |
+| `1.21.0+build.5`   | `1`   | `21`  | `0`   | `1.21.0`              |            | `build.5` |
+| `1.21.0-rc.1+bld`  | `1`   | `21`  | `0`   | `1.21.0`              | `rc.1`     | `bld`     |
 
 Anything that does not match this grammar is rejected with an `invalid_version`
-error. Comparison and ordering are numeric on major/minor/patch (a missing
-component counts as `0`), with the prerelease string compared lexically to break
-ties.
+error. Comparison and ordering use every numeric component, without a
+machine-integer size limit. A missing component counts as `0`, so `1.2`,
+`1.2.0`, and `1.2.0.0` have equal numeric cores. The prerelease string is
+compared lexically to break ties; build metadata does not affect ordering.
 
 ## Version template variables
 
@@ -57,9 +59,9 @@ including the multi-package-only `{{multipack}}`, is in
 | Variable          | Expands to                       |
 | ----------------- | -------------------------------- |
 | `{{version}}`     | the version exactly as written   |
-| `{{major}}`       | the major component              |
-| `{{minor}}`       | the minor component              |
-| `{{patch}}`       | the patch component              |
+| `{{major}}`       | the first numeric component      |
+| `{{minor}}`       | the second numeric component     |
+| `{{patch}}`       | the third numeric component      |
 | `{{prerelease}}`  | the prerelease tail, or empty    |
 | `{{buildmeta}}`   | the build-metadata tail, or empty |
 
@@ -70,6 +72,11 @@ ref = "v{{version}}"
 ```
 
 Two rules govern rendering:
+
+- **Fourth and later numeric components stay in `{{version}}`.** The three
+  component variables deliberately retain their compatibility meanings. For
+  example, `0.5.13.5` renders unchanged through `{{version}}`, while
+  `{{major}}.{{minor}}.{{patch}}` renders `0.5.13`.
 
 - **Referencing a component the version does not have is an error.** `{{version}}`
   fails when no version is selected at all; `{{minor}}` and `{{patch}}` fail when
@@ -160,9 +167,11 @@ first, and picks the first candidate the source actually offers:
 | `2.0.0`   | `2.0.0`, then `2.0`, then `2` |
 | `2.0`     | `2.0`, then `2`            |
 | `2.43.1`  | `2.43.1` only              |
+| `2.43.7.0.0` | `2.43.7.0.0`, then `2.43.7.0`, then `2.43.7` |
 
-Only trailing **zero** components are dropped — a non-zero patch or minor is never
-elided. The ladder is also **skipped entirely** when the version carries a
+Only trailing **zero** components are dropped — a non-zero component is never
+elided. The ladder works across any number of numeric components. It is also
+**skipped entirely** when the version carries a
 prerelease or build-metadata tail: `1.21.0-rc.1` is only ever matched as written.
 If no candidate is available (or the source is not reproducible/enumerable), the
 version you wrote is used verbatim.
