@@ -7,14 +7,27 @@ related:
   - provium/reference/vm
 ---
 
-A Disk wraps one virtio-blk disk attached to a VM. It exposes block-level operations and a fault-injection surface useful for exercising I/O error paths in the guest.
+A Disk wraps one disk attached to a VM. It exposes block-level operations and a fault-injection surface useful for exercising I/O error paths in the guest.
 
 ## Constructing
 
 | Source | Returns |
 |---|---|
-| `vm:attach_disk({id="vda", size=…, image="…"})` | New disk attached to `vm`. |
-| `vm:disk("id")` | Lookup of an already-attached disk. Errors if absent. |
+| `vm:disk("id")` | Handle for a disk the VM booted with. Errors if absent. |
+| `vm:attach_disk({id=…, size=…, image=…})` | Host-side handle only — see below. |
+
+A disk the **guest** can see is declared before it boots: in the
+profile's [`disks`](~provium/configuration/provium-toml#disks) when the
+image belongs to the system under test, or in
+[`vm:boot({disks = …})`](~provium/reference/vm#boot-disks) when it
+belongs to one test. `vm:disk(id)` then returns a handle for it.
+
+`vm:attach_disk` does **not** add a device to the running machine. It
+records a host-side attachment: a name, a size, and a backing file, so
+sector access and fault injection have something to address. Nothing
+reaches QEMU, so the guest sees no new block device. Use it to point a
+handle at an image the guest reaches some other way; use the boot forms
+above for a device the guest is meant to find.
 
 `vm:attach_disk` opts:
 

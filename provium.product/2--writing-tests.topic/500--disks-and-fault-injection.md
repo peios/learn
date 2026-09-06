@@ -8,22 +8,38 @@ related:
   - provium/writing-tests/vms-and-profiles
 ---
 
-Provium's disk support has two goals: give the test direct sector-level access to the backing image, and inject faults that exercise the guest's error-handling paths.
+Provium's disk support has three goals: put a block device in front of the guest, give the test direct sector-level access to the backing image, and inject faults that exercise the guest's error-handling paths.
 
 The exhaustive method reference is on [Disk](~provium/reference/disk).
 
 ## Attaching a disk
+
+A disk the guest can see is declared **before the boot**, because the guest's firmware and initramfs look for block devices long before there is an agent to call anything.
+
+For one test — a blank disk to install onto, a filesystem you have damaged on purpose:
 
 ```lua
 local img = "/tmp/test.img"
 -- Pre-create a backing file; Provium does not auto-create.
 io.open(img, "w"):write(string.rep("\0", 1024 * 1024)):close()
 
-local vm = provium:vm("v", "peios"):boot()
-local disk = vm:attach_disk({id = "vda", size = 1024 * 1024, image = img})
+local vm = provium:vm("v", "peios"):boot({
+    disks = {{path = img, id = "target"}},
+})
+local disk = vm:disk("target")
 ```
 
-The two opts that matter for fault-injection work are `id` (names the disk so you can re-look it up via `vm:disk(id)`) and `image` (the backing file — required for `read_sectors` / `write_sectors`). The full opts table, types, and defaults are in the [Disk reference](~provium/reference/disk#constructing).
+For every test in a suite — a boot medium, an image that *is* the system under test — put it in the profile instead, beside `kernel` and `initrd`:
+
+```toml
+[profiles.peios]
+disks = [{ path = "{out}/peios.iso", id = "medium", readonly = true }]
+```
+
+Either way the guest gets a `virtio-blk-pci` device, named `/dev/vda`, `/dev/vdb`, … in attachment order, with the profile's disks first. Both forms are documented in full under [`disks`](~provium/configuration/provium-toml#disks) and [Boot disks](~provium/reference/vm#boot-disks).
+
+> [!IMPORTANT]
+> `vm:attach_disk` is **not** this. It records a host-side attachment — a name, a size, and a backing file — so that sector access and fault injection have something to address. It emits no QEMU device, so the guest sees nothing new. Reach for it when the guest already gets at the image some other way; reach for the boot forms above when the guest is meant to find a device.
 
 ## Reading and writing sectors
 
@@ -179,18 +195,23 @@ end)
 ## Multiple disks per VM
 
 ```lua
-local data = vm:attach_disk({id = "vdb", size = 1024 * 1024, image = "/tmp/data.img"})
-local logs = vm:attach_disk({id = "vdc", size = 1024 * 1024, image = "/tmp/logs.img"})
+local vm = provium:vm("v", "peios"):boot({
+    disks = {
+        {path = "/tmp/data.img", id = "data"},
+        {path = "/tmp/logs.img", id = "logs"},
+    },
+})
 
 -- Inject EIO on data only; logs is unaffected.
-data:fault_inject("eio_read")
+vm:disk("data"):fault_inject("eio_read")
 ```
 
-Use `vm:disk(id)` to look up an already-attached disk:
+Attachment order is device order in the guest, so `data` is `/dev/vda` and `logs` is `/dev/vdb` — or `/dev/vdb` and `/dev/vdc` if the profile already attached one of its own.
+
+Use `vm:disk(id)` to look a disk up again anywhere later in the test:
 
 ```lua
-local data = vm:disk("vdb")
-data:fault_inject("slow")
+vm:disk("data"):fault_inject("slow")
 ```
 
 ## Caveats

@@ -144,6 +144,48 @@ That is the shape a kernel conformance suite wants, where the point is that noth
 
 `inject_agent = false` with no `initrd` is rejected: without injection there is no overlay to stand in for the missing file, and so nothing to boot.
 
+### `disks`
+
+```toml
+[profiles.peios]
+disks = [
+  { path = "{out}/peios.iso", id = "medium", readonly = true },
+]
+```
+
+| Type | Default | Description |
+|---|---|---|
+| array of tables | `[]` | Block devices attached to the guest for the whole of every boot under this profile, in order. Each emits a `-drive if=none` / `-device virtio-blk-pci` pair, so the guest sees them as `/dev/vda`, `/dev/vdb`, … by position. |
+
+Per disk:
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `path` | path string | required | Host path of the backing image. Provium never creates one — a missing file fails the launch with `disk \`<id>\`: no image at \`<path>\``. Rebased against the profile's directory and `{out}`-expanded like `kernel` and `initrd`. |
+| `id` | string | `disk<N>` by position | The QEMU drive id, and the name [`vm:disk(id)`](~provium/reference/vm) looks the attachment up under. |
+| `readonly` | bool | `false` | Attach read-only, so a guest write is refused rather than modifying the image every later boot in the run then reads. |
+
+Put a disk **here** when the image is part of the system under test
+rather than part of a test. A boot medium an initramfs scans for is a
+sibling of `initrd` and `root`: every test boots the same one, and the
+profile's `build` already owns keeping it fresh. Put it in
+[`vm:boot({disks = …})`](~provium/reference/vm) when it varies per test
+— a blank disk to install onto, a deliberately damaged filesystem.
+
+A disk cannot come from `vm:attach_disk`, which runs after boot.
+Anything the guest's firmware or initramfs does with a block device
+happens long before there is an agent to call that, so a medium the
+boot itself depends on has to be on the bus at the guest's first
+instruction.
+
+Ids are one namespace across the profile's disks and the boot's,
+because they end up on one QEMU command line. A duplicate within the
+profile is rejected when the config loads; a boot disk reusing a
+profile id fails the launch with `disk id \`<id>\` is already attached
+by the profile`. Profile disks are always attached first, so the
+medium a profile boots from keeps its device name no matter what a test
+adds.
+
 ### `inject_agent`
 
 ```toml
