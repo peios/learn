@@ -186,6 +186,41 @@ A few more consequences for anyone writing a hook:
 - **Check, and exit non-zero on failure.** A hook that mounts the root must exit non-zero if the mount failed. A hook that fails silently turns into prelude's generic "nothing mounted the root" failure later — which is harder to diagnose than the hook reporting its own error at the point it happened.
 - **Hooks run as SYSTEM.** Everything in the initramfs runs on the SYSTEM token (see [Bootstrap tokens](~peios/boot-and-trust-establishment/bootstrap-tokens)), so a hook has full authority. There is no identity model to work within inside the initramfs — that begins on the real root.
 
+### Reporting to the console
+
+The exit code is what prelude reads. What a **person** reads is whatever the hook writes to its own stdout and stderr, which go straight to the console: prelude runs each hook with a bare `fork` and `execve` and no pipe, so it never sees a hook's output and cannot label, align or colour it. That is deliberate — it keeps a PID 1 free of a pump it would otherwise have to drain — but it does mean the only place a hook's lines can be shaped is inside the hook.
+
+So that every hook does not invent its own shape, prelude ships a helper. Source it and report through it:
+
+```sh
+. /usr/libexec/prelude/hook-log.sh
+hook_log_init stratafs-base
+
+log      "mounting $target"     # progress, no outcome yet
+log_ok   "mounted $target"      # it worked
+log_skip "$target not present"  # deliberately not done
+log_warn "$target was already mounted"   # wrong, but the boot continues
+log_fail "mount $target failed"          # it did not work
+```
+
+which produces lines that line up with prelude's own and with peinit's later:
+
+```
+[      ] stratafs-base: mounting /bin
+[  OK  ] stratafs-base: mounted /bin
+[ SKIP ] stratafs-base: /opt not present
+[ WARN ] stratafs-base: /bin was already mounted
+[FAILED] stratafs-base: mount /bin failed
+```
+
+Three rules worth stating:
+
+- **Pass your own name to `hook_log_init`,** not `prelude` and not the file name. These lines are yours, and attributing them to prelude is how a hook's failure gets read as prelude's.
+- **Match the verb to the tag.** `log_ok` claims the thing is done, so it reads "mounted", never "mounting". A hook that announces its intention and then reports the outcome writes two lines, not one ambiguous one.
+- **The helper is `prelude-hook-abi` level 3.** Declare `prelude-hook-abi = ">= 3"` in the package. Sourcing a file that is not there aborts the hook under `set -e`, so this is a hard requirement rather than a preference.
+
+`log_warn` and `log_fail` write to stderr; the rest write to stdout. Both reach the console. Colour is decided the same way prelude and peinit decide it — on unless the kernel command line says `TERM=dumb` — so a hook never has to think about it.
+
 ## Writing a hook
 
 A complete, minimal hook — one that mounts an ext4 root from a known partition:
