@@ -200,8 +200,10 @@ Everything installs under `/usr/src/dist/<name>-<version>/` (with any
 
 - `upstream/` — the pristine source input. For a url source, the downloaded
   artifact byte-for-byte, so its hash matches the committed `pekit.lock`; for
-  a git source, a `git archive` export of the locked commit — deterministic
-  for a commit and independent of the mutable checkout. A URL source's
+  an ordinary git source, a `git archive` export of the locked commit —
+  deterministic for a commit and independent of the mutable checkout. For
+  tracked-path git, that archive is restricted to the one locked relative path;
+  no other repository file enters the source package. A URL source's
   upstream-maintained patch series is included byte-for-byte under
   `upstream/patches/`, in the same order and with the same hashes as its
   nested lock entries.

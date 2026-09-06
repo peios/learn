@@ -212,7 +212,9 @@ the first resolve of a version records what was fetched, and every later
 resolve verifies against the record — see
 [Sources](~pekit/recipes/sources#the-lockfile) for the behaviour. Commit it,
 and do not edit it by hand: `pekit lock --repin --version <v>` is the one
-supported way to change an existing entry. Loading is strict — an unknown key
+supported way to change an existing ordinary git or URL entry. Tracked-path
+git history is append-only, so changed bytes get a new date version and
+`--repin` is rejected. Loading is strict — an unknown key
 is `unknown_key` and an unsupported `schema` is `lock_schema`.
 
 ### Schema
@@ -231,6 +233,10 @@ Each `[[source]]` entry carries the keys for its source kind:
 | `sha256` | url and PyPI sources | SHA-256 of the fetched artifact. |
 | `ref` | git sources | The rendered ref the version resolved through. |
 | `commit` | git sources | The commit the ref resolved to — the assertion. |
+| `repository` | tracked-path git sources | Git repository URL bound by the snapshot. |
+| `path` | tracked-path git sources | Fixed repository-relative regular file selected by the recipe. |
+| `blob` | tracked-path git sources | Git blob object ID reached by `commit:path`. |
+| `blob_sha256` | tracked-path git sources | SHA-256 of the exact blob bytes; the transport-independent content assertion. |
 | `signature_key` | url sources with `[source.url.signature]` | Hex fingerprint of the pinned upstream key that verified the artifact at lock time. |
 | `[[source.patch]]` | url sources with `[source.url.patch_series]` | Ordered patch inputs applied for this version. Each carries `url`, `sha256`, and optional `signature_key` with the same meanings as the base artifact fields. |
 | `locked_at` | all | UTC timestamp of the pinning run (RFC 3339). |
@@ -257,6 +263,16 @@ schema = 1
   ref = "v1.2.0"
   commit = "8f3a1bc99e2f6d41c07b21ac1886d63b7f2e5d10"
   locked_at = "2026-08-10T11:00:00Z"
+
+[[source]]
+  version = "2026.09.06.2"
+  repository = "https://github.com/example/upstream.git"
+  ref = "refs/heads/release"
+  path = "security/trust/certdata.txt"
+  commit = "6b839fbb82801a7a5f5e37df0864c149fddda2b7"
+  blob = "65fddc0b380650ee16aa47e4e28e3a5e2c95f201"
+  blob_sha256 = "fa5092f93c2d5352ebf6c9f4f26f4232a2e2bc0fd8a8950756c1984984b490e0"
+  locked_at = "2026-09-06T12:00:00Z"
 ```
 
 ---

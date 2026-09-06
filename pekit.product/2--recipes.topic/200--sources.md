@@ -33,12 +33,13 @@ bytes. Declaring multiple reproducible tables is an error (`mixed_source`:
 
 ### `[source.git]`
 
-Clones a git repository and checks out a ref. It takes exactly four fields —
+Clones a git repository and checks out a ref. It takes exactly five fields —
 a required `url` (passed to `git clone --mirror`), a `ref` to check out
 (templated with the [selected version](~pekit/recipes/versions); defaults to
 `{{version}}` and must render non-empty), a `versions` **cap** that filters
 enumerated or requested versions, and a `tag_regex` used when enumerating tags
-(see [Enumeration](#enumeration)). The field-by-field schema is in the
+(see [Enumeration](#enumeration)). The fifth, `tracked_path`, selects the
+moving-ref snapshot mode described below. The field-by-field schema is in the
 [recipe format reference](~pekit/reference/recipe-format).
 
 ```toml
@@ -54,8 +55,54 @@ selected) pekit fails with `missing_version` — pass `--version` or set a
 non-templated `ref`.
 
 > [!NOTE]
-> There is **no** submodule option. `[source.git]` accepts
-> only the four fields above; a `submodules` key is an `unknown_key` error.
+> There is **no** submodule option. A `submodules` key is an `unknown_key`
+> error.
+
+#### Tracking one file on a moving ref
+
+Some upstream data has no release tags of its own: one file on a stable branch
+*is* the published stream. Set `tracked_path` to follow that file without
+turning every unrelated branch commit into a package release:
+
+```toml
+[source.git]
+url = "https://github.com/example/upstream.git"
+ref = "refs/heads/release"
+tracked_path = "security/trust/certdata.txt"
+versions = ">= 2026.01.01"
+```
+
+This is deliberately a bounded mode:
+
+- `ref` must be fixed and non-templated; `tag_regex` cannot be combined with
+  `tracked_path`;
+- `tracked_path` is one clean repository-relative regular file, not a
+  directory, symlink, or submodule;
+- discovery observes the fixed ref and compares the selected blob's SHA-256
+  with the newest matching lock entry. An unrelated commit, or any observation
+  with the same bytes as that newest lock, creates no version;
+- a changed blob receives the UTC discovery date `YYYY.MM.DD`. Further changed
+  blobs discovered and locked that day receive `.2`, `.3`, and so on. The
+  suffix follows committed lock history, and a backwards wall clock clamps to
+  the newest locked date, so the sequence remains monotonic;
+- the lock binds repository URL, fixed ref, path, immutable commit, Git blob
+  object ID, and SHA-256 of the blob bytes. It is append-only for this mode:
+  discover a change with `--latest`; `--repin` is rejected.
+
+`--latest`, constraints, and `--all-versions` check the moving ref. The
+enumerated set is all matching historical lock entries plus the current
+changed blob, if there is one; `--all-versions` therefore retains history
+rather than replacing it with the tip. An exact locked version does **not**
+resolve or fetch the moving ref. It uses the pinned commit and path, works
+offline when those objects are cached, and may fetch only the pinned commit on
+a cold cache. An exact version not yet locked is accepted only when it is the
+date version Pekit computes for the currently observed changed blob.
+
+The source root preserves the tracked relative path and contains no other
+upstream file. Targets therefore read the example above at
+`$PEKIT_SOURCE_ROOT/security/trust/certdata.txt`. This mode is suited to a
+single independently versioned data input; use ordinary git mode when the
+build needs a repository tree.
 
 ### `[source.url]`
 
@@ -261,6 +308,18 @@ Provenance is `git:<url>@<commit>` and the timestamp is the commit's committer
 date, so a git build is anchored to a specific commit even when `ref` was a
 branch or tag.
 
+**Tracked-path git** (`git`). Pekit keeps a separate bare cache under
+`<out_dir>/_source_cache/git-tracked/<hash>/repo.git`. Discovery shallow-fetches
+the fixed ref with a `blob:none` partial-clone filter, resolves its commit, and
+requests only `tracked_path`'s blob. A server without partial-clone filtering
+may transfer the other blobs in that shallow snapshot, but Pekit still
+materialises and packages only the selected regular file. A locked resolve
+uses the lock's commit directly and never consults the moving ref; a cold cache
+therefore requires a server that permits fetching that pinned commit object.
+The materialised tree is recreated from the verified blob on every resolve,
+then any recipe patch series is applied. Provenance is
+`git:<url>@<commit>:<path>#sha256:<blob-sha256>`.
+
 **URL** (`url`). pekit caches the downloaded artifact under
 `<out_dir>/_source_cache/url/<hash>/`:
 
@@ -305,7 +364,9 @@ plus a materialised tree — and the one knob is **`--refresh-source`**, which
 discards the cache and rebuilds from scratch:
 
 - git: removes the mirror repo **and** the checkout scope, forcing a fresh
-  `clone --mirror` and checkout.
+  `clone --mirror` and checkout. Tracked-path git removes its sparse cache and
+  refetches the selected immutable commit (for an exact lock) or moving ref
+  (during discovery), without changing what the lock asserts.
 - url / PyPI: removes the cached artifact **and** the materialised scope,
   forcing a re-download and re-extract.
 - local / sourceless: nothing to refresh.
@@ -320,11 +381,13 @@ Fetched inputs are pinned **trust-on-first-use** in a machine-written
 `pekit.lock` beside `pekit.toml`. The first time a source resolves for a
 version, pekit records what it fetched — the artifact's SHA-256 for a url or
 PyPI source, every ordered remote-patch URL and SHA-256 when present, or the
-resolved commit for a git source — and every later resolve verifies against
+resolved commit for an ordinary git source. A tracked-path git entry records
+the repository, fixed ref, path, commit, blob object ID, and blob SHA-256. Every
+later resolve verifies against
 that entry instead, cache hits included. A mismatch is a hard
 `lock_mismatch` stop: upstream's published bytes (or a tag) changed under a
 version that was already pinned. Accepting such a change is an explicit
-ceremony, never automatic:
+ceremony, never automatic for ordinary git and URL sources:
 
 ```text
 pekit lock --repin --version 1.2.0
@@ -430,6 +493,9 @@ Reproducible sources can list the versions they offer upstream; this feeds
   Without named version captures, pekit extracts the version from the ref
   template or an embedded `MAJOR.MINOR.PATCH`; unnamed capture groups only
   filter tags.
+- **tracked-path git**: shallow-fetch the fixed ref and expose matching
+  versions already in `pekit.lock`, plus one newly synthesized date version
+  only when the current tracked blob differs from the newest lock.
 - **url**: fetch `listing_url` when set, otherwise derive a directory listing
   from the `url` template (the part before the first `{{…}}`, up to the last
   `/`); filter entries by `file_regex`, and extract versions from the matches.
@@ -455,6 +521,7 @@ materialised:
 | sourceless | `recipe:<recipe-root>` |
 | local | `local:<path>` |
 | git | `git:<url>@<commit>` |
+| tracked-path git | `git:<url>@<commit>:<path>#sha256:<blob-sha256>` |
 | url (checksummed) | `url:<url>#<checksum>` |
 | url (locked, no checksum) | `url:<url>#sha256:<hash>` |
 | url with remote patches | the locked url ref above plus `+patches:sha256:<series-hash>` |
