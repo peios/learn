@@ -110,24 +110,31 @@ implement it separately, because prelude is a size-critical initramfs PID 1
 with no dependencies and the hooks are shell. Changing a tag word or a
 width means changing it in all three.
 
-Two other writers reach the console during boot and are **not** in this
-format.
+Everything peinit runs that reaches the console is in this format,
+including output peinit did not write itself. **Autorun scripts are
+captured**, not left to inherit peinit's streams, and their lines are
+relayed under the script's own file name:
 
-**`loregd` opens `/dev/console` itself** and points Go's logger at it. This
-does not contradict "service output is never echoed to the console" above —
-peinit is not echoing it; loregd is deliberately going around peinit's
-capture. The reason is a real gap: peinit captures Phase 1 registryd's
-stdout and stderr into a pipe it does **not** surface when the readiness
-wait times out, so a registryd that failed for a reason it had printed would
-have been reported only as `registryd readiness timeout expired before
-READY=1`. Until Phase 1 surfaces that pipe, the workaround is load-bearing
-and the lines stay unformatted.
+```
+[      ] 10-apply-seeds.sh: applied 20 file(s), 92 key(s); 0 failed
+[  OK  ] peinit: ran 1 autorun script(s)
+```
 
-**A general-purpose tool an autorun script invokes** — `reg apply`, for
-instance — writes its own output, which reaches the console because the
-autorun script's streams do. That output is correct for an interactive
-shell and should not be reshaped to suit one caller; if a boot wants it
-tagged, the autorun script is the place to do it.
+Relayed lines always carry the blank tag. peinit does not know whether a
+given line of somebody else's output is good news — the producer knows
+and peinit does not, and guessing from prose is how a rename silently
+turns an error green. The *producer's* outcome is reported separately,
+from its exit code, which peinit does know.
+
+Relayed lines are sanitised first: control characters become `?`, lines
+are cut at 512 characters and a producer is capped at 200 lines with the
+remainder counted. A script sharing the console could otherwise steer it
+with an escape sequence, and peinit's own output shares the device.
+
+The only lines on a normal boot that are **not** in this format come from
+outside peinit's reach entirely: the firmware's own messages before any
+kernel runs, and a service that owns the terminal through `TTYPath`
+writing to it directly.
 
 ## Severity and quiet
 
@@ -151,6 +158,32 @@ suppresses it along with every other kind of progress.
 The autorun step in Phase 1 (§2.3) bypasses the policy entirely, on the
 grounds that a script running that early and going wrong is worth
 interrupting anything for. Its lines are still tagged.
+
+## Phase 1 registryd failures
+
+One deliberate exception to "service output is never echoed to the
+console". peinit gives every service capture pipes and drains them in the
+runtime loop — but Phase 1 has no loop, so a registryd that printed
+exactly why it could not serve was reported to the operator as nothing but
+`registryd readiness timeout expired before READY=1`, with the reason
+sitting unread in a pipe.
+
+When Phase 1 registryd fails to become ready, or says `READY=1` and then
+cannot serve, peinit now drains those pipes and relays what it found:
+
+```
+[FAILED] peinit: registryd failed; what it said follows
+[      ] registryd(stderr): open hive Machine: permission denied
+```
+
+Failure path only. On a normal boot the descriptors are retained for the
+runtime, which drains them into the pre-eventd buffer and on to eventd
+like any other service's output — so registryd's startup lines are
+queryable with `evctl` and are **not** on the console.
+
+The drain is safe to run from PID 1 because the read ends are
+non-blocking: a registryd that is alive and silent yields `EAGAIN` rather
+than hanging the boot.
 
 > [!NOTE]
 > `peios.quiet` governs peinit only. What the **kernel** prints is
