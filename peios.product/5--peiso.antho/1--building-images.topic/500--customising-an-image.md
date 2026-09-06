@@ -81,10 +81,15 @@ exclude     = ["usr/share/doc"]          # root-relative; default none
 exclude = ["var/state/peipkg", "lcl/conf/peipkg"]   # the default; replaces it
 
 [boot]
-cmdline_extra = "loglevel=3"             # appended to live-boot's command line
+cmdline_extra = "loglevel=7 ignore_loglevel"   # appended to live-boot's command line
 ```
 
-`initramfs.exclude` *replaces* the default list rather than adding to it, so an explicit `[]` packs everything; the two defaults are the initramfs root's package database and repository configuration, which belong to the real root. `boot.cmdline_extra` is appended to the command line the boot package ships and baked into the UKI — there is no full replacement, because the shipped line carries `init=` and the console, and losing those quietly is how a custom image fails to boot.
+`initramfs.exclude` *replaces* the default list rather than adding to it, so an explicit `[]` packs everything; the two defaults are the initramfs root's package database and repository configuration, which belong to the real root. `boot.cmdline_extra` is appended to the command line the boot package ships and baked into the UKI — there is no full replacement, because the shipped line carries `init=`, and losing it quietly is how a custom image fails to boot.
+
+The shipped line runs the kernel at `loglevel=4`, so the console carries kernel errors and worse and peinit's own boot narrative stays legible. The example above is the common override: it puts the full kernel log back. `ignore_loglevel` is the token that does the work — while it is set the kernel prints every message whatever `loglevel` says — so raising the number alone will not undo the default.
+
+> [!NOTE]
+> The kernel's `loglevel` and peinit's [`peios.quiet`](~peios/services-and-jobs/boot-and-boot-modes) are independent settings that both sound like "how noisy is the boot". `loglevel` governs what the *kernel* prints; `peios.quiet` governs what *peinit* prints. Quieting one does nothing to the other.
 
 Not a knob: the ISO's label. `live-boot` finds the medium by it.
 

@@ -183,6 +183,9 @@ The rules **stack rather than scale**: errors are never less visible at `2` than
 
 A few lines escape all of this: whatever peinit and prelude print *before* they have read the command line. Neither can honour a preference it has not seen yet, and those lines are also the only evidence either started at all.
 
+> [!NOTE]
+> `peios.quiet` governs what **peinit** writes, and nothing else. The **kernel's** own console output is governed separately by the standard `loglevel` parameter, which shipped images set to `4` — errors and worse — so that peinit's narrative is not buried under the kernel's. The two are independent: setting `peios.quiet=0` to debug a boot does not bring the kernel's messages back, and `loglevel=7 ignore_loglevel` does not make peinit any louder. Note also that raising `loglevel` alone will not undo a shipped `ignore_loglevel`, and that the image ships no `dmesg`, so at the default a kernel warning is not recoverable after the fact.
+
 Unknown `peios.*` tokens are ignored, as is a malformed value on either of the two valued tokens — this parser runs before anything exists to report a diagnostic to, and refusing to boot over a typo in a tuning knob is the worse outcome.
 
 > [!NOTE]
