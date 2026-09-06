@@ -17,7 +17,8 @@ system. What it actually exercises is narrower.
 | Mount operations | The Phase 1 virtual filesystems. |
 
 peinit verifies the two privileges at startup, before Phase 1 does
-anything that needs them, and fails to recovery naming which is missing:
+anything that needs them, and fails to recovery naming which is missing
+[*privilege.the-required-privileges-are-verified-at-startup]:
 
 ```
 peinit: required privileges are not held: Token("peinit is missing
@@ -36,12 +37,13 @@ the privilege.
 
 `SeImpersonatePrivilege` is **not required and not checked**, even
 though it appears in the requirement list peinit was specified against.
-It is not used. peinit passes the peer's token
-descriptor to AccessCheck directly rather than impersonating the caller
-and evaluating as them, so the privilege that would be needed to
-impersonate is not needed at all. The same holds on the jobs socket:
-peinit never impersonates a submitter, and the identity a job runs as
-is one the kernel already verified the submitter could convey.
+It is not used. [*privilege.se-impersonate-is-not-required] peinit
+passes the peer's token descriptor to AccessCheck directly rather than
+impersonating the caller and evaluating as them, so the privilege that
+would be needed to impersonate is not needed at all. The same holds on
+the jobs socket: peinit never impersonates a submitter, and the identity
+a job runs as is one the kernel already verified the submitter could
+convey.
 
 For non-platform services peinit creates no tokens. It installs the ones
 authd minted. It mints only for the SYSTEM platform services it starts

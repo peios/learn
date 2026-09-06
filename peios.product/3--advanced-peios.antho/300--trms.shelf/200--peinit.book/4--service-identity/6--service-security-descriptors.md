@@ -15,6 +15,7 @@ reads definitions as SYSTEM.
 operations* on the service through the control interface. It is stored
 as a binary `ServiceSecurity` value on the same registry key, but
 enforced by peinit rather than by LCS.
+[*svcsd.servicesecurity-governs-runtime-operations]
 
 The two are genuinely independent. An administrator might be able to
 query a service's status without being able to read its configuration,
@@ -25,26 +26,28 @@ concerns and there is no reason for one to imply the other.
 
 | Right | Bit | Grants |
 |---|---|---|
-| `SERVICE_QUERY_STATUS` | 0x0001 | Query state, PID, cause, health, warnings. |
-| `SERVICE_START` | 0x0002 | Start the service. |
-| `SERVICE_STOP` | 0x0004 | Stop the service. |
-| `SERVICE_INTERROGATE` | 0x0008 | Reload the service. |
+| `SERVICE_QUERY_STATUS` | 0x0001 | Query state, PID, cause, health, warnings. [*svcsd.query-status-grants-status] |
+| `SERVICE_START` | 0x0002 | Start the service. [*svcsd.start-grants-start] |
+| `SERVICE_STOP` | 0x0004 | Stop the service. [*svcsd.stop-grants-stop] |
+| `SERVICE_INTERROGATE` | 0x0008 | Reload the service. [*svcsd.interrogate-grants-reload] |
 | `SERVICE_ALL_ACCESS` | 0x000F | The union of the four. |
 
-Restart requires `SERVICE_START` and `SERVICE_STOP` together. Reset
+Restart requires `SERVICE_START` and `SERVICE_STOP` together.
+[*svcsd.restart-requires-start-and-stop] Reset
 requires `SERVICE_STOP`, because clearing a Failed or Abandoned state is
 the tail of stopping something rather than the head of starting it.
+[*svcsd.reset-requires-stop]
 
 The generic mapping peinit passes to AccessCheck:
 
 | Generic right | Maps to |
 |---|---|
-| `GENERIC_READ` | `SERVICE_QUERY_STATUS` |
-| `GENERIC_WRITE` | `SERVICE_START` \| `SERVICE_STOP` \| `SERVICE_INTERROGATE` |
-| `GENERIC_EXECUTE` | `SERVICE_START` \| `SERVICE_STOP` \| `SERVICE_INTERROGATE` |
-| `GENERIC_ALL` | `SERVICE_ALL_ACCESS` |
+| `GENERIC_READ` | `SERVICE_QUERY_STATUS` [*svcsd.generic-read-is-query-status] |
+| `GENERIC_WRITE` | `SERVICE_START` \| `SERVICE_STOP` \| `SERVICE_INTERROGATE` [*svcsd.generic-write-is-start-stop-interrogate] |
+| `GENERIC_EXECUTE` | `SERVICE_START` \| `SERVICE_STOP` \| `SERVICE_INTERROGATE` [*svcsd.generic-execute-is-start-stop-interrogate] |
+| `GENERIC_ALL` | `SERVICE_ALL_ACCESS` [*svcsd.generic-all-is-service-all-access] |
 
-## Inheritance and the default
+## Inheritance and the default [*svcsd.a-definition-with-no-value-takes-the-services-keys]
 
 A service whose definition carries no `ServiceSecurity` value takes the
 one on `Machine\System\Services` itself. The lookup is a single step to
@@ -52,10 +55,10 @@ that key, not a walk up the hierarchy, which is exact for the flat
 layout definitions actually use.
 
 If that key has no `ServiceSecurity` either, peinit applies a built-in
-default:
+default: [*svcsd.the-built-in-default-grants-system-and-administrators-everything]
 
 ```
-O:SY G:SY D:(A;;0x000F;;;SY)(A;;0x000F;;;BA)
+O:SY G:BA D:(A;;0x000F;;;SY)(A;;0x000F;;;BA)
 ```
 
 SYSTEM and Administrators both get `SERVICE_ALL_ACCESS`. An
@@ -72,16 +75,16 @@ When a control command arrives, peinit:
 2. Resolves the target service and its ServiceSecurity descriptor. A
    command naming no definition and no addressable definition-removed
    entry returns `UNKNOWN_SERVICE`; peinit does not invent a descriptor
-   to check against.
+   to check against. [*svcsd.an-unknown-service-is-not-access-checked]
 3. Calls AccessCheck with the caller's token, that descriptor, the
    generic mapping above, and the right the command needs.
 4. On denial, returns `ACCESS_DENIED` and records the attempt as an
    `access.denied` event carrying the caller's SID, the target, the
    requested right by name, the requested access bits and the granted
-   bits.
+   bits. [*svcsd.a-denial-is-recorded-as-an-access-denied-event]
 5. On grant, proceeds.
 
-## Hot reload
+## Hot reload [*svcsd.a-descriptor-change-needs-no-restart]
 
 `ServiceSecurity` changes take effect on the next control request, with
 no restart. A registry change notification triggers a configuration
@@ -89,7 +92,7 @@ reload, and the reload re-reads every descriptor. There is no cached
 decision to invalidate — the check runs against the current descriptor
 every time.
 
-## Filtering, not denying
+## Filtering, not denying [*svcsd.list-omits-rather-than-denies]
 
 `list` returns only the services the caller has `SERVICE_QUERY_STATUS`
 on. Services the caller cannot query are **omitted**, not denied: a

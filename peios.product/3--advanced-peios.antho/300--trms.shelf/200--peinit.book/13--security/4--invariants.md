@@ -29,13 +29,14 @@ access bits requested and granted. Silent denial is not acceptable.
 
 **5. The control descriptor, the ServiceSecurity descriptors and the
 per-job descriptors are the only policy inputs for runtime access
-control.** peinit consults no configuration file, no environment
-variable and no hardcoded principal list. The only inputs to
-AccessCheck are those descriptors — the first two sourced from the
-registry with a compiled-in default, the third fixed at submission from
-the submitter's SID or the SDDL it supplied. Who may *submit* is not a
-policy input at all: it is the jobs socket's file descriptor, decided by
-the filesystem before peinit sees the connection.
+control.** [*invariant.the-descriptors-are-the-only-policy-inputs]
+peinit consults no configuration file, no environment variable and no
+hardcoded principal list. The only inputs to AccessCheck are those
+descriptors — the first two sourced from the registry with a compiled-in
+default, the third fixed at submission from the submitter's SID or the
+SDDL it supplied. Who may *submit* is not a policy input at all: it is
+the jobs socket's file descriptor, decided by the filesystem before
+peinit sees the connection.
 
 **6. peinit does not share its SYSTEM token.** It opens its own token
 query-only, as a template, and never installs it on a child. Even an
@@ -44,6 +45,7 @@ query-only, as a template, and never installs it on a child. Even an
 **7. peinit does not drop its SYSTEM identity.** PID 1 runs as SYSTEM
 for the lifetime of the system. Only the forked child installs a token;
 peinit never installs one on itself.
+[*invariant.peinit-never-installs-a-token-on-itself]
 
 **8. Identity is deterministic, and the dangerous case is never
 implicit.** Every service runs with a known identity. `SYSTEM` has to be
@@ -51,9 +53,11 @@ declared explicitly; an absent or empty `Identity` means `LocalService`.
 
 The declaration logic upholds the eighth: an empty value resolves to
 `LocalService`, and `SYSTEM` is reached only by naming it. What a
-service actually receives depends on materialisation, and while the
-authd client returns a minted SYSTEM token for every identity (§4.3), a
-service that declared nothing runs on one.
+service actually receives depends on materialisation, and the two can
+no longer diverge: the authd client that returned a minted SYSTEM token
+for whatever it was asked for is gone, and a token whose user SID is
+not the one the declared identity predicts fails the launch rather than
+being reported under the name that was asked for (§4.3).
 
 **9. A submitted job runs only as an identity the kernel verified its
 submitter could convey.** There is no identity field, no route from a

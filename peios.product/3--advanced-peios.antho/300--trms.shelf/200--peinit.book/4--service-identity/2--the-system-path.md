@@ -7,17 +7,19 @@ For `Identity=SYSTEM`, peinit mints a token itself. This is what breaks
 the bootstrap circle: registryd, lpsd, authd and eventd all need tokens,
 and authd — the thing that mints tokens — is one of them.
 
-## Minting
+## Minting [*token.minting-copies-peinits-own-token]
 
 peinit reads its own token as a template and builds a new **primary**
 token carrying the same identity: user SID `S-1-5-18`, the same group
 list, the same privilege set, the same integrity level. The mint
 requires `SeCreateTokenPrivilege`, which the boot SYSTEM token carries;
 the kernel refuses the call with `EPERM` otherwise.
+[*token.the-mint-requires-secreatetokenprivilege]
 
 Two details of the copy matter.
 
-**The logon session comes from the token's statistics.** peinit takes
+**The logon session comes from the token's statistics.**
+[*token.the-logon-session-comes-from-the-token-statistics] peinit takes
 the `auth_id` from the source token's `TokenStatistics` — not from the
 independent `interactivity_scope` field, and not from a hard-coded
 well-known SYSTEM LUID. The minted token therefore stays associated
@@ -26,12 +28,14 @@ carrying its own interactivity scope, which is zero for a platform
 service. Substituting either of the other two values would associate
 platform services with a session that does not exist.
 
-**The logon SID group is dropped from the copy.** The kernel re-appends
-the session's logon SID when it creates the token, and rejects a create
-whose group list already contains it. So peinit filters that group out
-of the template before building.
+**The logon SID group is dropped from the copy.**
+[*token.the-logon-sid-group-is-dropped-from-the-copy] The kernel
+re-appends the session's logon SID when it creates the token, and
+rejects a create whose group list already contains it. So peinit filters
+that group out of the template before building.
 
-**Two groups are added that the template does not carry.** The
+**Two groups are added that the template does not carry.**
+[*token.the-service-sid-and-service-group-are-added] The
 per-service SID (§4.4), which is what keeps platform daemons
 distinguishable while they all run as SYSTEM; and the Service group
 `S-1-5-6`, which every token authd mints for a service logon carries by
@@ -46,11 +50,14 @@ no less a service for having been started before the authority was.
 
 peinit also asserts that its own token is a primary token and that its
 user SID really is `S-1-5-18` before minting, and fails the start with a
-message naming what it found otherwise. PID 1 minting from something
-that is not the boot SYSTEM token is not a situation to proceed from.
+message naming what it found otherwise.
+[*token.the-template-must-be-a-primary-system-token] PID 1 minting from
+something that is not the boot SYSTEM token is not a situation to
+proceed from.
 
 The minted token is fully independent. The privilege restriction that
 follows (§4.5) operates on it alone and cannot affect peinit's own.
+[*token.the-minted-token-is-independent-of-peinits]
 
 > [!NOTE]
 > Minting is an interim mechanism. The intended model is for peinit to

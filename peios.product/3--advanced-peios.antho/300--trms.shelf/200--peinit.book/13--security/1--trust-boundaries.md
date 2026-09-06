@@ -5,7 +5,7 @@ description: The two boundaries peinit sits at — the kernel handing it a SYSTE
 
 peinit sits at two.
 
-## Kernel to peinit
+## Kernel to peinit [*trust.the-kernel-hands-peinit-the-system-token]
 
 peinit is the first userspace process, and the kernel gives it a SYSTEM
 token — `S-1-5-18`, every privilege. This is the root of trust for all
@@ -46,8 +46,9 @@ inode on it would be unreachable to everything — including peinit —
 until something stamps a descriptor it can inherit from.
 
 That enforcement has no bypass. There is no owner exemption, no
-privilege that overrides a missing descriptor, and no root escape, which
-is what makes the seeding step fatal on failure rather than advisory.
+privilege that overrides a missing descriptor, and no root escape
+[*trust.descriptor-enforcement-has-no-bypass], which is what makes the
+seeding step fatal on failure rather than advisory.
 
 FACS extends the model further, and until it lands the filesystem layer
 still relies partly on conventional trust — correct packaging,

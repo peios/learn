@@ -10,17 +10,20 @@ SIGKILLed. Its cgroup cannot be removed while it is there.
 peinit detects this through `cgroup.events`: after sending the kill it
 arms a post-kill deadline, 5 seconds by default, and checks whether
 `populated` is still 1 when the deadline fires.
+[*cgroup.a-post-kill-deadline-detects-a-survivor]
 
 ## What happens depends on which cgroup it is
 
 For the **main process**, a survivor is fatal to supervision: the
 service transitions to Abandoned with cause `ProcessUnkillable` and
 peinit stops supervising it (§6.1).
+[*cgroup.an-unkillable-main-process-abandons-the-service]
 
 For a **health check or a hook**, it is not. Those are diagnostic and
 setup processes; they hold no service resources — no ports, no file
 locks, no database connections — so a stuck one does not make the
 service unmanageable. peinit orphans the sub-cgroup instead:
+[*cgroup.a-leaked-hook-or-health-cgroup-is-orphaned]
 
 1. Marks it leaked, recording the path, the kind and the time.
 2. Increments the service's cgroup generation, so the next start builds
@@ -31,30 +34,32 @@ A leaked **pre-start check helper** is treated the same way: its
 `checks/` sub-cgroup is recorded and the generation bumped, which matters
 because otherwise the next start would build into a tree that still
 contains the unkillable process.
+[*cgroup.a-leaked-check-helper-is-treated-the-same-way]
 
 The leaked cgroup stays in the hierarchy until the next reboot.
 
-## Visibility
+## Visibility [*cgroup.a-leak-is-both-pushed-and-queryable]
 
 Leaks are not silent. peinit both pushes one when it is detected and
 keeps it queryable afterwards.
 
 The push happens once, on first detection — recording is idempotent, so
 a leak that is re-examined on a later cleanup pass is not announced
-again:
+again: [*cgroup.a-leak-is-announced-once]
 
 - A **`cgroup.leaked` event** on the event stream, carrying the service,
   the sub-cgroup path, its kind, and the detection time in monotonic
-  nanoseconds.
+  nanoseconds. [*cgroup.the-leak-event]
 
 - A **console line** naming the same service, kind and path.
+  [*cgroup.the-leak-console-line]
 
 The pull side survives the moment of detection, for anyone who was not
 watching:
 
 - A **status query** includes a `warnings` array, one entry per leak,
   each an object with the sub-cgroup path, its kind, and the time of
-  detection:
+  detection: [*cgroup.status-carries-a-warnings-entry-per-leak]
 
   ```json
   {"path": "/sys/fs/cgroup/peinit/jellyfin/health", "type": "health", "detected_at": "2026-06-01T12:34:56.123456789Z"}
@@ -63,9 +68,10 @@ watching:
 - A **start command** on a service with leaks returns a warning in its
   acknowledgement, saying the service has leaked sub-cgroups from a
   previous generation and that this indicates an I/O problem needing
-  investigation.
+  investigation. [*cgroup.a-start-on-a-service-with-leaks-warns]
 
-The `type` is the same vocabulary everywhere: `health` for a leaked
+The `type` is the same vocabulary everywhere
+[*cgroup.the-leak-type-vocabulary]: `health` for a leaked
 `health/` sub-cgroup, `hooks` for a leaked `hooks/` one, `helper` for a
 pre-start check helper's `checks/`, and `service_tree` for a leaked
 service root — the last being the most serious, since it means the whole

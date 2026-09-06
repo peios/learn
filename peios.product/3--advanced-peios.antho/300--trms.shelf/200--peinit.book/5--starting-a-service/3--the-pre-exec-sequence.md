@@ -6,24 +6,25 @@ description: Everything between deciding to start a service and its binary runni
 Everything between "peinit decides to start service X" and "X's binary
 is running". The service is in Starting throughout.
 
-## Step 1: Arm the start timeout
+## Step 1: Arm the start timeout [*preexec.one-deadline-covers-the-whole-sequence]
 
 `StartTimeout` covers the entire remaining sequence — pre-hooks, fork,
 exec, and the readiness wait. A single deadline, measured from the
 operation's creation rather than from this point, bounds all of it.
 
 Expiry aborts the start and kills the service's cgroup tree. The cause
-recorded depends on where the deadline landed: a timeout during
-pre-hooks is `PreHookFailure`; one during the readiness wait or the main
-process's execution is `ReadinessTimeout`.
+recorded depends on where the deadline landed
+[*preexec.the-start-timeout-cause-depends-on-where-it-landed]: a timeout
+during pre-hooks is `PreHookFailure`; one during the readiness wait or
+the main process's execution is `ReadinessTimeout`.
 
-## Step 2: Provision runtime directories
+## Step 2: Provision runtime directories [*preexec.runtime-directories-are-created-under-run]
 
 If the definition lists `RuntimeDirectories`, peinit creates each one
 under `/run` and applies its descriptor (§3.3) before anything else in
 the launch. Failure classifies as `ParentSetupFailure`.
 
-## Step 3: Run pre-exec hooks
+## Step 3: Run pre-exec hooks [*preexec.pre-hooks-run-in-sequence-into-the-hooks-cgroup]
 
 Each `ExecStartPre` command runs in sequence, forked into `hooks/`. A
 token is materialised for each at the point of use, from `HookIdentity`
@@ -32,13 +33,14 @@ and the service with `PreHookFailure`.
 
 Any hook exiting non-zero kills the entire service cgroup tree —
 cleaning up whatever grandchildren the hook left — and fails the service
-with `PreHookFailure`.
+with `PreHookFailure`. [*preexec.a-hook-exiting-non-zero-fails-the-service]
 
 When every hook has succeeded, peinit kills the `hooks/` sub-cgroup
 before the main process starts, so a hook that forked something into the
 background does not become part of the service.
+[*preexec.the-hooks-cgroup-is-killed-before-the-main-process]
 
-## Step 4: Materialise the service token
+## Step 4: Materialise the service token [*preexec.a-token-failure-is-a-parent-setup-failure]
 
 The main process's token, per §4.1. A failure means no child exists and
 the service fails with `ParentSetupFailure`.
@@ -49,7 +51,7 @@ evidence and does not change how the start is classified — the
 classification describes what went wrong with the start, and a failed
 close is a separate fact about the same failure.
 
-## Step 5: Create the cgroups and the error pipe
+## Step 5: Create the cgroups and the error pipe [*preexec.the-error-pipe-carries-post-fork-failures]
 
 The `main/` and `health/` sub-cgroups are created, and a
 `pipe2(O_CLOEXEC)` error pipe. The parent keeps the read end,
@@ -62,6 +64,7 @@ setup succeeded. If setup fails, the child writes a structured error
 first.
 
 **The payload is exactly eight bytes, written with one `write(2)`:**
+[*preexec.the-error-payload-is-eight-bytes]
 
 | Bytes | Content |
 |---|---|
@@ -72,8 +75,9 @@ The child writes at most one payload — the first reportable failure —
 and then exits. The parent treats a non-EOF payload that is not exactly
 eight bytes, or carries an unknown step identifier, or an errno of zero
 or less, as malformed evidence and fails closed with `PreExecFailure`.
+[*preexec.malformed-evidence-fails-closed]
 
-The step identifiers:
+The step identifiers: [*preexec.the-child-setup-step-identifiers]
 
 | Id | Step |
 |---|---|
@@ -91,15 +95,16 @@ The step identifiers:
 | 12 | Create a session |
 | 13 | Acquire the controlling terminal |
 
-Identifier 8 is reserved and never emitted: the environment is built in
-the parent and applied by `execve`, so there is no step in the child
-that could fail. Identifiers 12 and 13 are the two terminal steps, which
+Identifier 8 is reserved and never emitted
+[*preexec.identifier-8-is-reserved]: the environment is built in the
+parent and applied by `execve`, so there is no step in the child that
+could fail. Identifiers 12 and 13 are the two terminal steps, which
 occur only for a service with a `TTYPath`.
 
 If `pipe2` fails, no child exists and the service fails with
 `ParentSetupFailure`.
 
-## Step 6: Fork
+## Step 6: Fork [*preexec.the-child-is-cloned-straight-into-the-main-cgroup]
 
 `clone3(CLONE_PIDFD | CLONE_INTO_CGROUP)`, targeting `main/`. This does
 two things atomically: it returns a pidfd for the child, and it places
@@ -145,6 +150,7 @@ the start is classified.
      Simple/Alive activation.
    - **Data:** setup failed. Parse the step and errno, log the specific
      failure, fail the service with `PreExecFailure`.
+     [*preexec.a-child-setup-failure-is-a-pre-exec-failure]
 
 While setup is pending the job is not Running, and no dependent that
 waits on this service's readiness is released.
@@ -164,10 +170,13 @@ On readiness or successful exit, peinit runs `ExecStartPost` in sequence
 into `hooks/`, releases the service's dependents, kills `hooks/`, and —
 for a Simple service only — arms the watchdog if `WatchdogTimeout` is
 non-zero and the health check timer if `HealthCheck` is set.
+[*preexec.post-hooks-run-after-readiness]
 
-A post-hook that fails is logged and does not fail the service. The
-state transition to Active or Completed happens before the post-hooks
-run, so a service is already Active while its post-hooks are executing.
+A post-hook that fails is logged and does not fail the service.
+[*preexec.a-failed-post-hook-does-not-fail-the-service] The state
+transition to Active or Completed happens before the post-hooks run, so
+a service is already Active while its post-hooks are executing.
+[*preexec.the-state-transition-precedes-the-post-hooks]
 
 ## Failures before the fork
 

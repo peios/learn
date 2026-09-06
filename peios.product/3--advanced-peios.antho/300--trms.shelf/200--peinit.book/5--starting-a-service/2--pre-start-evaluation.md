@@ -9,9 +9,11 @@ never touches the registry.
 
 1. If the service names a `TTYPath` and another service is holding that
    terminal, it goes to Skipped with cause `TtyUnavailable` and the
-   start is abandoned (§11.6). Asked first because a terminal is a fact
-   about the machine right now, and evaluating conditions ahead of it
-   would fork a check helper for a start that was never going to happen.
+   start is abandoned (§11.6).
+   [*start.a-held-terminal-skips-before-the-checks] Asked first because
+   a terminal is a fact about the machine right now, and evaluating
+   conditions ahead of it would fork a check helper for a start that was
+   never going to happen.
 2. Conditions are evaluated. Any failure transitions the service to
    Skipped and abandons the start. Skipped satisfies dependents.
 3. If every condition passed and the service has asserts, they are
@@ -20,7 +22,7 @@ never touches the registry.
 
 Only when all three pass does the pre-exec sequence continue.
 
-## Where the transition happens
+## Where the transition happens [*start.the-evaluation-gates-the-transition]
 
 For a fresh start from Inactive, the evaluation gates the transition:
 the service becomes Starting only after the checks pass, so a skipped
@@ -54,8 +56,9 @@ The helper stats the paths and writes the results to a non-blocking
 pipe; peinit watches the pipe and the helper's pidfd through epoll.
 
 The terminal is re-checked when the helper's results come back, rather
-than the earlier answer being carried over: the helper ran in between,
-and a terminal can change hands while it did.
+than the earlier answer being carried over
+[*start.the-terminal-is-rechecked-after-the-helper]: the helper ran in
+between, and a terminal can change hands while it did.
 
 `PreStartCheckTimeout` bounds the helper, at 5 seconds by default. On
 expiry every check still outstanding is marked **not satisfied** — the
@@ -75,7 +78,8 @@ waits a long time on a dependency starts on the answer that was true
 when the wait began.
 
 Filesystem checks are gathered in one helper run, from the conditions
-and the asserts together. There is only ever one run — the completion
+and the asserts together. [*start.one-helper-run-covers-both-lists]
+There is only ever one run — the completion
 path evaluates both lists against the results it gets back, and there is
 no mechanism to ask for a second — so both lists' paths have to be
 stat'd before it. A path named in both is stat'd once.

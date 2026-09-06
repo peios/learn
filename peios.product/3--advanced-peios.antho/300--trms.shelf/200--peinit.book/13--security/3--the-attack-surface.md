@@ -28,6 +28,7 @@ A connection from any other principal is refused at `connect()`, by the
 filesystem, before peinit ever obtains a peer token — which means the
 `ACCESS_DENIED` path and the audit event are unreachable for such a
 caller on those two sockets.
+[*surface.a-refused-connect-never-reaches-peinit]
 
 The jobs socket is deliberately wider: `FILE_WRITE_DATA` for
 Authenticated Users, full control for SYSTEM and Administrators

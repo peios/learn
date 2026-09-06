@@ -10,7 +10,10 @@ is safe to do.
 
 Each step reports through the error pipe with the identifier from §5.3
 if it fails, then exits: `_exit(126)` for a setup failure, `_exit(127)`
-for a failed exec.
+for a failed exec. [*child.a-setup-failure-exits-126-and-a-failed-exec-127]
+
+The steps, in the order the child runs them:
+[*child.the-child-setup-order]
 
 | # | Step | Id |
 |---|---|---|
@@ -27,7 +30,7 @@ for a failed exec.
 | 11 | Inject stored descriptors from fd 3 upward | 10 |
 | 12 | `execve` | 11 |
 
-## The terminal steps
+## The terminal steps [*child.setsid-precedes-the-stream-setup]
 
 `setsid()` comes first, and its position is load-bearing in two
 directions. It has to precede the stream setup, because `setsid()` drops
@@ -40,20 +43,21 @@ controlling terminal.
 unable to steal a terminal already owned by another session.
 
 Without a `TTYPath` neither step runs and the service stays in peinit's
-session.
+session. [*child.without-a-ttypath-the-terminal-steps-do-not-run]
 
-## The standard streams
+## The standard streams [*child.the-standard-streams]
 
 Without a `TTYPath`: stdin from `/dev/null`, stdout and stderr onto the
 write ends of the service's output pipes, and every inherited pipe end
 that is no longer needed closed.
 
 With a `TTYPath`: all three streams onto the opened terminal, and the
-`/dev/null` descriptor and both pipe pairs closed. A terminal-attached
-service's output is therefore **not** captured for logging — it goes to
-the terminal, which is the point of asking for one.
+`/dev/null` descriptor and both pipe pairs closed.
+[*child.a-terminal-attached-service-gets-the-terminal-on-all-three-streams]
+A terminal-attached service's output is therefore **not** captured for
+logging — it goes to the terminal, which is the point of asking for one.
 
-## The signal environment
+## The signal environment [*child.the-signal-mask-is-emptied-and-dispositions-reset]
 
 peinit blocks every signal for its signalfd (§12.3) and the child
 inherits that mask across the fork. Step 5 empties the mask and resets
@@ -61,7 +65,7 @@ every resettable disposition to `SIG_DFL`. A service starting with
 signals blocked, or with PID 1's handling in place, is one of the
 classic ways for a daemon to behave inexplicably.
 
-## oom_score_adj
+## oom_score_adj [*child.oom-score-adj-follows-error-control]
 
 `-1000` — OOM-immune — for an `ErrorControl=Critical` service, and `0`
 for everything else. A Critical service is one whose loss reboots the
@@ -76,8 +80,9 @@ reserved and never emitted. peinit builds the environment in the parent
 rather than being installed beforehand. Step 10 is a check rather than a
 set: it confirms `NOTIFY_SOCKET` is present in the prebuilt environment
 and fails with a synthetic `EINVAL` if it is not.
+[*child.notify-socket-is-confirmed-not-set]
 
-## What the child does not inherit
+## What the child does not inherit [*child.only-the-streams-and-injected-descriptors-are-inherited]
 
 A service inherits only what peinit hands it: its standard streams and
 any descriptors injected from the fd store. Everything else peinit holds
@@ -90,8 +95,10 @@ The signal reset and the close-on-exec discipline together are what make
 a service start from a clean context rather than from PID 1's
 privileged one.
 
-The exception is a descriptor opened through the Peios native file
-interface, which returns without close-on-exec set. peinit repairs that
-where it opens input devices for the power button; each service's own
-cgroup directory descriptor is not repaired, and is inherited across
-exec.
+A descriptor opened through the Peios native file interface returns
+*without* close-on-exec set, so it does not get the discipline for free.
+peinit sets the flag by hand on each of those — the input devices it
+opens for the power button, and the `main/` cgroup directory descriptor
+it opens per launch — immediately after opening them, and nothing peinit
+opens reaches a service's descriptor table.
+[*child.natively-opened-descriptors-have-cloexec-set-by-hand]

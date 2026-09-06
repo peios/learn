@@ -7,7 +7,7 @@ Every service process runs with a KACS token that determines its
 identity and its access rights. peinit obtains or creates that token and
 installs it on the child before exec. It never shares its own token —
 even an `Identity=SYSTEM` service receives a separately materialised
-token of its own.
+token of its own. [*identity.a-service-never-shares-peinits-token]
 
 Which route the token comes from depends on the `Identity` field:
 
@@ -15,13 +15,13 @@ Which route the token comes from depends on the `Identity` field:
 |---|---|---|
 | `SYSTEM` | Minted by peinit from its own identity | `kacs_create_token`. §4.2 |
 | Anything else | authd | The token request flow. §4.3 |
-| Absent or empty | authd | Defaults to `LocalService`. |
+| Absent or empty | authd | Defaults to `LocalService`. [*identity.an-absent-identity-defaults-to-localservice] |
 
 peinit reads its own token with `kacs_open_self_token` requesting the
 real token rather than any impersonation, and opens it query-only: it is
 a template to copy from, never a thing to hand out.
 
-## Where a token is materialised
+## Where a token is materialised [*identity.materialisation-is-per-launched-process]
 
 Materialisation happens at the point of use, per launched process, not
 once per service. A service that runs a pre-exec hook, a main process,
@@ -30,9 +30,9 @@ and then a health check materialises three tokens.
 | Context | Identity used |
 |---|---|
 | Main process | `Identity` |
-| `ExecStartPre` / `ExecStartPost` | `HookIdentity` if set, otherwise `Identity` |
-| Health checks | `Identity`, always |
-| `ExecReload` external command | `Identity`, always |
+| `ExecStartPre` / `ExecStartPost` | `HookIdentity` if set, otherwise `Identity` [*identity.hooks-use-hookidentity-when-set] |
+| Health checks | `Identity`, always [*identity.health-checks-always-use-identity] |
+| `ExecReload` external command | `Identity`, always [*identity.execreload-always-uses-identity] |
 | Submitted jobs | The prepared primary token: the submitter's own, or the token the kernel attached to the submission (§8.5) |
 
 Health checks and reload commands deliberately do not honour
@@ -53,3 +53,4 @@ If materialisation fails at any point — authd unreachable, an identity
 that cannot be resolved, a KACS error — no child exists yet, and the
 start fails with `ParentSetupFailure` for the main process or
 `PreHookFailure` for a hook.
+[*identity.a-materialisation-failure-fails-the-start]

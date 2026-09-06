@@ -6,8 +6,9 @@ description: peinit uses cgroups v2 for exactly two things — knowing which pro
 peinit uses cgroups v2 for exactly two things: knowing which processes
 belong to a service, and killing all of them at once. It does no
 resource accounting and sets no limits.
+[*cgroup.no-accounting-and-no-limits]
 
-Every service gets a tree:
+Every service gets a tree: [*cgroup.every-service-gets-a-tree]
 
 ```
 /sys/fs/cgroup/peinit/<cgroup-id>/          service root
@@ -21,11 +22,12 @@ The sub-cgroups satisfy cgroups v2's "no internal processes" rule, which
 applies whenever controllers are enabled, and give hooks and probes
 containment of their own so that killing one does not touch the service.
 
-They are not all created at once. The root and `hooks/` are created when
-the first thing needs them — the first pre-exec hook, if there is one —
-and `main/` and `health/` when the main process launches.
+They are not all created at once.
+[*cgroup.sub-cgroups-are-created-on-demand] The root and `hooks/` are
+created when the first thing needs them — the first pre-exec hook, if
+there is one — and `main/` and `health/` when the main process launches.
 
-## The cgroup id
+## The cgroup id [*cgroup.the-id-is-the-encoded-service-name]
 
 `<cgroup-id>` is the service name with every byte outside
 `[A-Za-z0-9._-]` percent-encoded as `%` plus two uppercase hex digits.
@@ -40,7 +42,7 @@ and `a-b` would collide.
 
 The id is internal. The name a user sees is unchanged.
 
-## Generations
+## Generations [*cgroup.a-leak-moves-the-service-to-a-fresh-tree]
 
 A cgroup whose processes survived SIGKILL cannot be removed — `rmdir` on
 it fails with `EBUSY`. peinit records the leak and moves the service to a
@@ -53,15 +55,16 @@ fresh tree:
 Old leaked trees persist until the next reboot.
 
 Two conditions record a leak, and both are needed because they answer
-different questions. `cgroup.events` reporting `populated` at the
-post-kill deadline says live processes remain. `rmdir` returning `EBUSY`
-says the tree cannot be given up, which covers that case *and* the ones
-where nothing is running but the directory still will not go. Acting on
-only the first left the second reusing a tree that already existed and
-was not empty.
+different questions. [*cgroup.rmdir-ebusy-also-records-a-leak]
+`cgroup.events` reporting `populated` at the post-kill deadline says live
+processes remain. `rmdir` returning `EBUSY` says the tree cannot be given
+up, which covers that case *and* the ones where nothing is running but
+the directory still will not go. Acting on only the first left the second
+reusing a tree that already existed and was not empty.
 
 The generation advances **once per tree**, not once per leak recorded
-against it. A single failed start records two cleanup deadlines — one for
+against it. [*cgroup.the-generation-advances-once-per-tree] A single
+failed start records two cleanup deadlines — one for
 `hooks/`, one for the service tree — and a tree cleanup can report
 `main/`, `hooks/`, `health/` and the root separately; all of those are
 the same tree, so the first advances the generation and the rest find
