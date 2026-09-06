@@ -165,11 +165,15 @@ When more than one kernel is installed, there is one initramfs per kernel: the d
 
 The final act of the initramfs stage is the **handoff**: prelude replaces the in-memory root with the real root and gives the machine to the real init.
 
-Concretely, the real root has been mounted at `/mnt/rootfs` by a hook; prelude carries the kernel virtual filesystems across into it, switches `/` from the initramfs to `/mnt/rootfs`, and `exec`s the target init. Switching the root is the operation usually called `switch_root` — after it, `/` is the real filesystem and the in-memory initramfs is gone, its RAM reclaimed.
+Concretely, the real root has been mounted at `/mnt/rootfs` by a hook; prelude carries the kernel virtual filesystems across into it, empties the in-memory root to reclaim its space, and then `chdir`s, `chroot`s and `exec`s the target init.
+
+It is a `chroot`, and that is worth being exact about, because the operation this resembles — the one usually called `switch_root` — is *not* what happens. The kernel refuses to relocate a mount onto the initramfs rootfs, which rules out both `MS_MOVE` and `pivot_root`. So the initramfs rootfs does not go away: it remains the mount-namespace root, emptied and unreachable from anything running after the handoff, but present. What is reclaimed is the space its contents occupied, not the root itself.
+
+That distinction matters to the init on the other side. peinit never assumes a clean single-root mount topology and never attempts `pivot_root`, for exactly this reason — see [the initramfs contract](~peios/advanced-peios/peinit/boot/the-initramfs-contract) in its manual, which describes the same handoff from the receiving end.
 
 The init prelude execs is the one identified back in step 2 — the `init=` value from the kernel command line, or the fallback search. On a complete Peios system that init is **peinit**, which takes over as PID 1 of the real root and brings up the rest of userspace. During earlier development, before peinit exists, the target is a simpler stand-in; the contract is the same either way — prelude delivers a mounted real root and a console, and execs whatever the real init is.
 
-The handoff is a one-way door. Once `/` is the real root and the real init is running, the initramfs is not coming back; the in-memory stage exists only up to this moment. The SYSTEM token, though, **survives the handoff** — the real init inherits it across the exec, exactly as every program inherits its primary token across exec. That is the thread tying this page to [Bootstrap tokens](~peios/boot-and-trust-establishment/bootstrap-tokens): the SYSTEM token the kernel attached to prelude is the same token peinit starts life holding.
+The handoff is a one-way door. Once the real init is running there is no path back to the initramfs — its contents are gone and nothing running has a name for what remains; the in-memory stage exists only up to this moment. The SYSTEM token, though, **survives the handoff** — the real init inherits it across the exec, exactly as every program inherits its primary token across exec. That is the thread tying this page to [Bootstrap tokens](~peios/boot-and-trust-establishment/bootstrap-tokens): the SYSTEM token the kernel attached to prelude is the same token peinit starts life holding.
 
 ## What prelude does not do
 
