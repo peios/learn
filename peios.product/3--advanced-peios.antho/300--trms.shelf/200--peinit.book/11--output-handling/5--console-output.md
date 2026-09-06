@@ -111,10 +111,23 @@ with no dependencies and the hooks are shell. Changing a tag word or a
 width means changing it in all three.
 
 Two other writers reach the console during boot and are **not** in this
-format: `loregd`, whose startup output uses Go's default logger, and any
-general-purpose tool an autorun script invokes (`reg apply`, for instance),
-whose output is correct for an interactive shell and should not be reshaped
-for one caller.
+format.
+
+**`loregd` opens `/dev/console` itself** and points Go's logger at it. This
+does not contradict "service output is never echoed to the console" above —
+peinit is not echoing it; loregd is deliberately going around peinit's
+capture. The reason is a real gap: peinit captures Phase 1 registryd's
+stdout and stderr into a pipe it does **not** surface when the readiness
+wait times out, so a registryd that failed for a reason it had printed would
+have been reported only as `registryd readiness timeout expired before
+READY=1`. Until Phase 1 surfaces that pipe, the workaround is load-bearing
+and the lines stay unformatted.
+
+**A general-purpose tool an autorun script invokes** — `reg apply`, for
+instance — writes its own output, which reaches the console because the
+autorun script's streams do. That output is correct for an interactive
+shell and should not be reshaped to suit one caller; if a boot wants it
+tagged, the autorun script is the place to do it.
 
 ## Severity and quiet
 
