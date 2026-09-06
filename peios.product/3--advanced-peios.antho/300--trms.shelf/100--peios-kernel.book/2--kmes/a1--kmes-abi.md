@@ -18,12 +18,16 @@ is in the notes appendix, §2.B, which this generator does not touch.
 ## Syscall numbers [*abi.syscall-numbers]
 
 Signatures are read from the `SYSCALL_DEFINE` sites in `pkm/kmes/`.
+The PKM UAPI exports the uppercase constants in `<pkm/syscall.h>`. Peios
+glibc 2.44-5 and later exports the standard lowercase `SYS_kmes_*`
+aliases in `<sys/syscall.h>`; each alias has the same number as its PKM
+constant.
 
-| Number | Constant | Signature |
-|---|---|---|
-| 1090 | `SYS_KMES_EMIT` | `kmes_emit(const char __user *event_type, u16 event_type_len, const void __user *payload, u32 payload_len)` |
-| 1091 | `SYS_KMES_ATTACH` | `kmes_attach(unsigned int cpu_id, u64 __user *capacity)` |
-| 1092 | `SYS_KMES_EMIT_BATCH` | `kmes_emit_batch(const struct kmes_emit_entry __user *entries, u32 count, u32 __user *emitted_out)` |
+| Number | PKM constant | glibc alias | Signature |
+|---|---|---|---|
+| 1090 | `SYS_KMES_EMIT` | `SYS_kmes_emit` | `kmes_emit(const char __user *event_type, u16 event_type_len, const void __user *payload, u32 payload_len)` |
+| 1091 | `SYS_KMES_ATTACH` | `SYS_kmes_attach` | `kmes_attach(unsigned int cpu_id, u64 __user *capacity)` |
+| 1092 | `SYS_KMES_EMIT_BATCH` | `SYS_kmes_emit_batch` | `kmes_emit_batch(const struct kmes_emit_entry __user *entries, u32 count, u32 __user *emitted_out)` |
 
 ## Structure layouts
 
@@ -48,12 +52,13 @@ Grouped as the header groups them.
 
 *Event origin class — kmes_event_header.origin_class.* [*abi.origin-class-values]
 
-| Constant | Value |
-|---|---|
-| `KMES_ORIGIN_USERSPACE` | `0` |
-| `KMES_ORIGIN_KMES` | `1` |
-| `KMES_ORIGIN_KACS` | `2` |
-| `KMES_ORIGIN_LCS` | `3` |
+| Constant | Value | Notes |
+|---|---|---|
+| `KMES_ORIGIN_USERSPACE` | `0` |  |
+| `KMES_ORIGIN_KMES` | `1` |  |
+| `KMES_ORIGIN_KACS` | `2` |  |
+| `KMES_ORIGIN_LCS` | `3` |  |
+| `KMES_ORIGIN_PNP` | `4` | net/pnp: network-report |
 
 *Ring-slot discovery.* [*abi.ring-slot-discovery]
 

@@ -16,12 +16,16 @@ notes appendix, §5.B, which this generator does not touch.
 ## Syscall numbers [*lcs-abi.syscall-numbers]
 
 Signatures are read from the `SYSCALL_DEFINE` sites in `pkm/lcs/`.
+The PKM UAPI exports the uppercase constants in `<pkm/syscall.h>`. Peios
+glibc 2.44-5 and later exports the standard lowercase `SYS_reg_*`
+aliases in `<sys/syscall.h>`; each alias has the same number as its PKM
+constant.
 
-| Number | Constant | Signature |
-|---|---|---|
-| 1100 | `SYS_REG_OPEN_KEY` | `reg_open_key(int parent_fd, const char __user *path, u32 desired_access, u32 flags)` |
-| 1101 | `SYS_REG_CREATE_KEY` | `reg_create_key(const struct reg_create_key_args __user *args)` |
-| 1102 | `SYS_REG_BEGIN_TRANSACTION` | `reg_begin_transaction(void)` |
+| Number | PKM constant | glibc alias | Signature |
+|---|---|---|---|
+| 1100 | `SYS_REG_OPEN_KEY` | `SYS_reg_open_key` | `reg_open_key(int parent_fd, const char __user *path, u32 desired_access, u32 flags)` |
+| 1101 | `SYS_REG_CREATE_KEY` | `SYS_reg_create_key` | `reg_create_key(const struct reg_create_key_args __user *args)` |
+| 1102 | `SYS_REG_BEGIN_TRANSACTION` | `SYS_reg_begin_transaction` | `reg_begin_transaction(void)` |
 
 ## Ioctls [*lcs-abi.ioctl-numbers]
 
