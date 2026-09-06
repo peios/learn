@@ -6,13 +6,14 @@ description: The datagram socket services report on themselves over — authenti
 peinit binds one Unix datagram socket for service notifications, by
 default at `/run/services/peinit/notify.sock`. Its path is an
 implementation detail: services receive it through `NOTIFY_SOCKET` and
-nothing hardcodes it. The kernel command line can override it with
-`peios.notifysocket=`.
+nothing hardcodes it. [*notify.the-path-reaches-a-service-through-notify-socket]
+The kernel command line can override it with `peios.notifysocket=`.
+[*notify.the-path-is-overridable-on-the-kernel-command-line]
 
 There is one socket, not one per service, and the bind unlinks any stale
-path first.
+path first. [*notify.there-is-one-datagram-socket-for-every-service]
 
-## The descriptor
+## The descriptor [*notify.the-socket-descriptor]
 
 ```
 O:SYG:SYD:(A;;GA;;;SY)(A;;FW;;;S-1-5-6)
@@ -58,7 +59,8 @@ exposure.
 
 The parent directory `/run/services/peinit` carries a descriptor of its
 own, shared with the control socket that lands in it later in boot:
-SYSTEM and Administrators in full, and `S-1-5-6` traverse only. One constant
+SYSTEM and Administrators in full, and `S-1-5-6` traverse only.
+[*notify.the-parent-directory-descriptor] One constant
 serves both because `ensure_directory` re-stamps a directory that
 already exists — two call sites installing different descriptors on one
 path would silently leave whichever ran last, and since the notify
@@ -72,8 +74,8 @@ whether to believe a datagram.
 
 `SO_PASSCRED` is enabled on the socket, so every datagram arrives with a
 kernel-attested `SCM_CREDENTIALS` control message. A datagram without one
-is rejected outright. Descriptors for the fd store arrive alongside, as
-`SCM_RIGHTS`.
+is rejected outright. [*notify.a-datagram-without-credentials-is-rejected]
+Descriptors for the fd store arrive alongside, as `SCM_RIGHTS`.
 
 Authentication then runs five steps, and each closes a hole the previous
 one leaves:
@@ -81,7 +83,8 @@ one leaves:
 1. **Find the sender.** Scan for the current *service-main* job whose
    PID equals the sender's. Only a main job is ever a candidate, which
    is what makes `NotifyAccess=Main` the only mode there is — a hook or
-   a health check cannot notify on a service's behalf. If no service's
+   a health check cannot notify on a service's behalf.
+   [*notify.only-a-services-main-job-may-notify] If no service's
    main job carries the PID, the live submitted jobs (§8.5) are
    scanned instead. The routing question is asked purely by PID, before
    either door verifies anything, so that a sender is verified against
@@ -93,17 +96,22 @@ one leaves:
    between the sender writing and peinit reading. The pidfd was obtained
    atomically at fork, so verifying the PID against it is what makes the
    match sound rather than probable.
+   [*notify.the-pidfd-is-verified-against-the-senders-pid]
 5. **The generation matches.** A job whose activation generation is
    not the service's current one is a previous incarnation, and its
-   notifications are rejected. This is invariant 5 of §6.1 in force: a
+   notifications are rejected.
+   [*notify.a-stale-activation-generation-is-rejected] This is
+   invariant 5 of §6.1 in force: a
    `READY=1` from the process that just crashed cannot mark its
    replacement ready. A submitted job has no generation and no
    replacement, so for it the check stops at step 4.
 
 Anything that fails is dropped and recorded as a `notify.rejected` event
 carrying the sender's PID and the reason.
+[*notify.a-rejected-datagram-is-dropped-and-recorded]
 
-The UID and GID in the credentials are parsed and never used. They are
+The UID and GID in the credentials are parsed and never used.
+[*notify.the-credential-uid-and-gid-are-not-policy-inputs] They are
 not policy inputs, and peinit does not consult them for anything —
 identity on Peios is a token, and the token here is established by
 which job the sender *is*, not by what UID it claims.
@@ -111,11 +119,13 @@ which job the sender *is*, not by what UID it claims.
 ## Applying a datagram
 
 A datagram may carry several newline-separated lines, and peinit applies
-every one. Parsing happens before application and is all-or-nothing: if
+every one. [*notify.every-line-of-a-datagram-is-applied] Parsing happens
+before application and is all-or-nothing: if
 any line is malformed, nothing from that datagram is applied, and any
-descriptors it carried are dropped and closed. Partial application of an
-ambiguous service-control message is structurally impossible rather than
-merely avoided.
+descriptors it carried are dropped and closed.
+[*notify.a-malformed-line-voids-the-whole-datagram] Partial application
+of an ambiguous service-control message is structurally impossible
+rather than merely avoided.
 
 A rejection is recorded after authentication, so the event can name the
 service where one could be established.
@@ -133,11 +143,13 @@ Four are event-emitting. `STATUS=`, `ERRNO=` and `EXIT_STATUS=` are
 authenticated and then emitted as KMES events — `notify.status`,
 `notify.errno`, `notify.exit_status` — whose payloads carry the service
 name, the job identifier, the operation identifier and the activation
-generation, alongside the value. They take the same path as job and
-operation events, not a forward to eventd.
+generation, alongside the value.
+[*notify.status-errno-and-exit-status-emit-events] They take the same
+path as job and operation events, not a forward to eventd.
 
 `STOPPING=1` emits `notify.stopping`, carrying the same attribution and
-no value. It is there because the field's only effect is the *absence*
+no value. [*notify.stopping-emits-an-event] It is there because the
+field's only effect is the *absence*
 of an action — peinit suppresses the SIGTERM (§12.2) — and an absence
 cannot be inferred from what happened afterwards. Without the event, a
 service that was stopping and correctly received no SIGTERM looks
@@ -145,20 +157,24 @@ identical to one that should have received it and did not.
 
 `READY=1` and `RELOADING=1` emit nothing, deliberately: both are
 observable through the state transitions they cause.
+[*notify.ready-and-reloading-emit-no-event]
 
 `STATUS=` is additionally stored on the service's runtime state and
-exposed as `status_text` in a status query. It is cleared to null at the
+exposed as `status_text` in a status query.
+[*notify.status-is-exposed-as-status-text] It is cleared to null at the
 start of every activation generation, in the same step that increments
 the generation, so a status string cannot survive a restart and describe
 a process that no longer exists.
+[*notify.status-text-is-cleared-on-each-activation-generation]
 
 `ERRNO=` and `EXIT_STATUS=` are not stored. They are emitted and
-otherwise not retained.
+otherwise not retained. [*notify.errno-and-exit-status-are-not-stored]
 
-## Bounds
+## Bounds [*notify.the-datagram-and-descriptor-bounds]
 
 A datagram is read into a fixed 64 KiB buffer, and the control message
-buffer is sized for 64 descriptors. Neither `MSG_TRUNC` nor `MSG_CTRUNC`
-is inspected, so a larger datagram is truncated silently and descriptors
-beyond the sixty-fourth are dropped by the kernel before peinit sees
-them.
+buffer is sized for 64 descriptors. Both `MSG_TRUNC` and `MSG_CTRUNC`
+are inspected on the way in, and a datagram that overran either buffer
+is refused as truncated rather than acted on in part: a larger datagram
+is not applied from its surviving prefix, and a send carrying more than
+sixty-four descriptors is not applied from the ones that fitted.

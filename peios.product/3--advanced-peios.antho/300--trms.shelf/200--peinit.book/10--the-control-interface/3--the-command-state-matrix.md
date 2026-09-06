@@ -8,12 +8,12 @@ silent no-op. What the answer is depends on the pair.
 
 | | Inactive | Starting | Active | Reloading | Stopping | Completed | Backoff | Failed | Abandoned | Skipped |
 |---|---|---|---|---|---|---|---|---|---|---|
-| start | Start | MERGE | ALREADY | ALREADY | QUEUE | Start | DEFER | Start | ERROR | Start |
-| stop | NOOP | Cancel+Stop | Stop | Stop | MERGE | Clear | Cancel | NOOP | ERROR | NOOP |
-| restart | Start | QUEUE | Restart | Restart | QUEUE | Start | Restart | Start | ERROR | Start |
-| reload | ERROR | ERROR | Reload | MERGE | ERROR | ERROR | ERROR | ERROR | ERROR | ERROR |
-| reset | NOOP | ERROR | ERROR | ERROR | ERROR | ERROR | ERROR | Clear | Clear | Clear |
-| status | OK | OK | OK | OK | OK | OK | OK | OK | OK | OK |
+| start [*dispatch.matrix.start] | Start | MERGE | ALREADY | ALREADY | QUEUE | Start | DEFER | Start | ERROR | Start |
+| stop [*dispatch.matrix.stop] | NOOP | Cancel+Stop | Stop | Stop | MERGE | Clear | Clear | NOOP | ERROR | NOOP |
+| restart [*dispatch.matrix.restart] | Start | QUEUE | Restart | Restart | QUEUE | Start | Restart | Start | ERROR | Start |
+| reload [*dispatch.matrix.reload] | ERROR | ERROR | Reload | MERGE | ERROR | ERROR | ERROR | ERROR | ERROR | ERROR |
+| reset [*dispatch.matrix.reset] | NOOP | ERROR | ERROR | ERROR | ERROR | ERROR | ERROR | Clear | Clear | Clear |
+| status [*dispatch.matrix.status] | OK | OK | OK | OK | OK | OK | OK | OK | OK | OK |
 
 **ALREADY** — the service is already where the command would take it and
 no operation of that type is in flight. peinit returns the current
@@ -47,12 +47,14 @@ automatic restart already pending.
   honours the remaining delay. It does not short-circuit the backoff.
   If the automatic restart later becomes due, it merges into the
   administrator's operation, so the identifier the caller holds is the
-  one that executes.
+  one that executes. [*dispatch.backoff-start-honours-the-remaining-delay]
 - `stop` cancels both the pending restart and any deferred start, and
   the service goes Inactive. A subsequent automatic restart is refused,
   because the service is no longer in Backoff.
+  [*dispatch.backoff-stop-cancels-the-pending-restart]
 - `restart` cancels the automatic restart and queues an
   administrator-initiated one.
+  [*dispatch.backoff-restart-replaces-the-automatic-one]
 - `reload` and `reset` are invalid: there is no process to reload, and
   no terminal state to clear.
 
@@ -61,23 +63,26 @@ automatic restart already pending.
 `start` and `restart` clear Skipped before they run. A Skipped service
 is not in a state a start can proceed from — the state machine permits
 `Skipped -> Inactive` and nothing else — so the activation performs that
-transition first, then re-evaluates the conditions from scratch. Both
+transition first, then re-evaluates the conditions from scratch.
+[*dispatch.skipped-is-cleared-before-a-start-re-evaluates] Both
 outcomes are possible: the precondition that was missing at boot may now
 hold, in which case the service starts; or it may still not, in which
 case the service is skipped again, for whatever reason applies now.
 
 The clear is reported like any other transition, so a console watching
 the service sees it leave Skipped rather than appearing to jump.
+[*dispatch.the-skipped-clear-is-reported-as-a-transition]
 
 `reset` also clears Skipped, and differs only in stopping there.
+[*dispatch.reset-clears-skipped-and-stops-there]
 
-## The Abandoned column
+## The Abandoned column [*dispatch.abandoned-accepts-only-reset]
 
 Every lifecycle command is invalid on an Abandoned service except
 `reset`, which clears it (§6.2). Nothing else is meaningful while
 processes that ignored SIGKILL are still in the cgroup.
 
-## Definition-removed services
+## Definition-removed services [*dispatch.a-definition-removed-service-accepts-only-stop-and-status]
 
 Independently of state, a service whose definition has been removed
 (§3.8) rejects `start`, `restart` and `reload` with `UNKNOWN_SERVICE`,
