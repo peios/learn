@@ -79,6 +79,7 @@ still distinguishable to an access check. §4.4.
 persistent hives. peinit starts it in Phase 1 from a compiled-in
 definition and treats it as opaque thereafter. Its implementation is
 loregd, a distinction visible only in recovery mode.
+[*term.registryd-is-loregd]
 
 **Registry.** The configuration system LCS and its sources provide
 together. peinit reads service definitions from
@@ -99,7 +100,8 @@ PID reuse.
 **cgroup.** peinit uses cgroups v2 for process tracking and clean kill
 only — not for resource accounting or limits. Every service gets its own
 tree under `/sys/fs/cgroup/peinit/`, and every submitted job one under
-`/sys/fs/cgroup/peinit/jobs/`. §5.1.
+`/sys/fs/cgroup/peinit/jobs/`. [*term.a-submitted-job-is-under-the-jobs-cgroup]
+§5.1.
 
 **sd_notify.** The datagram protocol services and submitted jobs use
 to report readiness, status, progress, keepalives and stored

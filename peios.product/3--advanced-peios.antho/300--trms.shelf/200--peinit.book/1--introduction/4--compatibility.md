@@ -16,10 +16,12 @@ readiness, keepalives, status and stored descriptors by sending
 `KEY=VALUE` lines to the socket named in `NOTIFY_SOCKET`. Existing
 software that supports sd_notify works unmodified.
 
-The compatibility is not total. `MAINPID=` is not supported, because
-peinit does not supervise forking daemons — it tracks the process it
-forked through a pidfd, and there is no way to redirect supervision
-somewhere else. `BUSERROR=` is not supported because Peios has no D-Bus.
+The compatibility is not total. `MAINPID=` is not supported,
+[*compat.mainpid-is-not-supported] because peinit does not supervise
+forking daemons — it tracks the process it forked through a pidfd, and
+there is no way to redirect supervision somewhere else. `BUSERROR=` is
+not supported [*compat.buserror-is-not-supported] because Peios has no
+D-Bus.
 
 The protocol as peinit speaks it, including which fields it accepts and
 how a sender is authenticated, is specified in PSPU §4.
@@ -37,7 +39,8 @@ Timer schedules use systemd's `OnCalendar` format, including weekday
 names, lists, ranges, repetition, the `~` last-day-of-month form, IANA
 timezone suffixes and the named shortcuts. §9.1 gives the grammar peinit
 actually parses; the one deliberate subtraction is sub-second precision,
-which service scheduling has no use for.
+[*compat.sub-second-precision-is-not-parsed] which service scheduling
+has no use for.
 
 ## Windows Service Control Manager
 
@@ -61,7 +64,8 @@ listener across its own restart.
 
 There is no resource control. peinit uses cgroups for tracking and for
 clean kill, and sets `RLIMIT_NOFILE` and `RLIMIT_CORE` if a definition
-asks, but it does not do accounting, slices, or limits.
+asks, [*compat.rlimit-nofile-and-core-are-the-only-limits] but it does
+not do accounting, slices, or limits.
 
 ## Features that belong to other components
 
