@@ -47,16 +47,35 @@ test("…", function(t) end)
 test("…", function(t) end)
 ```
 
-The claim is taken at file dispatch and released at file completion. A second `:claim` errors — `lab claim already held; one-shot per lab`.
+The claim is reserved whole, when the call runs, and released at file completion. A second `:claim` errors — `lab claim already held; one-shot per lab`.
 
-Without a claim, the dispatcher uses the per-file overhead default (50 MiB memory, 0 CPU). A file that boots 3 VMs at 1 GiB each but doesn't claim anything gets through the pool gate immediately and then might OOM the host because the overhead default is way under the actual demand.
+A claim is the file's whole VM budget. Every `vm:boot()` in the file — at file scope, inside a test, in a sub-lab — takes its memory and vCPUs out of the claim and touches the pool not at all, so a claimed file never queues once its claim is in. A boot the claim cannot cover fails at once, with `needs … but the file's claim is … with … already in use; raise provium:claim to the file's peak`, rather than falling back to the pool and waiting.
 
-**Rule of thumb:** claim memory equal to the sum of expected VM memory budgets plus a small buffer; claim CPUs equal to the sum of expected VM vCPU budgets.
+Without a claim, the dispatcher admits the file on the per-file overhead default (50 MiB memory, 0 CPU) and every boot reserves from the pool on its own, at boot time. That is the only way an unclaimed file is kept from oversubscribing the host, and it has a cost, explained under [Deadlock](#deadlock) below.
+
+**Rule of thumb:** claim the file's peak — the most VMs it ever has alive at once — as the sum of their memory budgets plus 100 MiB of VMM overhead each, and the sum of their vCPUs. Nothing is gained by claiming more, and a boot past the claim fails.
 
 ```lua
--- 3 VMs × (2G memory, 2 CPUs each):
-provium:claim({memory = "7G", cpus = 7})  -- 6G VMs + 1G buffer; 6 vCPUs + 1
+-- Never more than 3 VMs alive at once, each 2G and 2 CPUs:
+provium:claim({memory = "6300M", cpus = 6})  -- 3 × (2G + 100M overhead); 3 × 2 vCPUs
 ```
+
+## Deadlock
+
+A file that reserves per boot holds what it has while it waits for more. Picture a testset where every file boots one VM at file scope and then, inside a test, boots a second: once enough files are running to hold the pool's whole CPU budget between them, every one of them is waiting for a second VM and none will ever release its first. That is a hold-and-wait deadlock, and it is what a large unclaimed testset does on a host with fewer cores than files. Every chapter passes when run alone, because a few files can never exhaust the pool; the whole set stalls.
+
+The pool sees this coming. It knows what every file holds and whether that file is parked waiting, so when a boot would leave every holder waiting with nothing free that any of them could use, that boot fails immediately instead of parking:
+
+```
+vm `second`: cannot boot: the pool is deadlocked: 12 files hold 13.2 GiB and 12 cpus of its
+25.5 GiB and 12 cpus and every one of them is waiting for more, while the 12.3 GiB and 0 cpus
+still free serves none of the 12 waiting requests (this one wants 1.1 GiB and 1 cpu); declare
+this file's peak with provium:claim so it is scheduled whole and no boot waits mid-file
+```
+
+The file whose boot closed the cycle takes the failure; the others are served as it winds down. The remedy is the one the message names: claim. A claimed file reserves everything it will need before it boots anything, so it is never a holder waiting for more.
+
+Without the verdict, a deadlocked run only ends when the per-file timeouts fire and `lab.shutdown()` kills the VMs the stalled files were holding — which shows up as a cascade of `VM is shutdown; create a new one` failures in the tests that follow, and looks like host contention rather than scheduling. With `--timeout 0` it never ends at all.
 
 ## File dispatch flow
 
@@ -167,25 +186,29 @@ The pool's available budget should return to its full value after each `claim_re
 
 ## VMs vs files
 
-A common confusion: the pool tracks per-file resources, not per-VM. The dispatcher reserves the file's full claim at dispatch and holds it until file completion, regardless of how many VMs the file actually boots concurrently.
+A claimed file is accounted per file: the claim is held whole from the moment it is taken until file completion, however many VMs are alive at any moment, and each boot draws from it rather than from the pool.
 
 ```lua
--- This file claims 4G, but only ever has one VM live at a time:
-provium:claim({memory = "4G"})
+-- This file claims 2G, and only ever has one VM live at a time:
+provium:claim({memory = "2G", cpus = 1})
 
 test("a", function(t)
     local vm = provium:vm("v", "peios"):boot()
-    vm:shutdown()  -- VM gone, but claim still held
+    vm:shutdown()  -- its share goes back to the claim, which the pool still holds whole
 end)
 
 test("b", function(t)
-    local vm = provium:vm("v", "peios"):boot()
+    local vm = provium:vm("v", "peios"):boot()  -- draws from the claim again
 end)
 ```
 
-The claim doesn't release between tests. If you want fine-grained reservation, you'd need a smaller claim and rely on the dispatcher's per-file overhead — but the trade-off is potential OOM if the claim is too small for the actual peak.
+The claim doesn't release between tests. An unclaimed file is accounted per VM instead — each boot reserves from the pool and each shutdown releases — which is finer-grained but is what makes a deadlock possible when many such files run together.
 
 For the typical case, claim for the file's worst-case peak.
+
+## File timeouts and queueing
+
+The per-file timeout (`--timeout`, default five minutes) is a budget for the file's own work. Time a file spends parked in the pool — at its claim, or at a boot when it has no claim — is excused: the deadline moves out by exactly as long as the file has waited, a wait still in progress included. A file is never killed for queueing, only for being slow once it has what it asked for.
 
 ## See also
 

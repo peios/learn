@@ -66,7 +66,8 @@ The intent: if you wanted the file-scope VM, use the lookup form (`provium:vm("s
 - `vm_names` / `bridge_names` / `members` — return only the local scope's contents.
 - `boot` / `shutdown` / `pause` / `resume` — batch ops on the local scope's VMs.
 - `snapshot` / `restore` — operate on the local scope plus its sub-labs (downward, not upward).
-- `claim`, `barrier` — file-scope coordination primitives; test-scope claims/barriers are isolated.
+- `barrier` — a file-scope coordination primitive; test-scope barriers are isolated.
+- `claim` — there is one claim per file wherever it is called from, so it neither walks parents nor needs to: a claim made inside a test is the file's claim.
 
 ## Per-test scope vs `reset_between_tests`
 
@@ -215,11 +216,13 @@ test("…", function(t) end)
 
 The claim sits across the file's lifetime; it's released at file end. A second `:claim` errors — `lab claim already held; one-shot per lab`. The accepted field shapes and the no-pool behaviour are in the [Lab reference](~provium/reference/lab#resource-claims).
 
-Why claim? The dispatcher won't oversubscribe — it tracks total RAM and CPU budget across files and only schedules a file when its claim plus the per-file overhead fits. A file that needs 4 VMs at 2 GiB each should claim ~10 GiB so it doesn't get scheduled alongside other heavy files and OOM the host.
+Why claim? Two reasons. The dispatcher won't oversubscribe — it tracks total RAM and CPU budget across files and only takes a claim when it fits, so a file that needs 4 VMs at 2 GiB each is not scheduled alongside other heavy files to OOM the host. And a claim is the file's whole VM budget: every boot in the file draws from it instead of reserving from the pool, so a claimed file never waits for a VM slot mid-file. Files that reserve per boot can deadlock a run — each holding one VM while it waits for another — and the pool refuses the boot that would complete such a cycle; see [pools and parallelism](~provium/running-tests/pools-and-parallelism#deadlock).
+
+Claim the file's peak: the most VMs alive at once, each counted as its memory plus 100 MiB of VMM overhead and its vCPUs. A boot past the claim fails at once rather than waiting.
 
 ```lua
--- For a 3-VM, 2-CPU-each, 1-GiB-each test:
-provium:claim({memory = "5G", cpus = 7})  -- 3 GiB + per-file overhead, 6 + 1 vCPU
+-- Never more than 3 VMs alive at once, 1 GiB and 2 vCPUs each:
+provium:claim({memory = "3300M", cpus = 6})  -- 3 × (1G + 100M overhead); 3 × 2 vCPUs
 ```
 
 ## Barriers

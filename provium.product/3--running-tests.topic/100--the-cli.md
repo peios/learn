@@ -170,6 +170,8 @@ provium tests/ --timeout 0              # disable
 
 Bare integers are seconds. Suffixes accepted: `ms`, `s`, `m`, `h`. `0` disables the timeout entirely.
 
+The timeout is a budget for the file's own work. Time the file spends queued in the resource pool — at its `provium:claim`, or at a `vm:boot()` when it has no claim — is not counted; see [pools and parallelism](~provium/running-tests/pools-and-parallelism#file-timeouts-and-queueing).
+
 When a file's timeout fires, the harness records it as `timed_out`, marks the file as failed for exit-code purposes, and emits a `file_completed` event with `status = "timed_out"`.
 
 ## Pool and CPU controls
