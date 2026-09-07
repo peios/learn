@@ -9,6 +9,14 @@ at install and nothing registers: presence is the catalogue. The
 session host reads the directory on every request, so an installed
 package's app appears on the next Toolbox load.
 
+Peios's own completed applications are separate noarch packages named
+`dev.peios.atrium-app-<name>`. `dev.peios.atrium` is the default-product
+package: it installs `dev.peios.atrium-core` and the complete first-party
+application set. Installing only the core is supported, as is adding or
+removing applications independently. Source-tree placeholders are not
+packages and do not appear in the installed catalogue until they have working
+behaviour.
+
 The id is reverse-DNS (`org.peios.terminal`), lowercase letters,
 digits, hyphens and dots, and **the directory name is the id** — a
 manifest whose `id` disagrees with its directory is a broken package

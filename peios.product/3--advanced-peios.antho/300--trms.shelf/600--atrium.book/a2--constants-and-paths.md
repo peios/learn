@@ -22,6 +22,12 @@ description: Ports, sockets, filesystem locations, environment, and limits, in o
 | Service definition | `/usr/share/regim/atriumd-service.reg` (applied by an image's autoapply) |
 | Shell assets | Served at `/shell/…`: `shell.js`, `shell.css`, `icons.js`, `sdk.js`, `tokens.css` — compiled into atrium-session |
 
+The three binaries and service seed upgrade atomically in
+`dev.peios.atrium-core`; they are privilege-separated roles within one runtime,
+not independently supported products. Application directories are owned by
+their corresponding `dev.peios.atrium-app-*` packages. The
+`dev.peios.atrium` default-product package selects the complete supported set.
+
 ## Session host environment
 
 `HOME`, `USER`, `LOGNAME`, `PATH`, `SHELL`, `ATRIUM_SESSION` (logon
