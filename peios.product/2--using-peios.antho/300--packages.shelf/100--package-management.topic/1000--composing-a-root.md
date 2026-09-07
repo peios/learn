@@ -46,6 +46,7 @@ The `<manifest>` positional is required. Flag order is not significant: the mani
 ```
 peipkg-compose build <manifest> --out <dir> [--locked | --update]
                      [--dangerously-bypass-path-restrictions]
+                     [--record-xattrs <file>]
 ```
 
 Assemble the root directory. The `<manifest>` positional is required; flag order is not significant.
@@ -58,6 +59,7 @@ Assemble the root directory. The `<manifest>` positional is required; flag order
 | `--locked` | Require an existing lock and do **not** resolve. Fails if no lock is present. Fetches only package bytes, taking integrity from the lock's hashes — the air-gap-friendly path. |
 | `--update` | Re-resolve from scratch, overwrite the lock, then build. |
 | `--dangerously-bypass-path-restrictions` | Permit packages that declare `special_system_package` to compose payloads outside the payload layout rules. An image built from a package set including the base filesystem needs this; `peiso` passes it through from `bypass_path_restrictions` in the image's build spec, so the grant stays a visible decision of the image rather than something the composer assumes. |
+| `--record-xattrs <file>` | Record each implied `security.peios.sig` or `security.peios.sd` attribute in deterministic JSONL instead of setting it on the output tree. Use this when an unprivileged builder will carry the attributes into an image, or when composing a disposable build root. Each line has `path`, `name`, and a base64-encoded `value`; the file must not already exist. |
 
 `--locked` and `--update` are **mutually exclusive**.
 
@@ -194,7 +196,7 @@ Compose's contract stops at producing a valid peipkg root. It is deliberately na
 - **Not a live-system tool.** It never touches the host `/`. There is no three-phase transaction, no commit boundary, no rollback journal, and no crash-recovery — the output is disposable, and its only atomicity is the single whole-tree rename above.
 - **Not the producer side.** It does not build or sign `.peipkg` files and it does not serve repositories — those are the separate `peipkg-build`, `peipkg-repo`, and `peipkg-manager` tools. Compose consumes ordinary peipkg packages and repositories unchanged, exactly as [PSPU §5](~peios/package-format-and-repository-protocol/scope-and-roles) defines them.
 - **No side effects.** `ldconfig`, `depmod`, and `man-db` are not run, and no audit events are emitted. A booted system runs those itself.
-- **Security descriptors are applied**, where a package declares one. A descriptor is stored in an ordinary extended attribute, so this needs no Peios kernel on the build host — and an image writer that cannot set `security.*` attributes can have compose hand them over instead, to be written into the image directly. Unlike `peipkg install`, compose applies overrides unconditionally: composing a root from nothing is the operator's own act, and there is no running system whose access control could be changed behind their back.
+- **Security descriptors are applied**, where a package declares one. Their `security.*` namespace normally requires privileged host access. An unprivileged image builder can pass `--record-xattrs` to receive the implied attributes as JSONL and write them into the image directly instead; the composed directory then carries none of them. Unlike `peipkg install`, compose applies or records overrides unconditionally: composing a root from nothing is the operator's own act, and there is no running system whose access control could be changed behind their back.
 
 No environment variables are read, and there is no `--version` flag.
 
