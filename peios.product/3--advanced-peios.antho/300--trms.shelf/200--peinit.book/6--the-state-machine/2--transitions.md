@@ -4,7 +4,7 @@ description: Every transition peinit performs — anything absent from the table
 ---
 
 Every transition peinit performs. Anything not listed here is not
-performed.
+performed. [*trans.a-transition-absent-from-the-table-is-not-performed]
 
 | From | To | Trigger |
 |---|---|---|
@@ -44,33 +44,40 @@ performed.
 ## Things the table settles
 
 **A restart never passes through Failed.** A restart-eligible failure
-goes to Backoff, waits, and goes to Starting. Failed is reached only
+goes to Backoff, waits, and goes to Starting.
+[*trans.a-restart-never-passes-through-failed] Failed is reached only
 when there will be no retry: `RestartPolicy=Never`, an invalid policy
 for the cause, or an exhausted budget. This is why `OnFailure` (§6.3),
 which fires on entry to Failed, does not fire on each retry — only when
 the service finally fails out.
+[*trans.onfailure-does-not-fire-on-each-retry]
 
 **A clean exit is not a crash.** A Simple service exiting zero goes to
 Inactive under cause `CleanExit`, consulting neither the restart policy
-nor the budget. It goes to Backoff only under `RestartPolicy=Always`,
+nor the budget. [*trans.a-simple-clean-exit-goes-to-inactive-under-cleanexit]
+It goes to Backoff only under `RestartPolicy=Always`,
 and then with the distinct cause `CleanExitRestart`, so status and
 events say plainly that the process succeeded and was restarted by
 policy rather than that anything went wrong.
+[*trans.a-clean-exit-under-always-goes-to-backoff-as-cleanexitrestart]
 
 **A forced stop remembers why.** Stopping to Failed carries the cause
 from the transition that started the stop — `ConflictEviction` or
-`BindsToPropagation` — rather than a generic failure. A service that
-lost a conflict and a service whose binding target went away are
-distinguishable afterwards, which is what makes bound-dependency
-recovery (§7.1) possible at all.
+`BindsToPropagation` — rather than a generic failure.
+[*trans.stopping-to-failed-carries-the-cause-that-started-the-stop] A
+service that lost a conflict and a service whose binding target went
+away are distinguishable afterwards, which is what makes
+bound-dependency recovery (§7.1) possible at all.
 
 **A restart detours through Inactive.** The stop leg of an
 administrator's restart ends in Inactive, and the start leg begins from
 there, so a restarting service is briefly observable as Inactive.
+[*trans.an-administrative-restart-detours-through-inactive]
 
 **A crash before readiness may be retried.** A Simple process that exits
 before signalling readiness is a `ProcessCrash` from Starting, and is
 restart-eligible like any other, rather than a terminal startup failure.
+[*trans.a-pre-readiness-exit-is-a-restart-eligible-processcrash]
 
 **A process can outlive its service's state.** Most states are reached by
 the main process exiting, but not all of them: a watchdog timeout, a
@@ -81,7 +88,7 @@ one.
 
 peinit records that exit and performs no transition. The service keeps
 the state it had, any pending restart deadline stands, and the console
-reports it:
+reports it: [*trans.an-exit-in-an-unexpected-state-performs-no-transition]
 
 ```
 peinit: service <service> main process exited in state <state>; no action taken
@@ -89,7 +96,8 @@ peinit: service <service> main process exited in state <state>; no action taken
 
 This is deliberately not a fatal condition. A supervised service
 producing an unexpected sequence costs that service; it does not cost
-the machine. Treating it as a broken invariant of the runtime loop meant
+the machine. [*trans.an-unexpected-exit-does-not-cost-the-machine]
+Treating it as a broken invariant of the runtime loop meant
 one crash-looping service dropped PID 1 into recovery mode and killed
 every session on the box.
 
@@ -98,10 +106,12 @@ every session on the box.
 Resetting an Abandoned service re-checks its `main/` sub-cgroup. If it
 has finally emptied, peinit cleans up the whole service tree — `main/`,
 `hooks/`, `health/`, then the root — and transitions to Inactive.
+[*trans.a-reset-of-an-emptied-abandoned-service-cleans-up-and-goes-inactive]
 
 If it is still populated, peinit leaves the cgroup leaked, transitions
 to Inactive anyway, and returns this warning in the operation
 acknowledgement:
+[*trans.a-reset-of-a-populated-abandoned-service-warns-and-leaves-the-cgroup-leaked]
 
 ```
 abandoned main cgroup for service <service> is still populated after
@@ -111,7 +121,9 @@ investigation
 
 The warning is also written to the console, so a reset issued without
 reading the response still leaves a trace of the still-leaked cgroup.
+[*trans.the-reset-warning-is-also-written-to-the-console]
 
 The re-check targets `main/`. Note that the two paths into Abandoned
 probe different cgroups: an explicit stop checks `main/`, while the
 shutdown wave checks the service root.
+[*trans.the-two-paths-into-abandoned-probe-different-cgroups]

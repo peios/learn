@@ -6,12 +6,15 @@ description: The two notification fields a running service uses to adjust the de
 Two notification fields let a running service adjust the deadlines it is
 held to. Both are authenticated exactly as any other notification
 (§10.5), and both carry microseconds.
+[*wdog.both-fields-carry-microseconds]
 
 ## The watchdog
 
 `WatchdogTimeout` sets the interval peinit expects `WATCHDOG=1` pings
-at. Zero, the default, disables it. Missing a ping is a
-`WatchdogTimeout` cause and takes the ordinary restart path.
+at. Zero, the default, disables it.
+[*wdog.watchdogtimeout-sets-the-ping-interval-and-zero-disables-it]
+Missing a ping is a `WatchdogTimeout` cause and takes the ordinary
+restart path. [*wdog.a-missed-ping-takes-the-ordinary-restart-path]
 
 A service may change the interval at runtime by sending
 `WATCHDOG_USEC=<value>`:
@@ -20,17 +23,21 @@ A service may change the interval at runtime by sending
   immediately** — the current timer is cancelled and a fresh one starts
   from the moment the message was received, rather than the new interval
   applying only from the next ping.
+  [*wdog.a-runtime-interval-update-re-arms-immediately]
 - A value of zero disables the watchdog entirely, equivalent to
   `WatchdogTimeout=0`.
+  [*wdog.a-runtime-value-of-zero-disables-the-watchdog]
 
 The runtime value does not persist. On a restart the interval reverts to
 the definition's `WatchdogTimeout` converted to microseconds, and if
 that is zero the watchdog starts disabled whatever the previous
 incarnation had set.
+[*wdog.a-runtime-interval-does-not-survive-a-restart]
 
 `WATCHDOG_USEC` is honoured only while the service is Active. A service
 that sends it while still Starting — before its own `READY=1` — is
 ignored and gets the definition's value.
+[*wdog.watchdog-usec-while-starting-is-ignored]
 
 > [!NOTE]
 > Runtime watchdog updates suit a service whose phases have genuinely
@@ -45,16 +52,21 @@ A service may ask for more time during a start, stop or reload by
 sending `EXTEND_TIMEOUT_USEC=<value>`.
 
 peinit sets the current phase's deadline to expire that many
-microseconds from now. The extension **replaces** the deadline rather
-than adding to it — each message sets an absolute deadline computed from
-its own arrival — and may be sent repeatedly.
+microseconds from now.
+[*wdog.extend-timeout-usec-extends-the-current-phases-deadline] The
+extension **replaces** the deadline rather than adding to it — each
+message sets an absolute deadline computed from its own arrival — and
+may be sent repeatedly.
+[*wdog.an-extension-replaces-the-deadline-rather-than-adding-to-it]
 
 Because it replaces, a small value shortens the remaining time rather
 than being ignored, and a value of zero sets the deadline to now.
+[*wdog.a-small-extension-shortens-the-remaining-time]
 
 ### The caps
 
 The extended deadline cannot exceed four times the phase's base timeout:
+[*wdog.the-extended-deadline-is-capped-at-four-times-the-base-timeout]
 
 | Phase | Base | Ceiling |
 |---|---|---|
@@ -63,23 +75,28 @@ The extended deadline cannot exceed four times the phase's base timeout:
 | Reloading | `StartTimeout` | `StartTimeout` × 4 |
 
 A value beyond the cap is clamped, not rejected — the message succeeds
-and the deadline becomes the maximum permitted. Because the cap is
+and the deadline becomes the maximum permitted.
+[*wdog.a-value-beyond-the-cap-is-clamped-not-rejected] Because the cap is
 anchored to when the operation started rather than to the previous
 deadline, repeated messages cannot creep past it.
+[*wdog.repeated-extensions-cannot-creep-past-the-cap]
 
 During shutdown an additional cap applies: the deadline cannot exceed
 the time remaining in the global `ShutdownTimeout`, and where both caps
 apply the stricter wins.
+[*wdog.during-shutdown-the-stricter-of-the-two-caps-wins]
 
 ### Where it does not apply
 
 A message arriving while the service is in a non-transitional state —
 Active, Completed, Failed — is ignored. There is no deadline to extend.
+[*wdog.an-extension-in-a-non-transitional-state-is-ignored]
 
 During shutdown the extension applies only to a service whose stop wave
 has already begun. A service in a later wave, or one still winding down
 a start or a reload when shutdown was requested, has no shutdown
 deadline recorded yet and its extension request has no effect.
+[*wdog.an-extension-before-the-services-stop-wave-has-no-effect]
 
 > [!NOTE]
 > Timeout extension is for a service doing variable-duration work in a

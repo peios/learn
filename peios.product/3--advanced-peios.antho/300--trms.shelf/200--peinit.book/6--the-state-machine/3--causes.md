@@ -7,6 +7,7 @@ Every transition carries a cause recording why it happened. peinit
 tracks both the current state and the cause of the most recent
 transition, and the cause determines restart eligibility, `OnFailure`
 behaviour, and what an administrator is told.
+[*cause.every-transition-carries-the-cause-of-the-most-recent-transition]
 
 ## The taxonomy
 
@@ -50,6 +51,7 @@ policy is consulted at all.
 **Restart-eligible.** peinit consults `RestartPolicy` and the budget. If
 a restart is allowed and the budget holds, the service goes to Backoff
 and then to Starting; otherwise Failed.
+[*cause.a-restart-eligible-cause-consults-the-policy-and-the-budget]
 
 `ProcessCrash`, `WatchdogTimeout`, `HealthCheckFailure`,
 `ReadinessTimeout`, `PreHookFailure`, `PreExecFailure`,
@@ -63,7 +65,9 @@ and then to Starting; otherwise Failed.
 
 **Always-only.** `CleanExitRestart` applies when a Simple service exits
 successfully and the policy is Always. It uses the same backoff and the
-same budget as a failure, which is what stops a daemon that exits
+same budget as a failure,
+[*cause.cleanexitrestart-uses-the-same-backoff-and-budget-as-a-failure]
+which is what stops a daemon that exits
 cleanly in a tight loop from bypassing throttling entirely. It is never
 treated as a `ProcessCrash`, and both status and events make clear the
 process succeeded and was restarted only because the policy says so.
@@ -73,10 +77,13 @@ consulting neither policy nor budget.
 
 **Budget-exempt.** `BindsToRecovery` takes a service from Failed to
 Starting when its binding target returns. It is not subject to the
-policy or the budget, because the service did not fail on its own — it
+policy or the budget,
+[*cause.bindstorecovery-is-exempt-from-the-policy-and-the-budget]
+because the service did not fail on its own — it
 was stopped because its dependency went away.
 
 **Never-restart.** peinit does not consult the policy at all:
+[*cause.a-never-restart-cause-does-not-consult-the-policy]
 `ExplicitStop`, `ExplicitReset`, `ShutdownWave`, `ConflictEviction`,
 `BindsToPropagation`, `ProcessUnkillable`, `RestartBudgetExhausted`,
 `ValidationError`, `CycleDetected`, `DependencyFailure`,
@@ -87,10 +94,13 @@ help with any of them.
 
 When a service enters Failed and its definition names an `OnFailure`
 service, peinit starts that service — with the exceptions below.
+[*cause.entering-failed-starts-the-named-onfailure-service]
 `OnFailure` fires on *entry* to Failed, and Failed to Failed is not a
 transition, so it fires at most once per failure.
+[*cause.onfailure-fires-at-most-once-per-failure]
 
 It does not fire for:
+[*cause.onfailure-does-not-fire-for-shutdown-or-definition-breakage]
 
 - **`ShutdownWave`** — no new service starts during shutdown, so a
   fallback would be both impossible and pointless.
@@ -103,11 +113,13 @@ It does not fire for:
 It fires for everything else, including `ProcessCrash`,
 `WatchdogTimeout`, `HealthCheckFailure`, the startup failures, and
 `RestartBudgetExhausted` on a non-Critical service.
+[*cause.onfailure-fires-for-a-non-critical-budget-exhaustion]
 
 For a **Critical** service exhausting its budget, the reboot takes
-precedence and no fallback is started. The suppression keys on the cause
-and the service's `ErrorControl` rather than on whether a reboot was
-actually scheduled.
+precedence and no fallback is started.
+[*cause.a-critical-budget-exhaustion-starts-no-handler] The suppression
+keys on the cause and the service's `ErrorControl` rather than on
+whether a reboot was actually scheduled.
 
 `OnFailure` is for graceful degradation — the main web interface fails,
 so start a minimal emergency endpoint. It is not for monitoring or
@@ -116,17 +128,21 @@ alerting, which is eventd's job.
 ### A handler that is already running
 
 If the named handler is already Active — or Reloading, on its way back to
-Active — the failure starts nothing. A running service has no state to
+Active — the failure starts nothing.
+[*cause.a-handler-already-active-or-reloading-starts-nothing] A running
+service has no state to
 transition into on being started again, and it is already doing the job
 the failure would have asked of it, so the start resolves as satisfied:
 no operation is created, and no loop-guard chain entry is recorded for a
 cascade that did not happen.
+[*cause.a-satisfied-handler-start-records-no-chain-entry]
 
 This is the same answer the control interface gives an administrator who
 starts an already-running service, and it is deliberately the same test.
 A handler in any other state is started normally — so a Oneshot handler
 that ran for an earlier failure runs again for a new one, and a handler
 that has since failed is restarted.
+[*cause.a-handler-in-any-other-state-is-started-normally]
 
 ### The loop guard
 
@@ -134,17 +150,22 @@ An `OnFailure` handler can fail and carry its own `OnFailure`, so a
 misconfiguration where A's handler is B and B's is A could run forever.
 peinit bounds the chain originating from one failure two ways: it tracks
 the set of services already started as handlers for that failure and
-will not start one already in the set, and it will not follow the chain
-past a fixed depth of 16. When either trips, peinit records an
-`on_failure.loop_suppressed` event naming which, and stops.
+will not start one already in the set,
+[*cause.a-handler-already-in-the-chain-is-not-started-again] and it will
+not follow the chain past a fixed depth of 16.
+[*cause.the-chain-is-not-followed-past-a-depth-of-sixteen] When either
+trips, peinit records an `on_failure.loop_suppressed` event naming
+which, and stops. [*cause.a-suppressed-loop-records-an-audit-event]
 
 A chain entry is retired two ways.
 
 **The handler stopped needing tracking.** Completed, Inactive, Skipped or
 Abandoned — it ended, gave up, or became unkillable.
+[*cause.a-chain-entry-is-retired-when-the-handler-ends]
 
 **The handler arrived.** It has been dependent-satisfying for its
 `RestartWindow` — the same window that resets a restart budget (§6.4).
+[*cause.a-chain-entry-is-retired-when-the-handler-holds-for-restartwindow]
 That is peinit's existing test for a service having genuinely taken over
 rather than merely come up, and it is what ends the originating failure:
 a later failure of that handler is a new one, starting a fresh chain.
@@ -163,7 +184,7 @@ treated as having arrived.
 
 Every state transition produces a record covering four things: what
 failed, why it failed, what peinit did about it, and what the
-administrator should do. Cryptic failure messages are a defect. A reboot
+administrator should do. [*cause.every-transition-produces-a-record] Cryptic failure messages are a defect. A reboot
 loop caused by a configuration error with an opaque message is the worst
 outcome the system has, and the cause taxonomy exists so that the "why"
 is never a guess.
