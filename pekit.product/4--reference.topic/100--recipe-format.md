@@ -204,7 +204,7 @@ Verification is in-process OpenPGP — no host `gpg` is involved.
 Key expiry is evaluated at the signature's signed creation time, so a later
 key expiry does not invalidate an older release. Current key revocations and
 explicit signature expiry are still enforced, and a signature dated after key
-expiry or materially in the future is rejected.
+expiry or materially in the future is rejected by default.
 
 | Key | Type | Required | Meaning |
 | --- | --- | --- | --- |
@@ -212,6 +212,7 @@ expiry or materially in the future is rejected.
 | `url` | string | no | Signature URL template. `{{source_url}}` expands to the rendered artifact URL; version variables are also available. Default `"{{source_url}}.sig"`. |
 | `of` | string | no | What the signature covers: `"artifact"` (the published file, default) or `"decompressed"` (its decompressed content — kernel.org's `.tar.sign` signs the uncompressed tar). Any other value is `invalid_signature`. |
 | `fingerprints` | string array | no | Allowlist of signer fingerprints (hex; spaces and `0x` ignored, case-insensitive). When set, a valid signature by any other pinned key is `signature_untrusted_key`. |
+| `ignore_expiry` | bool | no | Permit a new signature made after the pinned signing key expired. Default `false`. This bypasses key expiry only; cryptographic verification, fingerprint allowlisting, present-time revocation, explicit signature expiry, and timestamp checks remain enforced. |
 
 #### `[source.url.patch_series]`
 

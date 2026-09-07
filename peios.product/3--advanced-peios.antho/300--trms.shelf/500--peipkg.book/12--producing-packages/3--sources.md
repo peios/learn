@@ -38,11 +38,16 @@ mandatory for that source.
 | `of` | `artifact` or `decompressed` — which bytes the signature covers |
 | `key_files` | Required and non-empty: the pinned public keys |
 | `fingerprints` | An allowlist of acceptable signing fingerprints |
+| `ignore_expiry` | Boolean, default `false`. Permit new signatures made after the pinned key expired; use only for an upstream known to continue signing with that key |
 
 This is an entirely separate trust system from package signing. It
 verifies that the *upstream* tarball is the one upstream published,
 using upstream's own keys, pinned per recipe. It has no relationship to
 the Ed25519 signature the resulting package carries.
+
+`ignore_expiry` bypasses only signing-key expiry. Pekit still verifies the
+cryptographic signature, pinned fingerprint, present-time revocation state,
+explicit signature lifetime, and signature timestamp.
 
 ## A local tree
 

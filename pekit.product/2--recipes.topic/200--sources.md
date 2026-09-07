@@ -152,7 +152,12 @@ A signing key that expires later does not invalidate an immutable historical
 release: Pekit accepts the signature only when its signed creation time falls
 within the key's validity period. A present-time key revocation, an explicitly
 expired signature, a signature created after key expiry, or a materially
-future-dated signature remains a hard failure.
+future-dated signature remains a hard failure by default. For an upstream that
+knowingly continues to sign new releases after its key expires, a recipe may
+set `ignore_expiry = true` in the signature table. This is an explicit
+per-source exception to key expiry only: signature validity, the pinned
+fingerprint, revocation, explicit signature expiry, and timestamp checks remain
+mandatory.
 
 Some upstreams publish one `major.minor` archive and then maintain it as an
 incremental numbered patch series. `[source.url.patch_series]` models that
