@@ -7,13 +7,14 @@ An operation is a requested state machine action on a service, as a
 first-class object. Control commands do not mutate state directly: every
 one creates an operation that is validated, queued, resolved against
 whatever else is in flight, and executed by the event loop.
+[*op.every-control-command-creates-an-operation]
 
 Operations exist because peinit serves concurrent callers —
 administrative tools, automated triggers, other services. Without them,
 two commands arriving together collide with whatever behaviour falls
 out; with them, the resolution is explicit and observable.
 
-## Lifecycle
+## Lifecycle [*op.the-operation-states]
 
 ```
 Pending --> Running --> Completed
@@ -44,6 +45,7 @@ and a Restart whose target's definition is withdrawn while its stop leg
 is draining — the stop still finishes, but there is nothing to start, so
 the operation is aborted with the reason
 `definition_removed_during_restart_stop_leg` (§3.8).
+[*op.a-restart-is-aborted-when-its-definition-is-withdrawn-mid-stop]
 
 ## Fields
 
@@ -65,7 +67,7 @@ Operation {
 
 ## Sources
 
-Why peinit created the operation:
+Why peinit created the operation: [*op.the-operation-sources]
 
 | Source | Meaning |
 |---|---|
@@ -83,6 +85,7 @@ Why peinit created the operation:
 `Shutdown` is declared and labelled but not currently produced: shutdown
 transitions services and signals them directly, without creating
 operations for the stops (§12.2).
+[*op.shutdown-is-declared-but-not-produced]
 
 ## The types
 
@@ -90,38 +93,44 @@ operations for the stops (§12.2).
 their own start operations with source `DependencyPropagation`. It
 completes when the service reaches Active, Completed or Inactive as
 appropriate, or Skipped when pre-start conditions do not hold.
+[*op.a-start-completes-when-the-service-reaches-its-goal-state]
 
 **Stop** sends SIGTERM, arms `StopTimeout`, escalates to SIGKILL. It
 completes when the service reaches Inactive, or Failed after a conflict
 eviction or bound-dependency propagation.
+[*op.a-stop-completes-when-the-service-reaches-inactive]
 
 **Restart** is a stop then a start, tracked under one identifier across
 both phases, and the type stays `Restart` throughout for observability.
+[*op.a-restart-keeps-one-identifier-and-type-across-both-legs]
 
 **Reload** issues the reload command or signal (§6.5) and completes when
 the reload resolves. Unlike the other lifecycle commands it defaults to
 not waiting — the caller gets the identifier immediately.
 
 **Reset** clears Failed, Abandoned or Skipped, taking the service to
-Inactive. It is synchronous.
+Inactive. It is synchronous. [*op.reset-is-synchronous]
 
 ## Timeouts
 
 A start, reload or reset inherits the target's `StartTimeout` as its
-maximum lifetime; a stop inherits `StopTimeout`. A restart has two legs,
-each enforced against its own timeout, with the sum as the overall
-lifetime.
+maximum lifetime; a stop inherits `StopTimeout`.
+[*op.a-start-inherits-starttimeout-and-a-stop-stoptimeout] A restart has
+two legs, each enforced against its own timeout, with the sum as the
+overall lifetime.
 
 **The clock starts at creation, including queue time.** From the
 caller's point of view they have been waiting since they sent the
 command, not since peinit got round to it. A start that sits Pending
 behind a stop for longer than `StartTimeout` fails without ever running.
+[*op.the-operation-clock-starts-at-creation-including-queue-time]
 
 ## Retention
 
 Pending and Running operations are held in memory. A terminal operation
 is emitted as an event and dropped after a grace period of 60 seconds —
 long enough for a polling client to collect the result.
+[*op.a-terminal-operation-is-dropped-after-sixty-seconds]
 
 peinit keeps no operation history, for the same reason it keeps no job
 history. eventd is the historian.

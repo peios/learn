@@ -11,7 +11,7 @@ already Pending or Running, peinit resolves the two.
 An operation of the same type merges. The new caller receives the
 **existing** operation's identifier, and from their point of view their
 request is in progress — they neither know nor need to know that it
-merged.
+merged. [*conflict.an-operation-of-the-same-type-merges]
 
 | Existing | New | Resolution |
 |---|---|---|
@@ -21,9 +21,9 @@ merged.
 | Restart | Start | Merge — a restart already includes a start |
 
 Restart is not mergeable with itself. A second restart while one is in
-progress is queued.
+progress is queued. [*conflict.restart-is-not-mergeable-with-itself]
 
-## Cross-type
+## Cross-type [*conflict.the-cross-type-resolutions]
 
 | Existing | New | Resolution |
 |---|---|---|
@@ -44,19 +44,22 @@ progress is queued.
 
 Combinations outside this table are rejected: a new Reload while a
 Start, Stop or Restart is active, and a new Start while a Reload is
-active.
+active. [*conflict.combinations-outside-the-table-are-rejected]
 
 ## The principles
 
 1. **Stop wins over start.** An explicit stop always takes priority. The
    administrator said stop, so stop; a queued start can follow.
+   [*conflict.stop-wins-over-start]
 2. **Later supersedes earlier.** Start then immediately stop means the
    stop wins and the start is cancelled, recorded as superseded.
+   [*conflict.a-superseded-start-records-that-it-was-superseded]
 3. **Merging is transparent.** The merged caller gets the original
    identifier and blocks on the original operation's outcome.
 
 Reset is rejected outright while anything is in flight, because reset
 means "clear a terminal state" and nothing in flight has one.
+[*conflict.reset-is-rejected-while-anything-is-in-flight]
 
 ## Dependency propagation
 
@@ -65,8 +68,9 @@ peinit creates start operations for them:
 
 - **`Requires`** — source `DependencyPropagation`. If one fails, the
   parent operation fails with `DependencyFailure`.
+  [*conflict.a-failed-requires-dependency-fails-the-parent]
 - **`Wants`** — source `DependencyPropagation`. If one fails, the parent
-  continues.
+  continues. [*conflict.a-failed-wants-dependency-does-not-fail-the-parent]
 - **`BindsTo` recovery** — source `BindsToRecovery`, created when a
   bound target returns to Active, for dependents sitting in Failed with
   cause `BindsToPropagation`.
@@ -79,16 +83,19 @@ graph execution contexts are then associated with the one operation
 
 `BindsToRecovery` restarts are not subject to the restart budget. They
 are created because a dependency returned, not because anything failed.
+[*conflict.bindstorecovery-restarts-are-outside-the-restart-budget]
 
 ## Restart policy and timers
 
 A restart-eligible failure creates a start operation with source
-`RestartPolicy` once the backoff delay elapses. It goes through the
-ordinary validation and resolution: if an administrator has already sent
-a stop, or the budget is exhausted, it is rejected.
+`RestartPolicy` once the backoff delay elapses.
+[*conflict.a-restart-eligible-failure-creates-a-start-with-source-restartpolicy]
+It goes through the ordinary validation and resolution: if an
+administrator has already sent a stop, or the budget is exhausted, it is
+rejected.
 
 A timer firing creates an operation based on the service's current
-state:
+state: [*conflict.a-timer-firing-creates-an-operation-from-the-current-state]
 
 | Type | State | Action |
 |---|---|---|
@@ -105,3 +112,4 @@ Multiple missed firings collapse into one pending run.
 Boot and shutdown are modes peinit enters, which then generate
 per-service operations. There is no "shutdown operation" to observe or
 cancel. Boot-generated starts use source `Boot`.
+[*conflict.boot-generated-starts-use-the-boot-source]

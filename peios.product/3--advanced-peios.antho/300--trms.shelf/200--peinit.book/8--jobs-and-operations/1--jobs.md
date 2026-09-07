@@ -6,12 +6,14 @@ description: A job is one supervised process execution, and every fork peinit pe
 A job is one supervised process execution. Every fork peinit performs is
 a job: a service's main binary, a pre-exec hook, a post-exec hook, a
 reload command, a health check invocation, a submitted job (§8.5).
+[*job.every-fork-peinit-performs-is-a-job]
 
 Jobs are the observable unit of *what actually ran*. Services are
 definitions carrying identity, policy and configuration; jobs are
 instances. A restart creates a new job.
+[*job.a-restart-creates-a-new-job]
 
-## Lifecycle
+## Lifecycle [*job.the-lifecycle-states]
 
 ```
 Created --> Running --> Completed
@@ -68,11 +70,13 @@ The rules that govern when the nullable fields are populated are what
 make a job record trustworthy:
 
 - `id` is assigned **before** the fork, so a job that never forks still
-  has an identity.
+  has an identity. [*job.the-id-is-assigned-before-the-fork]
 - `pid` and `pidfd` land on the record only once exec success is
   confirmed by EOF on the error pipe. Until then they are held in
   pending setup state and the job is Created.
-- **An exit observed during that window is held, not applied.** peinit
+  [*job.pid-and-pidfd-land-only-on-exec-confirmation]
+- **An exit observed during that window is held, not applied.**
+  [*job.an-exit-in-the-setup-window-is-held-not-applied] peinit
   resolves a reaped child to a job by PID, and inside this window no job
   carries the PID yet — a short-lived process can be gone before the
   error pipe is read. The exit is kept against its PID and replayed once
@@ -85,17 +89,21 @@ make a job record trustworthy:
 - A setup failure takes the job straight from Created to Failed.
   `ended_at_ns` records the **classification** time, `failure_cause`
   records what went wrong, and `pid`, `pidfd`, `started_at_ns`,
-  `exit_code` and `exit_signal` all stay null. There was no process to
-  have a PID or an exit status.
+  `exit_code` and `exit_signal` all stay null.
+  [*job.a-setup-failure-goes-created-to-failed-with-the-exit-fields-null]
+  There was no process to have a PID or an exit status.
 - `exit_code` and `exit_signal` are populated only when peinit observed
   an exit — never both, since a process either exits or is killed.
+  [*job.exit-code-and-exit-signal-are-never-both-populated]
 - For an Abandoned job, `ended_at_ns` records when peinit stopped
-  supervising, and the exit fields stay null. Nothing exited.
+  supervising, and the exit fields stay null.
+  [*job.an-abandoned-jobs-exit-fields-stay-null] Nothing exited.
 
 `resolved_identity` is the identity *string* — `SYSTEM`,
 `LocalService`, a SID — that was resolved for the execution. For a
 submitted job it is the job identity's user SID, since no name was ever
 involved (§8.5).
+[*job.a-submitted-jobs-resolved-identity-is-the-job-identitys-user-sid]
 `token_summary` is what the resulting token actually contains. They are
 separate because they can differ, and the `identity` field exposed in
 status views and job events is the former.
@@ -104,8 +112,8 @@ status views and job events is the former.
 
 peinit tracks active jobs in memory. When a job reaches a terminal state
 it emits a structured event carrying the full record and then **drops**
-the job. There is no job history in peinit, and no structure that could
-hold one.
+the job. [*job.a-terminal-job-is-emitted-then-dropped] There is no job
+history in peinit, and no structure that could hold one.
 
 eventd is the historian. It consumes those events from the KMES kernel
 ring buffer, and a query for a service's past jobs is a query to eventd.
@@ -113,7 +121,9 @@ ring buffer, and a query for a service's past jobs is a query to eventd.
 A submitted job is the one partial exception: its record is dropped
 like any other, but the jobs system keeps its own entry for a further
 60 seconds so that a submitter polling for the outcome can still read
-it (§8.5). That entry is a retained answer, not a history.
+it (§8.5).
+[*job.a-submitted-jobs-entry-outlives-its-record-by-sixty-seconds] That
+entry is a retained answer, not a history.
 
 ## The launch queues are hints
 
@@ -131,7 +141,8 @@ ends PID 1.
 
 So a drain that meets an id with no record **discards it and moves on to
 the next**, rather than treating it as an error. A live entry behind a
-stale one still launches, so one bad id cannot stall a queue. This is why
+stale one still launches, so one bad id cannot stall a queue.
+[*job.a-stale-queue-entry-is-discarded-rather-than-fatal] This is why
 the ordering rule is worth stating plainly: keeping the queue in step is
 a tidiness obligation, not a correctness one.
 
@@ -155,3 +166,4 @@ queue entry, and that path is a defect even though it is no longer fatal.
 
 A service tracks its current main job's identifier, and a status query
 returns it.
+[*job.a-status-query-returns-the-services-current-main-job]
