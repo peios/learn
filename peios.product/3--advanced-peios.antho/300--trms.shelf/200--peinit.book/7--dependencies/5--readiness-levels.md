@@ -17,23 +17,29 @@ Wants    = ["timed:synchronised"]
 ```
 
 `netd:routed` waits for netd to be active **and** to have published the
-level `routed`. `netd` on its own is unchanged — the ordinary "that
-service must be active" dependency.
+level `routed`.
+[*ready.a-level-dependency-waits-for-the-level-as-well-as-the-service]
+`netd` on its own is unchanged — the ordinary "that service must be
+active" dependency.
 
 ## The syntax
 
-`<service>:<level>`, split on the first colon. It rides on the existing
-`Requires`, `Wants` and `BindsTo` fields rather than a field of its own,
-because a level dependency *is* a service dependency with a stricter
-predicate: `netd:routed` subsumes `netd`. Each relationship keeps exactly
-the semantics [it already has](~peios/advanced-peios/peinit/dependencies/relationships), applied to
-the stricter test.
+`<service>:<level>`, split on the first colon.
+[*ready.a-declared-target-splits-on-the-first-colon] It rides on the
+existing `Requires`, `Wants` and `BindsTo` fields rather than a field of
+its own, because a level dependency *is* a service dependency with a
+stricter predicate: `netd:routed` subsumes `netd`. Each relationship
+keeps exactly the semantics
+[it already has](~peios/advanced-peios/peinit/dependencies/relationships), applied to
+the stricter test. [*ready.each-relationship-keeps-its-semantics-with-a-level]
 
 It cannot collide with a service name. A service name may contain only
 letters, digits, `.`, `_` and `-`, so a colon never appears in one, and
 no existing definition can accidentally become a level dependency.
+[*ready.a-service-name-can-never-contain-a-colon]
 
-A trailing colon — `"netd:"` — reads as a plain dependency on `netd`. It
+A trailing colon — `"netd:"` — reads as a plain dependency on `netd`.
+[*ready.a-trailing-colon-is-a-plain-dependency] It
 is a typo, and treating it as a request for the empty level would produce
 a condition nothing could ever satisfy.
 
@@ -49,7 +55,9 @@ Requires = ["network:routed"]
 — netd, on a shipped image — and peinit rewrites the entry to
 `netd:routed` before anything reads it, exactly as
 [§7.6](~peios/advanced-peios/peinit/dependencies/derived-dependencies)
-resolves a role. The level rides across unchanged. Everything downstream
+resolves a role. The level rides across unchanged.
+[*ready.a-role-carrying-a-level-is-rewritten-to-the-provider-with-that-level]
+Everything downstream
 — validation, the graph, `svctl status` — sees a level dependency on a
 service, and never learns a role was involved.
 
@@ -61,9 +69,11 @@ fills the role publishes those. A definition that says `network:routed`
 survives netd being replaced; one that says `netd:routed` does not.
 
 Several services may fill a role; the entry then resolves to one level
-dependency per provider, and a `Requires` waits for all of them. A role
-no service fills is left as written and fails validation as the missing
-hard dependency it is, naming the role the definition wrote.
+dependency per provider, and a `Requires` waits for all of them.
+[*ready.a-role-with-several-providers-becomes-one-entry-per-provider] A
+role no service fills is left as written and fails validation as the
+missing hard dependency it is, naming the role the definition wrote.
+[*ready.an-unfilled-role-fails-validation-naming-the-role]
 
 ## How a level gets there
 
@@ -74,17 +84,22 @@ The service publishes it on the notification channel it already has, as
 LEVEL=routed
 ```
 
-An empty value retracts it. peinit records the level against the sending
-service, and holds any dependent whose declaration does not match.
+An empty value retracts it. [*ready.an-empty-level-retracts-it] peinit
+records the level against the sending service, and holds any dependent
+whose declaration does not match.
+[*ready.a-level-is-recorded-against-the-sender-and-holds-a-mismatched-dependent]
 
 There is no subscription. peinit does not connect to netd's socket or
 timed's, does not need to find them before they exist, and carries no
-knowledge of their wire formats — which matters, because PID 1 is the one
-process on the machine that cannot afford to fail to start.
+knowledge of their wire formats
+[*ready.peinit-never-connects-to-a-publishers-own-socket] — which
+matters, because PID 1 is the one process on the machine that cannot
+afford to fail to start.
 
 ## Levels are exact, not ordered
 
 `Requires = ["netd:addressed"]` is **not** satisfied by `netd:routed`.
+[*ready.a-level-is-matched-exactly-and-never-implied]
 
 peinit has no ordering over another daemon's vocabulary and does not
 invent one. netd knows that `routed` implies `addressed`; peinit does
@@ -99,7 +114,9 @@ name the useful condition directly.
 ## A level is never stale
 
 peinit clears a service's level whenever that service leaves a state that
-satisfies dependents. A level is a claim about a process that is
+satisfies dependents.
+[*ready.a-level-is-cleared-when-its-publisher-stops-satisfying-dependents]
+A level is a claim about a process that is
 currently making it, and one that outlived its process would hold a
 dependent open on a promise nobody was keeping — the exact failure the
 mechanism exists to prevent.
@@ -116,31 +133,37 @@ finishes) and be retracted while a dependent is still waiting — so the
 [execution graph](~peios/advanced-peios/peinit/dependencies/graph-execution)
 re-checks it against the service table every time it considers releasing
 the dependent, and holds the start until the answer is yes.
+[*ready.a-level-is-re-checked-at-every-release-rather-than-settled-at-planning]
 
 That check runs even when there is nothing to start. An already-active
 target is not part of the start plan, but the condition on it still is:
 the graph keeps a level edge to a service it is not starting, which is
 what makes `Requires = ["netd:routed"]` hold when netd is up and merely
 not routed yet.
+[*ready.a-level-edge-is-kept-to-a-target-that-is-not-being-started]
 
 Two events re-open the question. A `LEVEL=` arriving from the publisher
 releases every dependent held on it — this is the only thing that can
 open a `Requires` or `BindsTo` gate, which take the exact level and
-nothing else. And the publisher leaving a state that satisfies dependents
+nothing else. [*ready.only-the-level-itself-opens-a-hard-gate] And the
+publisher leaving a state that satisfies dependents
 releases `Wants` waiters: a soft dependency waits only while someone is
 running who could still publish the level, and proceeds once nobody is —
 which keeps `Wants` failure-tolerant, the property that defines it.
+[*ready.a-publisher-leaving-a-satisfying-state-releases-wants-waiters]
 
 A held start does not time out. `Requires = ["netd:no-such-level"]`
 holds the dependent indefinitely: the service stays inactive and the
 start operation stays pending, visible in `svctl status` as an operation
-that has not completed. That is the declared semantics, not a hang — the
-condition was never met, so the start never happened.
+that has not completed.
+[*ready.a-held-start-does-not-time-out] That is the declared semantics,
+not a hang — the condition was never met, so the start never happened.
 
 ## What happens on a drop
 
 Nothing, in this version. If a level falls away after a dependent has
 already started, the dependent keeps running and is not told.
+[*ready.a-level-dropping-after-the-start-does-nothing]
 
 That is a deliberate limit, not an oversight. The notification channel is
 one-way by specification (PSPU §4.16), so peinit has no way to tell a
@@ -153,7 +176,7 @@ just the fact.
 peinit's contribution is the start gate: the moment when the service does
 not exist yet and so cannot subscribe to anything at all.
 
-## Published levels
+## Published levels [*ready.netd-and-timed-are-the-shipped-publishers]
 
 | Publisher | Levels |
 |---|---|

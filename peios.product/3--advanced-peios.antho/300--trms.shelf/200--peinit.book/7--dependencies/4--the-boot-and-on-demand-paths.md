@@ -5,6 +5,7 @@ description: The two ways a graph gets built and how they differ beyond scope �
 
 The two ways a graph gets built differ in more than scope, and the
 differences are worth having in one place.
+[*ondemand.the-boot-and-on-demand-paths-differ-beyond-scope]
 
 | | Boot | On-demand |
 |---|---|---|
@@ -27,14 +28,17 @@ which one catches it depends on what kind of wrong it is:
   uncacheable key, a duplicate field — is caught when the registry is
   read. At boot it fails that service with `ValidationError` and the
   rest continue; on a reload it rejects the whole reload (§3.2).
+  [*ondemand.a-definition-that-does-not-parse-is-caught-when-the-registry-is-read]
 - **Graph validation.** A definition that parses but does not fit —
   a cycle, a missing target, a flap-constraint violation, an invalid
   calendar expression — is caught here, and fails that service at boot
   or the whole reload on a reload-config (§7.2).
+  [*ondemand.a-definition-that-does-not-fit-is-caught-at-graph-validation]
 - **Start.** A definition that parses and fits but whose preconditions
   do not hold — a failed assert, an unresolvable identity, a missing
   binary — is caught when the service actually starts, and fails that
   activation (§5.2, §5.3).
+  [*ondemand.a-precondition-that-does-not-hold-is-caught-at-start]
 
 The dividing line between the first two is whether the problem is
 visible in one definition on its own. Decoding sees one key at a time;

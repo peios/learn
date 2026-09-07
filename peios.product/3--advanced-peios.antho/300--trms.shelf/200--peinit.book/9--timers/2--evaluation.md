@@ -5,7 +5,7 @@ description: A timer is a trigger rather than a service type — how one is arme
 
 A timer is a trigger, not a service type. A service with a
 `timer:<schedule>` trigger is an ordinary Simple or Oneshot service that
-peinit starts on a schedule.
+peinit starts on a schedule. [*evalt.a-timer-is-a-trigger-on-an-ordinary-service]
 
 ## Arming
 
@@ -13,23 +13,28 @@ At boot, once the service graph is loaded, and whenever timer
 configuration changes, peinit computes the next firing time for every
 active trigger and arms a timerfd for it. Each trigger gets its own
 descriptor and its own computation.
+[*evalt.every-active-trigger-gets-its-own-armed-descriptor]
 
 A disabled service gets neither a registration nor a firing.
+[*evalt.a-disabled-service-is-neither-registered-nor-fired]
 
 A schedule that fails to parse, or whose next occurrence cannot be
 computed, fails that trigger. Every other timer arms normally, and what
-did not arm is reported to the console. This matches how graph
+did not arm is reported to the console.
+[*evalt.a-bad-schedule-fails-only-its-own-trigger-and-is-reported]
+This matches how graph
 validation already treats an invalid schedule (§7.4), so the outcome no
 longer depends on which of the two caught it.
 
-The next-occurrence search looks ten years ahead and then gives up. A
+The next-occurrence search looks ten years ahead and then gives up.
+[*evalt.the-next-occurrence-search-gives-up-after-ten-years] A
 schedule can parse and still match nothing — `*-02-30`, or a fixed year
 already past — and the horizon turns that into a prompt error against
 the one service rather than a very long walk. Ten years clears the
 sparsest schedule that is genuinely meaningful: `*-02-29` skips a
 century year not divisible by 400, so it can run eight years dry.
 
-## Firing
+## Firing [*evalt.a-firing-is-classified-from-the-services-type-and-state]
 
 ```
 handle_timer(service, trigger):
@@ -52,9 +57,11 @@ handle_timer(service, trigger):
 
 Every other state — Backoff, Stopping, Reloading, Abandoned, Skipped —
 records the firing and does nothing.
+[*evalt.a-firing-in-any-other-state-does-nothing]
 
 The last-run write happens in a forked child so that the event loop
-never waits on the registry — which matters because the registry is
+never waits on the registry [*evalt.the-last-run-write-happens-in-a-forked-child]
+— which matters because the registry is
 served by registryd, a service peinit supervises, so a synchronous write
 would let a wedged registryd stall PID 1.
 
@@ -68,7 +75,8 @@ peinit warning: recording the last run of timer <schedule> for service
 ```
 
 The write stays best-effort — nothing is retried and nothing is failed
-over it — but a persistent timer whose timestamp never lands runs its
+over it [*evalt.a-failed-last-run-write-is-reported-and-nothing-is-retried]
+— but a persistent timer whose timestamp never lands runs its
 catch-up on every boot, and that is otherwise a symptom with no thread
 to pull. The outstanding-write table is bounded, so a child that somehow
 escapes reaping cannot grow it.
@@ -78,14 +86,17 @@ escapes reaping cannot grow it.
 A Oneshot that fires while it is already running sets a flag rather than
 queueing an operation. When it next reaches Inactive or Completed,
 peinit immediately creates a start operation and clears the flag.
+[*evalt.a-oneshot-firing-mid-run-becomes-one-pending-run]
 
 Multiple firings during one run collapse into a single pending run.
 There is no queue, and the flag is per service rather than per trigger —
 a service with three timers that all fire during one long run still gets
 exactly one catch-up.
+[*evalt.multiple-firings-during-one-run-collapse-into-one]
 
 ## Multiple triggers
 
 Triggers on one service are independent: each has its own timerfd, its
 own next-firing computation, and its own last-run history. Only the
 Oneshot pending flag is shared.
+[*evalt.triggers-on-one-service-are-independent]
