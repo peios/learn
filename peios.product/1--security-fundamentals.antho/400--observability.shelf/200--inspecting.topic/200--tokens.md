@@ -84,7 +84,7 @@ There are 24 defined query classes. Each returns a structured payload defined fo
 | `TokenImpersonationLevel` | Anonymous / Identification / Impersonation / Delegation. On a primary token this is the ceiling on everything derived from it — normally Delegation for a logon or service token. |
 | `TokenStatistics` | `token_id`, `auth_id` (the logon-session ID), `modified_id`, token type, and expiry. |
 | `TokenRestrictedSids` | The `restricted_sids` array. Variable length. |
-| `TokenSessionId` | The interactive session ID. |
+| `TokenInteractivityScope` | The interactive-environment scope. This is not the LogonSession ID; that is `auth_id` in `TokenStatistics`. |
 | `TokenOrigin` | The originating logon-session ID. |
 | `TokenElevationType` | Default / Full / Limited. |
 | `TokenIntegrityLevel` | The integrity SID. |

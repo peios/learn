@@ -87,7 +87,7 @@ Bits 0x0004, 0x0008, 0x0080 and 0x0100 are unused.
 | `TOKEN_ADJUST_PRIVILEGES` | 0x0020 | Enable, disable or remove privileges. |
 | `TOKEN_ADJUST_GROUPS` | 0x0040 | Enable or disable groups. |
 | `TOKEN_ADJUST_DEFAULT` | 0x0080 | Change default DACL, owner index, primary group index. |
-| `TOKEN_ADJUST_SESSIONID` | 0x0100 | Change `interactive_session_id`. Additionally requires `SeTcbPrivilege`. |
+| `TOKEN_ADJUST_INTERACTIVITY_SCOPE` | 0x0100 | Change `interactivity_scope`. Additionally requires `SeTcbPrivilege`; does not change the LogonSession `auth_id`. |
 
 `TOKEN_QUERY_SOURCE` is a documented bit position rather than an enforced right: a token fd granting `TOKEN_QUERY` suffices for everything, and `TOKEN_QUERY_SOURCE` is not separately checked.
 

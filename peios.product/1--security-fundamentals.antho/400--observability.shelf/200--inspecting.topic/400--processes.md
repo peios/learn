@@ -33,7 +33,7 @@ These are the inspectable fields. Internal fields (refcounts, lock state) are no
 For a thread inspecting its own process's PSB, the path is:
 
 1. **Open the process's primary token** via `kacs_open_self_token` (with the `KACS_REAL_TOKEN` flag if you need the primary specifically, not the impersonation). The returned fd lets you query token state.
-2. **Query through the process-related classes** — `TokenSessionId` and related — which return PSB-adjacent state where available.
+2. **Query the token information you need.** `TokenStatistics.auth_id` identifies its LogonSession; `TokenInteractivityScope` separately identifies its interactive-environment scope.
 3. **Read the process SD** via `kacs_get_sd` with a self-targeted query (using the appropriate flags for "this process").
 
 For some PSB fields, dedicated query routes exist:

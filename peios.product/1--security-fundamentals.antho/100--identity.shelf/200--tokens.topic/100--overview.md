@@ -77,7 +77,7 @@ A token is itself one of the objects KACS protects. It has a security descriptor
 | `TOKEN_ADJUST_PRIVILEGES` | Enable, disable, or permanently remove privileges. |
 | `TOKEN_ADJUST_GROUPS` | Enable or disable groups. |
 | `TOKEN_ADJUST_DEFAULT` | Change the default DACL, owner index, or primary group index. |
-| `TOKEN_ADJUST_SESSIONID` | Change `interactive_session_id` (additionally requires `SeTcbPrivilege`). |
+| `TOKEN_ADJUST_INTERACTIVITY_SCOPE` | Change `interactivity_scope` (additionally requires `SeTcbPrivilege`). This does not change the token's LogonSession `auth_id`. |
 
 By default, a freshly minted token grants the SYSTEM identity and the creating principal full access, and grants the token's own user identity `TOKEN_QUERY` and the adjustment rights.
 

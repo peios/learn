@@ -192,7 +192,7 @@ When a flag is set, AccessCheck emits the corresponding audit event regardless o
 
 | Field | What it is |
 |---|---|
-| `interactive_session_id` | The interactive session number. Zero for services. Adjustable only with `SeTcbPrivilege`. |
+| `interactivity_scope` | The interactive-environment scope. Zero for services. Adjustable only with `SeTcbPrivilege`; distinct from the immutable LogonSession LUID in `auth_id`. |
 | `elevation_type` | Default / Full / Limited, for linked-pair membership. |
 
 ## Where to go next

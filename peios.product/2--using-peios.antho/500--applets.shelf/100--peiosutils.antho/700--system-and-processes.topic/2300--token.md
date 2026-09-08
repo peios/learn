@@ -69,6 +69,8 @@ Each of these prints one part of a token, for when you want just that piece:
 | `stats` | Token statistics — IDs, timestamps, the modification counter. |
 | `default-dacl` | The token's default DACL. |
 
+`token show` reports the token's LogonSession LUID as `session_id` and its separate interactive-environment scope as `interactivity_scope`.
+
 ### `query`
 
 `token query CLASS` performs a raw read of a single named token-info class and prints the result as JSON — the lowest-level inspection route, for tooling.
@@ -84,7 +86,7 @@ Each of these prints one part of a token, for when you want just that piece:
 | `adjust privs NAME=STATE …` | Enable, disable, or remove privileges. `STATE` is `enabled`, `disabled`, or `removed`. |
 | `adjust groups IDX=STATE …` | Enable or disable groups by their list index. |
 | `adjust default --dacl SDDL` | Replace the token's default DACL. Also `--owner-idx` / `--group-idx`. |
-| `adjust session ID` | Replace the token's session id. |
+| `adjust interactivity-scope SCOPE` | Replace the token's interactive-environment scope. The legacy name `adjust session SCOPE` is accepted as an alias; neither form changes the LogonSession `auth_id`. |
 
 ### `restrict`
 
