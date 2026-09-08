@@ -81,6 +81,7 @@ Why peinit created the operation: [*op.the-operation-sources]
 | `BindsToPropagation` | A bound target stopped. |
 | `ConflictResolution` | A conflict evicted the running service. |
 | `OnFailure` | A failed service's fallback handler. |
+| `TtyRelease` | A service released a terminal another service was waiting for. |
 
 `Shutdown` is declared and labelled but not currently produced: shutdown
 transitions services and signals them directly, without creating

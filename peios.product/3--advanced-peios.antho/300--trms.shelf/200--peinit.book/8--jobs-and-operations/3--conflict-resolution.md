@@ -43,8 +43,13 @@ progress is queued. [*conflict.restart-is-not-mergeable-with-itself]
 | Anything (either) | Reset | Reject |
 
 Combinations outside this table are rejected: a new Reload while a
-Start, Stop or Restart is active, and a new Start while a Reload is
-active. [*conflict.combinations-outside-the-table-are-rejected]
+Start, Stop or Restart is active.
+[*conflict.combinations-outside-the-table-are-rejected] A new Start
+while a Reload is active is not rejected — a reloading service is
+already where a start would take it, so the command is answered with
+the service's status and creates no operation, before conflict
+resolution is reached at all.
+[*conflict.a-start-while-reloading-is-answered-with-the-status]
 
 ## The principles
 

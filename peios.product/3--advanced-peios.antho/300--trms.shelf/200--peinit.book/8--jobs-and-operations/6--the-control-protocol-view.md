@@ -55,9 +55,12 @@ the work they are waiting on actually began.
 
 ## What an operation's result carries
 
-A completed operation carries the resulting service state. A failed one
-carries the failure reason. A merged one carries the survivor's
-identifier. A cancelled or aborted one carries why.
+A completed stop or reset carries the resulting service state; a
+completed start carries the readiness that satisfied it — `alive
+readiness: process started`, `notify readiness: READY=1`, or the exit
+code for a Oneshot — rather than a state name. A failed one carries the
+failure reason. A merged one carries the survivor's identifier. A
+cancelled or aborted one carries why.
 [*protoview.what-an-operations-result-carries]
 
 For a reload, the result also determines the reload's *mode* — whether
@@ -75,7 +78,10 @@ or signal, the retained `status_text` and `progress`, and the three
 timestamps. [*protoview.the-job-view-and-its-fields] Every inapplicable
 field is present and null, and `pid` is null once the job is terminal —
 there is no process to name.
-[*protoview.every-inapplicable-field-is-present-and-null]
+[*protoview.every-inapplicable-field-is-present-and-null] Abandoned is
+the exception, and the reason for it: an abandoned job's processes
+survived SIGKILL and are still running, so its `pid` is kept.
+[*protoview.an-abandoned-jobs-pid-is-kept]
 
 What a submitter sees of its job on the jobs socket is exactly what an
 administrator sees of it in `job-status`.

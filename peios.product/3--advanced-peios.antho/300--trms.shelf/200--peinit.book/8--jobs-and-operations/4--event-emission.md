@@ -108,10 +108,14 @@ requested right by name and the access bits requested and granted;
 `graph.validation_error` and `graph.validation_warning` for validation
 findings; `notify.rejected` for an unauthenticated notification;
 `fd_store.rejected` for a refused descriptor; `notify.status`,
-`notify.errno` and `notify.exit_status` for the three event-emitting
-notification fields; `cgroup.leaked` the first time a sub-cgroup is found
-still populated after its post-kill deadline (§5.7); and
-`graph.operation_terminal` for a graph member's terminal outcome.
+`notify.errno`, `notify.exit_status` and `notify.stopping` for the four
+event-emitting notification fields; `cgroup.leaked` the first time a
+sub-cgroup is found still populated after its post-kill deadline (§5.7);
+`graph.operation_terminal` for a graph member's terminal outcome;
+`recovery.entered` for the reason peinit dropped to a recovery shell
+(§2.8); `critical.failure` and `shutdown.abandoned` from the shutdown
+path (§12); and `service.reload_unconfirmed` for a reload a service
+started and never confirmed (§6.5).
 
 Audit records are events rather than logs, and that distinction is the
 point: the ring buffer persists from the moment PKM loads, so an access
