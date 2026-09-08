@@ -33,11 +33,15 @@ it is treated as though it had already escalated.
 length, not hexadecimal, or missing its trailing newline all produce a
 fresh identifier, recorded as a warning. It is an opaque install
 identifier, not a security principal, and a new one is a smaller problem
-than no boot. An I/O failure while reading, generating, or writing does
-send peinit to recovery.
+than no boot. An unreadable file or an unwritable path is fail-soft too
+— the boot continues on an ephemeral identifier, recorded as a warning.
+Only a failure to *generate* one sends peinit to recovery, because at
+that point there is no identifier to continue with (§2.3).
 
 **The seed** is entirely fail-soft. Absent, empty, oversized, or
-unrestorable all continue the boot silently. A system with no entropy
+unrestorable all continue the boot. An empty or oversized seed is
+recorded as an error on the way past (§2.3); none of them stops the
+boot. A system with no entropy
 cache still boots; it starts with less entropy, which is the image
 builder's problem to solve with a hardware or virtio RNG.
 
@@ -77,9 +81,11 @@ there is nothing outstanding to lose.
 [*powerloss.after-step-7-the-root-is-read-only-and-nothing-is-outstanding]
 
 The counter was incremented at the start of the boot that is now ending,
-and is reset only by a *successful* boot — so a power loss during a
-shutdown leaves the counter advanced.
-[*powerloss.a-power-loss-during-a-shutdown-leaves-the-counter-advanced]
-Enough of them in a row reach the recovery threshold, which is the
-intended behaviour: a machine that keeps losing power mid-shutdown is a
-machine an administrator should be looking at.
+and a successful boot resets it *during* that boot, once the success
+grace period has been held. So a power loss during the shutdown of a
+boot that succeeded leaves the counter at zero; one during the shutdown
+of a boot that never reached success leaves it advanced.
+[*powerloss.only-a-boot-that-never-succeeded-leaves-the-counter-advanced]
+Enough of those in a row reach the recovery threshold, which is the
+intended behaviour: a machine that keeps failing to reach a successful
+boot is a machine an administrator should be looking at.

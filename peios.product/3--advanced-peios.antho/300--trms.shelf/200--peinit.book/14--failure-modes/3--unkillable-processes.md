@@ -17,7 +17,7 @@ What follows depends on which cgroup it was:
 |---|---|
 | `main/` | The service goes to Abandoned with cause `ProcessUnkillable`. Supervision stops; the cgroup is leaked. |
 | `health/` or `hooks/` | The sub-cgroup is orphaned and recorded as a leak. The service carries on normally. |
-| `checks/` | The sub-cgroup is dropped with no record. |
+| `checks/` | The sub-cgroup is recorded as a leak of type `helper`, as any other leaked sub-cgroup is (§5.7). |
 
 The distinction is about what the stuck process is holding. A main
 process holds the service's ports, locks and connections, so a service

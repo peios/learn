@@ -7,8 +7,9 @@ description: The ordered steps of a graceful shutdown, from entering the shutdow
 
 peinit sets an internal flag. While it is set, no new service starts.
 [*graceful.no-new-service-starts-once-the-flag-is-set] Control commands
-other than `status`, `list` and `operation-status` are rejected as
-invalid for the current state.
+other than `status`, `list`, `operation-status`, `job-status`,
+`job-list` and `job-stop` are rejected as invalid for the current
+state.
 
 Every live submitted job (§8.5) is stopped at this point too: SIGTERM
 to each — unless it has already sent `STOPPING=1` — with cause

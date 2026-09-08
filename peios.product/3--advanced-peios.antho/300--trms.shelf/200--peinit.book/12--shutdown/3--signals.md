@@ -5,9 +5,15 @@ description: Every signal is blocked and read through a signalfd from the event 
 
 PID 1 handles every signal through a signalfd. All signals are blocked
 and read from the event loop.
-[*signal.every-signal-is-blocked-and-read-through-a-signalfd] So there
-are no signal handlers and no async-signal-safety concerns anywhere in
-peinit. [*signal.pid-1-has-no-signal-handlers]
+[*signal.every-signal-is-blocked-and-read-through-a-signalfd] So peinit
+installs no signal handlers of its own, and nothing peinit writes has to
+be async-signal-safe.
+[*signal.peinit-installs-no-signal-handlers-of-its-own]
+
+`/proc/1/status` does report two caught signals, SIGSEGV and SIGBUS.
+They are the Rust runtime's stack-overflow guard, which runs on an
+alternate stack and touches nothing peinit owns, so the reasoning above
+is unaffected. [*signal.the-two-caught-signals-are-the-runtimes-guard]
 
 ## Setup
 

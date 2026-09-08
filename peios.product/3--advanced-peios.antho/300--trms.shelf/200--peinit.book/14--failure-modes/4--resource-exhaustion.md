@@ -24,10 +24,10 @@ failed because the system was momentarily out of descriptors gets
 another go.
 [*exhaust.a-descriptor-exhaustion-at-launch-is-a-restart-eligible-parentsetupfailure]
 
-Two paths leak descriptors slowly: the pre-start check helper's result
-descriptor and pidfd are unregistered from the event loop but not
-closed, so a service using filesystem conditions leaks two per start.
-[*exhaust.a-filesystem-condition-leaks-two-descriptors-per-start]
+The pre-start check helper's result descriptor and pidfd are both
+unregistered from the event loop and closed, so a service using
+filesystem conditions costs no descriptors beyond the start itself.
+[*exhaust.a-filesystem-condition-leaks-no-descriptors]
 
 ## Processes
 
@@ -60,14 +60,15 @@ drops its oldest, there is no outbound queue for log delivery, terminal
 jobs and operations are dropped rather than retained, and neither has a
 history structure.
 
-Two things do accumulate. Graph execution contexts and their operation
-associations are never retired, so each boot and each on-demand start
-adds one for the life of the process.
-[*exhaust.graph-execution-contexts-are-never-retired] And an
-`OnFailure` chain entry for a handler that starts and stays running is
-never cleared, so it permanently occupies a slot of that failure's depth
-budget.
-[*exhaust.an-onfailure-chain-entry-for-a-resident-handler-is-never-cleared]
+Nor do the two structures that once did. A graph execution context and
+its operation associations are retired on the maintenance turn after
+every member reaches a terminal state (§7.3), so a boot or an on-demand
+start costs nothing lasting.
+[*exhaust.graph-execution-contexts-are-retired] And an `OnFailure` chain
+entry is cleared once its handler has held for a `RestartWindow` (§6.3),
+so a resident handler does not permanently occupy a slot of that
+failure's depth budget.
+[*exhaust.an-onfailure-chain-entry-is-cleared-once-the-handler-holds]
 
 ## Disk
 

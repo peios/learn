@@ -16,9 +16,10 @@ counter is incremented, so a persistently broken registryd burns boot
 attempts even though every one of them fails the same way.
 [*lostreg.a-phase-1-registryd-failure-still-increments-the-counter]
 
-The recovery shell reached from a Phase 1 failure does not have
-registryd running, and the offline tools (§2.8) are what an
-administrator has.
+The recovery shell reached from *this* failure does not have registryd
+running, and the offline tools (§2.8) are what an administrator has. A
+Phase 1 failure earlier than the registryd step is different: recovery
+starts a registryd of its own there (§2.8).
 
 ## During Phase 2
 
