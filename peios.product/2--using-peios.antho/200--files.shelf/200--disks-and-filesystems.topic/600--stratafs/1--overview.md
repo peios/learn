@@ -41,7 +41,7 @@ whiteouts.
 
 ## The base Peios topology
 
-The `fsbase` package installs the `mount-rootfs-stratafs-base.sh` [boot hook](~peios/boot-and-trust-establishment/boot-hooks)
+The `dev.peios.fsbase-stratafs-mount-hooks` package installs the `mount-rootfs-stratafs-base.sh` [boot hook](~peios/boot-and-trust-establishment/boot-hooks)
 in the initramfs. It runs after the deployment-specific hook has mounted the
 real root and before prelude hands off to it, mounting the conventional
 root-level views as one boot step:

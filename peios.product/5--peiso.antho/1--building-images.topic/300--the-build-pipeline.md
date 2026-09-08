@@ -23,7 +23,7 @@ Two things about the composed tree:
 - **It is complete but attribute-less.** Where a package carries a signature sidecar for a non-ELF file (device firmware: `<file>.peios.sig`), compose would normally set the target's `security.peios.sig` attribute — which needs `CAP_SYS_ADMIN`. peiso asks compose to *record* each one instead (`sidecars.jsonl`), and writes them into the squashfs at stage 5. The `root/` on the build host therefore carries no security attributes; the image does.
 - **The initramfs is a second root inside it.** Packages the initramfs runs — `prelude`, its hooks, the module subset — are placed there by the edition's cross-root dependency edges, not by anything peiso does.
 
-Compose is given the composer's half of the Special System Package exemption: `fsbase` lays down the mountpoint tree the layout rules otherwise protect, and a root with no `/proc` is not a root.
+Compose is given the composer's half of the Special System Package exemption: `dev.peios.fsbase` lays down the mountpoint tree the layout rules otherwise protect, and a root with no `/proc` is not a root.
 
 ## 2. Publish the medium repository
 

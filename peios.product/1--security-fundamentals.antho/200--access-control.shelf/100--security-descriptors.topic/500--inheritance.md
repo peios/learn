@@ -139,7 +139,7 @@ Two directories opt out, and both have to:
 
 Neither could be expressed by editing the root's ACL, because the root's ACL is also `/usr`'s and `/var`'s. That is the whole reason the protected flag exists: one inheritable ACL is one policy, and a system needs more than one.
 
-Both descriptors are declared by the `fsbase` package rather than stamped at boot, so the statement of what `/home` is lives beside the thing that creates it.
+Both descriptors are declared by the `dev.peios.fsbase` package rather than stamped at boot, so the statement of what `/home` is lives beside the thing that creates it.
 
 ## Auto-inherit flags
 
