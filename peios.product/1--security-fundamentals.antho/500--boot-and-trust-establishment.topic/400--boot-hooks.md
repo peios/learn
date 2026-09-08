@@ -77,7 +77,7 @@ The four are two ways to *supply* a capability crossed with two ways to *consume
 
 **`after` is how a shared vocabulary survives a small image.** A `requires` on a capability nothing supplies is a build error — deliberately, since it catches an initramfs that cannot possibly boot. But that makes any *standard* capability name dangerous: a hook mentioning `network-up` would break every image that has no networking. `after` expresses "if this happens at all, it happens before me", which is what most ordering against an optional milestone actually means.
 
-**`provides` and `contributes` differ in what "satisfied" means.** With alternatives, one supplier doing the job is enough — which is exactly the live-boot/disk-boot pair below, where one mounts the root and the other stands aside. With contributors, the capability is not satisfied until every one of them has completed — three hooks each unlocking a layer of an encrypted stack, say. A capability must be one or the other; declaring it both ways is a build error, because there would be no answer to whether it is satisfied yet.
+**`provides` and `contributes` differ in what "satisfied" means.** With alternatives, one supplier doing the job is enough — for example, two hardware-specific implementations of the same discovery step in a custom image. With contributors, the capability is not satisfied until every one of them has completed — three hooks each unlocking a layer of an encrypted stack, say. A capability must be one or the other; declaring it both ways is a build error, because there would be no answer to whether it is satisfied yet.
 
 The format is a small, deliberate subset of TOML: enough to declare two lists of names, and no more. It is checked **strictly** when the initramfs is built — an unknown key, a list that is not well-formed, a block that is opened and never closed, two blocks in one file — each of these is a build error, not a quiet misread. A typo in a hook's metadata is caught at build time, with a message naming the hook and the line.
 
@@ -166,7 +166,9 @@ The two middle codes are borrowed from `sysexits.h` (`EX_UNAVAILABLE`, `EX_TEMPF
 
 A hook that is not the right one for this machine **declines** (`69`) rather than exiting `0`. The difference matters because `provides` means *alternatives*: a capability with several providers is achieved as soon as one of them is satisfied, and a provider that exits `0` is claiming to be that one.
 
-This is what the live-boot/disk-boot pair does. Whichever hook `root=` does not select declines, and the other mounts the root. If **every** provider declines, the capability is never achieved and prelude stops with a message naming it — where previously a machine no hook would boot produced only the generic "nothing mounted the root" much later.
+A hardware-specific provider can use this to stand aside when the machine has no device it understands. If **every** provider declines, the capability is never achieved and prelude stops with a message naming it.
+
+Live boot and disk boot deliberately do **not** use runtime decline as their selector. Their initramfs packages conflict, and the installer replaces the live package with the disk package before rebuilding the image. The root-mount hook that is present therefore owns the job: `disk-boot` treats a missing `root=` as a broken image, while `live-boot` treats a missing medium as a failure. This moves an impossible two-flavour image to package-resolution time and preserves the actual cause when a selected flavour is misconfigured.
 
 For `contributes` the sense is reversed: since every contributor must complete, a contributor that declines has completed — "nothing needed doing here" is a way of being done.
 

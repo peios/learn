@@ -48,11 +48,11 @@ The layout is straightforward:
                          the x86-64 ABI loader path; /bin, /sbin and /lib views
                          do not exist before the runtime topology is mounted
     usr/libexec/prelude/hooks.d/
-        mount-root.sh    mounts a live medium's squashfs (live-boot)
+        mount-root.sh    mounts a live medium's squashfs (live-boot), or
         mount-root-disk.sh
-                         mounts an installed root partition (disk-boot); both
-                         contribute rootfs-ready, and `root=` on the cmdline
-                         decides which one acts
+                         mounts an installed root partition (disk-boot). Their
+                         packages conflict, so exactly one is present; the
+                         selected hook contributes rootfs-ready.
         mount-rootfs-stratafs-base.sh
                          mounts the real root's StrataFS views after rootfs-ready
         ...
