@@ -13,6 +13,7 @@ registry is read synchronously exactly twice: during Phase 2 boot,
 before meaningful supervision has started, and during a reload-config,
 which an administrator initiated and which is bounded. At all other
 times peinit works from the model.
+[*confgen.peinit-answers-from-the-model-rather-than-the-registry]
 
 > [!NOTE]
 > The model exists because the event loop cannot block on a userspace
@@ -24,7 +25,8 @@ times peinit works from the model.
 
 Change notifications arrive as events on a pollable descriptor. peinit
 subscribes to `Machine\System\Services\` and `Machine\System\Init\` at
-boot, using the LCS watch mechanism — a persistent subscription that
+boot, [*confgen.the-watch-covers-services-and-init] using the LCS watch
+mechanism — a persistent subscription that
 delivers change events on a key descriptor, with an OVERFLOW event when
 the kernel-side queue is exceeded (Peios Kernel TRM §5).
 
@@ -45,6 +47,7 @@ write during that window — from an install script, a post-hook, a
 package transaction — triggers a reload like any other. Services that
 are already running keep their pinned definition; a boot-plan service
 that has not started yet picks up the new one.
+[*confgen.a-write-during-the-boot-window-reaches-a-not-yet-started-service]
 
 ## The activation generation
 
@@ -53,10 +56,12 @@ The snapshot governs the whole start lifecycle: pre-exec hooks, the
 token request, the readiness timeout, the initial health checks. A field
 changed while the service is Starting does not take effect until the
 next start.
+[*confgen.a-field-changed-while-starting-takes-effect-at-the-next-start]
 
 A service in Inactive or Failed has no activation snapshot, so starting
-it uses the current model. That gives the expected behaviour for the
-common edits:
+it uses the current model.
+[*confgen.an-inactive-service-starts-from-the-current-model] That gives
+the expected behaviour for the common edits:
 
 - A new service entry is available once the change notification is
   processed.
@@ -72,19 +77,21 @@ Which class a field falls into depends on when its value is consumed.
 ### Pinned to the running definition
 
 A change takes effect only when the service is restarted:
+[*confgen.the-pinned-fields]
 
 `ImagePath`, `Type`, `Identity`, `RequiredPrivileges`, `ErrorControl`,
 `RemainAfterExit`, `Triggers`, `Disabled`.
 
 `Triggers` and `Disabled` are pinned only while the service is running.
 On a service that is not running, both take effect as soon as the
-notification is processed — which is what arms a timer added to an
-inactive service.
+notification is processed
+[*confgen.triggers-and-disabled-take-effect-at-once-on-a-service-that-is-not-running]
+— which is what arms a timer added to an inactive service.
 
 ### Applied on the next start
 
 A change takes effect at the next start or explicit graph reload, not
-while services are running:
+while services are running: [*confgen.the-next-start-fields]
 
 `Requires`, `Wants`, `BindsTo`, `Conflicts`, `OnFailure`, `Conditions`,
 `Asserts`.
@@ -92,6 +99,7 @@ while services are running:
 ### Reloaded at runtime
 
 A change takes effect at the next relevant event, with no restart:
+[*confgen.the-runtime-reloaded-fields]
 
 `Arguments`, `SuccessExitCodes`, every timeout and retry value
 (`StartTimeout`, `StopTimeout`, `WatchdogTimeout`, `RestartDelay`,

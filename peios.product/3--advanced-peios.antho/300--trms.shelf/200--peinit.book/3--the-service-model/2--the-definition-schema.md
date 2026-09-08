@@ -4,11 +4,13 @@ description: Every field a service definition can carry, with its registry type 
 ---
 
 Every field a service definition can carry, with its registry type and
-its default. The semantics of each are in the section named alongside.
+its default. [*schema.the-field-table] The semantics of each are in the
+section named alongside.
 
 Value names are matched case-insensitively, so `ImagePath` and
-`imagepath` are the same field — and therefore a definition carrying
-both is a duplicate, not two fields.
+`imagepath` are the same field [*schema.value-names-are-matched-case-insensitively]
+— and therefore a definition carrying both is a duplicate, not two
+fields.
 
 | Field | Type | Default | Meaning |
 |---|---|---|---|
@@ -73,24 +75,29 @@ both is a duplicate, not two fields.
 | binary | `REG_BINARY` |
 
 A value whose registry type does not match the field's is a decode
-error, as is a dword carrying a value outside an enumerated field's
-range.
+error. [*schema.a-type-mismatch-is-a-decode-error] So is a dword
+carrying a value outside an enumerated field's range.
+[*schema.a-dword-outside-an-enumerated-range-is-a-decode-error]
 
 ## Schema version and forward compatibility
 
-`Machine\System\Services\SchemaVersion` is a dword, currently 1. peinit
-creates it if it is absent (§2.3).
+`Machine\System\Services\SchemaVersion` is a dword, currently 1.
+[*schema.the-services-schema-version-is-one] peinit creates it if it is
+absent (§2.3).
 
-Unknown values on a service key are ignored, which is what lets the
-schema grow additively: a definition written for a newer peinit still
-loads on an older one, minus the fields it does not understand. A newer
-schema version does not prevent boot.
+Unknown values on a service key are ignored,
+[*schema.an-unknown-value-on-a-service-key-is-ignored] which is what
+lets the schema grow additively: a definition written for a newer peinit
+still loads on an older one, minus the fields it does not understand. A
+newer schema version does not prevent boot.
+[*schema.a-newer-schema-version-does-not-prevent-boot]
 
 Known fields are the opposite. A known field appearing more than once in
 a collected definition is a decode error rather than a last-one-wins,
-because a definition that says two different things about the same field
-has no defensible reading. Since names match case-insensitively, this
-catches `ImagePath` and `imagepath` in the same key.
+[*schema.a-duplicate-known-field-is-a-decode-error] because a definition
+that says two different things about the same field has no defensible
+reading. Since names match case-insensitively, this catches `ImagePath`
+and `imagepath` in the same key.
 
 ## What a decode failure costs
 
@@ -103,7 +110,7 @@ failed service fails in turn through the ordinary dependency propagation
 (§7.4), so the cost is bounded by what actually needed it.
 
 On reload-config the whole read is rejected and the previous generation
-stays in place (§10.4). That is not an inconsistency: a reload is atomic
+stays in place (§10.4). [*schema.a-decode-failure-rejects-a-whole-reload] That is not an inconsistency: a reload is atomic
 and has a working configuration to fall back to, where a boot has none.
 Refusing everything is the safe answer only when there is something to
 keep.
