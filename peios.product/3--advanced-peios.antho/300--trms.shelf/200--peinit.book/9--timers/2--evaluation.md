@@ -44,7 +44,9 @@ handle_timer(service, trigger):
             service.pending_timer = true      // at most one
         (Simple,  Active | Starting):
             record the firing; no action
-        (_, Inactive | Completed | Failed):
+        (Oneshot, Inactive | Completed | Failed):
+            create_operation(Start, service, source = Timer)
+        (Simple,  Inactive | Failed):
             create_operation(Start, service, source = Timer)
 
     // 2. Record when it fired.

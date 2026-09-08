@@ -133,6 +133,8 @@ parse error. [*cal.a-fraction-in-the-time-component-is-a-parse-error]
 > An expression that parses but can never match — `*-02-30`, or a fixed
 > year already past — is not rejected at parse time.
 > [*cal.an-unsatisfiable-expression-is-not-a-parse-error]
-> Computing its next occurrence walks forward a day at a time to the
-> year 9999 before concluding there isn't one.
-> [*cal.an-unsatisfiable-expression-is-walked-to-the-year-9999]
+> Computing its next occurrence walks forward a day at a time for ten
+> years and then gives up, reporting no future occurrence.
+> [*cal.an-unsatisfiable-expression-is-walked-for-ten-years] The horizon
+> is there because walking the full year range would turn an
+> unsatisfiable schedule into a boot that hangs.
