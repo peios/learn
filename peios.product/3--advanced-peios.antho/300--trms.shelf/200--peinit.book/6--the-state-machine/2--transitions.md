@@ -31,6 +31,7 @@ performed. [*trans.a-transition-absent-from-the-table-is-not-performed]
 | Stopping | Inactive | The process exited after an explicit stop or a shutdown. |
 | Stopping | Failed | The process exited after a conflict eviction or a bound dependency stopping. |
 | Stopping | Abandoned | SIGKILL sent and `main/` still populated after the post-kill deadline. |
+| Stopping | Starting | An explicit start queued against a service that is still stopping. Cause `ExplicitStart`. |
 | Backoff | Starting | The backoff delay elapsed. Cause `RestartPolicy`. |
 | Backoff | Inactive | An explicit stop cancelled the pending restart. |
 | Completed | Inactive | `RemainAfterExit=0` and dependents released; or an explicit stop; or shutdown clearing it. |

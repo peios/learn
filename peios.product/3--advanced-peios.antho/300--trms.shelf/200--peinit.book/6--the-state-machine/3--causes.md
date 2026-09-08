@@ -118,8 +118,8 @@ It fires for everything else, including `ProcessCrash`,
 For a **Critical** service exhausting its budget, the reboot takes
 precedence and no fallback is started.
 [*cause.a-critical-budget-exhaustion-starts-no-handler] The suppression
-keys on the cause and the service's `ErrorControl` rather than on
-whether a reboot was actually scheduled.
+asks whether a reboot is owed rather than inspecting `ErrorControl`
+itself, which is the same question §6.4 puts.
 
 `OnFailure` is for graceful degradation — the main web interface fails,
 so start a minimal emergency endpoint. It is not for monitoring or
@@ -182,9 +182,14 @@ treated as having arrived.
 
 ## The logging contract
 
-Every state transition produces a record covering four things: what
-failed, why it failed, what peinit did about it, and what the
-administrator should do. [*cause.every-transition-produces-a-record] Cryptic failure messages are a defect. A reboot
-loop caused by a configuration error with an opaque message is the worst
-outcome the system has, and the cause taxonomy exists so that the "why"
-is never a guess.
+A transition into Failed, Skipped or Abandoned is written to the
+console, naming the service and its cause: what failed, and why.
+[*cause.a-transition-into-a-bad-state-is-written-to-the-console] There
+is no per-transition event — a transition is visible through the `job.*`
+and `operation.*` events that carried it, not as a record of its own.
+[*cause.there-is-no-per-transition-event]
+
+Cryptic failure messages are a defect. A reboot loop caused by a
+configuration error with an opaque message is the worst outcome the
+system has, and the cause taxonomy exists so that the "why" is never a
+guess.
