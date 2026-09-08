@@ -52,12 +52,20 @@ not have to declare both. [*mode.critical-implies-safemode]
 
 ### What caused the downgrade
 
-The rebuild discards the Full-mode graph, so the services that forced
-Safe mode are never entered into the blocked set and are never marked
-Failed. That is deliberate: Safe mode was never going to start them, and
-a Failed state would say something about their own health that is not
-true. `status` should keep meaning "this service is broken".
-[*mode.a-service-that-forced-safe-mode-is-not-marked-failed]
+The rebuild discards the Full-mode graph, so a service that forced Safe
+mode and is then *excluded* from the rebuilt graph is never entered into
+the blocked set and never marked Failed. That is deliberate: Safe mode
+was never going to start it, and a Failed state would say something
+about its own health that is not true. `status` should keep meaning
+"this service is broken".
+[*mode.a-service-excluded-from-the-rebuild-is-not-marked-failed]
+
+A service that survives into the rebuilt graph gets no such protection.
+Two `Critical` services that require each other are both eligible in
+Safe mode, so the rebuild contains the same cycle and blocks them both,
+exactly as it would anywhere else — and there is no order that could
+have started either.
+[*mode.a-service-that-survives-the-rebuild-can-still-fail-there]
 
 The reason is therefore recorded at **boot level** rather than per
 service. Every finding that forced the downgrade — each critical cycle,
@@ -117,8 +125,11 @@ The two rules are independent, and an error is never less visible at `2`
 than at `1`. A terminal is matched by device rather than by path, since
 `/dev/console` and `/dev/ttyS<n>` can name the same device
 [*quiet.a-terminal-is-matched-by-device-not-path]; where the device
-cannot be determined, peinit falls back conservatively and treats the
-terminal as held. [*quiet.an-undeterminable-device-is-treated-as-held]
+cannot be determined, peinit treats the terminal as free and writes to
+it. [*quiet.an-undeterminable-device-is-treated-as-free] Guessing wrong
+in that direction costs a scrambled line, which is recoverable;
+guessing wrong the other way costs the operator their console output at
+the moment the machine is least able to explain itself.
 Suppressed messages are discarded rather than buffered.
 [*quiet.suppressed-messages-are-discarded]
 
