@@ -14,13 +14,13 @@ libpeios ships as a small set of packages, split the same way a C library conven
 
 | Package | Contents | When you need it |
 |---|---|---|
-| `libpeios` | The versioned shared object `libpeios.so.0` (the runtime soname). | At **runtime**, on every machine that runs a program linked against the library. Pulled in automatically as a dependency of anything built against it. |
-| `libpeios-devel` | The public headers (`peios.h` + `peios/*.h`), the unversioned `libpeios.so` linker symlink, and the `peios.pc` pkg-config descriptor. Depends on a matching `libpeios`. | At **build time**, on machines where you compile. |
-| `libpeios-static` | The static archive `libpeios.a`. | Only if you link the library **statically** instead of against the shared object. |
-| `libpeios-debuginfo` | Split DWARF debug info, build-id indexed. | Debugging or profiling through the library. |
-| `libpeios-debugsource` | The referenced Rust sources for the debug info. | Stepping into the library's own source in a debugger. |
+| `dev.peios.libpeios` | The versioned shared object `libpeios.so.0` (the runtime soname). | At **runtime**, on every machine that runs a program linked against the library. Pulled in automatically as a dependency of anything built against it. |
+| `dev.peios.libpeios-devel` | The public headers (`peios.h` + `peios/*.h`), the unversioned `libpeios.so` linker symlink, and the `peios.pc` pkg-config descriptor. Depends on a matching `dev.peios.libpeios` and the Peios kernel UAPI headers. | At **build time**, on machines where you compile. |
+| `dev.peios.libpeios-static` | The static archive `libpeios.a`. | Only if you link the library **statically** instead of against the shared object. |
+| `dev.peios.libpeios-debuginfo` | Split DWARF debug info, build-id indexed. | Debugging or profiling through the library. |
+| `dev.peios.libpeios-debugsource` | The referenced Rust sources for the debug info. | Stepping into the library's own source in a debugger. |
 
-Installing `libpeios-devel` pulls in the matching `libpeios` runtime automatically — the development package pins the exact runtime version whose ABI its headers describe, so the headers you compile against and the shared object you load can never disagree.
+Installing `dev.peios.libpeios-devel` pulls in the matching `dev.peios.libpeios` runtime and `kernel-headers` automatically — the development package pins the exact runtime version whose ABI its headers describe, so the headers you compile against and the shared object you load cannot disagree.
 
 ## The headers
 
@@ -73,7 +73,7 @@ Add `-I` / `-L` flags if your headers and library live outside the compiler's de
 
 ### Statically
 
-Install `libpeios-static` and point the linker at the archive:
+Install `dev.peios.libpeios-static` and point the linker at the archive:
 
 ```sh
 cc myprog.c -o myprog /usr/lib/x86_64-linux-peios/libpeios.a

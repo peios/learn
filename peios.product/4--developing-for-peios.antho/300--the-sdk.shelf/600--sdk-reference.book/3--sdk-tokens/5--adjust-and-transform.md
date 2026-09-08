@@ -56,13 +56,13 @@ The archetypal server flow: `peios_token_open_peer` the caller → `peios_token_
 ### Linked tokens and defaults
 
 ```c
-int peios_token_link(int elevated_fd, int filtered_fd, uint64_t session_id);
+int peios_token_link(int elevated_fd, int filtered_fd, uint64_t logon_session_id);
 int peios_token_get_linked(int fd);
 int peios_token_adjust_default(int fd, const void *dacl, size_t len,
                                uint16_t owner_index, uint16_t group_index);
-int peios_token_set_session_id(int fd, uint32_t session_id);
+int peios_token_set_interactivity_scope(int fd, uint32_t scope);
 ```
 
-- `peios_token_link` links an elevated + filtered primary-token pair in `session_id` — the UAC-style split-token model, where a filtered token is the everyday identity and its elevated linked token is available on demand. `peios_token_get_linked` opens the linked token of `fd`, returning a new fd. Errors (`_link`): `EACCES` (`SeTcbPrivilege` missing, or either handle lacks `DUPLICATE`), `EINVAL` (self-link, role/session/user-SID mismatch, not primary tokens, unknown `session_id`, or an fd that is not a token fd), `EBADF` (invalid fd). Errors (`_get_linked`): `EACCES` (handle lacks `QUERY`), `ENOENT` (not part of a linked pair, or the pair was destroyed), `ENOMEM` (allocation failed).
+- `peios_token_link` links an elevated + filtered primary-token pair in `logon_session_id` — the UAC-style split-token model, where a filtered token is the everyday identity and its elevated linked token is available on demand. `peios_token_get_linked` opens the linked token of `fd`, returning a new fd. Errors (`_link`): `EACCES` (`SeTcbPrivilege` missing, or either handle lacks `DUPLICATE`), `EINVAL` (self-link, role/logon-session/user-SID mismatch, not primary tokens, unknown `logon_session_id`, or an fd that is not a token fd), `EBADF` (invalid fd). Errors (`_get_linked`): `EACCES` (handle lacks `QUERY`), `ENOENT` (not part of a linked pair, or the pair was destroyed), `ENOMEM` (allocation failed).
 - `peios_token_adjust_default` replaces the token's default DACL and/or owner/primary-group indices. `dacl == NULL` leaves the DACL unchanged (and ignores `len`); `dacl != NULL` with `len == 0` clears it; an index of `0xFFFF` leaves that index unchanged. Errors: `EACCES` (handle lacks `ADJUST_DEFAULT`), `EINVAL` (out-of-range index; malformed or oversized DACL), `EFAULT` (bad DACL pointer).
-- `peios_token_set_session_id` sets the token's session id (requires `SeTcbPrivilege`). Errors: `EACCES` (handle lacks `ADJUST_SESSIONID`, or `SeTcbPrivilege` missing).
+- `peios_token_set_interactivity_scope` changes the token's `uint32_t` interactive-environment scope (requires `SeTcbPrivilege`). This is deliberately separate from the token's `uint64_t` LogonSession LUID (`auth_id`) and does not move the token between logon sessions. Errors: `EACCES` (handle lacks `ADJUST_INTERACTIVITY_SCOPE`, or `SeTcbPrivilege` missing).

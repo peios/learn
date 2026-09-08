@@ -23,14 +23,26 @@ struct peios_privilege_set {
     uint64_t used;
 };
 
+struct peios_token_statistics {
+    uint64_t token_id;
+    uint64_t auth_id;       /* LogonSession LUID */
+    uint64_t modified_id;
+    uint32_t token_type;
+    uint32_t reserved;
+    uint64_t expiration;
+};
+
 int peios_token_type(int fd, uint32_t *out);            /* CLASS_TYPE */
 int peios_token_impersonation_level(int fd, uint32_t *out); /* CLASS_IMPERSONATION_LEVEL */
-int peios_token_session_id(int fd, uint32_t *out);      /* CLASS_SESSION_ID */
+int peios_token_interactivity_scope(int fd, uint32_t *out); /* CLASS_INTERACTIVITY_SCOPE */
+int peios_token_statistics(int fd, struct peios_token_statistics *out); /* CLASS_STATISTICS */
 int peios_token_integrity(int fd, uint32_t *level_rid_out); /* CLASS_INTEGRITY_LEVEL */
 int peios_token_privileges(int fd, struct peios_privilege_set *out); /* CLASS_PRIVILEGES */
 ```
 
 `peios_token_impersonation_level` reads the token's impersonation level (`KACS_IMLEVEL_*`): the ceiling on everything captured from, conveyed by, or duplicated out of it — on a *primary* token as much as an impersonation one, since the level only ever ratchets down (Kernel TRM §3.5.1). A manager handed a token over a socket reads this before deciding what the token may become; a token below Impersonation cannot be turned into a primary token for a new process.
+
+`peios_token_interactivity_scope` reads the token's interactive-environment scope. It is not a logon-session identifier. To read the token's `uint64_t` LogonSession LUID, use `peios_token_statistics` and inspect `auth_id`; that helper returns the complete fixed-width statistics record.
 
 `peios_token_privileges` returns all four privilege words at once: which privileges are `present`, which are `enabled`, which are `enabled_by_default`, and which have been `used` (the audit trail of privilege use).
 
