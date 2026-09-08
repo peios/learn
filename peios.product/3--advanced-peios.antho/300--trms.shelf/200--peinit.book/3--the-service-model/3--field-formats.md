@@ -84,13 +84,20 @@ always success and does not need listing. Duplicates are collapsed.
 ## Dependency and handler names
 
 Entries in `Requires`, `Wants`, `BindsTo` and `Conflicts`, and the
-value of `OnFailure`, are validated as service names when the definition
-is read. A dependency naming something outside `[A-Za-z0-9._-]` is a
-decode error rather than an unresolved dependency discovered later
+value of `OnFailure`, are validated when the definition is read. A
+dependency naming something outside `[A-Za-z0-9._-]` is a decode error
+rather than an unresolved dependency discovered later
 [*fmt.an-illegal-dependency-name-is-a-decode-error] — the difference
 being that a typo containing an illegal character is caught immediately,
 while a typo that is still a legal name is caught at graph validation as
 a missing target.
+
+An entry in the four list fields may carry a readiness level, written
+after a colon (`netd:routed`). The name and the level are validated
+separately, so the colon is not one of the illegal characters there.
+[*fmt.a-list-dependency-may-carry-a-level] `OnFailure` takes a bare
+service name and no level: it names a handler to run, not a state to
+wait for. [*fmt.onfailure-takes-no-level]
 
 ## Timeouts and intervals
 

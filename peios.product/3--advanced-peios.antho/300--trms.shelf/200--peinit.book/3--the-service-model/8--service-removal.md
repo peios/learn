@@ -36,11 +36,15 @@ exits it is not restarted — `RestartPolicy` is moot, because there is
 nothing left to restart from — and peinit then discards the entry.
 [*remove.an-exit-is-not-restarted-and-the-entry-is-discarded]
 
+A definition-removed entry never has dependents. A read in which one
+service `Requires` another the read does not define is refused whole,
+with `MissingHardDependency` — so a removal that would leave a dangling
+hard dependency does not land at all, and the administrator has to
+remove the dependents first.
+[*remove.a-removal-leaving-a-dangling-dependency-is-refused]
+
 While an entry is definition-removed:
 
-- it keeps satisfying its dependents for as long as the instance is
-  alive, because it is still running;
-  [*remove.a-definition-removed-instance-still-satisfies-dependents]
 - `stop` is accepted, so an administrator can drain it cleanly, using
   the cached `StopTimeout`;
 - `start`, `restart` and `reload` are rejected with `UNKNOWN_SERVICE` —
@@ -66,8 +70,4 @@ its fd store (§10.6) — is discarded. A crash counts: the exit is routed
 to Failed rather than into a restart, because there is no policy left to
 apply. [*remove.a-crash-is-routed-to-failed-rather-than-a-restart] The
 fd store goes with it, which a crash would otherwise preserve for the
-restart that is not going to happen. A dependent that `Requires` the
-removed service keeps being satisfied while the instance runs; after the
-entry is discarded, the dependent's next start sees an unresolved
-dependency and takes the ordinary validation path.
-[*remove.after-the-discard-a-dependent-sees-an-unresolved-dependency]
+restart that is not going to happen.

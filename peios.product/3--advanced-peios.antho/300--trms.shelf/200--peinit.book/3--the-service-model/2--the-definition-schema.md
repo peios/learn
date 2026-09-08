@@ -26,7 +26,7 @@ fields.
 | Wants | multi_string | — | Soft dependencies. §7.1 |
 | BindsTo | multi_string | — | Runtime coupling. §7.1 |
 | Conflicts | multi_string | — | Mutual exclusion. §7.1 |
-| Provides | multi_string | — | Roles this service fills: virtual names a dependency may target (`network:routed`), and that peinit derives edges to. §7.6 |
+| Provides | multi_string | — | Roles this service fills: virtual names a dependency may target (`network`), and that peinit derives edges to. A role is a bare name — the level in `network:routed` comes from the depending service's readiness requirement, not from this value. §7.6 |
 | OnFailure | string | — | Service to start when this one fails. §6.3 |
 | ErrorControl | dword | 0 (Normal) | 0 Normal, 1 Critical. |
 | RemainAfterExit | dword | 0 | Oneshot only: stay Completed after a successful exit. |
