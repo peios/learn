@@ -14,6 +14,7 @@ schema-version probe sends peinit to recovery mode immediately. There is
 no Phase 2 without a registry and nothing useful to degrade to. The
 counter is incremented, so a persistently broken registryd burns boot
 attempts even though every one of them fails the same way.
+[*lostreg.a-phase-1-registryd-failure-still-increments-the-counter]
 
 The recovery shell reached from a Phase 1 failure does not have
 registryd running, and the offline tools (§2.8) are what an
@@ -28,16 +29,21 @@ peinit to recovery, for the same reason: there is no graph to boot.
 
 This is where the design pays off. peinit holds a complete in-memory
 model and does not read the registry during normal supervision, so
-registryd going away does not stop peinit supervising anything. Services
-keep running, restarts keep working, the control socket keeps answering,
-and timers keep firing.
+registryd going away does not stop peinit supervising anything.
+[*lostreg.registryd-going-away-does-not-stop-supervision] Services keep
+running, restarts keep working, the control socket keeps answering, and
+timers keep firing.
+[*lostreg.services-restarts-and-timers-keep-working-without-registryd]
 
 What stops working is anything that needs new configuration:
-reload-config fails, change notifications stop arriving, and a timer's
-last-run timestamp cannot be written — so a persistent timer may produce
-a spurious catch-up on the next boot.
+reload-config fails. [*lostreg.reload-config-fails-without-registryd]
+Change notifications stop arriving, and a timer's last-run timestamp
+cannot be written — so a persistent timer may produce a spurious
+catch-up on the next boot.
+[*lostreg.a-timer-last-run-timestamp-cannot-be-written-without-registryd]
 
-registryd itself is a Critical service, so its failure takes the
+registryd itself is a Critical service
+[*lostreg.registryd-is-a-critical-service], so its failure takes the
 ordinary Critical path: restart budget, then sync and reboot. peinit
 does not have to handle a permanently absent registryd at runtime,
 because the system reboots first.

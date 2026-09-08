@@ -39,15 +39,18 @@ acknowledgement and the console carry a warning saying so.
 
 ## When the process finally dies
 
-Abandoning a service does not close its main job. The process is still
-there, so there is still something to reap, and peinit keeps the job open
-against the possibility that it eventually exits — which it often does,
-once the I/O it was blocked on completes.
+Abandoning a service does not close its main job.
+[*unkillable.abandoning-a-service-does-not-close-its-main-job] The
+process is still there, so there is still something to reap, and peinit
+keeps the job open against the possibility that it eventually exits —
+which it often does, once the I/O it was blocked on completes.
 
 That exit arrives for a service already in Abandoned, a state that has
 stopped expecting a process. peinit records it and does nothing else: no
 transition, no restart, no operation update. The service stays
-Abandoned, the stop stays failed, and the console reports the exit:
+Abandoned, the stop stays failed
+[*unkillable.the-stop-that-gave-up-stays-failed], and the console
+reports the exit:
 
 ```
 peinit: service <service> main process exited in state Abandoned; no action taken
