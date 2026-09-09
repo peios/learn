@@ -166,7 +166,7 @@ This matters because a half-finished build often leaves the *previous* run's art
 A self-contained suite that builds its own image. The peiso spec lives in the suite, so a fresh clone can `provium` with nothing else set up:
 
 ```toml
-# test-suite/provium.toml
+# my-suite/provium.toml
 [provium]
 roots = ["tests"]
 
@@ -178,10 +178,10 @@ cmdline_file = "{out}/root/usr/share/live-boot/cmdline"
 ```
 
 ```
-test-suite/
+my-suite/
 ├── provium.toml
-├── manifests/
-│   └── peios-full.toml        # the image recipe, versioned with the tests
+├── specs/
+│   └── peios-full.toml        # the image spec, versioned with the tests
 └── tests/
     └── smoke.test.lua
 ```
