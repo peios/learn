@@ -28,6 +28,18 @@ because it has to produce a running system; reload rejects the whole
 thing, because it has a running system already and a half-applied
 configuration would be worse than the one in place.
 
+The same split applies one step earlier, at decoding. Boot decodes per
+key and fails only the service whose definition will not decode; reload
+treats the first undecodable key as a read failure. The reload returns
+an error naming that service and the decode problem, and the running
+configuration stands.
+[*control.reload-config.an-undecodable-definition-aborts-the-reload]
+Until the key is repaired or removed, every reload — including the ones
+a registry change notification triggers — fails the same way, so no
+other configuration change takes effect either. That is the cost of the
+choice, accepted: the alternative is a reload that silently drops a
+service the operator did not ask to drop.
+
 ## What changes
 
 - Every service definition is re-read.
