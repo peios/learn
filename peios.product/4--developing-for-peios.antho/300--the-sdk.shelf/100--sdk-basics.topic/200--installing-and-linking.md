@@ -22,6 +22,25 @@ libpeios ships as a small set of packages, split the same way a C library conven
 
 Installing `dev.peios.libpeios-devel` pulls in the matching `dev.peios.libpeios` runtime and `kernel-headers` automatically — the development package pins the exact runtime version whose ABI its headers describe, so the headers you compile against and the shared object you load cannot disagree.
 
+## Obtaining the SDK
+
+On a Peios system, the development package comes from the package repository the system is configured with:
+
+```sh
+peipkg install dev.peios.libpeios-devel
+```
+
+The packages are built, signed and published into the Peios repository, but that repository is not yet hosted at a public address. Until it is, the source is the route for anyone outside the project. All of it is public:
+
+| Repository | What it is |
+|---|---|
+| <https://github.com/peios/libpeios> | The library. `cargo build --release` produces `libpeios.so` and `libpeios.a`; the headers are in `include/`. |
+| <https://github.com/peios/librsi> | The registry-source library, built the same way. |
+| <https://github.com/peios/peios-rs> | The Rust `peios` and `peios-sys` crates. |
+| <https://github.com/peios/peios-cabi> | The shared C-ABI substrate both libraries are built on. |
+
+The library builds themselves need nothing beyond a Rust toolchain: they pin the kernel ABI through their Cargo dependencies. Compiling a C program against the resulting headers needs the `<pkm/*.h>` kernel UAPI headers described below.
+
 ## The headers
 
 Everything lives under `<peios/…>`, with one umbrella:
@@ -94,19 +113,19 @@ The one rule that matters across every language: the errno-based error model and
 
 ## librsi — the registry-source library
 
-Everything above describes **libpeios**. If you are writing a [registry source](~peios/registry-sources/overview), you link the sibling library **librsi** instead (or as well). It is built on the same [`peios-cabi` substrate](~peios/sdk-basics/what-is-the-peios-sdk), follows the identical [library conventions](~peios/sdk-conventions/library-conventions) — raw fds, the `int`/`ssize_t` error model, the borrow discipline — and is packaged exactly the same way libpeios is.
+Everything above describes **libpeios**. If you are writing a [registry source](~peios/registry-sources/overview), you link the sibling library **librsi** instead (or as well). It is built on the same [`peios-cabi` substrate](~peios/sdk-basics/what-is-the-peios-sdk) and follows the identical [library conventions](~peios/sdk-conventions/library-conventions) — raw fds, the `int`/`ssize_t` error model, the borrow discipline.
 
-### The packages
+### Packaging status
 
-| Package | Contents | When you need it |
-|---|---|---|
-| `librsi` | The versioned shared object `librsi.so.0`. | At **runtime**, wherever a source runs. |
-| `librsi-devel` | The public headers (`rsi.h` + `rsi/*.h`), the `librsi.so` linker symlink, and the `rsi.pc` pkg-config descriptor. Depends on a matching `librsi`. | At **build time**. |
-| `librsi-static` | The static archive `librsi.a`. | Only for static linking. |
-| `librsi-debuginfo` | Split DWARF debug info. | Debugging or profiling through the library. |
-| `librsi-debugsource` | The referenced Rust sources. | Stepping into the library's own source. |
+librsi is **not yet packaged**. It will take the same split as libpeios, under the `dev.peios.librsi` name: a runtime package, `-devel` with the headers, the `librsi.so` linker symlink and an `rsi.pc` descriptor, plus `-static`, `-debuginfo` and `-debugsource`. Until that lands, build it from source:
 
-As with libpeios, `librsi-devel` pulls in the matching `librsi` runtime and the `kernel-headers` package — the `<rsi/*.h>` headers include `<pkm/lcs.h>`, so the same UAPI-header requirement described above applies.
+```sh
+git clone https://github.com/peios/librsi
+cd librsi && cargo build --release
+# target/release/librsi.so, target/release/librsi.a, headers in include/
+```
+
+The `<rsi/*.h>` headers include `<pkm/lcs.h>`, so the same UAPI-header requirement described above applies.
 
 ### Headers and linking
 
@@ -120,10 +139,10 @@ Include the umbrella or the individual concept headers:
 #include <rsi/response.h>  /* building responses */
 ```
 
-and compile with pkg-config (the descriptor's module name is `rsi`):
+and, once the package exists, compile with pkg-config (the descriptor's module name will be `rsi`):
 
 ```sh
 cc mysource.c $(pkg-config --cflags --libs rsi) -o mysource
 ```
 
-or link `-lrsi` directly, or against `librsi.a` for a static build — exactly the three forms shown for libpeios above. The two libraries are independent: a program can be a client (libpeios), a source (librsi), or both, linking each as needed.
+From a source build, point the compiler at the checkout instead: `-I<checkout>/include -L<checkout>/target/release -lrsi`, or link against `librsi.a` for a static build — the same three forms shown for libpeios above. The two libraries are independent: a program can be a client (libpeios), a source (librsi), or both, linking each as needed.
