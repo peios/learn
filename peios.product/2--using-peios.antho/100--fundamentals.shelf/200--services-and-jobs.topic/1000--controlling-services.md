@@ -1,7 +1,7 @@
 ---
 title: Controlling services
 type: reference
-description: peiosctl and the control socket — the verbs and their rights, wait semantics, the command-by-state matrix, status output, error codes, and the job commands on both sockets.
+description: svctl and the control socket — the verbs and their rights, wait semantics, the command-by-state matrix, status output, error codes, and the job commands on both sockets.
 related:
   - peios/services-and-jobs/the-service-lifecycle
   - peios/services-and-jobs/who-can-manage-a-service
@@ -10,20 +10,20 @@ related:
   - peios/services-and-jobs/troubleshooting
 ---
 
-`peiosctl` is the command-line tool for driving **peinit** at runtime — starting and stopping services, querying their state, reloading configuration, and shutting the system down.
+`svctl` is the command-line tool for driving **peinit** at runtime — starting and stopping services, querying their state, reloading configuration, and shutting the system down.
 
 ```
-peiosctl <command> [service] [flags]
+svctl <command> [service] [flags]
 ```
 
 ```
-$ peiosctl status jellyfin        # current state of one service
-$ peiosctl start jellyfin         # start it, wait until Active or Failed
-$ peiosctl list                   # every service you can query
-$ peiosctl shutdown reboot        # graceful reboot
+$ svctl status jellyfin        # current state of one service
+$ svctl start jellyfin         # start it, wait until Active or Failed
+$ svctl list                   # every service you can query
+$ svctl shutdown reboot        # graceful reboot
 ```
 
-Underneath, `peiosctl` is a thin client over peinit's **control socket** at `/run/services/peinit/control.sock`. The wire protocol — not the CLI — is the normative interface, so everything here (commands, rights, semantics) holds regardless of which front-end you use.
+Underneath, `svctl` is a thin client over peinit's **control socket** at `/run/services/peinit/control.sock`. The wire protocol — not the CLI — is the normative interface, so everything here (commands, rights, semantics) holds regardless of which front-end you use.
 
 ## How the control interface works
 
@@ -34,7 +34,7 @@ The socket speaks **newline-delimited JSON**: one request object per line, one r
 {"status": "ok", "operation_id": "a1b2c3d4-...", "service": "jellyfin", "state": "active", "cause": "explicit_start", "warnings": []}
 ```
 
-Two properties are worth knowing even if you only ever use `peiosctl`:
+Two properties are worth knowing even if you only ever use `svctl`:
 
 - **Every command is access-controlled.** When you connect, peinit captures your [token](~peios/services-and-jobs/identity-and-privileges) from the kernel and runs [AccessCheck](~peios/access-decisions/overview) against the target service's descriptor for *every* command. There is no "trust localhost," no override. Who may do what is the subject of [Who can manage a service](~peios/services-and-jobs/who-can-manage-a-service).
 - **Lifecycle commands create [operations](~peios/services-and-jobs/jobs-and-operations).** A `start`/`stop`/`restart`/`reload`/`reset` returns an `operation_id` — a GUID you can poll. Conflict resolution between concurrent commands happens at the operation layer, which is why two simultaneous `start`s merge instead of colliding.
@@ -52,9 +52,9 @@ Two properties are worth knowing even if you only ever use `peiosctl`:
 | `list` | List services and states (filtered to what you can query). | (per-service `SERVICE_QUERY_STATUS`) |
 
 ```
-$ peiosctl restart jellyfin
-$ peiosctl reload nginx
-$ peiosctl reset failed-migration     # clear a Failed state without starting
+$ svctl restart jellyfin
+$ svctl reload nginx
+$ svctl reset failed-migration     # clear a Failed state without starting
 ```
 
 ## System commands
@@ -66,14 +66,14 @@ $ peiosctl reset failed-migration     # clear a Failed state without starting
 | `operation-status <id>` | Report the state of an operation by GUID. | `SERVICE_QUERY_STATUS` on its target |
 
 ```
-$ peiosctl shutdown poweroff
-$ peiosctl reload-config
-$ peiosctl operation-status a1b2c3d4-...
+$ svctl shutdown poweroff
+$ svctl reload-config
+$ svctl operation-status a1b2c3d4-...
 ```
 
 ## Job commands
 
-[Submitted jobs](~peios/services-and-jobs/jobs-and-operations) are reachable from two places, and `peiosctl job` covers both. Querying and stopping a job is *administration* and goes over the control socket; submitting a job, waiting on it, and signalling it belong to its submitter and go over the **jobs socket** at `/run/services/peinit/jobs.sock` (`--jobs-socket` overrides the path). Every job command is checked against the **job's own** descriptor, which by default admits the submitter, SYSTEM, and Administrators.
+[Submitted jobs](~peios/services-and-jobs/jobs-and-operations) are reachable from two places, and `svctl job` covers both. Querying and stopping a job is *administration* and goes over the control socket; submitting a job, waiting on it, and signalling it belong to its submitter and go over the **jobs socket** at `/run/services/peinit/jobs.sock` (`--jobs-socket` overrides the path). Every job command is checked against the **job's own** descriptor, which by default admits the submitter, SYSTEM, and Administrators.
 
 | Command | Socket | Does | Required right |
 |---|---|---|---|
@@ -85,20 +85,20 @@ $ peiosctl operation-status a1b2c3d4-...
 | `job signal JOB_ID SIGNAL` | jobs | Send one signal (a number, or a name like `SIGUSR1`) to the job's main process. Only the main process, only while `running`. | `JOB_SIGNAL` |
 
 ```
-$ peiosctl job list --state running
+$ svctl job list --state running
 JOB       STATE    SUBMITTER              IDENTITY               PROGRESS   DESCRIPTION
 5f2a...   running  S-1-5-21-...-1001      S-1-5-21-...-1001      3/5 items  nightly backup
-$ peiosctl job status 5f2a...
-$ peiosctl job stop 5f2a...
-$ peiosctl job submit --description "nightly backup" --timeout 3600 -- /usr/bin/backup --full
-$ peiosctl --wait job submit --env MODE=full /usr/bin/backup   # exits 0 only if the job completed
-$ peiosctl job wait --for ready 5f2a...
-$ peiosctl job signal 5f2a... SIGHUP
+$ svctl job status 5f2a...
+$ svctl job stop 5f2a...
+$ svctl job submit --description "nightly backup" --timeout 3600 -- /usr/bin/backup --full
+$ svctl --wait job submit --env MODE=full /usr/bin/backup   # exits 0 only if the job completed
+$ svctl job wait --for ready 5f2a...
+$ svctl job signal 5f2a... SIGHUP
 ```
 
-`job submit` takes the definition fields as options: `--description TEXT`, `--cwd DIR`, `--env NAME=VALUE` (repeatable), `--timeout SECS`, `--stop-timeout SECS`, `--readiness none|notify`, `--readiness-timeout SECS`, `--success-exit-code N` (repeatable), `--security-descriptor SDDL`. Two hand the job something of yours: `--fd NAME=FD` passes a descriptor of the `peiosctl` process to the job under `NAME` (from descriptor 3, with `LISTEN_FDS`/`LISTEN_FDNAMES` set), and `--output` attaches `peiosctl`'s standard output as the job's output sink, so the job's lines appear on your terminal as well as in eventd. Everything after `IMAGE` belongs to the job, options included; use `--` before an image path that starts with a dash.
+`job submit` takes the definition fields as options: `--description TEXT`, `--cwd DIR`, `--env NAME=VALUE` (repeatable), `--timeout SECS`, `--stop-timeout SECS`, `--readiness none|notify`, `--readiness-timeout SECS`, `--success-exit-code N` (repeatable), `--security-descriptor SDDL`. Two hand the job something of yours: `--fd NAME=FD` passes a descriptor of the `svctl` process to the job under `NAME` (from descriptor 3, with `LISTEN_FDS`/`LISTEN_FDNAMES` set), and `--output` attaches `svctl`'s standard output as the job's output sink, so the job's lines appear on your terminal as well as in eventd. Everything after `IMAGE` belongs to the job, options included; use `--` before an image path that starts with a dash.
 
-The CLI has no way to attach a token, so a `peiosctl`-submitted job always runs as the caller. Running a job as *someone else* is a programmatic act — a service attaching the token of the client it is impersonating — and is described in [Jobs and operations](~peios/services-and-jobs/jobs-and-operations).
+The CLI has no way to attach a token, so a `svctl`-submitted job always runs as the caller. Running a job as *someone else* is a programmatic act — a service attaching the token of the client it is impersonating — and is described in [Jobs and operations](~peios/services-and-jobs/jobs-and-operations).
 
 ## Wait semantics
 

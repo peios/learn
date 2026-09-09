@@ -23,7 +23,7 @@ A service name must be made of characters from `[A-Za-z0-9._-]` and be 1–128 b
 - **`/`** — names map directly onto cgroup ids and registry key names, and a slash would be ambiguous in both.
 - **`:`** — reserved for peinit-internal synthetic names (for example, the way a hook job is labelled).
 
-The name is how you refer to the service everywhere: in `peiosctl` commands, in another service's dependency list, in a [ServiceSecurity](~peios/services-and-jobs/who-can-manage-a-service) descriptor, and in the [per-service SID](~peios/services-and-jobs/identity-and-privileges) derived from it.
+The name is how you refer to the service everywhere: in `svctl` commands, in another service's dependency list, in a [ServiceSecurity](~peios/services-and-jobs/who-can-manage-a-service) descriptor, and in the [per-service SID](~peios/services-and-jobs/identity-and-privileges) derived from it.
 
 ## The definition schema
 

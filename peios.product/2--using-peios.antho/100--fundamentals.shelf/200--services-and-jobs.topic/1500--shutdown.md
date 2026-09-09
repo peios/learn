@@ -15,7 +15,7 @@ Shutdown is [boot](~peios/services-and-jobs/boot-and-boot-modes) run in reverse.
 
 There are four paths into shutdown, and they are not equal — three are graceful, one is not.
 
-**A control command.** An administrator with `SYSTEM_SHUTDOWN` runs `peiosctl shutdown <type>`:
+**A control command.** An administrator with `SYSTEM_SHUTDOWN` runs `svctl shutdown <type>` (the familiar `reboot`, `poweroff` and `halt` commands, and `shutdown -r now`, are the same client under other names):
 
 | Type | Result |
 |---|---|

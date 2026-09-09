@@ -13,8 +13,8 @@ related:
 Almost every peinit problem is diagnosed the same way: **read the state and the cause.** A `status` query gives you both, and the [cause taxonomy](~peios/services-and-jobs/the-service-lifecycle) tells you what the cause means. This page works backward from common symptoms to the cause and the fix.
 
 ```
-$ peiosctl status <service>      # state + cause + health + warnings
-$ peiosctl list                  # everything you can see, at a glance
+$ svctl status <service>      # state + cause + health + warnings
+$ svctl list                  # everything you can see, at a glance
 ```
 
 For history beyond what peinit holds in memory — past jobs, prior failures, the exact log line a service died on — query [eventd](~peios/auditing/overview); peinit emits every [job and operation](~peios/services-and-jobs/jobs-and-operations) transition there.
@@ -58,7 +58,7 @@ The [boot-attempt counter](~peios/services-and-jobs/boot-and-boot-modes) is desi
 
 - The underlying **I/O fault is the real problem** — investigate the storage or mount, not peinit.
 - The service's cgroup is **leaked** and shows in `warnings`. A later start uses a fresh [generational cgroup](~peios/services-and-jobs/execution-environment), so the new instance is unaffected.
-- `peiosctl reset <service>` clears the Abandoned state and re-checks the cgroup: if the stuck process finally died, peinit cleans up; if not, it stays leaked and warns you. Leaked cgroups clear fully only on reboot.
+- `svctl reset <service>` clears the Abandoned state and re-checks the cgroup: if the stuck process finally died, peinit cleans up; if not, it stays leaked and warns you. Leaked cgroups clear fully only on reboot.
 
 ## I changed the config and nothing happened
 
@@ -69,7 +69,7 @@ peinit works from an [in-memory snapshot](~peios/services-and-jobs/defining-a-se
 - **Reloadable at runtime** (timeouts, restart policy, health checks, environment, hooks…) → next time peinit acts on the service.
 - **Hot-reloaded** (`ServiceSecurity`) → next control request.
 
-If a change is not landing, check its class first. For a wholesale re-read of every definition, run `peiosctl reload-config` — it rebuilds and validates the whole graph atomically and swaps it in only if validation passes (running services are untouched). And remember peinit *pulls* changes from [registry notifications](~peios/registry-concepts/watches) rather than having them pushed, so there can be a brief lag.
+If a change is not landing, check its class first. For a wholesale re-read of every definition, run `svctl reload-config` — it rebuilds and validates the whole graph atomically and swaps it in only if validation passes (running services are untouched). And remember peinit *pulls* changes from [registry notifications](~peios/registry-concepts/watches) rather than having them pushed, so there can be a brief lag.
 
 ## ACCESS_DENIED
 
@@ -86,7 +86,7 @@ Every denial is logged with the caller SID, target, and requested right. Walk it
 
 ## A job submission is refused
 
-A `job submit` — from `peiosctl` or from a service — comes back with an error rather than a job. The code says which door it hit:
+A `job submit` — from `svctl` or from a service — comes back with an error rather than a job. The code says which door it hit:
 
 | Code | What happened | What to do |
 |---|---|---|
