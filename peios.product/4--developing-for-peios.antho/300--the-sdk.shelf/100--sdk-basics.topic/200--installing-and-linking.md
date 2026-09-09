@@ -115,17 +115,23 @@ The one rule that matters across every language: the errno-based error model and
 
 Everything above describes **libpeios**. If you are writing a [registry source](~peios/registry-sources/overview), you link the sibling library **librsi** instead (or as well). It is built on the same [`peios-cabi` substrate](~peios/sdk-basics/what-is-the-peios-sdk) and follows the identical [library conventions](~peios/sdk-conventions/library-conventions) — raw fds, the `int`/`ssize_t` error model, the borrow discipline.
 
-### Packaging status
+### The packages
 
-librsi is **not yet packaged**. It will take the same split as libpeios, under the `dev.peios.librsi` name: a runtime package, `-devel` with the headers, the `librsi.so` linker symlink and an `rsi.pc` descriptor, plus `-static`, `-debuginfo` and `-debugsource`. Until that lands, build it from source:
+librsi takes the same split as libpeios:
+
+| Package | Contents | When you need it |
+|---|---|---|
+| `dev.peios.librsi` | The versioned shared object `librsi.so.0`. | At **runtime**, wherever a source runs. |
+| `dev.peios.librsi-devel` | The public headers (`rsi.h` + `rsi/*.h`), the `librsi.so` linker symlink, and the `rsi.pc` pkg-config descriptor. Depends on a matching `dev.peios.librsi` and `kernel-headers`. | At **build time**. |
+| `dev.peios.librsi-static` | The static archive `librsi.a`. | Only for static linking. |
+| `dev.peios.librsi-debuginfo` | Split DWARF debug info. | Debugging or profiling through the library. |
+| `dev.peios.librsi-debugsource` | The referenced Rust sources. | Stepping into the library's own source. |
 
 ```sh
-git clone https://github.com/peios/librsi
-cd librsi && cargo build --release
-# target/release/librsi.so, target/release/librsi.a, headers in include/
+peipkg install dev.peios.librsi-devel
 ```
 
-The `<rsi/*.h>` headers include `<pkm/lcs.h>`, so the same UAPI-header requirement described above applies.
+The `<rsi/*.h>` headers include `<pkm/lcs.h>`, so the same UAPI-header requirement described above applies. To build from source instead, `cargo build --release` in a clone of <https://github.com/peios/librsi> produces `librsi.so` and `librsi.a`, with the headers in `include/`.
 
 ### Headers and linking
 
@@ -139,10 +145,10 @@ Include the umbrella or the individual concept headers:
 #include <rsi/response.h>  /* building responses */
 ```
 
-and, once the package exists, compile with pkg-config (the descriptor's module name will be `rsi`):
+and compile with pkg-config (the descriptor's module name is `rsi`):
 
 ```sh
 cc mysource.c $(pkg-config --cflags --libs rsi) -o mysource
 ```
 
-From a source build, point the compiler at the checkout instead: `-I<checkout>/include -L<checkout>/target/release -lrsi`, or link against `librsi.a` for a static build — the same three forms shown for libpeios above. The two libraries are independent: a program can be a client (libpeios), a source (librsi), or both, linking each as needed.
+or link `-lrsi` directly, or against `librsi.a` for a static build — exactly the three forms shown for libpeios above. The two libraries are independent: a program can be a client (libpeios), a source (librsi), or both, linking each as needed.
