@@ -22,11 +22,21 @@ cargo build --release --bin provium
 
 The features the binary needs (`lua` for the test framework, `local-agent` for the in-process VMM the runner uses) are on by default; `--no-default-features` exists only for building `provium-host` as a library without them.
 
-The binary lands at `target/release/provium`. Optionally, install it onto your `PATH`:
+The binary lands at `target/release/provium`. It is not usable on its own: every VM boot needs the **agent overlay**, a small cpio carrying a static `provium-agent` that Provium concatenates onto the guest's initrd at launch. Build it once:
+
+```
+rustup target add x86_64-unknown-linux-musl   # the agent is linked statically
+scripts/build-overlay.sh                      # also needs cpio and gzip
+```
+
+That writes `dist/agent-overlay.cpio.gz`, which a binary run from `target/` finds by itself. Optionally, install both onto your `PATH`:
 
 ```
 cargo install --path provium-host --bin provium
+scripts/build-overlay.sh -o ~/.cargo/share/provium/agent-overlay.cpio.gz
 ```
+
+An installed binary looks for the overlay in `<bindir>/../share/provium/`. Anywhere else, point at it with `PROVIUM_OVERLAY=/path/to/agent-overlay.cpio.gz` or the profile's [`agent_overlay_path`](~provium/configuration/provium-toml#agent-overlay-path). Without it every boot fails with `could not find agent-overlay.cpio.gz`.
 
 Verify:
 
