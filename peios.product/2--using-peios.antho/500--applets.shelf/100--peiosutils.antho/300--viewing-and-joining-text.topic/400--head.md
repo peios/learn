@@ -45,6 +45,8 @@ When given more than one file, `head` prints a header line before each one so yo
 | `-q`, `--quiet` | Never print the file-name headers. |
 | `-v`, `--verbose` | Always print the header, even for a single file. |
 
+The header is printed only once the file has actually been opened. A file that exists but cannot be read produces just the error message, with no `==> name <==` line before it.
+
 ## Other options
 
 | Option | Effect |

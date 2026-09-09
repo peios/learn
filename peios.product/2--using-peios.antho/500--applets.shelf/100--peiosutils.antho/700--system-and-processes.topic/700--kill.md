@@ -41,6 +41,8 @@ With no option, `kill` sends `TERM` — a polite request to shut down, which a w
 
 Use `KILL` only when `TERM` has failed. A process killed outright cannot save its work or release what it holds.
 
+A `-N` that is not a known signal number is an error ("invalid signal"). It is never reinterpreted as a negative process ID.
+
 ## Exit status
 
 | Code | Meaning |

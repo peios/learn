@@ -36,6 +36,8 @@ When `nohup` has to **create** `nohup.out`, that file is a new file and needs a 
 
 The reasoning is that `nohup.out` captures whatever the command writes, which the person running it has not chosen to share. A file that appears as a side effect should not be more open than its creator intended — so `nohup` gives it the safe default of owner-only, rather than whatever the surrounding directory would have handed down.
 
+The POSIX mode bits agree with the descriptor: the file is created with mode `0600` in the same `open` call that creates it, so there is no moment at which it exists more openly.
+
 | Option | Effect |
 |---|---|
 | `--sddl=SDDL` | Create `nohup.out` with the security descriptor given as an SDDL string, instead of the owner-only default. |

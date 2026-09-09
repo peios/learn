@@ -44,6 +44,8 @@ $ tail -n +20 report.txt    # from line 20 to the end
 | `--pid=PID` | While following, stop once process `PID` exits. |
 | `-s`, `--sleep-interval=N` | Wait `N` seconds between checks of the file. |
 
+Following by name picks up a *file* that replaces the watched one. If what appears under the name is a symbolic link, `tail` reports that the file "has been replaced with an untailable symbolic link" and stops reading it, rather than following the link to wherever it points.
+
 Press Ctrl-C to stop a `tail -f`.
 
 ## Headers for multiple files

@@ -60,6 +60,8 @@ A `SIZE` accepts a unit suffix: `K`, `M`, `G`, … as powers of 1024, or `KB`, `
 | `-x`, `--hex-suffixes[=START]` | Use hexadecimal suffixes. |
 | `--additional-suffix=SUFFIX` | Append a fixed `SUFFIX` to every output name — for giving the pieces an extension. |
 
+Each piece is created as a new file. If a name already exists, `split` opens it and checks, on the open handle, that it is not the input before truncating it; an output that turns out to be the input is refused with "would overwrite input".
+
 ## Other options
 
 | Option | Effect |
