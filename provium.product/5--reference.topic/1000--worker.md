@@ -38,11 +38,26 @@ The child is forked and exec'd *by the worker*, so it starts life with the worke
 
 The returned Process is auto-registered with the test's resource registry, so the scope walker SIGTERMs and reaps it at scope end. Without this, a worker-spawned child would leak past the test boundary. Joining the worker first orphans any child still running: it is reparented to PID 1 and the Process handle no longer reaches it.
 
-### `worker:open_file(path, mode_table)`
+### `worker:open_file(path, mode_table)` — rejected
 
-Open a guest-side file under the worker's namespace. Returns a [File](~provium/reference/file-handle). Same mode-table shape as `vm:open_file`.
+There is no worker-scoped File. The call errors with `worker_open_file: not supported for a process-isolated worker`, and the reason is structural: a worker is a separate guest process with its own file table, so a descriptor opened there would be out of reach of `file:read`, `file:write` and `file:close`, which act through the parent agent.
 
-The returned File is auto-registered with the test scope so `file:close()` fires automatically at scope end.
+Open files from inside the worker with [`worker:syscall`](#worker-syscall-nr) instead, so the descriptor is created, used and closed in the worker's own process under the worker's credentials:
+
+```lua
+-- x86-64 syscall numbers: openat = 257, write = 1, close = 3.
+local AT_FDCWD, O_WRONLY_CREAT_TRUNC = -100, 0x241
+local r = w:syscall(257, {
+    args = { AT_FDCWD, 0, O_WRONLY_CREAT_TRUNC, tonumber("644", 8) },
+    bufs = { "/tmp/from-worker\0" },   -- NUL-terminated path
+    ptrs = { 1 },                       -- buf 1 → arg slot 1
+})
+local fd = r.ret
+w:syscall(1, { args = { fd, 0, 2 }, bufs = { "hi" }, ptrs = { 1 } })
+w:syscall(3, fd)
+```
+
+If the file only needs to be read or written by the *test*, and the worker's identity does not matter, `vm:open_file` on the VM is the simpler call.
 
 ### `worker:syscall(nr, …)`
 

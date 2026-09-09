@@ -20,6 +20,8 @@ cd provium
 cargo build --release --bin provium
 ```
 
+The features the binary needs (`lua` for the test framework, `local-agent` for the in-process VMM the runner uses) are on by default; `--no-default-features` exists only for building `provium-host` as a library without them.
+
 The binary lands at `target/release/provium`. Optionally, install it onto your `PATH`:
 
 ```

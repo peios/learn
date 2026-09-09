@@ -9,14 +9,13 @@ related:
   - provium/reference/worker
 ---
 
-A File is an open guest-side file handle, returned by `vm:open_file(path, mode)` or `worker:open_file(path, mode)`. Once closed, all ops error with `file is closed`. Idempotent: closing twice is safe.
+A File is an open guest-side file handle, returned by `vm:open_file(path, mode)`. Once closed, all ops error with `file is closed`. Idempotent: closing twice is safe.
 
 ## Constructing
 
 | Source | Returns |
 |---|---|
 | `vm:open_file(path, mode)` | New file handle in the guest. |
-| `worker:open_file(path, mode)` | Same but allocated under a worker's namespace. |
 
 Mode table fields: `read`, `write`, `create`, `truncate`, `append`, `exclusive`, `perm`. See [VM open_file](~provium/reference/vm#vm-open-file-path-mode-table) for the full mode-table reference.
 
@@ -100,6 +99,6 @@ end
 ## See also
 
 - [VM](~provium/reference/vm) — `vm:open_file`, `vm:read_file`, `vm:write_file`, `vm:fd_stream`.
-- [Worker](~provium/reference/worker) — `worker:open_file` for files allocated under a worker's namespace.
+- [Worker](~provium/reference/worker) — why there is no `worker:open_file`, and the syscall form that opens a file inside a worker.
 - [Streams](~provium/reference/streams) — what `file:tail_stream()` returns.
 - [Files and handles](~provium/writing-tests/files-and-handles) — patterns for guest-side file I/O.

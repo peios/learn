@@ -266,16 +266,12 @@ end)
 
 ## Files inside a worker
 
-`worker:open_file(path, mode)` allocates the file under the worker's namespace. The returned File auto-registers with the test scope:
+A [worker](~provium/reference/worker) is a separate guest process with its own file table, and there is no worker-scoped File: `worker:open_file` is rejected by the agent, because a descriptor opened in the worker could not be reached by `file:read` and friends, which act through the parent agent.
 
-```lua
-local w = vm:spawn_worker()
-local h = w:open_file("/tmp/from-worker", {write=true, create=true})
-h:write("hi")
-h:close()
-```
+Decide which of two things you actually need:
 
-Otherwise the API is identical.
+- **The file must be opened under the worker's credentials** — a permission test, say. Open it from inside the worker with `worker:syscall(openat, …)`, and read, write and close it with further syscalls, so the descriptor lives and dies in the worker process. The [Worker reference](~provium/reference/worker#worker-open-file-path-mode-table-rejected) has a complete example.
+- **The test just needs to see or seed the file.** Use the VM handle: `vm:open_file`, `vm:read_file`, `vm:write_file`. The worker's identity is not involved, and the File auto-registers with the test scope as usual.
 
 ## Batch I/O for low latency
 

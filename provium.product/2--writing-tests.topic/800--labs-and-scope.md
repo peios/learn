@@ -352,7 +352,7 @@ When a test scope ends (per-test or per-file), the harness's resource graph walk
 
 1. Streams (Tails, Captures, ConsoleStreams).
 2. Processes (`vm:run_async`, `worker:run_async`).
-3. Files (`vm:open_file`, `worker:open_file`).
+3. Files (`vm:open_file`).
 4. Workers.
 5. Bridges.
 6. VMs.
