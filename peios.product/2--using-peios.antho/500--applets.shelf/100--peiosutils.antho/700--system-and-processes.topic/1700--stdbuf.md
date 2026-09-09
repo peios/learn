@@ -42,9 +42,9 @@ A program usually does not write each piece of output the instant it is produced
 
 ## How it works
 
-`stdbuf` carries a small helper library inside itself. Before running the command it writes that library to a private temporary directory, readable by no one else, and preloads it into the command so the C library's buffering defaults are changed before the command's `main` runs. `stdbuf` then waits for the command and removes the directory afterwards.
+`stdbuf` works by preloading a small helper library, `libstdbuf.so`, into the command, so the C library's buffering defaults are changed before the command's `main` runs. The library is installed with the utilities at `/usr/libexec/peiosutils/libstdbuf.so`; `stdbuf` looks for it beside its own executable first and in that directory second, and refuses to run the command if it is missing rather than run it unbuffered. `stdbuf` then waits for the command and exits with its status.
 
-The temporary directory lives under `$TMPDIR`. A `TMPDIR` whose path contains a colon cannot be used, because the preload variable is colon-separated; `stdbuf` refuses it rather than run the command with a mangled preload list.
+Nothing is written anywhere at run time. Earlier builds embedded the library and extracted it to `$TMPDIR` on every invocation, which is where two upstream security advisories lived; the shipped build no longer does that.
 
 ## A limitation
 
