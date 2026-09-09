@@ -26,7 +26,7 @@ Reorganise the tree — move that topic into an anthology, wrap it in a shelf, r
 - The **first segment is always a product slug**. There is no relative form and no site-wide search; every reference says which product it means.
 - The **remaining segments match the end of a page's path.** Trail compares them against each page's slugs — the anthology slugs, the topic slug, any subfolder or chapter slugs, and the page's own — and matches if your segments are the tail of that list.
 - Exactly one page must match. Zero or several is an error.
-- A **fragment** may follow, and is appended to the resolved URL: `~pekit/reference/cli#global-flags`.
+- A **fragment** may follow, and is appended to the resolved URL: `~pekit/reference/cli#global-flags`. It is checked too: the target article must define that anchor — a heading id, a `[*name]` citation anchor, or an id written in raw HTML — or the link is broken. Fragments on product and anthology pages, which have no body, are not checked.
 
 The rule of thumb is: **write the shortest thing that is unambiguous**, and add segments from the left only when you have to.
 
@@ -79,6 +79,10 @@ A `~` at the start of a destination is what makes it a reference. Everything els
 
 Root-relative links are the escape hatch for the handful of URLs that are not pages — `/print` views, `/llms.txt`, `/site.json`. They are not checked, so they are also the way to ship a broken link. Prefer `~` wherever the target is a page.
 
+A same-page fragment *is* checked, against the page's own heading ids, citation anchors and raw-HTML ids. Heading ids are derived from the heading text — lowercased, every run of non-alphanumerics collapsed to one hyphen, so `## vm:run(cmd, opts)` is `#vm-run-cmd-opts` — and a repeated heading gets `-2`, `-3`, … appended. Inside a `/print` bundle the link is namespaced along with the ids it points at, so it keeps working there.
+
+One form is always an error: a **relative path**, such as `../410--network-policy.md`. Pages are addressed by their slugs, not their source files, so no relative path can ever reach one; the build rejects it and tells you to write a `~` reference instead.
+
 `~` is only meaningful in a *link* destination. In an [image](~trail/writing/images) destination it is an error, with a message saying so: images are files, addressed relative to the article.
 
 ## Where else references are used
@@ -116,12 +120,14 @@ in article '/pekit/reference/cli': link '~pekit/targets' is ambiguous; candidate
   ~pekit/reference/recipe-format/targets
 ```
 
-There are three failure kinds, and they are not treated alike:
+There are five failure kinds, and they are not treated alike:
 
 | | Means | With `--allow-dangling-links` |
 |---|---|---|
 | **Unknown product** | the first segment is not a product slug | warning |
 | **No match** | nothing in that product ends with those segments | warning |
+| **Missing anchor** | the page exists but defines no such `#fragment` — on a `~` reference or a same-page link | warning |
+| **Relative path** | the destination is a file path, which no page can serve | warning |
 | **Ambiguous** | two or more pages match | **still fatal** |
 
 Ambiguity is never downgradable. A missing target is a link that does nothing; an ambiguous one is a link that goes somewhere *specific and possibly wrong*, and only the author knows which page was meant.

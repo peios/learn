@@ -64,7 +64,7 @@ Some problems are warnings on stderr rather than errors, and do not stop the bui
 
 ### `--allow-dangling-links`
 
-Downgrades missing `~link` and `related:` targets from errors to warnings, and does the same for missing images and unresolvable `§` citations. **Ambiguous references stay fatal** — trail will not pick between two candidate pages.
+Downgrades missing `~link` and `related:` targets from errors to warnings, and does the same for missing `#fragment` anchors, relative-path destinations, missing images and unresolvable `§` citations. **Ambiguous references stay fatal** — trail will not pick between two candidate pages.
 
 It is for the middle of a large reorganisation, when you want to see the site before every reference has caught up. Shipping with it on means shipping dead links.
 
