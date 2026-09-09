@@ -1,9 +1,10 @@
 ---
 title: Licensing and source availability
 type: concept
-description: The licences Peios ships under, how every package declares and carries its licence, and how to obtain the corresponding source for any published binary.
+description: The licences Peios ships under, what non-free material Peios does and does not ship, how every package declares and carries its licence, and how to obtain the corresponding source for any published binary.
 related:
   - project/policies/security-policy
+  - peios/device-firmware/overview
 ---
 
 Peios is open source. This page states the licensing terms and the mechanisms that carry them through the packaging pipeline.
@@ -18,17 +19,34 @@ Every Peios package declares its licence as an [SPDX expression](https://spdx.or
 
 The package format itself treats the field as optional, but **pekit requires it** for any `peipkg`-format package, so every package Peios publishes carries one. The metadata is complete by construction rather than by convention.
 
-The licence texts themselves install with the software, under `/usr/share/licenses/<package>/`. Composed images additionally carry an aggregate inventory at `/usr/share/licenses.json`, listing every installed package with its version, licence expression, and source reference — an image can always answer what it contains and under what terms.
+The licence texts themselves install with the software, under `/usr/share/licenses/<package>/`. Composed images additionally carry an aggregate inventory at `/usr/share/licenses.json`, listing every installed package with its version, licence expression, licence class, and source reference — an image can always answer what it contains and under what terms.
+
+## What Peios ships
+
+An SPDX expression says what a licence *is*; it does not say whether Peios considers the package free to redistribute. That judgement is a second manifest field, `license_class`, drawn from a closed set:
+
+| Class | Means |
+|---|---|
+| `free` | Open-source terms: the software may be used, modified and redistributed, and its corresponding source is published. |
+| `firmware` | Device firmware redistributed under the vendor's terms. It runs on a peripheral, not the CPU; it is needed to use hardware the user already owns; and there is no source to publish. |
+| `proprietary` | Software under terms that do not permit modification or redistribution. |
+| `unknown` | Not yet classified. This is the default when a recipe says nothing. |
+
+The policy is: **Peios ships free software and device firmware, and does not ship proprietary userspace.** Every package Peios publishes with a `LicenseRef-` term in its licence expression — which is exactly when the expression alone cannot answer — declares its class, and the composed-image inventory carries the class for every installed package, so a machine can state what non-free material it contains without parsing licence text.
+
+Firmware is the one deliberate exception to "everything is free", and it is kept visible rather than folded in: it ships as its own family of packages, each under the vendor licence recorded for that family, with the licence text installed beside the blobs. [Device firmware](~peios/device-firmware/overview) lists the families and explains how the kernel verifies what it loads.
 
 ## Corresponding source
 
-For every package built from an external source, Peios publishes a companion **source package** (`<name>-source`) through the same channel as the binary. It installs under `/usr/src/dist/<name>-<version>/` and contains:
+For every package Peios builds from source, it publishes a companion **source package** (`<name>-source`) through the same channel as the binary. It installs under `/usr/src/dist/<name>-<version>/` and contains:
 
 - `upstream/` — the pristine source input the build consumed, byte-for-byte; its hash matches the build recipe's committed lockfile, so you can verify it independently.
 - `patches/` — the patch series Peios applied, when there is one.
 - `recipe/` — the build recipe itself: the scripts that control compilation and installation.
 
 Each binary package names its source package in its manifest, in the `source_package` field, and the aggregate inventory carries the same mapping. This is how Peios meets the source-availability obligations of copyleft licences such as the GPL: the corresponding source of every published binary is available from the place you got the binary, for as long as the binary is distributed.
+
+The promise is about source, so it does not extend to packages that have none. Firmware packages redistribute the vendor's blobs as they are: the blob *is* the artefact, a source package would be the same bytes under another name, and the recipe turns the companion off. Such a package carries no `source_package` reference, and its `license_class` says why. That is the only ground for omitting a source package — licence terms are never one; a package whose licence forbids publishing source is a package Peios does not ship. The rule as it applies to recipe authors is in the peipkg reference, [Building and signing](~peios/peipkg/producing-packages/building-and-signing).
 
 Details of how source packages are produced are in the pekit documentation: [sources and the lockfile](~pekit/recipes/sources).
 
