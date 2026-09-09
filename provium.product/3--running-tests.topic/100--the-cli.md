@@ -249,7 +249,7 @@ provium list --fixtures      # fixtures
 
 ### `provium lsp-setup [dir]`
 
-Write Lua Language Server stubs and a `.luarc.json` into a test directory so the harness globals resolve in your editor — see [the CLI reference](~provium/reference/cli#provium-lsp-setup-dir---force).
+Write Lua Language Server stubs and a `.luarc.json` into a test directory so the harness globals resolve in your editor — see [the CLI reference](~provium/reference/cli#provium-lsp-setup-dir-force).
 
 ## Exit codes
 

@@ -17,8 +17,8 @@ Almost everything in KACS is built from four things:
 
 | Noun | What it is | SDK home |
 |---|---|---|
-| **SID** | The unique binary name of a principal — a user, group, machine, or well-known system actor. | [`security.h`](~peios/sdk-security/security-h-security-descriptors#sids) |
-| **Security descriptor (SD)** | What protects an object: its owner, its group, and the ACLs that grant or deny access. Built from ACEs, each naming a SID and an access mask. | [`security.h`](~peios/sdk-security/security-h-security-descriptors#building-security-descriptors) |
+| **SID** | The unique binary name of a principal — a user, group, machine, or well-known system actor. | [`security.h`](~peios/sdk-security/sids) |
+| **Security descriptor (SD)** | What protects an object: its owner, its group, and the ACLs that grant or deny access. Built from ACEs, each naming a SID and an access mask. | [`security.h`](~peios/sdk-security/building-security-descriptors) |
 | **Token** | The runtime object that carries an identity — a user SID, groups, privileges, an integrity level, claims. Every access decision is made *against a token*. A token is a file descriptor. | [`token.h`](~peios/sdk-tokens/token-h-tokens-and-sessions) |
 | **Access check** | The act of deciding whether a token may perform a desired access on an object, given the object's SD. | [`access.h`](~peios/sdk-access/access-h-access-checks) |
 
@@ -28,9 +28,9 @@ The relationship is simple to state: an **access check** asks whether a **token*
 
 When you need to make an authorisation decision in your own code, the pattern is almost always the same three steps:
 
-1. **Get the subject's token.** Usually the caller's — often via [`peios_token_open_peer`](~peios/sdk-tokens/token-h-tokens-and-sessions#opening-and-creating-tokens) on a socket, so you learn who connected — or your own effective token (`token_fd = -1`).
-2. **Get the object's security descriptor.** You either hold it already, read it off a file with [`peios_file_get_sd`](~peios/sdk-files/file-h-file-security), or build one with a [`peios_sd_builder`](~peios/sdk-security/security-h-security-descriptors#building-security-descriptors).
-3. **Run the check.** [`peios_access_check`](~peios/sdk-access/access-h-access-checks#the-check) tells you whether the desired rights are granted, and exactly which subset was granted.
+1. **Get the subject's token.** Usually the caller's — often via [`peios_token_open_peer`](~peios/sdk-tokens/opening-and-creating-tokens) on a socket, so you learn who connected — or your own effective token (`token_fd = -1`).
+2. **Get the object's security descriptor.** You either hold it already, read it off a file with [`peios_file_get_sd`](~peios/sdk-files/file-h-file-security), or build one with a [`peios_sd_builder`](~peios/sdk-security/building-security-descriptors).
+3. **Run the check.** [`peios_access_check`](~peios/sdk-access/the-check) tells you whether the desired rights are granted, and exactly which subset was granted.
 
 The [checking access](~peios/sdk-access-control/checking-access) guide walks that end to end.
 

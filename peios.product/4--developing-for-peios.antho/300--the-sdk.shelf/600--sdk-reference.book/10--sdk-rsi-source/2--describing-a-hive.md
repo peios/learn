@@ -22,4 +22,4 @@ struct rsi_hive {
 | `root_guid` | The GUID of the hive's root key — the anchor every path in the hive resolves from. |
 | `scope_guid` | For a **private** hive, the scope GUID that bounds who can resolve it; **zero for a global hive**. |
 
-A **global** hive is visible system-wide; a **private** hive is scoped by `scope_guid` and resolvable only by tokens holding that scope (see the token [LCS credentials](~peios/sdk-tokens/token-h-tokens-and-sessions#lcs-registry-credentials)). Set `RSI_HIVE_PRIVATE` and a non-zero `scope_guid` together for a private hive; leave both clear for a global one.
+A **global** hive is visible system-wide; a **private** hive is scoped by `scope_guid` and resolvable only by tokens holding that scope (see the token [LCS credentials](~peios/sdk-tokens/the-token-spec-builder#lcs-registry-credentials)). Set `RSI_HIVE_PRIVATE` and a non-zero `scope_guid` together for a private hive; leave both clear for a global one.

@@ -3,7 +3,7 @@ title: The token-spec builder
 description: Assembling the token wire format with typed setters instead of by hand — core and advanced fields, flags, claims and credentials.
 ---
 
-Minting a token means assembling a 192-byte-header wire format with many optional sections. The builder is the ergonomic path — typed setters, no hand-packed offsets — and follows the standard [sticky-error builder rules](~peios/sdk-conventions/library-conventions#memory-ownership): the setters return `void`, the first error latches, you check `peios_token_builder_error` at the end, and you `_free` every builder.
+Minting a token means assembling a 192-byte-header wire format with many optional sections. The builder is the ergonomic path — typed setters, no hand-packed offsets — and follows the standard [sticky-error builder rules](~peios/sdk-conventions/memory-ownership): the setters return `void`, the first error latches, you check `peios_token_builder_error` at the end, and you `_free` every builder.
 
 ```c
 typedef struct peios_token_builder peios_token_builder;
@@ -43,10 +43,10 @@ void peios_token_builder_default_dacl(peios_token_builder *b, const void *acl, s
 | `_add_group` | Appends a group SID with its `KACS_SE_GROUP_*` attribute word (enabled, mandatory, deny-only, …). Call once per group, in the order you want them indexed. |
 | `_privileges` | The privilege bitmasks: `present` (which privileges the token holds) and `enabled` (which are on). Bits are `KACS_SE_*_PRIVILEGE`. |
 | `_type` | The token `type` (`KACS_TOKEN_TYPE_*` — primary or impersonation) and the impersonation level `imp_level` (`KACS_IMLEVEL_*`). The level is a ceiling on everything derived from the token, so a primary carries a real one — `KACS_IMLEVEL_DELEGATION` for a logon or service token; the kernel currently refuses a primary below `KACS_IMLEVEL_IMPERSONATION`. |
-| `_integrity` | The integrity level, as the RID of an `S-1-16-<rid>` label (see [`peios_integrity_level`](~peios/sdk-security/security-h-security-descriptors#integrity-levels)). |
+| `_integrity` | The integrity level, as the RID of an `S-1-16-<rid>` label (see [`peios_integrity_level`](~peios/sdk-security/sids#integrity-levels)). |
 | `_session` | The logon session id the token references. |
 | `_owner_index` / `_primary_group_index` | Which SID (by [index](#the-index-convention)) is the default owner / primary group. |
-| `_default_dacl` | The default DACL applied to new objects the token creates (ACL bytes, e.g. from a [`peios_acl_builder`](~peios/sdk-security/security-h-security-descriptors#building-acls)). |
+| `_default_dacl` | The default DACL applied to new objects the token creates (ACL bytes, e.g. from a [`peios_acl_builder`](~peios/sdk-security/building-acls)). |
 
 ### Advanced fields
 

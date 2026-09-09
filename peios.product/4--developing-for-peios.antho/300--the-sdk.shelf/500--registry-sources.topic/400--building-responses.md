@@ -11,7 +11,7 @@ Every request gets exactly one response. Choosing the right one is simple once y
 
 ## The rule
 
-> **On failure, always [`rsi_respond_status`](~peios/sdk-rsi-response/rsi-response-h-building-responses#status-only-responses). On success, `rsi_respond_status` too — unless the op is one of the five that carry a payload.**
+> **On failure, always [`rsi_respond_status`](~peios/sdk-rsi-response/status-only-responses). On success, `rsi_respond_status` too — unless the op is one of the five that carry a payload.**
 
 Most operations (`SET_VALUE`, `CREATE_KEY`, the transaction ops, `FLUSH`, …) are status-only in both cases. And *any* op reports a non-OK outcome with `rsi_respond_status`, whatever it is:
 

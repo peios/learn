@@ -158,7 +158,7 @@ sub:include(v)            -- v is now in sub
 provium:remove(v)         -- and gone from root
 ```
 
-`lab:include` accepts a single VM, Bridge, or sub-Lab userdata, or an array of those. It errors on duplicate names, reserved names, and shadow conflicts — the exact error cases are in the [Lab reference](~provium/reference/lab#labincluderesource-or-list).
+`lab:include` accepts a single VM, Bridge, or sub-Lab userdata, or an array of those. It errors on duplicate names, reserved names, and shadow conflicts — the exact error cases are in the [Lab reference](~provium/reference/lab#lab-include-resource-or-list).
 
 `lab:remove` is [graph-state only](~provium/writing-tests/bridges-and-impairments#declared-vs-realised) — the underlying VM, bridge, or sub-lab is NOT shut down. It's removed from the lab's child list. Useful when you want to take ownership of a resource somewhere else.
 
@@ -227,7 +227,7 @@ provium:claim({memory = "3300M", cpus = 6})  -- 3 × (1G + 100M overhead); 3 × 
 
 ## Barriers
 
-`lab:barrier(name, count, timeout?)` is an N-arrival rendezvous: it blocks the caller until `count` callers have hit the same `name`-keyed barrier, then returns `true` for all of them. On timeout it returns `false` — it does not raise. The default timeout, count lock-in, and round-reuse semantics are in the [Lab reference](~provium/reference/lab#labbarriername-count-timeout).
+`lab:barrier(name, count, timeout?)` is an N-arrival rendezvous: it blocks the caller until `count` callers have hit the same `name`-keyed barrier, then returns `true` for all of them. On timeout it returns `false` — it does not raise. The default timeout, count lock-in, and round-reuse semantics are in the [Lab reference](~provium/reference/lab#lab-barrier-name-count-timeout).
 
 ```lua
 -- count = 1 is satisfied immediately: a labelled checkpoint.

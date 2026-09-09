@@ -401,7 +401,7 @@ pekit lock --repin --version 1.2.0
 Commit the lockfile with the recipe. Local sources, dry runs, and git sources
 without a selected version (a bare branch ref is a deliberately moving target)
 are never locked. The file's exact schema is in
-[Supporting files](~pekit/reference/supporting-files#pekitlock); the `lock`
+[Supporting files](~pekit/reference/supporting-files#pekit-lock); the `lock`
 command — including pre-locking versions without building — is in the
 [command-line reference](~pekit/reference/cli).
 
@@ -414,7 +414,7 @@ against the committed `pekit.lock` — and every emitted manifest records the
 provenance of its inputs, recipe, and builder. Both are covered in
 [Signing and provenance](~pekit/running/signing-and-provenance); opt out or
 rename with the recipe's
-[`[source_package]`](~pekit/reference/recipe-format#source_package) table.
+[`[source_package]`](~pekit/reference/recipe-format#source-package) table.
 
 ### Archive extraction
 
@@ -474,7 +474,7 @@ version control. The whole directory ships in the recipe's
 the applied series by construction.
 
 This recipe-owned series is distinct from
-[`[source.url.patch_series]`](#sourceurl), whose patches are upstream inputs:
+[`[source.url.patch_series]`](#source-url), whose patches are upstream inputs:
 remote patches are signature-verified and locked, ship below
 `upstream/patches/`, and are applied before any recipe-owned patches.
 
@@ -506,7 +506,7 @@ Reproducible sources can list the versions they offer upstream; this feeds
   `/`); filter entries by `file_regex`, and extract versions from the matches.
 - **PyPI**: fetch the project's standardized JSON Simple API page once per
   invocation and enumerate the eligible sdists described under
-  [`[source.pypi]`](#sourcepypi).
+  [`[source.pypi]`](#source-pypi).
 
 Local and sourceless recipes cannot enumerate
 (`version_enumeration_unavailable`) — they require an exact version. The

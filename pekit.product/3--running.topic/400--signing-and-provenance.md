@@ -219,7 +219,7 @@ Everything installs under `/usr/src/dist/<name>-<version>/` (with any
 Each binary member's manifest names the source package in
 `build.source_package`, linking every binary to its corresponding source. The
 recipe-side schema is in the
-[recipe format reference](~pekit/reference/recipe-format#source_package).
+[recipe format reference](~pekit/reference/recipe-format#source-package).
 
 ## What publish checks before shipping
 

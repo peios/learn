@@ -36,7 +36,7 @@ peios_event_reader_close(r);
 
 ## Parsing an event
 
-Each `struct peios_event` gives you the trusted metadata by value and the payload as a MessagePack value. Parse it with a [reader](~peios/sdk-msgpack/msgpack-h-messagepack-codec#reader):
+Each `struct peios_event` gives you the trusted metadata by value and the payload as a MessagePack value. Parse it with a [reader](~peios/sdk-msgpack/reader):
 
 ```c
 void handle_event(const struct peios_event *ev)
@@ -83,11 +83,11 @@ for (;;) {
 
 ## Watching for loss
 
-If a consumer falls behind, the producer laps it and events are lost. Poll [`peios_event_reader_lost`](~peios/sdk-events-api/event-h-events-kmes#the-high-level-reader) to see the cumulative count of lost events (derived from sequence gaps). A rising number means you aren't draining fast enough — process events more cheaply, hand off to a worker, or accept the loss deliberately.
+If a consumer falls behind, the producer laps it and events are lost. Poll [`peios_event_reader_lost`](~peios/sdk-events-api/consuming-events#the-high-level-reader) to see the cumulative count of lost events (derived from sequence gaps). A rising number means you aren't draining fast enough — process events more cheaply, hand off to a worker, or accept the loss deliberately.
 
 ## The low-level ring
 
-If the reader's loop doesn't fit your event model — you want the ring integrated into an existing `epoll`/state-machine loop, driving the read position yourself — the [low-level ring API](~peios/sdk-events-api/event-h-events-kmes#the-low-level-ring) exposes the mapping directly: `peios_event_ring_map`, the position accessors (`write_pos`/`tail_pos`/`generation`), `peios_event_ring_event_at` to parse a slot, and `peios_event_ring_wait` to sleep. It's more bookkeeping (you own the read position and the empty/lapping/generation checks) for more control. Reach for it only when you need to; the high-level reader is the right default.
+If the reader's loop doesn't fit your event model — you want the ring integrated into an existing `epoll`/state-machine loop, driving the read position yourself — the [low-level ring API](~peios/sdk-events-api/consuming-events#the-low-level-ring) exposes the mapping directly: `peios_event_ring_map`, the position accessors (`write_pos`/`tail_pos`/`generation`), `peios_event_ring_event_at` to parse a slot, and `peios_event_ring_wait` to sleep. It's more bookkeeping (you own the read position and the empty/lapping/generation checks) for more control. Reach for it only when you need to; the high-level reader is the right default.
 
 ## Next
 

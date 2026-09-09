@@ -3,7 +3,7 @@ title: Building ACLs
 description: Assembling an ordered list of ACEs with an ACL builder — adding each ACE type, and taking the serialised bytes.
 ---
 
-An **ACL** is an ordered list of ACEs. You assemble one with a `peios_acl_builder` — create it, add ACEs, take the serialised bytes, free it. Builders follow the [sticky-error rules](~peios/sdk-conventions/library-conventions#memory-ownership): the adders return `void`, the first error latches, and you check `peios_acl_builder_error` at the end.
+An **ACL** is an ordered list of ACEs. You assemble one with a `peios_acl_builder` — create it, add ACEs, take the serialised bytes, free it. Builders follow the [sticky-error rules](~peios/sdk-conventions/memory-ownership): the adders return `void`, the first error latches, and you check `peios_acl_builder_error` at the end.
 
 ```c
 typedef struct peios_acl_builder peios_acl_builder;

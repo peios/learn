@@ -31,7 +31,7 @@ The trusted metadata is the point of KMES: the `timestamp`, the identity GUIDs (
 int peios_event_attach(uint32_t cpu_id, uint64_t *capacity_out);
 ```
 
-The low-level primitive: attach to CPU `cpu_id`'s ring buffer, returning a fd and writing the data-region capacity to `*capacity_out`. **Discover the CPU count** by counting up from `0` until `peios_event_attach` returns `-1` with `errno == EINVAL`. Requires `SeSecurityPrivilege` (`EPERM` otherwise). You then `mmap` the fd via [`peios_event_ring_map`](#low-level-ring). Most callers should use the high-level reader instead, which does the attach and mmap for you.
+The low-level primitive: attach to CPU `cpu_id`'s ring buffer, returning a fd and writing the data-region capacity to `*capacity_out`. **Discover the CPU count** by counting up from `0` until `peios_event_attach` returns `-1` with `errno == EINVAL`. Requires `SeSecurityPrivilege` (`EPERM` otherwise). You then `mmap` the fd via [`peios_event_ring_map`](#the-low-level-ring). Most callers should use the high-level reader instead, which does the attach and mmap for you.
 
 ### The high-level reader
 

@@ -14,7 +14,7 @@ To keep the fragments readable, most error checks are elided here — every call
 
 ## The native open
 
-[`peios_file_open`](~peios/sdk-files/file-h-file-security#opening-a-file) is shaped like `NtCreateFile`: you state the access you want, what to do about existence (the *disposition*), any create options, and — when creating — the security descriptor to stamp on the new file. It returns an ordinary Linux fd whose **granted access is fixed for the fd's lifetime**, which means you can safely hand it to another process by `SCM_RIGHTS`, `dup`, or across `exec`: the fd carries exactly the access it was opened with.
+[`peios_file_open`](~peios/sdk-files/opening-a-file) is shaped like `NtCreateFile`: you state the access you want, what to do about existence (the *disposition*), any create options, and — when creating — the security descriptor to stamp on the new file. It returns an ordinary Linux fd whose **granted access is fixed for the fd's lifetime**, which means you can safely hand it to another process by `SCM_RIGHTS`, `dup`, or across `exec`: the fd carries exactly the access it was opened with.
 
 Open-or-create a file, readable and writable, stamping a creator SD if it's new:
 
@@ -59,7 +59,7 @@ if (peios_sd_view_dacl(&v, &dacl) == 0) {
 free(sd);
 ```
 
-If you already hold a file fd, use the fd-targeted [`peios_fd_get_sd`](~peios/sdk-files/file-h-file-security#by-fd) instead of a path — no second path resolution, and for a normal file fd the check uses the access already baked in at open.
+If you already hold a file fd, use the fd-targeted [`peios_fd_get_sd`](~peios/sdk-files/reading-and-writing-a-file-s-security-descriptor#by-fd) instead of a path — no second path resolution, and for a normal file fd the check uses the access already baked in at open.
 
 ## Changing a file's security descriptor
 
@@ -75,7 +75,7 @@ peios_file_set_sd(AT_FDCWD, "state.db", KACS_SECINFO_DACL, sd_bytes, sd_len, 0);
 peios_sd_builder_free(b);
 ```
 
-Because only `KACS_SECINFO_DACL` is selected, the owner, group, and SACL are left exactly as they were. The [`security.h` builders](~peios/sdk-security/security-h-security-descriptors#building-security-descriptors) are how you assemble the SD to apply.
+Because only `KACS_SECINFO_DACL` is selected, the owner, group, and SACL are left exactly as they were. The [`security.h` builders](~peios/sdk-security/building-security-descriptors) are how you assemble the SD to apply.
 
 ## Pre-flighting an open
 

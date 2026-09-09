@@ -12,7 +12,7 @@ This guide walks a complete access decision: you have an object to protect, a ca
 
 ## When to use this
 
-Reach for [`peios_access_check`](~peios/sdk-access/access-h-access-checks#the-check) when **your** program is the resource manager — you own something that isn't a kernel object (a document, an API route, a record) and you want to gate it with Peios identities and rules. For actual kernel objects, don't pre-check; just perform the operation and let the kernel enforce.
+Reach for [`peios_access_check`](~peios/sdk-access/the-check) when **your** program is the resource manager — you own something that isn't a kernel object (a document, an API route, a record) and you want to gate it with Peios identities and rules. For actual kernel objects, don't pre-check; just perform the operation and let the kernel enforce.
 
 Remember the check is **advisory**: it computes the answer, you enforce it.
 
@@ -38,7 +38,7 @@ size_t sd_len;
 const void *sd_bytes = peios_sd_builder_bytes(sd, &sd_len);
 ```
 
-(You can also write the descriptor as [SDDL text](~peios/sdk-security/security-h-security-descriptors#sddl-text-codec) and parse it — often easier when the policy is fixed.)
+(You can also write the descriptor as [SDDL text](~peios/sdk-security/sddl-text-codec) and parse it — often easier when the policy is fixed.)
 
 ## Step 2 — identify the subject
 
@@ -80,11 +80,11 @@ The key idea: a denial is **not** an error to log and bail on — it's the expec
 
 ## Per-property checks
 
-If your object has properties or property-sets with their own object ACEs, evaluate the whole tree in one call with [`peios_access_check_list`](~peios/sdk-access/access-h-access-checks#the-object-type-list-variant): supply an object-type tree and get one result per node, so you learn (for instance) that a caller may read most of an object but not one protected field — without a separate check per field.
+If your object has properties or property-sets with their own object ACEs, evaluate the whole tree in one call with [`peios_access_check_list`](~peios/sdk-access/the-object-type-list-variant): supply an object-type tree and get one result per node, so you learn (for instance) that a caller may read most of an object but not one protected field — without a separate check per field.
 
 ## Auditing a decision
 
-Pass a non-`NULL` [`peios_access_audit`](~peios/sdk-access/access-h-access-checks#audit-outputs) to learn what a `SYSTEM_AUDIT` ACE match would log, and whether a *staged* central access policy would decide differently — the signal you watch when rolling out a policy change.
+Pass a non-`NULL` [`peios_access_audit`](~peios/sdk-access/audit-outputs) to learn what a `SYSTEM_AUDIT` ACE match would log, and whether a *staged* central access policy would decide differently — the signal you watch when rolling out a policy change.
 
 ## Next
 

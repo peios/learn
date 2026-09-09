@@ -17,9 +17,9 @@ under `Machine\System\Network`. There is no rule language file, no
 every change there becomes a new **policy generation** within a fraction
 of a second. The interface layer is judged by netd, the network manager,
 from the same key and by the same rules. The
-[PNP viewer](../500--the-pnp-viewer.md) is the place to watch that
+[PNP viewer](~peios/networking/the-pnp-viewer) is the place to watch that
 happen and to write rules by hand; the
-[reference](../420--network-policy-reference.md) lists every fact,
+[reference](~peios/networking/network-policy-reference) lists every fact,
 operator and action.
 
 ## Rules are keys
@@ -319,7 +319,7 @@ from. That is exactly what the rule says, and PNP will do it.
 
 Every evaluation emits an event on `/dev/peios-pnp` carrying the verdict,
 the attributing rule's path, the layer and seat, and how many effects
-ran; the [viewer](../500--the-pnp-viewer.md) paints those onto the wire,
+ran; the [viewer](~peios/networking/the-pnp-viewer) paints those onto the wire,
 lists every live flow with its sentence, and shows the counter store
 live. A packet answered by a cached sentence emits no event — there was
 no evaluation — and is counted instead. `REPORT` effects become KMES

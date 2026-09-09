@@ -33,7 +33,7 @@ close(tok);
 
 `peios_token_open_self` gives you the *effective* token — if your thread is impersonating, that's the impersonated identity. Pass `KACS_TOKEN_OPEN_REAL` in the flags to get your process's real primary token regardless. The `access` argument is the handle rights you want; `KACS_TOKEN_QUERY` is enough to read.
 
-Group SIDs and other list-valued classes come back as buffers you parse with the [`security.h` views](~peios/sdk-security/security-h-security-descriptors#sid-and-attributes-arrays): read `CLASS_GROUPS` with [`peios_token_query`](~peios/sdk-tokens/token-h-tokens-and-sessions#query), then `peios_sid_array_parse` it.
+Group SIDs and other list-valued classes come back as buffers you parse with the [`security.h` views](~peios/sdk-security/parsing-views#sid-and-attributes-arrays): read `CLASS_GROUPS` with [`peios_token_query`](~peios/sdk-tokens/query), then `peios_sid_array_parse` it.
 
 ## Who is calling me?
 
@@ -64,7 +64,7 @@ peios_token_revert();   /* back to your own identity */
 close(caller);
 ```
 
-Always pair `peios_token_impersonate` with [`peios_token_revert`](~peios/sdk-tokens/token-h-tokens-and-sessions#impersonation-and-installation), ideally in the cleanup path, so a failure partway through can't leave your thread wearing someone else's identity. `peios_token_revert` is a safe no-op if you weren't impersonating.
+Always pair `peios_token_impersonate` with [`peios_token_revert`](~peios/sdk-tokens/adjust-and-transform#impersonation-and-installation), ideally in the cleanup path, so a failure partway through can't leave your thread wearing someone else's identity. `peios_token_revert` is a safe no-op if you weren't impersonating.
 
 The full flow for a request handler is: `accept` → `peios_token_open_peer` → `peios_token_impersonate` → serve the request → `peios_token_revert` → `close`. When the handler runs start to finish on one thread and has no other use for the token, `peios_token_impersonate_peer(conn)` collapses the open, impersonate and close into one call.
 
@@ -128,11 +128,11 @@ struct peios_token_restrict spec = {
 int weak = peios_token_restrict(my_primary, &spec);
 ```
 
-The result is a strictly less-powerful token. Combined with [integrity levels](~peios/sdk-security/security-h-security-descriptors#integrity-levels) and confinement (both set when [minting a token](~peios/sdk-tokens/token-h-tokens-and-sessions#the-token-spec-builder)), this is the basis of sandboxing on Peios.
+The result is a strictly less-powerful token. Combined with [integrity levels](~peios/sdk-security/sids#integrity-levels) and confinement (both set when [minting a token](~peios/sdk-tokens/the-token-spec-builder)), this is the basis of sandboxing on Peios.
 
 ## Minting tokens
 
-Creating a token from scratch requires `SeCreateTokenPrivilege` and is the province of authentication authorities, not ordinary programs. When you do need it, the [token-spec builder](~peios/sdk-tokens/token-h-tokens-and-sessions#the-token-spec-builder) is the ergonomic path — typed setters for the user SID, groups, privileges, integrity, claims, and the rest, then `peios_token_builder_create`. Mind the [index convention](~peios/sdk-tokens/token-h-tokens-and-sessions#the-index-convention) for owner/primary-group references, and don't add the logon SID yourself — the kernel injects it.
+Creating a token from scratch requires `SeCreateTokenPrivilege` and is the province of authentication authorities, not ordinary programs. When you do need it, the [token-spec builder](~peios/sdk-tokens/the-token-spec-builder) is the ergonomic path — typed setters for the user SID, groups, privileges, integrity, claims, and the rest, then `peios_token_builder_create`. Mind the [index convention](~peios/sdk-tokens/the-token-spec-builder#the-index-convention) for owner/primary-group references, and don't add the logon SID yourself — the kernel injects it.
 
 ## Next
 

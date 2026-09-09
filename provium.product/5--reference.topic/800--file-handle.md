@@ -18,7 +18,7 @@ A File is an open guest-side file handle, returned by `vm:open_file(path, mode)`
 | `vm:open_file(path, mode)` | New file handle in the guest. |
 | `worker:open_file(path, mode)` | Same but allocated under a worker's namespace. |
 
-Mode table fields: `read`, `write`, `create`, `truncate`, `append`, `exclusive`, `perm`. See [VM open_file](~provium/reference/vm#vmopen-filepath-mode-table) for the full mode-table reference.
+Mode table fields: `read`, `write`, `create`, `truncate`, `append`, `exclusive`, `perm`. See [VM open_file](~provium/reference/vm#vm-open-file-path-mode-table) for the full mode-table reference.
 
 At least one of `read`, `write`, or `append` must be true.
 

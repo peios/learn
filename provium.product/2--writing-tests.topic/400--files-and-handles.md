@@ -51,7 +51,7 @@ Relative `host_path` is resolved against the fixture (or helper) file's director
 vm:push_file("../big-corpus.tar", "/data.tar", {auto_dep = false})
 ```
 
-The auto-fold relies on static scanning of the call site, so non-literal host paths (variables, concatenation) are NOT tracked. Use [`lab:depends_on_file`](~provium/reference/lab#labdepends-on-filehost-path) with a literal string to declare them explicitly. See [Fixtures and dependencies — External host-file deps](~provium/running-tests/fixtures-and-dependencies#external-host-file-deps) for the full model.
+The auto-fold relies on static scanning of the call site, so non-literal host paths (variables, concatenation) are NOT tracked. Use [`lab:depends_on_file`](~provium/reference/lab#lab-depends-on-file-host-path) with a literal string to declare them explicitly. See [Fixtures and dependencies — External host-file deps](~provium/running-tests/fixtures-and-dependencies#external-host-file-deps) for the full model.
 
 Mode bits follow `write_file`'s agent defaults — `vm:run("chmod +x …")` after the push if you need executable bits.
 
@@ -66,7 +66,7 @@ print(m.perm)        -- POSIX mode bits
 print(m.entry_type)  -- "file", "directory", "symlink", …
 ```
 
-The full field table (including the complete `entry_type` value list) is in the [VM reference](~provium/reference/vm#vmstatpath). Two fields carry the modification time: use `mtime_ns` for exact comparisons; use `mtime` (float seconds) when "around what o'clock" is enough.
+The full field table (including the complete `entry_type` value list) is in the [VM reference](~provium/reference/vm#vm-stat-path). Two fields carry the modification time: use `mtime_ns` for exact comparisons; use `mtime` (float seconds) when "around what o'clock" is enough.
 
 `perm` is in the POSIX range. Lua 5.4 doesn't accept `0o…` literals — use decimal or hex (`0x180` for 0o600). `4095` is `0o7777`, the upper bound.
 
@@ -119,7 +119,7 @@ At least one of `read`, `write`, `append` must be true; an empty mode table erro
 local h = vm:open_file("/etc/secret", {write=true, create=true, truncate=true, perm=0x180})
 ```
 
-The full mode-table reference (including `append` and `exclusive` / `O_EXCL`) is on [vm:open_file](~provium/reference/vm#vmopen-filepath-mode-table).
+The full mode-table reference (including `append` and `exclusive` / `O_EXCL`) is on [vm:open_file](~provium/reference/vm#vm-open-file-path-mode-table).
 
 ### Reading
 
@@ -152,7 +152,7 @@ h:seek(-1, "end")             -- 1 byte before EOF
 h:tell()                      -- current offset
 ```
 
-`tell()` reports the authoritative agent-side position, not a host-side cache — the [File reference](~provium/reference/file-handle#filetell) explains how.
+`tell()` reports the authoritative agent-side position, not a host-side cache — the [File reference](~provium/reference/file-handle#file-tell) explains how.
 
 ### Closing
 
@@ -188,7 +188,7 @@ local line = stream:read_until("\n", "5s")
 t:assert(line:find("hello"))
 ```
 
-`opts.start` controls the starting position — `"end"` (the default: only bytes appended after the call), `"beginning"` (replay from byte 0, then continue tailing), or a byte offset. Negative-offset and float handling are in the [VM reference](~provium/reference/vm#vmtail-filepath-opts).
+`opts.start` controls the starting position — `"end"` (the default: only bytes appended after the call), `"beginning"` (replay from byte 0, then continue tailing), or a byte offset. Negative-offset and float handling are in the [VM reference](~provium/reference/vm#vm-tail-file-path-opts).
 
 ### `file:tail_stream()`
 
@@ -291,7 +291,7 @@ local results = vm:batch(function(b)
 end)
 ```
 
-Each entry in `results` is `{ok=value}` or `{err=msg}`. A failure on one op doesn't short-circuit the rest. See [VM batch](~provium/reference/vm#vmbatchfn) for the per-op return shape.
+Each entry in `results` is `{ok=value}` or `{err=msg}`. A failure on one op doesn't short-circuit the rest. See [VM batch](~provium/reference/vm#vm-batch-fn) for the per-op return shape.
 
 ## See also
 

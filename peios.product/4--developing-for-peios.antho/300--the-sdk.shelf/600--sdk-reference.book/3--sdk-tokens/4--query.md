@@ -10,7 +10,7 @@ ssize_t peios_token_query(int fd, uint32_t info_class, void *buf, size_t cap);
 ssize_t peios_token_user(int fd, void *sid_buf, size_t cap);   /* CLASS_USER */
 ```
 
-- `peios_token_query` reads the class `info_class` (`KACS_TOKEN_CLASS_*`) into `buf` using the [two-call protocol](~peios/sdk-conventions/library-conventions#the-two-call-buffer-protocol). Classes that return SID arrays or ACLs are parsed afterward with the [`<peios/security.h>` views](~peios/sdk-security/security-h-security-descriptors#parsing-views) — e.g. read `CLASS_GROUPS` into a buffer, then `peios_sid_array_parse` it.
+- `peios_token_query` reads the class `info_class` (`KACS_TOKEN_CLASS_*`) into `buf` using the [two-call protocol](~peios/sdk-conventions/the-two-call-buffer-protocol). Classes that return SID arrays or ACLs are parsed afterward with the [`<peios/security.h>` views](~peios/sdk-security/parsing-views) — e.g. read `CLASS_GROUPS` into a buffer, then `peios_sid_array_parse` it.
 - `peios_token_user` is the same two-call read specialised to the user SID (`CLASS_USER`): probe with `sid_buf == NULL, cap == 0`, then retrieve.
 
 For the common scalar classes there are typed helpers that write through a mandatory non-`NULL` out-pointer and return `0` / `-1`:

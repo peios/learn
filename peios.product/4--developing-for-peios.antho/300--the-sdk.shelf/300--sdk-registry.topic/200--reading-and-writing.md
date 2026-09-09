@@ -7,7 +7,7 @@ related:
   - peios/sdk-registry/watching-and-transactions
 ---
 
-This guide covers the bread-and-butter registry operations. The full call signatures and error sets are in [`registry.h`](~peios/sdk-registry-api/registry-h-the-registry-lcs); here we string them together. Recall the registry's [descriptor-struct buffer convention](~peios/sdk-registry-api/registry-h-the-registry-lcs#the-buffer-convention-here): reads fill `*_cap`/`*_len` fields and a zero-capacity buffer probes.
+This guide covers the bread-and-butter registry operations. The full call signatures and error sets are in [`registry.h`](~peios/sdk-registry-api/registry-h-the-registry-lcs); here we string them together. Recall the registry's [descriptor-struct buffer convention](~peios/sdk-registry-api/the-buffer-convention-here): reads fill `*_cap`/`*_len` fields and a zero-capacity buffer probes.
 
 The fragments below elide some error checks for brevity — every call returns `-1` with `errno` on failure, and real code must check each one (see [Library conventions](~peios/sdk-conventions/library-conventions)).
 
@@ -24,7 +24,7 @@ if (key < 0) {
 }
 ```
 
-`parent_fd == -1` means `path` is absolute. To open relative to a key you already hold, pass that key fd as the parent. Use [`peios_reg_create_key`](~peios/sdk-registry-api/registry-h-the-registry-lcs#opening-and-creating-keys) instead when the key might not exist yet — it opens-or-creates and reports which happened.
+`parent_fd == -1` means `path` is absolute. To open relative to a key you already hold, pass that key fd as the parent. Use [`peios_reg_create_key`](~peios/sdk-registry-api/opening-and-creating-keys) instead when the key might not exist yet — it opens-or-creates and reports which happened.
 
 ## Reading the effective value
 
@@ -48,7 +48,7 @@ if (peios_reg_query_value(key, "Timeout", 7, -1, &v) == 0) {
 
 The `name_len` is explicit (value names are length-counted; `0` reads the key's default value). Pass a transaction fd as the fourth argument to read within a transaction, or `-1` for none.
 
-To read *every* value at once, use [`peios_reg_query_values_batch`](~peios/sdk-registry-api/registry-h-the-registry-lcs#enumerating-values) — one call fills a buffer with all effective values in a packed record format. To walk them one at a time, loop `peios_reg_enum_value` from index `0` until `ENOENT`.
+To read *every* value at once, use [`peios_reg_query_values_batch`](~peios/sdk-registry-api/values#enumerating-values) — one call fills a buffer with all effective values in a packed record format. To walk them one at a time, loop `peios_reg_enum_value` from index `0` until `ENOENT`.
 
 ## Writing a value
 
@@ -63,7 +63,7 @@ int rc = peios_reg_set_value(key, "Timeout", 7, REG_DWORD,
                              0);           /* no CAS guard */
 ```
 
-Writing to a higher-precedence layer overrides lower ones without destroying them; [deleting](~peios/sdk-registry-api/registry-h-the-registry-lcs#writing-deleting-tombstoning) that layer's entry later lets the lower value re-emerge.
+Writing to a higher-precedence layer overrides lower ones without destroying them; [deleting](~peios/sdk-registry-api/values#writing-deleting-tombstoning) that layer's entry later lets the lower value re-emerge.
 
 ## Safe updates with compare-and-swap
 
@@ -90,7 +90,7 @@ Passing `expected_seq == 0` disables the guard (an unconditional write).
 
 ## Cleaning up
 
-Close key fds with `close()` when done. Values you wrote with auto-commit (`txn_fd == -1`) are already durable to the layer; to force the source to persist a hive's pending writes at a known point, call [`peios_reg_flush`](~peios/sdk-registry-api/registry-h-the-registry-lcs#watching-for-changes).
+Close key fds with `close()` when done. Values you wrote with auto-commit (`txn_fd == -1`) are already durable to the layer; to force the source to persist a hive's pending writes at a known point, call [`peios_reg_flush`](~peios/sdk-registry-api/subkeys-metadata-and-watches#watching-for-changes).
 
 ## Next
 

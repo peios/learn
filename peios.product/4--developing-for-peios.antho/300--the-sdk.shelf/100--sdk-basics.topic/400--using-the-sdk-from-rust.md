@@ -35,7 +35,7 @@ Two places, and the split is deliberate:
 
   This is the reference precisely *because* it is generated from the code — it can never fall out of sync with the actual method signatures and types the way hand-written prose would.
 
-- **The concepts live in these docs.** The *what* and *why* — what a token is, how the [two-call protocol](~peios/sdk-conventions/library-conventions#the-two-call-buffer-protocol) works, how an [access check](~peios/sdk-access-control/checking-access) reaches a verdict, the [RSI source model](~peios/registry-sources/overview) — are identical whether you call from C or Rust, and they are documented once, here. The safe crate mirrors the concept headers, so each learn section maps to a module:
+- **The concepts live in these docs.** The *what* and *why* — what a token is, how the [two-call protocol](~peios/sdk-conventions/the-two-call-buffer-protocol) works, how an [access check](~peios/sdk-access-control/checking-access) reaches a verdict, the [RSI source model](~peios/registry-sources/overview) — are identical whether you call from C or Rust, and they are documented once, here. The safe crate mirrors the concept headers, so each learn section maps to a module:
 
   | Rust module | Concepts in |
   |---|---|

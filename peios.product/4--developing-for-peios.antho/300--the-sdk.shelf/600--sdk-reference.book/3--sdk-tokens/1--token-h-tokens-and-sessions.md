@@ -7,7 +7,7 @@ description: What token.h covers — opening, creating and adjusting tokens, que
 
 **A token handle is a file descriptor.** Every open/create/duplicate call returns a raw `int` fd, `O_CLOEXEC` by default, that you close with `close()`. The `access` argument several calls take is the desired *handle-right* mask (`KACS_TOKEN_*`), access-checked against the token's own security descriptor and cached on the fd — a handle only lets you do what its rights allow.
 
-The wire constants (`KACS_TOKEN_*`, `KACS_IMLEVEL_*`, `KACS_SE_*_PRIVILEGE`, `KACS_TOKEN_CLASS_*`, `KACS_LOGON_TYPE_*`) and the ioctl arg structs (`kacs_priv_entry`, `kacs_group_entry`) come from `<pkm/token.h>`. Query payloads that are SID arrays or ACLs are read with the [views in `<peios/security.h>`](~peios/sdk-security/security-h-security-descriptors#parsing-views).
+The wire constants (`KACS_TOKEN_*`, `KACS_IMLEVEL_*`, `KACS_SE_*_PRIVILEGE`, `KACS_TOKEN_CLASS_*`, `KACS_LOGON_TYPE_*`) and the ioctl arg structs (`kacs_priv_entry`, `kacs_group_entry`) come from `<pkm/token.h>`. Query payloads that are SID arrays or ACLs are read with the [views in `<peios/security.h>`](~peios/sdk-security/parsing-views).
 
 The module divides into: **opening & creating**, the **token-spec builder**, **query**, **adjust/transform**, and **logon sessions**.
 

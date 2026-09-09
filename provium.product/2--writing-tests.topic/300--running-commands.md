@@ -156,7 +156,7 @@ proc:kill("usr1")            -- SIGUSR1
 proc:signal("usr2")          -- alias for kill(); reads better for non-fatal signals
 ```
 
-Signals are accepted by friendly name (`term`, `kill`, `usr1`, …), with a `sig` prefix (`sigterm`), or as a bare integer. The full recognised-name list is in the [Process reference](~provium/reference/process#prockillsig).
+Signals are accepted by friendly name (`term`, `kill`, `usr1`, …), with a `sig` prefix (`sigterm`), or as a bare integer. The full recognised-name list is in the [Process reference](~provium/reference/process#proc-kill-sig).
 
 ### Inspecting the process
 
@@ -176,7 +176,7 @@ proc:wait("5s")          -- wait at most 5 seconds
 proc:wait(0.5)           -- 500 ms
 ```
 
-Don't pass `0` — the harness rejects it and points you at `proc:status()` for non-blocking polling. The [Process reference](~provium/reference/process#procwaittimeout) explains why a literal-zero timeout is a footgun.
+Don't pass `0` — the harness rejects it and points you at `proc:status()` for non-blocking polling. The [Process reference](~provium/reference/process#proc-wait-timeout) explains why a literal-zero timeout is a footgun.
 
 ## Workers: parallel commands in the same VM
 
@@ -196,7 +196,7 @@ p2:wait("10s"):assert_ok()
 
 Workers expose the same surface as the VM (`run`, `run_async`, `open_file`, `syscall`, `kill`, `join`, `close`). Files and processes allocated under a worker live in the worker's namespace; cleanup is per-worker.
 
-For coordination between workers' guest processes, use a guest-side primitive (file on a shared mount, fifo, network message). [`lab:barrier(name, count, timeout?)`](~provium/reference/lab#labbarriername-count-timeout) is a host-side rendezvous and can't be reached from inside a guest — see [Labs and scope — Barriers](~provium/writing-tests/labs-and-scope#barriers).
+For coordination between workers' guest processes, use a guest-side primitive (file on a shared mount, fifo, network message). [`lab:barrier(name, count, timeout?)`](~provium/reference/lab#lab-barrier-name-count-timeout) is a host-side rendezvous and can't be reached from inside a guest — see [Labs and scope — Barriers](~provium/writing-tests/labs-and-scope#barriers).
 
 ## Common patterns
 

@@ -51,11 +51,11 @@ int rsi_request_enum_children(const struct rsi_request *req, struct rsi_enum_chi
 
 | Op | You must | Reply with |
 |---|---|---|
-| `LOOKUP` | Resolve `child_name` under `parent_guid` across your layers. | [`rsi_respond_lookup`](~peios/sdk-rsi-response/rsi-response-h-building-responses#lookup) |
+| `LOOKUP` | Resolve `child_name` under `parent_guid` across your layers. | [`rsi_respond_lookup`](~peios/sdk-rsi-response/payload-bearing-responses#lookup) |
 | `CREATE_ENTRY` | Bind `child_name` → `child_guid` in `layer_name` at `sequence`. | status |
 | `HIDE_ENTRY` | Place a tombstone for `child_name` in `layer_name`. | status |
 | `DELETE_ENTRY` | Remove `child_name`'s entry in `layer_name`. | status |
-| `ENUM_CHILDREN` | List every child of `parent_guid`. | [`rsi_respond_enum_children`](~peios/sdk-rsi-response/rsi-response-h-building-responses#enum_children) |
+| `ENUM_CHILDREN` | List every child of `parent_guid`. | [`rsi_respond_enum_children`](~peios/sdk-rsi-response/payload-bearing-responses#enum-children) |
 
 ### Key operations
 
@@ -91,7 +91,7 @@ int rsi_request_write_key(const struct rsi_request *req, struct rsi_write_key *o
 | Op | You must | Reply with |
 |---|---|---|
 | `CREATE_KEY` | Store the metadata record for `guid` (its name, parent, `sd`, and the `volatile_key`/`symlink` flags). | status |
-| `READ_KEY` | Return the metadata of `guid`. | [`rsi_respond_read_key`](~peios/sdk-rsi-response/rsi-response-h-building-responses#read_key) |
+| `READ_KEY` | Return the metadata of `guid`. | [`rsi_respond_read_key`](~peios/sdk-rsi-response/payload-bearing-responses#read-key) |
 | `DROP_KEY` | Delete the metadata record for `guid`. | status |
 | `WRITE_KEY` | Update **only** the fields selected in `field_mask` — the SD when `RSI_WRITE_KEY_FIELD_SD` is set, the `last_write_time` when its bit is set — leaving the rest untouched. | status |
 
@@ -144,7 +144,7 @@ int rsi_request_set_blanket_tombstone(const struct rsi_request *req,
 
 | Op | You must | Reply with |
 |---|---|---|
-| `QUERY_VALUES` | Return `value_name` — or every value when `query_all` is `1` (then `value_name` is ignored) — plus any blanket tombstones. | [`rsi_respond_query_values`](~peios/sdk-rsi-response/rsi-response-h-building-responses#query_values) |
+| `QUERY_VALUES` | Return `value_name` — or every value when `query_all` is `1` (then `value_name` is ignored) — plus any blanket tombstones. | [`rsi_respond_query_values`](~peios/sdk-rsi-response/payload-bearing-responses#query-values) |
 | `SET_VALUE` | Store `value_name` of `value_type` in `layer_name`. Honour `expected_sequence` as a compare-and-swap guard (`0` disables it) — reject with a non-OK status if the current sequence differs. | status |
 | `DELETE_VALUE_ENTRY` | Remove `value_name`'s entry in `layer_name`. | status |
 | `SET_BLANKET_TOMBSTONE` | Set (`set == 1`) or clear a blanket tombstone on `layer_name`, masking all lower values at once. | status |
@@ -187,5 +187,5 @@ int rsi_request_flush(const struct rsi_request *req, struct rsi_name *out);
 
 | Op | You must | Reply with |
 |---|---|---|
-| `DELETE_LAYER` | Remove the entire named layer, reporting the GUIDs of any keys it orphaned. | [`rsi_respond_delete_layer`](~peios/sdk-rsi-response/rsi-response-h-building-responses#delete_layer) |
+| `DELETE_LAYER` | Remove the entire named layer, reporting the GUIDs of any keys it orphaned. | [`rsi_respond_delete_layer`](~peios/sdk-rsi-response/payload-bearing-responses#delete-layer) |
 | `FLUSH` | Durably persist pending writes for the named hive, replying only once persistence is confirmed. | status |

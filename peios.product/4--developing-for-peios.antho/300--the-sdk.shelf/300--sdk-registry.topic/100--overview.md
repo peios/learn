@@ -27,7 +27,7 @@ This is what lets configuration compose cleanly:
 
 They all coexist on the same key. Reading gives you the winner; writing targets a *specific* layer (or the base layer by default). And because it's layers rather than destructive overwrites, removing a higher layer's entry lets the lower one **re-emerge** — you can override and then un-override without losing the original.
 
-**Tombstones** are the tool for "hide, don't delete": a per-value tombstone masks lower layers for one value, and a blanket tombstone masks all lower values of a key on a layer at once. Keys have the same idea via [hide](~peios/sdk-registry-api/registry-h-the-registry-lcs#deleting-and-hiding-keys).
+**Tombstones** are the tool for "hide, don't delete": a per-value tombstone masks lower layers for one value, and a blanket tombstone masks all lower values of a key on a layer at once. Keys have the same idea via [hide](~peios/sdk-registry-api/subkeys-metadata-and-watches#deleting-and-hiding-keys).
 
 ## Reads report where the answer came from
 

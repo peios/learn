@@ -9,7 +9,7 @@ related:
 
 The complete vocabulary of PNP rules as the kernel reads them. The
 concepts — layers, the forest, the laws — are in
-[Network policy](../410--network-policy.md); this page is the lookup
+[Network policy](~peios/networking/network-policy); this page is the lookup
 table.
 
 ## Registry layout

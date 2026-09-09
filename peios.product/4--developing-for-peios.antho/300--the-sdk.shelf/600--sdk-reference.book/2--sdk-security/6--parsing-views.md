@@ -3,7 +3,7 @@ title: Parsing — views
 description: Reading a descriptor, ACL or ACE without copying — the caller-allocated view structs and what each exposes.
 ---
 
-To *read* a security descriptor, ACL, or ACE you use zero-copy **views**. A view is a caller-allocated, opaque, stack-friendly struct that borrows the buffer you parse — see the [view rules](~peios/sdk-conventions/library-conventions#memory-ownership). Every accessor that yields a SID, a nested ACL, or a blob returns a pointer *into the original buffer*, so that buffer must outlive the view and everything derived from it.
+To *read* a security descriptor, ACL, or ACE you use zero-copy **views**. A view is a caller-allocated, opaque, stack-friendly struct that borrows the buffer you parse — see the [view rules](~peios/sdk-conventions/memory-ownership). Every accessor that yields a SID, a nested ACL, or a blob returns a pointer *into the original buffer*, so that buffer must outlive the view and everything derived from it.
 
 ```c
 typedef struct peios_sd_view        { uint64_t _opaque[8]; } peios_sd_view;

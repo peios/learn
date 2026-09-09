@@ -274,7 +274,7 @@ repository keys.
 
 ### Binary signing
 
-A build target's [`sign` table](~pekit/reference/recipe-format#target-sign)
+A build target's [`sign` table](~pekit/reference/recipe-format#build-name-sign-target-sign)
 also reads the keyring, but through entries the recipe names rather than a
 fixed one: `"bin/peinit" = "tcb.priv"` signs that output file with the key
 whose path the `tcb.priv` leaf holds. Any leaf will do; the convention in

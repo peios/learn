@@ -75,7 +75,7 @@ Open a [Tail](~provium/reference/streams) stream subscribed to captured stdout /
 
 The returned Tail's `StreamMeta` is pre-filled with `kind="proc_stdout_stream"` (or `"proc_stderr_stream"`) and the process handle id, so snapshot diagnostics show meaningful detail.
 
-Not available for a process a [worker](~provium/reference/worker#workerrun_asynccmd-opts) spawned: its output is captured in the worker, and the worker channel cannot carry a stream. `proc:wait` returns it.
+Not available for a process a [worker](~provium/reference/worker#worker-run-async-cmd-opts) spawned: its output is captured in the worker, and the worker channel cannot carry a stream. `proc:wait` returns it.
 
 ### `proc:close()`
 

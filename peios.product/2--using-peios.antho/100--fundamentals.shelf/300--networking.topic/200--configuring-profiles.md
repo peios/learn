@@ -128,7 +128,7 @@ reg set Machine/System/Network/Rules/Interface/radio/home Network.Name.Equal pal
 reg set Machine/System/Network/Rules/Interface/radio/home Actions multi:JOIN(home)
 ```
 
-Until a network has been identified on the link, the `Network.*` facts are absent, so the radio stands in `untrusted` first and moves to `home` once the network is known. `Trust` is your word until PNP's trust pass gives it evidence: a rule that conditions on it is stating that you accept the identification. The same word reaches the firewall: a `Flow` rule with `Network.Trust.Equal = home` sees the network the radio is on, so what you open at home stays shut at the cafe (see [the network context](../420--network-policy-reference.md#the-network-context)).
+Until a network has been identified on the link, the `Network.*` facts are absent, so the radio stands in `untrusted` first and moves to `home` once the network is known. `Trust` is your word until PNP's trust pass gives it evidence: a rule that conditions on it is stating that you accept the identification. The same word reaches the firewall: a `Flow` rule with `Network.Trust.Equal = home` sees the network the radio is on, so what you open at home stays shut at the cafe (see [the network context](~peios/networking/network-policy-reference#the-network-context)).
 
 ## Hand an interface to something else
 

@@ -18,7 +18,7 @@ Emits a single event. `event_type` is a **length-counted UTF-8** event kind such
 | `EAGAIN` | Rate-limited. |
 | `EFAULT` | Bad pointer. |
 
-Since the kernel's payload check matches [`peios_mp_validate`](~peios/sdk-msgpack/msgpack-h-messagepack-codec#validator), you can validate in userspace first and turn a would-be `EINVAL` into a check you control.
+Since the kernel's payload check matches [`peios_mp_validate`](~peios/sdk-msgpack/validator), you can validate in userspace first and turn a would-be `EINVAL` into a check you control.
 
 ```c
 /* Build a payload, then emit. */

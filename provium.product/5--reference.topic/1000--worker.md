@@ -26,7 +26,7 @@ The worker mirrors the VM's run / file / syscall surface. Where semantics differ
 
 ### `worker:run(cmd, opts?)`
 
-Synchronous exec. Same call shape as [`vm:run`](~provium/reference/vm#vmruncmd-or-args-opts). Returns a [RunResult](~provium/reference/vm#runresult).
+Synchronous exec. Same call shape as [`vm:run`](~provium/reference/vm#vm-run-cmd-or-args-opts). Returns a [RunResult](~provium/reference/vm#runresult).
 
 ### `worker:run_async(cmd, opts?)`
 
@@ -46,7 +46,7 @@ The returned File is auto-registered with the test scope so `file:close()` fires
 
 ### `worker:syscall(nr, …)`
 
-Direct syscall. Same call shape as [`vm:syscall`](~provium/reference/vm#vmsyscallnr-) — both the integer-only and table forms work. Returns the same `{ret, result, errno, out_bufs}` shape.
+Direct syscall. Same call shape as [`vm:syscall`](~provium/reference/vm#vm-syscall-nr) — both the integer-only and table forms work. Returns the same `{ret, result, errno, out_bufs}` shape.
 
 ### `worker:kill(sig?)`
 
@@ -88,7 +88,7 @@ test("two concurrent writers don't tear", function(t)
 end)
 ```
 
-For coordination between workers' guest processes, use a guest-side primitive (file, fifo, etc.). [`lab:barrier(name, count, timeout?)`](~provium/reference/lab#labbarriername-count-timeout) is a host-side rendezvous — a worker's guest processes can't call it. See [Labs and scope — Barriers](~provium/writing-tests/labs-and-scope#barriers) for what barriers can and can't synchronise today.
+For coordination between workers' guest processes, use a guest-side primitive (file, fifo, etc.). [`lab:barrier(name, count, timeout?)`](~provium/reference/lab#lab-barrier-name-count-timeout) is a host-side rendezvous — a worker's guest processes can't call it. See [Labs and scope — Barriers](~provium/writing-tests/labs-and-scope#barriers) for what barriers can and can't synchronise today.
 
 ## See also
 

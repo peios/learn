@@ -7,7 +7,7 @@ description: The shape of every serve loop — read a frame, parse the header, d
 
 The shape of the loop is always: **read a frame → parse the header → dispatch on the op-code → decode the payload with the matching parser**. The decoders are thin wrappers over the kernel's own RSI parsers, so your wire handling is guaranteed compatible with what the kernel sent.
 
-> **Borrowing:** every decoded name/data field is a `(ptr, len)` pair that **borrows into your frame buffer**. The pointers are valid only until you reuse that buffer for the next `rsi_read_request`. Copy out anything you need to keep across iterations. This is the same [borrow discipline](~peios/sdk-conventions/library-conventions#memory-ownership) as libpeios's views.
+> **Borrowing:** every decoded name/data field is a `(ptr, len)` pair that **borrows into your frame buffer**. The pointers are valid only until you reuse that buffer for the next `rsi_read_request`. Copy out anything you need to keep across iterations. This is the same [borrow discipline](~peios/sdk-conventions/memory-ownership) as libpeios's views.
 
 Op-code and field constants (`RSI_LOOKUP`, `RSI_WRITE_KEY_FIELD_*`, `RSI_TXN_*`) come from `<pkm/lcs.h>`.
 

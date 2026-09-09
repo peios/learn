@@ -80,12 +80,12 @@ The recipe file accepts exactly these top-level keys. Anything else is an
 | `wrap` | table | no | Command wrapper applied to every target. See [`[wrap]`](#wrap). |
 | `source` | table | no | Where the recipe's source tree comes from. See [`[source]`](#source). |
 | `delegate` | bool or table | no | Borrow build/env/wrap/package definitions from the source tree. See [`[delegate]`](#delegate). |
-| `source_package` | table | no | Corresponding-source package emission control. See [`[source_package]`](#source_package). |
-| `build` | table | no | Build target(s). See [`[build]` / `[test]` / `[install]` / `[clean]`](#targets). |
+| `source_package` | table | no | Corresponding-source package emission control. See [`[source_package]`](#source-package). |
+| `build` | table | no | Build target(s). See [`[build]` / `[test]` / `[install]` / `[clean]`](#build-test-install-clean-targets). |
 | `test` | table | no | Test target(s). |
 | `install` | table | no | Install target(s). |
 | `clean` | table | no | Clean target(s). |
-| `gen` | table | no | Source-generating target(s). See [`[gen]`](#gen). |
+| `gen` | table | no | Source-generating target(s). See [`[gen]`](#gen-gen). |
 
 ### `[env]`
 
@@ -146,7 +146,7 @@ One direct key is accepted alongside the sub-tables:
 See [Sources](~pekit/recipes/sources) for materialisation, caching, and
 provenance behaviour. Resolved git, url, and PyPI sources are pinned
 trust-on-first-use in the recipe's machine-written
-[`pekit.lock`](~pekit/reference/supporting-files#pekitlock).
+[`pekit.lock`](~pekit/reference/supporting-files#pekit-lock).
 
 #### `[source.git]`
 
@@ -316,7 +316,7 @@ Fields of a single target:
 | `needs` | array of strings | no | Names of other targets in the same section that must run first. |
 | `clear_out` | bool | no | Wipe this target's output directory before running. Default `true`. |
 | `dependencies` | table | no | **Build and test targets.** Dependencies the target needs provisioned in its root. Under `--env peipkg` the composed root holds *only* what is declared — a test stage that shells out needs `dash` (pekit runs `command` through `/usr/bin/sh`) and whatever else its script calls. See below. |
-| `sign` | table | no | **Build targets only.** Files in the target's output to sign after the command succeeds, by signature kind. See [`sign`](#target-sign) below. |
+| `sign` | table | no | **Build targets only.** Files in the target's output to sign after the command succeeds, by signature kind. See [`sign`](#build-name-sign-target-sign) below. |
 
 Any other key in a target table is an `unknown target key` error. `sign` is
 accepted only in `[build]` targets, and `dependencies` in `[build]` and
@@ -472,7 +472,7 @@ The package file accepts exactly these top-level keys; anything else is an
 | `provides` | table | no | name → version of capabilities this package provides. |
 | `replaces` | table | no | name → constraint of packages this one replaces. |
 | `side_effects` | array of strings | no | Declared install-time side effects. |
-| `sd_overrides` | table | no | payload path → SDDL security descriptor. See [`[sd_overrides]`](#sd_overrides). |
+| `sd_overrides` | table | no | payload path → SDDL security descriptor. See [`[sd_overrides]`](#sd-overrides). |
 | `claims` | table | no | Claim slots on provides/dependencies. See [`[claims]`](#claims). |
 
 > [!IMPORTANT]

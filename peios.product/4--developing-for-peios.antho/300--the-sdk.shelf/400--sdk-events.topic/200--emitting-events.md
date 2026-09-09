@@ -11,7 +11,7 @@ Emitting an event is two steps: build a MessagePack payload, then hand it and an
 
 ## Build the payload
 
-Use the [MessagePack writer](~peios/sdk-msgpack/msgpack-h-messagepack-codec#writer) to encode a single top-level value — typically a map of fields:
+Use the [MessagePack writer](~peios/sdk-msgpack/writer) to encode a single top-level value — typically a map of fields:
 
 ```c
 peios_mp_writer *w = peios_mp_writer_new();
@@ -59,7 +59,7 @@ The validator's acceptance matches the kernel's emit-time check at that depth bo
 
 ## Emitting in batches
 
-A high-rate producer should batch. [`peios_event_emit_batch`](~peios/sdk-events-api/event-h-events-kmes#batch-emit) emits many events in one call, so a single timestamp capture, identity capture, and consumer wake cover the whole set:
+A high-rate producer should batch. [`peios_event_emit_batch`](~peios/sdk-events-api/emitting-events#batch-emit) emits many events in one call, so a single timestamp capture, identity capture, and consumer wake cover the whole set:
 
 ```c
 struct peios_event_entry entries[3] = {

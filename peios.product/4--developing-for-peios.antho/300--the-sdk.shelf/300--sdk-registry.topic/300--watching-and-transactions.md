@@ -34,7 +34,7 @@ for (;;) {
 
 `filter` is a mask of `REG_NOTIFY_VALUE`, `REG_NOTIFY_SUBKEY`, and `REG_NOTIFY_SD`; `REG_NOTIFY_ALL` covers all three. The `subtree` flag extends the watch to descendants. Arming needs `KEY_NOTIFY` on the key. Call `peios_reg_notify(key, 0, 0)` to disarm.
 
-Each `read()` drains as many complete change records as fit — every record starts `[total_len: u32][event_type: u16][name_len: u16][name]`, so you step through the buffer by `total_len`. The full layout, the `REG_WATCH_*` event types, and the extra path fields a subtree watch appends are in [the reference](~peios/sdk-registry-api/registry-h-the-registry-lcs#watching-for-changes). Two practical notes: a buffer too small for even one record fails `EINVAL`, so size it generously rather than exactly; and a `REG_WATCH_OVERFLOW` record means events were dropped — re-read the key's state instead of trusting the stream.
+Each `read()` drains as many complete change records as fit — every record starts `[total_len: u32][event_type: u16][name_len: u16][name]`, so you step through the buffer by `total_len`. The full layout, the `REG_WATCH_*` event types, and the extra path fields a subtree watch appends are in [the reference](~peios/sdk-registry-api/subkeys-metadata-and-watches#watching-for-changes). Two practical notes: a buffer too small for even one record fails `EINVAL`, so size it generously rather than exactly; and a `REG_WATCH_OVERFLOW` record means events were dropped — re-read the key's state instead of trusting the stream.
 
 This is how a service picks up configuration changes live — no polling loop re-reading values on a timer, just a blocking `poll` that wakes when something actually changed.
 
@@ -67,11 +67,11 @@ close(key);
 Two things to keep in mind:
 
 - **Abort is the default.** If you close the transaction fd without committing — including on any early-return error path — nothing is applied. So you don't need explicit rollback logic; just don't commit.
-- **Commit can be retried.** `EBUSY` (write-lock contention) and `EIO` (source failure) leave the transaction **active**, so you can retry `peios_reg_commit`. Only `0` (committed — the fd is now terminal) and `EINVAL` (already committed or never bound) are final. Check state at any point with [`peios_reg_txn_status`](~peios/sdk-registry-api/registry-h-the-registry-lcs#transactions).
+- **Commit can be retried.** `EBUSY` (write-lock contention) and `EIO` (source failure) leave the transaction **active**, so you can retry `peios_reg_commit`. Only `0` (committed — the fd is now terminal) and `EINVAL` (already committed or never bound) are final. Check state at any point with [`peios_reg_txn_status`](~peios/sdk-registry-api/transactions).
 
 ## Backup and restore
 
-To snapshot a key and its whole subtree, or replace one from a snapshot, use [`peios_reg_backup`](~peios/sdk-registry-api/registry-h-the-registry-lcs#backup-and-restore) and `peios_reg_restore`. They stream to and from an fd and are gated by `SeBackupPrivilege` / `SeRestorePrivilege`; restore applies in a single transaction.
+To snapshot a key and its whole subtree, or replace one from a snapshot, use [`peios_reg_backup`](~peios/sdk-registry-api/backup-and-restore) and `peios_reg_restore`. They stream to and from an fd and are gated by `SeBackupPrivilege` / `SeRestorePrivilege`; restore applies in a single transaction.
 
 ## Next
 

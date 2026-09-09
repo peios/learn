@@ -8,7 +8,7 @@ description: What access.h is for, the two things worth knowing before using it,
 Two things are worth saying up front:
 
 - **These calls are advisory.** They *evaluate*, they do not *enforce*. `peios_access_check` tells you what the answer would be; enforcement of a real operation always runs inside the kernel against the subject's own process security block. Use these when *your* code is the resource manager — you hold an object, you have its security descriptor, and you need to make the grant/deny decision yourself.
-- **A denial is a normal result, not an error.** Per the [library conventions](~peios/sdk-conventions/library-conventions#structured-results-out-parameters), a denied check returns `-1` with `errno == EACCES`, and the granted mask is still written out. Only a genuine failure (a bad token fd, a malformed SD) is an error in the usual sense.
+- **A denial is a normal result, not an error.** Per the [library conventions](~peios/sdk-conventions/how-results-are-returned#structured-results-out-parameters), a denied check returns `-1` with `errno == EACCES`, and the granted mask is still written out. Only a genuine failure (a bad token fd, a malformed SD) is an error in the usual sense.
 
 ## See also
 

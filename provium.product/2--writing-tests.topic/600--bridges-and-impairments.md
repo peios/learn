@@ -121,7 +121,7 @@ lan:bandwidth_limit(1024 * 1024)                       -- 1 Mbit/s, both ways
 lan:bandwidth_limit({from = a, to = b, bps = 500000})  -- 500 kbit/s leaving A
 ```
 
-The number is **bits per second**, not bytes — matches `tc rate Nbit`. Two realisation caveats matter when you design a test: the directional form shapes every packet leaving the source TAP (not just traffic to the named `to`), and whole-bridge bandwidth is not enforced while whole-bridge latency/drop is also set — for combined shaping use the directional form on each source. The full realisation details (TBF vs HTB, `max(bps)` collapse across pairs) are in the [Bridge reference](~provium/reference/bridge#bridgebandwidth-limitbps-or-table).
+The number is **bits per second**, not bytes — matches `tc rate Nbit`. Two realisation caveats matter when you design a test: the directional form shapes every packet leaving the source TAP (not just traffic to the named `to`), and whole-bridge bandwidth is not enforced while whole-bridge latency/drop is also set — for combined shaping use the directional form on each source. The full realisation details (TBF vs HTB, `max(bps)` collapse across pairs) are in the [Bridge reference](~provium/reference/bridge#bridge-bandwidth-limit-bps-or-table).
 
 Combine directional bandwidth with directional latency / drop on the same source for a complete profile:
 
@@ -196,7 +196,7 @@ local pcap = table.concat(frames)
 -- pcap is now standard pcap-format bytes, parseable by tshark, etc.
 ```
 
-`bridge:capture()` returns a [Capture](~provium/reference/streams) stream of pcap-format bytes. It requires `tcpdump` on `PATH`, and a live capture blocks `vm:snapshot()` (no half-captured pcap) — capability requirements and the mechanism are in the [Bridge reference](~provium/reference/bridge#bridgecapture).
+`bridge:capture()` returns a [Capture](~provium/reference/streams) stream of pcap-format bytes. It requires `tcpdump` on `PATH`, and a live capture blocks `vm:snapshot()` (no half-captured pcap) — capability requirements and the mechanism are in the [Bridge reference](~provium/reference/bridge#bridge-capture).
 
 ### Per-NIC capture
 

@@ -25,7 +25,7 @@ struct rsi_hive hive = {
 
 The two decisions per hive:
 
-- **Global or private?** A **global** hive (`flags = 0`, `scope_guid` zero) is visible system-wide. A **private** hive (`flags = RSI_HIVE_PRIVATE`, `scope_guid` non-zero) is scoped — only tokens carrying that scope GUID in their [LCS credentials](~peios/sdk-tokens/token-h-tokens-and-sessions#lcs-registry-credentials) can resolve it. Use a private hive for per-application or per-tenant state that shouldn't be system-visible.
+- **Global or private?** A **global** hive (`flags = 0`, `scope_guid` zero) is visible system-wide. A **private** hive (`flags = RSI_HIVE_PRIVATE`, `scope_guid` non-zero) is scoped — only tokens carrying that scope GUID in their [LCS credentials](~peios/sdk-tokens/the-token-spec-builder#lcs-registry-credentials) can resolve it. Use a private hive for per-application or per-tenant state that shouldn't be system-visible.
 - **The root GUID.** Every hive is anchored at a root key identified by `root_guid`. This is the GUID paths in the hive resolve from, and it must match the root your storage actually holds.
 
 ## Register
