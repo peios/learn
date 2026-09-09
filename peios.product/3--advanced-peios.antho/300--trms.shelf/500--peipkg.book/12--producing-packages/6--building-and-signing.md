@@ -127,3 +127,15 @@ destination.
 
 The emitted package's name is recorded in the built package's manifest,
 so a consumer holding a binary can find the source that produced it.
+
+A recipe turns this off with `[source_package] enabled = false`, and
+the only reason to do so is that there is no source: the upstream
+artifact is itself the thing shipped, so a corresponding-source package
+would be that artifact again under another name. Device firmware is the
+standing example — the blobs are what the vendor publishes, there is
+nothing they were built from that Peios could ship, and the
+[firmware packages](~peios/device-firmware/overview) carry
+`license_class = "firmware"` for the same reason. A recipe that does
+build something from an upstream source keeps the default, whatever the
+licence: the corresponding-source package is how a binary's provenance
+is answered, not a statement about the licence's terms.
