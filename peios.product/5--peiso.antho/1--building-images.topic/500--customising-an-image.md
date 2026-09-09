@@ -58,7 +58,9 @@ name  = "dynamic-boot"
 state = "enable"          # or "install"; default enable
 ```
 
-Generates `20-features.sh`, which runs `feat add <name>` (install then enable) or `feat install <name>` per entry, in order, and removes itself. The feature's definition must be in the root — usually by a `[[package]]` that ships it (`feat-dynamic-boot` here). Services a feature creates start on the same boot, since autoruns finish before peinit enumerates them.
+Generates `20-features.sh`, which runs `feat add <name>` (install then enable) or `feat install <name>` per entry, in order, and removes itself. The feature's definition must be in the root — usually by a `[[package]]` that ships it (`dev.peios.feat-dynamic-boot` here). Services a feature creates start on the same boot, since autoruns finish before peinit enumerates them.
+
+The `dynamic-boot` definition creates `mkirf` and `mkuki` foreground watcher services. It deliberately follows the unique kernel below `/usr/lib/modules` rather than recording the release present when the feature was installed, so a kernel package upgrade is adopted automatically. The UKI watcher prefers the installed system command line at `/lcl/etc/boot/cmdline`; a live image that has not been installed falls back to `/usr/share/live-boot/cmdline`.
 
 ## Files on the medium
 
