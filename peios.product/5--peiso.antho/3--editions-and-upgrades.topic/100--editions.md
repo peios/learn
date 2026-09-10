@@ -12,12 +12,9 @@ Peios has no channels and no release cadence. It is a rolling release with a ful
 
 ## The edition package
 
-`dev.peios.peios-experimental` is the edition today. It retains
-`peios-experimental` as a compatibility capability, including for existing
-peiso and `upgrade-peios` edition lookup. It is an ordinary peipkg package with
-an unusual job:
+`peios-experimental` is the edition today. It is an ordinary peipkg package with an unusual job:
 
-- **Its version is the OS version.** `dev.peios.peios-experimental 2026.8-11` is Peios 2026.8. The package writes `/usr/lib/os-release` (`VERSION_ID="2026.8"`, `VARIANT_ID=experimental`, `PRETTY_NAME="Peios 2026.8 Experimental"`) and the `/usr/etc/os-release` compatibility symlink, so a system's identity and its release are one fact, tracked in the package database.
+- **Its version is the OS version.** `peios-experimental 2026.8-1` is Peios 2026.8. The package writes `/usr/lib/os-release` (`VERSION_ID="2026.8"`, `VARIANT_ID=experimental`, `PRETTY_NAME="Peios 2026.8 Experimental"`) and the `/usr/etc/os-release` compatibility symlink, so a system's identity and its release are one fact, tracked in the package database.
 - **Its dependencies are the base system.** Kernel, modules and firmware; the initramfs — `prelude`, its hooks, the module subset and its own base tree, each placed `IN initramfs` explicitly; the service manager, registry, identity and networking daemons; the installer. Installing the package into an empty root yields a bootable Peios.
 - **It provides `peios-release`.** Depend on that virtual name to mean "some Peios"; depend on the edition to mean that edition.
 - **It ships [`release.toml`](~peios/peiso/editions-and-upgrades/release-toml)**: what the release asks of a system beyond its packages, as data.
@@ -45,7 +42,4 @@ Moving from one release to the next is more than a package upgrade: the new rele
 
 ## Where an edition lives
 
-The recipe is `pkgs/dev.peios.peios-experimental/` in the Peios tree: a
-`pekit.toml` whose build writes `os-release` and `release.toml`, and a
-`package.pekit.toml` with the dependency table. Changing what Peios contains is
-a change there, followed by a republish. peiso and its spec do not change.
+The recipe is `pkgs/peios-experimental/` in the Peios tree: a `pekit.toml` whose build writes `os-release` and `release.toml`, and a `package.pekit.toml` with the dependency table. Changing what Peios contains is a change there, followed by a republish. peiso and its spec do not change.
