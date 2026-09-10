@@ -13,7 +13,7 @@ This page takes you from an empty directory to a working `.peipkg` in about five
 
 ## Prerequisites
 
-- **A `pekit` binary on your `PATH`.** Pekit is a single binary built from its source repository with `go build ./cmd/pekit`; there is no separate installer. Note that pekit has [no `--help` or version banner](~pekit/running/invocation) — the docs are the manual.
+- **A `pekit` binary on your `PATH`.** Pekit is a single binary built from its source repository with `go build ./cmd/pekit`; there is no separate installer. `pekit help` lists the commands and `pekit help <command>` a command's flags; these docs are the full manual.
 - **A POSIX shell** (`sh`). Target commands run under `sh -euc`; any Linux system has this.
 - **`zstd` and `tar`**, for the final inspection step only.
 

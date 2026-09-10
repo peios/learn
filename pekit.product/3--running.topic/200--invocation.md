@@ -82,8 +82,7 @@ $ pekit build --local /src/mypkg   # --local (empty) + /src/mypkg as a selector
 ```
 
 `-V` is an alias for `--version` and behaves identically (it is a required-value
-flag; it is *not* a version-print flag — pekit has no version banner and no
-`--help`).
+flag; it is *not* a version-print flag — that is the `pekit version` command).
 
 Per-key keyring values use a dotted-path form, `--keyring.<path>=<value>`, which
 always requires the `=` and a non-empty path.
@@ -202,9 +201,9 @@ command and `workspace` is whether the run went through the `workspace` command.
 
 Pekit uses two exit codes only: `0` on success, `1` on any error — bad
 invocation, missing recipe, failed build, and so on. There are no finer-grained
-codes, and there is **no `--help` or `help` command**: this page,
-[Commands and targets](~pekit/running/commands-and-targets), and the
-[command-line reference](~pekit/reference/cli) are the manual.
+codes. `pekit help` and `pekit help <command>` give the one-screen summaries;
+this page, [Commands and targets](~pekit/running/commands-and-targets), and
+the [command-line reference](~pekit/reference/cli) are the manual.
 
 ## How a recipe is located
 
