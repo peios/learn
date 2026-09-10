@@ -358,16 +358,18 @@ file/symlink paths, excludes, claims, multipack `enum.files.path`, publish
 | `{{major}}` | major component | Available once a version is selected. |
 | `{{minor}}` | minor component | Errors if the selected version has no minor component. |
 | `{{patch}}` | patch component | Errors if the selected version has no patch component. |
+| `{{suffix}}` | unseparated upstream suffix | Empty string when absent. |
 | `{{prerelease}}` | pre-release component (after `-`) | Empty string when absent. |
 | `{{buildmeta}}` | build-metadata component (after `+`) | Empty string when absent. |
 | `{{multipack}}` | the current multipack instance value | Only available while expanding a multipack package's per-instance values; errors in any non-multipack context. |
 
-A version string has one or more dot-separated numeric components followed by
-optional `-prerelease` and `+buildmeta` tails. `{{version}}` preserves the full
-string. `{{major}}`, `{{minor}}`, and `{{patch}}` expose the first three numeric
-components for compatibility, so `{{minor}}` / `{{patch}}` are only present
-when the version actually carries them; fourth and later components are
-available through `{{version}}` only.
+A version string has one or more dot-separated numeric components, an optional
+unseparated alphanumeric suffix beginning with a letter (for example `2026c`),
+and optional `-prerelease` and `+buildmeta` tails. `{{version}}` preserves the
+full string. `{{major}}`, `{{minor}}`, and `{{patch}}` expose the first three
+numeric components for compatibility, so `{{minor}}` / `{{patch}}` are only
+present when the version actually carries them; fourth and later components
+are available through `{{version}}` only.
 
 ### Shell targets use `$PEKIT_*` instead
 
@@ -381,6 +383,7 @@ pekit-managed environment. The version equivalents are:
 | `{{major}}` | `$PEKIT_VERSION_MAJOR` |
 | `{{minor}}` | `$PEKIT_VERSION_MINOR` |
 | `{{patch}}` | `$PEKIT_VERSION_PATCH` |
+| `{{suffix}}` | `$PEKIT_VERSION_SUFFIX` |
 | `{{prerelease}}` | `$PEKIT_VERSION_PRERELEASE` |
 | `{{buildmeta}}` | `$PEKIT_VERSION_BUILDMETA` |
 

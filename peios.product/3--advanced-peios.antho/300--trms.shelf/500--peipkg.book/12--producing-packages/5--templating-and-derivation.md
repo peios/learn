@@ -9,7 +9,7 @@ wrote.
 ## Templating
 
 Placeholders are substituted throughout a package definition:
-`{{version}}`, `{{major}}`, `{{minor}}`, `{{patch}}`, `{{prerelease}}`,
+`{{version}}`, `{{major}}`, `{{minor}}`, `{{patch}}`, `{{suffix}}`, `{{prerelease}}`,
 `{{buildmeta}}`, and `{{multipack}}`.
 
 They apply to the metadata scalars, to the **keys and values** of every
@@ -22,7 +22,9 @@ registered root rather than something derived from a version.
 
 The components come from pekit's own upstream version model, not from
 the package version model. For a package version carrying a Peios
-revision, the revision lands in `{{prerelease}}`.
+revision, the revision lands in `{{prerelease}}`. An upstream's unseparated
+lettered release suffix, such as the `c` in IANA tzdata `2026c`, lands in
+`{{suffix}}` instead.
 
 A version the model does not parse — one carrying an epoch or a tilde —
 has no components at all, and every token but `{{version}}` is then

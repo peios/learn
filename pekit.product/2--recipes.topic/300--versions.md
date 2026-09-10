@@ -23,32 +23,37 @@ version components into your recipe, and how the `--version`, `--latest`, and
 A version is written as:
 
 ```text
-NUMERIC_COMPONENT[.NUMERIC_COMPONENT...][-PRERELEASE][+BUILDMETA]
+NUMERIC_COMPONENT[.NUMERIC_COMPONENT...][SUFFIX][-PRERELEASE][+BUILDMETA]
 ```
 
-The numeric core contains one or more dot-separated decimal components. The
-optional `-PRERELEASE` and `+BUILDMETA` tails may each contain digits, ASCII
-letters, dots, and hyphens.
+The numeric core contains one or more dot-separated decimal components. An
+optional unseparated `SUFFIX` starts with an ASCII letter and continues with
+ASCII letters or digits; this covers upstream schemes such as IANA tzdata's
+`2026c`. The optional `-PRERELEASE` and `+BUILDMETA` tails may each contain
+digits, ASCII letters, dots, and hyphens.
 
-| Written version    | major | minor | patch | complete numeric core | prerelease | buildmeta |
-| ------------------ | ----- | ----- | ----- | --------------------- | ---------- | --------- |
-| `2`                | `2`   |       |       | `2`                   |            |           |
-| `2.43`             | `2`   | `43`  |       | `2.43`                |            |           |
-| `2.43.1`           | `2`   | `43`  | `1`   | `2.43.1`              |            |           |
-| `0.5.13.5`         | `0`   | `5`   | `13`  | `0.5.13.5`            |            |           |
-| `1.21.0-rc.1`      | `1`   | `21`  | `0`   | `1.21.0`              | `rc.1`     |           |
-| `1.21.0+build.5`   | `1`   | `21`  | `0`   | `1.21.0`              |            | `build.5` |
-| `1.21.0-rc.1+bld`  | `1`   | `21`  | `0`   | `1.21.0`              | `rc.1`     | `bld`     |
+| Written version    | major | minor | patch | complete numeric core | suffix | prerelease | buildmeta |
+| ------------------ | ----- | ----- | ----- | --------------------- | ------ | ---------- | --------- |
+| `2`                | `2`   |       |       | `2`                   |        |            |           |
+| `2026c`            | `2026`|       |       | `2026`                | `c`    |            |           |
+| `2.43`             | `2`   | `43`  |       | `2.43`                |        |            |           |
+| `2.43.1`           | `2`   | `43`  | `1`   | `2.43.1`              |        |            |           |
+| `0.5.13.5`         | `0`   | `5`   | `13`  | `0.5.13.5`            |        |            |           |
+| `1.21.0-rc.1`      | `1`   | `21`  | `0`   | `1.21.0`              |        | `rc.1`     |           |
+| `1.21.0+build.5`   | `1`   | `21`  | `0`   | `1.21.0`              |        |            | `build.5` |
+| `1.21.0-rc.1+bld`  | `1`   | `21`  | `0`   | `1.21.0`              |        | `rc.1`     | `bld`     |
 
 Anything that does not match this grammar is rejected with an `invalid_version`
 error. Comparison and ordering use every numeric component, without a
 machine-integer size limit. A missing component counts as `0`, so `1.2`,
-`1.2.0`, and `1.2.0.0` have equal numeric cores. The prerelease string is
-compared lexically to break ties; build metadata does not affect ordering.
+`1.2.0`, and `1.2.0.0` have equal numeric cores. Suffixes sort after the
+matching bare numeric core and lexically among themselves (`2026 < 2026a <
+2026b`); the prerelease string then breaks ties. Build metadata does not affect
+ordering.
 
 ## Version template variables
 
-Six variables expose the parsed components of the selected version. They render
+Seven variables expose the parsed components of the selected version. They render
 anywhere pekit expands `{{...}}` templates in a recipe — most importantly in
 [source](~pekit/recipes/sources) refs and URLs, and in
 [package](~pekit/recipes/packages) version and metadata fields. (These six are
@@ -62,6 +67,7 @@ including the multi-package-only `{{multipack}}`, is in
 | `{{major}}`       | the first numeric component      |
 | `{{minor}}`       | the second numeric component     |
 | `{{patch}}`       | the third numeric component      |
+| `{{suffix}}`      | the unseparated suffix, or empty |
 | `{{prerelease}}`  | the prerelease tail, or empty    |
 | `{{buildmeta}}`   | the build-metadata tail, or empty |
 
@@ -81,9 +87,9 @@ Two rules govern rendering:
 - **Referencing a component the version does not have is an error.** `{{version}}`
   fails when no version is selected at all; `{{minor}}` and `{{patch}}` fail when
   the selected version stops short of that component (for example `{{patch}}`
-  against `2.43`). `{{prerelease}}` and `{{buildmeta}}` are the exception — they
-  render as empty text when absent rather than erroring.
-- **Unknown variables are an error.** Any `{{name}}` that is not one of the six
+  against `2.43`). `{{suffix}}`, `{{prerelease}}`, and `{{buildmeta}}` are the
+  exception — they render as empty text when absent rather than erroring.
+- **Unknown variables are an error.** Any `{{name}}` that is not one of the seven
   above (or the multi-package `{{multipack}}` token) is rejected. There is no
   silent pass-through.
 
@@ -91,7 +97,7 @@ Two rules govern rendering:
 > Version variables do **not** apply to shell target commands. A `command`
 > in a build/test/install target receives version data through the
 > `PEKIT_VERSION`, `PEKIT_VERSION_MAJOR`, `PEKIT_VERSION_MINOR`,
-> `PEKIT_VERSION_PATCH`, `PEKIT_VERSION_PRERELEASE`, and
+> `PEKIT_VERSION_PATCH`, `PEKIT_VERSION_SUFFIX`, `PEKIT_VERSION_PRERELEASE`, and
 > `PEKIT_VERSION_BUILDMETA` environment variables instead — see
 > [recipe anatomy](~pekit/recipes/anatomy).
 
