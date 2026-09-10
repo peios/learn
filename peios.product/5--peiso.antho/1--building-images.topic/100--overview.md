@@ -16,7 +16,15 @@ It is a user-facing tool. Building a slightly customised Peios image is meant to
 
 ## The release is a package
 
-The thing peiso builds *from* is not a list. A Peios release is an **edition package** — `peios-experimental` today — whose version is the OS version, whose dependency closure is the base system (kernel, initramfs, services, firmware, the installer), and which ships the system's identity (`/usr/lib/os-release`) and a small data file, `release.toml`, stating what the release asks of a system beyond its packages. [Editions](~peios/peiso/editions-and-upgrades/editions) explains that package in full.
+The thing peiso builds *from* is not a list. A Peios release is an **edition
+package** — `dev.peios.peios-experimental` today, discoverable to image builds
+through its `peios-experimental` compatibility capability — whose version is
+the OS version, whose dependency closure is the base system (kernel, initramfs,
+services, firmware, the installer), and which ships the system's identity
+(`/usr/lib/os-release`) and a small data file, `release.toml`, stating what the
+release asks of a system beyond its packages.
+[Editions](~peios/peiso/editions-and-upgrades/editions) explains that package
+in full.
 
 peiso's job is therefore small: resolve that one package, compose its closure, and add what makes the result a *medium* rather than an installed system. An installed system moves to the next release by upgrading the same package, through [`upgrade-peios`](~peios/peiso/editions-and-upgrades/upgrading-peios).
 
