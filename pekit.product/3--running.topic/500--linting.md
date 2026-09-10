@@ -157,6 +157,7 @@ recipe does not use do nothing.
 | `source.reproducible` | `true` | The source is not `[source.local]` alone. A recipe with no source at all passes. |
 | `source.discovery` | `true` | A URL source has `listing_url`; a git source (other than a tracked path) has `tag_regex`. Without them new upstream releases cannot be found, and every update is by hand. |
 | `source.versions.floor` | `true` | A discovering source has a `versions` constraint with a lower bound: `>=`, `>`, `=`, `^` or `~`. A `< x` ceiling alone, `*`, or no constraint follows any release upstream ever published, including ones older than the recipe. Ceilings are never required. |
+| `source.versions.ceiling` | `"none"` | No `versions` constraint bounds from above: no `<` or `<=` term, no `=` pin, no `^` or `~` range. A ceiling is where unattended updates silently stop; a new major is reviewed when it arrives, not fenced off in advance. |
 | `source.ref` | `"immutable"` | A git `ref` is a template (`v{{version}}`), a full commit hash, a `refs/tags/` path or a tag-like `v1.2`, not a branch name that the lock could never pin. |
 | `source.url.scheme` | `"https"` | Every source URL (`url`, `listing_url`, signature and patch-series URLs) is https. A git URL may also be `ssh://`, `git+ssh://` or `user@host:path`. |
 | `source.lock` | `true` | `pekit.lock` exists with at least one entry; every URL entry carries a sha256 (and each patch its own); every git entry a commit hash; and, when the recipe verifies signatures, every URL entry records the key that verified it. |
