@@ -490,11 +490,16 @@ Reproducible sources can list the versions they offer upstream; this feeds
 
 - **git**: `git ls-remote --tags <url>`, with tags optionally filtered by
   `tag_regex`. A named `version` capture supplies the complete version. Named
-  `major`, `minor`, and `patch` captures instead compose a dotted version;
-  optional `prerelease` and `buildmeta` captures are appended. For example,
+  `major`, `minor`, and `patch` captures instead compose a dotted version.
+  Optional `revision`, `suffix`, `prerelease`, and `buildmeta` captures are
+  appended: `revision` becomes a fourth numeric component, while `suffix` is
+  unseparated. For example,
   `ref = "{{major}}{{minor}}{{patch}}"` with
   `tag_regex = '^(?P<major>\d{4})(?P<minor>\d{2})(?P<patch>\d{2})$'` maps the
   tag `20260810` to version `2026.08.10` and renders it back to the same ref.
+  A ref ending `{{suffix}}{{revision_suffix}}` can likewise round-trip either
+  `microcode-20230516a` as `2023.05.16a` or `microcode-20260210-rev1` as
+  `2026.02.10.1`.
   Without named version captures, pekit extracts the version from the ref
   template or an embedded `MAJOR.MINOR.PATCH`; unnamed capture groups only
   filter tags.

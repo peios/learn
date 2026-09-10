@@ -53,10 +53,10 @@ ordering.
 
 ## Version template variables
 
-Seven variables expose the parsed components of the selected version. They render
+Nine variables expose the parsed components of the selected version. They render
 anywhere pekit expands `{{...}}` templates in a recipe — most importantly in
 [source](~pekit/recipes/sources) refs and URLs, and in
-[package](~pekit/recipes/packages) version and metadata fields. (These six are
+[package](~pekit/recipes/packages) version and metadata fields. (These nine are
 the version-derived subset of the template engine; the complete variable table,
 including the multi-package-only `{{multipack}}`, is in
 [Supporting files](~pekit/reference/supporting-files).)
@@ -67,6 +67,8 @@ including the multi-package-only `{{multipack}}`, is in
 | `{{major}}`       | the first numeric component      |
 | `{{minor}}`       | the second numeric component     |
 | `{{patch}}`       | the third numeric component      |
+| `{{revision}}`    | the fourth numeric component, or empty |
+| `{{revision_suffix}}` | `-rev` plus the fourth component, or empty |
 | `{{suffix}}`      | the unseparated suffix, or empty |
 | `{{prerelease}}`  | the prerelease tail, or empty    |
 | `{{buildmeta}}`   | the build-metadata tail, or empty |
@@ -77,19 +79,22 @@ url = "https://github.com/example/tool.git"
 ref = "v{{version}}"
 ```
 
-Two rules govern rendering:
+Three rules govern rendering:
 
-- **Fourth and later numeric components stay in `{{version}}`.** The three
-  component variables deliberately retain their compatibility meanings. For
-  example, `0.5.13.5` renders unchanged through `{{version}}`, while
-  `{{major}}.{{minor}}.{{patch}}` renders `0.5.13`.
+- **The fourth numeric component is also available as a corrective revision.**
+  The first three component variables retain their compatibility meanings.
+  For example, `2026.02.10.1` renders unchanged through `{{version}}`, exposes
+  `1` through `{{revision}}`, and renders `-rev1` through
+  `{{revision_suffix}}`. Fifth and later components remain available only
+  through `{{version}}`.
 
 - **Referencing a component the version does not have is an error.** `{{version}}`
   fails when no version is selected at all; `{{minor}}` and `{{patch}}` fail when
   the selected version stops short of that component (for example `{{patch}}`
   against `2.43`). `{{suffix}}`, `{{prerelease}}`, and `{{buildmeta}}` are the
   exception — they render as empty text when absent rather than erroring.
-- **Unknown variables are an error.** Any `{{name}}` that is not one of the seven
+  `{{revision}}` and `{{revision_suffix}}` behave the same way.
+- **Unknown variables are an error.** Any `{{name}}` that is not one of the nine
   above (or the multi-package `{{multipack}}` token) is rejected. There is no
   silent pass-through.
 
