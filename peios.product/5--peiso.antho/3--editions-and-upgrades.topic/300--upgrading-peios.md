@@ -15,8 +15,8 @@ That is the whole procedure. It is safe to run again at any time: an interrupted
 
 ## What happens
 
-1. **Find the edition.** `upgrade-peios` reads `ID` and `VARIANT_ID` from `/usr/lib/os-release` — the file the edition package itself wrote — and derives the package name: `peios-` plus the variant, `peios-experimental`. A system whose `ID` is not `peios`, or that has no variant, is refused (exit 2).
-2. **Upgrade the edition package.** `peipkg upgrade peios-experimental --bypass-alternate-upgrade` (with `--yes` if you passed it). The edition declares an [alternate upgrade path](~peios/peiso/editions-and-upgrades/editions), so peipkg would otherwise stop and point here; the flag is `upgrade-peios`' whole privilege. The upgrade pulls the new release's closure with it. A peipkg failure is exit 3, and nothing further runs.
+1. **Find the edition.** `upgrade-peios` reads `ID` and `VARIANT_ID` from `/usr/lib/os-release` — the file the edition package itself wrote — and derives the compatibility capability: `peios-` plus the variant, `peios-experimental`. The canonical package `dev.peios.peios-experimental` provides that capability. A system whose `ID` is not `peios`, or that has no variant, is refused (exit 2).
+2. **Upgrade the edition package.** `peipkg upgrade peios-experimental --bypass-alternate-upgrade` (with `--yes` if you passed it) resolves the installed canonical provider. The edition declares an [alternate upgrade path](~peios/peiso/editions-and-upgrades/editions), so peipkg would otherwise stop and point here; the flag is `upgrade-peios`' whole privilege. The upgrade pulls the new release's closure with it. A peipkg failure is exit 3, and nothing further runs.
 3. **Stage the release's seeds.** The new [`release.toml`](~peios/peiso/editions-and-upgrades/release-toml) is read; each seed it names is copied from `/usr/share/regim/` into `/lcl/policy/autoapply.d/`, and the drain script is placed in `/lcl/policy/autorun.d/` if it is missing. A seed the release names that nothing ships is exit 4.
 4. **Apply them.** `reg apply --dir /lcl/policy/autoapply.d --once-delete --yes` applies each seed and removes it from the queue. Services the seeds define start now. Failure is exit 5.
 
@@ -40,15 +40,21 @@ A machine with no reachable repository is upgraded from an image instead: boot i
 `peipkg upgrade` upgrades every package it can and **holds the edition back**, printing the edition's message:
 
 ```text
-The package "peios-experimental" has an alternate upgrade path.
+The package "dev.peios.peios-experimental" has an alternate upgrade path.
 
 To upgrade Peios use the `upgrade-peios` command.
 
 Warning: Alternate upgrade paths may bypass normal peipkg protections; ensure you fully trust the authors of the package before running.
-held back: peios-experimental 2026.8-1 -> 2026.9-1
+held back: dev.peios.peios-experimental 2026.8-11 -> 2026.9-1
 ```
 
-`peipkg upgrade peios-experimental` refuses outright with the same text. This is not peipkg being unable to upgrade the package; it is peipkg declining to do only half the job. Moving a release also means reconciling its seeds, and applying registry seeds is exactly what the package manager must never do on a package's behalf. The refusal keeps that line where it is, and the flag is the deliberate act that crosses it.
+`peipkg upgrade peios-experimental` refuses outright with the same text after
+resolving that compatibility name to `dev.peios.peios-experimental`. This is
+not peipkg being unable to upgrade the package; it is peipkg declining to do
+only half the job. Moving a release also means reconciling its seeds, and
+applying registry seeds is exactly what the package manager must never do on a
+package's behalf. The refusal keeps that line where it is, and the flag is the
+deliberate act that crosses it.
 
 Once editions pin their dependencies exactly, this becomes the only way a release moves: `peipkg upgrade` cannot carry any pinned package past what the installed edition allows, so the system upgrades as a unit or not at all.
 

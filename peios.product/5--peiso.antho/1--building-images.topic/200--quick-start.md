@@ -32,7 +32,12 @@ edition = "Experimental"
 source_date = "2026-06-22T00:00:00Z"
 ```
 
-That is the whole thing. The edition name is lowercased and hyphenated to find the package — `peios-experimental` — and, with no `version`, the newest one wins. `keys` names the public key the pool's packages were signed with; the medium repository has to trust it to carry them. [The spec](~peios/peiso/reference/the-spec) lists every key.
+That is the whole thing. The edition name is lowercased and hyphenated to find
+the `peios-experimental` capability, which the canonical
+`dev.peios.peios-experimental` package provides; with no `version`, the newest
+provider wins. `keys` names the public key the pool's packages were signed
+with; the medium repository has to trust it to carry them. [The
+spec](~peios/peiso/reference/the-spec) lists every key.
 
 ## Build
 
@@ -45,7 +50,7 @@ peiso reports each stage:
 
 ```text
 resolving peios-experimental
-resolved peios-experimental 2026.8-1 (79 packages)
+resolved dev.peios.peios-experimental 2026.8-11 (79 packages)
 composing dist/peios-experimental-2026.8/root
 resolving medium packages
 publishing dist/peios-experimental-2026.8/repo
@@ -89,4 +94,7 @@ add    = ["my-service"]           # add one a package in the closure ships
 name = "org.gnu.bash"             # carry a package the edition does not
 ```
 
-To change *what the release is*, change the edition package (`pkgs/peios-experimental/`) and republish it; the spec does not change. [Editions](~peios/peiso/editions-and-upgrades/editions) explains why that line is drawn where it is.
+To change *what the release is*, change the edition package
+(`pkgs/dev.peios.peios-experimental/`) and republish it; the spec does not
+change. [Editions](~peios/peiso/editions-and-upgrades/editions) explains why
+that line is drawn where it is.
