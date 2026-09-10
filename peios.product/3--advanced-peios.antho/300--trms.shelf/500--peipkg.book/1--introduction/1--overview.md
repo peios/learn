@@ -56,7 +56,7 @@ that root lives is the installing system's business.
 virtual name that more than one installed package can provide, with at
 most one *holding* it. The holder's file answers the contended path
 through a symlink peipkg owns. Two registry daemons can be installed at
-once; only one is `/usr/bin/registryd`.
+once; only one is `/usr/sbin/registryd`.
 
 ## The shape of an operation
 

@@ -8,7 +8,7 @@ related:
   - peios/package-management/installing-and-removing
 ---
 
-Some filesystem names can be provided by more than one package. Two registry daemons — `loregd` and an alternative — both install a working binary, but only one of them can own `/usr/bin/registryd`. peipkg calls that shared name a **claim**, and it owns the machinery that decides which package holds it.
+Some filesystem names can be provided by more than one package. Two registry daemons — `dev.peios.loregd` and an alternative — both install a working binary, but only one of them can own `/usr/sbin/registryd`. peipkg calls that shared name a **claim**, and it owns the machinery that decides which package holds it.
 
 Three words are used precisely on this page:
 
@@ -20,10 +20,10 @@ Three words are used precisely on this page:
 
 ## What a claim is
 
-A claim materialises as a **symlink** on disk. The link lives at the **claim path** — the shared name, such as `/usr/bin/registryd` — and points at a file inside the holder's payload, the **target**, such as `/usr/sbin/loregd`. Ask the system for the shared name and you reach whichever provider currently holds it.
+A claim materialises as a **symlink** on disk. The link lives at the **claim path** — the shared name, such as `/usr/sbin/registryd` — and points at a file inside the holder's payload, the **target**, such as `/usr/sbin/loregd`. Ask the system for the shared name and you reach whichever provider currently holds it.
 
 ```
-/usr/bin/registryd -> /usr/sbin/loregd
+/usr/sbin/registryd -> /usr/sbin/loregd
 ```
 
 The claim symlink is **owned and managed by peipkg**. It is not shipped inside any package's payload; no provider installs it, and removing a provider does not remove it out from under peipkg. peipkg creates, repoints, and tears down the link as part of the transactions that install, remove, grant, and revoke.
@@ -41,9 +41,9 @@ A claim is the "exactly one owner of a shared name" extension of the `provides` 
 
 ## Auto-claim on install
 
-Installing an eligible provider auto-claims every claim it provides that is currently unheld. If no package yet holds `registryd`, installing `loregd` makes `loregd` the holder and materialises the link as part of the same transaction — you get a working shared name without a second step.
+Installing an eligible provider auto-claims every claim it provides that is currently unheld. If no package yet holds `registryd`, installing `dev.peios.loregd` makes it the holder and materialises the link as part of the same transaction — you get a working shared name without a second step.
 
-The rule is strictly unheld-only. Auto-claim never overrides a claim that is already held by another package. Install a second registry daemon while `loregd` holds `registryd` and the newcomer is installed as an eligible provider but takes nothing; `loregd` stays the holder. Reassigning a held claim is always a deliberate act — see the `claim` command below, or the install flags that force it.
+The rule is strictly unheld-only. Auto-claim never overrides a claim that is already held by another package. Install a second registry daemon while `dev.peios.loregd` holds `registryd` and the newcomer is installed as an eligible provider but takes nothing; `dev.peios.loregd` stays the holder. Reassigning a held claim is always a deliberate act — see the `claim` command below, or the install flags that force it.
 
 ### Install flags
 
@@ -76,18 +76,18 @@ peipkg claim <claim> revoke
 
 ```
 $ peipkg claim registryd
-holder: loregd
+holder: dev.peios.loregd
 links:
-  /usr/bin/registryd -> /usr/sbin/loregd
+  /usr/sbin/registryd -> /usr/sbin/loregd
 eligible providers:
-  loregd
-  altregd
+  dev.peios.loregd
+  org.example.altregd
 ```
 
 **Grant.** `grant <package>` makes an installed eligible provider the holder. peipkg atomically repoints all of the claim's links to that package's targets — every path the claim covers moves together, or none does. The named package must be an installed eligible provider for the claim.
 
 ```
-$ peipkg claim registryd grant altregd
+$ peipkg claim registryd grant org.example.altregd
 ```
 
 **Revoke.** `revoke` removes the grant. The claim becomes **unheld** and its links are torn down. peipkg does not automatically promote another provider — a revoked claim has no holder until you grant one.
@@ -105,11 +105,11 @@ Uninstalling the current holder **auto-withdraws** the claim. The holder is goin
 peipkg does not auto-promote another provider in its place — an automatic promotion would be the kind of silent reassignment claims exist to prevent. Instead it surfaces the remaining eligible providers and hands you a ready-to-run command to reassign the claim yourself:
 
 ```
-$ peipkg remove loregd
+$ peipkg remove dev.peios.loregd
 ...
-claim 'registryd' is now unheld. eligible providers: altregd
+claim 'registryd' is now unheld. eligible providers: org.example.altregd
 to reassign it, run:
-  peipkg claim registryd grant altregd
+  peipkg claim registryd grant org.example.altregd
 ```
 
 If the holder was the only eligible provider, the claim is left unheld with nothing to promote, and any consumer relying on the shared name will find it absent until a new provider is installed.

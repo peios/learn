@@ -16,6 +16,13 @@ operational. It is the source that provides the `Machine\` and `Users\`
 hives at boot, which puts it on the critical path to a running system —
 if loregd does not come up, very little else does.
 
+The `dev.peios.loregd` package installs the daemon, its `registryd` role
+provider, and the protected empty state directory. Debugging support is split
+into `dev.peios.loregd-debuginfo` and `dev.peios.loregd-debugsource`; the
+matching build inputs are published as `dev.peios.loregd-source`. peinit owns
+the compiled-in Phase-1 service definition, so Loregd does not ship a second
+service seed that could compete with it.
+
 ## Where loregd sits
 
 The registry is split across a trust boundary. The kernel side owns the

@@ -29,7 +29,7 @@ Peios distributes software as **`.peipkg` files**: signed, self-contained archiv
 
 A package is a **low-level primitive**. It is the unit peipkg installs and tracks. The curated, user-facing concepts that most operators think in — bundles of software, "the web-server role", applications — are built above packages and are out of peipkg's scope: peipkg installs `nginx` the package; it does not know what a "web server role" is. This topic is about the primitive.
 
-What peipkg does coordinate at the package level is [claims](~peios/package-management/claims): a claim is a single shared name that exactly one installed package may hold, so that two packages offering the same role — for example, `registryd` and `loregd` both providing the registry — do not silently collide.
+What peipkg does coordinate at the package level is [claims](~peios/package-management/claims): a claim is a single shared name that exactly one installed package may hold, so that two packages offering the same role — for example, `dev.peios.loregd` and an alternative both providing `registryd` — do not silently collide.
 
 Every installed package is tracked in a private database. peipkg records, for every package, which files it owns — the record that makes a clean removal, a correct upgrade, and the [`verify`](~peios/package-management/inspecting-and-verifying) check possible.
 

@@ -8,7 +8,7 @@ name. A **claim** extends that to the filesystem: it lets several
 installed packages contend for a single shared filesystem name, with
 exactly one owning it at a time. The canonical case is a role daemon —
 two registry sources may both be installed, but only one may own
-`/usr/bin/registryd`.
+`/usr/sbin/registryd`.
 
 This section specifies what a package declares. Which provider holds a
 role, and when the consumer re-evaluates that, is consumer mechanics.
@@ -29,7 +29,7 @@ role, and when the consumer re-evaluates that, is consumer mechanics.
 
 > [!NOTE]
 > The two halves of a claim are declared by two different parties. The
-> *consumer* — whatever hard-codes `/usr/bin/registryd` and expects to
+> *consumer* — whatever hard-codes `/usr/sbin/registryd` and expects to
 > find a registry daemon there — declares the path. The *provider*
 > declares the target, the file of its own that should answer it. The
 > consumer joins the two by (role, slot). Splitting the declaration this
@@ -75,7 +75,7 @@ Example — one package consumes the role, another provides it:
 // the consumer's manifest
 "dependencies": [
   { "name": "registryd",
-    "claims": { "binary": { "path": "/usr/bin/registryd" } } }
+    "claims": { "binary": { "path": "/usr/sbin/registryd" } } }
 ]
 
 // the provider's manifest

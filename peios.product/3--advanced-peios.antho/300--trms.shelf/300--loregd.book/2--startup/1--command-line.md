@@ -59,7 +59,8 @@ service-manager readiness socket: once the hives are registered and the
 request loop is about to begin, it connects and sends `READY=1`. When it
 is unset, the step is skipped.
 
-loregd also opens `/dev/console` for writing at startup and, if that
-succeeds, redirects its own diagnostic log there. This is what makes
-loregd's failures visible during early boot, before any log daemon
-exists.
+loregd writes ordinary progress to standard output and faults to standard
+error. peinit captures both streams during Phase 1: if loregd fails before
+readiness, peinit relays the captured diagnostic output to the console; after
+the log service starts, the pre-eventd buffer carries both streams into eventd.
+This keeps early-boot failures visible without bypassing the system log.

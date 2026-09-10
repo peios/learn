@@ -13,8 +13,8 @@ If other eligible providers remain installed, the withdrawal is surfaced
 to the operator, naming them and the command to assign a new holder:
 
 ```
-Claim 'registryd' withdrawn — packages 'altregd', 'thirdregd'
-also provide it. Run 'peipkg claim registryd grant altregd'
+Claim 'registryd' withdrawn — packages 'org.example.altregd', 'org.example.thirdregd'
+also provide it. Run 'peipkg claim registryd grant org.example.altregd'
 to assign a new holder.
 ```
 

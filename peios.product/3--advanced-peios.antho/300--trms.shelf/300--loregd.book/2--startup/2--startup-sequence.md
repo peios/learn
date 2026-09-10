@@ -15,10 +15,12 @@ in §2.1.
 ## 2. Open each hive database
 
 For each declared hive, create the database file's parent directory if it
-is absent (mode `0755`), then open — or create — the SQLite database at
-that path. loregd owns its storage location, so a first boot onto an
-empty `/var/state` is expected to work without anything having prepared
-the directory.
+is absent (mode `0700`), then open — or create — the SQLite database at
+that path. Registry hives can contain credentials and security policy, so
+the fallback directory is private to the service. A packaged system normally
+receives the same protected directory from the `dev.peios.loregd` package,
+but a first boot onto an empty `/var/state` still works without anything
+having prepared it.
 
 Four pieces of connection state are established immediately:
 

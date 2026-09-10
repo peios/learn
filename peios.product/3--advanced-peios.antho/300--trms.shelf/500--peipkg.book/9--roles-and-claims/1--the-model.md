@@ -8,7 +8,7 @@ own on the filesystem, with at most one *holding* it. The holder's file
 answers the contended path through a symlink peipkg owns.
 
 Two registry daemons can be installed at once; only one of them is
-`/usr/bin/registryd`.
+`/usr/sbin/registryd`.
 
 The declarations are specified in PSPU §5.23. What follows is what
 peipkg does with them.
@@ -27,8 +27,8 @@ set with the holder's targets.
 ## Links are relative
 
 A claim link's body is a **relative** path, computed from the link's
-location to the target: a link at `/usr/bin/registryd` pointing at
-`/usr/sbin/loregd` is written as `../sbin/loregd`.
+location to the target: a link at `/usr/sbin/registryd` pointing at
+`/usr/sbin/loregd` is written as `loregd`.
 
 Only the database keeps the absolute logical target. Anything reading
 the link itself — an auditor, an unrelated tool — sees the relative
