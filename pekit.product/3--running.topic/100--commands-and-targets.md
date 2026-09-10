@@ -34,6 +34,7 @@ For the flags themselves (how they parse, global flags like `--dry-run`), see
 | `gen` | `gen` targets | none | yes | Runs gen commands; writes generated source **into the tree**. |
 | `verify` | `gen` targets | none | yes | Runs gen `verify_command`s; a read-only drift check (writes nothing). |
 | `lock` | the recipe's source | multiple | no | Fetches and pins the selected versions in [`pekit.lock`](~pekit/recipes/sources#the-lockfile) without building. With no version flags, reports the current lock instead. |
+| `lint` | the recipe and every package it defines | none, or multiple | no | Checks the tree against the rules in [`lint.pekit.toml`](~pekit/running/linting); with a version, also the payload from an existing build stage. Never builds; writes nothing. |
 | `workspace` | a delegated command across members | (delegated) | (delegated) | Runs one of the above across every workspace member. |
 
 `gen` and `verify` are the source-generating pair — see

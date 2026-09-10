@@ -1,7 +1,7 @@
 ---
 title: Supporting files and reference tables
 type: reference
-description: "Exact schemas for pekit's non-recipe files (workspace, env, keyring, pekit.lock, patch series) plus template variables, source-ref roots, and publish targets."
+description: "Exact schemas for pekit's non-recipe files (workspace, env, keyring, lint, pekit.lock, patch series) plus template variables, source-ref roots, and publish targets."
 related:
   - pekit/reference/recipe-format
   - pekit/recipes/environments-and-keyrings
@@ -201,6 +201,25 @@ A build target's [`sign` table](~pekit/reference/recipe-format#build-name-sign-t
 reads further entries, but which ones is the recipe's choice: each `sign.pip`
 value is the dotted path of a leaf holding the path to an ML-DSA-65 private
 key. Those entries are still exported to the target like any other.
+
+---
+
+## `lint.pekit.toml`
+
+Enables and parameterises the rules `pekit lint` checks. pekit turns no rule
+on by itself; a tree with no lint file has nothing to lint.
+
+| Key | Type | Required | Meaning |
+| --- | --- | --- | --- |
+| `[package]`, `[source]`, `[build]`, `[payload]`, `[split]`, `[elf]` | tables | no | Rule keys and parameters, one table per area. A key's dotted path is the rule's ID. Every key must be a known rule or parameter (`unknown_key`) with a value of the shape it accepts (`invalid_value`). |
+| `[allow]` | table (rule ID → reason) | no | Exemptions. Each key names a rule; the value is a non-empty reason (`missing_reason`). A parameter key is not a rule and is rejected. |
+
+Files are found from the recipe directory up to the workspace root, plus a
+delegated recipe's source root, and merge outermost first with the nearest
+file winning per key. A nearer file may not set a rule an outer file enabled
+to `false` (`lint_rule_disabled`); it exempts it through `[allow]` instead.
+Every rule, its accepted values and the merge order are on
+[Linting](~pekit/running/linting).
 
 ---
 
