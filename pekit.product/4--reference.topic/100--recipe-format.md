@@ -75,7 +75,7 @@ The recipe file accepts exactly these top-level keys. Anything else is an
 
 | Key | Type | Required | Meaning |
 | --- | --- | --- | --- |
-| `out_dir` | string | no | Output directory name, relative to the recipe root. Default `"out"`. |
+| `out_dir` | string | no | Managed output directory strictly below the recipe root. Relative paths resolve from the recipe root; an absolute path is accepted only when it remains below that root. Default `"out"`. |
 | `env` | table | no | Environment variables exported to every target command. See [`[env]`](#env). |
 | `wrap` | table | no | Command wrapper applied to every target. See [`[wrap]`](#wrap). |
 | `source` | table | no | Where the recipe's source tree comes from. See [`[source]`](#source). |

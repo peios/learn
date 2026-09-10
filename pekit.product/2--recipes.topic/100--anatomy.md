@@ -115,7 +115,12 @@ command = "cargo clean"
 
 The top-level keys break down as follows:
 
-- **`out_dir`** — the directory pekit stages everything under, relative to the recipe unless absolute. Defaults to `"out"`. This is pekit's **managed** output: `pekit clean` may remove it wholesale, so keep nothing precious there. It holds fetched sources, per-target staging directories, and written `.peipkg` files.
+- **`out_dir`** — the directory pekit stages everything under, relative to the
+  recipe unless it is an absolute path below the recipe root. Defaults to
+  `"out"`. Pekit rejects the recipe root, its parents, and paths outside it:
+  this is pekit's **managed** output and `pekit clean` removes it wholesale.
+  Keep nothing precious there. It holds fetched sources, per-target staging
+  directories, and written `.peipkg` files.
 - **`[env]`** — a table of `NAME = "value"` pairs exported into every target command. Names must be valid shell identifiers, and pekit reserves the `PEKIT_` prefix — you cannot set a `PEKIT_*` variable here. See [Environments and keyrings](~pekit/recipes/environments-and-keyrings).
 - **`[wrap]`** — a single `command` that every target runs *inside*. The string must contain exactly one `{{command}}` placeholder, which pekit replaces with the target's script. Use it to enter a toolchain shell, a container, or a sandbox.
 - **`[source]`** — declares where the source tree comes from: `[source.git]`, `[source.url]`, `[source.pypi]`, or `[source.local]`. Absent, the recipe builds against its own directory. Covered in [Sources](~pekit/recipes/sources).

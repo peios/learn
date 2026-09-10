@@ -245,6 +245,13 @@ invalid_selector: clean accepts at most one target selector
 
 `--output-only` and `--target-only` cannot be combined.
 
+Pekit accepts only an `out_dir` strictly below the recipe root. It rejects the
+recipe root itself, its parents, and paths outside it before any command runs,
+so a typo such as `out_dir = "."`, `".."`, or `"/"` cannot make `clean`
+recursively remove source or a broader workspace. If the child path is a
+symlink, removing managed output removes the symlink rather than following it;
+a symlink in any parent component of a nested `out_dir` is rejected.
+
 ## `--all` for `package` and `publish`
 
 A multi-package recipe has several package **members**. `package` and `publish`
