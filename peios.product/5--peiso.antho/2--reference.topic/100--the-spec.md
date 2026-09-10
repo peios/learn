@@ -17,6 +17,7 @@ keys = ["../../pkgs/dev-signing.pub"]
 
 [baseline]
 edition     = "Experimental"
+package     = "dev.peios.peios-experimental"
 version     = "2026.8"
 first_boot  = "live"
 source_date = "2026-06-22T00:00:00Z"
@@ -94,7 +95,7 @@ first_boot = "none"
 
 | | |
 |---|---|
-| Scalars | A layer that states one overrides; a layer silent about one leaves it alone. `edition`, `version`, `first_boot`, `source_date`, `squashfs.compression`, `squashfs.level`, `boot.cmdline_extra`, `devtools.dwe`. |
+| Scalars | A layer that states one overrides; a layer silent about one leaves it alone. `edition`, `package`, `version`, `first_boot`, `source_date`, `squashfs.compression`, `squashfs.level`, `boot.cmdline_extra`, `devtools.dwe`. |
 | Lists | Accumulate in layering order: `[[packages.repository]]`, `[[package]]`, `[[file]]`, `[[autorun]]`, `[[feature]]`, `[[medium]]`, `registry.add`, `registry.remove`, `squashfs.exclude`. Repositories are searched in that order, so a base layer's sources come before a later layer's additions. |
 | `initramfs.exclude` | Replaces rather than accumulates. Absent and empty already mean different things there — the default list, and nothing — and appending would leave a layer no way to write either. |
 
@@ -114,7 +115,8 @@ Where packages come from. At least one is required; several are searched togethe
 
 | Key | | |
 |---|---|---|
-| `edition` | required | The edition name as written on the box: `"Experimental"`. The package is `peios-` plus the name lowercased with each run of whitespace replaced by a hyphen: `"Pro Desktop"` → `peios-pro-desktop`. |
+| `edition` | required | The edition name as written on the box: `"Experimental"`. |
+| `package` | optional | The concrete package identity backing the edition, such as `"dev.peios.peios-experimental"`. New qualified editions should always state it. If omitted for an older spec, Peiso derives the historical name as `peios-` plus the edition lowercased with whitespace replaced by hyphens: `"Pro Desktop"` → `peios-pro-desktop`. |
 | `version` | optional | The edition version to build, e.g. `"2026.8"`. Absent means the newest available. Written without the packaging revision; `2026.8` matches `2026.8-1` and any later revision. |
 | `first_boot` | optional, default `"live"` | What the medium boots into. `"live"` adds `live-boot` to the root. `"none"` says the composition is not a medium at all and adds no boot flavour — for a root something else will boot, or make bootable its own way; `peiso iso` refuses it. `"install"` is reserved and currently refused. |
 | `source_date` | optional | An RFC 3339 timestamp stamped on everything the build produces — compose's source date, the repository indexes, every squashfs entry, the ISO. Absent means the build time, which is not reproducible. |
