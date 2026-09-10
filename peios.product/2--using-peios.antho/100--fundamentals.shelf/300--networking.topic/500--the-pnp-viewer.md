@@ -18,6 +18,13 @@ pnpd is development-phase tooling, and deliberately *not* part of
 enforcement: the kernel reads its policy from the registry itself. pnpd
 watches, explains, and writes the registry like any other author.
 
+The Experimental edition is a development-machine image, not a production
+deployment profile. Its pnpd service listens on every interface and does not
+authenticate viewers; a viewer can inspect captured traffic and change network
+policy. Run it only on a trusted development network, and expose port 8081 to
+the host through a loopback-only forward. Do not deploy the Experimental image
+or expose pnpd to an untrusted network.
+
 ## The wire tab
 
 Every frame on every interface, both directions, decoded in the browser:
