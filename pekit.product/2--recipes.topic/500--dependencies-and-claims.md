@@ -36,17 +36,19 @@ ones. Both parse identically.
 
 ```toml
 [dependencies]
-libssl              = ">= 3.0"
-"libc.so.6"         = "*"
-"pkgconfig(zlib)"   = ">= 1.2.11"
+"org.openssl.libssl" = ">= 3.0"
+"libc.so.6"          = "*"
+"pkgconfig(zlib)"    = ">= 1.2.11"
 
 [optional_dependencies]
-bash-completion = "*"
+"org.gnu.bash-completion" = "*"
 ```
 
-Each entry maps a **name** to a **version constraint** string. The name is a
-peipkg capability name — either a real package name or a virtual capability such
-as a soname (`libc.so.6`) or a `pkgconfig(...)` token. The constraint is any
+Each entry maps a **name** to a **version constraint** string. A concrete
+package is named by its canonical reverse-DNS identity; unqualified package
+aliases are not a supported compatibility layer. A virtual capability instead
+names an interchangeable interface, such as a soname (`libc.so.6`), a
+`pkgconfig(...)` token, or an explicitly documented role such as `sh`. The constraint is any
 peipkg constraint expression (`">= 1.2"`, `"< 2"`, and so on). Both `"*"` and the
 long form below with the constraint omitted mean **any version**.
 
@@ -59,10 +61,10 @@ from the depender's own root:
 ```toml
 [dependencies]
 # short form: constraint only, depender's own root
-zlib = ">= 1.2"
+"io.github.zlib-ng.zlib-ng-compat" = ">= 1.2"
 
 # table form: constraint + explicit root
-[dependencies.libfoo]
+[dependencies."org.example.libfoo"]
 constraint = ">= 3"
 root       = "system.lib"
 ```

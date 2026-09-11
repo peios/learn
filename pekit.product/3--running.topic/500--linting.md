@@ -34,16 +34,26 @@ pekit lint --version 1.5.7
 pekit workspace lint --json
 ```
 
-With no version flag, `lint` reads only committed files: the recipe, its
-package files, `pekit.lock`, the patch series. It resolves no source and
-touches no network, so it is safe in any checkout.
+With no version flag, an ordinary non-delegated recipe reads only its committed
+recipe files, `pekit.lock`, and patch series. It resolves no source and touches
+no network.
 
-With a version flag (`--version`, `--latest`, `--local`), `lint` also resolves
-the source the way `package` does and checks the **payload** each package
-would pack, read from an existing build stage. It never builds: a missing
-stage is `stage_missing`, naming the `pekit build` to run first. The rules
-that need a payload are marked in the tables below; without a version they
-are skipped with a `lint_skipped` event that says how many.
+A delegated recipe is the deliberate exception. Plain `pekit lint` acquires
+one source snapshot, loads the delegated `pekit.toml`, package files, and
+`lint.pekit.toml`, merges them with the wrapper, and runs static rules against
+that effective recipe. A templated, tracked-path, or PyPI source selects the
+newest discoverable version; a fixed Git ref or fixed URL needs no synthetic
+version; a local-only delegate uses its configured `[source.local]` tree. This
+may contact the source and populate `out_dir`'s source cache, but it runs no
+target and needs no build stage.
+
+With an explicit source/version flag (`--version`, `--latest`, `--local`),
+`lint` performs the same effective-recipe checks and additionally checks the
+**payload** each package would pack, read from an existing build stage. It
+never builds: a missing stage is `stage_missing`, naming the `pekit build` to
+run first. The rules that need a payload are marked in the tables below;
+without an explicit selection they are skipped with a `lint_skipped` event
+that says how many.
 
 `lint` takes the version-selection and local-source flags, `--env` and
 `--keyring`, and the global flags. It accepts no selectors and no `--all`:
@@ -87,9 +97,10 @@ run.
 ### Where files are found, and how they layer
 
 Files are found by walking up from the recipe directory to the workspace
-root. A recipe outside a workspace reads only its own. A delegated recipe
-(one whose build lives in its source, `delegate = true`) also reads the file
-at the source root once the source is resolved.
+root. A recipe outside a workspace reads only its own, except that a delegated
+recipe also reads the file at its acquired source root. Plain lint performs
+that acquisition automatically; it is not necessary to request payload lint
+just to apply the source project's rules.
 
 They merge **outermost first, nearest winning per key**, in this order:
 
@@ -145,7 +156,19 @@ Checked for each package definition the recipe produces.
 | `package.homepage` | `true` or `"https"` | A homepage is declared; with `"https"`, it is an https URL. |
 | `package.description` | `true` or a length | A description exists, is one line, is at most the given length (80 when `true`), does not end with a full stop, and does not start with the package name or its last dotted label. |
 | `package.dependencies` | `"consistent"` | No self-dependency; no dependency on a name the package itself provides; no name both depended on and conflicted with; no name in both `[dependencies]` and `[optional_dependencies]`; no provide or conflict on the package's own name. |
+| `package.references` | `"reverse-dns"` | Every concrete package reference in package metadata and every Peipkg target dependency uses its canonical reverse-DNS name. Structured virtual capabilities such as `pkgconfig(foo)`, `python(abi)` and ELF SONAMEs remain valid. Other deliberately unqualified interfaces must be listed in `package.virtual_capabilities`. |
 | `package.architecture` | `"consistent"` **payload** | A package declared architecture-independent ships no ELF object and nothing under an architecture-specific directory; a package declared for an architecture ships at least one such thing. The architecture-independent name is the `package.noarch` parameter, default `noarch`. |
+
+`package.virtual_capabilities` is an array parameter shared by the
+`package.references` checks. It is for genuine interchangeable interfaces such
+as `sh` or an operating-system role, never for a compatibility alias for a
+concrete package. For example:
+
+```toml
+[package]
+references = "reverse-dns"
+virtual_capabilities = ["init", "sh"]
+```
 
 ### `[source]`
 

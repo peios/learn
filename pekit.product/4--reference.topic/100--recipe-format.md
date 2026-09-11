@@ -316,11 +316,12 @@ Fields of a single target:
 | `needs` | array of strings | no | Names of other targets in the same section that must run first. |
 | `clear_out` | bool | no | Wipe this target's output directory before running. Default `true`. |
 | `dependencies` | table | no | **Build and test targets.** Dependencies the target needs provisioned in its root. Under `--env peipkg` the composed root holds *only* what is declared — a test stage that shells out needs `dash` (pekit runs `command` through `/usr/bin/sh`) and whatever else its script calls. See below. |
+| `gate` | bool | no | **Test targets only.** When `true`, `package` and `publish` run this test after staging its `needs` and before writing any artifact. Default `false`; `--no-gates` explicitly bypasses gated tests. |
 | `sign` | table | no | **Build targets only.** Files in the target's output to sign after the command succeeds, by signature kind. See [`sign`](#build-name-sign-target-sign) below. |
 
 Any other key in a target table is an `unknown target key` error. `sign` is
-accepted only in `[build]` targets, and `dependencies` in `[build]` and
-`[test]`; using either in `install`/`clean` is an unknown key.
+accepted only in `[build]` targets, `gate` only in `[test]`, and `dependencies`
+in `[build]` and `[test]`; using them elsewhere is an unknown key.
 
 The `dependencies` table is keyed by **provider** (a selector), each mapping
 dependency names to version constraints:

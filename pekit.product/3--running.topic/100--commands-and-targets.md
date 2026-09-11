@@ -28,13 +28,13 @@ For the flags themselves (how they parse, global flags like `--dry-run`), see
 | `build` | `build` targets + their `needs` | multiple | no | Runs build targets; stages their output under `out_dir`. |
 | `test` | `test` targets + the builds they need | **single resolved** | no | Stages needed builds, then runs the selected test targets. |
 | `install` | `install` targets + the builds they need | **single resolved** | no | Stages needed builds, then runs the selected install targets. |
-| `package` | package members + the builds they list | multiple | yes | Stages builds and writes `.peipkg` artifacts under `out_dir`. Recipes with a reproducible source also emit a [corresponding-source package](~pekit/recipes/sources#source-packages). |
-| `publish` | package members (as `package`) | multiple | yes | Packages, then publishes to configured `localdir` and/or Peipkg repository destinations. |
+| `package` | package members + release gates | multiple | yes | Stages builds, runs gated tests, and writes `.peipkg` artifacts under `out_dir`. Recipes with a reproducible source also emit a [corresponding-source package](~pekit/recipes/sources#source-packages). |
+| `publish` | package members (as `package`) | multiple | yes | Runs release gates, packages, then publishes to configured `localdir` and/or Peipkg repository destinations. |
 | `clean` | one optional `clean` target | none | no | Runs a clean target and/or removes the managed output directory. |
 | `gen` | `gen` targets | none | yes | Runs gen commands; writes generated source **into the tree**. |
 | `verify` | `gen` targets | none | yes | Runs gen `verify_command`s; a read-only drift check (writes nothing). |
 | `lock` | the recipe's source | multiple | no | Fetches and pins the selected versions in [`pekit.lock`](~pekit/recipes/sources#the-lockfile) without building. With no version flags, reports the current lock instead. |
-| `lint` | the recipe and every package it defines | none, or multiple | no | Checks the tree against the rules in [`lint.pekit.toml`](~pekit/running/linting); with a version, also the payload from an existing build stage. Never builds; writes nothing. |
+| `lint` | the recipe and every package it defines | none, or multiple | no | Checks the effective tree against [`lint.pekit.toml`](~pekit/running/linting), acquiring delegated recipe files when needed; with an explicit version/source selection, also checks the payload from an existing build stage. Never builds. |
 | `workspace` | a delegated command across members | (delegated) | (delegated) | Runs one of the above across every workspace member. |
 | `help` | a command name, optionally | none | no | Prints the overview, or one command's flags and selectors. `--help` / `-h` anywhere do the same. |
 | `version` | nothing | none | no | Prints the pekit version and build commit. |
@@ -70,9 +70,10 @@ Each command accepts a fixed set of flag groups. Passing a flag the command does
 not support is an **error** up front (`unsupported_flag`), unless you pass
 `--allow-unused`, which downgrades it to a suppressed warning. Broadly:
 `build`, `test`, `install`, `package`, and `publish` share the version-selection,
-local-source, `--no-build`, `--no-verify`, and `--refresh-source` groups; `--all`
-is `package`/`publish`/`gen`/`verify` only; `--allow-unanchored` and `--allow-unsigned` are `publish`
-only; `clean` takes only `--env`, `--keyring`, and its own mode flags
+local-source, `--no-build`, `--no-verify`, and `--refresh-source` groups;
+`--no-gates` is `package`/`publish` only; `--all` is
+`package`/`publish`/`gen`/`verify` only; `--allow-unanchored` and
+`--allow-unsigned` are `publish` only; `clean` takes only `--env`, `--keyring`, and its own mode flags
 (`--output-only` / `--target-only`); `gen` and `verify` take only `--env`,
 `--keyring`, and `--all`; `lock` takes version selection, `--refresh-source`,
 and its own `--repin`. The full command-by-flag matrix is in the
@@ -188,6 +189,30 @@ target_cycle: build dependency cycle: a -> b -> a
 
 `--no-build` may name already-staged build targets to skip re-running them;
 naming a build target that does not exist is likewise a `missing_target` error.
+
+## Release gates
+
+A test target with `gate = true` is part of the recipe's release contract:
+
+```toml
+[test.release]
+needs = ["main"]
+gate = true
+command = "./tests/release-check"
+```
+
+`pekit package` and `pekit publish` stage the union of the selected packages'
+build requirements and every release gate's `needs`, then run each gate once
+for the resolved source version. Package artifacts are written only after all
+gates succeed. A failed gate therefore cannot create or publish a new artifact.
+
+Gates are recipe-wide: selecting one package from a multi-package recipe still
+runs every gated test in that recipe. `pekit build` does not run gates, and an
+explicit `pekit test` runs a selected target whether or not it is a gate.
+
+For rapid local iteration, `pekit package --no-gates` and `pekit publish
+--no-gates` skip release gates and print a warning naming them. `--no-build`
+only controls build-stage reuse and never implies `--no-gates`.
 
 ### Stages that did not finish
 

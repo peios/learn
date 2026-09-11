@@ -62,8 +62,8 @@ Ten commands, each with a defined job:
 | `build` | Run build targets and their build dependencies. |
 | `test` | Stage the builds a test needs, then run test targets. |
 | `install` | Stage the builds an install needs, then run install targets. |
-| `package` | Stage builds and write `.peipkg` package artifacts. |
-| `publish` | Package, then publish the artifacts to a configured destination. |
+| `package` | Stage builds, run release gates, and write `.peipkg` package artifacts. |
+| `publish` | Run release gates, package, then publish the artifacts to a configured destination. |
 | `clean` | Run a clean target and/or remove pekit's managed output directory. |
 | `gen` | Run source-generating targets that write generated source into the tree. |
 | `verify` | Run gen targets' drift checks without writing anything. |

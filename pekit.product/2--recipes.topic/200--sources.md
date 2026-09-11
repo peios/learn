@@ -578,6 +578,11 @@ This lets a thin Peios recipe wrap upstream software that already ships its own
 pekit recipe: point `[source.git]` at the upstream repo, set `delegate = true`,
 and reuse its build and packaging while overriding only what you need.
 
+Plain `pekit lint` acquires one delegated source snapshot and statically checks
+these merged recipe and package definitions without building. An explicit
+version or source selector additionally enables payload rules against that
+selection's existing build stage.
+
 ## Where to go next
 
 For how enumerated versions are selected and rendered, read [Versions](~pekit/recipes/versions).
