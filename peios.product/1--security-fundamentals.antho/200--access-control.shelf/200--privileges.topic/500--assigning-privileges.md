@@ -29,11 +29,11 @@ Machine\Generic\Authn\Policy
   DeniedPrivileges  REG_MULTI_SZ  ["SeDebugPrivilege"]
   \Everyone
       Privileges    REG_MULTI_SZ  ["SeChangeNotifyPrivilege"]
+      DefaultDacl   REG_SZ        "D:(A;;GA;;;S-1-3-4)(A;;GA;;;SY)(A;;GA;;;BA)"
   \Administrators
       Privileges    REG_MULTI_SZ  ["SeBackupPrivilege", "SeRestorePrivilege"]
       Integrity     REG_SZ        "High"
       Owner         REG_SZ        "Administrators"
-      DefaultDacl   REG_SZ        "D:(A;;GA;;;SY)(A;;GA;;;BA)"
 ```
 
 Keyed by principal rather than by privilege on purpose. One key shows the totality of a principal's authority — `reg ls` on `\Administrators` answers "what can an administrator do on this machine?" completely. Authority scattered across twenty per-privilege values is authority nobody audits: a right granted somewhere unexpected does not surface when you look at the principal, and you would have to know to check every other place.
@@ -141,15 +141,19 @@ The case this exists for is a shared administrative estate: objects an administr
 
 ### `DefaultDacl` — `REG_SZ`
 
-The DACL objects this token creates inherit when nothing else supplies one, written as **SDDL**:
+The DACL an object gets when this token creates it with no parent to inherit from, written as **SDDL**. The shipped policy names it on the `Everyone` record:
 
 ```
-D:(A;;GA;;;SY)(A;;GA;;;BA)
+D:(A;;GA;;;S-1-3-4)(A;;GA;;;SY)(A;;GA;;;BA)
 ```
+
+That is the owner, `LocalSystem` and `BUILTIN\Administrators`, full control, and nobody else — the same shape `authd` stamps on a home directory. `S-1-3-4` is `OWNER RIGHTS`, which the access check resolves against the object's owner at the time of the check. It is written as a literal SID because the SDDL parser has no alias for it, and it has to be `OWNER RIGHTS` rather than `CREATOR OWNER`: the kernel copies a default DACL onto a new file verbatim and substitutes no placeholders, so a `CREATOR OWNER` ACE would name nobody.
+
+The value is a fallback and is reached rarely. Whenever the parent has inheritable ACEs the child takes those and the default DACL is not consulted (see [Inheritance](~peios/security-descriptors/inheritance)), and every filesystem root on Peios carries inheritable ACEs. What reaches it is an object with no parent, such as an abstract socket, or a child of a container whose descriptor was written without inheritable ACEs. There is no kernel fallback beneath it: a token with no default DACL leaves such an object with a null DACL, which grants every caller everything.
 
 SDDL rather than raw bytes because the whole argument for policy living in the registry is that an operator can read it. Conditional ACEs are preserved, so `D:(XA;;GA;;;WD;(@USER.Department == "Engineering"))` works and keeps its condition.
 
-A value that does not parse is dropped with a warning and the system default applies — a typo costs the customisation, not the session.
+A value that does not parse is dropped with a warning and the token is minted with no default DACL — a typo costs the customisation, not the session, but it does leave the null-DACL case open until it is corrected.
 
 ### `LogonTypes` — `REG_MULTI_SZ`
 

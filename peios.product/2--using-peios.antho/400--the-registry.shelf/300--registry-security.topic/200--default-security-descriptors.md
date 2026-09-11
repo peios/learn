@@ -64,7 +64,7 @@ Whoever can write a component's SdDefaults values decides what access the compon
 
 **Bootstrap seeding.** The very first descriptors of a boot — the seed stamped onto a fresh root before any registry source is attached — are compiled into the tools that write them, and are not customisable through the registry. There is no registry to read at that point in boot; that is not a gap in the convention but the reason it has a floor.
 
-**Kernel fallbacks.** The descriptors the kernel synthesises when a mount policy has no template, and the default DACL applied when a created object has no parent to inherit from, are fixed. They are the floor under a missing policy, not configuration.
+**Kernel fallbacks.** The descriptors the kernel synthesises when a mount policy has no template are fixed. They are the floor under a missing policy, not configuration. The DACL applied when a created object has no parent to inherit from is not a kernel fallback at all: it is the creating token's default DACL, which `authd` sets from the `DefaultDacl` value of the principal's policy record (see [Assigning privileges](~peios/privileges/assigning-privileges)), and a token with none leaves such an object with a null DACL.
 
 **Files installed by packages.** A package payload entry gets its descriptor by inheritance from its destination directory, or from a declaration in the package manifest — see [PSPU §5.20](~peios/package-format-and-repository-protocol/security-descriptor-overrides). SdDefaults governs what software stamps at runtime, not what the package manager installs.
 

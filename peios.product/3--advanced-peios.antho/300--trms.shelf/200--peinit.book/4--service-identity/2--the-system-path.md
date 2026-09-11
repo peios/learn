@@ -48,6 +48,21 @@ minted here without it would be unable to report itself ready, while an
 otherwise identical service on an authd-minted token could. A service is
 no less a service for having been started before the authority was.
 
+**The minted token carries a default DACL the template cannot supply.**
+[*token.the-minted-token-carries-the-system-default-dacl] A token's
+default DACL is the DACL an object gets when the token creates it with
+no parent to inherit from — an abstract socket, a key under a container
+written without inheritable ACEs. The kernel has no fallback of its
+own: a token whose default DACL is empty leaves such an object with a
+null DACL, which grants everything to everybody. The bootstrap SYSTEM
+token carries `D:(A;;GA;;;SY)(A;;GA;;;BA)` (see
+[Bootstrap tokens](~peios/boot-and-trust-establishment/bootstrap-tokens)),
+but a token's default DACL is not a field peinit can read back from its
+own handle, so peinit states the same value itself and sets it on every
+SYSTEM token it mints. Non-SYSTEM services do not pass through here; their default DACL
+is the authority's, from the `DefaultDacl` value of the principal's
+policy record (§4.3).
+
 peinit also asserts that its own token is a primary token and that its
 user SID really is `S-1-5-18` before minting, and fails the start with a
 message naming what it found otherwise.

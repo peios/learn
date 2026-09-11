@@ -62,7 +62,7 @@ The merge proceeds as follows:
 
 1. **Compute the child's owner.** If the creator supplied an owner in the explicit SD, use it (subject to the same-self-or-owner-group rule from [Ownership](~peios/security-descriptors/ownership)). Otherwise, use the creator's token's default owner.
 2. **Compute the child's primary group.** Same rule: explicit SD if present, otherwise the creator's token's default primary group.
-3. **Compute the child's DACL.** Start with explicit ACEs from the creator's SD (or, if the creator did not supply a DACL, the creator's token's `default_dacl`). Then append inheritable ACEs from the parent's DACL — but only those whose flags say they should propagate to this kind of child (container or non-container).
+3. **Compute the child's DACL.** If the creator supplied a DACL, start with its explicit ACEs and append the inheritable ACEs from the parent's DACL — only those whose flags say they should propagate to this kind of child (container or non-container). If the creator supplied no DACL, the child's DACL is the inherited ACEs alone. Only when the parent yields no inheritable ACE at all is the creator's token consulted: the child then gets the token's `default_dacl`, and if the token has none, a null DACL. The default DACL is a fallback, never a base that inherited ACEs are added to.
 4. **Compute the child's SACL.** Same algorithm as the DACL, applied to SACL ACEs.
 
 Each inherited ACE goes through a small transformation as it is copied:
@@ -102,12 +102,12 @@ Which source wins for each component of the child SD, in order:
 |---|---|---|---|
 | Owner | Creator's explicit SD (if owner present) | Creator's token's default owner | (none — must be present) |
 | Primary group | Creator's explicit SD (if group present) | Creator's token's default primary group | (none — must be present) |
-| DACL | Creator's explicit SD (if DACL present) | Creator's token's `default_dacl` | (no DACL means NULL DACL) |
-| SACL | Creator's explicit SD (if SACL present) | (no fallback) | (no SACL means no audit policy) |
+| DACL | Creator's explicit SD (if DACL present), plus the parent's inheritable ACEs | The parent's inheritable ACEs alone | Creator's token's `default_dacl`, and a NULL DACL if the token has none |
+| SACL | Creator's explicit SD (if SACL present), plus the parent's inheritable ACEs | The parent's inheritable ACEs alone | (no SACL means no audit policy) |
 
-Plus, in every case, **inheritable ACEs from the parent are appended** to whatever DACL/SACL was chosen as the base. The parent's contributions never replace; they always extend.
+Whenever the parent has inheritable ACEs, they are **appended** to an explicit DACL or SACL rather than replacing it, so a creator who supplies an explicit DACL gets that DACL plus the inheritable ACEs from the parent. They cannot exclude the parent's ACEs except by setting the protected flag (see below).
 
-This means: a creator who supplies an explicit DACL gets that DACL plus the inheritable ACEs from the parent. They cannot exclude the parent's ACEs except by setting the protected flag (see below).
+The token's `default_dacl` is a fallback, not a base. It is consulted only when the creator supplied no DACL and inheritance produced nothing, which on a Peios filesystem is rare: every root descriptor carries inheritable ACEs. The cases that reach it are objects with no parent to inherit from, such as an abstract socket, and children of a container whose descriptor was deliberately written without inheritable ACEs.
 
 ## Protected ACLs
 
@@ -115,7 +115,7 @@ There is an opt-out: the `SE_DACL_PROTECTED` and `SE_SACL_PROTECTED` flags in th
 
 | Flag | Effect |
 |---|---|
-| `SE_DACL_PROTECTED` (0x1000) | The child's DACL does not accept inheritable ACEs from the parent. Only the explicit ACEs in the creator's SD (or the creator's `default_dacl`) appear. |
+| `SE_DACL_PROTECTED` (0x1000) | The child's DACL does not accept inheritable ACEs from the parent. Only the explicit ACEs in the creator's SD appear. |
 | `SE_SACL_PROTECTED` (0x2000) | Same, for the SACL. |
 
 When a creator sets these flags on the explicit SD they pass to the create call, the resulting child's DACL/SACL is purely what the creator wrote. The parent might have a hundred inheritable ACEs; none of them appear on the child.
