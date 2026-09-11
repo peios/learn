@@ -24,7 +24,7 @@ fetched artifact — and declaring both is an error.
 | `extract` | Whether to unpack the artifact |
 | `root` | The subdirectory of the unpacked tree that is the source root |
 | `versions` | A constraint cap |
-| `file_regex` | A pattern applied to a directory listing to enumerate versions |
+| `file_regex` | A pattern applied to a directory listing to enumerate versions; named version-component captures can map upstream filenames to canonical package versions |
 | `checksum` | A single hash, or a table mapping version to hash |
 
 ### Signature verification

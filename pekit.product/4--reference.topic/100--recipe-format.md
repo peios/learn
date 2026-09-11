@@ -167,7 +167,7 @@ trust-on-first-use in the recipe's machine-written
 | `extract` | bool | no | Treat the download as an archive and extract it. Default `false`. |
 | `root` | string | no | Sub-directory within the extracted tree to use as the source root. Default `"."`. |
 | `versions` | string | no | Version **cap**: a constraint string filtering enumerated or requested versions (see [Versions](~pekit/recipes/versions)). |
-| `file_regex` | string | no | Regex extracting version numbers when enumerating from a listing. |
+| `file_regex` | string | no | Regex extracting versions when enumerating from a listing. Named `version`, `major`, `minor`, `patch`, `revision`, `suffix`, `prerelease`, and `buildmeta` captures map filenames with the same semantics as Git `tag_regex`; unnamed captures only filter. |
 | `checksum` | string **or** table | no | Expected checksum. A bare string applies to all versions; a table maps version → checksum. |
 | `signature` | table | no | Upstream signature verification — see `[source.url.signature]` below. |
 | `patch_series` | table | no | Incremental upstream patch series layered over each `major.minor` base archive — see `[source.url.patch_series]` below. |

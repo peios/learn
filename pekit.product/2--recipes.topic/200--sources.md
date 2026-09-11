@@ -112,7 +112,9 @@ required `url` is templated with the selected version; `extract` (default
 **inside the archive** to promote as the source tree; `versions` is a version
 cap (as for git); `listing_url` can name a release page when the download
 template does not live in a browsable directory; `file_regex` is used when
-enumerating that listing; and `checksum` pins the download to an expected
+enumerating that listing. Like Git `tag_regex`, named `version` or component
+captures can map upstream filenames into the catalogue's version form; the URL
+and archive root then render from that mapped version. `checksum` pins the download to an expected
 digest — a single string or a per-version table (see below). The full schema is in the
 [recipe format reference](~pekit/reference/recipe-format).
 
@@ -509,6 +511,11 @@ Reproducible sources can list the versions they offer upstream; this feeds
 - **url**: fetch `listing_url` when set, otherwise derive a directory listing
   from the `url` template (the part before the first `{{…}}`, up to the last
   `/`); filter entries by `file_regex`, and extract versions from the matches.
+  Named captures have the same mapping semantics as Git `tag_regex`: for
+  example, `(?P<major>\d{4})(?P<minor>\d{2})(?P<patch>\d{2})` exposes
+  `20260810` as `2026.08.10`, which a URL containing
+  `{{major}}{{minor}}{{patch}}` renders back to the upstream filename.
+  Without named version captures, Pekit extracts an embedded version as before.
 - **PyPI**: fetch the project's standardized JSON Simple API page once per
   invocation and enumerate the eligible sdists described under
   [`[source.pypi]`](#source-pypi).
