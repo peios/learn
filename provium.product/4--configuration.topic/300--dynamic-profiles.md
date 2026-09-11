@@ -113,7 +113,7 @@ Some builders have no incremental mode to reach for. `peiso root` is one: it com
 build = "rm -rf {out}/root && peiso root shared.toml peiso.toml --out {out}/root"
 ```
 
-— and that is a full compose on every `provium test`, however small the change. Where the tests themselves take a second, the build can be most of a minute of it.
+— and that is a full compose on every `provium` run, however small the change. Where the tests themselves take a second, the build can be most of a minute of it.
 
 The fix is a script beside the profile that decides for itself:
 
