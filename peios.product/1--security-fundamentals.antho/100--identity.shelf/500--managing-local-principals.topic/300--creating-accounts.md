@@ -77,13 +77,11 @@ The sign-in is otherwise completely ordinary. `lpsd` still vouches for the princ
 
 An empty password is not the same thing and is refused. See [the `lps` command](~peios/managing-local-principals/lps-command).
 
-## Give the first account Administrators
+## Make the first account an administrator
 
-On a stock machine the tree-wide security descriptor grants `LocalSystem` and `BUILTIN\Administrators`, and nothing else.
+An ordinary account is usable on a stock image. The descriptor the system tree ships with grants `Everyone` read and execute — and on Peios execute is also traverse — so any principal can list directories, read the system tree and run what is in it. What it cannot do is *write* there. A non-administrator writes only where something grants it: its own home directory, which is created at first sign-in with a protected DACL admitting the owner, `LocalSystem` and `BUILTIN\Administrators` and nobody else, and `/tmp`, where anyone may create files and only their owner may remove them. See [Installing to disk](~peios/disks-and-filesystems/installing-to-disk) for the root descriptor itself.
 
-An account without `Administrators` can traverse to a file it names exactly, and can execute it — but it cannot *list a directory*, because nothing bypasses that check. The symptom is a shell that appears to work until you type `ls`.
-
-That is a limit of the descriptor the system ships with rather than anything about the account. Until per-subtree descriptors exist, an ordinary non-administrative account on a stock image is not comfortable to use.
+What an ordinary account cannot do is administer the machine. `lps` refuses it, so it cannot create the next account; it cannot mount a filesystem, install a package or change a service definition either. The first account is therefore an administrator because nothing else on the machine can make one, and it stays one because `lps` will not leave the machine without an enabled administrator (see *You cannot lock yourself out* below). The accounts after it need `Administrators` only if they are going to administer.
 
 ## Where the first account comes from
 
