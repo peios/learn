@@ -153,7 +153,7 @@ artifact came from:
 | `timestamp` | The run's start time, UTC RFC 3339. |
 | `farm_id` | `local` — pekit builds are local builds. |
 | `source_ref` | The source [provenance ref](~pekit/recipes/sources#source-roots-and-provenance): `git:<url>@<commit>`, `url:<url>#sha256:<hash>`, and so on. |
-| `recipe_ref` | The recipe tree's own git commit, `git:<commit>`. Suffixed `+dirty` when the work tree has uncommitted changes anywhere — including a freshly written, not-yet-committed `pekit.lock`. Omitted when the recipe is not inside a git work tree. |
+| `recipe_ref` | The recipe tree's own git commit, `git:<commit>`. Suffixed `+dirty` when any of the build's own inputs are uncommitted — including a freshly written, not-yet-committed `pekit.lock`. Omitted when the recipe is not inside a git work tree. |
 | `builder` | The producing pekit's own revision: `pekit/<12-hex-commit>`, `+dirty` when built from a modified tree, falling back to the module version when the binary carries no VCS stamp. |
 | `source_package` | The name of the corresponding-source package emitted from this recipe (below); empty when none is. |
 
@@ -161,9 +161,32 @@ Together these state the full provenance chain — the exact upstream inputs,
 the exact recipe that drove the build, and the exact tool that performed
 it. `recipe_ref` deliberately resolves the **enclosing** repository: a
 workspace member's identity is the workspace repository's commit, not some
-per-recipe notion. A dirty tree is over-marked rather than under-marked,
-because a commit id alone does not describe a build whose tree had local
-changes.
+per-recipe notion.
+
+### What makes a recipe dirty
+
+`+dirty` answers one question: did anything that could change *this* artifact
+differ from that commit? So the marker covers the build's own inputs, and
+nothing else:
+
+| Counts as dirty | Does not |
+|---|---|
+| The selected recipe directory — `pekit.toml`, its package definitions, `pekit.lock`, source patches, embedded upstream keys | Other recipes in the same repository, whether or not workspace fan-out selects them |
+| Inherited workspace inputs beside the members — `workspace.pekit.toml`, shared package defaults, environment files, keyrings | Pekit's managed output: a member's `out_dir`, as a real directory or as a link into shared staging |
+| Anything else uncommitted inside those paths, tracked or not | The destinations a run publishes into, including a local peipkg repository |
+
+Within that scope a dirty tree is over-marked rather than under-marked,
+because a commit id alone does not describe a build whose inputs had local
+changes: pekit marks the artifact, rather than trying to decide which edits
+mattered. That is also why two differently dirty work trees at the same commit
+produce the same `recipe_ref` — `+dirty` says the commit is not the whole
+story, not what the rest of it was.
+
+A shared recipe repository is the reason for the scope. Without it, editing any
+package taints the provenance of every package published from that repository
+until the edit is committed, and an operational output or repository link
+beside a member taints an otherwise exact commit — which is not something a
+repository should have to solve with `.gitignore` entries.
 
 Provenance also decides how long a staged artifact stays usable. Package
 stages are stamped with the `recipe_ref`, `builder` and `source_ref` they were

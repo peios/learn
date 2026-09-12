@@ -270,8 +270,8 @@ Two consequences are worth knowing:
   rather than a build input, so repacking it costs nothing but the pack.
 
 Two dirty work trees at the same commit produce the same `recipe_ref` and so
-the same stamp. Dirty state is [deliberately over-marked rather than
-described](~pekit/running/signing-and-provenance#what-the-manifest-records):
+the same stamp, because [`+dirty` marks rather than
+describes](~pekit/running/signing-and-provenance#what-makes-a-recipe-dirty):
 commit the recipe when you need an artifact whose provenance identifies its
 inputs exactly.
 
