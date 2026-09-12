@@ -36,8 +36,10 @@ storage. [*key.identity.guid-assigned-by-lcs-not-source]
 Once a path has been resolved to a GUID at open time, every subsequent
 RSI operation uses the GUID directly. [*key.identity.rsi-uses-guid-after-open]
 
-The generator is the kernel's UUIDv4: random bytes from the kernel
-CSPRNG with the RFC 4122 version and variant bits set. [*key.identity.guid-generator-is-uuidv4]
+The generator is the kernel's version-4 GUID generator: random bytes
+from the kernel CSPRNG with the version and variant bits set in the
+PCDS layout — the version nibble in the high nibble of byte 7, because
+`Data3` is little-endian in bytes 6–7, and the variant bits in byte 8. [*key.identity.guid-generator-is-uuidv4]
 
 Freshness is the collision resistance of UUIDv4 plus a check against
 the keys LCS currently tracks, with a bounded retry. [*key.identity.freshness-checked-against-tracked-keys]
