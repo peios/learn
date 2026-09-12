@@ -41,7 +41,11 @@ established.
 `--yes` confirms the routine prompt and nothing else. Every elevated
 action — a downgrade, a foreign `replaces`, a low-trust provider filling
 a high-trust role — raises a distinct authorization that `--yes` does
-not satisfy and that is confirmed on its own terms (§13.4).
+not satisfy and that is confirmed on its own terms (§13.4). The same
+holds for a configuration file an uninstall would delete that has been
+modified since install: it is put to the operator per file — remove,
+keep, or abort — and with no answer on the input the uninstall aborts
+(§6.6).
 
 ## Exit behaviour
 

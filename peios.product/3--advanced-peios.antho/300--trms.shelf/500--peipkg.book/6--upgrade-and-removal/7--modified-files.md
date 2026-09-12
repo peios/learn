@@ -9,7 +9,7 @@ program, or by corruption.
 
 ## Where the check runs
 
-peipkg compares recorded hashes against disk in two places.
+peipkg compares recorded hashes against disk in three places.
 
 `peipkg verify` does it on demand, across every recorded file, and
 reports what differs.
@@ -17,19 +17,21 @@ reports what differs.
 An upgrade does it for configuration files, to decide whether to
 preserve an operator's edit (§6.2).
 
-An uninstall does not. Every owned path is renamed aside regardless of
-whether its content matches what was installed, and the operator is not
-told that something they customised is being removed.
+An uninstall does it for configuration files too, and puts each
+modified one to the operator before the removal is prepared: remove it
+with the previous content kept as a backup, keep it as an unowned file,
+or abort (§6.6).
 
 > [!NOTE]
 > A modified file at removal time is either a customisation that removal
-> destroys, or an unauthorised modification of a system file. Both are
-> worth surfacing, and both currently pass silently.
+> destroys, or an unauthorised modification of a system file. Surfacing
+> it is what lets the operator tell which, and the choice is theirs.
 
 ## The cost of checking
 
 Hashing every installed file at uninstall is expensive: a large package
-on slow storage takes seconds. The workable shape is to restrict the
-check to paths where customisation is expected — configuration, and
-locations policy names — and skip it for binaries and libraries, with
-the operator able to authorise removal, skip the file, or abort.
+on slow storage takes seconds. The check is therefore restricted to the
+paths where customisation is expected — the configuration scope the
+upgrade already uses, `/usr/etc/` and the legacy `/etc/` — and skipped
+for binaries, libraries and data. A hand-patched binary is removed
+without a question; `peipkg verify` is the tool for finding one.

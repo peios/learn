@@ -43,4 +43,6 @@ Added files are renamed into place. Replaced files have their original
 renamed aside first, then the staged file renamed in. Removed files are
 renamed aside.
 
-Directories left empty by an upgrade are not removed.
+A directory the previous version owned that the new payload does not
+carry is released, and reclaimed after commit if it is then unowned and
+empty (§6.6).
