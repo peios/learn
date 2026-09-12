@@ -22,6 +22,15 @@ is marked Failed with cause `ValidationError`.
 proceeds with every other definition, and anything that depended on the
 failed service fails in turn through the ordinary dependency propagation.
 
+peinit holds no definition for such a service, so the entry behind it
+is a placeholder: `status` reports it Failed with cause
+`ValidationError`, marked definition-removed (§3.8), with the decode
+error as its description. `start`, `restart`, `reload` and `reset` are
+refused with `UNKNOWN_SERVICE`, as for any definition-removed service.
+The placeholder leaves with its key: a `reload-config` that re-reads a
+repaired key restores the entry, and one that finds the key deleted
+discards it, since Failed does not retain a definition-removed entry.
+
 Only services carrying a `boot` trigger are root candidates.
 [*phase2.only-boot-triggered-services-are-roots] A service with no
 triggers is demand-only and is not a root, though it can still be pulled
