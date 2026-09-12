@@ -86,7 +86,9 @@ vm:run("sleep 100", {timeout = "5s"})          -- 5s
 vm:run("sleep 100", {timeout = "1m"})          -- 1 minute
 ```
 
-When the timeout fires, the agent kills the process and returns a RunResult with `status = "timed_out"`, `timed_out = true`, and `exit_code = -2`. Use `r.timed_out` to disambiguate from a clean exit with code -2.
+When the timeout fires, the agent kills the command and returns a RunResult with `status = "timed_out"`, `timed_out = true`, and `exit_code = -2`. Use `r.timed_out` to disambiguate from a clean exit with code -2.
+
+Each command runs in its own process group, and the timeout SIGKILLs that whole group. This matters most for the shell form: `sh` commonly forks its command rather than exec'ing it, so the work you asked for is a grandchild of the agent. If it survived the kill it would keep the captured stdout and stderr pipes open, and `vm:run` would stay blocked until it finished on its own — long past the timeout you set.
 
 ```lua
 local r = vm:run("flaky", {timeout = "2s"})
@@ -157,6 +159,8 @@ proc:signal("usr2")          -- alias for kill(); reads better for non-fatal sig
 ```
 
 Signals are accepted by friendly name (`term`, `kill`, `usr1`, …), with a `sig` prefix (`sigterm`), or as a bare integer. The full recognised-name list is in the [Process reference](~provium/reference/process#proc-kill-sig).
+
+The signal goes to the process you spawned, not to the process group it leads — `proc:signal("usr1")` reaches that one process, as you asked. So a shell that backgrounded its work keeps that work running. To take the whole tree down, give `proc:wait` a timeout: that path SIGKILLs the group.
 
 ### Inspecting the process
 

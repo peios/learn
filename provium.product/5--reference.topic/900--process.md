@@ -33,6 +33,8 @@ Wait for the process to exit. Returns a [RunResult](~provium/reference/vm#runres
 
 Passing `0` is rejected with a pointer to use `proc:status()` for non-blocking polling — a literal-zero timeout would otherwise SIGKILL the process immediately because the agent's `wait_with_timeout(0)` sees the deadline already past.
 
+When the timeout fires, the agent SIGKILLs the whole process group the process leads, so anything it forked or backgrounded goes with it. Without that, a surviving descendant would hold the captured stdout and stderr pipes open and `:wait()` would block past its timeout waiting for them to close.
+
 After `:wait()` returns, the agent-side slot is gone. The Process is "consumed"; subsequent ops still work, but `:close()` short-circuits without re-killing.
 
 ### `proc:kill(sig?)`
@@ -44,6 +46,8 @@ Send a signal. `sig` accepts:
 - A string — friendly name. Recognised: `term`/`sigterm`/`15`, `kill`/`sigkill`/`9`, `int`/`sigint`/`2`, `hup`/`sighup`/`1`, `quit`/`sigquit`/`3`, `stop`/`sigstop`, `cont`/`sigcont`, `usr1`/`sigusr1`/`10`, `usr2`/`sigusr2`/`12`, `alrm`/`sigalrm`/`14`, `pipe`/`sigpipe`/`13`, `chld`/`sigchld`/`17`, `winch`/`sigwinch`. Comparison is case-insensitive.
 
 Unknown name → `unknown signal name \`X\``.
+
+The signal reaches the process you spawned only, not the process group it leads: a non-fatal signal is meant for the process you named. If the command is a shell that backgrounded its work, that work survives — use `proc:wait(timeout)`, which SIGKILLs the group, to take the tree down.
 
 ### `proc:signal(sig)`
 
@@ -79,7 +83,7 @@ Not available for a process a [worker](~provium/reference/worker#worker-run-asyn
 
 ### `proc:close()`
 
-Auto-close hook. If `:wait()` already happened, this is a no-op. Otherwise, sends SIGTERM, then waits up to 2 seconds for exit (the agent escalates to SIGKILL on its own timeout).
+Auto-close hook. If `:wait()` already happened, this is a no-op. Otherwise, sends SIGTERM to the process, then waits up to 2 seconds for exit. That wait is a `proc:wait` timeout, so a process still alive after 2 seconds takes its whole group with it when the agent escalates to SIGKILL.
 
 ## Example: tail logs while the process runs
 
