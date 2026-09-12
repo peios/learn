@@ -7,7 +7,10 @@ description: Where a file's descriptor lives and why raw xattr access is denied 
 
 FACS intercepts every raw xattr operation on the canonical descriptor
 xattr — `security.peios.sd`, or `system.ntfs_security` on NTFS — and
-denies all three directions.
+denies all three directions. An NTFS inode with no `$Secure` entry,
+whose descriptor is an inline attribute the driver never reads, counts
+as carrying no descriptor: the mount's missing-descriptor policy
+decides for it, as it does for a file with no `security.peios.sd`.
 
 **Writes** are denied: all modification goes through the set-security
 interface. **Removal** is denied: a descriptor is never detached from
