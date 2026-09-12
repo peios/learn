@@ -31,33 +31,63 @@ An origin is nonetheless the unit that read access is granted on
 (§3.28), and a collector matches it against patterns using dot-delimited
 prefix semantics: the pattern `svc` matches the origin `svc` and any
 origin beginning `svc.`, and matches neither `svc_daemon` nor `svcfoo`.
+It also matches every origin whose part before a slash is `svc`, such as
+`svc/HealthCheck`, because matching considers only that part.
 
 A producer therefore SHOULD choose an origin that names it stably and
 distinguishably, and SHOULD use dots for hierarchy, because an
 administrator writing an access rule has nothing else to write it
 against.
 
-An origin MUST match the identifier grammar of §3.19:
+An origin MUST match:
 
 ```text
-[A-Za-z_][A-Za-z0-9_.-]*
+origin    := component | component "/" producer
+producer  := component | component "[" [0-9]+ "]"
+component := [A-Za-z0-9_][A-Za-z0-9_.-]*
 ```
 
 A collector MUST discard a record whose origin does not.
 
-The constraint exists because an origin is not merely a label. It is
-matched against patterns in which `*` is the wildcard, so an origin
-containing `*` could not be selected exactly and could match a rule its
-producer was never meant to satisfy; and it is the name an access rule
-is stored under, so an origin carrying a path separator or a quoting
-character could land somewhere other than where the administrator who
-wrote the rule believes it is. Constraining the producer is the only
-point at which either can be prevented.
+A single component is the identifier grammar of §3.19, widened only to
+admit a leading digit, and names a program. The optional second
+component names a **producer within** that program — a hook, a reload
+command, a health check, one submitted job — and the bracketed integer
+distinguishes several of the same kind. A forwarding service manager
+uses it for exactly that: `jellyfin/ExecStartPre[0]` is a pre-start
+hook's output, `jellyfin/HealthCheck` a health check's, `jobs/<guid>` a
+submitted job's. There is at most one slash, and the index may appear
+only after one.
+
+Everything the grammar still excludes, it excludes on purpose. An
+origin is not merely a label: it is matched against patterns in which
+`*` is the wildcard, so an origin containing `*` could not be selected
+exactly and could match a rule its producer was never meant to satisfy;
+and it is the name an access rule is stored under, so an origin carrying
+a backslash, a quoting character or whitespace could land somewhere
+other than where the administrator who wrote the rule believes it is.
+Constraining the producer is the only point at which either can be
+prevented.
+
+The slash is safe there only because it is never written into a stored
+rule. A collector MUST resolve the access rule for an origin from the
+part **before** the slash, so that a service's hooks, reloads, health
+checks and jobs answer to the rule written against the service — and a
+producer cannot reach a rule of its own by inventing a second component.
+
+A collector MUST count discarded origins and MUST make that count
+observable to an operator. An unrecognised origin means a producer's
+vocabulary and a collector's have drifted apart, and every line that
+producer sends is being dropped; a silent discard makes the most
+complete kind of log loss the least visible one.
 
 Quoted forms remain valid syntax everywhere an origin may be written
-(§3.24). A conforming origin never needs them, but a *pattern* may, and
-a collector holding origins stored before this rule applied must still
-be able to return and select them.
+(§3.24). A single-component origin beginning with a letter or `_` never
+needs them; every other conforming origin does, because the query
+language's identifiers admit neither a slash, a bracket nor a leading
+digit (§3.19). A *pattern* may need them too, and a collector holding
+origins stored before this rule applied must still be able to return and
+select them.
 
 ## `is_error`
 

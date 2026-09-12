@@ -24,8 +24,14 @@ LOGS
 `FROM` is exactly `WHERE origin == "…"` for one origin and
 `WHERE origin IN ("…", "…")` for several.
 
-Origins are written as identifiers (§3.19) or as quoted strings.
-A conforming origin is always an identifier (§3.7).
+Origins are written as identifiers (§3.19) or as quoted strings. An
+origin that names a producer within a service, such as
+`jellyfin/HealthCheck` or `jobs/<guid>`, is not an identifier and is
+written quoted (§3.7):
+
+```text
+LOGS FROM "jellyfin/ExecStartPre[0]"
+```
 
 ## ERROR ONLY
 

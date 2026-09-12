@@ -55,6 +55,8 @@ least:
 - the per-CPU committed receipt coverage and highest covered sequence
 - the current non-streaming and streaming query counts
 - the metric series cache occupancy
+- log records discarded for an origin outside the origin grammar, and
+  the most recent such origin where one exists (§4.1)
 - metric datagrams missing identity, truncated, denied by name policy or
   rejected by an authorization error
 - the cumulative metric type-mismatch count and the latest conflicting

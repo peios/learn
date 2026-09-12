@@ -22,12 +22,21 @@ separator and not a mere character.
 
 `*` is the wildcard default and matches everything.
 
-Ingestion constrains origins and metric names to the identifier grammar
-(PSPU §3.7, §3.10), which is what keeps a producer from choosing a name
-containing the wildcard or a registry path separator — a name that would
-otherwise match a rule its producer was never meant to satisfy, or store
-its descriptor somewhere other than where the administrator who wrote it
-believes.
+Ingestion constrains metric names to the identifier grammar and origins
+to that grammar plus a producer component (PSPU §3.7, §3.10), which is
+what keeps a producer from choosing a name containing the wildcard or a
+backslash — a name that would otherwise match a rule its producer was
+never meant to satisfy, or store its descriptor somewhere other than
+where the administrator who wrote it believes.
+
+An origin naming a producer within a service — `jellyfin/HealthCheck`,
+`jobs/<guid>` — resolves from the part **before** the slash, so the
+matching above starts at `jellyfin` and at `jobs`. A service's hooks,
+reload commands and health checks therefore answer to the descriptor
+written against the service itself, and every submitted job's output
+answers to one descriptor at `Logs\jobs`. The slash never enters a
+descriptor path, which is what keeps it out of the registry namespace it
+would otherwise be a separator in.
 
 ## Resolution
 

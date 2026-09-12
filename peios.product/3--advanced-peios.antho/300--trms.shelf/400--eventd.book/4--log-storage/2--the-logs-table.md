@@ -15,7 +15,7 @@ It holds the `logs`, `log_origins` and `metadata` tables.
 | `id` | INTEGER PRIMARY KEY | SQLite rowid, monotonic. |
 | `boot_id` | BLOB NOT NULL | 16-byte boot ID GUID in PCDS binary layout. |
 | `timestamp` | INTEGER NOT NULL | Nanoseconds since the Unix epoch — the producer's value if it supplied one, otherwise eventd's clock at receipt. |
-| `origin` | TEXT NOT NULL | The service context peinit associated with the output pipe. |
+| `origin` | TEXT NOT NULL | The producer peinit associated with the output pipe — a service, or a hook, health check, reload command or job within one. |
 | `is_error` | INTEGER NOT NULL | 1 for standard error or an explicitly marked error, 0 otherwise. |
 | `message` | TEXT NOT NULL | The log text. |
 | `job_id` | BLOB | 16-byte correlation GUID when the producer supplied one; null otherwise. |
@@ -26,6 +26,30 @@ optionally which execution it belongs to. There is no payload blob and
 no origin class. `origin` is broker-attested rather than a service's
 self-assertion: the log socket admits peinit and excludes service-logon
 tokens (§7.6). The optional correlation key is not an identity.
+
+## What an origin looks like
+
+An origin is one or two components (PSPU §3.7):
+
+```text
+origin    := component | component "/" producer
+producer  := component | component "[" [0-9]+ "]"
+component := [A-Za-z0-9_][A-Za-z0-9_.-]*
+```
+
+One component is a service — `loregd`, `jellyfin` — and is what a main
+process's output carries. Two name a producer **within** a service:
+peinit tags a pre-start hook `jellyfin/ExecStartPre[0]`, a reload
+command `jellyfin/ExecReload`, a health check `jellyfin/HealthCheck`,
+and a submitted job `jobs/<guid>` (peinit TRM §11.1). The bracketed
+index appears only after a slash, and there is never more than one
+slash.
+
+Ingestion discards a record whose origin is anything else, before the
+record reaches a batch (§4.1). Nothing wider is accepted: `*` would
+impersonate the access-control wildcard, and a backslash, a quote or
+whitespace would reach into the registry path an origin's descriptor
+lives at (§7.2).
 
 A program needing more structure than this emits events.
 

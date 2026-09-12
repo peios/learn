@@ -91,3 +91,23 @@ paying for nothing.
 eventd supplies the `boot_id` and, where the producer omitted
 `timestamp`, its own clock at receipt. Everything else is stored as
 given — `message` byte for byte (PSPU §3.8).
+
+## Rejected origins are counted
+
+A record whose `origin` is outside the origin grammar (§4.2) is
+discarded where it is parsed, before it can join a batch. eventd counts
+every such discard and keeps the most recent origin, escaped and
+truncated to 64 characters; both appear in the diagnostic dump (§8.5) as
+`log_ingress` and `last_rejected_log_origin`.
+
+It also writes one line to standard error on the first discard and at
+most one a minute after that. peinit captures eventd's own standard
+error, so that line is stored as an ordinary log record under the origin
+`eventd` and is queryable with everything else — and it still reaches
+the console directly when the log store is the broken thing.
+
+The rate limit is what makes the report usable. A producer whose
+vocabulary has drifted from this one usually uses the same origin for
+every line it sends, so an unlimited report would turn a silent total
+loss into a flood; the count is the quantity that matters and the text
+is there to name the vocabulary that drifted.

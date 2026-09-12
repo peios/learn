@@ -19,9 +19,13 @@ type patterns, log origins and value aliases. `.`, `_` and `-` are
 permitted inside one; `/`, `:`, whitespace, quotes, brackets,
 parentheses, commas and the comparison operators are not.
 
-This grammar is the same one that constrains a log origin, a metric name
-and a metric label key at ingestion (§3.7, §3.10), which is what makes
-every stored identifier writable here without quoting.
+This grammar is the same one that constrains a metric name and a metric
+label key at ingestion (§3.10), which is what makes every stored metric
+identifier writable here without quoting. A log origin is the one
+exception: it is constrained to a near relative of this grammar (§3.7)
+that also admits a leading digit and a producer component such as
+`/ExecStartPre[0]`, and an origin using either is written as a quoted
+string.
 
 A value that cannot be written as an identifier MUST be written as a
 quoted string. Quoted forms are accepted anywhere an identifier is —
