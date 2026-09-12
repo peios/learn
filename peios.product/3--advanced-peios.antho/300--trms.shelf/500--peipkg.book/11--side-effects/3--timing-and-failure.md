@@ -10,7 +10,7 @@ every package in the transaction has completed extraction and
 registration.
 
 They are deduplicated across the transaction: several packages declaring
-`ldconfig` produce one invocation. Distinct effects run in an
+`man-db` produce one invocation. Distinct effects run in an
 unspecified order, which is safe because the recognised set is chosen so
 that order between them does not matter.
 

@@ -4,36 +4,31 @@ description: A package cannot ship install-time code; it declares one of three s
 ---
 
 A package cannot ship code that runs at install time. It can declare
-that one of three standard maintenance operations is required, and
+that one of two standard maintenance operations is required, and
 peipkg invokes it.
 
 | Identifier | Rebuilds |
 |---|---|
-| `ldconfig` | The shared library cache, `/etc/ld.so.cache`, and shared library symlinks |
 | `depmod` | The kernel module dependency cache — `modules.dep` and its companions under `/usr/lib/modules/<release>/` |
 | `man-db` | The man page index, `/var/cache/man/index.db` or its equivalent, which `apropos` and `whatis` read |
 
-The set is closed. A manifest declaring anything else is rejected, and a
-duplicate within the array is rejected.
+The set is closed. A manifest declaring anything else — `ldconfig`
+included: Peios has one shared-library directory and no loader cache
+(§5.24) — is rejected, and a duplicate within the array is rejected.
 
 ## When each is required
 
-A package containing shared libraries declares `ldconfig`; one
-containing none does not. A package containing kernel modules declares
-`depmod`; one containing none does not. A package containing man pages
-is expected to declare `man-db` — a recommendation rather than a
-requirement, because man page lookup degrades to a filesystem scan
-without it.
+A package containing kernel modules declares `depmod`; one containing
+none does not. A package containing man pages is expected to declare
+`man-db` — a recommendation rather than a requirement, because man page
+lookup degrades to a filesystem scan without it.
 
-peipkg validates the declared values against the enumeration. It does
-not validate them against the payload: a package shipping shared
-libraries with no `ldconfig` declaration packs, installs, and leaves the
-library cache stale, and a package declaring `ldconfig` while shipping
-no libraries invokes it for nothing.
-
-The producer is where that check belongs — the payload map it would
-examine is already walked to derive shared-library capabilities — and
-neither the producer nor the consumer performs it.
+peipkg validates the declared values against the enumeration. The
+consumer does not validate them against the payload; the producer's
+packer does, refusing a payload whose kernel modules and `depmod`
+declaration disagree in either direction. A package built elsewhere
+that declares `depmod` with no modules behind it runs nothing at install
+time and is reported as a warning (§11.2).
 
 ## What side effects are not
 
