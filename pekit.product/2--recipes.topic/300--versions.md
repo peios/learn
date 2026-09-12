@@ -127,6 +127,14 @@ API page). `--latest`, `--all-versions`, and any constraint require one;
 against a non-enumerable source they fail with `selected source cannot enumerate
 versions`.
 
+A URL source with one exact `versions` value (for example, `"= 1.83.0"`),
+no `listing_url`, and no patch series has a singleton version set. Automatic
+selectors use that declared version without requesting a directory listing.
+This supports pinned bootstrap inputs on hosts that serve artifacts but do
+not expose indexes. Artifact download, lock checks, and signature verification
+still apply. A range such as `">= 1.83.0"` still requires discovery, and an
+explicit `listing_url` is always consulted.
+
 ### `--version` as an exact selector
 
 The simplest form is one or more exact versions, comma-separated:

@@ -159,6 +159,14 @@ Checked for each package definition the recipe produces.
 | `package.references` | `"reverse-dns"` | Every concrete package reference in package metadata and every Peipkg target dependency uses its canonical reverse-DNS name. Structured virtual capabilities such as `pkgconfig(foo)`, `python(abi)` and ELF SONAMEs remain valid. Other deliberately unqualified interfaces must be listed in `package.virtual_capabilities`. |
 | `package.architecture` | `"consistent"` **payload** | A package declared architecture-independent ships no ELF object and nothing under an architecture-specific directory; a package declared for an architecture ships at least one such thing. The architecture-independent name is the `package.noarch` parameter, default `noarch`. |
 
+Architecture-specific directory inference uses wildcard entries in
+`payload.dirs.lib`, such as `usr/lib/*-linux-*`, and the split-debug directory
+`usr/lib/debug`. Source text under `usr/src/debug` does not become
+architecture-specific merely because of that directory name. ELF objects are
+still detected there. This payload check cannot infer external dependency
+architectures; a package whose architecture is determined by its dependency
+contract needs a documented exception.
+
 `package.virtual_capabilities` is an array parameter shared by the
 `package.references` checks. It is for genuine interchangeable interfaces such
 as `sh` or an operating-system role, never for a compatibility alias for a
@@ -227,6 +235,9 @@ parameters are glob patterns matched against a destination's directory.
 | Rule | Value | Checks |
 |---|---|---|
 | `split.devel.packages` | a name pattern, or an array | **payload.** Development files land only in packages whose names match: headers, pkg-config files, CMake files, aclocal macros (the `split.devel.files` patterns, default `usr/include/**`, `include/**`, `**/pkgconfig/*.pc`, `**/cmake/**`, `usr/share/aclocal/**`, `usr/lib/**/*.cmake`) and unversioned `.so` symlinks in a lib directory. After ten findings in one package the rest are counted. |
+
+Empty directories owned by a filesystem skeleton are not development files.
+The split check applies to the files and symlinks that provide the interface.
 
 ### `[elf]`
 

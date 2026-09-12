@@ -29,6 +29,13 @@ A source is **reproducible** when it is git, url, or PyPI — those pin to exact
 bytes. Declaring multiple reproducible tables is an error (`mixed_source`:
 "exactly one reproducible source table is allowed").
 
+When writing URL listing filters, remember that `file_regex` searches the
+downloaded listing text. Anchoring it with `^` and `$` to a bare filename will
+not match that filename inside an HTML page. Use a named `version` capture
+when the package name itself contains digits, for example
+`m4-(?P<version>[0-9]+\.[0-9]+\.[0-9]+)\.tar\.xz`, so those digits cannot
+be mistaken for the release version.
+
 ## The four source kinds
 
 ### `[source.git]`
