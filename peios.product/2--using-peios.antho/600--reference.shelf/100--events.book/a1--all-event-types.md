@@ -83,8 +83,6 @@ them in one place:
 - A registry key open requesting `MAXIMUM_ALLOWED` alone emits no
   `LCS_KEY_OPEN_AUDIT`, because the mapped desired mask is zero and no
   ACE matches zero (§5.2).
-- StrataFS refusals raised before a provider is known emit an empty
-  `provider_stratum` (§4.2).
 - `caap-policy-diagnostic` with `kind = staging-mismatch` does not
   identify which rule differed, and its two masks can be equal while
   `object_results_differ` is true (§3.4).

@@ -1,6 +1,6 @@
 ---
 title: STRATAFS_MUTATION_REFUSED
-description: Refusals that come from how a mount is arranged rather than from an access check — what counts, two irregularities, and what is not audited at all.
+description: Refusals that come from how a mount is arranged rather than from an access check — what counts, what a record carries when no provider is known, and what is not audited at all.
 ---
 
 Fires when a mutation is refused because of how the mount is arranged,
@@ -13,9 +13,9 @@ Event type string: `STRATAFS_MUTATION_REFUSED`.
 | `path` | The relative path within the mount. |
 | `operation` | The operation name. |
 | `provider_index` | The provider stratum's index. |
-| `provider_stratum` | That stratum's path. |
-| `errno` | The refusal. |
-| deferred flag | Whether the refusal was deferred. |
+| `provider_stratum` | That stratum's path, or msgpack nil when no provider is known. |
+| `result_errno` | The refusal. |
+| `deferred` | Whether the refusal was deferred. |
 
 ## What counts as an arrangement refusal
 
@@ -46,13 +46,19 @@ create or link whose outer bookkeeping failed and whose lower object
 could not be removed again, and a failed publication rollback after a
 copy-up.
 
-## Two irregularities
+## When no provider is known
 
-**A refusal raised before a provider is known** — creation, tmpfile, the
-heads of link and rename — passes a provider index of `-1`, so
-`provider_stratum` is emitted as an empty string. The specification asks
-for the provider stratum in every refusal record, so this is a gap
-rather than a design.
+A refusal raised before a provider is known — creation, tmpfile, and the
+heads of link and rename — has no stratum to name. Those records carry a
+`provider_index` of `-1` and a `provider_stratum` of msgpack **nil**, so
+you can tell "no provider was involved" from "the provider's path is
+empty". The two fields always agree: an index of `-1` accompanies a nil
+stratum.
+
+Test for nil rather than for an empty string, or these records never
+match.
+
+## One irregularity
 
 **A refused deferred deletion is audited on any non-zero result**, not
 only on the arrangement errors, so one refused by an access check does
