@@ -149,7 +149,9 @@ fallback.
 ## Errors
 
 A rule whose DACL evaluation errors denies everything except rights
-granted by privileges. [*check.cap.rule-error-denies-except-privileges] Preserving those is the escape hatch: an
+granted by privileges — in the effective and the staged evaluation
+alike, and in the scalar total exactly as on every node of a
+result-list check. [*check.cap.rule-error-denies-except-privileges] Preserving those is the escape hatch: an
 administrator with `SeSecurityPrivilege` keeps the ability to read and
 modify the SACL and remove the offending scoped policy ACE.
 
