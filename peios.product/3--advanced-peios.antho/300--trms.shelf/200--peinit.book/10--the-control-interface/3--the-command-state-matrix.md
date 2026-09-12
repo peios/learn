@@ -52,8 +52,15 @@ automatic restart already pending.
   the service goes Inactive. A subsequent automatic restart is refused,
   because the service is no longer in Backoff.
   [*dispatch.backoff-stop-cancels-the-pending-restart]
-- `restart` cancels the automatic restart and queues an
-  administrator-initiated one.
+- `restart` replaces the automatic restart with the administrator's.
+  A Restart operation with source `admin` is queued Pending and honours
+  the remaining delay exactly as a deferred `start` does; when the delay
+  expires it is that operation — keeping its type, for observability —
+  that executes, so the identifier the caller holds is the one that
+  runs. A deferred `start` already pending is cancelled with reason
+  `superseded_by_restart`, and a second `restart` merges into the
+  pending one rather than queueing behind it. Nothing is sent to the
+  control boundary, because there is no process for it to act on.
   [*dispatch.backoff-restart-replaces-the-automatic-one]
 - `reload` and `reset` are invalid: there is no process to reload, and
   no terminal state to clear.
@@ -87,3 +94,10 @@ processes that ignored SIGKILL are still in the cgroup.
 Independently of state, a service whose definition has been removed
 (§3.8) rejects `start`, `restart` and `reload` with `UNKNOWN_SERVICE`,
 accepts `stop`, and reports its state on `status`.
+
+The accepted `stop` drains the instance with the cached `StopTimeout`,
+and the exit that ends it also discards the entry. A caller waiting on
+that stop is answered after the discard, with the state the service
+last had — Inactive, cause `ExplicitStop` — rather than with a lookup
+of an entry that no longer exists. A `status` sent after that is
+`UNKNOWN_SERVICE`, as for any service peinit does not know.

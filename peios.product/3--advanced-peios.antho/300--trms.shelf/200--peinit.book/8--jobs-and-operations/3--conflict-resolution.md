@@ -22,6 +22,9 @@ merged. [*conflict.an-operation-of-the-same-type-merges]
 
 Restart is not mergeable with itself. A second restart while one is in
 progress is queued. [*conflict.restart-is-not-mergeable-with-itself]
+The one place that does not apply is a restart deferred by a backoff
+(§10.3): it is Pending with nothing running for a second one to queue
+behind, so a second `restart` in Backoff merges into it.
 
 ## Cross-type [*conflict.the-cross-type-resolutions]
 

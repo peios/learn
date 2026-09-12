@@ -31,10 +31,21 @@ Pending --> Running --> Completed
 | Pending | Validated and queued, waiting on a precondition. |
 | Running | Executing. |
 | Completed | The goal was reached. Start: Active for Simple, Completed or Inactive for Oneshot. Stop: the service is no longer running. Reload: the reload resolved. |
-| Failed | The goal was not reached — or the operation's maximum lifetime expired while it was still Pending. |
+| Failed | The goal was not reached — or the operation's maximum lifetime expired while it was still Pending — or peinit could not execute it (below). |
 | Merged | Merged into an existing identical operation, whose identifier is recorded. |
 | Cancelled | Terminated while Pending. It never executed. |
 | Aborted | Terminated while Running. |
+
+An operation can also fail because peinit could not execute it: the
+matrix admitted it and then the boundary found nothing to act on — no
+current main job, a transition the state machine does not permit. That
+is peinit's fault rather than the service's, and it is contained to the
+one operation. The operation fails with the result
+`internal_error: <cause>`, the service keeps the state it had, a
+`[FAILED]` console line names the service, the operation and the cause
+(`peinit: service <service>: <type> operation <id> failed before it
+began: <cause>`), and the runtime loop carries on. A caller waiting on
+the operation is answered `INTERNAL_ERROR` (§10.1).
 
 Cancelled and Aborted are the same idea at different points: never ran
 versus was running. Why it happened is a property of the event, not of

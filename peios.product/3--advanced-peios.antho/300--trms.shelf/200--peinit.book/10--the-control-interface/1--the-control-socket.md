@@ -89,6 +89,17 @@ resolves, bounded by the operation's own timeout rather than the
 connection's. A job wait has no timeout of its own; it is bounded by
 the job.
 
+A wait is answered when its operation reaches a terminal state, with
+the lifecycle acknowledgement carrying the service's state at that
+moment. Two cases are answered differently. An operation that failed
+because peinit could not execute it (§8.2) is answered with an
+`INTERNAL_ERROR` whose message carries the operation's result, not with
+an `ok` carrying an unchanged state. And an operation whose service has
+been discarded by the time it resolves — a `stop` that drained a
+definition-removed entry (§10.3) — is answered with the state the
+service last had, since there is no entry left to ask. Neither answer
+costs the connection or the listener.
+
 peinit handles one frame per readiness turn, and processes no further
 frames from a connection while a wait is pending on it. Pipelined
 requests are therefore serialised behind a wait.

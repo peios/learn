@@ -59,8 +59,9 @@ A completed stop or reset carries the resulting service state; a
 completed start carries the readiness that satisfied it — `alive
 readiness: process started`, `notify readiness: READY=1`, or the exit
 code for a Oneshot — rather than a state name. A failed one carries the
-failure reason. A merged one carries the survivor's identifier. A
-cancelled or aborted one carries why.
+failure reason; one that peinit could not execute (§8.2) carries
+`internal_error: <cause>`. A merged one carries the survivor's
+identifier. A cancelled or aborted one carries why.
 [*protoview.what-an-operations-result-carries]
 
 For a reload, the result also determines the reload's *mode* — whether
