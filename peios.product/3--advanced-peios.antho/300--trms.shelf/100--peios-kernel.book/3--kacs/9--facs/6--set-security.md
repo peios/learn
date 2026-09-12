@@ -42,6 +42,14 @@ MIC and PIP apply to these checks. A low-integrity caller cannot
 modify a high-integrity file's descriptor even where the DACL grants
 `WRITE_OWNER`. [*facs.set-sd.mic-pip-apply]
 
+A read-only mount withholds the write along that path whatever the
+descriptor grants: the call fails with `EROFS`, as every modifying
+operation through a read-only bind does, and the descriptor stays
+writable through any writable path to the same object. The mount is
+consulted after the access check, so a caller the descriptor refuses
+sees the denial rather than a read-only error that would confirm the
+object exists. [*facs.set-sd.read-only-mount-erofs]
+
 ## Ownership [*facs.set-sd.ownership]
 
 A new owner may be set only to the caller's own SID, or to a group SID
