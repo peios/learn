@@ -165,6 +165,15 @@ per-recipe notion. A dirty tree is over-marked rather than under-marked,
 because a commit id alone does not describe a build whose tree had local
 changes.
 
+Provenance also decides how long a staged artifact stays usable. Package
+stages are stamped with the `recipe_ref`, `builder` and `source_ref` they were
+packed under, and a packaging run drops every stage stamped differently before
+it packs anything — so committing the recipe, or dirtying the tree, cannot
+leave an artifact behind whose `recipe_ref` describes the recipe as it used to
+be. Only packing repeats; completed build stages are untouched and
+`--no-build` still reuses them. See
+[Package stages and recipe provenance](~pekit/running/commands-and-targets#package-stages-and-recipe-provenance).
+
 ## Corresponding-source packages
 
 A recipe with a reproducible source automatically emits a

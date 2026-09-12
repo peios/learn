@@ -240,6 +240,41 @@ treated as unknown rather than failed and is still reused, with a note saying
 its state is unverified — refusing it would turn an explicit `--no-build` into
 a rebuild, which is the opposite of what the flag asks for.
 
+### Package stages and recipe provenance
+
+Each package gets its own stage under `<work base>/package/`, named for the
+package's identity — its name, version, architecture and format — and the
+finished artifact is left there for collection. Because a run packages only
+the selected packages, stages of packages you did not select survive
+untouched, and so do stages left by earlier runs.
+
+An artifact records [the recipe it was built from](~pekit/running/signing-and-provenance#what-the-manifest-records),
+so a surviving stage would otherwise keep offering an artifact whose
+`recipe_ref` describes a state of the recipe that has moved on: commit the
+recipe, package one member, and every other member's stage still claims the
+old commit and `+dirty`. To prevent that, pekit stamps each package stage with
+the provenance its artifact was packed with — the recipe ref, the builder and
+the source ref — and, before packing anything, drops every package stage whose
+stamp does not match the current run, selected or not. The stamp lives beside
+the stage in the work base's `.pekit/` metadata, for the same reason completion
+markers do.
+
+Two consequences are worth knowing:
+
+- **Committing the recipe repackages, but never recompiles.** Only package
+  stages carry this stamp. Build stages are keyed on their own inputs and keep
+  their completion markers, so `--no-build` still reuses a completed build
+  after any provenance change, and packaging repeats only the packing.
+- **A stage packed by an older pekit is dropped.** It carries no stamp, so its
+  provenance cannot be shown to match. A package stage is a cached output
+  rather than a build input, so repacking it costs nothing but the pack.
+
+Two dirty work trees at the same commit produce the same `recipe_ref` and so
+the same stamp. Dirty state is [deliberately over-marked rather than
+described](~pekit/running/signing-and-provenance#what-the-manifest-records):
+commit the recipe when you need an artifact whose provenance identifies its
+inputs exactly.
+
 ## `clean`
 
 `clean` has two independent effects, gated by two mutually exclusive mode flags:
