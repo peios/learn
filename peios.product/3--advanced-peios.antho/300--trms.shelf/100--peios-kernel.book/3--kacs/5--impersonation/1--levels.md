@@ -22,7 +22,8 @@ Authenticated Users. [*imp.anonymous.no-identity-conveyed]
 query groups, inspect privileges — but cannot act as them. An
 Identification-level token is barred from AccessCheck against
 resources: a server thread impersonating one and attempting to open a
-file simply fails the check. [*imp.identification.barred-from-accesscheck]
+file simply fails the check, with `EACCES` — the same refusal the
+`kacs_access_check` syscall reports for that token. [*imp.identification.barred-from-accesscheck]
 
 **Impersonation.** The server can act as the caller for all local
 operations, including ones that cross local IPC boundaries. If service
