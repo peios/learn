@@ -163,8 +163,11 @@ Architecture-specific directory inference uses wildcard entries in
 `payload.dirs.lib`, such as `usr/lib/*-linux-*`, and the split-debug directory
 `usr/lib/debug`. Source text under `usr/src/debug` does not become
 architecture-specific merely because of that directory name. ELF objects are
-still detected there. This payload check cannot infer external dependency
-architectures; a package whose architecture is determined by its dependency
+still detected there. An architecture-specific sibling package named as a
+required dependency also supplies architecture evidence, allowing source and
+header splits to retain their exact runtime coupling. A `noarch` package
+depending on such a sibling is reported. This payload check cannot infer
+external dependency architectures; a package whose architecture is determined by its dependency
 contract needs a documented exception.
 
 `package.virtual_capabilities` is an array parameter shared by the
