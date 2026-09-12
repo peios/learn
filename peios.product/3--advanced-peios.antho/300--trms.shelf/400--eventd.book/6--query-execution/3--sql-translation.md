@@ -27,6 +27,14 @@ ordered by the composite index that already provides `(timestamp, id)`
 payload extraction predicates, and may use an adaptive payload
 expression index to narrow candidates (§3.4).
 
+**`HAS`**, array containment, narrows nothing. The payload expression
+index stores one key per field, and a field holding an array of group
+SIDs has no single key to store, so a `HAS` predicate is answered by
+decoding each candidate row and testing its array in full. The operator
+is correct on every row and costs a scan of whatever the rest of the
+query left; a query using it wants a time range or another predicate
+beside it.
+
 The rule governing every such translation is that **SQL narrows, the
 query language decides**. Where a SQL construct cannot reproduce a
 predicate's comparison semantics exactly, eventd uses it only to reduce

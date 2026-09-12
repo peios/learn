@@ -43,6 +43,10 @@ positions, and a path like `hops.3.address` would mean something
 different in every record — so an array is carried across whole and
 treated as one value.
 
+Being one value is also why `==` against an array field compares the
+whole array. The question usually being asked of one — does it hold this
+element — is `HAS` (§3.20).
+
 Binary values in a payload stay binary. A collector MUST NOT render
 `bin` as a string, in either direction.
 

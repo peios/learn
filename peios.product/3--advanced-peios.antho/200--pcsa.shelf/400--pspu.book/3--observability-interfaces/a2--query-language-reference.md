@@ -81,8 +81,11 @@ Transforms feed aggregations; a query may have at most one of each
 
 ## Operators
 
-`==` `!=` `>` `>=` `<` `<=` `STARTS_WITH` `ENDS_WITH` `CONTAINS` `IN`
-`NOT_IN` `IS NULL` `IS NOT NULL`, combined with `AND` and `OR` (§3.20).
+`==` `!=` `>` `>=` `<` `<=` `STARTS_WITH` `ENDS_WITH` `CONTAINS` `HAS`
+`IN` `NOT_IN` `IS NULL` `IS NOT NULL`, combined with `AND` and `OR`
+(§3.20).
+
+`CONTAINS` is substring on a string; `HAS` is membership in an array.
 
 There is no `NOT` and no `=`.
 
