@@ -19,9 +19,21 @@ target and optionally a path. A `claims`
 field on a `conflicts` entry is rejected outright. Slot names are
 validated against the package-name grammar.
 
-Claim paths and targets are checked for structural sanity: absolute,
-within the length limit, lexically clean, with a non-empty first
-component.
+Claim paths and targets are held to the payload path-syntax and safety
+rules of §5.13 — absolute, valid UTF-8 in Normalization Form C, no NUL,
+control or backslash bytes, no empty, `.` or `..` component, and within
+the component, depth and total length limits. The manifest decoder
+applies the same single copy of those rules that the archive reader
+applies to a payload path, so the two cannot drift.
+
+A claim **path** is also confined to the locations §5.23 admits: under
+one of the permitted install destinations of §5.14, under `/run/`, or
+the root-level name `/init`. A manifest declaring a claim path anywhere
+else — `/etc/passwd`, `/opt/tool`, `/run` itself, `/init/x` — is
+rejected when it is decoded, before anything is planned. A provider's
+**target** is confined to the §5.14 destinations alone, because it
+names a payload path: `/run/` and `/init` are claim-only locations that
+no package can ship to.
 
 ## Targets are checked against the package's own payload
 
@@ -38,12 +50,10 @@ are enforced on the same entries.
 
 ## What peipkg does not check
 
-A claim **path** is not checked against the permitted install
-destinations, and neither a path nor a target is subject to the payload
-path-syntax constraints — normalisation form, control characters,
-backslashes, component length. The one absolute exception is
-`/lcl/policy`, which no claim path may reach (§5.14).
-
-The visible consequence is that a claim path outside the managed tree is
-materialised there, displacing whatever was at that path into a backup
-that the commit then discards.
+`/lcl/policy` is unreachable as a claim path or target whatever else
+permits it (§5.14), and the destination set keeps a claim link inside
+the managed tree. Within that tree, materialising a link does not apply
+the unowned-file rule that a payload entry gets (§5.7): a file at the
+claim path that no package owns is displaced into the backup the
+transaction keeps for rollback, and the commit then discards that
+backup. Only a path owned by an installed package is refused (§9.6).
