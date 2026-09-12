@@ -15,8 +15,10 @@ It is a single-threaded Rust process.
 its design answers to. A blocking syscall in PID 1 stops everything:
 child reaping, watchdog expiry, shutdown signals, the control socket. So
 peinit keeps a complete in-memory model of every service it knows about,
-reads the registry synchronously only twice — at boot and on an explicit
-reload [*intro.the-registry-is-read-at-boot-and-on-reload] — and pushes
+reads the registry synchronously only at boot and when it reloads —
+whether an administrator asked for the reload or a registry change
+notification set it off, which takes the same path (§10.4)
+[*intro.the-registry-is-read-at-boot-and-on-reload] — and pushes
 anything that could block off the main loop into a forked helper or a
 pollable descriptor.
 

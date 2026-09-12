@@ -1,6 +1,6 @@
 ---
 title: States
-description: The ten states a service can be in, the three that satisfy dependents, and the invariants that hold across all of them.
+description: The ten states a service can be in, the four that satisfy dependents, and the invariants that hold across all of them.
 ---
 
 Every service is in exactly one state. There are ten.
@@ -21,8 +21,9 @@ Every service is in exactly one state. There are ten.
 
 ## Dependent satisfaction
 
-Exactly three states satisfy dependents: **Active**, **Completed** and
-**Skipped**. [*state.only-active-completed-and-skipped-satisfy-dependents]
+Exactly four states satisfy dependents: **Active**, **Reloading**,
+**Completed** and **Skipped**.
+[*state.only-active-reloading-completed-and-skipped-satisfy-dependents]
 Nothing else does, and a dependent blocked on a `Requires` target in any
 other state does not start.
 [*state.a-dependent-on-an-unsatisfied-requires-target-does-not-start]
@@ -38,7 +39,9 @@ every conditional service a hazard to everything that depends on it.
 
 Reloading satisfies because the process is still there and still
 serving; a reload is a service telling itself to re-read a file, not an
-outage.
+outage. So a reload does not restart the `RestartWindow` clock (§6.4),
+clear a readiness level the service has published (§7.5), or count as
+its target going away to a `BindsTo` dependent (§7.1).
 
 Backoff does not, and the distinction from Failed matters: a service in
 Backoff is *going* to start again, and its dependents wait rather than

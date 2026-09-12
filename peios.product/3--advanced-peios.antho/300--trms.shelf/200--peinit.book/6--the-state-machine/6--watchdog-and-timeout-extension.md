@@ -92,14 +92,17 @@ A message arriving while the service is in a non-transitional state —
 Active, Completed, Failed — is ignored. There is no deadline to extend.
 [*wdog.an-extension-in-a-non-transitional-state-is-ignored]
 
-During shutdown an extension is honoured whether or not the service's
-stop wave has begun. A service in a later wave, or one still winding
-down a start or a reload when shutdown was requested, has no shutdown
-deadline recorded yet — the request is remembered and applied to the
-deadline when one is set.
-[*wdog.an-extension-before-the-services-stop-wave-is-remembered] A
-service that knows it will need longer should not have to wait until
-peinit reaches it before saying so.
+During shutdown, as at any other time, an extension moves only a
+deadline the service already has. A service still in a transition when
+the shutdown begins — starting, reloading, or stopping under an explicit
+stop — extends that transition's deadline, and one already stopping
+keeps its stop deadline, extension included, into its wave (§12.2). A
+service that is Active until its stop wave reaches it has no deadline to
+extend before then, so a request it sends earlier is ignored like any
+other in a non-transitional state.
+[*wdog.before-its-stop-wave-an-active-service-has-no-deadline-to-extend]
+A service that expects its stop to take longer sends the request once
+its stop has begun.
 
 > [!NOTE]
 > Timeout extension is for a service doing variable-duration work in a

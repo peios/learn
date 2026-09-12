@@ -56,7 +56,10 @@ The unmount step re-reads `/proc/self/mountinfo` when checking whether a
 mount point that returned `ENOENT` or `EINVAL` is really gone. Depth
 ordering puts the depth-one mounts last, alphabetically — `/dev`,
 `/proc`, `/run`, `/sys` — so `/proc` is unmounted before `/run` and
-`/sys` are attempted, and the check for those two cannot read the file
-it needs. The result is a recorded cleanup failure and a pointless
-read-only remount attempt at the tail of every graceful shutdown.
-[*final.unmounting-proc-first-makes-the-later-mount-checks-fail]
+`/sys` are attempted. [*final.proc-is-unmounted-before-run-and-sys]
+Neither of those answers `ENOENT` or `EINVAL` in practice — `/sys`
+unmounts, and `/run` either unmounts or is busy — so the check never
+runs for them. It is a latent hazard rather than a live one: if either
+ever did answer that way, the check could not read the file it needs,
+and the shutdown would record a cleanup failure and attempt a pointless
+read-only remount.

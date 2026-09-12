@@ -85,11 +85,13 @@ Three rules keep the derivation from doing damage:
   [*derived.a-provider-never-gains-a-dependency-on-its-own-role] An
   authority declaring a non-SYSTEM identity would otherwise require
   itself, and a service that requires itself never starts.
-- **An edge already declared is not added again**, including one carrying
-  a level. [*derived.an-already-declared-edge-is-not-added-again]
+- **An edge already declared is not added again**, whether it was
+  declared as `Requires` or `BindsTo`, and including one carrying a
+  level. [*derived.an-already-declared-edge-is-not-added-again]
   `Requires = ["authd:ready"]` already orders against the
   authority, and more strictly; adding a plain edge beside it would be a
-  second edge to the same service saying less.
+  second edge to the same service saying less. `BindsTo` requires its
+  target as well as binding to it, so the same holds for it.
 - **Nothing is derived when no service fills the role.**
   [*derived.nothing-is-derived-when-no-service-fills-the-role] See below.
 

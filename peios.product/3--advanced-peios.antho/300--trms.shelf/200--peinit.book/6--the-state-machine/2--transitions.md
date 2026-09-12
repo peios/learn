@@ -74,8 +74,10 @@ bound-dependency recovery (§7.1) possible at all.
 
 **A restart detours through Inactive.** The stop leg of an
 administrator's restart ends in Inactive, and the start leg begins from
-there, so a restarting service is briefly observable as Inactive.
-[*trans.an-administrative-restart-detours-through-inactive]
+there. [*trans.an-administrative-restart-detours-through-inactive] The
+two legs meet within one turn of the event loop, and peinit answers no
+request mid-turn, so no query ever sees the service Inactive in between.
+[*trans.a-restarts-pass-through-inactive-is-not-observable]
 
 **A crash before readiness may be retried.** A Simple process that exits
 before signalling readiness is a `ProcessCrash` from Starting, and is

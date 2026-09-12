@@ -28,9 +28,9 @@ onto a value it knows.
 | `abandoned` | Yes, unkillably | No |
 | `skipped` | No | Yes |
 
-Exactly three states satisfy dependents: `active`, `completed` and
-`skipped`. A client deciding whether something depending on this service
-could be running MUST use that set and no other.
+Exactly four states satisfy dependents: `active`, `reloading`,
+`completed` and `skipped`. A client deciding whether something depending
+on this service could be running MUST use that set and no other.
 
 ## Transition cause
 
