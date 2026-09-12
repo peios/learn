@@ -270,9 +270,9 @@ access and retried. A failed or skipped write-back never fails the
 operation that triggered synthesis. [*facs.storage.write-back-best-effort] Kernel threads, and a failure to
 queue the callback, fall back to re-synthesis the same way.
 
-Once written, the next cache miss reads it back as an ordinary
-xattr-backed descriptor: durable, no longer generation-tagged, and
-never synthesised again. [*facs.storage.written-back-becomes-ordinary]
+Once written, the cached entry becomes an ordinary xattr-backed
+descriptor: durable, no longer generation-tagged, never synthesised
+again, and owed no further write-back. [*facs.storage.written-back-becomes-ordinary]
 
 An ancestor synthesised only to supply inheritance inputs for a
 descendant is itself pending, and persists under the same rules when
