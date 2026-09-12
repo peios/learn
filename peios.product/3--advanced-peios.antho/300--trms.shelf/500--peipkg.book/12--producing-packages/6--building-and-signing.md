@@ -33,6 +33,14 @@ often surfaces as a manifest error at pack time.
 The layout check runs here, over the whole file map minus any entry
 marked as an override.
 
+A regular file of 8 GiB or more is refused before anything is hashed
+or written, naming the file and its size. The container has no
+representation for it: the ustar header's size field tops out at
+8 GiB − 1 and §5.11 forbids the PAX `size` record that would extend it,
+and a consumer's 4 GiB decompression bound (§5.27) would refuse the
+package in any case. The size is the one recorded when the file map is
+walked, the same figure the tar header is written from.
+
 The **side-effect check** runs here too, over the whole file map
 *including* overrides: an override escapes the layout rules, but a
 kernel module still needs indexing wherever it was declared. It enforces
