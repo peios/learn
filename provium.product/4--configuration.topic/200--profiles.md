@@ -196,17 +196,15 @@ Where an appended token repeats one the profile already sets, the kernel takes t
 
 ## Default profile selection
 
-A few CLI subcommands take an optional profile arg — when omitted, they fall back to "the first profile in `provium.toml` sorted by name":
+One subcommand takes an optional profile arg and falls back to "the first profile in `provium.toml` sorted by name" when you omit it:
 
 | Subcommand | Behaviour |
 |---|---|
-| `provium repl --fixture <path>` (no profile) | First profile by sorted name. |
-| `provium fixture build <path>` | Uses the first profile's kernel/initrd as the cache-key kernel inputs. |
+| `provium repl --fixture <path>` (no profile) | Boots the first profile by sorted name. |
 
-> [!WARNING]
-> With more than one profile configured, `provium fixture build` folds only that first profile into the key, while the test runner folds every profile — so a pre-warmed entry may not be the one the runner looks up. Pre-warming is reliable on single-profile configs.
+That is a boot-time choice and nothing more. It does not narrow the fixture cache key: the test runner, `provium fixture build`, `provium fixture rebuild`, `provium fixture stale` and `provium repl --fixture` all fold every profile's kernel and initrd into the key, so they address the same cache entry however many profiles you have configured. Pre-warming in CI with `provium fixture build` warms the entry the runner then reads.
 
-To make the default predictable, name your most common profile so it sorts first alphabetically. `aaa-default` is ugly but it works; `peios` is fine when it's your only profile.
+To make the REPL default predictable, name your most common profile so it sorts first alphabetically. `aaa-default` is ugly but it works; `peios` is fine when it's your only profile.
 
 ## What happens to the cache when profiles change
 
