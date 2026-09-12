@@ -79,6 +79,23 @@ Free (aligned): 0B  in 0 extent(s), largest 0B
 
 `part del /dev/vda 2 --yes` removes a partition by number. It frees the space and the slot; it does not touch the data that was in it.
 
+### After the table is written
+
+Writing a table changes the disk; it does not by itself change what the kernel believes is on the disk. So `part` asks the kernel to re-read the table, which is what makes `/dev/vda1` appear — without it the partition exists on disk and nowhere else, and the `mkfs` you run next has no path to format.
+
+The kernel refuses to re-read while any partition of the disk is open. Immediately after a write that is usually nothing lasting: publishing the new nodes is what prompts whatever probes new block devices to open one, so the refusal and its cause arrive together. `part` therefore keeps asking for up to three seconds, which outlasts a probe comfortably.
+
+If the disk is still held when that time is up, `part` stops and says what is holding it:
+
+```
+# part add /dev/vdb --size max --type linux --name "Peios root" --yes
+part: /dev/vdb: the table was written, but the kernel would not re-read it
+      within 3000ms: /dev/vdb1 is mounted on /mnt/rootfs. Release it or reboot
+      before formatting
+```
+
+When nothing of the disk is mounted, it says that instead, because the answer is then different — run the command again rather than go looking for a mount that does not exist. Either way the table on disk is already correct; it is only the kernel's view of it that is behind.
+
 ### Sizes are sectors unless you say otherwise
 
 `--size` takes `K`, `M`, `G`, `T` — powers of 1024 — or `max`. **A bare number is a sector count, not bytes.** `--size 2048` is 1 MiB on a 512-byte-sector disk, and you can write `2048s` to say so explicitly. Reading it as bytes would silently produce a partition a thousand times smaller than intended.
