@@ -107,9 +107,9 @@ So `initramfs-ready` carries one extra rule:
 
 The exemption is *derived*, not declared — you are exempt exactly when you are part of the capability. There is no cycle to construct and nothing for a hook author to remember. A hook assembling the initramfs's own topology simply declares `contributes = ["initramfs-ready"]` and lands before everything.
 
-Two things fall out of the existing rules rather than needing special cases. An initramfs with **no** contributors leaves the capability unsupplied, and an `after` on an unsupplied capability is vacuous — so a minimal initramfs just runs, with nothing to configure. And a hook carrying **no metadata block** does not gain the edge, because it already runs after every declaring hook; adding it would have pulled the escape hatch into the DAG.
+Three things fall out of the existing rules rather than needing special cases. An initramfs with **no** contributors leaves the capability unsupplied, and an `after` on an unsupplied capability is vacuous — so a minimal initramfs just runs, with nothing to configure. A hook carrying **no metadata block** does not gain the edge, because it already runs after every declaring hook; adding it would have pulled the escape hatch into the DAG. And a hook that **already waits on `initramfs-ready`**, by `requires` as readily as by `after`, keeps the declaration it wrote: the implicit edge would order it no differently.
 
-mkirf materialises these edges into the sequence as ordinary `after` entries, rather than leaving prelude to know the rule. That keeps one implementation instead of two that have to agree, and makes the sequence file explain itself — in a rescue shell you can read why a hook ran where it did, instead of needing a rule that appears nowhere in the image.
+mkirf materialises these edges into the sequence as ordinary `after` entries, rather than leaving prelude to know the rule. That keeps one implementation instead of two that have to agree, and makes the sequence file explain itself — in a rescue shell you can read why a hook ran where it did, instead of needing a rule that appears nowhere in the image. Each stanza names a dependency once: a hook that declared `requires = ["initramfs-ready"]` shows that line and no `after` beside it, because the two keys mean different things at boot — `requires` waits for the capability to be achieved, `after` only for it to be settled.
 
 ### More than one hook may supply the same capability
 
@@ -160,7 +160,7 @@ A hook reports what happened through its **exit code**, and there are four thing
 | `75` | **Deferred** — I cannot run yet, and I have changed nothing. | Re-queued and tried again once something else has made progress. |
 | anything else | **Failed.** | The boot stops and the machine halts. |
 
-The two middle codes are borrowed from `sysexits.h` (`EX_UNAVAILABLE`, `EX_TEMPFAIL`) rather than invented, for a practical reason: `1` and `2` are what any failing command returns and `126`, `127` and `128+n` are the shell's own, so a small dedicated range is the only place a deliberate signal cannot be mistaken for an accident. A hook killed by a signal is always a failure, whatever code it might have produced.
+The two middle codes are borrowed from `sysexits.h` (`EX_UNAVAILABLE`, `EX_TEMPFAIL`) rather than invented, for a practical reason: `1` and `2` are what any failing command returns and `126`, `127` and `128+n` are the shell's own, so a small dedicated range is the only place a deliberate signal cannot be mistaken for an accident. A hook killed by a signal is always a failure, whatever code it might have produced. So is one that is **stopped** by a job-control signal: prelude reports it as `stopped`, kills it, and ends the boot. Nothing in the initramfs can resume a stopped hook — there is no job control, no shell and no other process to send it `SIGCONT` — so waiting for it would be waiting forever.
 
 ### Declining is not the same as succeeding
 
