@@ -147,7 +147,7 @@ The DACL an object gets when this token creates it with no parent to inherit fro
 D:(A;;GA;;;S-1-3-4)(A;;GA;;;SY)(A;;GA;;;BA)
 ```
 
-That is the owner, `LocalSystem` and `BUILTIN\Administrators`, full control, and nobody else — the same shape `authd` stamps on a home directory. `S-1-3-4` is `OWNER RIGHTS`, which the access check resolves against the object's owner at the time of the check. It is written as a literal SID because the SDDL parser has no alias for it, and it has to be `OWNER RIGHTS` rather than `CREATOR OWNER`: the kernel copies a default DACL onto a new file verbatim and substitutes no placeholders, so a `CREATOR OWNER` ACE would name nobody.
+That is the owner, `LocalSystem` and `BUILTIN\Administrators`, full control, and nobody else — the same shape `authd` stamps on a home directory. `S-1-3-4` is `OWNER RIGHTS`, which the access check resolves against the object's owner at the time of the check. You can also write it as the alias `OW`. It has to be `OWNER RIGHTS` rather than `CREATOR OWNER`: the kernel copies a default DACL onto a new file verbatim and substitutes no placeholders, so a `CREATOR OWNER` ACE would name nobody.
 
 The value is a fallback and is reached rarely. Whenever the parent has inheritable ACEs the child takes those and the default DACL is not consulted (see [Inheritance](~peios/security-descriptors/inheritance)), and every filesystem root on Peios carries inheritable ACEs. What reaches it is an object with no parent, such as an abstract socket, or a child of a container whose descriptor was written without inheritable ACEs. There is no kernel fallback beneath it: a token with no default DACL leaves such an object with a null DACL, which grants every caller everything.
 

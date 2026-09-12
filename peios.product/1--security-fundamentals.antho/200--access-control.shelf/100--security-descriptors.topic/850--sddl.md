@@ -190,35 +190,100 @@ Mandatory-label policy bits, valid on an `ML` ACE:
 | `NX` | No execute up |
 
 A rights field may also be a hexadecimal mask, written `0x` followed by the
-value. It consumes the rest of the field, so it cannot be combined with letter
-codes — write the whole mask in hex or none of it.
+value. It consumes the rest of the field, so it can only come last — but it may
+follow letter codes rather than replacing them. `FRFX0x6` grants file read, file
+execute, and the two bits `0x6` names, which is how you reach a right that has
+no two-letter code without giving up the ones that do:
+
+```
+(A;;FRFX0x6;;;WD)
+```
+
+`FILE_ADD_FILE` and `FILE_ADD_SUBDIRECTORY` are the usual reason to need it.
+Writing the whole mask as `0x1200af` is equally correct and tells a reader
+nothing.
 
 ## SID codes
 
-An account field takes either a full `S-1-…` SID or one of these aliases:
+An account field takes either a full `S-1-…` SID or one of these aliases.
+
+Principals and logon types:
 
 | Code | SID | Principal |
 | --- | --- | --- |
 | `WD` | `S-1-1-0` | Everyone |
 | `AN` | `S-1-5-7` | Anonymous |
+| `IU` | `S-1-5-4` | Interactive |
+| `NU` | `S-1-5-2` | Network logon |
 | `SU` | `S-1-5-6` | Service |
+| `RC` | `S-1-5-12` | Restricted code |
+| `WR` | `S-1-5-33` | Write-restricted code |
+| `PS` | `S-1-5-10` | Principal self |
+| `ED` | `S-1-5-9` | Enterprise domain controllers |
 | `AU` | `S-1-5-11` | Authenticated Users |
 | `SY` | `S-1-5-18` | Local System |
 | `LS` | `S-1-5-19` | Local Service |
 | `NS` | `S-1-5-20` | Network Service |
-| `BA` | `S-1-5-32-544` | Administrators |
-| `BU` | `S-1-5-32-545` | Users |
+| `AC` | `S-1-15-2-1` | All application packages |
+
+Inheritance placeholders:
+
+| Code | SID | Principal |
+| --- | --- | --- |
+| `CO` | `S-1-3-0` | Creator Owner |
+| `CG` | `S-1-3-1` | Creator Group |
+| `OW` | `S-1-3-4` | Owner rights |
+
+Integrity levels:
+
+| Code | SID | Principal |
+| --- | --- | --- |
 | `LW` | `S-1-16-4096` | Low integrity |
 | `ME` | `S-1-16-8192` | Medium integrity |
 | `MP` | `S-1-16-8448` | Medium-plus integrity |
 | `HI` | `S-1-16-12288` | High integrity |
 | `SI` | `S-1-16-16384` | System integrity |
 
+The BUILTIN groups, `S-1-5-32-*`. These are absolute despite the name: the RIDs
+are fixed, not allocated per machine.
+
+| Code | SID | Principal |
+| --- | --- | --- |
+| `BA` | `S-1-5-32-544` | Administrators |
+| `BU` | `S-1-5-32-545` | Users |
+| `BG` | `S-1-5-32-546` | Guests |
+| `PU` | `S-1-5-32-547` | Power users |
+| `AO` | `S-1-5-32-548` | Account operators |
+| `SO` | `S-1-5-32-549` | Server operators |
+| `PO` | `S-1-5-32-550` | Printer operators |
+| `BO` | `S-1-5-32-551` | Backup operators |
+| `RE` | `S-1-5-32-552` | Replicator |
+| `RU` | `S-1-5-32-554` | Pre-Windows 2000 compatible access |
+| `RD` | `S-1-5-32-555` | Remote desktop users |
+| `NO` | `S-1-5-32-556` | Network configuration operators |
+| `MU` | `S-1-5-32-558` | Performance monitor users |
+| `LU` | `S-1-5-32-559` | Performance log users |
+| `IS` | `S-1-5-32-568` | IIS users |
+| `CY` | `S-1-5-32-569` | Cryptographic operators |
+| `ER` | `S-1-5-32-573` | Event log readers |
+| `CD` | `S-1-5-32-574` | Certificate service DCOM access |
+| `RA` | `S-1-5-32-575` | RDS remote access servers |
+| `ES` | `S-1-5-32-576` | RDS endpoint servers |
+| `MS` | `S-1-5-32-577` | RDS management servers |
+| `HA` | `S-1-5-32-578` | Hyper-V administrators |
+| `AA` | `S-1-5-32-579` | Access control assistance operators |
+| `RM` | `S-1-5-32-580` | Remote management users |
+
 `SU` is worth knowing about: it is the group every token minted for a service
 logon carries, so it is how you grant something to services as a class rather
 than naming each one. Membership follows from how a process was started rather
 than from which account it runs as, so an ordinary user process cannot acquire
 it.
+
+`CO` is the one you reach for most often after that. An inheritable ACE naming
+Creator Owner is rewritten to the new object's owner when a child is created,
+which is how a container grants each principal rights over what it makes there
+without granting anything over what anyone else makes.
 
 Two SIDs you might expect have no alias and must be written in full: the null
 SID `S-1-0-0`, and the protected-process integrity level `S-1-16-20480`.
@@ -231,7 +296,9 @@ rather than by its spelling. The collisions that catch people out:
 | Code | As a right | As an account | Elsewhere |
 | --- | --- | --- | --- |
 | `WD` | Write DACL | Everyone | |
+| `RC` | Read control | Restricted code | |
 | `AU` | | Authenticated Users | ACE type: system audit |
+| `RA` | | RDS remote access servers | ACE type: resource attribute |
 | `FA` | All file access | | ACE flag: audit failed access |
 | `SD` | Delete | | |
 
@@ -254,13 +321,18 @@ reason: it shares a mask with `KR`, so only one of the two can ever come back.
 The formatter also prefers composites to their components, emitting `FA` rather
 than the eight codes that add up to it.
 
-## Domain-relative aliases
+## Domain- and machine-relative aliases
 
-The codes `DA`, `DG`, `DU`, `DD`, `DC`, `LA`, `LG`, `SA`, `EA`, `RO`, `CA`,
-`PA`, `CN`, `RS` and `RU` name principals relative to a domain — domain admins,
-domain users, and so on. Peios recognises them so that it can reject them with
-a message that says what is wrong, and it cannot resolve them: there is no
-domain SID for them to be relative to. Write the SID you mean instead.
+The codes `DA`, `DG`, `DU`, `DD`, `DC`, `SA`, `EA`, `RO`, `CA`, `PA`, `CN`,
+`AP`, `KA`, `EK` and `RS` name principals relative to a domain — domain admins,
+domain users, and so on — and `LA` and `LG` name the local administrator and
+guest accounts relative to a machine. Peios recognises them so that it can
+reject them with a message that says what is wrong, and it cannot resolve them:
+there is no domain or machine SID for them to be relative to. Write the SID you
+mean instead.
+
+`RU` reads like one of these and is not: it is BUILTIN\\Pre-Windows 2000
+Compatible Access, `S-1-5-32-554`, and resolves like any other BUILTIN group.
 
 ## Reading a descriptor
 

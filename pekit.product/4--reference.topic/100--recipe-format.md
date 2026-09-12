@@ -718,14 +718,15 @@ Three constraints are worth knowing before writing one:
   file or a directory — never a symlink, which carries no descriptor of
   its own. A consumer rejects the whole package otherwise.
 - **Absolute SID aliases only.** The compile happens on a build host
-  with no domain and no machine to resolve against, so `SY`, `BA`, `WD`
-  and literal SIDs are fine while domain-relative aliases (`DA`, `EA`,
-  and the rest) are an error. CREATOR OWNER has no alias here and is
-  written `S-1-3-0`.
-- **A rights field is mnemonics or a hex mask, not both.** `FRFX` and
-  `0x1200af` each parse; `FRFX0x6` does not. Rights with no two-letter
-  mnemonic — `FILE_ADD_FILE` and `FILE_ADD_SUBDIRECTORY`, in particular
-  — therefore force the whole mask to be written as hex.
+  with no domain and no machine to resolve against, so `SY`, `BA`, `CO`,
+  `WD` and literal SIDs are fine while domain- and machine-relative
+  aliases (`DA`, `EA`, `LA` and the rest) are an error.
+- **A rights field may end in a hex literal.** `FRFX`, `0x1200af` and
+  `FRFX0x6` all parse, the last of them as file read, file execute and
+  the two bits after that. Use it for rights with no two-letter mnemonic
+  — `FILE_ADD_FILE` and `FILE_ADD_SUBDIRECTORY`, in particular — rather
+  than writing the whole mask as hex and losing what the mnemonics said.
+  The literal consumes the rest of the field, so it can only come last.
 
 > [!NOTE]
 > A declared descriptor only takes effect if the consumer is willing to
