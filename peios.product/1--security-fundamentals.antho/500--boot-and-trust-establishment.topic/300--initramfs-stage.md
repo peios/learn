@@ -136,7 +136,9 @@ on. A `/dev` that is still SYSTEM-only is a degraded system rather than an
 unbootable one — the recovery console still works there — and refusing to
 boot would turn a permissions defect into an outage. The console line is
 the only warning, so it is worth reading: it names how far the seeding
-got.
+got. It is tagged `[ WARN ]` rather than `[FAILED]`, because the boot goes
+on to complete — the tag tells you whether the boot survived, and this one
+did — and it is not removed by `peios.quiet=2`.
 
 ## When the initramfs stage fails
 
