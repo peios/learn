@@ -42,6 +42,7 @@ behaviour, and what an administrator is told.
 | `ConditionSkipped` | Skipped | A start-time condition failed. |
 | `TtyUnavailable` | Skipped | Another service was holding the terminal this one names in `TTYPath`. §11.6 |
 | `ProcessUnkillable` | Abandoned | Processes survived SIGKILL. |
+| `InternalError` | Failed | peinit could not execute the relaunch a backoff deadline began. The service did nothing; the operation waiting on the restart fails with the `internal_error` result (§8.2). |
 
 ## Restart eligibility
 
@@ -87,8 +88,8 @@ was stopped because its dependency went away.
 `ExplicitStop`, `ExplicitReset`, `ShutdownWave`, `ConflictEviction`,
 `BindsToPropagation`, `ProcessUnkillable`, `RestartBudgetExhausted`,
 `ValidationError`, `CycleDetected`, `DependencyFailure`,
-`AssertionError`, `ConditionSkipped`, `TtyUnavailable`. Retrying cannot
-help with any of them.
+`AssertionError`, `ConditionSkipped`, `TtyUnavailable`, `InternalError`.
+Retrying cannot help with any of them.
 
 ## OnFailure
 

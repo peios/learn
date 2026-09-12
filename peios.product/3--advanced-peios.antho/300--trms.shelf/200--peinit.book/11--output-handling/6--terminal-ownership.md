@@ -59,6 +59,18 @@ The check runs ahead of the service's own conditions and asserts, which
 is why a service queued on a busy terminal never forks a check helper.
 [*terminal.the-terminal-check-precedes-conditions-and-asserts]
 
+The graph paths — the Phase 2 boot plan, and any start that brings
+dependencies with it — ask twice. Their pre-start check runs for every
+service released together before any of them has moved, so two
+boot-plan services naming one terminal both pass it. The question is
+then asked again at the moment each one would enter Starting, and by
+then the first holds the device: the second is skipped there, with the
+same cause and the same completed operation, rather than launched into
+a terminal that already has a session.
+
+A relaunch from Backoff asks too, and a service whose terminal was taken
+while it waited goes from Backoff to Skipped (§6.2).
+
 ## Winning the terminal [*terminal.higher-tty-precedence-wins]
 
 `TTYPrecedence` decides who wins when several services want the same

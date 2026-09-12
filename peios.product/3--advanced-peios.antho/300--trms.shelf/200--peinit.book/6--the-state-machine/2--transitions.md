@@ -34,6 +34,8 @@ performed. [*trans.a-transition-absent-from-the-table-is-not-performed]
 | Stopping | Starting | An explicit start queued against a service that is still stopping. Cause `ExplicitStart`. |
 | Backoff | Starting | The backoff delay elapsed. Cause `RestartPolicy`. |
 | Backoff | Inactive | An explicit stop cancelled the pending restart. |
+| Backoff | Skipped | The backoff delay elapsed and the relaunch's pre-start checks skipped the service: its terminal is now held (§11.6), or a condition no longer holds. |
+| Backoff | Failed | The backoff delay elapsed and peinit could not execute the relaunch. Cause `InternalError`. |
 | Completed | Inactive | `RemainAfterExit=0` and dependents released; or an explicit stop; or shutdown clearing it. |
 | Completed | Starting | A start command or timer trigger re-running the Oneshot. |
 | Failed | Starting | An explicit start, a bound dependency recovering, or a timer trigger. |

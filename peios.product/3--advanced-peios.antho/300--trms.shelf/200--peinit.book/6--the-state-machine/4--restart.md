@@ -45,6 +45,16 @@ elapses the service transitions to Starting and the ordinary activation
 sequence begins, with its own fresh `StartTimeout`.
 [*restart.a-relaunch-gets-a-fresh-starttimeout]
 
+The relaunch runs the pre-start checks like any other start, and the
+machine can have changed while the service waited. If its terminal is
+now held (§11.6) or a condition no longer holds, the service goes from
+Backoff to Skipped, with the cause the check gives, and its pending
+operation completes as a skip. A relaunch that peinit itself cannot
+execute — its bookkeeping refuses the start — takes the service from
+Backoff to Failed under `InternalError` (§6.3), fails the operation
+waiting on the restart with the `internal_error` result, and reports
+both on the console; it does not cost the machine.
+
 The exit code is available only when peinit observed a process exit, and
 it is carried into the evaluation wherever there was one — including the
 pre-readiness exit, where a Simple service exits before signalling
