@@ -120,6 +120,26 @@ Switching a rule off goes through `[allow]`.
 
 ### `[allow]`: exemptions with reasons
 
+For a payload exception limited to particular files, prefer `allow_files`:
+
+```toml
+[allow_files."payload.junk"]
+"usr/lib/compiler/*/crtbegin.o" = "startup object linked into user programs"
+```
+
+Keys are case-sensitive, package-root-relative payload paths or glob patterns
+(`*` matches within one path component; `**` can cross directories). They match
+destinations, not build-host source paths. Every entry requires a nonempty reason
+and a known payload rule; absolute paths, parent traversal and malformed patterns
+are rejected. Other files and other rules remain enforced. Exceptions apply to
+all splits of the recipe, so keep paths narrow. Configurations merge per rule and
+pattern, nearest winning for the same pair. Matching findings remain visible as
+`lint_allowed`, and unused entries produce `lint_unused_allow`. A whole-rule
+`allow` takes precedence; otherwise the first matching pattern in lexical order
+is used. Neither form enables a rule that is disabled or absent.
+
+Use a whole-rule exemption only when it genuinely applies to the entire recipe:
+
 ```toml
 [allow]
 "source.reproducible" = "non-public: grants unauthenticated SYSTEM access to a DWE guest"
