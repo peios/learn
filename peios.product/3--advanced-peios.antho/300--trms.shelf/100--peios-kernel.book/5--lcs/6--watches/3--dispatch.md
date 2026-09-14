@@ -126,11 +126,20 @@ a subtree from a stream are all of this kind. [*watch.dispatch.recovery-triggeri
 Computing an exact diff would mean walking arbitrary parts of the tree
 through the source.
 
-LCS does not attempt it. It increments the affected hive's generation
-number and then queues a no-name `OVERFLOW` to every armed watch on the
-affected source, which is the notification for those changes. [*watch.dispatch.recovery-bumps-generation-and-queues-overflow]
+LCS does not attempt it. It increments the generation number of every
+hive the affected source backs and then queues a no-name `OVERFLOW` to
+every armed watch on that source, which is the notification for those
+changes. [*watch.dispatch.recovery-bumps-generation-and-queues-overflow]
 The watcher re-reads, and can compare the generation number it last saw
-against the current one (§5.5.3) to tell whether it missed anything.
+against the current one (§5.5.3) to tell whether an *ordinary* write
+happened in between; after a recovery it cannot, because the bump is
+deliberately conservative. The kernel does not know which hives a layer
+operation touched — the source's delete-layer answer names only the
+keys it orphaned, and a layer holding hiding or masked entries changes
+effective state without orphaning anything — so it bumps every hive
+rather than risk a watcher skipping a re-read its hive needed. The
+consequence is always a spurious re-read, never a missed change.
+[*watch.dispatch.recovery-generation-bump-is-source-wide]
 
 Two properties of this delivery are worth stating. It is object-
 semantic like every other dispatch — it walks the watch map, resolves
@@ -139,9 +148,10 @@ It does not disarm anything. [*watch.dispatch.recovery-does-not-disarm]
 
 The scope is the **source**, not the hive. A source backing several
 hives delivers `OVERFLOW` to watches on all of them, including hives
-the operation did not touch. [*watch.dispatch.recovery-scope-is-the-source-not-the-hive]
-The generation counters are maintained per hive; the watch delivery is
-not.
+the operation did not touch, and bumps all of their generation
+counters. [*watch.dispatch.recovery-scope-is-the-source-not-the-hive]
+The generation counters are maintained per hive for ordinary writes;
+recovery treats the source as the unit.
 
 For a restore, recovery is published only after the source commit
 succeeds. A restore that fails or aborts before commit emits nothing. [*watch.dispatch.restore-recovery-published-only-after-commit]
