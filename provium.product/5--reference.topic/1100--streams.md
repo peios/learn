@@ -29,6 +29,8 @@ Returns the next chunk of bytes as a Lua string, or `nil` at EOF / timeout. The 
 - **Capture**: chunks of pcap bytes from tcpdump's pipe (variable size, up to 64 KiB).
 - **ConsoleStream**: chunks of console bytes (variable size, up to 64 KiB).
 
+A timeout does not consume a partial Tail frame or mark the stream as EOF. The next read resumes the same frame, including when the timeout arrived partway through its length prefix or payload. This applies to file tails, file-descriptor streams, and process stdout/stderr streams. Interrupted transport reads are retried automatically.
+
 The `timeout` argument accepts seconds (number) or a string with `ms`/`s`/`m`/`h` suffix. Default: 10 seconds.
 
 ### `:read_until(pattern, timeout?)`

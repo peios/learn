@@ -15,6 +15,8 @@ A worker is a real, separate guest process: a re-exec'd copy of the agent that t
 
 ## Constructing
 
+Workers also run as separate host processes when using the local-agent backend. The `provium` executable handles the worker protocol itself, so this backend does not need a separate installed guest-agent binary. Rust applications embedding `LocalAgentVmm` must select a worker-capable executable with `LocalAgentVmm::new().with_worker_executable(path)` if their own executable does not implement that protocol. The path may name `provium` or `provium-agent`.
+
 | Source | Returns |
 |---|---|
 | `vm:spawn_worker()` | New worker on the VM's main agent. |

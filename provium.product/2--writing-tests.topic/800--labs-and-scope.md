@@ -361,6 +361,8 @@ This is implemented as a Lua-side registry that every `register_resource` call a
 
 You don't usually need to call `:close` yourself — the walker fires it automatically. Calling explicitly is fine (the methods are idempotent) and useful when the resource's lifetime is bounded by a clear point in the test.
 
+Keeping a Lua reference to a test-scope resource does not extend its lifetime. For example, a stream opened inside a test on a file-scope VM is closed when that test ends; the VM remains available to later tests. Cleanup continues through the remaining resources if an individual close fails.
+
 ## See also
 
 - [Lab reference](~provium/reference/lab) — every method.
