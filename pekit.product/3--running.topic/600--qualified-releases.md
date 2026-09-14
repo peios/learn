@@ -113,3 +113,23 @@ check and are captured as exact candidate inputs. A successful upstream release
 therefore does not force a human to commit its generated lock before the next
 attempt. Recipe, helper, lint, environment and release-policy changes still
 require a reviewed commit; lock integrity/source-authenticity checks still apply.
+
+
+## Reference toolchain differences
+
+The last entry in `release.environments` produces the archives selected for
+publication. Earlier environments provide reference builds. A workspace may
+record a known reference-toolchain limitation with a reason per lint rule:
+
+```toml
+[release.reference_allow]
+"elf.cet" = "Debian startup/runtime objects do not promise Peios CET markers; reference artifacts are not published"
+```
+
+The coordinator still runs the rule and records each allowed finding in the
+reference receipt. The allowance never applies to the final environment, so a
+native artifact missing CET code evidence or properties still prevents promotion.
+Unknown rules, parameter names and empty reasons are rejected. This policy does
+not bypass build failures, test gates, source verification, archive signatures or
+repository checks. Ordinary `pekit lint` continues to enforce its configured
+package policy; these allowances apply only to release reference builds.
