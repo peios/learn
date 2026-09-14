@@ -174,9 +174,15 @@ MAC LSMs — SELinux, AppArmor, SMACK, TOMOYO — and the BPF LSM have to
 be disabled. [*cred.dac.mac-lsms-disabled] They would independently deny operations from their own
 label and policy systems, undermining KACS's claim to be the sole
 identity-based authorization mechanism and FACS's to be the sole file
-access authority. Non-MAC LSMs are permitted: landlock, lockdown, yama
-and integrity make no identity-based access decisions and stack
-safely. [*cred.dac.non-mac-lsms-allowed]
+access authority. Non-MAC LSMs are permitted where they make no
+identity-based access decision: landlock, lockdown and integrity stack
+safely. [*cred.dac.non-mac-lsms-allowed] Yama is not among them and is not built: its
+relational `ptrace_scope` answers every attach to a non-descendant with
+"does the caller hold `CAP_SYS_PTRACE`", which the switchboard maps to
+SeDebugPrivilege, so it would decide ahead of the process descriptor
+and PIP dominance that §3.7 makes the ptrace authority. The same-uid
+attach it exists to close cannot arise under KACS, which never grants
+on uid. [*cred.dac.yama-not-built]
 
 The check is made at initialisation and KACS refuses to activate if it
 fails — but it is a **build-configuration** test rather than an

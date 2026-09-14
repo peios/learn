@@ -37,15 +37,16 @@ Specifically, PKM refuses to activate if any of `selinux`, `apparmor`, `smack`, 
 The LSM stack Peios expects is, in order:
 
 ```
-landlock, lockdown, yama, integrity, pkm
+landlock, lockdown, integrity, pkm
 ```
 
 - **`commoncap`** is implicit (Linux always includes it; not listed in `CONFIG_LSM` explicitly).
 - **`landlock`** is permitted — it's a process-local sandboxing LSM that processes opt into; it doesn't conflict with PKM.
 - **`lockdown`** is permitted — it gates specific kernel-debugging interfaces; orthogonal to PKM.
-- **`yama`** is permitted — it adds ptrace restrictions; complements PKM's ptrace gating.
 - **`integrity`** is permitted — Linux's IMA/EVM mechanisms can run alongside PKM for the use cases they cover.
 - **`pkm`** is the Peios module.
+
+**`yama`** is not built. Its `ptrace_scope` decides attach ahead of PKM, and its escape hatch is `CAP_SYS_PTRACE`, which PKM maps to SeDebugPrivilege — so with it present, a process descriptor that grants debugging never gets a say. PKM's own ptrace gating is the whole authority.
 
 Distributors building a Peios kernel must include this stack. Building a kernel with SELinux enabled and active would produce a system where PKM cannot activate — boot would fail with a clear error.
 
