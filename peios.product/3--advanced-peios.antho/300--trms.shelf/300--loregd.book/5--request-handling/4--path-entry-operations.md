@@ -28,11 +28,12 @@ returned, and choosing between them is the kernel's job.
 
 An unresolvable parent GUID returns `RSI_NOT_FOUND`.
 
-If a path entry names a `target_guid` for which no key record exists, the
-metadata fetch finds nothing and the whole request fails with
-`RSI_STORAGE_ERROR`. This is reachable in ordinary operation: the kernel
+If a path entry names a `target_guid` for which no key record exists,
+loregd drops that entry from the response and returns `RSI_OK`, so the
+child reads as absent. This is reachable in ordinary operation: the kernel
 issues `RSI_CREATE_ENTRY` before `RSI_CREATE_KEY`, so a lookup landing
-between the two sees an entry whose key has not yet been written.
+between the two sees an entry whose key has not yet been written, and
+failing the request would make a routine race fatal to the caller.
 
 ## RSI_CREATE_ENTRY
 
@@ -47,10 +48,11 @@ The target table follows the child key's volatile flag (§5.1); a child GUID
 in neither store lands in the persistent table.
 
 `RSI_ALREADY_EXISTS` comes from the target table's primary key on
-`(parent_guid, child_name_folded, layer)`. Since that key is per-schema, an
-identical entry in the *other* store does not collide, and the same triple
-can come to exist in both — in which case both rows are returned by lookups
-and enumerations (§5.1).
+`(parent_guid, child_name_folded, layer)`. That key binds one schema, so
+loregd also asks the *other* store for the same triple before inserting,
+and answers `RSI_ALREADY_EXISTS` if it finds one. Nothing de-duplicates on
+read, so a triple in both stores would put two entries claiming the same
+name in the same layer inside one child block (§5.1).
 
 An unresolvable parent GUID returns `RSI_NOT_FOUND`.
 
@@ -99,8 +101,9 @@ FROM volatile.path_entries WHERE parent_guid = ?
 Rows are grouped by folded child name into one block per child, each
 carrying that child's per-layer entries. Metadata for the distinct
 non-HIDDEN target GUIDs is fetched and emitted exactly as for
-`RSI_LOOKUP`, and the same `RSI_STORAGE_ERROR` arises for an entry whose
-key record does not yet exist.
+`RSI_LOOKUP`. The tolerance `RSI_LOOKUP` shows for an entry whose key
+record does not yet exist is not shared here: the metadata fetch finds
+nothing and the whole request fails with `RSI_STORAGE_ERROR`.
 
 Ordering, and the treatment of two rows whose folded names match but whose
 stored case differs, are covered in §5.2.

@@ -18,23 +18,26 @@ order before encoding a response:
 | `RSI_ENUM_CHILDREN` children | folded child name |
 | `RSI_ENUM_CHILDREN` per-child entries | layer, then sequence |
 | `RSI_QUERY_VALUES` value entries | folded value name, then layer, then sequence |
+| `RSI_QUERY_VALUES` blanket tombstones | folded layer name, then sequence |
+| `RSI_DELETE_LAYER` orphan GUIDs | ascending GUID, compared bytewise |
 | Key-metadata blocks, in any response | ascending GUID, compared bytewise |
 
 This ordering is a wire-stability guarantee only. It has no bearing on
 layer resolution, which is order-independent — the kernel selects a
 maximum, not a first match.
 
-## Arrays that are not sorted
+## Arrays assembled outside one query
 
-Two arrays reach the wire in the order the query produced them:
+Two of those arrays are not a single query's result set. They are
+assembled first and sorted afterwards:
 
-- The **blanket-tombstone array** in an `RSI_QUERY_VALUES` response. It
-  comes from an unordered `UNION ALL` like everything else, but is
-  emitted unsorted.
-- The **orphan-GUID array** in an `RSI_DELETE_LAYER` response. That
-  operation walks every registered hive and concatenates their orphan
-  sets, and the walk follows Go's randomised map iteration, so the array
-  order differs between otherwise identical calls.
+- The **blanket-tombstone array** in an `RSI_QUERY_VALUES` response comes
+  from its own `UNION ALL`, separate from the value entries it travels
+  beside, and takes the same order they do.
+- The **orphan-GUID array** in an `RSI_DELETE_LAYER` response is the
+  concatenation of every registered hive's orphan set. That walk ranges a
+  Go map, whose iteration order is randomised, so the array is sorted
+  bytewise before it is encoded.
 
 ## Child display names
 
@@ -43,7 +46,7 @@ child block per folded name, carrying a display name taken from the
 `child_name` column.
 
 Where two rows share a folded name but differ in stored case — `Foo` in
-one store and `FOO` in the other, say — the display name emitted is
-whichever row the unordered union yielded first. The *order* of children
-is stable, because it is sorted on the folded name; the *case* of the name
-reported for such a child is not.
+one store and `FOO` in the other, say — the display name emitted is the
+lower of the two bytewise, which is a property of the set rather than of
+the order the union produced. Both the *order* of children and the *case*
+of the name reported for each are therefore stable across calls.

@@ -19,12 +19,13 @@ VALUES (?, ?, fold(?), ?, ?, 0, ?, ?)
 current wall-clock time in Unix nanoseconds at insertion.
 
 Uniqueness comes from the target table's primary key on `guid`, surfaced
-as `RSI_ALREADY_EXISTS`. Because that key is per-schema, a GUID already
-present in the *other* store does not collide: creating a persistent key
-whose GUID exists in `volatile.keys` succeeds, and the GUID then exists in
-both. Subsequent metadata reads resolve such a GUID to the `main` row,
-since the reading query takes the first row of a `UNION ALL` that puts
-`main` first.
+as `RSI_ALREADY_EXISTS`. That key binds one schema, so loregd also asks
+the *other* store whether it holds the GUID before inserting, and answers
+`RSI_ALREADY_EXISTS` if it does. Without that check a GUID could come to
+exist in both stores, where metadata reads would resolve it to the `main`
+row — the reading query takes the first row of a `UNION ALL` that puts
+`main` first — leaving the volatile row unreachable while it still
+occupied its GUID.
 
 The new GUID is added to the hive cache immediately, before the enclosing
 transaction commits, with an abort hook to remove it if that transaction

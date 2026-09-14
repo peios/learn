@@ -34,7 +34,7 @@ SELECT layer, sequence
 FROM volatile.blanket_tombstones WHERE key_guid = ?
 ```
 
-Value entries are sorted; blanket tombstones are not (§5.2).
+Value entries and blanket tombstones are both sorted (§5.2).
 
 An unresolvable GUID returns `RSI_NOT_FOUND`. An existing key with no
 values returns `RSI_OK` with empty arrays.

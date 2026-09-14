@@ -43,7 +43,7 @@ transaction as the orphan computation, so nothing can be inserted between
 the two steps. The orphaned GUIDs are evicted from the hive cache (§4.2)
 and returned to the caller.
 
-The response array's order is not stable across calls (§5.2).
+The response array is sorted into ascending byte order (§5.2).
 
 Every failure is reported as `RSI_STORAGE_ERROR`; busy errors are not
 classified separately, unlike the other write paths.
