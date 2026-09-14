@@ -1,11 +1,13 @@
 ---
 title: Layer and Maintenance Operations
-description: Delete-layer and flush — the two operations that ignore the request's transaction id and take the write connection directly.
+description: Delete-layer and flush — the two operations that check the request's transaction id but cannot join it, taking the write connection directly.
 ---
 
-Neither operation in this section consults the request's transaction id
-(§4.1). Both take the hive's write connection directly and commit work of
-their own.
+Both operations in this section consult the request's transaction id before
+doing anything — a read-only transaction may not mutate, and an unknown id
+is refused (§4.3) — but neither can *join* one. Both take the hive's write
+connection directly and commit work of their own, which is why a bound
+transaction makes them decline rather than wait (§4.1).
 
 ## RSI_DELETE_LAYER
 
@@ -45,8 +47,11 @@ and returned to the caller.
 
 The response array is sorted into ascending byte order (§5.2).
 
-Every failure is reported as `RSI_STORAGE_ERROR`; busy errors are not
-classified separately, unlike the other write paths.
+A contended write is reported as `RSI_TXN_BUSY`, the same distinction every
+other write path draws: the operation declines if any transaction already
+holds a hive's write connection, and again if a hive's own
+`BEGIN IMMEDIATE` finds the database busy. Other failures are
+`RSI_STORAGE_ERROR`.
 
 ## RSI_FLUSH
 
