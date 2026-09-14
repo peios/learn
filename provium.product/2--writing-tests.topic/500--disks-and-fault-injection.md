@@ -153,6 +153,25 @@ disk:clear_faults()
 local r = disk:read_sectors(0, 1)    -- succeeds
 ```
 
+## Cutting the power
+
+Everything above is host-side: `fault_inject` changes what `read_sectors` and `write_sectors` do, which is the test's view of the image rather than the guest's. For the question a write-ahead log actually poses — *did what the guest fsynced survive, and did what it did not fsync correctly vanish?* — the disk has to be **mediated**:
+
+```lua
+local vm = provium:vm("v", "peios"):boot({
+    disks = {{scratch = "512M", id = "state", mediated = true}},
+})
+
+-- … the guest writes and flushes …
+
+vm:disk("state"):power_cut()  -- drop everything it never flushed
+vm:reset()                    -- and let the reboot clear its caches
+```
+
+Provium serves a mediated disk over an NBD server of its own and holds each write until the guest flushes it, which is what makes the cut exact. Killing the VM is not a substitute: unflushed data written through an ordinary drive sits in the *host's* page cache and outlives the process, so the test would find everything intact having proven nothing.
+
+`power_cut` on a disk that was not booted `mediated` fails, naming the disk — a power cut that silently did nothing is exactly the failure this is here to prevent.
+
 ## Detaching a disk
 
 ```lua

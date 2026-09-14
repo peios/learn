@@ -82,6 +82,25 @@ Multiple modes can be active simultaneously. When `slow` and the matching `eio_*
 
 Clear every active fault. Subsequent reads / writes succeed normally.
 
+### `disk:power_cut()`
+
+Discard every write the guest has not flushed. What is left is exactly what it made durable.
+
+Unlike the fault modes above — which change what `read_sectors` and `write_sectors` do, and so act on the *test's* view of the image — this one acts on the guest's own I/O. It requires a disk booted with [`mediated = true`](~provium/reference/vm#boot-disks); on any other disk it errors naming the disk, rather than quietly succeeding and letting a test conclude that data survived a crash which never happened.
+
+The guest's page cache is untouched and still holds what it wrote, so read back *after* a reboot rather than before — otherwise the answer comes from the guest's memory instead of from the disk.
+
+```lua
+local vm = provium:vm("v", "peios"):boot({
+    disks = {{scratch = "512M", id = "state", mediated = true}},
+})
+
+-- … the guest writes, and flushes some of it …
+
+vm:disk("state"):power_cut()  -- everything unflushed is gone
+vm:reset()                    -- and the reboot clears the guest's caches
+```
+
 ### `disk:active_faults()`
 
 Returns a Lua array of the currently-active fault mode names. Useful for tests that need to assert the harness state.

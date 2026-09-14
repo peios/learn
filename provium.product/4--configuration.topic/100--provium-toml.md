@@ -164,6 +164,7 @@ Per disk:
 | `path` | path string | required | Host path of the backing image. Provium never creates one — a missing file fails the launch with `disk \`<id>\`: no image at \`<path>\``. Rebased against the profile's directory and `{out}`-expanded like `kernel` and `initrd`. |
 | `id` | string | `disk<N>` by position | The QEMU drive id, and the name [`vm:disk(id)`](~provium/reference/vm) looks the attachment up under. |
 | `readonly` | bool | `false` | Attach read-only, so a guest write is refused rather than modifying the image every later boot in the run then reads. |
+| `mediated` | bool | `false` | Serve the disk through Provium rather than handing QEMU the file, so [`disk:power_cut()`](~provium/reference/disk#disk-power-cut) can discard exactly what the guest never flushed. See below. |
 
 Put a disk **here** when the image is part of the system under test
 rather than part of a test. A boot medium an initramfs scans for is a
@@ -185,6 +186,27 @@ profile id fails the launch with `disk id \`<id>\` is already attached
 by the profile`. Profile disks are always attached first, so the
 medium a profile boots from keeps its device name no matter what a test
 adds.
+
+#### Mediated disks
+
+A disk with `mediated = true` still reaches the guest as an ordinary
+`virtio-blk` device. What changes is who is underneath it: Provium
+serves the image over an NBD server of its own and holds each write
+until the guest flushes it, so
+[`disk:power_cut()`](~provium/reference/disk#disk-power-cut) drops
+precisely the writes that were never made durable.
+
+Killing the VM is not a substitute for that. Unflushed data written
+through an ordinary drive sits in the **host's** page cache, which
+outlives the process — so a test that killed QEMU would find everything
+intact and report durability it had never demonstrated.
+
+The drive is attached `cache=none` as a consequence rather than as a
+tuning choice: a read QEMU could satisfy from its own cache is a read
+Provium never sees.
+
+Mediation is opt-in per disk. `power_cut` on a disk without it fails
+naming the disk, rather than quietly doing nothing.
 
 ### `inject_agent`
 
