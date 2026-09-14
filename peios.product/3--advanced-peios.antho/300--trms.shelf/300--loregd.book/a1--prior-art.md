@@ -6,11 +6,13 @@ description: loregd is specified against SQLite rather than an abstract store �
 ## SQLite
 
 loregd's storage engine is SQLite, and it is specified against SQLite
-rather than against an abstract store. The schema, the concurrency model,
-and the operational behaviour all name SQLite features directly: WAL mode
-for concurrent readers alongside a serialised writer, savepoints and
-transactions for atomicity, `PRAGMA wal_checkpoint` for durability on
-demand, and its crash recovery for restart after an unclean shutdown.
+rather than against an abstract store.
+[*priorart.loregd-is-specified-against-sqlite-not-an-abstract-store] The
+schema, the concurrency model, and the operational behaviour all name
+SQLite features directly: WAL mode for concurrent readers alongside a
+serialised writer, savepoints and transactions for atomicity,
+`PRAGMA wal_checkpoint` for durability on demand, and its crash recovery
+for restart after an unclean shutdown.
 
 Both halves of a hive are SQLite. Persistent data lives in the database
 file named on the command line; volatile data lives in a second,
@@ -34,7 +36,7 @@ What the two share is the data model — keys, values, security descriptors
 — which Peios inherits through the registry's kernel-side specification
 rather than from the file format. The on-disk format has no relationship
 to REGF whatsoever, and no REGF file can be read by loregd or written by
-it.
+it. [*priorart.no-regf-file-can-be-read-or-written-by-loregd]
 
 ## The Registry Source Interface
 
@@ -48,4 +50,4 @@ the two stores.
 Where this manual and the RSI specification disagree about wire
 behaviour, the specification is correct and this manual has a bug — the
 RSI is a contract with the kernel, and loregd is one implementation of
-one side of it.
+one side of it. [*priorart.the-rsi-specification-wins-over-this-manual]

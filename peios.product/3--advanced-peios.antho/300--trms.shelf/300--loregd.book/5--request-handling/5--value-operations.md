@@ -3,7 +3,7 @@ title: Value Operations
 description: Querying, setting and deleting value entries, conditional writes, and setting a blanket tombstone.
 ---
 
-## RSI_QUERY_VALUES
+## RSI_QUERY_VALUES [*value.query-values-returns-one-value-or-all-of-a-keys-values]
 
 Returns every layer's entry for one value, or for all of a key's values
 when the request sets the query-all flag:
@@ -25,6 +25,7 @@ FROM volatile.[values] WHERE key_guid = ?
 ```
 
 The response also carries the key's blanket-tombstone state:
+[*value.query-values-also-returns-the-blanket-tombstone-state]
 
 ```sql
 SELECT layer, sequence
@@ -35,14 +36,19 @@ FROM volatile.blanket_tombstones WHERE key_guid = ?
 ```
 
 Value entries and blanket tombstones are both sorted (§5.2).
+[*value.query-values-sorts-value-entries-and-blanket-tombstones]
 
-An unresolvable GUID returns `RSI_NOT_FOUND`. An existing key with no
-values returns `RSI_OK` with empty arrays.
+An unresolvable GUID returns `RSI_NOT_FOUND`.
+[*value.query-values-on-an-unresolvable-guid-returns-not-found]
+An existing key with no values returns `RSI_OK` with empty arrays.
+[*value.query-values-on-a-key-with-no-values-returns-empty-arrays]
 
-## RSI_SET_VALUE
+## RSI_SET_VALUE [*value.set-value-writes-one-layers-entry-for-a-value]
 
-The key's volatile flag selects the store; a key GUID in neither store
-returns `RSI_NOT_FOUND`.
+The key's volatile flag selects the store.
+[*value.set-value-targets-the-store-of-the-keys-volatile-flag]
+A key GUID in neither store returns `RSI_NOT_FOUND`.
+[*value.set-value-on-an-unknown-key-guid-returns-not-found]
 
 ```sql
 INSERT OR REPLACE INTO [values]
@@ -50,7 +56,7 @@ INSERT OR REPLACE INTO [values]
 VALUES (?, ?, fold(?), ?, ?, ?, ?)
 ```
 
-### Conditional writes
+### Conditional writes [*value.a-non-zero-expected-sequence-makes-the-write-a-compare-and-swap]
 
 When the request carries a non-zero `expected_sequence`, the write is a
 compare-and-swap. loregd reads the current entry's sequence and writes only
@@ -63,14 +69,19 @@ WHERE key_guid = ? AND name_folded = ? AND layer = ?
 
 If the row is absent, or its sequence differs, the operation returns
 `RSI_CAS_FAILED` and writes nothing.
+[*value.a-failed-compare-and-swap-returns-cas-failed-and-writes-nothing]
 
 Outside a transaction, the check and the write are wrapped in their own
-`BEGIN IMMEDIATE` transaction so no other writer can interleave; if that
-transaction cannot begin because the database is busy, the operation
-returns `RSI_TXN_BUSY`. Inside a transaction, the caller's transaction
-already provides the isolation.
+`BEGIN IMMEDIATE` transaction so no other writer can interleave.
+[*value.an-unbound-conditional-write-wraps-itself-in-begin-immediate]
+If that transaction cannot begin because the database is busy, the
+operation returns `RSI_TXN_BUSY`.
+[*value.a-conditional-write-that-cannot-begin-its-transaction-returns-txn-busy]
+Inside a transaction, the caller's transaction already provides the
+isolation.
+[*value.a-conditional-write-inside-a-transaction-relies-on-the-callers-isolation]
 
-## RSI_DELETE_VALUE_ENTRY
+## RSI_DELETE_VALUE_ENTRY [*value.delete-value-entry-removes-one-layers-entry-from-both-stores]
 
 Removes one layer's entry for one value, from both stores:
 
@@ -79,14 +90,18 @@ DELETE FROM [values]
 WHERE key_guid = ? AND name_folded = ? AND layer = ?
 ```
 
-No rows-affected check, so deleting an absent entry succeeds. A GUID that
-resolves to no hive returns `RSI_NOT_FOUND`.
+No rows-affected check, so deleting an absent entry succeeds.
+[*value.deleting-an-absent-value-entry-succeeds]
+A GUID that resolves to no hive returns `RSI_NOT_FOUND`.
+[*value.delete-value-entry-on-an-unresolvable-guid-returns-not-found]
 
-## RSI_SET_BLANKET_TOMBSTONE
+## RSI_SET_BLANKET_TOMBSTONE [*value.a-blanket-tombstone-masks-every-value-in-lower-layers]
 
 Sets or clears the tombstone that masks every value a key holds in lower
-layers. The key's volatile flag selects the store, and a GUID in neither
-returns `RSI_NOT_FOUND`.
+layers. The key's volatile flag selects the store.
+[*value.set-blanket-tombstone-targets-the-store-of-the-keys-volatile-flag]
+A GUID in neither returns `RSI_NOT_FOUND`.
+[*value.set-blanket-tombstone-on-an-unknown-key-guid-returns-not-found]
 
 ```sql
 -- set

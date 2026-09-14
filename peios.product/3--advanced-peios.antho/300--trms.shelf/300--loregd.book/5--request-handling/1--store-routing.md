@@ -7,7 +7,7 @@ Persistent data lives in the hive database's `main` schema; volatile data
 lives in the attached `volatile` schema (§3.3). Most operations act on one
 of the two, and loregd has to decide which before it can run any SQL.
 
-## Operations naming one key
+## Operations naming one key [*route.an-operation-naming-one-key-routes-on-the-keys-volatile-column]
 
 For an operation that names a single key, the key's own `volatile` column
 selects the store. loregd reads it with one statement across both schemas:
@@ -20,24 +20,30 @@ LIMIT 1
 ```
 
 A GUID present in neither produces `RSI_NOT_FOUND` for most operations.
+[*route.a-guid-in-neither-store-produces-not-found]
 
 Note that routing follows the **column value**, not which table the row
-came from. Rows loregd writes are always consistent about this — a row in
+came from. [*route.routing-follows-the-column-value-not-the-source-table]
+Rows loregd writes are always consistent about this — a row in
 `volatile.keys` carries `volatile = 1`, a row in `main.keys` carries 0 —
 so the distinction only matters if a database were modified externally.
 
 `RSI_CREATE_KEY` cannot consult a key that does not exist yet, so it
 routes on the volatile flag carried in the request instead.
+[*route.create-key-routes-on-the-requests-volatile-flag]
 
 `RSI_CREATE_ENTRY` routes on the volatile flag of the **child** key the
-entry points at. When that child GUID is present in neither store, the
-entry is written to the persistent table.
+entry points at.
+[*route.create-entry-routes-on-the-child-keys-volatile-flag] When that
+child GUID is present in neither store, the entry is written to the
+persistent table.
+[*route.an-entry-with-an-unknown-child-guid-goes-to-the-persistent-table]
 
 `RSI_HIDE_ENTRY` routes on the **parent** key, since a HIDDEN entry
 belongs to the parent's child list and a volatile parent's whole subtree
-is volatile.
+is volatile. [*route.hide-entry-routes-on-the-parent-key]
 
-## Operations spanning both stores
+## Operations spanning both stores [*route.the-operations-that-span-both-stores]
 
 `RSI_LOOKUP`, `RSI_ENUM_CHILDREN`, `RSI_READ_KEY` and `RSI_QUERY_VALUES`
 are not scoped to one store: a persistent parent may have volatile
@@ -45,11 +51,15 @@ children, and a persistent key may have volatile-store rows beneath it.
 Each issues a single `UNION ALL` statement over the two schemas rather
 than querying them separately, so the merge happens inside SQLite.
 
-Nothing de-duplicates across the two stores. The primary keys that make
-`(parent_guid, child_name_folded, layer)` unique apply *per schema*, so if
-the same triple exists in both, both rows appear in the response. The same
-holds for value entries keyed on `(key_guid, name_folded, layer)`.
+Nothing de-duplicates across the two stores.
+[*route.nothing-de-duplicates-across-the-two-stores] The primary keys that
+make `(parent_guid, child_name_folded, layer)` unique apply *per schema*,
+so if the same triple exists in both, both rows appear in the response.
+[*route.a-triple-present-in-both-stores-appears-twice-in-the-response] The
+same holds for value entries keyed on `(key_guid, name_folded, layer)`.
+[*route.value-entries-are-not-de-duplicated-either]
 
 The deletions — `RSI_DELETE_ENTRY`, `RSI_DELETE_VALUE_ENTRY` and
 `RSI_DROP_KEY` — do not route at all. They delete from both schemas
 unconditionally.
+[*route.the-deletions-do-not-route-and-delete-from-both-schemas]
