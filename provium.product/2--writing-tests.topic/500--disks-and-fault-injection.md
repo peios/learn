@@ -172,6 +172,36 @@ Provium serves a mediated disk over an NBD server of its own and holds each writ
 
 `power_cut` on a disk that was not booted `mediated` fails, naming the disk — a power cut that silently did nothing is exactly the failure this is here to prevent.
 
+## Making the guest's own I/O fail
+
+A power cut is one fault a mediated disk can serve. The rest make the guest's reads and writes fail or stall *while it is running*, which is how you exercise the error paths rather than the recovery path.
+
+```lua
+local vm = provium:vm("v", "peios"):boot({
+    disks = {{scratch = "512M", id = "state", mediated = true}},
+})
+local disk = vm:disk("state")
+
+test("the database survives its disk dying mid-transaction", function(t)
+    -- The disk dies three commands from now — flushes included.
+    disk:fail_after(3)
+
+    local r = vm:run("sqlite3 /mnt/state/db 'insert into t values (1)'")
+    t:assert(r.exit_code ~= 0, "the insert should have failed")
+
+    disk:clear_policy()   -- and the disk works again
+end)
+```
+
+Every verb is listed on the [Disk reference](~provium/reference/disk#faults-the-guest-can-see). Two of them are worth keeping straight, because they model genuinely different hardware failures:
+
+- **`fail_writes()`** refuses new writes but still honours flushes — a disk that will not take data.
+- **`fail_after(n)`** counts flushes too, so it can fail an `fsync`: the guest is told that data it was promised was durable is gone. That is the fault a write-ahead log has to survive, and the one `fail_writes` deliberately cannot produce.
+
+The `fail_after` counter starts from the call that arms it, not from boot. By the time a test runs, the guest has already issued hundreds of commands mounting its filesystem, so a count from boot would be unusable.
+
+These are the guest's faults. `fault_inject` above is the test's, and the two sets are cleared separately — `disk:clear_policy()` for these, `disk:clear_faults()` for those.
+
 ## Detaching a disk
 
 ```lua

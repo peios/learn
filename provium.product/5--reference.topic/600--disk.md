@@ -101,6 +101,36 @@ vm:disk("state"):power_cut()  -- everything unflushed is gone
 vm:reset()                    -- and the reboot clears the guest's caches
 ```
 
+### Faults the guest can see
+
+Everything reached through `disk:fault_inject` changes what `read_sectors` and `write_sectors` do — the *test's* view of the image. The verbs below are served into the guest's own I/O, so the guest is what sees them fail.
+
+They need a disk booted with [`mediated = true`](~provium/reference/vm#boot-disks). On any other disk each errors naming the disk and the missing `mediated`, rather than quietly doing the weaker host-side thing: a test that watched its guest sail through an error the guest never actually saw would report that as resilience.
+
+| Method | Effect on the guest's I/O |
+|---|---|
+| `disk:fail_reads()` | Every read returns EIO. |
+| `disk:fail_writes()` | Every write returns EIO. Flushes still work. |
+| `disk:fail_after(n)` | The nth command and every one after it returns EIO — reads, writes **and flushes**. |
+| `disk:fail_range(sector, count)` | Any command whose bytes overlap `count` sectors from `sector` returns EIO. |
+| `disk:delay(ms)` | Every command sleeps `ms` before it is served. |
+| `disk:clear_policy()` | Disarm all of the above. |
+| `disk:fault_policy()` | Read back what is armed, as a table. |
+
+Rules accumulate: `disk:fail_reads()` then `disk:delay(20)` gives a disk that is both slow and failing reads, the way `bridge:add_latency` and `bridge:drop_rate` compose. Only `disk:clear_policy()` removes them — `disk:clear_faults()` clears the *host-side* set and leaves these untouched.
+
+#### `fail_after` is the one that can fail an fsync
+
+`fail_writes` refuses writes and leaves flushes working, which models a disk rejecting new data. `fail_after` counts flushes too, so it is the rule that can tell a guest its **durable** data is gone — the fault a write-ahead log actually has to survive.
+
+The counter resets every time a policy is armed, so `fail_after(1)` means the first command after *that call*, not the first since boot. A booted guest has already issued hundreds, and a counter running from the server's start could never be aimed at the test's own workload. `n` must be at least 1.
+
+#### Ranges fail whole commands
+
+A command overlapping the range fails entirely rather than partially: one NBD reply carries one error, so half a read is not expressible. `count` must be at least 1 — an empty range overlaps nothing, so it would arm a fault that could never fire, which is indistinguishable from a passing test.
+
+`fail_range` never catches a flush, which carries no offset or length. Failing a flush is `fail_after`'s job alone.
+
 ### `disk:active_faults()`
 
 Returns a Lua array of the currently-active fault mode names. Useful for tests that need to assert the harness state.
