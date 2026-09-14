@@ -75,8 +75,11 @@ its folded name, a hive route's identity includes its folded name, and
 a duplicate is a folded-equal duplicate. `RoleA` and `rolea` are one
 layer, not two. [*name.case.identity-is-the-folded-name]
 
-Two comparisons in the kernel are ASCII-only rather than folded: the
-check for whether a layer name is `base` on two of its call sites, and
-KACS's duplicate check when parsing private layer names into a token.
-For the literal string `base` the two agree; for arbitrary names they
-do not. [*name.case.two-comparisons-are-ascii-only]
+Every comparison folds, on both sides of the kernel boundary. The
+Kernel Access Control Subsystem (KACS) parses private layer names into
+a token and rejects a duplicate with `EINVAL`; that duplicate check
+uses the same folding routine and the same table as LCS, so a pair
+that LCS treats as one layer cannot occupy two of a token's slots.
+There were two ASCII-only comparators, the `base` check on two of its
+call sites and this KACS check, and both are gone (§5.3.2 for
+`base`). [*name.case.every-comparison-folds]
