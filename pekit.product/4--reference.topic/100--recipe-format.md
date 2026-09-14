@@ -259,15 +259,16 @@ either its own flag or `all` is set.
 ### `[source_package]`
 
 Controls the **corresponding-source package** a recipe emits alongside its
-binary packages. Emission is automatic — the table exists only to opt out or
-rename. A recipe emits one when both of these hold: it has a reproducible
-`[source]` (`git` or `url`; local overrides and bare branch refs never
+binary packages. Emission is automatic; the table controls naming, emission and
+additional shared source inputs. A recipe emits one when both of these hold: it has a reproducible
+`[source]` (`git`, `url` or PyPI; local overrides and bare branch refs never
 qualify), and it produces at least one `peipkg`-format package.
 
 | Key | Type | Required | Meaning |
 | --- | --- | --- | --- |
 | `name` | string | no | Package name. Default `<recipe-dir>-source`. |
 | `enabled` | bool | no | Set `false` to emit no source package. Default `true`. |
+| `workspace_inputs` | array of relative paths | no | Additional shared workspace inputs for this recipe. Under workspace isolation they are copied into read-only worker mounts and included byte-for-byte in the source bundle. Missing, ignored or escaping inputs fail. |
 
 Any other key is an `unknown source_package key` error.
 
@@ -282,10 +283,19 @@ undeclared member counting as `unknown`), and installs under `/usr/src/dist/<nam
 - `upstream/` — the pristine source input: a url source's downloaded artifact
   byte-for-byte, so its hash matches the committed `pekit.lock`, or a
   `git archive` export of the locked commit.
-- `patches/` — the recipe's patch series, when a `patches/` directory exists.
-- `recipe/` — the build-controlling files from the recipe directory:
-  `pekit.toml`, package definitions (including `packages.pekit/`), env files,
-  `pekit.lock`, and `keys/`. `*.keyring.pekit.toml` files are never included.
+- `source/` — the prepared tree, with patches already applied.
+- `workspace/` — the complete captured recipe, shared inputs, inherited policy
+  and environment profiles, preserving their relative paths.
+- `recipe/` and `patches/` — compatibility views.
+- `acquisition/` and `build-environment/` — captured vendoring outputs and
+  dependency identities when provided by the isolated job.
+- `build-inputs.json`, `rebuild.py`, `REBUILD.md` — schema-2 hashes, modes,
+  provenance and the outside-checkout reconstruction command.
+
+Output/cache state, ignored developer files, keyring/credential files and
+configured key paths are excluded. Missing or escaping source links fail closed.
+See [source reconstruction](~pekit/running/signing-and-provenance#reconstructing-a-source-bundle)
+for required dependency services, signing keys and the bounds of reconstruction.
 
 Every `peipkg`-format member the recipe emits carries the source package's
 name in its manifest's `build.source_package` field, linking each binary to
@@ -315,6 +325,7 @@ Fields of a single target:
 | `command` | string or array of strings | **yes** | The command. String form runs through a shell; array form is an argv executed directly. An empty array is rejected. |
 | `needs` | array of strings | no | Names of other targets in the same section that must run first. |
 | `clear_out` | bool | no | Wipe this target's output directory before running. Default `true`. |
+| `keyring_inputs` | string array | no | Dotted keyring entries requested by this target. Default none. The operator keyring must grant `public` access, or `acquisition` for `build.vendor`. Signing entries cannot be exported. |
 | `dependencies` | table | no | **Build and test targets.** Dependencies the target needs provisioned in its root. Under `--env peipkg` the composed root holds *only* what is declared — a test stage that shells out needs `dash` (pekit runs `command` through `/usr/bin/sh`) and whatever else its script calls. See below. |
 | `gate` | bool | no | **Test targets only.** When `true`, `package` and `publish` run this test after staging its `needs` and before writing any artifact. Default `false`; `--no-gates` explicitly bypasses gated tests. |
 | `sign` | table | no | **Build targets only.** Files in the target's output to sign after the command succeeds, by signature kind. See [`sign`](#build-name-sign-target-sign) below. |
@@ -360,7 +371,7 @@ before any dependent target or package sees the output.
 
 | Level | Type | Meaning |
 | --- | --- | --- |
-| kind | table | A signature kind. The only kind is `pip` — the Peios binary signature that confers a [Process Integrity Protection](~peios/binary-signing-and-pip/process-integrity-protection) tier. Any other name is `unknown_key`. |
+| kind | table | A signature kind. `pip` produces Peios binary/firmware signatures; `module` signs `.ko` and `.ko.zst` with a kernel PKCS#7 trailer. Other names are `unknown_key`. |
 | kind.*&lt;pattern&gt;* | string | A relative path or glob (the same glob syntax as `[files]`). The value is a keyring leaf path such as `tcb.priv` whose value is the path to the private key. Must be non-empty. |
 
 For `pip`, the key is an ML-DSA-65 private key — PKCS#8 PEM as produced by

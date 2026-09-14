@@ -211,7 +211,7 @@ emitted when all of these hold:
 
 - `source_package.enabled` is not set to `false` (emission is the default);
 - the source actually materialised as **git with a resolved commit** or
-  **url** — a local override never qualifies, and neither does a git source
+  **url/PyPI** — a local override never qualifies, and neither does a git source
   built from a bare branch ref with no selected version (a deliberately
   moving target has no stable corresponding source);
 - at least one emitted member has `format = "peipkg"`.
@@ -239,14 +239,74 @@ Everything installs under `/usr/src/dist/<name>-<version>/` (with any
   upstream-maintained patch series is included byte-for-byte under
   `upstream/patches/`, in the same order and with the same hashes as its
   nested lock entries.
-- `patches/` — the recipe's [patch series](~pekit/recipes/sources#patches),
-  when one is declared. The applied series is the shipped series by
-  construction, and it ships under the fixed `patches/` name even when
-  `[source].patches` picks a different directory.
-- `recipe/` — the build-controlling files from the recipe directory:
-  `pekit.toml`, `pekit.lock`, package definitions (including
-  `packages.pekit/`), env files, and `keys/`. `*.keyring.pekit.toml` files
-  are **never** included — developer key material stays out.
+- `source/` — the prepared source tree before package targets run, including the
+  applied upstream and distribution patches. Reconstruction uses this tree
+  directly, without fetching the upstream source or applying patches again.
+- `workspace/` — the captured recipe tree at its original relative path,
+  inherited workspace/package/lint policy, environment profiles, and declared
+  shared inputs. Recipe-local test fixtures, tools, scripts and license files
+  are included. Safe relative symlinks retain their topology; missing or
+  escaping targets fail packaging. Empty fixture directories are preserved.
+- `recipe/` and `patches/` — compatibility views for older source consumers.
+  New reconstruction tooling uses the complete `workspace/` topology.
+- `acquisition/vendor/` — captured outputs of an isolated `build.vendor` stage,
+  when it ran, including vendored language dependencies.
+- `build-environment/` — dependency versions and artifact identities recorded
+  by the selected root preparers. These identify the original build inputs;
+  they do not automatically replay an old Debian archive or native repository.
+- `build-inputs.json`, `rebuild.py` and `REBUILD.md` — the versioned bundle
+  manifest, reconstruction entry point and required tools. The manifest records
+  file hashes, modes, link targets, the upstream version/ref and selected
+  environment. Peipkg transport modes differ from source Unix modes; the
+  reconstruction tool restores source modes after all hashes verify.
+
+An isolated job copies shared helpers before any target runs. Workers consume
+those read-only copies, and the source package contains the same bytes. Recipe
+and policy inputs are captured separately from writable worker trees. Editing
+those inputs during a job, or before reusing its outputs, causes packaging to
+fail with `source_input_changed`; rebuild with the new inputs. Retained outputs
+from before source-input capture was introduced also require one fresh build.
+
+The exporter excludes output/cache state, Git internals, ignored developer
+files, keyring files, known credential filenames and configured key-file paths.
+An explicitly declared input that is missing, ignored or escapes the workspace
+is an error. Keep credentials out of tracked recipe material. Copying build
+inputs does not authorize distributing private keys.
+
+Workspace `isolation.inputs` are captured automatically. A recipe can add
+`source_package.workspace_inputs = ["helpers/python"]` for its own read-only
+shared inputs. Coordinator-side support, such as root preparation scripts,
+belongs in workspace `[source_package] inputs = ["_peiroot_", "_debroot_"]`;
+this captures source without granting workers access to those directories.
+
+### Reconstructing a source bundle
+
+Verify the outer package signature using the distribution's trust configuration,
+then extract it and run `python3 rebuild.py test` or `python3 rebuild.py package`
+in its `/usr/src/dist/<name>-<version>/` directory. The command verifies captured
+hashes, restores source modes, and invokes Pekit with the included prepared tree,
+the recorded version, and the original environment. `PEKIT_REBUILD_ENV` can
+select another captured environment. Additional Pekit flags follow the command.
+
+Install a compatible Pekit, Python 3, Bubblewrap and the selected profile's root
+preparation tools. A native profile still needs its declared trusted package
+repository; a Debian profile needs Docker and archive access. For the catalogue,
+provide that repository at `workspace/_peipkgRepo_`. These dependency services and
+operator signing keys are supplied separately. A generic reconstruction may
+rerun the declared language acquisition stage; its captured vendored sources
+are also available for language-specific offline replay.
+
+Reconstruction uses local provenance and does not claim a byte-identical signed
+release. Exact historic dependency replay, independent reproducibility and
+publication qualification remain separate checks. New ordinary builds continue
+following upstream automatically; no manually maintained version pins are added.
+
+Recipes with no reproducible external source, and explicit `--local` builds,
+still do not emit an automatic source package. For in-repository products,
+distribute the complete catalogue commit/tree (including shared support and
+policy) with the release and record that identity, or give the product a
+reproducible Git source so automatic source packaging applies. A binary alone
+and a moving repository URL are not a complete corresponding-source offer.
 
 Each binary member's manifest names the source package in
 `build.source_package`, linking every binary to its corresponding source. The
@@ -285,3 +345,27 @@ For the keyring files that carry the signing key, read
 
 For every flag mentioned here, read the
 [command-line reference](~pekit/reference/cli).
+
+## Kernel module signing
+
+```toml
+[build.kernel.sign.module]
+"modules-root/**/*.ko.zst" = "modsig.priv"
+"modules-irf-root/**/*.ko.zst" = "modsig.priv"
+```
+
+The keyring entry names an ML-DSA-65 PKCS#8 PEM private key followed by its X.509
+certificate. The coordinator signs the uncompressed relocatable ELF bytes,
+verifies the detached CMS signature against that certificate, appends the kernel
+signature trailer, and recompresses `.ko.zst` outputs. It uses its trusted OpenSSL,
+never the build tree's `scripts/sign-file`. OpenSSL 3.5 authenticated attributes
+require the kernel's ML-DSA auth-attribute compatibility setting.
+
+Workers need only the public certificate in `modsig.pub`, granted with
+`access = "public"` and requested through `keyring_inputs`. Kernel compilation
+keeps signature enforcement enabled; `modules_install` suppresses its own signing
+invocation with `CONFIG_MODULE_SIG_ALL=`. The coordinator then signs both module
+sets before dependent tests run. Firmware tests similarly prepare fixture blobs
+in a build target, apply `sign.pip` in the coordinator, and consume those signed
+fixtures in the test worker. Production private keys never enter worker source or
+output trees.

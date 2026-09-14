@@ -37,6 +37,8 @@ distro-wide defaults.
 | `[env]` | table | no | Workspace-level environment variables. See [env table](#env-table). |
 | `[wrap]` | table | no | Workspace-level command wrapper. See [wrap table](#wrap-table). |
 | `[policy]` | table | no | Distro-wide derivation policy. See below. |
+| `[isolation]` | table | no | `enabled` (bool, default false) requires workspace sandbox policy; `inputs` (array of relative paths) grants copied, read-only shared workspace inputs, also captured in source bundles. |
+| `[source_package]` | table | no | `inputs` (array of canonical relative paths) captures coordinator-side support source, such as root-preparation scripts, without mounting it into workers. Workspace configuration, package/lint policy and environment profiles are captured automatically. |
 
 ### `[policy]`
 
@@ -62,14 +64,23 @@ Each entry in `[policy.symbol_versions]` is `soname = "PREFIX_"`:
 An env file provides a *named, selectable* layer of environment variables,
 command wrapper, and dependency-provider override.
 
-An env file must declare **at least one** of `[env]`, `[wrap]`, or
+An env file must declare **at least one** of `[env]`, `[wrap]`, `[sandbox]`, or
 `dependency_provider`; a file with none of them is rejected (`missing_key`).
 
 | Key | Type | Required | Meaning |
 | --- | --- | --- | --- |
-| `[env]` | table | one of the three | Environment variables. See [env table](#env-table). |
-| `[wrap]` | table | one of the three | Command wrapper. See [wrap table](#wrap-table). |
-| `dependency_provider` | string | one of the three | Selector naming which of a build target's declared dependency-provider blocks (`[build.<target>.dependencies.<provider>]`) is exported as the `PEKIT_DEPENDENCIES*` variables. Validated as a [selector](#selectors). |
+| `[env]` | table | one of the four | Environment variables. See [env table](#env-table). |
+| `[wrap]` | table | one of the four | Command wrapper. See [wrap table](#wrap-table). |
+| `dependency_provider` | string | one of the four | Selector naming which of a build target's declared dependency-provider blocks (`[build.<target>.dependencies.<provider>]`) is exported as the `PEKIT_DEPENDENCIES*` variables. Validated as a [selector](#selectors). |
+
+### `[sandbox]`
+
+A workspace profile's `command` (string or argv array, required) prepares the
+fresh `PEKIT_SANDBOX_ROOT` destination. No `{{command}}` placeholder is used.
+Optional `network_targets` is an array containing only `"build:vendor"`.
+Pekit owns process isolation; the preparer only supplies dependencies. This table
+requires `[isolation] enabled = true` in the workspace. Member/source profiles
+cannot override it. See [isolated production jobs](~pekit/recipes/environments-and-keyrings#isolated-production-jobs).
 
 ### `--env <name>` selection
 
@@ -143,15 +154,14 @@ below and is not available in ordinary recipe strings.
 
 ## `*.keyring.pekit.toml`
 
-A keyring file supplies secrets to the build environment as `PEKIT_KEYRING_*`
-variables. Keyrings are opt-in per invocation (`--keyring`); a keyring named
+A keyring file supplies coordinator values and explicitly granted worker inputs. Keyrings are opt-in per invocation (`--keyring`); a keyring named
 `<name>` resolves to `<name>.keyring.pekit.toml`, searched in the workspace
 root then the recipe root (a path-like value is used verbatim).
 
 ### Schema
 
-The file is a tree of nested TOML tables whose **leaves are strings**. Each
-leaf's dotted path is converted into an environment-variable name:
+The file is a tree of nested TOML tables whose leaves are strings or `{ value = "...", access = "..." }` entries.
+Requested worker inputs use an environment-variable name derived from their path:
 
 - Prefix `PEKIT_KEYRING_`, then the dotted path uppercased.
 - Every run of non-alphanumeric characters (including the `.` separators)
@@ -179,15 +189,16 @@ api-key = "REPLACE_ME"
 
 | Rule | Detail |
 | --- | --- |
-| Leaf type | Every leaf must be a string. A non-string leaf is an error. |
+| Leaf type | A string (coordinator-only), or a typed table with string `value` and `access`. |
 | Nesting | Sub-tables nest arbitrarily; each nesting level adds a segment to the exported name. |
-| Typed entries | A table containing a `path` or `content` key is a *typed* entry and is **not supported yet** (`unsupported_keyring_entry`). |
+| Typed access | `public` permits requesting targets; `acquisition` permits only `build.vendor`; `signing` is coordinator-only. `path` and `content` forms remain unsupported. |
 | Collisions | A keyring export that collides with a normal or managed env variable is an error (`env_collision`). |
 
 ### Well-known entries
 
-Most keyring values are opaque to pekit — they exist to be exported. The
-entries below are additionally read by pekit itself:
+Targets receive only entries listed in `keyring_inputs` and permitted by their
+access grant. Inline overrides are coordinator-only. The following entry is read
+by Pekit itself:
 
 | Leaf path | Meaning |
 | --- | --- |
@@ -200,7 +211,7 @@ Without a configured signing key, `package` writes unsigned artifacts, and
 A build target's [`sign` table](~pekit/reference/recipe-format#build-name-sign-target-sign)
 reads further entries, but which ones is the recipe's choice: each `sign.pip`
 value is the dotted path of a leaf holding the path to an ML-DSA-65 private
-key. Those entries are still exported to the target like any other.
+key. Those private-key entries are never exported to workers.
 
 ---
 

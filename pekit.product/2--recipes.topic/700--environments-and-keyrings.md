@@ -1,7 +1,7 @@
 ---
 title: Environments and keyrings
 type: concept
-description: "The [env] layers, env files and --env, [wrap] wrappers, dependency_provider, and how keyrings inject secrets as PEKIT_KEYRING_* variables."
+description: "The [env] layers, env files and --env, [wrap] wrappers, dependency_provider, and worker isolation and explicit keyring inputs."
 related:
   - pekit/recipes/anatomy
   - pekit/recipes/dependencies-and-claims
@@ -86,7 +86,7 @@ workspace profile, and the selected recipe env file has the final say.
 
 For the common case — a shell target, or any target run under a `[wrap]` wrapper —
 pekit emits the user variables as `export` lines in a shell script that runs before
-your command, and it does **not** quote them. That means `[env]` values are
+your command, using double quotes that preserve spaces. This means `[env]` values are
 expanded by the shell and may reference other variables:
 
 ```toml
@@ -188,9 +188,11 @@ claims](~pekit/recipes/dependencies-and-claims) for what the selection exports.
 
 ## Keyrings
 
-Keyrings supply secrets and keys to targets. Every keyring value is exported to the
-target as a `PEKIT_KEYRING_*` environment variable. There are two ways to provide
-them: keyring **files** and inline **literals**.
+Keyrings supply keys to the coordinator. Targets receive **no keyring entries by
+default**. A target requests specific public or acquisition inputs with
+`keyring_inputs`, and the operator's keyring must separately grant the matching
+access. Private signing keys remain coordinator-only. Keyring files and inline
+literals continue to resolve through the same precedence rules.
 
 ### `--keyring=<value>` (keyring files)
 
@@ -233,7 +235,7 @@ with `PEKIT_KEYRING_`; the exact sanitisation rules are in
 
 ```bash
 pekit build --keyring.tcb.priv=<value>
-# exported to the target as PEKIT_KEYRING_TCB_PRIV
+# coordinator-only; never exported to the target
 ```
 
 Literals are keyed by their dotted path, so repeating the same path replaces the
@@ -255,7 +257,7 @@ an `env_collision` error.
 
 ### Package signing
 
-One keyring entry is read by pekit itself rather than merely exported:
+The well-known package-signing entry is read by Pekit itself:
 `signing.package_key` names the Ed25519 private key that signs every
 peipkg-format artifact a `package` or `publish` run produces. Because it rides
 the keyring mechanism, the key path stays in a per-developer, gitignored file —
@@ -283,32 +285,114 @@ Peios' own recipes is `[tcb] priv = "<path>"`. See
 
 ### Keyring file format
 
-A `*.keyring.pekit.toml` file is a TOML document whose leaves are strings. Each
-string leaf becomes one `PEKIT_KEYRING_*` variable, named from its full dotted key
-path using the same sanitisation as inline literals. Nested tables are flattened:
+Legacy string leaves remain supported as coordinator-only values. To expose a
+value to a worker, use a typed entry with `value` and `access`:
 
 ```toml
-# prod.keyring.pekit.toml
-token = "<value>"          # -> PEKIT_KEYRING_TOKEN
-
+# prod.keyring.pekit.toml — operator-controlled and gitignored
 [tcb]
-priv = "<value>"           # -> PEKIT_KEYRING_TCB_PRIV
-pub  = "<value>"           # -> PEKIT_KEYRING_TCB_PUB
+priv = "/secure/tcb.pem"
+pub = { value = "PUBLIC_KEY_HEX", access = "public" }
+
+[sources]
+registry_token = { value = "TOKEN", access = "acquisition" }
 ```
 
-A leaf that is not a string is rejected, and typed entries — a sub-table carrying a
-`path` or `content` key — are reserved and currently rejected as
-`unsupported_keyring_entry`. The full schema is documented in
-[Supporting files](~pekit/reference/supporting-files).
+```toml
+# pekit.toml
+[build.main]
+keyring_inputs = ["tcb.pub"]
+command = 'generate-header "$PEKIT_KEYRING_TCB_PUB"'
+
+[build.vendor]
+keyring_inputs = ["sources.registry_token"]
+command = 'fetch-sources'
+```
+
+`public` inputs are available to requesting targets. `acquisition` inputs are
+restricted to `build.vendor`. `signing` entries and legacy strings cannot be
+requested by workers. An inline override resets the entry to coordinator-only,
+so it cannot accidentally inherit a public grant from an earlier keyring file.
+Values are literal strings, including public certificate PEM content; a path
+value does not grant filesystem access. Typed `path` and `content` entries remain
+unsupported. Colliding normalized entry names are rejected.
 
 ### A note on secrets in output
 
-Keyring values are exported to the target like any other environment variable.
+Explicitly granted worker inputs are exported like other environment variables.
 pekit does **not** redact them from a target's stdout/stderr — if your command
 prints a secret, pekit streams it verbatim. pekit's own diagnostics and its
 `--verbose` environment summary log variable **names** only, never values, but you
 are responsible for not echoing secrets from inside your commands. Prefer writing
 secrets to files or consuming them directly rather than printing them.
+
+## Isolated production jobs
+
+A workspace can require Pekit-controlled isolation:
+
+```toml
+# workspace.pekit.toml
+[isolation]
+enabled = true
+inputs = ["_pybuild_"]
+```
+
+The selected **workspace** environment profile prepares a dependency root:
+
+```toml
+# peipkg.env.pekit.toml
+dependency_provider = "peipkg"
+[sandbox]
+command = 'exec "$PEKIT_WORKSPACE_ROOT/_peiroot_/enter.sh"'
+```
+
+The preparer receives `PEKIT_SANDBOX_ROOT`, a fresh destination path, and
+`PEKIT_JOB_STATE`, coordinator-only job storage. It installs declared dependencies
+and exits. It receives managed variables, not recipe environment expansions or
+keyring values. Pekit then runs the target through Bubblewrap with a private PID,
+mount and user namespace, a cleared environment, and no network by default.
+An acquisition profile may set `network_targets = ["build:vendor"]`; this shares
+the host network for acquisition, including its DNS configuration, without
+mounting the host root or home. Other target names cannot enable network access.
+The worker receives its dependency manifest through a read-only file at
+`PEKIT_DEPENDENCIES_FILE`. The Peios acquisition profile uses the recipe's `apt`
+dependencies, adding Cargo, Rust, Git and TLS trust when not already declared;
+recipe constraints take precedence. Its installed Debian inventory records the
+actual acquisition toolchain.
+
+Delegated and member `[env]` layers still apply inside the worker. Their wrappers
+cannot replace workspace isolation or its dependency provider. `--env none` or a
+profile without a root preparer fails before target outputs are cleared. Sandbox
+profiles outside an isolation-enabled workspace are rejected rather than run
+unprotected.
+
+Authenticated source caches remain outside the worker. The source receives a
+writable copy by default, at the same visible path: no `allow_write` toggle is
+needed. Job outputs retain their paths across stages, and completed stages in the
+same job may be modified by later stages and tests. Sibling recipes, repository
+indexes, signing keys, host home and completion records are not mounted. Shared
+workspace inputs must be named explicitly and are copied into read-only mounts.
+Copies exclude Git databases, keyrings, configured key files and common local
+credential files; source trees must still contain only intended build inputs.
+
+Pekit serializes invocations of the same recipe. A worker's descendants are gone
+before signing starts. PIP and module signatures are applied by the coordinator;
+package/publish reapplies signatures after gates that may have rebuilt outputs.
+Signing paths that escape the stage through symlinks are rejected.
+
+`--no-build` retains both staged outputs and the private source copy. Outputs
+created before isolation was enabled must first be rebuilt; their old stages may
+contain leaked signing material and are not exposed to new workers. An explicit
+`gen` runs against a private copy and applies its source changes through a bounded
+filesystem root after successful completion. Concurrent source edits cause it to
+abort. `verify` never writes the source checkout back.
+
+The Peios root preparer snapshots signed repository metadata once per job and
+records each resolved dependency closure. Debian preparation records installed
+package versions and its base image identity. This is automatic build provenance:
+recipes can continue selecting current upstream releases and wildcard dependency
+versions. A new job selects current inputs again; no hand-maintained version pins
+are required.
 
 ## Where to go next
 
