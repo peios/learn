@@ -263,17 +263,20 @@ wrap. Keyrings behave similarly: a named `--keyring` on a workspace run
 resolves against the workspace root once, and the values are shared with
 every member.
 
-### Policy: symbol-version floors
+### Policy: symbol-version requirements
 
-The `[policy]` table carries distro-wide derivation policy. Its one current
-sub-table is `[policy.symbol_versions]`, a map from a shared-library **soname**
+The `[policy]` table carries distro-wide derivation policy.
+`[policy.symbol_versions]` is a map from a shared-library **soname**
 to the **symbol-version token prefix** whose tokens are commensurable with the
 providing package's version:
 
 ```toml
+[policy]
+symbol_capabilities = ["libstdc++.so.6"]
+
 [policy.symbol_versions]
 "libc.so.6" = "GLIBC_"
-"libstdc++.so.6" = "GLIBCXX_"
+"libgcc_s.so.1" = "GCC_"
 ```
 
 This governs which sonames receive a symbol-version floor when pekit derives a
@@ -283,6 +286,10 @@ dependency. An unknown sub-table under `[policy]` is rejected
 (`unknown_key`, "policy.… is not a known policy table"). For how derived
 dependencies and claims work, see
 [Dependencies and claims](~pekit/recipes/dependencies-and-claims).
+
+`symbol_capabilities` derives every required and provided version node directly,
+including both GLIBCXX and CXXABI for libstdc++. Its token numbers are not GCC
+package versions. Publish capability-bearing runtimes before consumers.
 
 ## Where to go next
 
@@ -296,3 +303,12 @@ same-named file beside one recipe overlays it. This lets a workspace define
 shared build rungs without per-member symlinks.
 
 For the full flag surface and remote locators, read [Invocation and flags](~pekit/running/invocation).
+
+
+## Release batches
+
+`pekit workspace --jobs 4 release --all --latest --keyring production` uses the
+workspace's `[release]` policy. Unlike ordinary per-member `publish` fan-out,
+release waits for all selected members and required environments to pass, then
+promotes their frozen artifacts in one repository batch. Failure in any member
+prevents promotion. See [Qualified releases](~pekit/running/qualified-releases).

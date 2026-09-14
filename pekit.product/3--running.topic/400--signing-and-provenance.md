@@ -252,8 +252,9 @@ Everything installs under `/usr/src/dist/<name>-<version>/` (with any
 - `acquisition/vendor/` — captured outputs of an isolated `build.vendor` stage,
   when it ran, including vendored language dependencies.
 - `build-environment/` — dependency versions and artifact identities recorded
-  by the selected root preparers. These identify the original build inputs;
-  they do not automatically replay an old Debian archive or native repository.
+  by the selected root preparers. The catalogue Debian profile
+  records an immutable prepared-root archive and supports explicit replay below.
+  Native repository replay remains a separate provider contract.
 - `build-inputs.json`, `rebuild.py` and `REBUILD.md` — the versioned bundle
   manifest, reconstruction entry point and required tools. The manifest records
   file hashes, modes, link targets, the upstream version/ref and selected
@@ -290,15 +291,72 @@ select another captured environment. Additional Pekit flags follow the command.
 
 Install a compatible Pekit, Python 3, Bubblewrap and the selected profile's root
 preparation tools. A native profile still needs its declared trusted package
-repository; a Debian profile needs Docker and archive access. For the catalogue,
+repository; a fresh Debian environment needs Docker and archive access; retained-root replay
+needs neither. For the catalogue,
 provide that repository at `workspace/_peipkgRepo_`. These dependency services and
 operator signing keys are supplied separately. A generic reconstruction may
 rerun the declared language acquisition stage; its captured vendored sources
 are also available for language-specific offline replay.
 
+### Retaining and replaying Debian build environments
+
+The catalogue's Debian root preparer separates networked dependency acquisition
+from Pekit's offline build and test workers. A fresh job pulls the current
+`debian:trixie` image once, records its immutable image ID and repository digests,
+and creates every Debian root for that job by ID. APT package requirements use
+concrete names, optionally qualified by architecture. A constraint is `*` or a
+comma-separated conjunction of `=`, `>=`, `>`, `<=` and `<` comparisons. Debian
+version ordering applies, including epochs and `~`; semver ranges and virtual
+package requests are not accepted. Before a single joint install, the preparer
+filters available versions against the constraints, permitting a necessary
+downgrade only inside the disposable root. It checks all final installed direct
+dependencies after resolution. Failed archive refreshes and unsatisfied or
+unsupported requirements stop acquisition.
+
+Each completed root is exported and retained as `<sha256>.tar.gz`. Its contents
+include installed package files, the dpkg database, APT configuration and signed
+index metadata. The per-target `debian-root.json` records the requests, base
+image, host architecture, preparer hash, archive hash/size and package inventory
+hash. `installed.tsv` includes package name, version, architecture and dpkg state.
+Both records enter the corresponding source bundle under `build-environment/`.
+Large root archives remain in coordinator storage, outside source bundles and
+worker mounts.
+
+The default archive store is
+`${XDG_STATE_HOME:-$HOME/.local/state}/pekit/debian-roots`.
+`PEKIT_DEBIAN_ROOT_STORE` selects another directory, for example a backed-up
+release archive volume. Archives are published atomically, verified before
+reuse and extracted into fresh roots. Ordinary build cleanup cannot delete the
+store. The preparer does not garbage-collect it: retain or back up every archive
+referenced by a supported release's records. Source bundles alone do not contain
+these dependency bytes. Deleting a referenced archive makes that historical
+environment unavailable; the preparer does not silently reconstruct it from a
+new archive state.
+
+After verifying and extracting a corresponding-source package, replay its
+recorded Debian environment with:
+
+```sh
+export PEKIT_DEBIAN_ROOT_STORE=/srv/releases/debian-roots
+export PEKIT_DEBIAN_REPLAY="$PWD/build-environment"
+python3 rebuild.py test
+```
+
+Supply these variables to the coordinator process, not recipe `[env]` tables.
+Replay requires Python 3.11+, GNU tar, Pekit and Bubblewrap, but invokes no Docker
+or APT commands. It requires matching captured preparer bytes, architecture and
+canonical requested dependencies, and verifies both inventory and archive
+hashes. Every executed Debian target must have its own record; missing, corrupt
+or incompatible records fail without a network fallback. For a native build
+using a Debian vendoring root, this option replays only that Debian environment.
+Language acquisition commands retain their explicitly declared network policy;
+retaining the root alone does not turn a `cargo vendor` invocation into offline
+source replay.
+
 Reconstruction uses local provenance and does not claim a byte-identical signed
-release. Exact historic dependency replay, independent reproducibility and
-publication qualification remain separate checks. New ordinary builds continue
+release. Retained-root replay fixes the dependency filesystem; the host kernel,
+CPU capabilities, runtime mounts, clock, signing identities and independent
+reproducibility/publication qualification remain separate checks. New ordinary builds continue
 following upstream automatically; no manually maintained version pins are added.
 
 Recipes with no reproducible external source, and explicit `--local` builds,

@@ -11,6 +11,7 @@ normative for the capability `name`.
 | Capability | Virtual name | Version |
 |---|---|---|
 | Shared library | The ELF soname, verbatim — `libssl.so.3`. | None by default. |
+| ELF symbol-version node | `elfver(<soname>:<token>)`, for example `elfver(libstdc++.so.6:GLIBCXX_3.4.30)`. | None: the whole name is an exact capability. |
 | pkg-config module | `pkgconfig(<module>)`, where `<module>` is the `.pc` file's base name — `pkgconfig(glib-2.0)`. | The `.pc` file's `Version:` field, matched as an ordered constraint per §5.7. |
 
 ## Shared libraries
@@ -24,6 +25,23 @@ exact equality: `libssl.so.3` is never satisfied by `libssl.so.4`. A
 version MAY be carried on a soname provide when the library's symbol
 versions are commensurable with the providing package's own version, as
 they are for a C library shipping versioned symbols.
+
+## ELF symbol-version nodes
+
+A strong GNU ELF version need is represented by `elfver(<soname>:<token>)`;
+the matching provide comes from that SONAME's non-base version definition.
+Both components preserve case and exact bytes. The colon separates components;
+it is not permitted within either component. Tokens use ASCII letters, digits,
+underscores, dots, plus and minus characters; the complete capability obeys the
+normal capability-name length bound. Weak version needs do not impose a mandatory
+dependency. A producer must reject unrepresentable metadata rather than omit a
+selected version requirement.
+
+These capabilities supplement SONAME identity and are independent of the
+provider package's version. All required nodes must be present; defining a
+numerically greater node alone is insufficient. A token from another SONAME
+does not satisfy the dependency. Producer policy selects the libraries to which
+this derivation applies; Peios selects libstdc++ to cover GLIBCXX and CXXABI.
 
 ## pkg-config modules
 

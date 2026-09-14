@@ -115,3 +115,73 @@ The Docutils recipe in the pool is the reference for a library with console scri
 - [Install destinations](~peios/install-destinations) — the permitted top-level paths, including why `/usr/lib/python3.X` is not one of them.
 - [Package files](~peios/producing-packages/package-files) — the manifest keys a recipe's package definition may carry.
 - [Recipe anatomy](~pekit/recipes/anatomy) — the pekit recipe this page's steps live in.
+
+## Qualifying Python build backends
+
+Flit Core and Setuptools bootstrap themselves with the system interpreter and
+`install-wheel`. Their `build.main` targets remain independent of the Python
+test ecosystem. Initial bootstrap output is provisional: final package gates
+also require a separate `build.vendor` target and offline tests.
+
+The catalogue uses the same interpreter-derived `sysconfig` library path for
+installation and the first staged-module assertions. Native Peios checks also
+require `/usr/lib/x86_64-linux-peios/python<major>.<minor>/site-packages` for the
+running interpreter. Debian reference paths are accepted for reference tests;
+the Peios-specific package file mappings continue to select only native payloads.
+
+Test-only Python tools are resolved during the explicit acquisition stage using
+Debian's packaged pip and TLS trust. The selected backend version constrains the
+candidate tool wheel automatically; other requirements follow the upstream test
+requirements and current compatible releases. Only portable Python wheels are
+accepted. The acquisition output retains every wheel, a requirements file and
+`test-tools.json` with their hashes. These inputs enter the corresponding-source
+bundle under `acquisition/vendor`. This is a per-job resolved record, not a
+manually maintained version list.
+
+The test worker verifies the complete recorded wheel inventory before creating
+a private virtualenv. Pip is bootstrapped from its recorded wheel and installs
+only recorded local files into that virtualenv. Dependency consistency is
+checked there. Pip and the test ecosystem are not added to the build backend's
+runtime package or to the system interpreter. Nested virtualenv tests can clear
+`PYTHONPATH` and still find their tools. The worker has no external network;
+local `file://` package-index fixtures and recorded wheel files remain usable.
+Rust acquisition infrastructure is added only when the target declares Cargo or
+rustc, so Python acquisition does not install an unrelated compiler stack.
+
+Both environments run all Flit Core tests and Setuptools's offline functional
+suite. Setuptools tests explicitly marked `uses_network` are excluded: these
+include its live-PyPI project integration matrix. Release-upload tooling and
+performance instrumentation are outside this functional package gate. Upstream
+platform/version skips and expected failures remain visible in JUnit results;
+a dependency import failure or failed assertion fails qualification.
+
+Two recorded adjustments apply only to disposable Setuptools test inputs:
+
+- The unused coverage-plugin warning category is removed from the copied pytest
+  configuration when coverage instrumentation is not enabled. Other warning
+  errors remain enforced.
+- `jaraco.path` loads ctypes inside its Windows-only hidden-file implementation.
+  The guarded adjustment fails if that usage changes. It does not mock ctypes
+  or skip Linux filesystem assertions.
+
+Peios's runtime Python deliberately omits CPython's regression tests. Setuptools
+therefore declares the Python source package as a native test dependency. When
+`test.support` is absent, the gate copies its helpers into the private virtualenv
+from the source matching the interpreter's exact major, minor and micro version.
+Older source-package archives are checked against their source-lock hash before
+extraction; prepared source trees are also supported. A version mismatch fails
+the gate. No test modules are added to the runtime package.
+
+Each backend's installed-payload checks import from the native or reference
+staging directory and exercise wheel, metadata and source-archive hooks. The
+smoke wheel's complete RECORD is checked against its files, then the wheel is
+installed into a fresh directory and its module is imported in a separate
+interpreter with an explicit staged search path. Metadata, vendored code,
+licenses and checked-hash bytecode are also checked.
+
+For a selected release candidate, run `pekit test --env debian --version VERSION`
+and `pekit test --env peipkg-net --version VERSION` from its recipe directory,
+then package and lint the native candidate. Only `build:vendor` has network
+access; compilation and tests remain offline. `pekit build main --env peipkg --version VERSION` is available for the initial minimal bootstrap, but it does
+not constitute final release qualification. Normal release discovery continues
+to follow upstream automatically.

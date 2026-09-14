@@ -276,7 +276,7 @@ every package. Relocatable objects, kernel modules and anything under
 | `elf.stack` | `"non-exec"` | A `PT_GNU_STACK` header is present and does not request an executable stack. |
 | `elf.relro` | `"partial"` or `"full"` | A dynamic object has a `PT_GNU_RELRO` segment; with `"full"`, it is also bound at load (`BIND_NOW`), so the GOT is read-only afterwards. |
 | `elf.relr` | `true` | A dynamic object with relative relocations left in `.rela.dyn` has none, or carries `DT_RELR`; the linker flag is `-z pack-relative-relocs`. |
-| `elf.cet` | `true` | An x86 object carries the `GNU_PROPERTY_X86_FEATURE_1_AND` note with both IBT and SHSTK. One assembly object without the note drops it for the whole link. Other architectures are not checked. |
+| `elf.cet` | `true` | An x86 object carries both IBT and SHSTK GNU properties, and inspected indirect-call entry points begin with ENDBR32/ENDBR64. Requires local symbols or matching build-ID debuginfo. Other architectures are not checked. |
 | `elf.rpath` | `"forbidden"` | No `DT_RPATH` or `DT_RUNPATH`. |
 | `elf.textrel` | `"forbidden"` | No text relocations. |
 | `elf.stripped` | `true` | No `.debug_*` sections and no `.symtab`. |
@@ -291,3 +291,42 @@ whether a service runs under the right identity, and whether its files sit
 in the places a particular distribution mandates. The first three are
 review judgement; the last is [pack-time validation](~peios/peipkg/producing-packages/building-and-signing)
 in the package format, not a lint rule.
+
+### What CET validation establishes
+
+`elf.cet` checks the runtime payload's machine code, using exported function
+symbols, the `main` callback passed to libc, and relocated pointers to known
+functions in loaded data. It supports x86 REL, RELA and packed RELR relocations.
+For stripped objects it obtains symbols from a debug file shipped by this
+recipe at `usr/lib/debug/.build-id/xx/yyyy.debug`, and verifies the build ID,
+machine and ELF class before using its addresses. The instruction bytes always
+come from the runtime payload. Missing symbols, unreadable evidence and objects
+with no supported targets produce findings rather than a reduced-coverage pass.
+
+Functions reached only by direct calls, jump-table labels and the process entry
+point do not automatically require ENDBR. This check is bounded static evidence:
+it cannot enumerate computed or generated targets, prove shadow-stack
+compatibility, validate all inline assembly, or establish that a running system
+actually enables CET. Retain upstream tests and runtime enforcement tests where
+these behaviors matter.
+
+Compile the code with the relevant protection option, including linked runtime
+and assembly inputs. GNU ld's `-z ibt` and `-z shstk` force compatibility markers;
+they cannot substitute for instrumentation. `-z ibtplt` generates IBT PLT entries
+without overriding the input-note merge. On a native toolchain that provides
+marked inputs, use `-z cet-report=error` to reject missing properties during
+linking. Do not combine that check with forced properties: forcing suppresses
+the corresponding missing-property diagnostic. See the
+[GNU linker options](https://sourceware.org/binutils/docs/ld.html).
+
+Rust uses its own [control-flow protection code-generation option](https://doc.rust-lang.org/unstable-book/compiler-flags/cf-protection.html).
+Its linked standard library must also be compatible. Older dependencies may
+probe unstable features in build scripts: enabling `RUSTC_BOOTSTRAP` globally
+can change those probes. A recipe that requires an unstable code-generation
+option should confine that access to actual compiler code generation and test
+the resulting executable, as well as the complete linked input set.
+
+If a supported upstream/toolchain combination cannot meet the rule, document a
+narrow `allow_files."elf.cet"` exception with the affected payload path, reason
+and removal condition. Keep the resulting lack of compatibility visible; do
+not manufacture a note to obtain a passing lint result.

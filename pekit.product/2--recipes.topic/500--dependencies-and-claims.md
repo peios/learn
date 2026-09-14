@@ -133,8 +133,7 @@ a different feature that shares a word.
 ### Symbol version policy
 
 By default a soname dependency is derived at **soname granularity only**: the
-name must match exactly, with no version constraint. That is always safe but
-coarse — it cannot express "needs at least the glibc that introduced
+name must match exactly, with no version constraint. That alone cannot establish symbol-version compatibility: it cannot express "needs at least the glibc that introduced
 `GLIBC_2.34`".
 
 A **workspace** may opt specific sonames into finer, version-aware derivation
@@ -160,9 +159,42 @@ For a soname listed here, ELF derivation is refined on both sides:
 
 A soname **absent** from the policy is derived at soname granularity only, as
 above. The policy is a distro-wide assertion and lives **only** in the workspace
-file — `[policy]` currently accepts just the one sub-table, and any other key
-under it is an error. Recipes and package files cannot set it. When no workspace
+file. It accepts `symbol_versions` and `symbol_capabilities`; unknown keys are errors. Recipes and package files cannot set it. When no workspace
 policy is configured, every soname is derived at name granularity.
+
+### Exact ELF version capabilities
+
+Libraries such as libstdc++ number their ABI versions independently of their
+package releases. Select these SONAMEs explicitly:
+
+```toml
+[policy]
+symbol_capabilities = ["libstdc++.so.6"]
+```
+
+Pekit derives `elfver(libstdc++.so.6:GLIBCXX_3.4.30)` and corresponding CXXABI
+capabilities from the actual GNU ELF version tables. Providers advertise each
+non-base version definition; consumers require each strong version need in
+addition to the SONAME. These names carry no package-version constraint. The
+library name scopes the token, so a definition from another library cannot
+satisfy it. Weak version needs remain optional. Exact definitions are compared,
+not an assumed numeric maximum or a hand-maintained GCC release mapping.
+
+Symlinks and source/debug-source fixtures are excluded. A package's own library
+satisfies only the exact capabilities it defines. An incompatible bundled
+library, multiple objects supplying the selected SONAME, malformed version
+tables or unrepresentable names fail package creation. Such errors must not
+silently fall back to SONAME-only requirements.
+
+For rollout, publish updated runtime providers before publishing consumers with
+these requirements. Existing binaries and manifests are not retroactively
+qualified. Consumers originally linked against an unversioned runtime need
+relinking against a versioned runtime; packaging cannot reconstruct symbol
+versions absent from the binary. An old provider with only a SONAME capability
+cannot satisfy a new versioned requirement. Normal resolver checks also reject
+runtime upgrades that would leave installed consumers' requirements unsatisfied.
+This does not pin an exact GCC release or guarantee compatibility across arbitrary
+C++ ABI-changing compiler flags; normal upstream ABI gates still apply.
 
 ## Build dependencies exported to the build command
 

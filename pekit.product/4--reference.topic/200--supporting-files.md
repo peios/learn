@@ -39,22 +39,27 @@ distro-wide defaults.
 | `[policy]` | table | no | Distro-wide derivation policy. See below. |
 | `[isolation]` | table | no | `enabled` (bool, default false) requires workspace sandbox policy; `inputs` (array of relative paths) grants copied, read-only shared workspace inputs, also captured in source bundles. |
 | `[source_package]` | table | no | `inputs` (array of canonical relative paths) captures coordinator-side support source, such as root-preparation scripts, without mounting it into workers. Workspace configuration, package/lint policy and environment profiles are captured automatically. |
+| `[release]` | table | no | Production `path`, `name`, `signing_key`, ordered `environments`, and required coordinator `checks`; see [Qualified releases](~pekit/running/qualified-releases). |
 
 ### `[policy]`
 
-The `[policy]` table currently carries exactly one sub-table. Any other key
-under `[policy]` is rejected.
+The `[policy]` table accepts package-version floors and exact ELF capabilities.
+Unknown keys are rejected.
 
 | Key | Type | Required | Meaning |
 | --- | --- | --- | --- |
+| `symbol_capabilities` | array of strings | no | SONAMEs whose exact GNU ELF version nodes become `elfver(soname:token)` dependencies and provides, independently of package versions. |
 | `[policy.symbol_versions]` | table (string → string) | no | Maps a shared-library soname to the symbol-version **token prefix** whose tokens are commensurable with the providing package's version. Governs which sonames get a symbol-version floor during dependency derivation. |
 
 Each entry in `[policy.symbol_versions]` is `soname = "PREFIX_"`:
 
 ```toml
+[policy]
+symbol_capabilities = ["libstdc++.so.6"]
+
 [policy.symbol_versions]
 "libc.so.6"     = "GLIBC_"
-"libstdc++.so.6" = "GLIBCXX_"
+"libgcc_s.so.1" = "GCC_"
 ```
 
 ---

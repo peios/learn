@@ -456,3 +456,12 @@ separator. Two rules apply to all of them:
 - [Command-line reference](~pekit/reference/cli) — the full command-by-flag capability matrix.
 - [Versions](~pekit/recipes/versions) — the version selectors these commands accept.
 - [Workspaces](~pekit/running/workspaces) — running a command across every member.
+
+
+## Production release
+
+`release` selects the same package definitions as `package`, builds and qualifies
+them in the ordered workspace release environments, then promotes one checked
+batch. It never rediscovers upstream between checks. Required workspace checks
+run against the frozen candidate before promotion. See
+[Qualified releases](~pekit/running/qualified-releases).
