@@ -465,3 +465,9 @@ them in the ordered workspace release environments, then promotes one checked
 batch. It never rediscovers upstream between checks. Required workspace checks
 run against the frozen candidate before promotion. See
 [Qualified releases](~pekit/running/qualified-releases).
+
+
+`pekit workspace clean --output-only` removes managed output without running
+recipe clean targets or fetching delegated source. It needs no build environment
+or keyring, even in an isolated workspace, and respects each recipe's active-job
+lock. Ordinary clean targets still require the configured sandbox environment.
