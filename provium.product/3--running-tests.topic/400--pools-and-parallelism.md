@@ -51,7 +51,7 @@ The claim is reserved whole, when the call runs, and released at file completion
 
 A claim is the file's whole VM budget. Every `vm:boot()` in the file — at file scope, inside a test, in a sub-lab — takes its memory and vCPUs out of the claim and touches the pool not at all, so a claimed file never queues once its claim is in. A boot the claim cannot cover fails at once, with `needs … but the file's claim is … with … already in use; raise provium:claim to the file's peak`, rather than falling back to the pool and waiting.
 
-Without a claim, the dispatcher admits the file on the per-file overhead default (50 MiB memory, 0 CPU) and every boot reserves from the pool on its own, at boot time. That is the only way an unclaimed file is kept from oversubscribing the host, and it has a cost, explained under [Deadlock](#deadlock) below.
+Without a claim, the dispatcher admits the file on the per-file overhead default (50 MiB memory, 0 CPU) and every boot reserves from the pool on its own, at boot time. A boot reserves what the VM will run with: its declared `memory` and `cpus`, or the launch defaults of 512 MiB and one vCPU where it declares neither, plus 100 MiB of VMM overhead. That is the only way an unclaimed file is kept from oversubscribing the host, and it has a cost, explained under [Deadlock](#deadlock) below.
 
 **Rule of thumb:** claim the file's peak — the most VMs it ever has alive at once — as the sum of their memory budgets plus 100 MiB of VMM overhead each, and the sum of their vCPUs. Nothing is gained by claiming more, and a boot past the claim fails.
 
