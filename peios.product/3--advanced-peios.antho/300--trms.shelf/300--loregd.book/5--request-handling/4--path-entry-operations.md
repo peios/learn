@@ -101,9 +101,12 @@ FROM volatile.path_entries WHERE parent_guid = ?
 Rows are grouped by folded child name into one block per child, each
 carrying that child's per-layer entries. Metadata for the distinct
 non-HIDDEN target GUIDs is fetched and emitted exactly as for
-`RSI_LOOKUP`. The tolerance `RSI_LOOKUP` shows for an entry whose key
-record does not yet exist is not shared here: the metadata fetch finds
-nothing and the whole request fails with `RSI_STORAGE_ERROR`.
+`RSI_LOOKUP`, including its treatment of an entry whose key record does not
+yet exist: the entry is dropped, and a child left holding no entries at all
+is dropped with it, so the child reads as absent rather than failing the
+enumeration. The metadata block for a dropped entry is omitted with it —
+the kernel rejects a GUID-typed entry carrying no metadata, and equally a
+metadata block no entry references.
 
 Ordering, and the treatment of two rows whose folded names match but whose
 stored case differs, are covered in §5.2.
