@@ -41,9 +41,13 @@ meaningful.
 
 ## Caps
 
-`MaxTotalLayers`, default 1024, bounds the in-memory layer table. [*layer.model.max-total-layers-default-1024]
+`MaxTotalLayers`, default 1024, bounds the in-memory layer table, the
+base layer included: a table holding that many entries admits no more. [*layer.model.max-total-layers-default-1024]
 
-Creating a layer when it is full returns `ENOSPC`. [*layer.model.layer-table-full-is-enospc]
+Creating a layer when it is full returns `ENOSPC`. The refusal happens
+at the creation of the metadata key under `Layers\`, before anything
+reaches the source, so a full table never leaves a metadata key behind
+that the table cannot publish. [*layer.model.layer-table-full-is-enospc]
 
 The table itself is a fixed array sized at compile time for 1023
 dynamic layers plus the base layer. [*layer.model.table-is-fixed-at-1023-dynamic-plus-base]

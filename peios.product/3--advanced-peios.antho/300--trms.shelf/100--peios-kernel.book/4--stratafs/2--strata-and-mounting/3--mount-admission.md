@@ -89,19 +89,17 @@ an oracle: a caller with no right to traverse a directory should not be
 able to name it as a stratum and learn from the errno whether it exists
 and whether it is a directory.
 
-For a single stratum, that holds. The path walk runs under the caller's
+The path walk and the attribute read both run under the caller's
 credentials, so a path the caller cannot resolve returns `EACCES` from
-the walk itself, before the type test or the duplicate test is reached,
-and the `EACCES` is propagated unchanged.
+the walk itself, and the `EACCES` is propagated unchanged.
 
-Across the stack it does not. The strata are checked in one loop —
-resolve, stat, type-test, compare against earlier strata — so stratum 0
-is fully judged before stratum 1 is resolved at all. A caller who names
-a readable stratum first and an unreadable one second learns the first
-stratum's `ENOTDIR` or `ENOENT` rather than the `EACCES` they would
-have been given had the whole stack been checked for entitlement first.
-This is tracked as a defect; the disclosure is bounded to paths the
-caller could resolve, but the specified ordering is stack-wide.
+The check is stack-wide because it runs in two passes. The first
+resolves and stats every stratum; an `EACCES` from any of them is the
+answer, whatever an earlier stratum reported. Only when every stratum
+has passed entitlement does the second pass apply the type, duplicate
+and depth conditions. A caller who names a readable non-directory first
+and an unreadable path second is told `EACCES`, not `ENOTDIR`.
+[*mount.entitlement-is-decided-in-two-passes]
 
 The mount-point loop condition is evaluated in a different call
 entirely, after the tree has been built, and so always follows every

@@ -59,10 +59,16 @@ The check is synchronous and inline at `REG_IOC_SET_VALUE` time, and it
 happens early — before sequence allocation, before transaction
 enlistment, before the source is contacted. [*layer.authz.precedence-gate-runs-before-sequence-and-dispatch]
 
-It runs when three things hold: the target key GUID is in the set of
-known layer metadata keys, the value name folds equal to `Precedence`
-under the same Unicode folding used for every other value name, and the
-data is a positive `REG_DWORD`. [*layer.authz.precedence-gate-trigger-conditions]
+It runs when three things hold: the target key is a layer metadata key,
+the value name folds equal to `Precedence` under the same Unicode
+folding used for every other value name, and the data is a positive
+`REG_DWORD`. [*layer.authz.precedence-gate-trigger-conditions] A key
+is a layer metadata key by its path — a direct child of
+`Machine\System\Registry\Layers` — or by already being in the set of
+published layer metadata keys. The path test is what covers the
+recommended creation flow (§5.3.3), where `Precedence` is written inside
+the transaction that creates the metadata key, before the layer has
+been published at all. [*layer.authz.precedence-gate-keys-on-the-path]
 
 Failing the privilege check is `EPERM`. [*layer.authz.precedence-gate-denial-is-eperm]
 

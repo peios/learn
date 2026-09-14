@@ -67,13 +67,20 @@ inherited descriptor if not, and reports which happened. [*reg-syscall.create-ke
 | `path_ptr` | Pointer to a null-terminated path. |
 | `desired_access` | As `reg_open_key`. |
 | `flags` | `REG_OPTION_VOLATILE` (`0x01`), `REG_OPTION_CREATE_LINK` (`0x02`). Other bits reserved. [*reg-syscall.create-key.flags] |
-| `layer_ptr` | Pointer to a null-terminated layer name for creation, or null for the base layer. Ignored if the key already exists. [*reg-syscall.create-key.null-layer-means-base] |
+| `layer_ptr` | Pointer to a null-terminated layer name for creation, or null for the base layer. Names the layer whose entry is created; what "exists" means depends on it (below). [*reg-syscall.create-key.null-layer-means-base] |
 | `txn_fd` | A transaction fd, or -1. A non-negative value makes creation a mutating operation that binds or reuses that transaction. [*reg-syscall.create-key.txn-fd-makes-creation-transactional] |
 | `disposition_ptr` | Receives `REG_CREATED_NEW` (1) or `REG_OPENED_EXISTING` (2). May be null. [*reg-syscall.create-key.disposition-values] |
 | `_pad0`, `_pad1` | Reserved; must be zero. |
 
-**If the key exists**, this behaves as `reg_open_key`, the layer
-parameter is ignored, and the disposition is `REG_OPENED_EXISTING`. [*reg-syscall.create-key.existing-key-is-opened]
+**If the key exists**, this behaves as `reg_open_key` and the
+disposition is `REG_OPENED_EXISTING`. [*reg-syscall.create-key.existing-key-is-opened]
+What "exists" means depends on the layer named. For the base layer (a
+null `layer_ptr`) it is the path resolving through any enabled layer.
+For a named layer it is that layer holding an entry at the path:
+presence is per layer (§5.2.5), so another layer's key at the same path
+does not count, and the create makes the named layer's own entry, with
+its own GUID and `REG_CREATED_NEW` — which is how hide-and-replace is
+authored. [*reg-syscall.create-key.named-layer-creates-its-own-entry]
 
 **If it does not:**
 

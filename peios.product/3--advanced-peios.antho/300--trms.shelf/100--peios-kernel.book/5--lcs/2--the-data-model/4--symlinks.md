@@ -59,10 +59,21 @@ stripped first.
 A target is always interpreted as absolute — its first component is
 routed as a hive name. [*symlink.target-path.always-absolute]
 
-There is no check that rejects a relative-looking target as malformed.
-A target of `Sub\Key` is not an error; it is a request for a hive named
-`Sub`, and it yields `ENOENT` unless such a hive happens to be
-registered, in which case it resolves there. [*symlink.target-path.relative-looking-target-not-rejected]
+Resolution has no check that rejects a relative-looking target as
+malformed. A target of `Sub\Key` is not an error; it is a request for a
+hive named `Sub`, and it yields `ENOENT` unless such a hive happens to
+be registered, in which case it resolves there. [*symlink.target-path.relative-looking-target-not-rejected]
+
+Writing one is different. `REG_IOC_SET_VALUE` of a `REG_LINK` value
+routes the target's first component at write time, with the writer's
+scope GUIDs, and answers `EINVAL` if it names no registered hive. That
+is what stops a dangling target being captured later by whoever
+registers a private hive of that name: a target that cannot be written
+cannot be captured, and the failure lands on whoever authored it. The
+cost is that a symlink cannot forward-reference a hive registered after
+it. A target that arrives in source data or a backup stream is not
+gated, which is why resolution still has to treat the shape as a hive
+request. [*symlink.target-path.write-time-routing-gate]
 
 `CurrentUser\` rewriting is not applied (§5.2.1), so a target beginning
 with `CurrentUser\` routes as a hive of that name and cannot be

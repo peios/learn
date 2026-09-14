@@ -9,6 +9,11 @@ before parsing, routing, folding, layer resolution or source
 dispatch. [*name.utf8.invalid-utf8-is-einval-before-any-other-work]
 
 Null bytes are rejected in all of them. [*name.utf8.null-bytes-rejected-in-every-string]
+The rejection is `EINVAL` where the string is length-delimited — ioctl
+and RSI strings — because there the null byte sits inside the counted
+length. A syscall argument (a path or `reg_create_key`'s layer name) is
+a C string, and a null byte there is its terminator: the name the
+kernel validates ends at it, and nothing after it is read. [*name.utf8.syscall-strings-end-at-the-null]
 
 The one thing that is not a string is value data, which is opaque
 bytes.

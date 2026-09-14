@@ -32,9 +32,13 @@ the request loop: `read()` for requests, `write()` for responses.
   overflowing 64 bits, or registration fails `EOVERFLOW` and the source
   is never made Active (§5.3.7). [*source.register.max-sequence-overflow-is-eoverflow]
 
-Root GUIDs are checked for uniqueness within one request, and the
-already-registered state is checked for consistency, but an incoming
-request's root GUIDs are not compared against those of existing slots. [*source.register.root-guids-not-compared-across-slots]
+Root GUIDs are checked for uniqueness within one request, and against
+every existing slot, Active or Down: a request whose root GUID is
+already the root of a differently-named hive is refused `EEXIST`. A
+same-named hive is decided by the identity rules above instead. The
+already-registered state is also checked for consistency, and a table
+that ever held two hives with one root would fail that check on every
+later registration and path walk, which is why admission refuses it. [*source.register.root-guids-compared-across-slots]
 
 ## Source slots
 
