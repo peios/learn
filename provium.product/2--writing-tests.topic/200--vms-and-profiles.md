@@ -204,7 +204,7 @@ vm:resume()
 
 ## Reset and power-button
 
-`vm:reset()` warm-reboots the guest — same VM, same RAM image initially, then init re-runs. Stays in `Booted`.
+`vm:reset()` warm-reboots the guest — same VM, same RAM image initially, then init re-runs. Stays in `Booted`, and does not return until the guest is answering again, so the next line of the test can use the VM straight away. A reset that returns is a guest that came back; one that does not is an error rather than a VM that quietly stops responding.
 
 `vm:power_button()` sends ACPI power-button. The guest's init handles it as a graceful shutdown signal (typically: stop services, sync filesystems, kernel halts). Ends in `Shutdown`.
 
