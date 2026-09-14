@@ -45,7 +45,10 @@ Release accepts package selectors, `--all`, normal version selectors and
 keyrings. It requires a clean committed catalogue, isolated workers and anchored
 sources. It rejects local sources and build/test/verification/signature bypass
 flags. Environment selection comes from policy, not `--env`. Each environment
-uses fresh stages and a disposable copy of one frozen prepared source tree.
+uses fresh stages and a disposable copy of one frozen prepared source tree. The source
+remains at `source/` beside `build/` and `test/` within each environment’s work
+directory, preserving debug-source path remapping. Worker writes stay in its
+private copy and cannot alter the frozen source or another environment’s input.
 Corresponding-source inputs are captured for every candidate, including recipes
 that do not emit an automatic source package.
 
