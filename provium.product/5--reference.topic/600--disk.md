@@ -14,7 +14,7 @@ A Disk wraps one disk attached to a VM. It exposes block-level operations and a 
 | Source | Returns |
 |---|---|
 | `vm:disk("id")` | Handle for a disk the VM booted with. Errors if absent. |
-| `vm:attach_disk({id=…, size=…, image=…})` | Host-side handle only — see below. |
+| `vm:attach_disk({id=…, size=…, image=…})` | Hot-plugs into a running VM — see below. |
 
 A disk the **guest** can see is declared before it boots: in the
 profile's [`disks`](~provium/configuration/provium-toml#disks) when the
@@ -22,12 +22,13 @@ image belongs to the system under test, or in
 [`vm:boot({disks = …})`](~provium/reference/vm#boot-disks) when it
 belongs to one test. `vm:disk(id)` then returns a handle for it.
 
-`vm:attach_disk` does **not** add a device to the running machine. It
-records a host-side attachment: a name, a size, and a backing file, so
-sector access and fault injection have something to address. Nothing
-reaches QEMU, so the guest sees no new block device. Use it to point a
-handle at an image the guest reaches some other way; use the boot forms
-above for a device the guest is meant to find.
+`vm:attach_disk` adds a disk to a machine that is **already running**.
+With an `image`, on a booted or paused VM, the guest gets a real
+`virtio-blk-pci` device; without one — or before the VM boots — it
+records the host-side attachment alone, which is all sector access and
+fault injection address. The one thing it cannot do is be present from
+the guest's first instruction, so a device the guest must find at boot
+belongs in the forms above.
 
 `vm:attach_disk` opts:
 
@@ -35,7 +36,8 @@ above for a device the guest is meant to find.
 |---|---|---|---|
 | `id` | string | `"attached-<vm_name>"` | Disk identifier within the VM. |
 | `size` | int (bytes) | `4 GiB` | Modelled disk size. Used for `:size()` when no image is attached. |
-| `image` | string (path) | none | Backing file. Sector ops require an image. |
+| `image` | string (path) | none | Backing file. Sector ops require an image, and so does the guest-visible device. |
+| `readonly` | bool | `false` | Attach the hot-plugged device read-only. |
 
 Disks are 512-byte sectors throughout. The `read_sectors` and `write_sectors` ops express offsets and counts in sectors.
 

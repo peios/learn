@@ -19,14 +19,34 @@ A disk the guest can see is declared **before the boot**, because the guest's fi
 For one test — a blank disk to install onto, a filesystem you have damaged on purpose:
 
 ```lua
-local img = "/tmp/test.img"
--- Pre-create a backing file; Provium does not auto-create.
-io.open(img, "w"):write(string.rep("\0", 1024 * 1024)):close()
-
+-- `scratch` asks Provium for a blank disk of that size. It creates the
+-- file, owns it, and removes it with the VM.
 local vm = provium:vm("v", "peios"):boot({
-    disks = {{path = img, id = "target"}},
+    disks = {{scratch = "1M", id = "target"}},
 })
 local disk = vm:disk("target")
+```
+
+To start from contents you have prepared — a seeded filesystem, a
+registry hive captured from an earlier boot — copy a `template`. Each VM
+gets its own copy, and the template itself is never written, so a
+fixture survives the test that used it:
+
+```lua
+local vm = provium:vm("v", "peios"):boot({
+    disks = {{template = "fixtures/seeded.img", id = "target"}},
+})
+```
+
+`path` is the third form and means something different: a file **you**
+own, taken verbatim and never created. A path that does not exist fails
+the launch naming the disk and the path, so a typo stays an error
+instead of quietly becoming a blank disk.
+
+```lua
+local vm = provium:vm("v", "peios"):boot({
+    disks = {{path = "out/prepared.img", id = "target", readonly = true}},
+})
 ```
 
 For every test in a suite — a boot medium, an image that *is* the system under test — put it in the profile instead, beside `kernel` and `initrd`:
