@@ -33,7 +33,9 @@ payload. The payloads are supersets of the summaries above — `job.ended`
 in particular carries the whole record, except that `arguments` is cut
 to 32 KiB of whole arguments; `arguments_truncated` and
 `arguments_total` say so, and an `event.oversized` with action
-`truncated` follows it. An event the ring refuses outright is dropped,
+`truncated` follows it.
+[*emit.job-ended-cuts-its-arguments-and-says-so] An event the ring
+refuses outright is dropped,
 counted, and replaced by an `event.oversized` with action `dropped`
 naming the event, its service and job, and the sizes, and a `[ WARN ]`
 line reports it; only the ring refusing that small event is fatal
