@@ -39,15 +39,22 @@ described below.
 ## Datagram framing and the record [*eventd.a-datagram-holds-a-msgpack-array-of-records]
 
 peinit sends a msgpack array of one or more records in each datagram.
-It takes the largest ordered prefix that fits
-the PSPU portable ceiling of 262144 encoded bytes.
+It takes the largest ordered prefix that fits the smaller of the PSPU
+portable ceiling of 262144 encoded bytes and the log socket's send
+buffer.
 [*eventd.a-batch-is-the-largest-prefix-fitting-the-portable-ceiling] It
 deliberately does
 not read eventd's larger local ceiling: fixing the producer boundary
 avoids registry work and means an eventd configuration change cannot
-invalidate peinit's batches. A successful datagram advances the replay
+invalidate peinit's batches. peinit asks for a send buffer large enough
+for the portable ceiling when it connects, but the kernel caps what it
+grants, so the socket's own limit is the one that finally bounds a
+batch. A successful datagram advances the replay
 buffer by the whole array, while a failed datagram advances it by
 nothing. [*eventd.a-failed-datagram-advances-the-replay-by-nothing]
+The one exception is a batch the socket refuses as too large: a single
+record that cannot fit one datagram is discarded rather than replayed
+forever, and peinit announces the discard on the console.
 
 Each record is a msgpack map [*eventd.the-record-fields]:
 

@@ -9,6 +9,10 @@ implementation detail: services receive it through `NOTIFY_SOCKET` and
 nothing hardcodes it. [*notify.the-path-reaches-a-service-through-notify-socket]
 The kernel command line can override it with `peios.notifysocket=`.
 [*notify.the-path-is-overridable-on-the-kernel-command-line]
+peinit creates the socket's directory only when it lies under `/run`;
+an overriding path anywhere else must have a parent that already
+exists. `/run/services/peinit` itself is created whichever path is in
+use.
 
 There is one socket, not one per service, and the bind unlinks any stale
 path first. [*notify.there-is-one-datagram-socket-for-every-service]
