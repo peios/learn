@@ -152,10 +152,11 @@ running who could still publish the level, and proceeds once nobody is —
 which keeps `Wants` failure-tolerant, the property that defines it.
 [*ready.a-publisher-leaving-a-satisfying-state-releases-wants-waiters]
 
-A held start does not time out. `Requires = ["netd:no-such-level"]`
-holds the dependent indefinitely: the service stays inactive and the
-start operation stays pending, visible in `svctl status` as an operation
-that has not completed.
+A held start does not time out, and its `StartTimeout` runs from the
+moment the level arrives, not from when the start was asked for.
+`Requires = ["netd:no-such-level"]` holds the dependent indefinitely:
+the service stays inactive and the start operation stays pending,
+visible in `svctl status` as an operation that has not completed.
 [*ready.a-held-start-does-not-time-out] That is the declared semantics,
 not a hang — the condition was never met, so the start never happened.
 
