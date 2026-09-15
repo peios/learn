@@ -245,7 +245,7 @@ The jobs socket has its own set, under the same key:
 | Key | Default | Limits |
 |---|---|---|
 | `MaxJobsConnections` | 64 | Concurrent jobs-socket connections (excess are closed at connect, with no response). |
-| `MaxJobMessageSize` | 65536 | Bytes per message — which bounds a submission's whole definition. |
+| `MaxJobMessageSize` | 32768 | Bytes per message — which bounds a submission's whole definition. |
 | `JobsConnectionTimeout` | 30 | Seconds an *idle* jobs connection may sit before it is closed. A connection blocked on a `wait` or a pending `submit` is not idle. |
 | `MaxJobsPerSubmitter` | 64 | Live jobs one submitting SID may hold. SYSTEM is exempt. |
 

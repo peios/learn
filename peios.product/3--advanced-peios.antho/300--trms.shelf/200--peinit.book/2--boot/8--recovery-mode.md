@@ -16,6 +16,11 @@ the administrator an unrestricted SYSTEM shell on the console.
 - A Phase 2 registry read that fails or times out, or invalid boot
   configuration.
 - A required provisioned path that cannot be created or secured.
+- The runtime loop failing on an error about supervision itself: the
+  event wait, event source registration, a listener, the event ring
+  refusing even the small `event.oversized`, shutdown finalisation. An
+  error peinit can attribute to one service is contained to that
+  service instead and does not enter recovery (§8.2).
 
 ## What peinit does
 

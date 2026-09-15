@@ -154,7 +154,7 @@ Under `Machine\System\Init\`:
 | `MaxRequestSize` | dword | 65536 | Maximum control-socket request size (bytes). | [Controlling services](~peios/services-and-jobs/controlling-services) |
 | `ConnectionTimeout` | dword | 30 | Seconds before an idle control connection is closed. | [Controlling services](~peios/services-and-jobs/controlling-services) |
 | `MaxJobsConnections` | dword | 64 | Maximum concurrent jobs-socket connections. | [Controlling services](~peios/services-and-jobs/controlling-services) |
-| `MaxJobMessageSize` | dword | 65536 | Maximum jobs-socket message size (bytes); bounds a submission's whole definition. | [Controlling services](~peios/services-and-jobs/controlling-services) |
+| `MaxJobMessageSize` | dword | 32768 | Maximum jobs-socket message size (bytes); bounds a submission's whole definition. | [Controlling services](~peios/services-and-jobs/controlling-services) |
 | `JobsConnectionTimeout` | dword | 30 | Seconds before an idle jobs connection is closed. | [Controlling services](~peios/services-and-jobs/controlling-services) |
 | `MaxJobsPerSubmitter` | dword | 64 | Live submitted jobs one submitting SID may hold; SYSTEM is exempt. | [Jobs and operations](~peios/services-and-jobs/jobs-and-operations) |
 | `MaxLogLineLength` | dword | 8192 | Maximum bytes per service output line before truncation. | [Service output and logging](~peios/services-and-jobs/output-and-logging) |

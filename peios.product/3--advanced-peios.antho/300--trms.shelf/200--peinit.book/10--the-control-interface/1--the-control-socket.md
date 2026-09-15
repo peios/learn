@@ -58,7 +58,7 @@ token cannot be obtained is closed the same way.
 [*control.an-inadmissible-connection-is-closed-without-a-response]
 
 The jobs socket has its own three, under `Machine\System\Init\`:
-`MaxJobsConnections` (64), `MaxJobMessageSize` (65536) and
+`MaxJobsConnections` (64), `MaxJobMessageSize` (32768) and
 `JobsConnectionTimeout` (30), plus a fourth bound that is the
 submitter's rather than the connection's, `MaxJobsPerSubmitter` (64).
 All four are read at boot and on reload-config, and are listed with the

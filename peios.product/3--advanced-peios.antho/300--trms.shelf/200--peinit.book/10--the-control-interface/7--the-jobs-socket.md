@@ -71,7 +71,7 @@ limit [*jobs.the-peer-token-and-pidfd-are-captured-on-accept]:
 | Key | Default | Meaning |
 |---|---|---|
 | `Machine\System\Init\MaxJobsConnections` | 64 | Concurrent connections. [*jobs.max-jobs-connections] |
-| `Machine\System\Init\MaxJobMessageSize` | 65536 | Maximum message content, in bytes. [*jobs.max-job-message-size] |
+| `Machine\System\Init\MaxJobMessageSize` | 32768 | Maximum message content, in bytes. Half of KMES `MaxEventSize`'s default, so a job whose record fills a message still has its `job.ended` fit the ring (§8.4). [*jobs.max-job-message-size] |
 | `Machine\System\Init\JobsConnectionTimeout` | 30 | Seconds before an idle connection is closed. [*jobs.jobs-connection-timeout] |
 | `Machine\System\Init\MaxJobsPerSubmitter` | 64 | Live jobs one submitter SID may hold; SYSTEM exempt. See §8.5. |
 

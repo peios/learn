@@ -47,6 +47,19 @@ one operation. The operation fails with the result
 began: <cause>`), and the runtime loop carries on. A caller waiting on
 the operation is answered `INTERNAL_ERROR` (§10.1).
 
+The same rule covers every path that is about one service — a job
+terminal, a setup status, a health probe, a lifecycle deadline, a notify
+datagram, an event the ring refuses. An internal error there fails that
+service under `InternalError` (§6.3): its job is retired, its operation
+fails with `internal_error: <step>: <cause>`, a `[FAILED]` line
+`peinit: service <service>: internal error at <step>: <cause>` and a
+`service.internal_error` event (§8.4) announce it, and the runtime loop
+carries on. Only an error about supervision itself — the wait, event
+source registration, the listeners, the event ring refusing even the
+small `event.oversized`, shutdown finalisation — ends the loop and
+enters recovery (§2.8). A bug peinit can attribute to one service costs
+that service; it does not cost the machine its control socket.
+
 Cancelled and Aborted are the same idea at different points: never ran
 versus was running. Why it happened is a property of the event, not of
 the state.

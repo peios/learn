@@ -42,7 +42,7 @@ behaviour, and what an administrator is told.
 | `ConditionSkipped` | Skipped | A start-time condition failed. |
 | `TtyUnavailable` | Skipped | Another service was holding the terminal this one names in `TTYPath`. §11.6 |
 | `ProcessUnkillable` | Abandoned | Processes survived SIGKILL. |
-| `InternalError` | Failed | peinit could not execute the relaunch a backoff deadline began. The service did nothing; the operation waiting on the restart fails with the `internal_error` result (§8.2). |
+| `InternalError` | Failed | peinit could not carry out a step on the service — a relaunch, a job terminal, a setup status, a health probe, a deadline action. The service did nothing wrong; its operation fails with the `internal_error` result (§8.2). |
 
 ## Restart eligibility
 

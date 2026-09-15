@@ -37,7 +37,7 @@ referenced.
 | `Machine\System\Init\MaxRequestSize` | dword | 65536 | Maximum control request size, in bytes. | §10.1 |
 | `Machine\System\Init\ConnectionTimeout` | dword | 30 | Seconds before an idle control connection is closed. | §10.1 |
 | `Machine\System\Init\MaxJobsConnections` | dword | 64 | Concurrent jobs socket connections. | §10.7 |
-| `Machine\System\Init\MaxJobMessageSize` | dword | 65536 | Maximum jobs socket message content, in bytes. | §10.7 |
+| `Machine\System\Init\MaxJobMessageSize` | dword | 32768 | Maximum jobs socket message content, in bytes. | §10.7 |
 | `Machine\System\Init\JobsConnectionTimeout` | dword | 30 | Seconds before an idle jobs connection is closed. | §10.7 |
 | `Machine\System\Init\MaxJobsPerSubmitter` | dword | 64 | Live submitted jobs one submitter SID may hold. SYSTEM is exempt. | §8.5 |
 | `Machine\System\Init\MaxLogLineLength` | dword | 8192 | Bytes per output line before truncation. Minimum 256; below that the default is used and a warning logged. | §11.3 |
