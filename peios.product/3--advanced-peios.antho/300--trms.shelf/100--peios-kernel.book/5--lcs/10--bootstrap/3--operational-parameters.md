@@ -42,13 +42,7 @@ conflict. [*param.hard-ceilings-match-range-maxima]
 
 ## Where a configured value does not fully bind
 
-Two of the nineteen do not do everything their range suggests.
-
-`MaxTotalLayers` may be configured up to 65536, but the in-memory layer
-table is a fixed array sized at compile time for 1023 dynamic layers
-plus the base layer. A value above 1024 validates and publishes, and
-then layer creation fails `ENOSPC` at 1023 regardless. Values below
-1024 bind correctly.
+One of the nineteen does not do everything its range suggests.
 
 `MaxPrivateLayersPerToken` is described as an attachment-time limit but
 is not enforced at attachment. KACS applies its own hard cap of 256 and

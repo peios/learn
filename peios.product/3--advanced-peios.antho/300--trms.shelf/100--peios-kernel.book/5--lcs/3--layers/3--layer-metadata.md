@@ -92,5 +92,12 @@ refresh, the source has returned malformed data. LCS emits an audit
 event, does not publish or update that layer's entry, and keeps the
 previous known-good one. [*layer.metadata.unparseable-descriptor-keeps-previous-entry]
 
+The same isolation holds at bootstrap. The refresh that runs on source
+registration visits every layer under `Layers\` in turn, and one whose
+metadata will not parse — the descriptor, or any of the three values —
+is skipped, unpublished and counted, while its siblings publish as they
+would have without it. Only a failure of the source itself, rather than
+of one layer's data, fails the refresh. [*layer.metadata.bootstrap-isolates-a-malformed-layer]
+
 If the refresh was required to complete the operation in hand —
 creating a layer, say, or exposing one — the syscall fails with `EIO`. [*layer.metadata.required-refresh-failure-is-eio]

@@ -154,12 +154,16 @@ reason, operation and state codes intended for tooling.
 ## Build configuration
 
 `CONFIG_SECURITY_PKM=y` and `CONFIG_RUST=y` are required, as are
-`CONFIG_STRICT_DEVMEM=y` and `CONFIG_MODULE_SIG_FORCE=y` -- the last
-two enforced at initialisation rather than only at build (§3.7). [*abi-notes.build.runtime-enforced-configs]
+`CONFIG_STRICT_DEVMEM=y` and `CONFIG_MODULE_SIG_FORCE=y`. The last two,
+and the absence of every other MAC LSM and of `CONFIG_BPF_LSM`, are
+enforced at build time by `BUILD_BUG_ON` in `pkm_init` (§3.7): a kernel
+configured without them does not compile. They were once checked at
+initialisation instead, which is no refusal at all -- the LSM framework
+answers a failed init with a warning and boots with the hooks
+uninstalled, the opposite of what the gate intends (PEI-487). [*abi-notes.build.configs-enforced-at-build]
 `CONFIG_SECURITY_SELINUX`, `_APPARMOR`, `_SMACK` and `_TOMOYO` are
-refused by Kconfig dependency; `CONFIG_BPF_LSM` is refused only at
-runtime, so a kernel enabling both configures and builds and then
-fails to initialise. `CONFIG_LSM` is never parsed.
+additionally refused by Kconfig dependency. `CONFIG_LSM` is never
+parsed.
 
 Two further symbols gate large bodies of code:
 

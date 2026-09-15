@@ -86,6 +86,13 @@ the requirement to audit a deferred deletion is unconditional — nobody
 is left to receive the error — but it is a deliberate exception to the
 `EACCES` exclusion above.
 
+The record is stratafs's whether or not stratafs was entered. The
+delete-child check on the merged parent runs before `->unlink`, so a
+directory whose descriptor tightened between the arm and the close
+refuses the deletion before the filesystem sees it; KACS then raises
+the stratafs record itself, with a provider index of `-1`, since no
+stratum was consulted.
+
 ## What is not audited [*audit.lookup-not-audited]
 
 Resolution, revalidation and enumeration emit no records of their own.

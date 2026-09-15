@@ -49,13 +49,15 @@ at the creation of the metadata key under `Layers\`, before anything
 reaches the source, so a full table never leaves a metadata key behind
 that the table cannot publish. [*layer.model.layer-table-full-is-enospc]
 
-The table itself is a fixed array sized at compile time for 1023
-dynamic layers plus the base layer. [*layer.model.table-is-fixed-at-1023-dynamic-plus-base]
+The table is sized to `MaxTotalLayers` rather than fixed at build. It
+is allocated on the first publication and grows, under the table lock,
+whenever a publication finds every slot taken while the configured
+bound still admits one more; it never shrinks. [*layer.model.table-grows-to-max-total-layers]
 
-`MaxTotalLayers` is configurable up to 65536, and a value above 1024
-validates and publishes, but the table still runs out at 1023 dynamic
-entries. [*layer.model.max-total-layers-above-1024-not-honoured] Values
-below 1024 bind correctly. [*layer.model.max-total-layers-below-1024-binds]
+So a value anywhere in the configurable range, 16 to 65536, binds.
+Raising `MaxTotalLayers` above the default admits layers past 1024;
+lowering it below the current occupancy admits no new layer until
+enough have been deleted, and discards nothing. [*layer.model.max-total-layers-binds-across-the-range]
 
 `MaxLayersPerValue`, default 128, bounds how many layers may write to
 the same `(key GUID, value name)` pair. [*layer.model.max-layers-per-value-default-128] It is a guard against

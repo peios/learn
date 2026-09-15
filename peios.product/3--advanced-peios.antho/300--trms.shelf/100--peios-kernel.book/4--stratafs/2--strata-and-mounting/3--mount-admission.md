@@ -147,3 +147,13 @@ A mount succeeds even when no stratum root is present at all — a stack
 whose only strata are absent `am` strata is legal. The root inode is
 constructed with no provider, and reports mode `S_IFDIR` with no
 permission bits. [*mount.all-absent-stack-is-legal]
+
+Such a root still carries a security descriptor, since an object with
+none would refuse every access check made on the mount root and the
+provider-less root could never be observed. stratafs synthesises it:
+owned by the mounter, with read and traverse for everyone, and nothing
+more — there is nothing beneath such a root to write. The moment a
+stratum root appears the root's descriptor is that root's own, and
+when it goes again the synthesised one returns; KACS never caches a
+StrataFS root's descriptor, so no access is decided against a root that
+has since gained or lost its provider. [*mount.all-absent-root-serves-a-synthesised-descriptor]
