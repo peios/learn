@@ -38,8 +38,9 @@ keeps running with its definition marked removed, as if the key had been
 deleted. The reload succeeds, lists the keys in `summary.undecodable`,
 and names each key, the offending field and the problem in
 `undecodable`; each is also a `graph.validation_error` event under phase
-`reload_config`. Repairing the key restores the service on the next
-reload.
+`reload_config`. A key whose name is not a service name (§3.1) is
+undecodable in the same way, reported under its raw name with `field:
+name`. Repairing the key restores the service on the next reload.
 [*control.reload-config.an-undecodable-definition-fails-only-that-service]
 
 ## What changes
