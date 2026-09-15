@@ -28,17 +28,19 @@ because it has to produce a running system; reload rejects the whole
 thing, because it has a running system already and a half-applied
 configuration would be worse than the one in place.
 
-The same split applies one step earlier, at decoding. Boot decodes per
-key and fails only the service whose definition will not decode; reload
-treats the first undecodable key as a read failure. The reload returns
-an error naming that service and the decode problem, and the running
-configuration stands.
-[*control.reload-config.an-undecodable-definition-aborts-the-reload]
-Until the key is repaired or removed, every reload — including the ones
-a registry change notification triggers — fails the same way, so no
-other configuration change takes effect either. That is the cost of the
-choice, accepted: the alternative is a reload that silently drops a
-service the operator did not ask to drop.
+Decoding does not split: reload decodes per key exactly as boot does. A
+key that will not decode fails that one service with `ValidationError` —
+a placeholder entry, marked definition-removed, that `status` reports
+and nothing can start — and every other definition in the batch loads; a
+dependent of the failed key fails through ordinary propagation when it
+is next started. A service that is running when its key stops decoding
+keeps running with its definition marked removed, as if the key had been
+deleted. The reload succeeds, lists the keys in `summary.undecodable`,
+and names each key, the offending field and the problem in
+`undecodable`; each is also a `graph.validation_error` event under phase
+`reload_config`. Repairing the key restores the service on the next
+reload.
+[*control.reload-config.an-undecodable-definition-fails-only-that-service]
 
 ## What changes
 

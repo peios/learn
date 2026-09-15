@@ -47,7 +47,12 @@ Backoff does not, and the distinction from Failed matters: a service in
 Backoff is *going* to start again, and its dependents wait rather than
 failing. [*state.a-dependent-of-a-service-in-backoff-waits-rather-than-failing]
 It is the state that makes a restart something other than a
-transit through Failed.
+transit through Failed. A dependent held this way looks exactly like a
+start held on a readiness level — Inactive, its start operation Pending
+(§8.2) — and is released when the service next reaches a
+dependent-satisfying state. It fails with `dependency_failure` only when
+the service gives up: its restart budget is exhausted, or it is stopped
+or its definition withdrawn while in Backoff.
 
 ## Invariants
 

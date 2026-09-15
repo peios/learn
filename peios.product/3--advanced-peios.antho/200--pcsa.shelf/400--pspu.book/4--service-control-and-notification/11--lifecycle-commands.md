@@ -60,8 +60,10 @@ knowledge.
 
 ## Timeouts
 
-Every operation has a maximum lifetime, derived from the target
-service's own configured timeouts.
+Every queued or executing operation has a maximum lifetime, derived from
+the target service's own configured timeouts; a start the service
+manager is holding on an undecided dependency has none and MUST stay
+Pending until the dependency is decided.
 
 **The lifetime is measured from the operation's creation, including any
 time it spent queued.** From the caller's point of view they have been

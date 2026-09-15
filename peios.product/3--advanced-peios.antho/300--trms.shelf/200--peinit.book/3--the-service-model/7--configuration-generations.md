@@ -44,10 +44,20 @@ that point, and the boot executes against them.
 The watches are armed as the event loop starts, which is after the plan
 is fixed but while boot-plan services are still starting. A registry
 write during that window — from an install script, a post-hook, a
-package transaction — triggers a reload like any other. Services that
-are already running keep their pinned definition; a boot-plan service
-that has not started yet picks up the new one.
-[*confgen.a-write-during-the-boot-window-reaches-a-not-yet-started-service]
+package transaction — does not reload: the boot executes against its
+snapshot (§2.5), so a boot-plan service that has not started yet starts
+from the definition the plan was built from. The write is counted
+(`config.reload_deferred`), and once every launch the plan contains has
+been attempted — each service terminal, or in Backoff with its
+dependents held for it (§6.1) — peinit runs one reload for everything
+that arrived during the window (`config.reload_coalesced`), which
+reaches the same state a reload at the time would have: running services
+keep their pinned definition with the new one pending, and new services
+appear. An explicit `reload-config` during the window is refused with
+`INVALID_STATE` and is honoured by that same reload, so a provisioning
+service that writes definitions and then starts one of them in the same
+boot has to wait for the plan to drain first.
+[*confgen.a-write-during-the-boot-window-is-coalesced-into-one-reload-after-the-plan-drains]
 
 ## The activation generation
 

@@ -55,6 +55,12 @@ A parsed command runs a fixed sequence before it does anything.
 `operation-status` resolves the operation before it checks the right, so
 an unknown identifier is reported as unknown regardless of who asked.
 [*dispatch.operation-status-resolves-before-it-checks]
+If the operation's service has since been discarded (§3.8), the right is
+checked against the `ServiceSecurity` the service had when the operation
+was created, which peinit records on the operation; a retained operation
+therefore stays queryable for its retention window (a2) by exactly the
+callers who could have queried the service.
+[*dispatch.a-retained-operation-keeps-its-services-descriptor]
 
 `job-status` and `job-stop` resolve the job first too, and for them
 that is the whole story: `UNKNOWN_JOB` for an identifier that names

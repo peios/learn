@@ -109,8 +109,7 @@ boot proceeds with every other definition. Anything that depended on the
 failed service fails in turn through the ordinary dependency propagation
 (§7.4), so the cost is bounded by what actually needed it.
 
-On reload-config the whole read is rejected and the previous generation
-stays in place (§10.4). [*schema.a-decode-failure-rejects-a-whole-reload] That is not an inconsistency: a reload is atomic
-and has a working configuration to fall back to, where a boot has none.
-Refusing everything is the safe answer only when there is something to
-keep.
+On reload-config the same: that service is Failed with cause
+`ValidationError` — or, if it is running, left running with its
+definition marked removed — and every other definition loads (§10.4).
+[*schema.a-decode-failure-fails-only-that-service-on-reload]

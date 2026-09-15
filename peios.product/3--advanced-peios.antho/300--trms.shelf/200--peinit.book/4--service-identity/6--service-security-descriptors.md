@@ -52,7 +52,10 @@ The generic mapping peinit passes to AccessCheck:
 A service whose definition carries no `ServiceSecurity` value takes the
 one on `Machine\System\Services` itself. The lookup is a single step to
 that key, not a walk up the hierarchy, which is exact for the flat
-layout definitions actually use.
+layout definitions actually use. That includes the compiled-in registryd,
+which takes it once Phase 2 has read the key and on every reload after;
+a registry definition of registryd (§2.3) may give it a descriptor of its
+own like any other service.
 
 If that key has no `ServiceSecurity` either, peinit applies a built-in
 default: [*svcsd.the-built-in-default-grants-system-and-administrators-everything]

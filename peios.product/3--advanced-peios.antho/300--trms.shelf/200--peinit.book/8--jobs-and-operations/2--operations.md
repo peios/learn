@@ -31,7 +31,7 @@ Pending --> Running --> Completed
 | Pending | Validated and queued, waiting on a precondition. |
 | Running | Executing. |
 | Completed | The goal was reached. Start: Active for Simple, Completed or Inactive for Oneshot. Stop: the service is no longer running. Reload: the reload resolved. |
-| Failed | The goal was not reached — or the operation's maximum lifetime expired while it was still Pending — or peinit could not execute it (below). |
+| Failed | The goal was not reached — or the operation's maximum lifetime expired while it was still Pending (a start peinit is holding on a dependency has no lifetime, §7.5) — or peinit could not execute it (below). |
 | Merged | Merged into an existing identical operation, whose identifier is recorded. |
 | Cancelled | Terminated while Pending. It never executed. |
 | Aborted | Terminated while Running. |
@@ -142,7 +142,12 @@ A start, reload or reset inherits the target's `StartTimeout` as its
 maximum lifetime; a stop inherits `StopTimeout`.
 [*op.a-start-inherits-starttimeout-and-a-stop-stoptimeout] A restart has
 two legs, each enforced against its own timeout, with the sum as the
-overall lifetime.
+overall lifetime. A start the graph is holding — on a readiness level
+(§7.5) or on a target in Backoff (§6.1) — is exempt: it stays Pending
+for as long as the fact it waits on is undecided, and a caller waiting
+on it waits with it. Queue time behind another operation is not a hold
+and still counts.
+[*op.a-held-start-has-no-lifetime]
 
 **The clock starts at creation, including queue time.** From the
 caller's point of view they have been waiting since they sent the
