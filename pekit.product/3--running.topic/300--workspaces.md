@@ -35,7 +35,7 @@ is rejected with `unknown_key`: `include` and `exclude`
 (globs selecting and removing member directories, relative to the workspace
 root), `[env]` and `[wrap]` (shared configuration contributed to every member),
 and `[policy]` (distro-wide derivation policy — see
-[Policy](#policy-symbol-version-floors)). The key-by-key schema is in
+[Policy](#policy-symbol-version-requirements)). The key-by-key schema is in
 [Supporting files](~pekit/reference/supporting-files).
 
 `include` is mandatory: an omitted or empty `include` fails with `missing_key`
