@@ -32,7 +32,10 @@ triggers a re-read and validation of the parameters (§5.10.3). [*self-watch.dri
 
 **The layer table.** A change under `Machine\System\Registry\Layers\`
 marks the affected layer names dirty and drives a bounded refresh of
-their precedence, enabled state, owner and cached descriptor.
+their precedence, enabled state, owner and cached descriptor. Within
+one delivery — a transaction's commit, say, whose batch creates a
+layer and then writes its three values — each dirty layer is refreshed
+once, however many of the batch's events named it. [*self-watch.layer-refreshed-once-per-delivery]
 
 **Layer lifecycle.** `SUBKEY_CREATED` and `SUBKEY_DELETED` under
 `Layers\` add and remove layers, except for `base`, which is ignored
