@@ -130,6 +130,40 @@ symbol-version policy below. In particular it has nothing to do with the
 `dependency_provider` / `PEKIT_DEPENDENCIES*` mechanism described later — that is
 a different feature that shares a word.
 
+### Retaining an older library ABI
+
+A runtime compatibility package contains the actual maintained older libraries,
+with their original SONAMEs. It does not alias a new ABI to an old filename or
+claim to replace a development interface. The resolver can install both versions
+when the required library filenames differ.
+
+For OpenSSL, `org.openssl.openssl` tracks current upstream and supplies the
+command and development interface through its normal split packages.
+`dev.openssl.openssl3` follows authenticated 3.5 LTS patch releases and supplies
+`libcrypto.so.3`, `libssl.so.3`, the OpenSSL 3 engines, and its legacy provider.
+It has no command, headers, static libraries, or unversioned linker symlinks.
+The current OpenSSL 4 command uses `openssl rehash`; upstream removed the
+separate `c_rehash` command. This runtime package does not restore that command.
+ELF dependencies on the `.so.3` names select it automatically. A package that
+explicitly pins an obsolete concrete OpenSSL package revision still needs its
+metadata updated; ABI compatibility does not override version constraints.
+
+OpenSSL 3 reads `/etc/ssl/openssl3.cnf` and
+`/etc/ssl/ct_log_list-openssl3.cnf`; package defaults are installed under
+`/usr/etc/ssl`. Its provider directory is
+`/usr/lib/x86_64-linux-peios/ossl-modules-3`. OpenSSL 4 retains the canonical
+configuration and provider paths. Both use `/etc/ssl/cert.pem` and
+`/etc/ssl/certs` for the system trust store. Administrators with custom OpenSSL
+configuration should apply the settings required by older consumers to the
+OpenSSL 3 configuration too; explicit `OPENSSL_CONF` and `OPENSSL_MODULES`
+overrides remain application-specific and must match the selected ABI.
+
+The compatibility recipe retains the 3.5 LTS maintenance line, supported upstream
+through April 2030 ([upstream support dates](https://openssl-library.org/source/)).
+Its discovery bound does not freeze patch releases; the shorter-lived 3.6 line
+is deliberately excluded. Remove the compatibility package only when supported
+consumers no longer require that ABI.
+
 ### Symbol version policy
 
 By default a soname dependency is derived at **soname granularity only**: the
