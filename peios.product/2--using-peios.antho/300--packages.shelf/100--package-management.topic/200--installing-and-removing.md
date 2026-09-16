@@ -100,9 +100,10 @@ GNU Awk is installed as `org.gnu.gawk` and provides both the `gawk` and `awk`
 command names. Loadable extensions and the password/group lookup helpers stay
 with the interpreter, reusable Awk libraries and manuals are in
 `org.gnu.gawk-common`, and `org.gnu.gawk-devel` provides `gawkapi.h` for
-building additional extensions. Arbitrary-precision MPFR arithmetic and
-persistent arrays are enabled; interactive debugger line editing will be
-enabled once the catalogue has a production Readline package.
+building additional extensions. Arbitrary-precision MPFR arithmetic is
+enabled. Persistent arrays are disabled because their process-wide ASLR
+manipulation is outside the Peios process contract. Interactive debugger line
+editing will be enabled once the catalogue has a production Readline package.
 
 GNU Gettext's catalog commands are installed as `org.gnu.gettext`, with
 manuals, extraction rules, project templates and the commands' translated
@@ -192,9 +193,9 @@ GNU M4 is installed as `org.gnu.m4`. The package includes the command,
 localised messages and manual; matching source, debuginfo and debugsource
 packages are published alongside it.
 
-GNU Make is installed as `org.gnu.make`. Its `gnumake.h` loadable-module
-interface is included with the command; Guile integration is not included.
-Recipes use Peios' `/usr/bin/sh` system-shell path by default.
+GNU Make is installed as `org.gnu.make`. Install `org.gnu.make-devel` to
+compile loadable modules against its `gnumake.h` interface. Guile integration
+is not included. Recipes use Peios' `/usr/bin/sh` system-shell path by default.
 
 Meson is installed as `com.mesonbuild.meson`. The package includes the
 `meson` command and manual, and declares Ninja as a runtime dependency because
