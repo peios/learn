@@ -283,13 +283,15 @@ undeclared member counting as `unknown`), and installs under `/usr/src/dist/<nam
 - `upstream/` — the pristine source input: a url source's downloaded artifact
   byte-for-byte, so its hash matches the committed `pekit.lock`, or a
   `git archive` export of the locked commit.
-- `source/` — the prepared tree, with patches already applied.
+- `source/` — the prepared tree, with patches already applied. Large trees
+  travel in `prepared-source.tar` instead; `rebuild.py` verifies and reconstructs
+  `source/` before invoking Pekit.
 - `workspace/` — the complete captured recipe, shared inputs, inherited policy
   and environment profiles, preserving their relative paths.
 - `recipe/` and `patches/` — compatibility views.
 - `acquisition/` and `build-environment/` — captured vendoring outputs and
   dependency identities when provided by the isolated job.
-- `build-inputs.json`, `rebuild.py`, `REBUILD.md` — schema-2 hashes, modes,
+- `build-inputs.json`, `rebuild.py`, `REBUILD.md` — schema-2 or schema-3 hashes, modes,
   provenance and the outside-checkout reconstruction command.
 
 Output/cache state, ignored developer files, keyring/credential files and

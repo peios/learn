@@ -261,6 +261,24 @@ Everything installs under `/usr/src/dist/<name>-<version>/` (with any
   environment. Peipkg transport modes differ from source Unix modes; the
   reconstruction tool restores source modes after all hashes verify.
 
+Small source bundles use schema 2. At 90,000 payload entries, Pekit uses
+schema 3 and stores the prepared tree in a deterministic, uncompressed
+`prepared-source.tar` inside the compressed package. Pristine upstream archives
+and individual source hashes, modes and link targets remain included. This keeps
+the outer package within Peipkg's 100,000-entry limit without dropping tests or
+other source files. A prepared archive exceeding 4 GiB, an identity manifest
+exceeding 64 MiB, or too many remaining non-source entries fails packaging.
+
+`rebuild.py` accepts both schemas. For schema 3 it checks the archive hash before
+reading it, extracts into a fresh temporary directory and verifies every member
+against the identity manifest before moving the tree into place. Missing,
+duplicate, escaping, sparse, hard-link and special-file entries fail verification.
+Relative symlinks must resolve within the prepared tree. Extraction does not use
+`tar.extractall`; it bounds paths, sizes and extended-header reads. An existing
+prepared tree is verified before reuse. Verify the outer package signature before
+running any included script: these checks detect changed inputs and do not make
+an unsigned script trustworthy.
+
 An isolated job copies shared helpers before any target runs. Workers consume
 those read-only copies, and the source package contains the same bytes. Recipe
 and policy inputs are captured separately from writable worker trees. Editing
