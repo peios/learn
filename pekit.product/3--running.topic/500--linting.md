@@ -234,6 +234,12 @@ recipe does not use do nothing.
 All **payload** rules. Paths are payload destinations, slash-separated,
 relative to the package root.
 
+Claim metadata uses canonical absolute paths in the installed logical root,
+such as `/usr/bin/sh`. Staged and final-archive lint convert these to
+package-relative keys when indexing claim slots; the leading slash does not
+refer to the build host. Relative, root-only and noncanonical claim paths
+(including `..` components) are not valid claim-slot exemptions.
+
 | Rule | Value | Checks |
 |---|---|---|
 | `payload.junk` | `true` or an array of patterns | No destination matches a build-leftover pattern. `true` uses the built-in list: `**/*.la`, `**/*.orig`, `**/*.rej`, `**/*.o`, `**/*~`, `**/*.swp`, `**/.git`, `**/.git/**`, `**/.gitignore`, `**/CMakeCache.txt`, `**/.DS_Store`, `usr/share/info/dir`, `**/perllocal.pod`, `**/.packlist`. An array replaces it; `"@default"` in the array includes it. A `.pyc` without its `.py` is always reported. |
