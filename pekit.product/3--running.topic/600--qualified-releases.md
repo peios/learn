@@ -59,8 +59,9 @@ This supports offline loopback tests without importing the coordinator’s host
 aliases or granting external network access.
 
 The Peios catalogue uses Debian stable for reference builds, with reviewed
-coordinator-owned Debian sid exceptions for rolling libxslt and Go dependencies
-that stable cannot satisfy. The selected image contributes to the preparation
+coordinator-owned Debian sid exceptions for rolling libxslt, Go and Rust
+dependencies that stable cannot satisfy. Rolling Rust requires the matching
+LLVM SDK; the retained Rust 1.83 lane continues to use Debian stable. The selected image contributes to the preparation
 policy identity, and the resolved image digest, package closure and root archive
 remain recorded. Recipe-local environment files cannot override this policy.
 
