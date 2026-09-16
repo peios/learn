@@ -9,27 +9,42 @@ can without blocking indefinitely.
 ## The sequence
 
 1. **Stop accepting.** Unlink all three socket paths so no new client
-   can reach them, and stop accepting query connections. Existing
-   streaming queries are terminated with an error. The log and metric
+   can reach them, and stop accepting query connections.
+   [*shutdown.all-three-socket-paths-are-unlinked-and-query-connections-stop-being-accepted]
+   Existing
+   streaming queries are terminated with an error.
+   [*shutdown.existing-streaming-queries-are-terminated-with-an-error]
+   The log and metric
    socket descriptors stay **open**.
+   [*shutdown.the-log-and-metric-socket-descriptors-stay-open-after-unlinking]
 2. **Drain ingestion.** Read and process the datagrams still in the log
-   and metric receive queues, then close those descriptors. This is
+   and metric receive queues, then close those descriptors.
+   [*shutdown.queued-log-and-metric-datagrams-are-processed-before-their-sockets-close]
+   This is
    bounded by the queue size — four times the datagram ceiling — so it
    completes quickly.
 3. **Final event drain.** Each drain thread performs one last drain
    cycle from its ring buffer.
+   [*shutdown.each-drain-thread-performs-one-final-drain-cycle]
 4. **Final commit.** Every writer commits its current batch immediately,
    whatever its size. The log and metric writers do the same.
+   [*shutdown.every-writer-commits-its-current-batch-whatever-its-size]
 5. **Record sequence state.** Derive each logical CPU's highest
    contiguously covered sequence from committed receipt ranges and write
    it to `sequence_checkpoints` for diagnostics (§3.5).
+   [*shutdown.each-cpus-highest-contiguously-covered-sequence-is-written-to-sequence-checkpoints]
 6. **Emit the shutdown event.** Write `synthetic.shutdown` with the
    per-CPU sequences, using the daemon-wide shard assignment rule
-   (§2.6). If no shard is writable, the event is skipped and the failure
+   (§2.6).
+   [*shutdown.a-synthetic-shutdown-event-carries-the-per-cpu-sequences]
+   If no shard is writable, the event is skipped and the failure
    logged to standard error.
+   [*shutdown.with-no-writable-shard-the-shutdown-event-is-skipped-and-the-failure-logged]
 7. **Close databases.** Close every connection, writer and reader.
    SQLite checkpoints the write-ahead log automatically on close.
+   [*shutdown.every-database-connection-is-closed-checkpointing-its-wal]
 8. **Unmap.** Unmap every ring buffer and close the per-CPU descriptors.
+   [*shutdown.every-ring-buffer-is-unmapped-and-its-descriptor-closed]
 9. **Exit.**
 
 Steps 1 and 2 are deliberately split. Unlinking the pathnames stops new
@@ -46,17 +61,21 @@ the checkpoint rather than the commit (§4.1).
 
 Shutdown is bounded by peinit's service stop timeout. If the sequence
 has not finished, eventd aborts and exits immediately.
+[*shutdown.an-unfinished-shutdown-aborts-at-the-peinit-stop-timeout]
 
 What an aborted shutdown costs:
 
 - **Uncommitted event batches** are lost. Those events remain in the
   KMES ring buffers and are available at the next start, provided they
   have not been overwritten by then.
+  [*shutdown.event-batches-lost-to-an-aborted-shutdown-are-recovered-from-kmes-at-the-next-start]
 - **Uncommitted log and metric batches** are lost, which is acceptable
   by design.
+  [*shutdown.an-aborted-shutdown-loses-uncommitted-log-and-metric-batches]
 - **The diagnostic sequence metadata** may be stale. It does not matter:
   startup derives coverage from committed receipt ranges and reconciles
   it with the ring buffer (§2.2).
+  [*shutdown.stale-sequence-metadata-after-an-aborted-shutdown-does-not-affect-recovery]
 
 Every consequence is one the restart path already handles, which is why
 aborting is safe rather than merely tolerable.

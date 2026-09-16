@@ -6,10 +6,12 @@ description: eventd is the single persistent sink for everything a Peios system 
 eventd is the observability daemon: the single persistent sink for
 everything a Peios system records about itself. Events, logs and metrics
 all end in eventd, and every query for any of them is answered by it.
+[*overview.eventd-stores-and-answers-queries-for-events-logs-and-metrics]
 
 It is one of the platform daemons the service manager starts at boot,
 signed at TCB level, and it is Critical — a system that loses it loses
 its audit trail.
+[*overview.eventd-is-a-boot-started-critical-platform-daemon-signed-at-tcb-level]
 
 The three data types are genuinely different and eventd treats them
 differently at every layer.
@@ -72,18 +74,22 @@ within a record (§7).
 **It is not a log framework.** eventd stores lines; it does not parse
 them, does not understand severity beyond a single error flag, and does
 not care whether the text happens to be JSON.
+[*overview.eventd-stores-log-lines-without-parsing-them]
 
 **It is not a metric collector.** Nothing in eventd reads `/proc`,
-scrapes an endpoint, or polls a service. Something else measures and
-pushes.
+scrapes an endpoint, or polls a service.
+[*overview.eventd-reads-no-proc-scrapes-no-endpoint-and-polls-no-service]
+Something else measures and pushes.
 
 **It is not a tracing system.** Distributed tracing is out of scope
-entirely.
+entirely. [*overview.eventd-implements-no-distributed-tracing]
 
 **It is not the low-latency path to events.** A consumer that needs
 events in microseconds attaches to the KMES ring buffers directly, as
 `revstrm` does. eventd sits above that transport, adds persistence and
 access control, and costs a batch commit interval in latency.
+[*overview.eventd-costs-a-batch-commit-interval-of-latency-over-kmes]
 
 **It is not the only KMES consumer**, and holds no privileged position
 among them.
+[*overview.eventd-holds-no-privileged-position-among-kmes-consumers]

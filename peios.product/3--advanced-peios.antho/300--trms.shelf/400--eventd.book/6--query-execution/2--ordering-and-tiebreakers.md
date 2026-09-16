@@ -12,19 +12,22 @@ This is how eventd achieves it.
 Where the query's explicit `SORT` keys — or the mode's default ordering
 — do not uniquely order two records, eventd appends internal keys until
 the order is total:
+[*order.internal-tiebreaker-keys-are-appended-until-the-order-is-total]
 
 | Mode | Appended, in order |
 |---|---|
-| Events | `timestamp` descending, shard index ascending, `events.id` descending |
-| Logs | `timestamp` descending, `logs.id` descending |
-| Metrics | `timestamp` ascending, metric name ascending, canonical labels ascending, and `samples.id` ascending where the row corresponds to a raw sample or a derived sample pair |
+| Events | `timestamp` descending, shard index ascending, `events.id` descending [*order.event-tiebreakers-are-timestamp-desc-then-shard-index-asc-then-id-desc] |
+| Logs | `timestamp` descending, `logs.id` descending [*order.log-tiebreakers-are-timestamp-desc-then-id-desc] |
+| Metrics | `timestamp` ascending, metric name ascending, canonical labels ascending, and `samples.id` ascending where the row corresponds to a raw sample or a derived sample pair [*order.metric-tiebreakers-are-timestamp-name-labels-then-sample-id-all-ascending] |
 
 These are not query-language fields. They never appear in a result
 record, cannot be named in a `SORT` or a `SELECT`, and have no
 access-control identity (PSPU §3.28).
+[*order.tiebreaker-keys-never-appear-in-results-and-cannot-be-named]
 
 The **shard index** is the numeric identifier from the `shard-NNNN.db`
-filename. It appears in the event tiebreaker because rowids are
+filename. [*order.the-shard-index-is-the-number-in-the-shard-filename]
+It appears in the event tiebreaker because rowids are
 per-database: two events in different shards can share a rowid, and
 without the shard index the pair would be genuinely unordered.
 
@@ -36,6 +39,7 @@ alone does not separate rows from different series.
 
 `samples.id` and `events.id` break ties within one database, but neither
 is a substitute for the timestamp ordering they follow.
+[*order.row-ids-only-break-ties-and-never-replace-timestamp-order]
 
 Metric samples may arrive out of timestamp order (§5.1), so insertion
 order and time order genuinely differ. Every metric computation —
@@ -43,6 +47,7 @@ order and time order genuinely differ. Every metric computation —
 interval construction — is defined over `(timestamp, id)` ascending
 precisely so that a late-arriving sample lands where its timestamp says
 it belongs rather than where it happened to be written.
+[*order.metric-computations-order-samples-by-timestamp-then-id-ascending]
 
 Events are less prone to it, since a drain thread reads one ring buffer
 in order, but a shard receiving from several CPUs interleaves them
@@ -52,6 +57,7 @@ arbitrarily and a clock step can invert two events from the same CPU.
 
 Sorting, grouping and equality all use the query language's semantics,
 never the storage engine's dynamic-type rules (PSPU §3.20, §3.21).
+[*order.sorting-grouping-and-equality-never-use-sqlite-type-rules]
 
 The divergences are not edge cases. SQLite compares an integer and a
 real by converting; the query language compares them mathematically and
@@ -69,7 +75,7 @@ the row (§6.3).
 
 A group whose members are equal under the language's rules but not
 byte-identical emits the **smallest** member rather than the first
-(PSPU §3.21).
+(PSPU §3.21). [*order.a-group-emits-its-smallest-member-not-its-first]
 
 Smallest rather than first is what makes the representative a property
 of the set. An event query merges results from every shard in an order

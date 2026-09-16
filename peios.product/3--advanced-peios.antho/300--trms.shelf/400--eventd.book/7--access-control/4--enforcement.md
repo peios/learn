@@ -5,43 +5,60 @@ description: Access control is the third phase of query evaluation — which cla
 
 The order in which eventd evaluates a query is fixed (PSPU §3.18), and
 access control is the third phase — before predicates, transforms,
-grouping, aggregation, ordering and pagination. What follows is the
-sequence within that phase.
+grouping, aggregation, ordering and pagination.
+[*enforce.access-control-is-the-third-query-phase-before-predicates] What
+follows is the sequence within that phase.
 
 1. **Obtain the caller's token** from the connection (§7.1). Failure
    denies the query.
+   [*enforce.the-token-is-obtained-first-and-failure-denies-the-query]
 2. **Parse** the query to establish its data sources and filters (§6.1).
+   [*enforce.the-query-is-parsed-for-its-sources-and-filters]
 3. **Discover the concrete identifiers** the query could touch — event
-   type strings, log origin strings, metric name strings. A broad
+   type strings, log origin strings, metric name strings.
+   [*enforce.the-concrete-identifiers-a-query-could-touch-are-discovered]
+   A broad
    selector authorizes nothing by itself: `EVENTS`, `EVENTS kacs.*`,
    `LOGS` without `FROM` and `METRIC cpu.*` are each resolved identifier
    by identifier.
+   [*enforce.a-broad-selector-is-authorized-identifier-by-identifier]
 4. **Resolve and check** each discovered identifier: find its descriptor
    by hierarchical matching (§7.2), build the object type list for the
    fields the query references (§7.3), call `kacs_access_check_list`,
    and cache the verdicts for this `(token, identifier, field set)`
    (§7.5).
+   [*enforce.each-discovered-identifier-is-resolved-checked-and-cached]
 5. **Apply root verdicts.** An identifier whose root is denied is
    invisible: its records are excluded from the logical row set before
-   aggregation, ordering, pagination and formatting. For a cross-type
+   aggregation, ordering, pagination and formatting.
+   [*enforce.a-root-denied-identifiers-records-are-excluded-before-aggregation]
+   For a cross-type
    source, a denied identifier is treated as having no matching data.
+   [*enforce.a-denied-cross-type-identifier-has-no-matching-data]
 6. **Apply field verdicts to predicates.** Where the query references a
    field in a predicate or shaping clause and a matching identifier does
    not grant it, that identifier's records contribute nothing — exactly
-   as if its root had been denied. The query is **not** rejected.
+   as if its root had been denied.
+   [*enforce.a-denied-referenced-field-excludes-that-identifiers-records]
+   The query is **not** rejected.
+   [*enforce.a-denied-referenced-field-does-not-reject-the-query]
 7. **Cross-type sources** get the same treatment. A denied root, or a
    denied field needed to evaluate the condition, makes the condition
    evaluate as though no matching cross-source data existed.
+   [*enforce.a-denied-cross-source-root-or-field-evaluates-as-no-matching-data]
 8. **Execute**, with root filtering already part of the logical row set.
+   [*enforce.execution-runs-with-root-filtering-already-applied]
 9. **Re-resolve per result identifier.** For each distinct concrete
    identifier in the resulting rows, resolve its descriptor, build the
    object type list with field GUIDs, call `kacs_access_check_list` with
    the token, the descriptor, `EVENTD_READ`, the list and an audit
    context naming the identifier, and cache the per-field results.
+   [*enforce.each-result-identifier-is-rechecked-for-eventd-read-with-field-guids]
 10. **Shape each record.** Look up the cached results for its
     identifier; exclude the record entirely if the root was denied;
     otherwise include it, and include each field only if its node was
     granted.
+    [*enforce.each-record-is-shaped-by-its-identifiers-cached-verdicts]
 
 ## Which clauses count as referencing a field
 
@@ -49,19 +66,28 @@ Step 6 applies to every clause that reads a value rather than merely
 displaying one:
 
 - ordinary `WHERE` predicates
+  [*enforce.a-where-predicate-references-its-fields]
 - metric label filters in a primary selector
+  [*enforce.a-metric-label-filter-in-a-primary-selector-references-the-label]
 - `GROUP`, `COUNT BY`, `TOP N BY`, `SORT` and `DISTINCT` fields
+  [*enforce.grouping-counting-ranking-sorting-and-distinct-fields-are-referenced]
 - event and log aggregation arguments — `SUM`, `AVG`, `MIN`, `MAX`
+  [*enforce.event-and-log-aggregation-arguments-are-referenced]
 - metric transforms and terminal aggregations, all of which read the
   fixed `value` field: `RATE`, `DELTA`, `P50`, `P95`, `P99`, `AVG`,
   `MIN`, `MAX`, `SUM`, `AVG_OVER`, `MIN_OVER`, `MAX_OVER`, `SUM_OVER`
+  [*enforce.metric-transforms-and-terminal-aggregations-reference-value]
 - a metric boot filter, which reads `boot_id`; and an explicit metric
   type predicate, grouping, sort or distinct, which reads `type`
+  [*enforce.a-metric-boot-filter-references-boot-id-and-type-clauses-reference-type]
 
-`SELECT` is not on this list. It shapes output and is applied last, so a
+`SELECT` is not on this list.
+[*enforce.select-does-not-count-as-referencing-a-field] It shapes output
+and is applied last, so a
 field it omits was still available to every earlier phase — and
 conversely, selecting a field the caller may not read removes the field,
 not the record.
+[*enforce.selecting-an-unreadable-field-removes-the-field-not-the-record]
 
 ## Denial is silent, not fatal
 
@@ -84,6 +110,7 @@ fields now match them.
 A field's authorization is resolved from the name **as written**,
 against each concrete identifier, whether or not any record of that
 identifier actually carries it.
+[*enforce.field-authorization-is-resolved-from-the-written-name-regardless-of-presence]
 
 Payload fields vary between records of the same type, so a rule turning
 on presence would require the scan that authorization is meant to
@@ -93,13 +120,17 @@ precede.
 
 Row identifiers, series identifiers, ordering tiebreakers and series
 type checks are not query-language source fields unless the mode exposes
-them as fixed fields or the query names them (§6.2). Errors raised by
+them as fixed fields or the query names them (§6.2).
+[*enforce.internal-values-are-not-source-fields-unless-exposed-or-named]
+Errors raised by
 internal checks never carry a denied field's value.
+[*enforce.internal-check-errors-never-carry-a-denied-fields-value]
 
 A metric result's `value` **is** a source field, because it is either a
 raw sample or a scalar derived from raw samples.
+[*enforce.a-metric-results-value-is-a-source-field]
 
-## Filtering is part of the logical result
+## Filtering is part of the logical result [*enforce.access-filtering-is-part-of-the-logical-result-not-presentation]
 
 Access filtering is not a presentation step. Aggregating, ordering or
 paginating over unreadable records would leak them through counts,
@@ -110,17 +141,22 @@ set is known, or read candidates and filter them before aggregating
 (§6.3). The externally visible result is identical to filtering first,
 and `COUNT`, `COUNT BY`, `TOP N BY` and every other aggregate reflect
 only what the caller may see.
+[*enforce.every-aggregate-reflects-only-what-the-caller-may-see]
 
 ## The audit trail
 
 Every access check produces a KACS audit event through the SACL audit
 walk in the AccessCheck pipeline.
+[*enforce.every-access-check-produces-a-kacs-audit-event]
 
 eventd passes an `audit_context` blob naming the security pattern being
 accessed — `"events:kacs.access_denied"`, `"logs:loregd"` — so the audit
 trail records exactly which observability data was read, by whom, rather
 than merely that eventd performed a check.
+[*enforce.the-audit-context-names-the-data-type-and-pattern-accessed]
 
 Those audit events are themselves KMES events, which eventd consumes and
 stores, and which are governed by the `synthetic`-independent event
-patterns like any other. Reading the audit store is auditable.
+patterns like any other.
+[*enforce.access-audit-events-are-stored-and-governed-like-any-other-event]
+Reading the audit store is auditable.

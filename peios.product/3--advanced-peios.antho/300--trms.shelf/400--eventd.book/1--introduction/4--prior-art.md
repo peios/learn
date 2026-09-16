@@ -23,7 +23,8 @@ descriptor per event type pattern (§7.2).
 
 Different: eventd unifies three data types where Windows separates them
 across the Event Log, ETL trace files and Performance Counters. eventd
-stores in SQLite rather than a proprietary binary format. And ETW's
+stores in SQLite rather than a proprietary binary format.
+[*priorart.eventd-stores-in-sqlite-not-a-proprietary-binary-format] And ETW's
 buffering is a kernel-managed trace session, where KMES exposes
 shared-memory ring buffers with a lock-free consumer protocol that
 eventd drains directly (§2.2).

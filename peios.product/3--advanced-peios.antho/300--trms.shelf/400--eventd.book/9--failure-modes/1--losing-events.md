@@ -13,8 +13,11 @@ When events are emitted faster than eventd drains them, the per-CPU ring
 buffers fill and KMES overwrites its oldest entries.
 
 - eventd sees it as a sequence gap on the affected CPU (§2.5).
+  [*lostevents.an-overrun-is-detected-as-a-sequence-gap-on-the-affected-cpu]
 - A `synthetic.gap` record is written, naming the missing range.
+  [*lostevents.an-overrun-writes-a-synthetic-gap-naming-the-missing-range]
 - Draining resumes from the oldest survivor at `tail_pos`.
+  [*lostevents.after-an-overrun-draining-resumes-from-the-oldest-survivor-at-tail-pos]
 
 The events are gone. No other copy exists, and a gap record is a
 tombstone rather than a recovery — it records what was lost and when,
@@ -36,11 +39,15 @@ predictably.
 ## Query timeouts
 
 A query exceeding `QueryTimeoutMs` is cancelled and the client receives
-an error (§6.5). Read-only connections are released; nothing is lost,
+an error (§6.5).
+[*lostevents.a-query-exceeding-querytimeoutms-is-cancelled-with-an-error]
+Read-only connections are released; nothing is lost,
 and the query simply did not finish.
+[*lostevents.a-timed-out-query-releases-its-read-only-connections]
 
 Streaming queries are bounded only up to `watch`; past that the watch
 phase is not time-limited.
+[*lostevents.the-watch-phase-of-a-streaming-query-is-not-time-limited]
 
 The main risk is a large scan over a field with no index, which adaptive
 indexing reduces over time by indexing whatever keeps being filtered on
@@ -52,8 +59,10 @@ set rather than only as an error to retry.
 When a log or metric socket's receive queue is full, the kernel discards
 the datagram. Neither the sender nor eventd is notified, and eventd does
 not count it.
+[*lostevents.a-datagram-dropped-on-a-full-receive-queue-is-not-counted]
 
 This is by design and is not a failure to be tuned away (PSPU §3.4). The
 one operational note is that the queue is not being drained *while a
 batch is committing*, because the same thread does both jobs (§4.1) —
 so a burst arriving during a commit is the common case for log loss.
+[*lostevents.a-socket-queue-is-not-drained-while-its-batch-commits]

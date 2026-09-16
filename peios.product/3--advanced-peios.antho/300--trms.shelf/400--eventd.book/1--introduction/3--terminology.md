@@ -21,56 +21,72 @@ The following are specific to eventd.
 
 **Drain thread**: one of the threads that reads from a per-CPU KMES ring
 buffer. There is exactly one per CPU (§2.2).
+[*term.there-is-exactly-one-drain-thread-per-cpu]
 
 **Writer thread**: the sole writer to one event shard. There is exactly
 one per shard, and no other thread writes to that database (§2.3).
+[*term.each-shard-has-exactly-one-writer-thread-and-no-other-writer]
 
 **Shard**: one of the independent SQLite databases the event store is
 split across, each with its own file, write-ahead log and writer thread.
 A shard is a write-path construct only; the query path treats the whole
 directory as one store (§2.3).
+[*term.the-query-path-treats-every-shard-as-one-store]
 
 **Active shard**: a shard in the current configuration's numbering.
 **Historical shard**: a shard database left behind by a previous
 configuration, opened read-only and still queried (§3.3).
+[*term.a-historical-shard-is-opened-read-only-and-still-queried]
 
 **Handoff channel**: the bounded queue between drain threads and a
 writer thread. It is a small startup-fixed scheduling handoff, bounded
 by slots and bytes independently of transaction batch size (§2.3).
+[*term.the-handoff-channel-is-bounded-by-slots-and-bytes-independently-of-batch-size]
 
 **Synthetic event**: a record eventd generates itself and writes
 directly to a shard, bypassing KMES. Synthetic events carry no identity
 stamps and no sequence numbers, and are distinguished by a
 `synthetic.`-prefixed type (§2.6).
+[*term.synthetic-events-bypass-kmes-and-carry-no-stamps-or-sequence-numbers]
 
 **Gap record**: the synthetic event recording that events were lost on
 one CPU, and which sequence numbers went missing (§2.5).
+[*term.a-gap-record-names-the-cpu-and-the-missing-sequence-numbers]
 
 **Event store directory**: the directory holding every shard database
 and the metadata database. **Metadata database**: `eventd-meta.db`, the
 one database that is not a shard and survives shard reconfiguration
 (§3.5).
+[*term.the-metadata-database-is-not-a-shard-and-survives-shard-reconfiguration]
 
 **Desired index set**: the global, priority-ordered list of fields eventd
-aims to have indexed across all shards. **Material indexes**: the indexes a
-given shard actually has, which converge toward the desired set when the
-shard is quiet and diverge from it under pressure (§3.4).
+aims to have indexed across all shards.
+[*term.the-desired-index-set-is-one-global-priority-ordered-list]
+
+**Material indexes**: the indexes a given shard actually has, which
+converge toward the desired set when the shard is quiet and diverge from
+it under pressure (§3.4).
+[*term.material-indexes-converge-when-quiet-and-diverge-under-pressure]
 
 **Shedding**: dropping secondary indexes to protect write throughput
-(§3.4).
+(§3.4). [*term.shedding-drops-secondary-indexes]
 
 **Rollup**: a disposable, pre-computed metric-window result whose freshness is
 proved against authoritative raw samples before reuse (§5.6).
+[*term.a-rollup-is-reused-only-after-its-freshness-is-proved-against-raw-samples]
 
 **Series cache**: the bounded in-memory map from series identity to
 series row, which keeps metric ingestion off SQLite in the common case
 (§5.3).
+[*term.the-series-cache-is-a-bounded-in-memory-map-from-series-identity-to-row]
 
 **Logical live size**: `(page_count - freelist_count) × page_size` for a
 SQLite database — the space actually holding data, excluding pages freed
 by deletion and available for reuse. Retention is enforced against this
 rather than against the file size (§3.6).
+[*term.retention-is-enforced-against-logical-live-size-not-file-size]
 
 **Quarantine**: renaming a database SQLite has reported corrupt, aside
 from the path eventd uses, and creating an empty one in its place
 (§3.3).
+[*term.quarantine-renames-a-corrupt-database-aside-and-creates-an-empty-one]

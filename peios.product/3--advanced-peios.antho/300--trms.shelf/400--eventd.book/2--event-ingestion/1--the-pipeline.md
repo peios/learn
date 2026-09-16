@@ -5,6 +5,7 @@ description: The four stages from shared memory to a committed row, why the ring
 
 eventd is the primary consumer of the KMES ring buffers. Events travel
 from shared memory to a committed database row in four stages.
+[*pipeline.events-travel-from-the-ring-buffers-to-a-committed-row-in-four-stages]
 
 1. **Drain.** One thread per CPU reads events from that CPU's ring
    buffer, following the lock-free read protocol PSPK specifies (§2.2).
@@ -20,7 +21,7 @@ from shared memory to a committed database row in four stages.
 Two principles govern the whole pipeline, and most of its behaviour
 follows from them rather than from anything specific to a stage.
 
-## The ring buffers are the only buffer
+## The ring buffers are the only buffer [*pipeline.the-ring-buffers-are-the-only-buffer]
 
 eventd holds no large intermediate queue between KMES and SQLite. The
 handoff channel has startup-fixed slot and byte bounds chosen by
@@ -33,11 +34,13 @@ reading, events accumulate in the ring buffer, which is exactly what a
 ring buffer is for. Backpressure propagates all the way back to the
 kernel, and the absorption capacity is the ring buffer's, which an
 administrator already sizes.
+[*pipeline.backpressure-propagates-from-the-writer-through-the-channel-to-the-ring-buffer]
 
 If the ring buffer also fills, KMES overwrites its oldest events, the
 drain thread notices the sequence jump when it resumes, and the loss is
 recorded (§2.5). That is the designed worst case: **eventd loses events
 visibly rather than buffering without bound and dying**.
+[*pipeline.a-full-ring-buffer-loses-events-visibly-rather-than-buffering-without-bound]
 
 The alternative — a large in-process queue — would move the same
 capacity into a place where losing it is invisible, where it competes
@@ -47,9 +50,11 @@ the whole queue with no record that it existed.
 ## Sharding scales writes linearly
 
 Each shard is a self-contained SQLite database with its own file, its
-own write-ahead log and its own writer thread. Shards share no
+own write-ahead log and its own writer thread.
+[*pipeline.each-shard-has-its-own-file-wal-and-writer-thread] Shards share no
 write-path state, so the write path has no cross-shard lock, no shared
 counter and no coordination point (§2.3).
+[*pipeline.shards-share-no-write-path-state-or-coordination-point]
 
 The consequence for the query path is that a shard means nothing to it.
 A shard database holds whatever CPUs happened to route to it in whatever

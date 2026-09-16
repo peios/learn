@@ -9,16 +9,19 @@ built on becomes visible as three different outcomes.
 
 | Store | Setting | What survives |
 |---|---|---|
-| Event | `synchronous=FULL` | Every committed transaction. |
-| Log | `synchronous=NORMAL` | Transactions up to the last checkpoint. |
-| Metric | `synchronous=NORMAL` | Transactions up to the last checkpoint. |
+| Event | `synchronous=FULL` | Every committed transaction. [*powerloss.every-committed-event-transaction-survives-power-loss] |
+| Log | `synchronous=NORMAL` | Transactions up to the last checkpoint. [*powerloss.log-transactions-survive-only-up-to-the-last-checkpoint] |
+| Metric | `synchronous=NORMAL` | Transactions up to the last checkpoint. [*powerloss.metric-transactions-survive-only-up-to-the-last-checkpoint] |
 
 **The event store** loses only the in-flight batch — the events
 accumulated since the last commit, which the adaptive batcher keeps as
-small as throughput allows (§2.4). Unlike a process crash, a power cycle
+small as throughput allows (§2.4).
+[*powerloss.the-event-store-loses-only-the-in-flight-batch] Unlike a process crash, a power cycle
 destroys the old KMES rings and changes the boot ID. eventd can neither
 recover that batch nor determine its final sequence range, so it cannot
-honestly manufacture a `synthetic.gap` for it. The last receipt coverage
+honestly manufacture a `synthetic.gap` for it.
+[*powerloss.no-gap-record-is-written-for-a-batch-lost-to-power-loss]
+The last receipt coverage
 and the following boot's `synthetic.startup` bound the unknown loss.
 
 **The log and metric stores** may lose everything committed since their
@@ -45,9 +48,12 @@ particular store.
 Nothing manual. eventd starts, finds its databases consistent — WAL
 recovery is SQLite's, and an incomplete transaction is rolled back on
 open — reads the new kernel boot ID and starts that boot's per-CPU
-coverage before sequence 1 (§3.7). It does not compare a new boot's ring
+coverage before sequence 1 (§3.7).
+[*powerloss.a-new-boots-per-cpu-coverage-starts-before-sequence-1]
+It does not compare a new boot's ring
 against the previous boot's receipts: those are different sequence
 namespaces.
+[*powerloss.a-new-boots-ring-is-never-reconciled-against-the-previous-boots-receipts]
 
 This is the irreducible difference from a process crash. In the latter,
 KMES survives and receipt/ring reconciliation can distinguish committed,

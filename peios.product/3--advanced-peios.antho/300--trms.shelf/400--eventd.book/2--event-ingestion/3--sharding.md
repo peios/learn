@@ -6,12 +6,14 @@ description: Event writes distributed across up to 256 independent databases —
 ## The shard count
 
 Event writes are distributed across one to 256 independent SQLite
-databases. The count comes from `StorageShards` (§A); zero means "as
-many shards as there are successfully attached KMES buffers", and is
-the default.
+databases. [*shard.there-are-between-1-and-256-event-shards] The count
+comes from `StorageShards` (§A); zero means "as many shards as there
+are successfully attached KMES buffers", and is the default.
+[*shard.storage-shards-zero-is-the-default-and-means-one-shard-per-attached-buffer]
 
-Two properties make a count perform well, and neither is enforced. A
-power of two lets routing use a bitwise AND rather than a modulo. A
+Two properties make a count perform well, and neither is enforced.
+[*shard.neither-a-power-of-two-nor-a-multiple-of-the-buffer-count-is-enforced]
+A power of two lets routing use a bitwise AND rather than a modulo. A
 multiple of the attached-buffer count distributes shards evenly across
 drain threads. The default satisfies the second by construction.
 
@@ -19,42 +21,53 @@ drain threads. The default satisfies the second by construction.
 
 Shard-to-CPU assignment is computed once at startup and is fixed for the
 process lifetime.
+[*shard.assignment-is-computed-once-at-startup-and-fixed-for-the-process-lifetime]
 
 The successfully attached logical CPUs are assigned dense ordinals
 `c = 0..attached_count-1` in logical-ID order (§2.2). For each ordinal
 `c`, eventd assigns every shard `j` where
-`j % attached_count == c`. If that produces nothing — which happens
-when there are fewer shards than attached buffers — ordinal `c` is
-instead assigned `c % shard_count`. Every drain thread ends with at
-least one write path. Logical `cpu_id`, not the ordinal, is stored.
+`j % attached_count == c`.
+[*shard.ordinal-c-is-assigned-every-shard-j-where-j-mod-attached-count-equals-c]
+If that produces nothing — which happens when there are fewer shards
+than attached buffers — ordinal `c` is instead assigned
+`c % shard_count`.
+[*shard.an-ordinal-with-no-shard-is-assigned-c-mod-shard-count] Every
+drain thread ends with at least one write path.
+[*shard.every-drain-thread-has-at-least-one-shard] Logical `cpu_id`, not
+the ordinal, is stored. [*shard.the-logical-cpu-id-not-the-ordinal-is-stored]
 
 The three cases behave differently:
 
 | Relation | Result |
 |---|---|
-| shards == CPUs | one shard per CPU, the 1:1 case |
-| shards < CPUs | several CPUs share a shard |
-| shards > CPUs | a CPU owns several shards |
+| shards == CPUs | one shard per CPU, the 1:1 case [*shard.equal-counts-give-one-shard-per-cpu] |
+| shards < CPUs | several CPUs share a shard [*shard.fewer-shards-than-cpus-means-cpus-share-shards] |
+| shards > CPUs | a CPU owns several shards [*shard.more-shards-than-cpus-means-a-cpu-owns-several] |
 
 A drain thread owning several shards distributes **contiguous sequence
 stripes**, not individual events round-robin. It sends a fixed positive
 number of successive events to one shard, then moves to the next shard
-it owns. The stripe length is selected once at startup and is not
+it owns.
+[*shard.a-multi-shard-drain-thread-sends-fixed-length-contiguous-stripes-to-its-shards-in-turn]
+The stripe length is selected once at startup and is not
 persisted; committed receipt ranges, rather than recomputing the routing
 choice, are the recovery authority (§2.2, §3.1).
+[*shard.the-stripe-length-is-chosen-at-startup-and-not-persisted]
 
 Keeping a contiguous run together makes one receipt describe the run
 compactly. It preserves parallelism across CPUs and across successive
 stripes without requiring any cross-shard commit coordinator.
 
 When the counts do not divide evenly, some CPUs carry one shard more
-than others, or some shards receive from one CPU more than others. The
+than others, or some shards receive from one CPU more than others.
+[*shard.uneven-counts-leave-an-imbalance-of-at-most-one-shard-or-cpu] The
 resulting imbalance is one shard's worth of throughput, which is
 negligible against the whole.
 
-## Shards are not a query-path concept
+## Shards are not a query-path concept [*shard.the-query-path-assumes-no-relationship-between-a-shard-and-a-cpu]
 
-Assignment is not persisted. A shard database accumulates events from
+Assignment is not persisted. [*shard.assignment-is-not-persisted] A
+shard database accumulates events from
 whatever CPUs routed to it during whatever eventd lifetimes wrote it, so
 a single shard file may hold events from a different set of CPUs in
 different regions of its history.
@@ -67,27 +80,37 @@ for.
 ## Writer threads
 
 Each shard has exactly one writer thread, and that thread is the only
-writer to that database. No other thread and no other connection writes
-to it, which is what makes the single-writer assumptions in §5.3 and
-§3.4 safe.
+writer to that database.
+[*shard.each-shard-has-exactly-one-writer-thread-and-no-other-writer] No
+other thread and no other connection writes to it, which is what makes
+the single-writer assumptions in §5.3 and §3.4 safe.
 
-Drain threads never write to SQLite. When several drain threads share a
-shard they hand off concurrently, so the handoff channel is
+Drain threads never write to SQLite.
+[*shard.drain-threads-never-write-to-sqlite] When several drain threads
+share a shard they hand off concurrently, so the handoff channel is
 multi-producer and single-consumer.
+[*shard.the-handoff-channel-is-multi-producer-single-consumer]
 
 ## The handoff channel
 
 Each writer thread has one bounded channel through which drain threads
-submit events. Its capacity is fixed at startup and independent of
-`MaxBatchSize`: the channel is bounded both by occupied slots and by the
-total bytes held by those slots. Both are internal implementation limits
-selected by performance testing, not live registry settings.
+submit events. [*shard.each-writer-thread-has-one-bounded-handoff-channel]
+Its capacity is fixed at startup and independent of `MaxBatchSize`: the
+channel is bounded both by occupied slots and by the total bytes held by
+those slots.
+[*shard.channel-capacity-is-fixed-at-startup-in-slots-and-bytes-independent-of-max-batch-size]
+Both are internal implementation limits selected by performance testing,
+not live registry settings.
+[*shard.the-channel-bounds-are-not-registry-settings]
 
 When either bound would be exceeded the drain thread **stops reading
-from the ring buffer** and waits. It reserves capacity before copying or
-advancing `read_pos` (§2.2), does not drop events to relieve pressure,
-and does not grow the channel. Events accumulate in the ring buffer
-instead, which is the designed path (§2.1):
+from the ring buffer** and waits.
+[*shard.a-drain-thread-stops-reading-when-either-channel-bound-would-be-exceeded]
+It reserves capacity before copying or advancing `read_pos` (§2.2), does
+not drop events to relieve pressure, and does not grow the channel.
+[*shard.channel-pressure-never-drops-events-or-grows-the-channel] Events
+accumulate in the ring buffer instead, which is the designed path
+(§2.1):
 
 ```text
 writer slow → channel fills → drain pauses → ring buffer absorbs
@@ -96,24 +119,30 @@ writer slow → channel fills → drain pauses → ring buffer absorbs
 
 When the writer commits and the channel has room, the drain thread
 resumes immediately.
+[*shard.the-drain-thread-resumes-as-soon-as-the-channel-has-room]
 
 The channel is a small scheduling handoff, not storage for a complete
 transaction and not a second backlog buffer. A writer can consume and
 insert one slot while producers refill it, so a transaction may contain
-many more events than the channel can hold simultaneously. Changing
-`MaxBatchSize` changes only the writer's next commit threshold and never
-resizes or replaces a live channel (§8.3).
+many more events than the channel can hold simultaneously.
+[*shard.a-transaction-may-hold-more-events-than-the-channel-can-at-once]
+Changing `MaxBatchSize` changes only the writer's next commit threshold
+and never resizes or replaces a live channel (§8.3).
+[*shard.changing-max-batch-size-never-resizes-or-replaces-a-live-channel]
 
 ## Lifecycle and reconfiguration
 
 Shard databases are created in the event store directory on first use.
-eventd never deletes or overwrites one left by a previous configuration:
-starting with fewer shards than exist leaves the excess in place, and
-the query path continues to read them (§3.3).
+[*shard.shard-databases-are-created-on-first-use] eventd never deletes
+or overwrites one left by a previous configuration: starting with fewer
+shards than exist leaves the excess in place, and the query path
+continues to read them (§3.3).
+[*shard.shards-left-by-a-previous-configuration-are-kept-and-still-read]
 
 Changing `StorageShards` takes effect at the next restart. The
 configuration watch notices the change and eventd defers it rather than
 reassigning CPUs or creating shards while running (§8.3).
+[*shard.a-storage-shards-change-is-deferred-to-the-next-restart]
 
 Shard count changes are expected to be rare — set once from the hardware
 profile, one for a small board and a multiple of the CPU count for a

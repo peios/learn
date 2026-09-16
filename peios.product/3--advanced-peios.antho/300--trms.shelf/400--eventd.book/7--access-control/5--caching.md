@@ -13,9 +13,11 @@ underneath both.
 When a pattern's descriptor contains **no object ACEs**, the check is a
 plain grant or deny on the root, and the result is cached per
 `(token, pattern)`.
+[*accesscache.without-object-aces-a-root-verdict-is-cached-per-token-and-pattern]
 
 A query returning ten thousand events across twenty distinct event types
 performs at most twenty checks.
+[*accesscache.ten-thousand-events-of-twenty-types-take-at-most-twenty-checks]
 
 ## Field-level
 
@@ -23,53 +25,70 @@ When the descriptor **does** contain object ACEs, the verdict depends on
 which fields the record carries, since different payloads produce
 different object type lists (§7.3). The result is cached per
 `(token, pattern, field set)`.
+[*accesscache.with-object-aces-a-verdict-is-cached-per-token-pattern-and-field-set]
 
 In practice events of one type carry the same fields, so this is
 effectively one check per `(token, event type)`. Log records have a
-fixed field set, so log queries reach one check per origin. Metric
+fixed field set, so log queries reach one check per origin.
+[*accesscache.a-log-query-takes-one-check-per-origin] Metric
 records vary by series label keys.
 
 The pathological case is an event type whose payload fields differ from
 record to record, which produces a distinct field set — and a distinct
 cache entry, and a distinct syscall — for each shape encountered.
+[*accesscache.each-distinct-field-set-costs-its-own-cache-entry-and-check]
 
 ## Descriptor resolution
 
 Resolving a pattern to a descriptor is itself cached, across queries
 rather than within one, since it costs a registry read and a hierarchy
 walk (§7.2).
+[*accesscache.descriptor-resolution-is-cached-across-queries]
 
 eventd watches the security registry subtree and invalidates cached
-resolutions and cached check results when a descriptor changes. That is
+resolutions and cached check results when a descriptor changes.
+[*accesscache.a-descriptor-change-invalidates-cached-resolutions-and-verdicts]
+That is
 what makes a revocation take effect on the next query rather than at the
-next restart.
+next restart. [*accesscache.a-revocation-takes-effect-on-the-next-query]
 
 If the registry watch fails after startup, eventd **discards the
 descriptor cache and operates fail-closed for new resolutions** until
-the watch is re-established. A cache it cannot trust to be current is
+the watch is re-established.
+[*accesscache.a-failed-registry-watch-discards-the-cache-and-fails-closed-for-new-resolutions]
+A cache it cannot trust to be current is
 worse than none: continuing to serve from stale entries would make a
 revocation silently ineffective, and the failure would be invisible.
 This is a degraded state, not a failure — eventd keeps ingesting, and
 keeps answering queries for descriptors already resolved (§9.3).
+[*accesscache.a-failed-watch-degrades-but-ingestion-and-resolved-queries-continue]
 
 ## During a stream
 
 Verdicts reached for a streaming query's initial result set are reused
 through the watch phase, with two exceptions.
+[*accesscache.initial-stream-verdicts-are-reused-through-the-watch-phase]
 
 A **new concrete identifier** appearing in a streamed batch — an event
 type or log origin not present in the initial results — is resolved and
-checked before the record or its distinct value is used. It has never
+checked before the record or its distinct value is used.
+[*accesscache.a-new-identifier-in-a-stream-is-checked-before-it-is-used]
+It has never
 been authorized, and inheriting a verdict from a sibling pattern would
 be a grant nobody made.
 
 A **descriptor change** invalidates the cache as it does anywhere, and
 subsequent batches are re-checked against the new one.
+[*accesscache.after-a-descriptor-change-stream-batches-are-rechecked]
 
-The **token** is not re-examined. It was captured at connection (§7.1),
+The **token** is not re-examined.
+[*accesscache.a-streams-token-is-never-re-examined] It was captured at
+connection (§7.1),
 so a client whose memberships change mid-stream continues under what it
 connected with, and a client whose access is revoked keeps receiving
-records until it disconnects. The bound on that exposure is the client's
+records until it disconnects.
+[*accesscache.a-stream-keeps-its-connection-time-identity-until-disconnect]
+The bound on that exposure is the client's
 own connection lifetime, which for a dashboard may be days.
 
 > [!NOTE]
@@ -90,3 +109,4 @@ This cache is deliberately thread-local. A recurring metric performs a
 borrowed string lookup without allocation, shared locking or AccessCheck;
 the only per-datagram identity operation left is querying the fresh
 token fd's stable statistics before that fd is closed.
+[*accesscache.a-recurring-metric-needs-no-lock-and-only-stats-the-token-fd]

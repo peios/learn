@@ -6,31 +6,36 @@ description: What the query language translates to directly, what does not trans
 Events and logs are translated to SQL. Metrics are translated to SQL
 against `series` and `samples`. Clients never see any of it — the
 translation is entirely internal and carries no guarantees.
+[*sql.clients-never-see-the-generated-sql]
 
 ## What translates directly
 
 **Event header fields** are columns, so a predicate on `event_type`,
 `process_guid` or `cpu_id` becomes a SQL `WHERE` comparison over an
 indexable column (§3.1).
+[*sql.an-event-header-predicate-becomes-a-sql-where-comparison]
 
 **Log fields** are all columns; log mode has no payload and its field
-set is closed (§4.2).
+set is closed (§4.2). [*sql.every-log-field-is-a-column]
 
 **Metric selection** resolves names and labels through `series` — from
 the in-memory cache where possible — and reads `samples` for the range,
 ordered by the composite index that already provides `(timestamp, id)`
 (§5.2).
+[*sql.metric-selection-resolves-through-series-and-reads-samples-in-index-order]
 
 ## What does not
 
 **Event payload predicates** have no column. They become eventd-internal
 payload extraction predicates, and may use an adaptive payload
 expression index to narrow candidates (§3.4).
+[*sql.a-payload-predicate-becomes-an-internal-extraction-predicate]
 
 **`HAS`**, array containment, narrows nothing. The payload expression
 index stores one key per field, and a field holding an array of group
 SIDs has no single key to store, so a `HAS` predicate is answered by
-decoding each candidate row and testing its array in full. The operator
+decoding each candidate row and testing its array in full.
+[*sql.has-uses-no-index-and-tests-each-candidates-array-in-full] The operator
 is correct on every row and costs a scan of whatever the rest of the
 query left; a query using it wants a time range or another predicate
 beside it.
@@ -40,6 +45,7 @@ query language decides**. Where a SQL construct cannot reproduce a
 predicate's comparison semantics exactly, eventd uses it only to reduce
 the candidate set and then applies the real predicate after loading the
 row.
+[*sql.sql-only-narrows-candidates-and-the-real-predicate-is-applied-after-loading]
 
 SQLite's native dynamic-type equality and ordering never substitute for
 the query language's ASCII case folding, exact numeric comparison,
@@ -58,6 +64,7 @@ Which it does is a performance decision. What is fixed is that the
 externally visible result is identical to the one filtering-first would
 produce — aggregates, ordering and pagination included, since all three
 would otherwise leak the existence of rows the caller cannot read.
+[*sql.results-equal-filtering-first-including-aggregates-ordering-and-pagination]
 
 ## Aggregation
 
@@ -65,6 +72,7 @@ Aggregation is pushed into SQL wherever the storage engine can express
 it, which is most of the time for simple grouping over columns and none
 of the time for grouping over payload paths whose comparison semantics
 SQL cannot reproduce.
+[*sql.aggregation-is-pushed-into-sql-except-where-sql-cannot-reproduce-the-comparison]
 
 For an event query the push-down matters twice over, because it also
 determines what crosses the shard boundary (§6.4): a shard returning

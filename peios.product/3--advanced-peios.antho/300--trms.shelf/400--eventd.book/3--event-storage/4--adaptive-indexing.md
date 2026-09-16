@@ -16,20 +16,28 @@ latency**.
 
 **Query frequency counters.** Query handlers increment a per-field
 counter when a field appears in a `WHERE` predicate. This is the
-write-heavy path — once per query, per predicate. Counters live in
+write-heavy path — once per query, per predicate.
+[*index.a-field-in-a-where-predicate-increments-its-counter-once-per-query-per-predicate]
+Counters live in
 memory and are flushed periodically to the metadata database (§3.5),
 never to a shard, because they are global state that must survive shard
 reconfiguration.
+[*index.counters-are-flushed-periodically-to-the-metadata-database-never-a-shard]
 
 **Index policy.** A periodic process reads the counters, applies the
 creation and removal thresholds, and computes the **desired index set**
-— an ordered list of fields, highest priority first. It runs every
+— an ordered list of fields, highest priority first.
+[*index.the-policy-computes-the-desired-set-as-fields-in-priority-order] It runs every
 `AdaptiveIndexPolicyIntervalMinutes` (§A), and it is the only writer to
 the desired set.
+[*index.the-policy-runs-every-policy-interval-and-is-the-only-desired-set-writer]
 
 **Shard convergence.** Writer threads read the desired set and move
-their material indexes toward it. They never read the counters and never
+their material indexes toward it.
+[*index.writer-threads-move-their-material-indexes-toward-the-desired-set]
+They never read the counters and never
 write the desired set.
+[*index.writer-threads-never-read-counters-or-write-the-desired-set]
 
 The separation exists so that the high-frequency counter updates never
 contend with the writer threads. The policy is the bridge between them
@@ -37,6 +45,7 @@ and runs on the order of once an hour, so it is never a contention
 point.
 
 The desired set is **global** — one list applying to every shard.
+[*index.the-desired-set-is-one-global-list-for-every-shard]
 Individual shards do not make independent decisions; they differ only in
 how far they have got.
 
@@ -47,16 +56,22 @@ events and its material indexes do not match the desired set, it takes
 **one** convergence action — creating the highest-priority missing
 index, or dropping the lowest-priority material index no longer wanted —
 then rechecks write pressure before considering another.
+[*index.an-idle-writer-takes-one-convergence-action-then-rechecks-pressure]
 
 Creation uses `CREATE INDEX IF NOT EXISTS`; removal uses
-`DROP INDEX IF EXISTS`. Both run on the shard's writer thread, which is
+`DROP INDEX IF EXISTS`.
+[*index.indexes-are-created-if-not-exists-and-dropped-if-exists] Both run on the shard's writer thread, which is
 the only thread permitted to write that database (§2.3).
+[*index.index-creation-and-removal-run-on-the-shards-writer-thread]
 
 **Index creation is cancellable.** If drain threads detect rising write
 pressure during a build, they signal the writer to abort; the writer
 cancels the `CREATE INDEX`, SQLite rolls back the partial index cleanly,
-and the writer returns to event batches immediately. The abandoned build
+and the writer returns to event batches immediately.
+[*index.rising-write-pressure-cancels-an-index-build-and-the-writer-returns-to-batches]
+The abandoned build
 is retried at the next quiet period.
+[*index.a-cancelled-index-build-is-retried-at-the-next-quiet-period]
 
 Cancellation responsiveness matters more than it looks. `sqlite3_interrupt`
 sets a flag checked at SQL VM opcode boundaries, and during B-tree
@@ -66,10 +81,12 @@ rate. `sqlite3_progress_handler()`, registering a callback invoked every
 thousand opcodes that checks a cancellation flag and returns non-zero to
 abort, gives cancellation that tracks the pressure signal rather than
 lagging it.
+[*index.a-progress-handler-checks-for-cancellation-every-thousand-opcodes]
 
 Shards converge at their own pace. One under sustained pressure may lag
 the desired set indefinitely, and that is the correct outcome: it is
 prioritising throughput.
+[*index.a-shard-under-sustained-pressure-may-lag-the-desired-set-indefinitely]
 
 ## Shedding
 
@@ -79,50 +96,68 @@ Under sustained pressure a shard drops indexes to cut per-insert cost.
 batches within a `SheddingWindowSeconds` sliding window exceeded 75% of
 `MaxBatchSize`, the shard drops its lowest-priority secondary index —
 the one whose column has the lowest query frequency in the desired set.
-If pressure persists, the next-lowest goes, and so on. The check runs
+[*index.too-many-large-batches-in-the-window-sheds-the-lowest-priority-index]
+If pressure persists, the next-lowest goes, and so on.
+[*index.persistent-pressure-sheds-the-next-lowest-index-in-turn] The check runs
 once per batch commit.
+[*index.the-graduated-shedding-check-runs-once-per-batch-commit]
 
 **Emergency shedding.** If a shard is at maximum batch size and its
 drain thread signals rising ring buffer pressure, it drops **all**
-secondary indexes at once. `DROP INDEX` is a metadata operation
+secondary indexes at once.
+[*index.emergency-shedding-drops-every-secondary-index-at-once] `DROP INDEX` is a metadata operation
 measured in milliseconds, so it is safe to do under pressure in a way
 that creation is not.
 
 The pressure signal comes from the drain thread watching the gap between
 `write_pos` and its own `read_pos`. Exceeding
-`EmergencySheddingBufferPercent` of ring buffer capacity raises it. It
+`EmergencySheddingBufferPercent` of ring buffer capacity raises it.
+[*index.ring-fill-above-emergency-shedding-buffer-percent-raises-the-pressure-signal]
+It
 is a distinct signal from the index-build cancellation one: this
 triggers shedding whether or not a build is in progress.
+[*index.emergency-shedding-triggers-whether-or-not-a-build-is-in-progress]
 
 `idx_events_timestamp` is **exempt**. It is never shed at any pressure,
 because time-range queries are the access pattern everything else is
 built on and the store is unusable without it.
+[*index.the-timestamp-index-is-never-shed]
 
 When pressure subsides, shedding reverses: the shard rebuilds toward the
 desired set under the same quiet-period scheduling and the same
 cancellability, highest priority first.
+[*index.shed-indexes-are-rebuilt-highest-priority-first-once-pressure-subsides]
 
 ## Candidates
 
 Any field that can appear in a `WHERE` predicate is a candidate.
+[*index.any-field-usable-in-a-where-predicate-is-a-candidate]
 
 **Header columns.** `event_type`, `origin_class`, `cpu_id`,
 `effective_token_guid`, `true_token_guid`, `process_guid`, `boot_id`.
+[*index.the-candidate-header-columns]
 `timestamp` is always indexed and is not adaptively managed.
+[*index.the-timestamp-column-is-not-adaptively-managed]
 
 **Payload fields.** Any queryable flattened path that appears in a
-predicate is a candidate for an expression index. A path suppressed by
+predicate is a candidate for an expression index.
+[*index.a-queryable-flattened-payload-path-is-an-expression-index-candidate]
+A path suppressed by
 the flattening rules of PSPU §3.22 — a top-level key colliding with a
 header field, a key that is not a valid segment, a duplicate path —
 never receives one, because it is not a query-language field at all.
+[*index.a-suppressed-payload-path-never-receives-an-index]
 
-The raw `payload` column never receives a plain column index. Indexing
+The raw `payload` column never receives a plain column index.
+[*index.the-raw-payload-column-never-receives-a-column-index] Indexing
 an opaque blob accelerates nothing.
 
 ## Payload indexes are an optimisation, not an authority
 
 An expression index extracts a field from the payload on every insert
-and indexes a deterministic private key for it. The exact key bytes are
+and indexes a deterministic private key for it.
+[*index.a-payload-index-keys-each-row-on-a-deterministic-extraction-of-the-field]
+The exact key bytes are
 internal to eventd and are not part of the storage contract.
 
 eventd may implement these as SQLite expression indexes with
@@ -133,23 +168,28 @@ PSPU §3.22 — and that where the index cannot reproduce the query
 language's comparison semantics exactly, it is used only to **narrow
 candidate rows**, with the real predicate applied after the row is
 loaded (§6.3).
+[*index.payload-indexes-resolve-fields-as-the-query-language-does-and-otherwise-only-narrow-candidates]
 
 SQLite's native dynamic-type equality and ordering never substitute for
 the query language's string case folding, numeric comparison, binary
 comparison, array comparison, or null and missing-field handling.
+[*index.sqlite-comparison-never-substitutes-for-query-language-comparison]
 Getting a smaller answer faster is worthless if it is a different
 answer.
 
 Rows where the field is absent, unqueryable or suppressed index as null,
 or are otherwise excluded in a way that preserves those semantics.
+[*index.rows-lacking-a-queryable-field-index-as-null-or-are-excluded-preserving-semantics]
 
 Payload indexes are otherwise ordinary members of the desired set, with
 the same priority ordering, shedding and convergence.
+[*index.payload-indexes-are-ordinary-desired-set-members]
 
 ## Naming
 
 Header column indexes are `idx_events_<column>` —
 `idx_events_event_type`, `idx_events_process_guid`.
+[*index.header-column-indexes-are-named-idx-events-column]
 
 Payload expression indexes are named from the field GUID (§7.3), to
 avoid both collisions and characters SQLite will not accept in an
@@ -160,7 +200,8 @@ idx_events_payload_<field_guid_hex>
 ```
 
 where `field_guid_hex` is the UUID v5 field GUID for the flattened path,
-as 32 lowercase hexadecimal digits with braces and hyphens stripped. The
+as 32 lowercase hexadecimal digits with braces and hyphens stripped.
+[*index.payload-indexes-are-named-by-the-32-lowercase-hex-digit-field-guid] The
 path `source.name` yields
 `idx_events_payload_` followed by the 32 hex digits of
 `uuid_v5(EVENTD_FIELD_NAMESPACE, "source.name")`.

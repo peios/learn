@@ -5,23 +5,27 @@ description: The four phases between a query string and an answer, what can only
 
 A query arrives as one string (PSPU §3.15). Turning it into an answer
 has four phases before any data is read: parse, plan, authorize,
-execute.
+execute. [*plan.a-query-runs-parse-then-plan-then-authorize-then-execute]
 
 ## Parsing
 
 The string is parsed into a syntax tree. The parser:
 
 1. Identifies the mode from the first token — `EVENTS`, `LOGS` or
-   `METRIC`.
+   `METRIC`. [*plan.the-mode-is-identified-from-the-first-token]
 2. Extracts the primary selector: a type pattern, a `FROM` list, or a
    metric name with an optional label selector.
+   [*plan.the-parser-extracts-the-primary-selector]
 3. Collects every clause, in whatever order they appear.
+   [*plan.clauses-are-collected-in-whatever-order-they-appear]
 4. Validates that the clauses suit the mode — `CONTAINING` only in log
    mode, `RATE` only in metric mode, `SELECT` only where a result schema
-   is not fixed.
+   is not fixed. [*plan.clause-and-mode-compatibility-is-checked-at-parse-time]
 
 Parse errors are returned immediately, before anything is opened, read
-or authorized. A malformed query costs a decode and a parse.
+or authorized.
+[*plan.parse-errors-return-before-anything-is-opened-read-or-authorized]
+A malformed query costs a decode and a parse.
 
 ## What can only fail later
 
@@ -30,6 +34,7 @@ resolves to a counter or a histogram, how many series a selector
 matches, or whether the effective range exceeds the cross-type lookback
 limit — those depend on the store, so they surface at planning or
 execution time (PSPU §3.B).
+[*plan.store-dependent-failures-surface-at-planning-or-execution-not-parse]
 
 The practical consequence is that the same query string can parse
 everywhere and fail on one machine: a metric selector matching one
@@ -42,22 +47,31 @@ Planning resolves what the query will actually touch:
 - which concrete identifiers the data could carry — event types, log
   origins, metric names — because access control resolves per identifier
   and a broad selector authorizes nothing by itself (§7.4)
+  [*plan.planning-resolves-the-concrete-identifiers-the-data-could-carry]
 - which series a metric selector matches, and whether they are
   type-homogeneous
+  [*plan.planning-resolves-matched-series-and-checks-they-are-type-homogeneous]
 - which fields the query references, for both authorization and
   frequency accounting (§6.5)
+  [*plan.planning-collects-referenced-fields-for-authorization-and-accounting]
 - which stores are involved, including any cross-type source
+  [*plan.planning-identifies-every-store-involved-including-cross-type-sources]
 
 Identifier discovery reads compact catalogues: the union of every
 shard's `event_types`, the log store's `log_origins`, and the metric
-store's `series` rows (§3.1, §4.2, §5.2). The primary selector filters
-that set before access checks. Discovery therefore never runs a
-`DISTINCT` scan over a hot records table and does not depend on an
-adaptive event index being present.
+store's `series` rows (§3.1, §4.2, §5.2).
+[*plan.identifier-discovery-reads-the-event-types-log-origins-and-series-catalogues]
+The primary selector filters that set before access checks.
+[*plan.the-primary-selector-filters-discovered-identifiers-before-access-checks]
+Discovery therefore never runs a `DISTINCT` scan over a hot records
+table and does not depend on an adaptive event index being present.
+[*plan.discovery-never-scans-a-records-table-or-needs-an-adaptive-index]
 
 Catalogues may conservatively contain a name whose final retained row was
-deleted. That safe superset can cause an extra access check but cannot
+deleted. [*plan.a-catalogue-may-keep-a-name-whose-rows-were-all-deleted]
+That safe superset can cause an extra access check but cannot
 expose a row or omit a concrete identifier that committed successfully.
+[*plan.a-stale-catalogue-name-never-exposes-a-row-or-omits-a-committed-identifier]
 Low-priority cleanup is optional and is never query-critical.
 
 ## When payloads are decoded
@@ -66,6 +80,7 @@ Event payloads are stored as opaque MessagePack and are never decoded on
 the write path (§3.1). Decoding happens here, on the read path, and only
 where a query needs it: to evaluate a payload predicate, to build a flat
 result record, or to compute a payload expression index's key on insert.
+[*plan.payloads-are-decoded-only-where-a-query-needs-them]
 
 At high result counts this dominates the query path. Constructing flat
 maps from thousands of events means decoding thousands of payloads and
@@ -77,11 +92,13 @@ avoids materialising the payload at all (§C).
 ## Read connections
 
 Execution uses read-only SQLite connections, which in WAL mode do not
-block writer threads.
+block writer threads. [*plan.queries-execute-on-read-only-sqlite-connections]
 
 An event query opens one connection per shard database in the directory
-(§6.4). A log or metric query opens one. eventd supports concurrent
-queries up to its admission limit (§6.5), subject to the operating
-system actually having the descriptors and memory; where it cannot
-allocate what an admitted query needs, it fails that query rather than
-blocking a writer or exceeding the limit.
+(§6.4). A log or metric query opens one.
+[*plan.a-log-or-metric-query-opens-a-single-connection] eventd supports
+concurrent queries up to its admission limit (§6.5), subject to the
+operating system actually having the descriptors and memory; where it
+cannot allocate what an admitted query needs, it fails that query rather
+than blocking a writer or exceeding the limit.
+[*plan.an-admitted-query-that-cannot-get-resources-fails-rather-than-blocking-a-writer]
