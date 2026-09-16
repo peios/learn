@@ -118,6 +118,13 @@ attempt. Recipe, helper, lint, environment and release-policy changes still
 require a reviewed commit; lock integrity/source-authenticity checks still apply.
 
 
+If a required dependency is unavailable in a reference environment, that
+qualification remains incomplete. A separate diagnostic snapshot may run only
+the native environment, but its receipt is native-only evidence: it does not
+satisfy the configured reference requirement or justify silently changing the
+publication policy. Keep the failed reference attempt and the dependency reason
+with the native results.
+
 ## Reference toolchain differences
 
 The last entry in `release.environments` produces the archives selected for

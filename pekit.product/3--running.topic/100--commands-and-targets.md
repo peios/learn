@@ -206,6 +206,12 @@ build requirements and every release gate's `needs`, then run each gate once
 for the resolved source version. Package artifacts are written only after all
 gates succeed. A failed gate therefore cannot create or publish a new artifact.
 
+A gate succeeds when its command exits successfully. Some upstream runners
+print failed comparisons but still exit zero; wrapping one in `make check` does
+not fix that. Recipes must propagate comparison failures and verify that the
+intended tests actually ran. Record skipped tests and missing test prerequisites
+separately from a passing gate.
+
 Gates are recipe-wide: selecting one package from a multi-package recipe still
 runs every gated test in that recipe. `pekit build` does not run gates, and an
 explicit `pekit test` runs a selected target whether or not it is a gate.
