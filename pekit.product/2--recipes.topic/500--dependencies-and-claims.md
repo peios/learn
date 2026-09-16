@@ -164,6 +164,27 @@ Its discovery bound does not freeze patch releases; the shorter-lived 3.6 line
 is deliberately excluded. Remove the compatibility package only when supported
 consumers no longer require that ABI.
 
+### Foreign static Linux targets
+
+`org.libc.musl-sysroot` supplies a private static sysroot for Rust's
+`x86_64-unknown-linux-musl` cross target. Its headers, static archives and startup
+objects live under `/usr/lib/x86_64-linux-peios/musl`. It installs no dynamic
+loader, shared process libc or command, and provides no generic `libc` capability.
+Peios applications continue to use the native glibc toolchain.
+
+This target follows upstream musl's Linux ABI. It does not promise Peios-native
+CET shadow-stack support: upstream assembly, including nonlocal jumps, does not
+implement that contract. Do not force ELF property notes to advertise it. The
+native compiler and native application packages retain their normal CET gates.
+
+The mandatory sysroot gate compiles and runs a self-contained static PIE against
+the staged headers and archives. It exercises thread creation/join, `setjmp` /
+`longjmp`, signal-mask restoration with `sigsetjmp` / `siglongjmp`, and the patched
+GB18030 decoder. It also checks non-executable stack, RELRO, eager relocation,
+compressed relative relocations and absence of a dynamic loader or shared-library
+dependencies. These are cross-target functional and layout checks, not a claim
+that foreign binaries satisfy every Peios-native execution policy.
+
 ### Symbol version policy
 
 By default a soname dependency is derived at **soname granularity only**: the
