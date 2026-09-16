@@ -52,6 +52,18 @@ private copy and cannot alter the frozen source or another environment’s input
 Corresponding-source inputs are captured for every candidate, including recipes
 that do not emit an automatic source package.
 
+If a prepared root has a missing or empty `/etc/hosts`, Pekit supplies fixed
+IPv4 and IPv6 localhost entries before starting the worker. A populated regular
+hosts file remains intact; a symlink is replaced without following its target.
+This supports offline loopback tests without importing the coordinator’s host
+aliases or granting external network access.
+
+The Peios catalogue uses Debian stable for reference builds, with reviewed
+coordinator-owned Debian sid exceptions for rolling libxslt and Go dependencies
+that stable cannot satisfy. The selected image contributes to the preparation
+policy identity, and the resolved image digest, package closure and root archive
+remain recorded. Recipe-local environment files cannot override this policy.
+
 All declared release gates and applicable generated-file checks must pass.
 Configured recipe and payload lint must be enabled. Payload lint reads frozen
 signed archives, including generated links and packaging transformations; it
