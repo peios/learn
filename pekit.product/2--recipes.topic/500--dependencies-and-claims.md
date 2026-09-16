@@ -312,6 +312,43 @@ Pekit does not resolve or install these — it only renders the declared list an
 passes it through. Consuming it is the build script's job. `dependency_provider`
 is a **name selector**, not a command or hook.
 
+### Debian reference dependencies without a Debian package
+
+The e2fsprogs security-descriptor extensions depend on libpeios, which Debian
+cannot install from APT. Its recipe therefore declares a private reference SDK
+prerequisite. The input is the unchanged signed `dev.peios.libpeios-source`
+0.5.0-1 publication, with its repository key, MIT licence, source commit and
+verified archive hashes recorded beside the recipe. Acquisition refuses changed
+bytes before extracting the source.
+
+That older source publication did not contain a vendored dependency closure.
+The acquisition target runs its original lockfile-bound Cargo vendor command and
+retains the PKM UAPI from the same fixed Git revision. These generated inputs are
+captured in the e2fsprogs source bundle. The offline SDK target builds from them
+and runs the frozen source's tests, ABI/export checks and dynamic/static consumer
+probes. The main reference build receives the SDK as an explicit prerequisite.
+
+The snapshot establishes the reference ABI0 dependency; it needs review when
+required APIs change or prerequisite security maintenance requires a refresh.
+It does not pin native or runtime libpeios packages and does not modify or
+republish the active first-party source tree.
+
+Qualification evidence (2026-09-16): both providers passed the required build,
+test and archive lint gates. Each ran the upstream 19-test internal suite and
+390-test filesystem suite with zero failures; 17 upstream skips remain (slow,
+privileged, unavailable optional features and platform exclusions). The Debian
+prerequisite ran 256 Rust tests and the frozen ABI consumer/export checks.
+Exact cbindgen 0.29.2 was unavailable, so the frozen prerequisite policy verified
+the committed ABI snapshot instead of regenerating it; it checked standalone
+C/C++ headers and 207 DSO exports.
+
+All 22 resulting archives passed independent trusted-key signature and payload
+hash verification. Both source bundles reconstructed 3,656 authenticated input
+identities and the expected build dispatch. This checks source reconstruction,
+not an additional rebuild. Candidate installation is still blocked by the
+existing repository closure's missing `libblkid.so.1`; recipe qualification is
+not a claim of image or public-release acceptance.
+
 ## Claims
 
 A **claim** is how a package plugs into a shared filesystem name that at most one
