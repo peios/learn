@@ -174,6 +174,21 @@ The remaining transfer and security assertions still run. Testing a blocked case
 on a suitable host provides additional evidence, separately identified from the
 isolated package gate.
 
+Bash's upstream runner can return success after comparison failures. Its gate
+collects failed comparisons and individual script statuses, uses a PTY for
+terminal fixtures, and validates its private locale data through libc before
+running locale-sensitive tests. Test-only platform expectations are explicit;
+changing a golden file requires a demonstrated platform result, not merely a
+failing comparison. A SIGCHLD fixture staggers child completion times because
+ordinary signals can coalesce, while retaining all child and trap assertions.
+
+Go runs its standard-library package set and cmd/go in upstream short mode.
+A clone-based prerequisite probe determines whether five namespace-dependent
+cases can run in the worker. Other clone errors fail the probe; unavailable
+namespaces do not justify excluding unrelated tests. Short-mode success does
+not certify resource-intensive upstream cases, and the existing internal-linker
+hardening exceptions remain part of the recorded policy.
+
 Record the scope of each suite. For example, cbindgen's library/binary unit tests
 and generated C/C++ header checks do not establish its complete fixture or Cython
 coverage. Kmod's native LLVM-generated alias fixtures can differ in entry order;
