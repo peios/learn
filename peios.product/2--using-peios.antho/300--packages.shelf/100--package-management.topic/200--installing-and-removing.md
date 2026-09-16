@@ -217,10 +217,11 @@ linker names, pkg-config metadata and API manuals are in
 Narrow-character, C++ and Ada compatibility surfaces are not included.
 
 The Ninja build executor is installed as `org.ninja-build.ninja`. Its Bash and
-Zsh completions, Vim syntax file, README and source manual are included with
-the command. Ninja uses the system shell to execute build rules, so the
-package depends on `dash`; matching source, debuginfo and debugsource packages
-are published alongside it.
+Zsh completions, Vim syntax file, README, source manual and `ninja(1)` command
+reference are included with the command. The command reference is generated
+from the packaged executable's help output. Ninja uses the system shell to
+execute build rules, so the package depends on `org.git.kernel.dash`; matching
+source, debuginfo and debugsource packages are published alongside it.
 
 The numactl command suite is installed as `io.github.numactl.numactl`. The
 shared libnuma runtime is `io.github.numactl.libnuma`; its headers, linker
@@ -293,10 +294,10 @@ their Pekit SHA-256 lock after HTTPS retrieval until Sigstore verification is
 available.
 
 The system pkg-config implementation is `org.pkgconf.pkgconf`. It provides both
-the `pkgconf` and `pkg-config` command names, the Autoconf `pkg.m4` macros, and
-the `bomtool`, `spdxtool` and `pccritic` metadata utilities. Installing it
-replaces the earlier unqualified `pkgconf` package. The independently usable
-shared library is `org.pkgconf.libpkgconf`; public headers, linker name and
+the `pkgconf` and `pkg-config` command names and the `bomtool`, `spdxtool` and
+`pccritic` metadata utilities. Install `org.pkgconf.pkgconf-devel` when
+regenerating Autoconf builds that need the `pkg.m4` macros. The independently
+usable shared library is `org.pkgconf.libpkgconf`; public headers, linker name and
 pkg-config metadata are in `org.pkgconf.libpkgconf-devel`, with the static
 archive in `org.pkgconf.libpkgconf-static`. Matching source, debuginfo and
 debugsource packages are published alongside the family.
