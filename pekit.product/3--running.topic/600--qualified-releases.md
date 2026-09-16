@@ -155,3 +155,33 @@ Unknown rules, parameter names and empty reasons are rejected. This policy does
 not bypass build failures, test gates, source verification, archive signatures or
 repository checks. Ordinary `pekit lint` continues to enforce its configured
 package policy; these allowances apply only to release reference builds.
+
+
+## Test prerequisites and coverage
+
+A package gate must distinguish an unavailable worker prerequisite from a
+product failure. Check the concrete prerequisite, retain its diagnostic and
+identify every affected assertion. Do not turn an arbitrary failed test into
+a skip or describe accepted exceptions as upstream passes.
+
+Build workers have limited identity maps and do not run Peios authority services.
+Perl's native hostname fixture compares its wrapper result with a direct libc
+lookup: missing localhost resolution skips nine lookup assertions, while a
+wrapper failure with working libc resolution still fails. Rsync checks mapped
+identities and procfs ownership before selecting affected cases; its allocation
+tests use a compiled filesystem probe when native Python has no ctypes module.
+The remaining transfer and security assertions still run. Testing a blocked case
+on a suitable host provides additional evidence, separately identified from the
+isolated package gate.
+
+Record the scope of each suite. For example, cbindgen's library/binary unit tests
+and generated C/C++ header checks do not establish its complete fixture or Cython
+coverage. Kmod's native LLVM-generated alias fixtures can differ in entry order;
+the gate checks the exact known diagnostics, identical alias sets, unchanged
+module dependency data and preserved module precedence. It retains the raw
+upstream discrepancy and rejects other failures.
+
+Passing build, test and signed-archive checks establishes package qualification.
+Repository-wide dependency closure, independently repeated builds, service
+integration, privileged kernel behavior and image lifecycle checks remain
+separate release requirements where applicable.
