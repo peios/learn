@@ -19,6 +19,15 @@ requested package set against the configured repositories' indexes, and
 writes a **lock**: the pinned closure, with each package's URL, hash and
 declared sizes, and the trust state of every repository it draws from.
 
+The source scan includes authenticated archive indexes when either a manifest
+constraint or a dependency declared by an active or local candidate can need
+historical versions. An unconstrained request for a development package can
+therefore resolve the older runtime revision it requires exactly. Shared scans
+check all candidates because a later lock can select a different closure from
+the same source universe; the scan remains immutable between locks. Repositories
+may omit archive indexes, but a dependency requiring an unavailable historical
+version still fails resolution.
+
 **Build** reads the lock, fetches each package, checks its bytes against
 the hash the lock recorded, verifies its signature against the trust
 state the lock carries for its source, and assembles the tree —
