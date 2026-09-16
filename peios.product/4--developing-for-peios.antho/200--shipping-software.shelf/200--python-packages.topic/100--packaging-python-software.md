@@ -123,11 +123,14 @@ Flit Core and Setuptools bootstrap themselves with the system interpreter and
 test ecosystem. Initial bootstrap output is provisional: final package gates
 also require a separate `build.vendor` target and offline tests.
 
-The catalogue uses the same interpreter-derived `sysconfig` library path for
-installation and the first staged-module assertions. Native Peios checks also
-require `/usr/lib/x86_64-linux-peios/python<major>.<minor>/site-packages` for the
-running interpreter. Debian reference paths are accepted for reference tests;
-the Peios-specific package file mappings continue to select only native payloads.
+The catalogue installer and staged-module checks share the distribution path
+`/usr/lib/x86_64-linux-peios/python<major>.<minor>/site-packages`, using the
+executing interpreter's major/minor version. Native Python must also report
+that exact path through `sysconfig`. Debian reference builds stage the same
+package layout instead of their interpreter's `/usr/local` installation default;
+their gates import explicitly from that staged location. Only native archives
+are eligible for promotion; reference bytecode is tied to the reference Python
+version and is not a substitute for a native package.
 
 Test-only Python tools are resolved during the explicit acquisition stage using
 Debian's packaged pip and TLS trust. The selected backend version constrains the
