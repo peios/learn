@@ -425,6 +425,13 @@ provenance of its inputs, recipe, and builder. Both are covered in
 rename with the recipe's
 [`[source_package]`](~pekit/reference/recipe-format#source-package) table.
 
+Corresponding-source bundles preserve relative dangling symlinks used by upstream
+test fixtures, provided every component remains inside the exported tree. Both
+publication and `rebuild.py` reject absolute targets, escaping traversal, cycles
+and non-directory parents. A missing link target is not a missing declared input:
+all declared files and the original link text still undergo identity checks.
+Compact prepared-source archives apply the same checks within `source/`.
+
 ### Archive extraction
 
 Extraction is chosen by the artifact's **filename suffix**. Only these formats
