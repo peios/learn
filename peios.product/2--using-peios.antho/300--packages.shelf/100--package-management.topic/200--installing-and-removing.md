@@ -184,7 +184,9 @@ manuals are in `net.sourceforge.perfmon2.libpfm-devel`; the static encoder is
 in `net.sourceforge.perfmon2.libpfm-static`. Python bindings are not included.
 
 GNU Libtool's command-line tools, macros and support files are installed as
-`org.gnu.libtool`. The independently usable libltdl runtime is
+`org.gnu.libtool`. The configured `libtool` command records the target
+compiler and ABI paths, so this package is architecture-specific even though
+its commands are shell scripts. The independently usable libltdl runtime is
 `org.gnu.libtool-ltdl`; its headers and linker metadata are in
 `org.gnu.libtool-ltdl-devel`, with the static archive in
 `org.gnu.libtool-ltdl-static`.
@@ -222,6 +224,11 @@ reference are included with the command. The command reference is generated
 from the packaged executable's help output. Ninja uses the system shell to
 execute build rules, so the package depends on `org.git.kernel.dash`; matching
 source, debuginfo and debugsource packages are published alongside it.
+
+IANA timezone data is installed as `org.iana.tzdata` under
+`/usr/share/zoneinfo`. The build uses the backward-compatible fat TZif format
+so older timezone compilers preserve final transitions that change daylight
+saving status or an abbreviation without changing the UTC offset.
 
 The numactl command suite is installed as `io.github.numactl.numactl`. The
 shared libnuma runtime is `io.github.numactl.libnuma`; its headers, linker
