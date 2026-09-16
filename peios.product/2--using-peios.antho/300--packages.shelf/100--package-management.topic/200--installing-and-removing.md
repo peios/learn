@@ -77,6 +77,19 @@ Peipkg normalizes POSIX ownership and mode metadata, `find` predicates such as
 `-user`, `-group` and `-perm` inspect that compatibility metadata; they do not
 query KACS policy and must not be used as authorization checks.
 
+GNU Bison's parser generator, `yacc` frontend and parser skeletons are in
+`org.gnu.bison`. Install `org.gnu.bison-devel` when a project uses the
+traditional `liby.a` convenience library or the `bison-i18n.m4` Autoconf macro.
+Generated-parser message catalogs are independently available through
+`org.gnu.bison-runtime`.
+
+GNU Binutils' assembler, linker and object tools are in `org.gnu.binutils`;
+headers, linker names and static libraries are in `org.gnu.binutils-devel`.
+The optional profiler is `org.gnu.binutils-gprofng`, including its command
+manuals. Its library's linker name and static archive are separately available
+in `org.gnu.binutils-gprofng-devel`, which also installs the matching profiler
+runtime. Ordinary compiler builds do not need the profiler.
+
 The Flex scanner generator is `io.github.westes.flex`; its `flex++` frontend
 is included with the command. The independently usable libfl runtime is
 `io.github.westes.flex-libs`, while `io.github.westes.flex-devel` adds the C++
