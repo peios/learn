@@ -52,6 +52,31 @@ Related payloads retain that canonical base. For example,
 `org.sourceware.elfutils-devel` carries their development interfaces without
 requiring the command-line tools to be installed.
 
+The elfutils tools include command manuals and `eu-make-debug-archive` for
+preparing an offline debugging archive. To archive one executable, use
+`eu-make-debug-archive debug.a -e /path/to/program`; its debugging information
+must be available. The optional `--sudo` mode requires a separately installed
+and authorized privilege helper. The debuginfod service/client and stackprof
+components are not included in this family.
+
+GNU C Library administration commands and their manuals are in
+`org.gnu.glibc-bin`. Profiling and tracing commands, including the Perl-based
+`mtrace`, are in `org.gnu.glibc-utils`. Extra legacy character converters are
+in `org.gnu.glibc-gconv-extra`, and the reference manual is in
+`org.gnu.glibc-doc`. These utilities retain Peios's fixed authority and resolver
+providers; installing them does not make local passwd files an account authority.
+
+Libtraceevent's library symbols are in `org.linux.traceevent-libs-debuginfo`,
+while plugin symbols are in `org.linux.traceevent-debuginfo`. The tracing
+libraries provide their API manuals and HTML documentation through their
+respective `-doc` packages.
+
+Mozilla root-certificate data is installed by `org.mozilla.ca-certificates`
+at `/usr/share/ca-certificates/mozilla.crt`. The package supplies server-authentication
+roots from the tracked Firefox release data; it does not install machine trust
+policy by itself. A flat PEM store cannot express Mozilla's per-root distrust
+dates, so loading it alone does not reproduce every Firefox trust restriction.
+
 The eudev family follows the same rule: `io.github.eudev-project.eudev`
 contains the daemon, tools, rules and Peios service integration;
 `io.github.eudev-project.eudev-libudev` contains the runtime library; and
