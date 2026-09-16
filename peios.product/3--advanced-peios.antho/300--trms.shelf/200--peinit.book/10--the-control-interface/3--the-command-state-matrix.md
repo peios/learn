@@ -77,8 +77,9 @@ hold, in which case the service starts; or it may still not, in which
 case the service is skipped again, for whatever reason applies now.
 
 The clear is reported like any other transition, so a console watching
-the service sees it leave Skipped rather than appearing to jump.
-[*dispatch.the-skipped-clear-is-reported-as-a-transition]
+the service sees it leave Skipped rather than appearing to jump:
+`peinit: service X left skipped: ExplicitStart`, before the start's own
+lines. [*dispatch.the-skipped-clear-is-reported-as-a-transition]
 
 `reset` also clears Skipped, and differs only in stopping there.
 [*dispatch.reset-clears-skipped-and-stops-there]
