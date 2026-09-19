@@ -224,6 +224,17 @@ CPython source authentication retains its existing explicit limitation: the upst
 The completed CPython 3.14.7 qualification reports 46,527 tests and 2,282 skips in the reference root, and 46,489 tests and 2,360 skips in the native root, with zero failures or errors. The native root additionally reports perf trampoline profiling as unsupported. Focused replays recover 10 reference namespace prerequisite skips and 57 native prerequisite skips: 29 forward hostname, one reverse lookup, 10 passwd-record, 13 CGI-account, one named-root-account and three namespace-ID cases. Other reported skips retain upstream platform, optional-feature and optional-resource reasons. These results establish build/test/archive qualification, not public repository installation or release acceptance.
 
 
+### LLVM 18 experimental constant interpreter
+
+LLVM 18's opt-in `-fexperimental-new-constant-interpreter` can leak wide-integer storage when function evaluation fails or speculative evaluation stops partway through an expression. The retained compatibility lane records this [upstream limitation](https://github.com/llvm/llvm-project/issues/139012); it does not carry the broader interpreter allocation and stack-lifetime rewrite.
+
+The supplemental LeakSanitizer diagnostic failed, reporting 120 and 176 leaked bytes in its positive and negative experimental-interpreter corpora. These results remain failed and visible. Across 128 comparisons of the original and privately instrumented compiler, both leak classes also reproduced without the generic counting builtins. No sanitizer suppression or passing result replaces that evidence.
+
+Both full default-interpreter diagnostic corpora and the bounded direct-builtin controls were clean under validated LeakSanitizer. The private assertion compile, link and deliberate-failure control also passed. These checks cover their recorded inputs; they do not establish universal leak freedom or a fully assertion-enabled compiler build.
+
+Recording this limitation does not waive the configured package gates, signed-archive checks or installed Clang dependency-closure checks. Those requirements remain separate from the disposition of this supplemental experimental-interpreter diagnostic.
+
+
 ### Development package closures
 
 A development package must install every file named by its exported build metadata. Some upstream CMake configurations load shared and static imported targets together, even when the consumer requests only a shared library. For these SDKs, the matching development package owns both the unversioned shared-library link and the static archive. Zstd, Capstone and both zlib-ng API variants follow this layout. Their existing static package names remain installable umbrellas depending on the complete SDK.
