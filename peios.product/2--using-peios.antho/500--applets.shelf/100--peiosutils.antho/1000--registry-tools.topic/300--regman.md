@@ -71,6 +71,29 @@ Values
 
 So you can start at a subtree, see what is configurable there, and drill into any single value.
 
+## Keys that come in families
+
+Much of the registry is not at a fixed path. Every service has a key under `Machine\System\Services\`, every interface one under `Machine\System\Network\Interfaces\`, every principal one under `Machine\Generic\Authn\Policy\`. You ask about a real one — `sshd`, an interface id — and the documentation is written once for the whole family.
+
+`regman` resolves that for you. Ask about the concrete path and you get the family's page:
+
+```
+$ regman Machine\System\Services\sshd ImagePath
+
+Machine\System\Services\<name> ImagePath              documented by peinit
+
+  Type     REG_SZ
+  Default  (required)
+  Valid    a non-empty absolute path
+  Applies  restart
+
+Absolute path to the service binary.
+```
+
+The heading keeps the `<name>` so you can see you have been handed the page for the family rather than one written about `sshd` specifically. Everything on the card applies to the key you asked about.
+
+If a package *has* documented your exact key — its own service's knob, a particular principal's privileges — that page wins instead, and the heading shows the concrete path. The more specific documentation always answers.
+
 ## Searching, when you do not know the path
 
 If you don't know where a setting lives, `regman -k` searches names and summaries — the registry's `apropos`:

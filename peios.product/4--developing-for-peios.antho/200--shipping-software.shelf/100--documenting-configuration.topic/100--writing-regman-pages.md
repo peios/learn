@@ -103,6 +103,56 @@ A **value doc** documents one knob. The four value fields are what fill in its c
 > [!NOTE]
 > `regman` renders field values **verbatim** — it does not reformat them. If you want the default to read `1024 (1 K jobs)`, write exactly that into the `default:` field. The card shows what you wrote.
 
+### Documenting a family of keys
+
+Plenty of configuration isn't at a fixed path. A service definition lives at
+`Machine\System\Services\<name>`, an interface's record at
+`Machine\System\Network\Interfaces\<ifid>`, a principal's policy at
+`Machine\Generic\Authn\Policy\<SID>`. There is one thing to explain and an open
+set of paths to explain it at, and the operator asking will name a real one —
+`sshd`, not `<name>`.
+
+Write the varying component in angle brackets and `regman` treats it as a
+**wildcard** matching exactly one path component:
+
+```
+--- machine\system\services\<name> imagepath
+canonical: Machine\System\Services\<name> ImagePath
+type: REG_SZ
+default: (required)
+valid: a non-empty absolute path
+applies: restart
+
+Absolute path to the service binary.
+```
+
+`regman Machine\System\Services\sshd ImagePath` now answers with that card, and
+`regman Machine\System\Services\sshd` renders the family's key doc with its
+whole `Values` index. The heading still shows the canonical — the reader can
+see they've been handed the generic page, which is the honest thing to show.
+
+Four things worth knowing:
+
+- **One component, never a path tail.** `\X\<Y>\Z` answers for `\X\B\Z` and not
+  for `\X\B\C\Z`. A wildcard also never spans the space between a key path and
+  a value name, so it cannot swallow a value it wasn't meant to cover.
+- **The name inside is for the reader.** `<name>`, `<ifid>` and `<x>` behave
+  identically; pick the one that documents itself.
+- **A concrete record wins.** If some package documents
+  `Machine\System\Services\sshd ImagePath` outright, that page answers instead
+  of the generic one — the same most-specific-match rule as a port reservation
+  selector. Key docs and value docs are resolved separately, so a service that
+  ships its own key doc still gets the generic `Values` index beneath it.
+- **There is no escape for a literal `<…>`.** LCS permits `<` and `>` in a key
+  name, so a key genuinely spelled `<Y>` can't be told apart from a wildcard.
+  In practice nobody names a key that, and the notation was already how these
+  docs wrote a varying component by hand.
+
+Use a wildcard for a family whose members share their whole meaning, which is
+the usual case. Where one member genuinely differs — a specific service's own
+knob, a particular principal's privileges — document that one concretely and
+let specificity do the rest.
+
 ### The body's first line is the summary
 
 There is no `summary:` field. The **first non-empty line of the body** is taken as the one-sentence summary — it is what shows next to the value name in a key doc's index and in `regman -k` search results. So write the body like a good commit message or docstring: lead with one self-contained sentence, then elaborate in the paragraphs below.
