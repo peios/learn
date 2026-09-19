@@ -242,3 +242,17 @@ A development package must install every file named by its exported build metada
 Imported executable targets also belong to the dependency contract. Capstone's SDK declares the package containing cstool. LLVM's SDKs similarly declare the tools referenced by their CMake exports, as well as external development libraries needed by exported components. Dependencies select matching same-family revisions, without cycles.
 
 Package gates derive a minimal SDK prefix from the declared file mappings and same-family dependency closure. They configure, link and execute shared/static consumers against that prefix. Exact imported paths and linkage are checked, so unrelated staged files cannot conceal an incomplete package split. Independent qualification audits also compose signed package archives with their real resolver dependencies. Passing a consumer against the unsplit build installation alone does not establish that a separately installed SDK works.
+
+Independent installed-package checks compose the signed dependency closure with
+an explicit signed `dev.peios.fsbase` platform package, which supplies the
+filesystem and executable-interpreter layout. The platform package is part of
+the recorded test root. Tests must not invent `/bin` aliases or import host
+files to make an incomplete installed closure work.
+
+Ninja consumer checks must execute both ordinary rules and console-pool rules
+through its declared `/usr/bin/sh`; a version or help check alone does not test
+command execution. Compiler and SDK consumers must use ordinary compiler and
+exported build flags. A diagnostic that forces standard-header search paths
+does not establish that the installed SDK discovers those headers correctly.
+
+Installed-driver success alone does not establish SDK qualification. The corresponding recorded consumer checks must pass before that claim is made.
