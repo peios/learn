@@ -262,25 +262,29 @@ Everything installs under `/usr/src/dist/<name>-<version>/` (with any
   reconstruction tool restores source modes after all hashes verify.
 
 Small source bundles use schema 2. At 90,000 payload entries, Pekit uses
-schema 3 and stores the prepared tree in a deterministic, uncompressed
-`prepared-source.tar` inside the compressed package. Pristine upstream archives
-and individual source hashes, modes and link targets remain included. This keeps
-the outer package within Peipkg's 100,000-entry limit without dropping tests or
-other source files. A prepared archive exceeding 4 GiB, an identity manifest
-exceeding 64 MiB, or too many remaining non-source entries fails packaging.
+schema 4 and stores the prepared tree in deterministic `prepared-source.tar.gz`.
+Compressing this inner archive leaves room for the pristine upstream archives
+and acquisition inputs within the outer package's 4 GiB decompressed limit.
+Individual source hashes, modes and link targets remain included. This also
+keeps the outer package within Peipkg's 100,000-entry limit without dropping
+source files. Both the compressed prepared archive and its decoded tar stream,
+including headers and padding, are limited to 4 GiB. Too many remaining
+non-source entries or an identity manifest exceeding 64 MiB fails packaging.
 The identity manifest uses readable JSON when it fits, and compact JSON when
 removing whitespace is needed to fit the same limit. Every recorded identity and
 metadata field is preserved; compact manifests that still exceed the limit fail.
 
-`rebuild.py` accepts both schemas. For schema 3 it checks the archive hash before
-reading it, extracts into a fresh temporary directory and verifies every member
-against the identity manifest before moving the tree into place. Missing,
-duplicate, escaping, sparse, hard-link and special-file entries fail verification.
-Relative symlinks must resolve within the prepared tree. Extraction does not use
-`tar.extractall`; it bounds paths, sizes and extended-header reads. An existing
-prepared tree is verified before reuse. Verify the outer package signature before
-running any included script: these checks detect changed inputs and do not make
-an unsigned script trustworthy.
+`rebuild.py` accepts schemas 2, 3 and 4. Historical schema-3 bundles retain their
+uncompressed `prepared-source.tar`. For either archived form, it checks the
+archive hash before reading it, extracts into a fresh temporary directory and
+verifies every member against the identity manifest before moving the tree into
+place. Missing, duplicate, escaping, sparse, hard-link and special-file entries
+fail verification. Relative symlinks must resolve within the prepared tree.
+Extraction does not use `tar.extractall`; it bounds paths, decoded bytes and
+extended-header reads. Compressed streams are checked through their trailer,
+including the checksum. An existing prepared tree is verified before reuse.
+Verify the outer package signature before running any included script: these
+checks detect changed inputs and do not make an unsigned script trustworthy.
 
 An isolated job copies shared helpers before any target runs. Workers consume
 those read-only copies, and the source package contains the same bytes. Recipe
