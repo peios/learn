@@ -65,6 +65,30 @@ LLVM SDK; the retained Rust 1.83 lane continues to use Debian stable. The select
 policy identity, and the resolved image digest, package closure and root archive
 remain recorded. Recipe-local environment files cannot override this policy.
 
+Some first-party reference builds need Peios SDK interfaces or a newer Rust
+compiler than Debian supplies. For explicitly supported families, the coordinator
+adds independently qualified, signed **Debian-built** SDK/compiler archives to a
+Debian sid root. Debian supplies its own system runtime and build tools. The
+native Peios provider remains independently required; its binaries are not used
+to satisfy the Debian reference check.
+
+The selection records package receipts, signatures, archive hashes, matching SDK
+source and UAPI inputs, resolved runtime libraries and consumer checks. Only
+wildcard Cargo/Rust APT requests are substituted; unsupported explicit constraints
+or file collisions fail. Each job captures its selection before its first root
+and reuses that exact selection across targets. A new default therefore affects
+new jobs while existing jobs continue unchanged. Historical source replay uses
+the captured selection and root archive, not the current operator default.
+The default selection is coordinator-owned state; upstream recipes cannot choose
+an alternate manifest or trust key. Automatic refreshing of that default is a
+separate coordinator integration and is not established by these build results.
+
+Native Rust service builds use compiler-generated CET instrumentation, with
+ABI-checked minimum SDK versions rather than exact patch-version requirements.
+The Go compiler/runtime currently does not provide equivalent IBT and shadow-stack
+support; the Go services retain explicit source-owned CET and RELR limitations.
+Passing their package gates does not establish hardware CET enforcement.
+
 The Rust recipes obtain their exact bootstrap compiler, Cargo and standard library
 from the checksums in `src/stage0` of the authenticated upstream source release.
 Acquisition runs in the declared networked vendor step; seed verification,
