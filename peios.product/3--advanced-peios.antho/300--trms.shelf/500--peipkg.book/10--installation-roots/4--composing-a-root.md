@@ -18,7 +18,7 @@ A TOML document with a schema version, declaring:
 | Key | Meaning |
 |---|---|
 | `arch` | The primary architecture, which becomes the composed database's recorded value |
-| `source_date` | The timestamp everything is stamped with |
+| `source_date` | The composition timestamp recorded in the package database and generated metadata |
 | `local_packages` | Globs of package files on the build host that join the candidate set — the bootstrap path |
 | `[[repository]]` | Name, base URL, priority, signature policy, trust anchors, transport allowance, minimum index version |
 | `[[root]]` | A name and a path, declaring a named root nested inside the output |
@@ -91,6 +91,18 @@ bound.
 payload layout against the fetched bytes, resolves claims, seeds the
 database, extracts payloads, and materialises claim links. The whole
 tree is built under a temporary name and renamed into place on success.
+
+Payload files and symlinks retain the archive's canonical modification time,
+which format verification requires to equal the package's `build.timestamp`.
+Declared directories are timestamped after extraction, claim links, and generated
+metadata are complete. A directory shared by several packages uses the newest
+owning package's timestamp, independent of extraction order. Symlink timestamp
+updates do not follow their targets. A filesystem that cannot represent the
+required timestamp causes composition to fail rather than silently changing it.
+
+This keeps an unchanged dependency closure stable across fresh build roots.
+Changing package identities must still invalidate reused build outputs: a newly
+selected package can contain different bytes with an older canonical timestamp.
 
 ## What it seeds
 
