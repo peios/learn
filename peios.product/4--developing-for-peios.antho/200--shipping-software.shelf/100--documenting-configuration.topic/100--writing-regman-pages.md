@@ -153,6 +153,74 @@ the usual case. Where one member genuinely differs — a specific service's own
 knob, a particular principal's privileges — document that one concretely and
 let specificity do the rest.
 
+#### When the family is a tree
+
+Some families nest. A [PNP rule](~peios/networking/network-policy)'s subkeys
+are exceptions, twelve deep at most; a [netd profile](~peios/networking/configuring-profiles)'s
+subkeys are derived profiles. The vocabulary doesn't change with depth — an
+exception is a rule, with the same values meaning the same things — so there is
+still one page to write, but no fixed number of `<…>` components reaches every
+member of it.
+
+Put `...` immediately inside the closing bracket and that component **spans
+separators**, matching one path component or many:
+
+```
+--- machine\system\network\rules\<layer>\<rule...> actions
+canonical: Machine\System\Network\Rules\<Layer>\<rule...> Actions
+type: REG_MULTI_SZ
+default: (absent or empty — NULL, the rule abstains)
+valid: one action expression per element
+applies: live — at the next generation
+
+What the rule does when it matches.
+```
+
+That answers for `Rules\Packet\ssh Actions` and for
+`Rules\Packet\ssh\from-lan\not-vpn Actions` alike. Note that `<Layer>` in the
+same anchor is still one component: the spanning form applies to the bracket it
+is written in, not to the record.
+
+The rules that matter:
+
+- **It still won't cross the space.** `<name...>` spans `\` and nothing else, so
+  a key-path wildcard can never eat the value name after it.
+- **It still needs at least one component.** `Rules\<Layer>\<rule...>` does not
+  answer for `Rules\Packet`, which has its own page.
+- **Narrower beats broader.** Concrete beats `<name>`, and `<name>` beats
+  `<name...>`. A page written for the top of a tree and a page written for the
+  whole tree can coexist; the narrower one answers where it applies, and no
+  "documented by 2 packages" warning appears.
+
+Reach for it only where the subtree really is a tree. A flat family —
+`Services\<name>`, `Policy\<SID>` — wants the plain form, which says something
+truer about the shape of the keys.
+
+#### A wildcard in the value name
+
+Nothing restricts a wildcard to the key path. PNP documents rule conditions
+this way: a condition's value name is `<Fact>.<Operator>`, so each fact gets one
+record with the operator left open —
+`Rules\<Layer>\<rule...> DstPort.<op>`, whose card covers `Equal`,
+`GreaterThan`, `LessThan` and `Present` at once.
+
+There is one trap, and it is worth knowing before you reach for this:
+
+> [!WARNING]
+> A wildcard stops at `\` and at a space, but **not at a dot**. So a record at
+> `Local.<op>` will also answer for `Local.User.Equal` — and if `Local.User` has
+> its own page, an operator asking about it gets both, flagged as though two
+> packages disagreed.
+
+Where one fact's name is a prefix of another's, write that one out per operator
+(`Local.Equal`, `Local.Present`) instead of wildcarding it. The rest of the
+family is unaffected.
+
+The other limit follows from the space rule: a value name that *contains* a
+space can't be reached by a wildcard at all. If the thing you are documenting
+has an optional-whitespace syntax, say so on the card and recommend the
+spelling that resolves.
+
 ### The body's first line is the summary
 
 There is no `summary:` field. The **first non-empty line of the body** is taken as the one-sentence summary — it is what shows next to the value name in a key doc's index and in `regman -k` search results. So write the body like a good commit message or docstring: lead with one self-contained sentence, then elaborate in the paragraphs below.
