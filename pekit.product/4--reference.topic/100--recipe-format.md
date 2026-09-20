@@ -79,6 +79,7 @@ The recipe file accepts exactly these top-level keys. Anything else is an
 | `env` | table | no | Environment variables exported to every target command. See [`[env]`](#env). |
 | `wrap` | table | no | Command wrapper applied to every target. See [`[wrap]`](#wrap). |
 | `source` | table | no | Where the recipe's source tree comes from. See [`[source]`](#source). |
+| `input` | table | no | Additional authenticated upstream inputs, keyed by name. See [`[input.<name>]`](#input-name). |
 | `delegate` | bool or table | no | Borrow build/env/wrap/package definitions from the source tree. See [`[delegate]`](#delegate). |
 | `source_package` | table | no | Corresponding-source package emission control. See [`[source_package]`](#source-package). |
 | `build` | table | no | Build target(s). See [`[build]` / `[test]` / `[install]` / `[clean]`](#build-test-install-clean-targets). |
@@ -238,6 +239,29 @@ signatures are verified before Pekit writes the version's lock entry.
 | Key | Type | Required | Meaning |
 | --- | --- | --- | --- |
 | `path` | string | **yes** | Path to the source directory, resolved relative to the recipe root. |
+
+### `[input.<name>]` {#input-name}
+
+An additional authenticated upstream, for a build that genuinely consumes more
+than one. A recipe may declare any number, each under its own name. Names are
+lower-case alphanumeric words separated by hyphens (`invalid_name` otherwise),
+and must stay distinct after upper-casing and mapping `-` to `_`, because that
+is the `$PEKIT_INPUT_<NAME>` a target reads.
+
+Accepts the same keys as [`[source.url]`](#source-url), including a nested
+`signature` table, with two differences:
+
+| Difference | Meaning |
+| --- | --- |
+| `versions` | Must pin exactly one version — `"= 7.0.9"` or a bare `"7.0.9"`. A range is `invalid_versions`: inputs are never selected by `--latest` or `--all-versions`. |
+| `patch_series` | Not accepted (`unknown_key`). A patch series applies to the source tree. |
+
+`{{version}}` inside an input block renders that input's own version, never the
+recipe's. Each input is fetched, signature-checked and pinned in
+[`pekit.lock`](~pekit/reference/supporting-files#pekit-lock) as an `[[input]]`
+entry, materialised at `$PEKIT_INPUT_<NAME>`, bind-mounted read-only under
+isolation, and carried in the source package under `upstream/<name>/`. See
+[Additional inputs](~pekit/recipes/sources#additional-inputs).
 
 ### `[delegate]`
 

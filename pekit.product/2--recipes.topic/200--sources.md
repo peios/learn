@@ -254,6 +254,64 @@ path = "../widget-checkout"
 with only `[source.local]` cannot be pinned or enumerated. The local tree is
 only used when a local flag selects it — see below.
 
+## Additional inputs
+
+A recipe has one source. When a build genuinely consumes a second upstream,
+declare it as an **input**: `[input.<name>]`. The Peios kernel is the case this
+exists for — it is built from the pkm tree *and* the pristine Linux tarball, and
+neither is the other's patch series.
+
+An input is a `[source.url]` addressed by a name. It takes the same fields,
+including a `signature` block, and pekit puts it through the same download,
+the same signature verification and the same lockfile pinning.
+
+```toml
+[input.linux]
+url         = "https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-{{version}}.tar.xz"
+listing_url = "https://cdn.kernel.org/pub/linux/kernel/v7.x/"
+file_regex  = 'linux-[0-9]+\.[0-9]+(?:\.[0-9]+)?\.tar\.xz'
+versions    = "= 7.0.9"
+extract     = true
+root        = "linux-{{version}}"
+
+[input.linux.signature]
+url          = "https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-{{version}}.tar.sign"
+of           = "decompressed"
+key_files    = ["keys/greg-kroah-hartman.asc"]
+fingerprints = ["647F28654894E3BD457199BE38DBBDC86092693E"]
+```
+
+Three things differ from a source:
+
+- **An input carries its own version.** `{{version}}` inside an input block is
+  that input's version, never the recipe's. The two move independently.
+- **An input is pinned, not discovered.** Its `versions` must name exactly one
+  version — `"= 7.0.9"`, or a bare `"7.0.9"`. A range is rejected
+  (`invalid_versions`), because an input is never swept by `--latest` or
+  `--all-versions`. Moving one is a deliberate edit.
+- **An input takes no patch series.** Patches apply to the source tree.
+
+Targets read the materialised input at **`$PEKIT_INPUT_<NAME>`**, upper-cased
+with hyphens becoming underscores, so `[input.linux]` is `$PEKIT_INPUT_LINUX`.
+With `extract = true` it is the extracted tree, with `root` naming the directory
+to promote; otherwise it is a directory holding the downloaded file. Under
+isolation each input is bind-mounted read-only, so a target reads exactly the
+verified bytes and cannot alter them.
+
+```toml
+[build.upstream]
+command = 'cp -a "$PEKIT_INPUT_LINUX/." "$PEKIT_OUT/"'
+```
+
+Because pekit fetches and verifies inputs itself, before any build root exists,
+a build needs no network access and no PGP implementation of its own — which is
+what lets the same recipe work identically on a native rung and on a Debian
+reference rung, where only Debian packages are installed.
+
+Each input's pristine archive is carried in the recipe's
+[source package](#source-packages) under `upstream/<name>/`, and its hash is in
+the lockfile, so a recipient can verify those bytes independently.
+
 ## Selecting the local override
 
 Two invocation flags choose the local override; they resolve differently and are
@@ -406,6 +464,21 @@ ceremony, never automatic for ordinary git and URL sources:
 ```text
 pekit lock --repin --version 1.2.0
 ```
+
+[Additional inputs](#additional-inputs) are pinned in the same file, in their
+own `[[input]]` entries keyed by name rather than by version:
+
+```toml
+[[input]]
+  name = "linux"
+  version = "7.0.9"
+  url = "https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-7.0.9.tar.xz"
+  sha256 = "ac07acdf76cf4621cc5187a2670270a1a699533c8a6b225e4878c416ad83f1c4"
+  signature_key = "647f28654894e3bd457199be38dbbdc86092693e"
+```
+
+An input asserts the same thing a url source does — these bytes, verified by
+this key — and stops the same way when they change.
 
 Commit the lockfile with the recipe. Local sources, dry runs, and git sources
 without a selected version (a bare branch ref is a deliberately moving target)

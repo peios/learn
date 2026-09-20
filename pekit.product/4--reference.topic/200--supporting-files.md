@@ -258,6 +258,7 @@ is `unknown_key` and an unsupported `schema` is `lock_schema`.
 | --- | --- | --- |
 | `schema` | integer | Lockfile schema version. Currently `1`. |
 | `[[source]]` | array of tables | One entry per locked version, kept sorted by version. |
+| `[[input]]` | array of tables | One entry per [`[input.<name>]`](~pekit/reference/recipe-format#input-name), kept sorted by name. |
 
 Each `[[source]]` entry carries the keys for its source kind:
 
@@ -275,6 +276,18 @@ Each `[[source]]` entry carries the keys for its source kind:
 | `signature_key` | url sources with `[source.url.signature]` | Hex fingerprint of the pinned upstream key that verified the artifact at lock time. |
 | `[[source.patch]]` | url sources with `[source.url.patch_series]` | Ordered patch inputs applied for this version. Each carries `url`, `sha256`, and optional `signature_key` with the same meanings as the base artifact fields. |
 | `locked_at` | all | UTC timestamp of the pinning run (RFC 3339). |
+
+Each `[[input]]` entry is addressed by name rather than version, and asserts
+what a url `[[source]]` entry does:
+
+| Key | Meaning |
+| --- | --- |
+| `name` | The input's name, matching its `[input.<name>]` table. |
+| `version` | The version its `versions` constraint pins. A recipe edit that moves it is a `lock_mismatch` until repinned. |
+| `url` | The rendered URL fetched at lock time. Provenance only. |
+| `sha256` | SHA-256 of the fetched artifact — the assertion. |
+| `signature_key` | Hex fingerprint of the pinned upstream key that verified it, when a `signature` block is configured. |
+| `locked_at` | UTC timestamp of the pinning run (RFC 3339). |
 
 ### Worked example
 
