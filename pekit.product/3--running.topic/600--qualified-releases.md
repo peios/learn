@@ -65,6 +65,23 @@ LLVM SDK; the retained Rust 1.83 lane continues to use Debian stable. The select
 policy identity, and the resolved image digest, package closure and root archive
 remain recorded. Recipe-local environment files cannot override this policy.
 
+The Rust recipes obtain their exact bootstrap compiler, Cargo and standard library
+from the checksums in `src/stage0` of the authenticated upstream source release.
+Acquisition runs in the declared networked vendor step; seed verification,
+compilation and toolchain tests run offline. The source bundle retains the seed
+archives, their selected versions and installed binary identities. The rolling
+Rust recipe follows the bootstrap version selected by each new upstream release;
+it does not require a separately maintained bootstrap-package revision. Rust
+1.83 remains an explicit kernel-toolchain pin that requires a coordinated kernel
+transition to change.
+
+Rust qualification includes bounded upstream programs and compiler, runtime,
+FFI, procedural-macro and rustdoc regressions. Installed-package acceptance also
+compiles and runs a consumer using the signed declared dependency closure. The
+rolling lane additionally checks its advertised musl standard-library target as
+a static PIE. These checks do not certify the entire upstream compiler suite,
+independent compiler reproducibility or hardware-enforced CET.
+
 All declared release gates and applicable generated-file checks must pass.
 Configured recipe and payload lint must be enabled. Payload lint reads frozen
 signed archives, including generated links and packaging transformations; it
