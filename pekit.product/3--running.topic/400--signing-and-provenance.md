@@ -268,6 +268,9 @@ and individual source hashes, modes and link targets remain included. This keeps
 the outer package within Peipkg's 100,000-entry limit without dropping tests or
 other source files. A prepared archive exceeding 4 GiB, an identity manifest
 exceeding 64 MiB, or too many remaining non-source entries fails packaging.
+The identity manifest uses readable JSON when it fits, and compact JSON when
+removing whitespace is needed to fit the same limit. Every recorded identity and
+metadata field is preserved; compact manifests that still exceed the limit fail.
 
 `rebuild.py` accepts both schemas. For schema 3 it checks the archive hash before
 reading it, extracts into a fresh temporary directory and verifies every member
