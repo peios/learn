@@ -258,7 +258,7 @@ is `unknown_key` and an unsupported `schema` is `lock_schema`.
 | --- | --- | --- |
 | `schema` | integer | Lockfile schema version. Currently `1`. |
 | `[[source]]` | array of tables | One entry per locked version, kept sorted by version. |
-| `[[input]]` | array of tables | One entry per [`[input.<name>]`](~pekit/reference/recipe-format#input-name), kept sorted by name. |
+| `[[input]]` | array of tables | One entry per locked version of each [`[input.<name>]`](~pekit/reference/recipe-format#input-name), kept sorted by name and then version. |
 
 Each `[[source]]` entry carries the keys for its source kind:
 
@@ -277,13 +277,14 @@ Each `[[source]]` entry carries the keys for its source kind:
 | `[[source.patch]]` | url sources with `[source.url.patch_series]` | Ordered patch inputs applied for this version. Each carries `url`, `sha256`, and optional `signature_key` with the same meanings as the base artifact fields. |
 | `locked_at` | all | UTC timestamp of the pinning run (RFC 3339). |
 
-Each `[[input]]` entry is addressed by name rather than version, and asserts
-what a url `[[source]]` entry does:
+Each `[[input]]` entry is addressed by name and version, and asserts what a url
+`[[source]]` entry does. The entries include inputs declared by a delegated
+source tree, which are pinned here, in the delegating recipe's lock:
 
 | Key | Meaning |
 | --- | --- |
 | `name` | The input's name, matching its `[input.<name>]` table. |
-| `version` | The version its `versions` constraint pins. A recipe edit that moves it is a `lock_mismatch` until repinned. |
+| `version` | The version its `versions` constraint pins. Moving the constraint adds an entry the first time the new version resolves. Existing entries stay, so builds that still name an older version keep verifying against it. |
 | `url` | The rendered URL fetched at lock time. Provenance only. |
 | `sha256` | SHA-256 of the fetched artifact — the assertion. |
 | `signature_key` | Hex fingerprint of the pinned upstream key that verified it, when a `signature` block is configured. |

@@ -312,6 +312,30 @@ Each input's pristine archive is carried in the recipe's
 [source package](#source-packages) under `upstream/<name>/`, and its hash is in
 the lockfile, so a recipient can verify those bytes independently.
 
+### Inputs in a delegated source
+
+A source tree that carries its own `pekit.toml` can declare inputs there, next
+to the targets that read them. When a recipe delegates its build to that tree
+(`delegate = true`, or `build = true` in a `[delegate]` table), the source's
+inputs come with the borrowed targets. The Peios kernel works this way: pkm
+declares `[input.linux]` with kernel.org's signing key committed beside it, so
+the Linux release it is derived from moves in the same commit as its patch
+series, and the catalogue recipe that builds it stays a pointer.
+
+- **The delegating recipe does the fetching and pinning.** Pins go in its own
+  `pekit.lock`, the one record of everything the build consumed. The source
+  tree is never written to.
+- **Keys resolve where they were declared.** A relative `key_files` path names
+  a file beside the source's `pekit.toml`, and lint reports the source's
+  inputs against that file.
+- **A recipe input overrides by name.** If the delegating recipe declares an
+  input with the same name, it replaces the source's input as a whole, the
+  same rule that governs delegated targets.
+
+Because each release of the source can name its own input version, the lock
+keys input pins by name *and* version. Building an older release verifies
+against the pin that release recorded.
+
 ## Selecting the local override
 
 Two invocation flags choose the local override; they resolve differently and are
@@ -466,7 +490,7 @@ pekit lock --repin --version 1.2.0
 ```
 
 [Additional inputs](#additional-inputs) are pinned in the same file, in their
-own `[[input]]` entries keyed by name rather than by version:
+own `[[input]]` entries keyed by name and version:
 
 ```toml
 [[input]]
@@ -478,7 +502,10 @@ own `[[input]]` entries keyed by name rather than by version:
 ```
 
 An input asserts the same thing a url source does — these bytes, verified by
-this key — and stops the same way when they change.
+this key — and stops the same way when they change. Moving an input to a new
+version is an edit to its `versions` constraint. The new version is verified and
+pinned the first time it resolves, like a new version of a source, and the old
+pin stays.
 
 Commit the lockfile with the recipe. Local sources, dry runs, and git sources
 without a selected version (a bare branch ref is a deliberately moving target)

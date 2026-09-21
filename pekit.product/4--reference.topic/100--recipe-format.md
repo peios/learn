@@ -260,8 +260,13 @@ Accepts the same keys as [`[source.url]`](#source-url), including a nested
 recipe's. Each input is fetched, signature-checked and pinned in
 [`pekit.lock`](~pekit/reference/supporting-files#pekit-lock) as an `[[input]]`
 entry, materialised at `$PEKIT_INPUT_<NAME>`, bind-mounted read-only under
-isolation, and carried in the source package under `upstream/<name>/`. See
-[Additional inputs](~pekit/recipes/sources#additional-inputs).
+isolation, and carried in the source package under `upstream/<name>/`.
+
+When a recipe delegates `build`, the fetched source tree's own `[input.<name>]`
+tables are part of the build too. The delegating recipe resolves and pins them
+in its own `pekit.lock`, and their `key_files` resolve beside the source's
+`pekit.toml`. A recipe input with the same name replaces the source's as a
+whole. See [Additional inputs](~pekit/recipes/sources#additional-inputs).
 
 ### `[delegate]`
 
@@ -272,7 +277,7 @@ rather than in the recipe directory. May be written as a bare boolean
 | Key | Type | Required | Meaning |
 | --- | --- | --- | --- |
 | `all` | bool | no | Delegate everything (build, env, wrap, packages). |
-| `build` | bool | no | Delegate build targets. |
+| `build` | bool | no | Delegate build targets, together with the `[input.<name>]` tables the source declares for them. |
 | `env` | bool | no | Delegate `[env]`. |
 | `wrap` | bool | no | Delegate `[wrap]`. |
 | `packages` | bool | no | Delegate package definitions. |
