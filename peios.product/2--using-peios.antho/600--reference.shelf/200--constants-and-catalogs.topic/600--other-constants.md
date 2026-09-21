@@ -66,8 +66,9 @@ A session's `logon_type` field. The model is [Logon types](~peios/logon-sessions
 | `LOGON_TYPE_SERVICE` | 5 | Service running under a specific principal. |
 | `LOGON_TYPE_NETWORK_CLEARTEXT` | 8 | Network logon with a cleartext credential. |
 | `LOGON_TYPE_NEW_CREDENTIALS` | 9 | Keep the local identity; use alternative credentials outbound. |
+| `LOGON_TYPE_REMOTE_INTERACTIVE` | 10 | A graphical desktop on this machine, driven from somewhere else. |
 
-Values 1, 6, 7 and 10 upward are reserved.
+Values 1, 6, 7 and 11 upward are reserved.
 
 ## Elevation types
 

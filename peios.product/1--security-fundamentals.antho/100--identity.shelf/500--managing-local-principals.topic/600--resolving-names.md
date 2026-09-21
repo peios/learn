@@ -93,7 +93,7 @@ Membership comes in three kinds:
 
 **Stapled.** `Everyone`, `Authenticated Users`. Nothing records who is in them; `authd` adds them to every token it mints. Membership is a rule, not data, so there is no list to produce.
 
-**Session-scoped.** `Interactive`, `Network`, `Batch`, `Service`. These are not properties of an account at all, but of a *logon*: `jack` is in `Interactive` at the console and not in it over the network. No static answer exists even in principle, which is why they have no POSIX group id either.
+**Session-scoped.** `Interactive`, `Remote Interactive`, `Network`, `Batch`, `Service`. These are not properties of an account at all, but of a *logon*: `jack` is in `Interactive` at the console and not in it over the network. No static answer exists even in principle, which is why they have no POSIX group id either.
 
 The asymmetry that falls out is the useful one. *Which groups is this principal in* is cheap and always works. *Who is in this group* is best-effort, and a source is entitled to decline it — listing a directory group can mean listing an entire organisation.
 

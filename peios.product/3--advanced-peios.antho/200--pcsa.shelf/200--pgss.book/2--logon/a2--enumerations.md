@@ -4,8 +4,8 @@ description: Every enumerated value the protocol carries — logon and identifie
 ---
 
 Adding a value to any enumeration here is a breaking change requiring a
-version bump — see §2.6. The single exception is the field mask, noted
-below.
+version bump — see §2.6, which states the three exceptions and where
+each is stated in full.
 
 ## Logon types
 
@@ -21,9 +21,13 @@ reference.
 | 5 | Service |
 | 8 | NetworkCleartext |
 | 9 | NewCredentials |
+| 10 | RemoteInteractive |
 
 The gaps are deliberate: the numbering follows KACS, and values it does
 not define are not available here.
+
+A value MAY be added here without a version bump, for the reason §2.7
+gives.
 
 ## Identifier types
 
@@ -111,9 +115,9 @@ single bit.
 | 8 | `ENABLED` | `u8` |
 | 9 | `LOGON_TYPES` | `u32` |
 
-This is the sole exception to the rule above. A bit MAY be added without
-a version bump, because a reply states which fields it answered and an
-authority MUST ignore a bit it does not implement (§2.16).
+A bit MAY be added without a version bump, because a reply states which
+fields it answered and an authority MUST ignore a bit it does not
+implement (§2.16).
 
 ## Lookup outcomes
 

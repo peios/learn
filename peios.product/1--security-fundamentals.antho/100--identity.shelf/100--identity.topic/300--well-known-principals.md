@@ -43,12 +43,18 @@ This is the largest group of well-known SIDs and where most of the principals yo
 | SID | Name | Behaviour |
 |---|---|---|
 | `S-1-5-2` | Network | Matches a token created by a network logon. |
-| `S-1-5-4` | Interactive | Matches a token created by an interactive logon (console, RDP, SSH). |
+| `S-1-5-3` | Batch | Matches a token created to run a scheduled job. |
+| `S-1-5-4` | Interactive | Matches a token created by an interactive logon — at the console, over SSH, or to a remote desktop. |
 | `S-1-5-6` | Service | Matches a token created for a service. |
 | `S-1-5-7` | Anonymous | The user SID for tokens at the Anonymous impersonation level. |
 | `S-1-5-11` | Authenticated Users | Matches every successfully authenticated token. Excludes Anonymous. |
+| `S-1-5-14` | Remote Interactive | Matches a token created by a logon to a remote graphical desktop. Carried alongside Interactive, not instead of it. |
 
 The pair `S-1-1-0` (Everyone) and `S-1-5-11` (Authenticated Users) is the most common distinction worth getting right. Everyone includes Anonymous; Authenticated Users excludes it. Anything reachable by Anonymous is reachable by an unauthenticated network peer, which is almost never what you want.
+
+A remote desktop logon puts **both** `S-1-5-4` and `S-1-5-14` on the token. That pairing is what makes "only someone physically at the machine" expressible: the user counts as an interactive user in every ACL that was ever written, and can still be told apart by one that cares. Allow Interactive and deny Remote Interactive, and you have said exactly that — a rule you could not write if remote desktops had a type of their own and nothing else.
+
+A remote desktop logon deliberately does **not** carry `S-1-5-2` (Network), even though the session is reached over a wire. A deny entry beats any allow, so carrying Network would place every remote-desktop user inside every rule that denies access to network logons, with no way to carve them back out. Network says a credential crossed a wire; it does not say a screen did.
 
 ### System actors
 

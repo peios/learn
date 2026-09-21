@@ -345,6 +345,7 @@ outcomes the token's object accesses generate audit events for. [*kacs-abi.audit
 | `KACS_LOGON_TYPE_SERVICE` | `5` |
 | `KACS_LOGON_TYPE_NETWORK_CLEARTEXT` | `8` |
 | `KACS_LOGON_TYPE_NEW_CREDENTIALS` | `9` |
+| `KACS_LOGON_TYPE_REMOTE_INTERACTIVE` | `10` |
 
 *Maximum number of groups a token may carry.* [*kacs-abi.token-max-groups]
 

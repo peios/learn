@@ -1,7 +1,7 @@
 ---
 title: Logon types
 type: concept
-description: Every logon session is tagged with a logon type — Interactive, Network, Batch, Service, NetworkCleartext, or NewCredentials — and what each type means.
+description: Every logon session is tagged with a logon type — Interactive, Network, Batch, Service, NetworkCleartext, NewCredentials, or RemoteInteractive — and what each type means.
 related:
   - peios/logon-sessions/overview
   - peios/logon-sessions/lifecycle
@@ -10,9 +10,9 @@ related:
 
 Every logon session carries a `logon_type` — a single number, set by authd at session creation, that classifies the nature of the sign-in. The type is informational from KACS's point of view: AccessCheck does not branch on it. But it is recorded in every audit event that references the session, and it is what audit consumers and SIEM tools use to distinguish "the user logged in at the console" from "the user logged in over the network" from "a service started under this account".
 
-There are six types in v0.20.
+There are seven types in v0.20.
 
-## The six types
+## The seven types
 
 The numeric values are also catalogued in [Other constants](~peios/constants-and-catalogs/other-constants).
 
@@ -24,8 +24,9 @@ The numeric values are also catalogued in [Other constants](~peios/constants-and
 | 5 | **Service** | A service started under a specific principal. Used for the long-lived service-account model. |
 | 8 | **NetworkCleartext** | A network logon where the credential was transmitted in cleartext over the wire. The session is otherwise a Network session; the type distinction exists for audit. |
 | 9 | **NewCredentials** | A session created to use different credentials when reaching out to remote resources, while keeping the local identity unchanged. The local thread continues to act as its primary token; outbound network requests carry the alternative credentials. |
+| 10 | **RemoteInteractive** | The user signed in to a graphical desktop on this machine from somewhere else. Interactive in every sense that matters to an access check, but reached over a wire rather than at hardware this machine owns. |
 
-Values 1, 6, 7, and 10 onward are reserved and not used in v0.20.
+Values 1, 6, 7, and 11 onward are reserved and not used in v0.20.
 
 ## When each type is used
 
@@ -64,6 +65,14 @@ You should rarely see this in normal operation. Its presence in an audit log is 
 The unusual one. A NewCredentials session does not replace the calling thread's identity. Instead, it represents "I want to keep being myself locally but use these other credentials for outbound network calls". The thread's effective token retains the local user's SIDs and privileges for everything KACS evaluates locally, but any outbound credential-using request carries the alternative principal.
 
 The pattern matters in environments where a user has local rights on one machine and different rights on another, and wants to keep both available without switching sessions.
+
+### RemoteInteractive
+
+A desktop session driven from somewhere else — the user has a screen, a keyboard and a full graphical session, but none of the hardware is here.
+
+It is a separate type from Interactive rather than a flavour of it because the two differ in exactly one respect that an administrator may want to act on: whether the person is physically at the machine. Everything else about the session is the same, which is why a RemoteInteractive token carries the Interactive group SID as well as its own — see [Well-known principals](~peios/identity/well-known-principals) for what that pair lets you write.
+
+Rebooting from a RemoteInteractive session needs `SeRemoteShutdownPrivilege` on top of `SeShutdownPrivilege`, as it does from a Network, NetworkCleartext or NewCredentials session. The screen being remote is what counts, not the session being graphical.
 
 ## Where the type appears
 

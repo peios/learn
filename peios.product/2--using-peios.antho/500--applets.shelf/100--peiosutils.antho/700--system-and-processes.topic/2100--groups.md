@@ -40,7 +40,7 @@ On other Unixes these two forms differ only in the order they print.
 
 Both forms are lossy in the same way, and unavoidably so — a group can only be listed if it has a group ID, and some deliberately do not:
 
-- `Interactive`, `Network`, `Batch` and `Service` are **unnumbered on purpose**. They describe *how* you signed in rather than who you are, which is what lets a rule like "network logons cap at Low" be written at all. You are in `Interactive` at the console and not over the network, so there is no static answer to record.
+- `Interactive`, `Remote Interactive`, `Network`, `Batch` and `Service` are **unnumbered on purpose**. They describe *how* you signed in rather than who you are, which is what lets a rule like "network logons cap at Low" be written at all. You are in `Interactive` at the console and not over the network, so there is no static answer to record.
 - Your **logon session** SID is minted fresh for each sign-in and has no number either.
 - A group's **attributes** are not representable. A deny-only group — one that can block access through a deny entry but grant nothing through an allow entry — is printed exactly like an ordinary membership.
 

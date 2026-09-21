@@ -119,7 +119,7 @@ token at full access. [*priv.catalogue.se-tcb]
 `SeShutdownPrivilege` shuts down or reboots the machine, mapped
 through `CAP_SYS_BOOT`. [*priv.catalogue.se-shutdown] `SeRemoteShutdownPrivilege` is required *in
 addition* when the request originates from a Network,
-NetworkCleartext, or NewCredentials logon. [*priv.catalogue.se-remote-shutdown]
+NetworkCleartext, NewCredentials, or RemoteInteractive logon. [*priv.catalogue.se-remote-shutdown]
 
 `SeLoadDriverPrivilege` loads and unloads kernel modules through
 `CAP_SYS_MODULE`. [*priv.catalogue.se-load-driver] `SeDebugPrivilege` attaches to and inspects any

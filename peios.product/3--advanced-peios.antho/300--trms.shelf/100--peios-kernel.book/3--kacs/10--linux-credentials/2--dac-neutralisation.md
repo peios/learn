@@ -98,8 +98,8 @@ refused. A hook can narrow that decision; it cannot widen it.
 
 `CAP_SYS_BOOT` carries an extra condition the table cannot express: a
 token whose logon session is of a remote origin — Network,
-NetworkCleartext or NewCredentials — additionally requires
-`SeRemoteShutdownPrivilege`. [*cred.dac.sys-boot-remote-shutdown]
+NetworkCleartext, NewCredentials or RemoteInteractive — additionally
+requires `SeRemoteShutdownPrivilege`. [*cred.dac.sys-boot-remote-shutdown]
 
 **DENY** capabilities are refused unconditionally, whatever privilege
 the caller holds: `CAP_SETPCAP` (8) and `CAP_SETFCAP` (31), because

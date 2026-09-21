@@ -117,7 +117,8 @@ credential type would silently fail to collect something the authority
 required, and an authority that skipped an unrecognised logon type would
 grant the wrong kind of session.
 
-There are exactly two exceptions, and both are stated where they apply:
+There are exactly three exceptions, and each is stated where it applies:
 `LogonStart.supported_credential_types`, which is a statement of
-capability rather than an instruction (§2.7), and the field mask of
+capability rather than an instruction (§2.7); `LogonStart.logon_type`,
+which only the authority ever receives (§2.7); and the field mask of
 `Lookup`, whose reply says which bits it answered (§2.16).

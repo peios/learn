@@ -49,7 +49,7 @@ A subkey's name is either a **well-known name** or a **literal SID**:
 \S-1-5-21-2847362817-1094533892-3310298447-1000
 ```
 
-Names are matched case-insensitively. The recognised ones are `SYSTEM`, `Everyone`, `Authenticated Users`, `Administrators`, `Users`, `Guests`, `Local Service`, `Network Service`, and the logon types `Interactive`, `Network`, `Batch`, `Service` and `Anonymous`.
+Names are matched case-insensitively. The recognised ones are `SYSTEM`, `Everyone`, `Authenticated Users`, `Administrators`, `Users`, `Guests`, `Local Service`, `Network Service`, and the logon types `Interactive`, `Remote Interactive`, `Network`, `Batch`, `Service` and `Anonymous`.
 
 Two limits are worth knowing before you hit them:
 
@@ -164,9 +164,9 @@ The logon types this principal may **originate** — request of `authd` over `/r
     LogonTypes  REG_MULTI_SZ  ["Interactive"]
 ```
 
-The names are `Interactive`, `Network`, `Batch`, `Service`, `NetworkCleartext` and `NewCredentials`, matched case-sensitively; an unrecognised name is dropped with a warning and the rest still applies.
+The names are `Interactive`, `Network`, `Batch`, `Service`, `NetworkCleartext`, `NewCredentials` and `RemoteInteractive`, matched case-sensitively; an unrecognised name is dropped with a warning and the rest still applies.
 
-The proposed logon type is not cosmetic. It selects a group SID the minted token carries — `Interactive` puts `S-1-5-4` on it — and policy records can key on those SIDs, so the type must be what the *peer* is permitted, never merely what it proposed. A greeter granted `["Interactive"]` cannot mint itself a network-shaped token, nor the reverse.
+The proposed logon type is not cosmetic. It selects the group SIDs the minted token carries — `Interactive` puts `S-1-5-4` on it, `RemoteInteractive` puts `S-1-5-4` *and* `S-1-5-14` — and policy records can key on those SIDs, so the type must be what the *peer* is permitted, never merely what it proposed. A greeter granted `["Interactive"]` cannot mint itself a network-shaped token, nor the reverse.
 
 A principal with no `LogonTypes` originates nothing. `SYSTEM` is the exception and is permitted every type unconditionally — it administers this very key, so a registry constraint on it would enforce nothing, and `authd` does not pretend otherwise.
 

@@ -26,6 +26,26 @@ authority MUST constrain against the verified peer — see §2.4.
 
 Values are defined by KACS and listed for reference in §2.B.
 
+### The exception this field carries
+
+A value MAY be added to this enumeration without a version bump. This is
+the third departure from §2.6, and it turns on the same question that
+rule turns on: which party has to understand the value. The rule binds
+because every peer must understand every value it is *sent*, and
+`logon_type` only ever travels client to authority. The authority is
+therefore the only party that must understand a new one.
+
+**An authority MUST refuse a `logon_type` it does not recognise**, with
+`MalformedRequest` (§2.10). A message carrying a value the authority
+cannot name is one it could not understand, and it is refused before
+any question of what the peer is permitted arises.
+
+Neither direction of mismatch is left to chance by that. An older client
+never proposes a value it has not heard of, and a newer client proposing
+one to an older authority is refused — so the failure is no session
+rather than a session of the wrong kind, which is the outcome §2.6
+exists to prevent.
+
 ## identifier_type and identifier
 
 Together these name the principal. `identifier_type` says how to read

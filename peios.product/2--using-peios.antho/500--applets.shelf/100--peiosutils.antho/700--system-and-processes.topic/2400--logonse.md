@@ -63,7 +63,7 @@ $ logonse create --logon-type interactive --auth-package Negotiate --user-sid S-
 
 | Flag | Meaning |
 |---|---|
-| `--logon-type TYPE` | The kind of logon: `interactive`, `network`, `batch`, `service`, `network-cleartext`, or `new-credentials`. |
+| `--logon-type TYPE` | The kind of logon: `interactive`, `network`, `batch`, `service`, `network-cleartext`, `new-credentials`, or `remote-interactive`. |
 | `--auth-package STR` | The name of the authentication package that vouched for the logon. |
 | `--user-sid SID` | The user the session belongs to, as an `S-1-…` SID or an SDDL alias such as `BA`. |
 

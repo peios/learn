@@ -30,11 +30,13 @@ attached to them is described in the Peios Kernel TRM §3.8.
 | SID | Name | Description |
 |---|---|---|
 | S-1-5-2 | Network | Principals that authenticated over the network. |
+| S-1-5-3 | Batch | Principals that logged on to run a scheduled job. |
 | S-1-5-4 | Interactive | Principals that logged on interactively. |
 | S-1-5-6 | Service | Principals that authenticated as a service. |
 | S-1-5-7 | Anonymous | The anonymous identity. Carried by tokens at Anonymous impersonation level. |
 | S-1-5-10 | Principal Self | Placeholder in ACEs on directory objects. Matches the caller when the caller's identity corresponds to the object's associated principal. Resolved via the `self_sid` parameter to AccessCheck. |
 | S-1-5-11 | Authenticated Users | All principals that have been authenticated (excludes Anonymous). |
+| S-1-5-14 | Remote Interactive | Principals that logged on interactively to a remote graphical desktop. Carried in addition to Interactive, never in place of it. |
 | S-1-5-18 | Local System (SYSTEM) | The operating system's own identity. Highest privilege level. |
 | S-1-5-19 | Local Service | A built-in service account with reduced privileges. |
 | S-1-5-20 | Network Service | A built-in service account that can authenticate to remote services. |

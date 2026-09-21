@@ -197,6 +197,8 @@ message, and is conforming.
     (§2.16, §2.19).
 63. Never widen what a principal's holder permits. Local policy may
     narrow it further; nothing may add to it (§2.16).
+64. Refuse a `logon_type` it does not recognise, with
+    `MalformedRequest` (§2.7, §2.10).
 
 ## Client obligations
 
