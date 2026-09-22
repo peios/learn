@@ -46,8 +46,8 @@ This chapter covers:
 This chapter does not cover:
 
 - What a program *is* to a desktop: its title, what it opens, how it is
-  started. A specification of that kind gives a program an icon by name
-  under §4.5, and is a separate chapter.
+  started. That is PGSS Applications (§5), which gives a program an
+  icon by name under §4.5.
 - How a consumer determines a file's type. §4.6 takes the type as
   given.
 - How a consumer draws a picture, at what size, or in what colour.

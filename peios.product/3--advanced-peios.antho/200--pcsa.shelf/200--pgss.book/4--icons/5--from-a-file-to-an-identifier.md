@@ -26,8 +26,8 @@ Such a specification MUST yield an identifier, to be looked up under
 > [!NOTE]
 > This is the step by which a declaration that a program is an
 > application, with a title and the types it opens, gives the program
-> an icon. That declaration is another chapter's; this one only leaves
-> it the first word.
+> an icon. That declaration is PGSS Applications' (§5.5); this chapter
+> only leaves it the first word.
 
 ## The owner's word
 
