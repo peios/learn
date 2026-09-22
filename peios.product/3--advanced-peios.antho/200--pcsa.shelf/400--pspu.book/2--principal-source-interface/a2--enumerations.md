@@ -70,6 +70,7 @@ Carried in `Register.capabilities` (§2.8) as a `u32` bitmask.
 | 1 | `ENUMERATES` |
 | 2 | `MEMBERS` |
 | 3 | `PUSHES_CHANGES` |
+| 4 | `CHANGES_CREDENTIALS` |
 
 Unlike the enumerations above, a bit MAY be added here without a version
 bump. A source that does not set a bit has not declared the capability,

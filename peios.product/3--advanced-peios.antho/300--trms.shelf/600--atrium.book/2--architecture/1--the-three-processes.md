@@ -13,8 +13,9 @@ user code never share a process.
 | `atrium-session` | The logged-on user | peinit (submitted job) | One per interactive session: serves the shell, holds session state, runs applications |
 
 **atriumd** is deliberately the smallest of the three. It runs as
-SYSTEM because originating a logon takes that today — `/run/logon.sock`
-admits SYSTEM alone — and everything it does follows from holding that
+SYSTEM because originating a logon takes that today — authd lets SYSTEM
+originate logons without a `LogonTypes` policy record, and nothing else
+without one — and everything it does follows from holding that
 position: it conducts the PGSS Logon conversation, keeps logon tokens
 in its session table, submits session hosts to peinit, and relays the
 login exchange for the server. It parses no HTTP and never installs a

@@ -18,8 +18,10 @@ it.
 ## Access control
 
 The socket MUST carry a security descriptor granting connect access to
-the principals permitted to originate logons. See §2.4 for why this, and
-not process integrity, is the control.
+the principals permitted to originate logons, and to the principals
+permitted to change their own credential (§2.20). See §2.4 for why this,
+and not process integrity, is the control — and why reaching the socket
+is not, on its own, permission to originate a logon.
 
 ## One conversation per connection
 

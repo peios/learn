@@ -3,8 +3,8 @@ title: AccessDenied
 description: The terminal failure message — a deliberately small denial vocabulary, and what a denial must never reveal.
 ---
 
-`msg_type` = `0x8003`. Authority to client. The other terminal message;
-nothing follows it.
+`msg_type` = `0x8003`. Authority to client. The terminal failure message
+of a logon and of a credential change (§2.20) alike; nothing follows it.
 
 | Field | Encoding | Limit |
 |---|---|---|

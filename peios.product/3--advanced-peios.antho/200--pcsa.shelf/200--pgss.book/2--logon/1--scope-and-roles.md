@@ -51,7 +51,8 @@ This chapter covers:
   (§2.15)
 - how a service manager obtains a token for a service, where there is no
   credential to exchange (§2.19)
-- the obligations binding on each role (§2.20)
+- how a principal changes their own credential (§2.20)
+- the obligations binding on each role (§2.21)
 
 This chapter does not cover:
 
@@ -63,8 +64,9 @@ This chapter does not cover:
   Those belong to the authority's own design. Mainline's authority
   federates them over PSI, the Principal Source Interface, specified in
   PSPU §2.
-- Password change, credential enrolment, and account administration,
-  which are not specified.
+- Credential enrolment — giving a principal a credential it does not
+  have — and account administration, including setting a credential on
+  another principal's behalf. Neither is specified.
 - Service startup and ordering, described in the peinit TRM.
 
 The distinction in the second point is the load-bearing one. PGSS Logon

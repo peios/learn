@@ -139,6 +139,25 @@ An authority federating over PSI MUST satisfy all of the following.
 
 An authority that holds nothing satisfies 45 to 49 trivially.
 
+### Credential change
+
+An authority that relays PGSS Logon's credential change (PGSS §2.20)
+over PSI MUST also satisfy the following. Obligations 19 to 21 bind a
+change conversation as they bind an authentication.
+
+50. Take `principal` from the client's connected socket, never from a
+    message body (§2.21).
+51. Send `ChangeCredential` only to the source authoritative for
+    `principal`'s domain, never offer the change to another source, and
+    never send it to a source that did not declare
+    `CHANGES_CREDENTIALS` (§2.21, §2.8).
+52. Answer the client `AuthorityUnavailable`, rather than refusing the
+    account, where no registered source is authoritative for
+    `principal` and a configured source is absent (§2.21).
+53. End the client's conversation with `Internal` on an `Assertion` in a
+    change conversation or a `CredentialChanged` in any other, minting
+    nothing and reporting no change (§2.21).
+
 ## Source obligations
 
 A principal source MUST satisfy all of the following.
@@ -163,8 +182,8 @@ A principal source MUST satisfy all of the following.
 8. Decline to act on a message on a conversation it does not know, and
    never treat it as opening one — without replying on it, since the
    identifier may since have been reused (§2.7).
-9. Refuse an `Authenticate`, `Query` or `EnumerateSource` arriving on
-   conversation `0` (§2.7).
+9. Refuse an `Authenticate`, `ChangeCredential`, `Query` or
+   `EnumerateSource` arriving on conversation `0` (§2.7).
 10. Bound the conversations it tracks itself, rather than relying on the
     authority's limit (§2.6).
 11. Refuse beyond that bound with `AuthorityUnavailable`, rather than
@@ -173,8 +192,9 @@ A principal source MUST satisfy all of the following.
 
 ### Answering
 
-13. Send exactly one terminal message — `Assertion` or `Refusal` — per
-    conversation (§2.13).
+13. Send exactly one terminal message per conversation: `Assertion` or
+    `Refusal` for an authentication, `CredentialChanged` or `Refusal` for
+    a credential change (§2.13, §2.21).
 14. Assert only principals within its declared domain (§2.18).
 15. Assert group SIDs and identifiers only, never attributes (§2.13).
 16. Carry the canonical spelling of the principal's name in
@@ -248,6 +268,23 @@ entirely.
     stated", and never substitute a default of its own — what silence
     means is the authority's reading, and two components with their own
     defaults can disagree (§2.15, PGSS §2.16).
+
+### Credential change
+
+A source that declares `CHANGES_CREDENTIALS` MUST also satisfy the
+following.
+
+41. Change only the credential of `principal`, and never take a
+    principal from anything the client supplied (§2.21).
+42. Establish that the principal can present their current credential
+    before changing it, and refuse with `AuthenticationFailed` where they
+    cannot (§2.21).
+43. Never change a credential on the strength of a current credential
+    that has changed since it was proved (§2.21).
+44. Refuse with `AccountRestricted` a principal it holds no changeable
+    credential for (§2.21).
+45. Send `CredentialChanged` only once the new credential is the one its
+    next `Authenticate` for that principal will verify (§2.21).
 
 ## What a source is not required to do
 

@@ -35,8 +35,8 @@ of the following.
 
 ### Conversation
 
-9. Require `LogonStart` as the first message, and reject a conversation
-   opening otherwise (§2.3).
+9. Require `LogonStart`, or `CredentialChangeStart`, as the first
+   message, and reject a conversation opening otherwise (§2.3).
 10. Send exactly one terminal message, nothing after it, and close the
     connection (§2.3).
 11. Bound the number of rounds, the time spent awaiting an answer, and
@@ -200,14 +200,45 @@ message, and is conforming.
 64. Refuse a `logon_type` it does not recognise, with
     `MalformedRequest` (§2.7, §2.10).
 
+### Credential change
+
+An authority that implements `CredentialChangeStart` MUST satisfy all of
+the following. An authority that does not implement it MUST refuse the
+message with `PermissionDenied`, and is conforming. Obligations 10 to
+13, 19, 20, 24 and 25 bind a change conversation as they bind a logon.
+
+65. Change only the credential of the principal the connected peer's
+    token names, established from the socket and never from a message
+    (§2.20, §2.4).
+66. Establish, within the conversation, that the principal can present
+    their current credential before changing it, and refuse with
+    `AuthenticationFailed` where they cannot (§2.20).
+67. Refuse with `AccountRestricted` a principal it holds no changeable
+    credential for, including every service identity (§2.20, §2.19).
+68. Send `CredentialChanged` only once the new credential is the one a
+    subsequent logon will be tested against (§2.20).
+69. Mint no token and create no session for a change, and send no
+    descriptor with `CredentialChanged` (§2.20).
+70. End with `ConversationLimit` a change it gives up on for want of an
+    acceptable new credential (§2.20).
+71. Refuse a `CredentialChangeStart` that ends before
+    `supported_credential_types` with `MalformedRequest` (§2.20).
+72. Where the socket's descriptor admits peers that may not originate
+    logons, decide from each peer's identity whether it may originate
+    one, and never treat reaching the socket as that permission (§2.20,
+    §2.4).
+
 ## Client obligations
 
-There are two client roles, and they are independent. A program may be
-either, both, or neither: a logon originator never looks a principal up;
-a name resolver does the reverse.
+There are three client roles, and they are independent. A program may
+be any of them, several, or none: a logon originator never looks a
+principal up; a name resolver does the reverse.
 
 An implementation originating logons MUST satisfy obligations 1 to 20.
-An implementation performing identity lookup MUST satisfy 21 to 27.
+An implementation performing identity lookup MUST satisfy 21 to 27. An
+implementation changing its own principal's credential MUST satisfy
+obligations 2 to 12 and 18 to 20, reading `CredentialChangeStart`
+wherever they say `LogonStart`, and 28 and 29.
 
 ### Conversation
 
@@ -290,6 +321,14 @@ single process just as they bind an authority. A resolver that remembers
 "no such user" through an outage will keep reporting it after the outage
 ends, and one that reports a failed walk as an empty system does the
 same thing to every principal at once.
+
+### Credential change
+
+28. Send exactly one `CredentialChangeStart`, as the first message, and
+    name no principal in it — there is no field for one (§2.20).
+29. Treat `CredentialChanged` as the only successful outcome, expect no
+    token with it, and close any descriptor that arrives with it
+    (§2.20).
 
 ## What a client is not required to do
 

@@ -14,23 +14,26 @@ a running system.
 
 **Client.** A process that connects to the authority. Also called the
 *originator* when the emphasis is on whose identity the authority
-verifies. There are two client roles — originating a logon and looking
-an identity up — and they are independent (§2.20).
+verifies. There are three client roles — originating a logon, changing
+the caller's own credential, and looking an identity up — and they are
+independent (§2.21).
 
 **Principal.** The identity a logon is *for* — the person or service
 being authenticated. The principal is not a party to the conversation;
 the client speaks on their behalf.
 
-**Conversation.** One logon connection's exchange, from the client's
-opening message to a terminal message from the authority. One connection
-carries exactly one conversation.
+**Conversation.** One connection's exchange, from the client's opening
+message — a logon's or a credential change's (§2.20) — to a terminal
+message from the authority. One connection carries exactly one
+conversation.
 
 **Round.** One `CredentialRequest` from the authority and the
 `CredentialResponse` that answers it. A conversation MAY take several
 rounds.
 
-**Terminal message.** `AccessGranted` or `AccessDenied`. Exactly one is
-sent, and nothing follows it.
+**Terminal message.** `AccessGranted` or `AccessDenied` for a logon;
+`CredentialChanged` or `AccessDenied` for a credential change (§2.20).
+Exactly one is sent, and nothing follows it.
 
 **Credential material.** Any byte sequence a principal supplies as proof
 of identity — a password, a one-time code, a response from a token.

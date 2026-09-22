@@ -3,7 +3,9 @@ title: The Relayed Interrogation
 description: CredentialRequest and CredentialResponse carrying PGSS Logon bodies verbatim — what the authority polices on the way through, and what it never inspects.
 ---
 
-Two messages, both carrying PGSS Logon bodies verbatim.
+Two messages, both carrying PGSS Logon bodies verbatim. They serve a
+credential change (§2.21) exactly as they serve an authentication, and
+everything below applies to both.
 
 ## CredentialRequest
 

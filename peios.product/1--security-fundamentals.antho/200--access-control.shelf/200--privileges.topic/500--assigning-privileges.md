@@ -174,7 +174,15 @@ An empty list revokes: it is "may originate nothing", distinct from the value be
 
 ### `LogonSocketDescriptor` — `REG_SZ`, on the `Policy` key itself
 
-The security descriptor `/run/logon.sock` carries, as SDDL, read once at `authd` startup. The built-in value admits `SYSTEM` and `Administrators`. Admitting a new originator takes both edits on purpose: widen this descriptor so the peer can connect (connect access is `FILE_WRITE_DATA`; `0x100082` grants it with stat and sync), and give the peer's record a `LogonTypes` list so the connection can do something. The descriptor is the outer gate; the record is what the widening means.
+The security descriptor `/run/logon.sock` carries, as SDDL, read once at `authd` startup. The built-in value gives `SYSTEM` and `Administrators` full access, and gives every authenticated principal connect access alone, so that anyone signed in can [change their own password](~peios/signing-in/the-passwd-command):
+
+```
+O:SYG:SYD:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;0x100082;;;AU)
+```
+
+Connect access is `FILE_WRITE_DATA`; `0x100082` grants it with stat and sync. Reaching the socket does not let a peer originate a logon: that is the `LogonTypes` record above, and a peer without one originates nothing however it connected. So admitting a new originator that is not already an authenticated principal takes both edits, and one that is takes only the record.
+
+A replacement descriptor that leaves out the `AU` entry turns off self-service password change for every principal it leaves out.
 
 ## Locking a machine down
 

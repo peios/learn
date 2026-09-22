@@ -212,7 +212,7 @@ Again:
 set the password for jack
 ```
 
-This is an administrator resetting somebody else's password. Changing your own will go over PGSS Logon instead, so that it works identically whichever source holds your account.
+This is an administrator resetting somebody else's password. A principal changes their own with [`passwd`](~peios/signing-in/the-passwd-command), which goes over PGSS Logon instead, so that it works identically whichever source holds the account.
 
 An empty password is refused here for the same reason it is refused at creation. Giving a passwordless principal a password works and makes them an ordinary account; there is currently no command that takes one away again, so a principal created with `--no-password` can gain a credential but not shed one.
 

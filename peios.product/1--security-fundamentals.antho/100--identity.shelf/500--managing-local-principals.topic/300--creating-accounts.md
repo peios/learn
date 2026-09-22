@@ -155,9 +155,20 @@ A local group is a real object with its own SID and gid, so it can be named in a
 
 ## Changing your own password
 
-Not yet. `lps password` is an administrator resetting somebody else's.
+Run [`passwd`](~peios/signing-in/the-passwd-command). It asks for your current password and then the new one:
 
-Changing your *own* password will go over PGSS Logon rather than through `lps`, so that it works the same way whichever source holds your account — a domain principal will change their password exactly as a local one does. Until then, an administrator resets it for you.
+```
+$ passwd
+Changing the password for alice
+Current password:
+New password:
+Retype new password:
+password changed
+```
+
+It goes over PGSS Logon rather than through `lps`, so it works the same way whichever source holds your account — a domain principal changes their password exactly as a local one does. `lps password` is the other operation: an administrator setting somebody else's.
+
+An account created with `--no-password` has no current password to prove, so it cannot give itself one. An administrator sets one with `lps password`.
 
 ## Where to go next
 

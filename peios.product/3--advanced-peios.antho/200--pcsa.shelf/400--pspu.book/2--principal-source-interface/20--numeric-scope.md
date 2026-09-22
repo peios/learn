@@ -117,7 +117,7 @@ of object it holds**, so that a number issued to a principal is never
 issued again to a group.
 
 An authority cannot check this — it sees one assertion at a time — so it
-is stated as an obligation on the source (§2.21) rather than as
+is stated as an obligation on the source (§2.22) rather than as
 something enforced.
 
 > [!NOTE]

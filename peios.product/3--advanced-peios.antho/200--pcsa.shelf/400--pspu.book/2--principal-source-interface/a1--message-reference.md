@@ -20,6 +20,8 @@ description: Every PSI message by number and direction, the protocol constants, 
 | `0x0006` | `EnumerateSource` | authority → source | 1+ (opens) | §2.16 |
 | `0x8006` | `EnumerateResult` | source → authority | 1+ (terminal) | §2.16 |
 | `0x8007` | `Changed` | source → authority | `0` | §2.17 |
+| `0x0007` | `ChangeCredential` | authority → source | 1+ (opens) | §2.21 |
+| `0x8008` | `CredentialChanged` | source → authority | 1+ (terminal) | §2.21 |
 
 The high bit marks a message sent by **the source**, which is the
 authority for its own principals (§2.7).
@@ -43,6 +45,7 @@ authority for its own principals (§2.7).
 | `domain` | 68 bytes | §2.8 |
 | `max_batch` | 64 | §2.8 |
 | `originator` | 68 bytes | §2.11 |
+| `principal` | 68 bytes | §2.21 |
 | `user_sid` | 68 bytes | §2.13 |
 | `canonical_name` | 256 bytes | §2.13 |
 | `groups` | 128 entries, each SID 68 bytes | §2.13 |
@@ -75,8 +78,9 @@ allows 1024 values per claim. These bound the work an authority does
 decoding a message it has not yet decided to believe, and nothing needs
 a thousand-valued claim from a principal source.
 
-Fields inside a nested `LogonStart`, `CredentialRequest`,
-`CredentialResponse` or profile keep PGSS Logon's limits (PGSS §2.A).
+Fields inside a nested `LogonStart`, `CredentialChangeStart`,
+`CredentialRequest`, `CredentialResponse` or profile keep PGSS Logon's
+limits (PGSS §2.A).
 
 ## The ceiling that actually binds a page
 

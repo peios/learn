@@ -8,6 +8,7 @@ related:
   - peios/managing-local-principals/overview
   - peios/tokens/overview
   - peios/signing-in/the-login-command
+  - peios/signing-in/the-passwd-command
 ---
 
 Every sign-in on Peios is a conversation with an **authority** over a Unix socket at `/run/logon.sock`. The protocol is PGSS Logon, and it is a conformance requirement rather than an implementation detail: a system that does not offer it, at that path, with these semantics, is not Peios.
@@ -29,6 +30,12 @@ A client opens a connection and sends one `LogonStart`, naming the principal, th
 The capability list is a statement about the client, not a demand. Declaring that you can collect a password does not mean one will be asked for; declaring that you can collect nothing says you are able to complete a sign-in that needs no interaction, and nothing else. An authority faced with that either completes the sign-in or denies it. That is the mechanism behind [passwordless accounts](~peios/managing-local-principals/creating-accounts) and console autologon.
 
 A connection carries exactly one conversation, so the connection is the conversation's identity. There is no correlation identifier to forge.
+
+## Changing your own password
+
+The logon socket carries one other kind of conversation: changing your own credential. It opens with a different message, which names nobody — the account is the one your token says you are — and it ends without a token, because a change mints nothing. Your current credential is asked for first, even though you are signed in. [`passwd`](~peios/signing-in/the-passwd-command) is the client for it.
+
+Because every principal needs to reach the socket for this, reaching it is not permission to originate a logon. The authority decides that per caller, from the caller's token.
 
 ## The authority is not a process factory
 
@@ -71,6 +78,7 @@ Account **existence** is not a secret, and Peios does not pretend otherwise — 
 ## Where to start
 
 - [The `login` command](~peios/signing-in/the-login-command) — the terminal client, and how a live image signs in without being asked anything.
+- [The `passwd` command](~peios/signing-in/the-passwd-command) — changing your own password.
 - [Logon sessions](~peios/logon-sessions/overview) — the kernel object a successful sign-in creates.
 - [Managing local principals](~peios/managing-local-principals/overview) — the accounts being signed in to.
 

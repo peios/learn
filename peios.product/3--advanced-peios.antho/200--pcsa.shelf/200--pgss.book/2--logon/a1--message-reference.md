@@ -15,6 +15,8 @@ description: Every message type by number and socket, the protocol constants, an
 | `0x8002` | `AccessGranted` | authority → client | §2.9 |
 | `0x8003` | `AccessDenied` | authority → client | §2.10 |
 | `0x0020` | `ServiceAttest` | client → authority | §2.19 |
+| `0x0030` | `CredentialChangeStart` | client → authority | §2.20 |
+| `0x8030` | `CredentialChanged` | authority → client | §2.20 |
 
 ### On `/run/ident.sock`
 

@@ -44,6 +44,7 @@ What the source can do beyond authenticating.
 | 1 | `ENUMERATES` | Answers `EnumerateSource` (§2.16). |
 | 2 | `MEMBERS` | Can produce a group's membership. |
 | 3 | `PUSHES_CHANGES` | Sends `Changed` (§2.17). |
+| 4 | `CHANGES_CREDENTIALS` | Answers `ChangeCredential` (§2.21). |
 
 An authority MUST NOT send a message a source did not declare it
 answers, and MUST NOT set a field bit gating a capability the source did

@@ -147,7 +147,7 @@ parse is a `Refusal` for the whole conversation (§2.13).
 
 > [!NOTE]
 > `Refused` is how a source declines to expose a principal it holds —
-> which §2.21 has always permitted. It is distinct from `NotFound`
+> which §2.22 has always permitted. It is distinct from `NotFound`
 > because the authority may consult another source on `NotFound`, and
 > must not on `Refused`: the object was found, and the answer was no.
 

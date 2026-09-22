@@ -3,7 +3,9 @@ title: Assertion and Refusal
 description: "The two terminal messages a source may send — and what an assertion pointedly does not contain: no session, no token, no privileges."
 ---
 
-Exactly one terminal message ends a source conversation.
+Exactly one terminal message ends a source conversation. An
+authentication ends in `Assertion` or `Refusal`. A credential change
+ends in `CredentialChanged` or `Refusal`, never in `Assertion` (§2.21).
 
 ## Assertion
 
@@ -39,7 +41,7 @@ session's records do not vary with a caller's shift key.
 
 A source MUST NOT assert a name that PGSS §2.15 forbids — one carrying a
 reserved character, a byte outside the printable ASCII range, or a
-leading or trailing space. The authority MUST refuse one anyway (§2.21),
+leading or trailing space. The authority MUST refuse one anyway (§2.22),
 because a name from a source reaches a `passwd`-format record and an
 audit line, and by then the damage is the reader's to do.
 
@@ -111,7 +113,7 @@ becomes the default group of objects the token creates. Empty means the
 source did not say, and the authority chooses.
 
 It need not appear in `groups`. The authority is required to place it on
-the token regardless (§2.21), because a token's primary group must be a
+the token regardless (§2.22), because a token's primary group must be a
 group the token carries — so naming a group here **is** a membership
 claim, and it is subject to membership scope exactly as a listed group
 is (§2.19).
@@ -128,7 +130,7 @@ fails.
 > [!NOTE]
 > A source that made this the one field escaping the scope check would
 > have found a route to `BUILTIN\Administrators` that the group array
-> denies it. The obligation in §2.21 to apply membership scope to the
+> denies it. The obligation in §2.22 to apply membership scope to the
 > primary group closes that.
 
 ### profile

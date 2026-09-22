@@ -63,5 +63,11 @@ at high trust merely to *collect a password*. Collecting a credential is
 not a privileged act; deciding whether it is correct is, and that
 decision happens on the other side of the socket.
 
+The descriptor decides who may reach the socket, not what a peer may do
+once there. Where it admits principals so that they can change their own
+credential (§2.20), it admits peers that may not originate logons, and
+an authority MUST decide from each peer's identity whether it may
+originate one.
+
 Rate limiting is defence in depth. It is not the access control, and an
 authority MUST NOT rely on it as such.

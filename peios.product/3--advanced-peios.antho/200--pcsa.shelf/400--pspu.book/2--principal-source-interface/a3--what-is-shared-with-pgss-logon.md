@@ -24,7 +24,7 @@ either specification changes.
 | Header layout, first 12 bytes | §2.6 | Same fields at the same offsets |
 | Byte order, string encoding, length framing | §2.6 | See §2.7 |
 | Extensibility rules | §2.6 | Append-only; new enum value is breaking |
-| Credential-handling obligations | §2.12 | Bind sources too (§2.21) |
+| Credential-handling obligations | §2.12 | Bind sources too (§2.22) |
 | Name rules | §2.15 | Bind what a source asserts (§2.13) |
 
 An implementation that reimplements any of these rather than sharing one

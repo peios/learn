@@ -20,7 +20,7 @@ and says who they are. The source role is publicly implementable: any
 process an authority has been configured to accept MAY register as a
 source, and a third party writing one for a directory, a hardware token
 service or an identity provider is the case this chapter is written for.
-A conforming source is the subject of the source obligations in §2.21.
+A conforming source is the subject of the source obligations in §2.22.
 
 A source is not a *store*, necessarily. A local source owns its bytes; a
 directory-backed source owns nothing and forwards the question. The
@@ -51,7 +51,9 @@ This chapter covers:
 - scope: what a source may claim about identity, separately about
   membership, and separately again about POSIX identifiers (§2.18 to
   §2.20)
-- the obligations binding on each role (§2.21)
+- relaying a principal's change of their own credential to the source
+  that holds it (§2.21)
+- the obligations binding on each role (§2.22)
 
 This chapter does not cover:
 

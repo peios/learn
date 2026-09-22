@@ -64,10 +64,10 @@ Carried in `AccessDenied.denial` (§2.10) as a `u32`.
 |---|---|---|
 | 1 | `MalformedRequest` | The message could not be understood. |
 | 2 | `UnsupportedVersion` | The protocol version is not implemented. |
-| 3 | `PermissionDenied` | The peer may not originate this logon at all. |
+| 3 | `PermissionDenied` | The peer may not make this request at all. |
 | 4 | `AuthenticationFailed` | The principal is unknown, or the credential is wrong. Deliberately one code — see §2.10. |
 | 5 | `LogonTypeNotPermitted` | The peer may not request this kind of session. |
-| 6 | `AccountRestricted` | The principal exists and authenticated, but policy refuses this logon. |
+| 6 | `AccountRestricted` | The principal exists and authenticated, but policy refuses this logon; or, in a credential change, the principal has no credential that can be changed (§2.20). |
 | 7 | `AuthorityUnavailable` | The authority cannot reach what it needs to decide. |
 | 8 | `ConversationLimit` | Too many rounds, or too long without an answer. |
 | 9 | `Internal` | The authority failed for a reason it will not describe. |
