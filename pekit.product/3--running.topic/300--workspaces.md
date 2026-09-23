@@ -47,7 +47,7 @@ include = ["core/*", "extra/**"]
 exclude = ["extra/experimental/*"]
 
 [env]
-SOURCE_DATE_EPOCH = "1700000000"
+LC_ALL = "C"
 
 [wrap]
 command = ["nice", "-n", "10", "{{command}}"]
