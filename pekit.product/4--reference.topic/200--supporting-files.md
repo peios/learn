@@ -502,7 +502,7 @@ overwrite = false
 
 | Key | Type | Required | Meaning |
 | --- | --- | --- | --- |
-| `path` | string | **yes** | Destination **directory**, relative to the base root. Templated with `{{version}}` and `{{multipack}}`. The artifact keeps its own filename. |
+| `path` | string | **yes** | Destination **directory**, relative to the base root. Templated with `{{version}}` and `{{multipack}}`, where `{{version}}` is the rendered *package* version (`1.26.2-3`), not the upstream one. The upstream-version tokens (`{{major}}`, `{{prerelease}}` and the rest) do not describe a package version and are refused with a diagnostic. The artifact keeps its own filename. |
 | `overwrite` | bool | no (default `true`) | Whether an existing destination file may be replaced. When `false`, an existing destination is an error (`publish_exists`). |
 
 Resolution details:
@@ -548,8 +548,12 @@ package-signing key.
 
 Pekit then publishes that batch into the repository's canonical
 `p/<name>/<version>/` tree and regenerates both signed indexes once for the
-batch. Separate selected versions and workspace members are serialized but
-remain separate repository publications. The target rejects non-peipkg
+batch. The batch is published only after every selected package of the
+recipe has been written and has passed the lint gate: if any of them fails,
+none is published, so a partly failed `publish --all` cannot leave a family at
+mixed revisions. Separate selected versions and workspace members are
+serialized but remain separate repository publications, so a workspace run
+that stops at a failing member keeps the members already published before it. The target rejects non-peipkg
 artifacts and already-published name/version/architecture identities. Workspace
 members sharing one repository are serialized so their whole-index updates
 cannot overwrite each other.

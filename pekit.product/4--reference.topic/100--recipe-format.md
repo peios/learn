@@ -545,7 +545,7 @@ The package file accepts exactly these top-level keys; anything else is an
 | `optional_dependencies` | table | no | Optional runtime dependencies (same schema as `dependencies`). |
 | `conflicts` | table | no | name → constraint of packages this one conflicts with. |
 | `provides` | table | no | name → version of capabilities this package provides. |
-| `replaces` | table | no | name → constraint of packages this one replaces. |
+| `replaces` | table | no | name → constraint of packages this one replaces. `"*"` means every version, as it does in `dependencies`; the manifest records such an entry with no constraint. |
 | `side_effects` | array of strings | no | Declared install-time side effects. |
 | `sd_overrides` | table | no | payload path → SDDL security descriptor. See [`[sd_overrides]`](#sd-overrides). |
 | `claims` | table | no | Claim slots on provides/dependencies. See [`[claims]`](#claims). |
@@ -582,7 +582,7 @@ Package metadata. Accepts exactly these keys; any other is an
 | Key | Type | Required | Meaning |
 | --- | --- | --- | --- |
 | `name` | string | no | Package name. Defaults to the package selector (suffixed with the multipack value for multipack instances) when omitted. |
-| `version` | string | no | Package version. Required for `peipkg`. |
+| `version` | string | no | Package version. Required for `peipkg`, where the rendered value must be a peipkg version — `[epoch:]upstream-revision` (PSPU book 5 §5.5), so `"{{version}}-1"` and never a bare `"{{version}}"`. A value that does not parse is an `invalid_package_version` error when the package is expanded, before anything is built. |
 | `architecture` | string | no | Target architecture. Required for `peipkg`. |
 | `description` | string | no | Human-readable description. |
 | `license` | string | no | License identifier. Required for `peipkg`. |
