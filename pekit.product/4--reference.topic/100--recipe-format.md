@@ -358,7 +358,7 @@ Fields of a single target:
 | `needs` | array of strings | no | Names of other targets in the same section that must run first. |
 | `clear_out` | bool | no | Wipe this target's output directory before running. Default `true`. |
 | `keyring_inputs` | string array | no | Dotted keyring entries requested by this target. Default none. The operator keyring must grant `public` access, or `acquisition` for `build.vendor`. Signing entries cannot be exported. |
-| `dependencies` | table | no | **Build and test targets.** Dependencies the target needs provisioned in its root. Under `--env peipkg` the composed root holds *only* what is declared — a test stage that shells out needs `dash` (pekit runs `command` through `/usr/bin/sh`) and whatever else its script calls. See below. |
+| `dependencies` | table | no | **Build and test targets.** Dependencies the target needs provisioned in its root. Under a `peipkg` provider the composed root holds *only* what is declared — a test stage that shells out needs `dash` (pekit runs `command` through `/usr/bin/sh`) and whatever else its script calls. See below. |
 | `gate` | bool | no | **Test targets only.** When `true`, `package` and `publish` run this test after staging its `needs` and before writing any artifact. Default `false`; `--no-gates` explicitly bypasses gated tests and the lint gate. |
 | `sign` | table | no | **Build targets only.** Files in the target's output to sign after the command succeeds, by signature kind. See [`sign`](#build-name-sign-target-sign) below. |
 

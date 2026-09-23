@@ -244,12 +244,14 @@ own tags count, never a delegated source's.
 
 Tags and ordering together are how a distribution bootstraps from nothing: build
 the tagged seed in an environment that needs none of the catalogue, then
-everything else in dependency order, then the seed again natively.
+everything else in dependency order, then the seed again natively. Here the
+workspace's default profile is the native one, and `debian` is the named
+profile used only for the seed:
 
 ```console
 $ pekit workspace publish --all --latest --tag bootstrap --env debian
-$ pekit workspace publish --all --latest --exclude-tag bootstrap --env peipkg
-$ pekit workspace publish --all --latest --tag bootstrap --env peipkg
+$ pekit workspace publish --all --latest --exclude-tag bootstrap
+$ pekit workspace publish --all --latest --tag bootstrap
 ```
 
 ### Summary

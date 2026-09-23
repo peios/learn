@@ -337,13 +337,18 @@ enabled = true
 inputs = ["_pybuild_"]
 ```
 
-The selected **workspace** environment profile prepares a dependency root:
+The selected **workspace** environment profile prepares a dependency root. Put
+the profile most jobs use in the workspace's `env.pekit.toml`, so commands run
+isolated without `--env`, and keep named profiles such as `debian.env.pekit.toml`
+for the exceptions:
 
 ```toml
-# peipkg.env.pekit.toml
+# env.pekit.toml
 dependency_provider = "peipkg"
 [sandbox]
 command = 'exec "$PEKIT_WORKSPACE_ROOT/_peiroot_/enter.sh"'
+network_targets = ["build:vendor"]
+entry = ["/usr/libexec/peiroot/entry"]
 ```
 
 The preparer receives `PEKIT_SANDBOX_ROOT`, a fresh destination path, and
@@ -351,7 +356,7 @@ The preparer receives `PEKIT_SANDBOX_ROOT`, a fresh destination path, and
 and exits. It receives managed variables, not recipe environment expansions or
 keyring values. Pekit then runs the target through Bubblewrap with a private PID,
 mount and user namespace, a cleared environment, and no network by default.
-An acquisition profile may set `network_targets = ["build:vendor"]`; this shares
+A profile may set `network_targets = ["build:vendor"]`; this shares
 the host network for acquisition, including its DNS configuration, without
 mounting the host root or home. Other target names cannot enable network access.
 The worker receives its dependency manifest through a read-only file at
@@ -361,7 +366,7 @@ A profile may also name an `entry` program, which the preparer places in the
 root. Pekit runs it inside the sandbox ahead of each target command and it
 `exec`s the command, so a profile can start job-scoped services that the
 isolated root needs; anything it leaves running ends with the job. The Peios
-acquisition profile (`peipkg-net`) uses this for name resolution. Peios glibc
+default profile uses this for name resolution during acquisition. Peios glibc
 resolves hosts only through resolvd's socket, which no sandbox runs, so a
 native acquisition root gets resolvd's NSS module and a small build-root
 resolver that answers on that socket from the copied `resolv.conf`.

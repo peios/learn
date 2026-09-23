@@ -120,12 +120,12 @@ The Docutils recipe in the pool is the reference for a library with console scri
 
 Flit Core and Setuptools bootstrap themselves with the system interpreter and
 `install-wheel`. Their `build.main` targets remain independent of the Python
-test ecosystem. Initial bootstrap output is provisional: final package gates
-also require a separate `build.vendor` target and offline tests.
+test ecosystem; their package gates add a separate `build.vendor` target and
+offline tests.
 
 The catalogue installer and staged-module checks share the distribution path
 `/usr/lib/x86_64-linux-peios/python<major>.<minor>/site-packages`, using the
-executing interpreter's major/minor version. Native Python must also report
+executing interpreter's major/minor version. The interpreter must also report
 that exact path through `sysconfig`.
 
 Test-only Python tools are resolved during the explicit acquisition stage, in a
@@ -149,8 +149,7 @@ local `file://` package-index fixtures and recorded wheel files remain usable.
 Rust acquisition infrastructure is added only when the target declares Cargo or
 rustc, so Python acquisition does not install an unrelated compiler stack.
 
-Both environments run all Flit Core tests and Setuptools's offline functional
-suite. Setuptools tests explicitly marked `uses_network` are excluded: these
+The gates run all Flit Core tests and Setuptools's offline functional suite. Setuptools tests explicitly marked `uses_network` are excluded: these
 include its live-PyPI project integration matrix. Release-upload tooling and
 performance instrumentation are outside this functional package gate. Upstream
 platform/version skips and expected failures remain visible in JUnit results;
@@ -169,16 +168,14 @@ Older source-package archives are checked against their source-lock hash before
 extraction; prepared source trees are also supported. A version mismatch fails
 the gate. No test modules are added to the runtime package.
 
-Each backend's installed-payload checks import from the native or reference
-staging directory and exercise wheel, metadata and source-archive hooks. The
+Each backend's installed-payload checks import from the staging directory and
+exercise wheel, metadata and source-archive hooks. The
 smoke wheel's complete RECORD is checked against its files, then the wheel is
 installed into a fresh directory and its module is imported in a separate
 interpreter with an explicit staged search path. Metadata, vendored code,
 licenses and checked-hash bytecode are also checked.
 
-For a selected release candidate, run `pekit test --env debian --version VERSION`
-and `pekit test --env peipkg-net --version VERSION` from its recipe directory,
-then package and lint the native candidate. Only `build:vendor` has network
-access; compilation and tests remain offline. `pekit build main --env peipkg --version VERSION` is available for the initial minimal bootstrap, but it does
-not constitute final release qualification. Normal release discovery continues
-to follow upstream automatically.
+For a selected release candidate, run `pekit test --version VERSION` from its
+recipe directory, then package and lint it. Only `build:vendor` has network
+access; compilation and tests remain offline. Normal release discovery
+continues to follow upstream automatically.
