@@ -217,6 +217,45 @@ per-source exception to key expiry only: signature validity, the pinned
 fingerprint, revocation, explicit signature expiry, and timestamp checks remain
 mandatory.
 
+### Signed checksum manifests
+
+Some upstreams sign a checksum file rather than the artifact: a clear-signed
+text file listing each release file's digest. `of = "checksums"` verifies such a
+manifest instead of a detached signature. Dash is the case in the catalogue:
+
+```toml
+[source.url.signature]
+of           = "checksums"
+url          = "{{source_url}}.sha512sum"
+key_files    = ["keys/herbert-xu.asc"]
+fingerprints = ["9F9D45FE50AE361530983792C7271D0A49B18BA7"]
+```
+
+Pekit fetches the manifest from `url`, verifies its clear signature against the
+pinned keys, and then requires **exactly one** entry whose name is the artifact
+URL's file name, character for character (`./dash-0.5.13.5.tar.gz` or a
+directory-qualified name does not match). The artifact's digest must equal that
+entry's, and its size too when the entry states one. The signer is recorded as
+`signature_key` in the lock, as for a detached signature, beside the artifact's
+`sha256`.
+
+Because one manifest signature vouches for every file the manifest lists, this
+mode is stricter than a detached signature:
+
+- `url` is required, since checksum manifests have no conventional name, and
+  `fingerprints` is required, each a full key fingerprint.
+- The manifest must be a clear-signed message and nothing else; text outside
+  the signed block is refused.
+- Three line forms are read: `<digest>  <name>` (coreutils, with `*<name>` for
+  binary mode), `<digest> <size> <name>` (Dash's), and
+  `SHA512 (<name>) = <digest>` (BSD). Digests must be SHA-256 or SHA-512. Any
+  line pekit cannot read, including an MD5 or SHA-1 digest, makes the whole
+  manifest unusable rather than being skipped.
+
+A manifest that fails any of these checks is `checksum_manifest_invalid`; an
+artifact that does not match its entry is `checksum_mismatch`. As with every
+signature failure, nothing is locked or built.
+
 Some upstreams publish one `major.minor` archive and then maintain it as an
 incremental numbered patch series. `[source.url.patch_series]` models that
 scheme without fetching anything from a build script:

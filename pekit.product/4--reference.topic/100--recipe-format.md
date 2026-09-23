@@ -231,9 +231,9 @@ expiry or materially in the future is rejected by default.
 | Key | Type | Required | Meaning |
 | --- | --- | --- | --- |
 | `key_files` | string array | **yes** | Committed public key files (armoured or binary OpenPGP), resolved relative to the recipe root. Must be non-empty. |
-| `url` | string | no | Signature URL template. `{{source_url}}` expands to the rendered artifact URL; version variables are also available. Default `"{{source_url}}.sig"`. |
-| `of` | string | no | What the signature covers: `"artifact"` (the published file, default) or `"decompressed"` (its decompressed content — kernel.org's `.tar.sign` signs the uncompressed tar). Any other value is `invalid_signature`. |
-| `fingerprints` | string array | no | Allowlist of signer fingerprints (hex; spaces and `0x` ignored, case-insensitive). When set, a valid signature by any other pinned key is `signature_untrusted_key`. |
+| `url` | string | no (**yes** with `of = "checksums"`) | Signature URL template — the checksum manifest's location with `of = "checksums"`. `{{source_url}}` expands to the rendered artifact URL; version variables are also available. Default `"{{source_url}}.sig"`. |
+| `of` | string | no | What the signature covers: `"artifact"` (the published file, default), `"decompressed"` (its decompressed content — kernel.org's `.tar.sign` signs the uncompressed tar), or `"checksums"` (a clear-signed checksum manifest at `url` that must list the artifact exactly once; see [Signed checksum manifests](~pekit/recipes/sources#signed-checksum-manifests)). Any other value is `invalid_signature`. |
+| `fingerprints` | string array | no (**yes** with `of = "checksums"`, full fingerprints only) | Allowlist of signer fingerprints (hex; spaces and `0x` ignored, case-insensitive). When set, a valid signature by any other pinned key is `signature_untrusted_key`. |
 | `ignore_expiry` | bool | no | Permit a new signature made after the pinned signing key expired. Default `false`. This bypasses key expiry only; cryptographic verification, fingerprint allowlisting, present-time revocation, explicit signature expiry, and timestamp checks remain enforced. |
 
 #### `[source.url.patch_series]`
