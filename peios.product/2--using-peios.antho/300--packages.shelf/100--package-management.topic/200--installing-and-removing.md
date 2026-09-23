@@ -127,8 +127,8 @@ with the interpreter, reusable Awk libraries and manuals are in
 `org.gnu.gawk-common`, and `org.gnu.gawk-devel` provides `gawkapi.h` for
 building additional extensions. Arbitrary-precision MPFR arithmetic is
 enabled. Persistent arrays are disabled because their process-wide ASLR
-manipulation is outside the Peios process contract. Interactive debugger line
-editing will be enabled once the catalogue has a production Readline package.
+manipulation is outside the Peios process contract. The interactive debugger
+(`gawk -D`) has GNU Readline line editing and command history.
 
 GNU Gettext's catalog commands are installed as `org.gnu.gettext`, with
 manuals, extraction rules, project templates and the commands' translated
@@ -333,6 +333,16 @@ usable shared library is `org.pkgconf.libpkgconf`; public headers, linker name a
 pkg-config metadata are in `org.pkgconf.libpkgconf-devel`, with the static
 archive in `org.pkgconf.libpkgconf-static`. Matching source, debuginfo and
 debugsource packages are published alongside the family.
+
+GNU Readline's line-editing and history libraries are installed as
+`org.gnu.readline`, linked against ncurses' `libtinfo`. Headers, linker names,
+pkg-config metadata and the `readline(3)` and `history(3)` manuals are in
+`org.gnu.readline-devel`, with static archives in `org.gnu.readline-static`.
+Interactive `bc`, the `gawk` debugger and Python's `readline` module (which
+serves `input()` and the basic REPL selected by `PYTHON_BASIC_REPL`) use it,
+giving Emacs- or vi-style editing, history recall and `~/.inputrc` key
+bindings. Bash builds its own bundled copy of Readline and does not depend on
+this package.
 
 Rsync is installed as `org.samba.rsync`, which also provides and replaces the
 earlier `rsync` package name. The main package supports IPv6, iconv, generic
