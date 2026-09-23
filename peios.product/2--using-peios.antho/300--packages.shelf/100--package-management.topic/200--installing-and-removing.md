@@ -63,7 +63,7 @@ GNU C Library administration commands and their manuals are in
 `org.gnu.glibc-bin`. Profiling and tracing commands, including the Perl-based
 `mtrace`, are in `org.gnu.glibc-utils`. Extra legacy character converters are
 in `org.gnu.glibc-gconv-extra`, and the reference manual is in
-`org.gnu.glibc-doc`, as HTML under `/usr/share/doc/org.gnu.glibc-doc/html/`. These utilities retain Peios's fixed authority and resolver
+`org.gnu.glibc-doc`, as HTML under `/usr/share/doc/org.gnu.glibc/html/`. These utilities retain Peios's fixed authority and resolver
 providers; installing them does not make local passwd files an account authority.
 
 Libtraceevent's library symbols are in `org.kernel.libtraceevent-libs-debuginfo`,
