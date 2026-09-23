@@ -156,14 +156,10 @@ performance instrumentation are outside this functional package gate. Upstream
 platform/version skips and expected failures remain visible in JUnit results;
 a dependency import failure or failed assertion fails qualification.
 
-Two recorded adjustments apply only to disposable Setuptools test inputs:
-
-- The unused coverage-plugin warning category is removed from the copied pytest
-  configuration when coverage instrumentation is not enabled. Other warning
-  errors remain enforced.
-- `jaraco.path` loads ctypes inside its Windows-only hidden-file implementation.
-  The guarded adjustment fails if that usage changes. It does not mock ctypes
-  or skip Linux filesystem assertions.
+One recorded adjustment applies only to disposable Setuptools test inputs: the
+unused coverage-plugin warning category is removed from the copied pytest
+configuration when coverage instrumentation is not enabled. Other warning
+errors remain enforced.
 
 Peios's runtime Python deliberately omits CPython's regression tests. Setuptools
 therefore declares the Python source package as a native test dependency. When
