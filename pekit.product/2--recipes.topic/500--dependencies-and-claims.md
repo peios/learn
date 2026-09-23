@@ -139,7 +139,7 @@ when the required library filenames differ.
 
 For OpenSSL, `org.openssl.openssl` tracks current upstream and supplies the
 command and development interface through its normal split packages.
-`dev.openssl.openssl3` follows authenticated 3.5 LTS patch releases and supplies
+`org.openssl.openssl3` follows authenticated 3.5 LTS patch releases and supplies
 `libcrypto.so.3`, `libssl.so.3`, the OpenSSL 3 engines, and its legacy provider.
 It has no command, headers, static libraries, or unversioned linker symlinks.
 The current OpenSSL 4 command uses `openssl rehash`; upstream removed the
