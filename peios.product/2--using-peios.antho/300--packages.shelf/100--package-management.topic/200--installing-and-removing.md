@@ -157,9 +157,9 @@ published libraries remain portable across Peios x86-64 systems.
 
 GNU Grep is installed as `org.gnu.grep` and provides the `grep`, `egrep` and
 `fgrep` command names. Its manuals and translated messages are in
-`org.gnu.grep-common`. Basic, extended and fixed-string regular expressions
-are supported; Perl-compatible `grep -P` matching is deliberately unavailable
-until the catalogue has a production PCRE2 package.
+`org.gnu.grep-common`. Basic, extended, fixed-string and Perl-compatible
+(`grep -P`) regular expressions are all supported; `grep -P` uses the PCRE2
+library from `org.pcre.pcre2`, which is installed alongside Grep.
 
 GNU gzip is installed as `org.gnu.gzip`, containing `gzip`, `gunzip`, `zcat`
 and `uncompress`; its manuals are in `org.gnu.gzip-common`. The optional
