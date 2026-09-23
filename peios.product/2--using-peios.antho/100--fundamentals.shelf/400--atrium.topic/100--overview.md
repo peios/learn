@@ -80,5 +80,31 @@ a change applies live — right beside the editor. Like every
 Atrium app it acts with exactly your authority — it runs `reg` as
 you — so a key your logon may not open shows as denied, not as empty.
 
+## Packages
+
+The Packages app is `peipkg` in a window. **Installed** lists what the
+machine carries — click a package for its description, origin, licence
+and the files it owns; one whose repository is no longer configured is
+marked orphaned. **Available** searches the configured repositories,
+**Updates** shows what an upgrade would change, **Repositories** lists
+where packages come from, and **History** is every transaction peipkg
+has made, with **Undo last** to reverse the most recent one.
+
+Nothing changes on a single click. Install, upgrade, uninstall and
+undo each first ask peipkg for its plan — the same list
+`peipkg … --dry-run` prints, dependencies included — and show it; only
+**Apply** runs it, with peipkg's output streaming as it works.
+Uninstalling a package that others depend on is refused until you
+tick the cascade option, and the plan then names everything that
+would go.
+
+Two kinds of change cannot be made from the app, and it says so and
+gives you the command instead: a plan that needs elevated
+authorisation, and an uninstall that would delete a file you have
+modified. peipkg accepts those answers only at its own prompt, so they
+belong in the Terminal. The app also runs `peipkg` as you, for at most
+five minutes at a time: if a very large transaction is cut off at that
+limit the app tells you to run `peipkg recover` before anything else.
+
 Atrium serves plain HTTP in this version: use it on networks you
 trust.

@@ -34,7 +34,10 @@ the shell to close this window.
 **Shortcuts.** `atrium.shortcuts.on(chord, fn)` registers an
 application-local chord, active while the window has focus. Reserved
 chords never fire here; they are captured first and forwarded to the
-shell (§4.3).
+shell (§4.3). A chord with no Ctrl, Alt or Meta in it does not fire
+while the focus is in an `input`, `textarea`, `select` or editable
+element: there the key is text, so an application may bind `R` and
+still have a search box that accepts the letter.
 
 **The declarative layer.** For wrapper apps, the SDK wires clicks on
 any element carrying `data-atrium-exec`:
