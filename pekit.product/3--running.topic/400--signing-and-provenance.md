@@ -372,8 +372,7 @@ Replay requires Python 3.11+, GNU tar, Pekit and Bubblewrap, but invokes no Dock
 or APT commands. It requires matching captured preparer bytes, architecture and
 canonical requested dependencies, and verifies both inventory and archive
 hashes. Every executed Debian target must have its own record; missing, corrupt
-or incompatible records fail without a network fallback. For a native build
-using a Debian vendoring root, this option replays only that Debian environment.
+or incompatible records fail without a network fallback.
 Language acquisition commands retain their explicitly declared network policy;
 retaining the root alone does not turn a `cargo vendor` invocation into offline
 source replay.

@@ -366,13 +366,10 @@ resolves hosts only through resolvd's socket, which no sandbox runs, so a
 native acquisition root gets resolvd's NSS module and a small build-root
 resolver that answers on that socket from the copied `resolv.conf`.
 
-That profile acquires natively whenever the vendor target declares a
-non-empty `peipkg` dependency set, adding only a shell, Python for the
-resolver, the NSS module and TLS trust. A vendor target whose native set is
-still empty acquires in a clean Debian root from its `apt` set, adding Cargo,
-Rust, Git and TLS trust when not already declared; its installed Debian
-inventory records the actual acquisition toolchain. In both cases recipe
-constraints take precedence.
+That profile acquires in a native root built from the vendor target's `peipkg`
+dependency set, adding only a shell, Python for the resolver, the NSS module
+and TLS trust; recipe constraints take precedence. A vendor target with an
+empty `peipkg` set is rejected.
 
 Delegated and member `[env]` layers still apply inside the worker. Their wrappers
 cannot replace workspace isolation or its dependency provider. `--env none` or a
