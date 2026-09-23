@@ -227,7 +227,8 @@ recipe does not use do nothing.
 | `source.signature.required` | `true` | A URL source has a `[source.url.signature]` block. |
 | `source.signature.fingerprint` | `"full"` | A signature block lists at least one fingerprint, and each is the full 40- or 64-hex-digit fingerprint, never a short key id. |
 | `source.signature.keys` | `true` | Every `key_files` entry exists and is not empty. |
-| `source.patches.headers` | `true` | Every patch in the series has, ahead of its first hunk, a `Description:` or `Subject:` line and an `Origin:`, `Author:` or `From:` line (DEP-3). `git format-patch` output satisfies this as written. |
+| `source.patches.headers` | `true` | Every patch in the series has, ahead of its first hunk, a non-empty `Description:` or `Subject:` line and an `Origin:`, `Author:` or `From:` line (DEP-3). `git format-patch` output satisfies this as written. |
+| `source.patches.status` | `true` | Every patch in the series records where it stands upstream: `Forwarded:` (a URL, `no` or `not-needed`), `Applied-Upstream:`, `Bug:`, or an `Origin:` that begins `upstream` or `backport`. |
 
 ### `[build]`
 
@@ -250,7 +251,7 @@ refer to the build host. Relative, root-only and noncanonical claim paths
 | Rule | Value | Checks |
 |---|---|---|
 | `payload.junk` | `true` or an array of patterns | No destination matches a build-leftover pattern. `true` uses the built-in list: `**/*.la`, `**/*.orig`, `**/*.rej`, `**/*.o`, `**/*~`, `**/*.swp`, `**/.git`, `**/.git/**`, `**/.gitignore`, `**/CMakeCache.txt`, `**/.DS_Store`, `usr/share/info/dir`, `**/perllocal.pod`, `**/.packlist`. An array replaces it; `"@default"` in the array includes it. A `.pyc` without its `.py` is always reported. |
-| `payload.scripts` | `true` | A file with a `#!` line is executable; its interpreter is an absolute path that is shipped by this recipe or listed in `payload.interpreters`; and, for `sh`, `dash`, `ash` and `bash`, the host shell's `-n` syntax check passes. |
+| `payload.scripts` | `true` | A file with a `#!` line is executable; its interpreter is an absolute path that is shipped by this recipe or listed in `payload.interpreters` (for `#!/usr/bin/env prog`, both `env`'s own path and `prog` must be allowed); and, for `sh`, `dash`, `ash` and `bash`, the host shell's `-n` syntax check passes. |
 | `payload.symlinks.dangling` | `"forbidden"` | Every symlink resolves to something shipped by one of the recipe's packages. Claim slot paths, which point across packages by design, are skipped. |
 | `payload.symlinks.absolute` | `"forbidden"` | No symlink has an absolute target. |
 | `payload.filenames` | `"portable"` | Every destination is printable ASCII with no whitespace. |

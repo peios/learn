@@ -48,6 +48,12 @@ changes nothing: trustd overwrites it the next time anything changes. The
 `GenerateLinuxTrustFiles` value decides whether they exist at all — see
 [the compat files](~peios/trust/the-compat-files).
 
+Trust belongs to the machine, not to each program. A package that uses TLS
+does not depend on `ca-certificates` or on trustd: installing the root store
+alone renders nothing, and the image that runs the program provides trustd.
+Without trustd, the files above do not exist and certificate validation
+fails.
+
 > [!NOTE]
 > There is no `update-ca-certificates` and no directory to drop a `.crt`
 > into. Both exist on other systems because trust policy lives in files
