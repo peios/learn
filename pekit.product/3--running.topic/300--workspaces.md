@@ -167,7 +167,8 @@ selectors carried through unchanged.
 `--jobs N` sets how many members run concurrently. `N` must be a **positive
 integer**; a missing value is `missing_flag_value` and a non-positive or
 non-numeric value is `invalid_flag_value` ("--jobs requires a positive
-integer"). The **default is 1**, i.e. members run one at a time in id order.
+integer"). The **default is 1**, i.e. members run one at a time, in
+[dependency order](#dependency-order).
 
 ### Fail-fast: `--fail-fast`
 
@@ -184,14 +185,72 @@ further members are started**. Members that had not yet begun are recorded as
 > that are already running. In-flight members run to completion. There is no
 > mid-member cancellation.
 
-### No inter-member dependencies
+### Dependency order
 
-Members are independent. Pekit does **not** compute a dependency graph between
-members, does not topologically order them, and does not make one member's build
-visible to another as an input. The only ordering is the lexicographic id order
-used for dispatch. If a member needs another member's output, that relationship
-must be expressed through the normal recipe machinery (sources, package
-dependencies), not through workspace membership.
+For `build`, `install`, `test`, `package` and `publish`, pekit orders members so
+that a member producing a package runs before the members that install it. The
+aim is the best chance of a whole batch succeeding, even into an empty
+repository.
+
+A member waits for another when the dependencies of its **gate targets** name a
+package the other member defines. Gate targets are the ones the command
+installs dependencies for: build targets for `build` and `install`, build and
+test targets for `test`, and build targets plus [gated tests](~pekit/running/commands-and-targets#gates)
+for `package` and `publish` (only build targets under `--no-gates`). Only the
+dependency set of the **selected env's `dependency_provider`** counts: under an
+env whose provider's names no member produces (a foreign distribution's
+packages, say), there are no edges and members are independent.
+
+Runtime dependencies count too. When a member needs a package another member
+defines, it also waits for whatever that package's own runtime
+[`[dependencies]`](~pekit/reference/recipe-format#dependencies) name, followed
+transitively through member packages, provided the package declares the same
+[`dependency_provider`](~pekit/reference/recipe-format#top-level-keys-2). Names
+no selected member defines are not ordered: they resolve from whatever the
+provider already has, as before.
+
+Scheduling:
+
+- Among members whose waits are satisfied, lower ids start first; `--jobs`
+  runs several at once.
+- A member starts even if one it waited for failed. It then resolves that
+  dependency from what the provider already has.
+- A dependency cycle cannot be ordered. When nothing is runnable and nothing is
+  running, pekit starts the blocked member with the fewest unfinished
+  dependencies (lowest id on a tie) and carries on. There is no warning:
+  building a real cycle from nothing needs a separately built seed, which
+  [tags](#selecting-members-by-tag) let you select.
+
+Ordering reads each member's effective recipe, resolving its source as the
+member's own run will. Under `--dry-run` only already-cached sources are
+visible, and `--dry-run` or `--verbose` reports each member's waits as
+`workspace_order` events. A member whose recipe cannot be resolved is not
+ordered, and reports its failure when it runs.
+
+## Selecting members by tag
+
+A recipe may label itself with [`tags`](~pekit/reference/recipe-format#top-level-keys):
+
+```toml
+# pekit.toml
+tags = ["bootstrap"]
+```
+
+After the delegated command, `--tag <tag>` runs only members carrying any
+given tag, and `--exclude-tag <tag>` skips members carrying any given tag.
+Both repeat, apply after `include`/`exclude`, and fail with `empty_workspace`
+when nothing matches. Tags are catalogue policy, so only the member recipe's
+own tags count, never a delegated source's.
+
+Tags and ordering together are how a distribution bootstraps from nothing: build
+the tagged seed in an environment that needs none of the catalogue, then
+everything else in dependency order, then the seed again natively.
+
+```console
+$ pekit workspace publish --all --latest --tag bootstrap --env debian
+$ pekit workspace publish --all --latest --exclude-tag bootstrap --env peipkg
+$ pekit workspace publish --all --latest --tag bootstrap --env peipkg
+```
 
 ### Summary
 

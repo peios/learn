@@ -82,6 +82,7 @@ The recipe file accepts exactly these top-level keys. Anything else is an
 | `input` | table | no | Additional authenticated upstream inputs, keyed by name. See [`[input.<name>]`](#input-name). |
 | `delegate` | bool or table | no | Borrow build/env/wrap/package definitions from the source tree. See [`[delegate]`](#delegate). |
 | `source_package` | table | no | Corresponding-source package emission control. See [`[source_package]`](#source-package). |
+| `tags` | array of strings | no | Labels for selecting this recipe as a workspace member with `--tag` and `--exclude-tag`. Each tag is a selector-style name; duplicates are rejected. Only the member recipe's own tags count: a delegated source's `tags` are ignored. See [Workspaces](~pekit/running/workspaces#selecting-members-by-tag). |
 | `build` | table | no | Build target(s). See [`[build]` / `[test]` / `[install]` / `[clean]`](#build-test-install-clean-targets). |
 | `test` | table | no | Test target(s). |
 | `install` | table | no | Install target(s). |
@@ -501,6 +502,7 @@ The package file accepts exactly these top-level keys; anything else is an
 | Key | Type | Required | Meaning |
 | --- | --- | --- | --- |
 | `format` | string | no | Artifact format: `"tar"` or `"peipkg"`. Default `"tar"`. |
+| `dependency_provider` | string | no | The dependency namespace this package's runtime [`[dependencies]`](#dependencies) belong to, matching an env file's `dependency_provider`. Workspace ordering follows a package's runtime dependencies only when this equals the selected env's provider. Inherited through package layers like `format`, so a workspace sets it once in its shared `package.pekit.toml`. Undeclared means the runtime dependencies do not affect ordering. |
 | `clear_out` | bool | no | Wipe the package stage directory before building. Default `true`. |
 | `builds` | array of strings | no | Names of build targets this package requires before staging. |
 | `package` | table | no | Package metadata. See [`[package]`](#package). |
