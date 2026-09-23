@@ -220,7 +220,10 @@ The package is named `<recipe-dir>-source` by default (rename with
 `source_package.name`), is `noarch`, and is versioned identically to the
 members — members that disagree on version are a
 `source_package_version_conflict` error. Its license is the conjunction of
-the members' distinct licenses, joined with ` AND `. Its license class is the
+the members' licenses and any `source_package.license`. The recipe declares
+that key for material only the source carries, such as a test program no member
+ships. Terms are deduplicated and sorted, and a term containing `OR` stays
+parenthesised. Its license class is the
 most restrictive class declared by any member, so an all-`free` family remains
 `free`, while an omitted or `unknown` member makes the corresponding source
 package `unknown`. Its homepage is kept only when every member agrees on one;

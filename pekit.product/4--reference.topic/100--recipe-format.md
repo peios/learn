@@ -319,16 +319,26 @@ qualify), and it produces at least one `peipkg`-format package.
 | `name` | string | no | Package name. Default `<recipe-dir>-source`. |
 | `enabled` | bool | no | Set `false` to emit no source package. Default `true`. |
 | `workspace_inputs` | array of relative paths | no | Additional shared workspace inputs for this recipe. Under workspace isolation they are copied into read-only worker mounts and included byte-for-byte in the source bundle. Missing, ignored or escaping inputs fail. |
+| `license` | string | no | SPDX expression covering material that only the source package carries, such as upstream test programs or build helpers that no member ships. It is added to the members' licenses, never substituted for them. An expression that isn't valid SPDX is `invalid_value`. |
 
 Any other key is an `unknown source_package key` error.
 
 The emitted package is `noarch`, versioned identically to the recipe's package
 members (members that disagree on version are a
 `source_package_version_conflict` error), licensed as the conjunction of the
-members' licenses (and classed as the most encumbered member's class —
+members' licenses and `license` (see below; and classed as the most encumbered member's class —
 `proprietary` over `firmware` over `unknown` over `free`, with an
 undeclared member counting as `unknown`), and installs under `/usr/src/dist/<name>-<version>/`
-(with any `-source` suffix stripped from `<name>`):
+(with any `-source` suffix stripped from `<name>`).
+
+The conjunction is built term by term. Each expression is split into its
+top-level `AND` terms. A term containing `OR` keeps its parentheses, so the
+surrounding `AND`s can't rebind it. Repeated terms appear once, and the terms
+are sorted. Members licensed `GPL-2.0-or-later OR LGPL-3.0-or-later`,
+`GPL-3.0-or-later` and `GPL-3.0-or-later AND LGPL-2.1-or-later` produce
+`(GPL-2.0-or-later OR LGPL-3.0-or-later) AND GPL-3.0-or-later AND LGPL-2.1-or-later`.
+
+The package's content:
 
 - `upstream/` — the pristine source input: a url source's downloaded artifact
   byte-for-byte, so its hash matches the committed `pekit.lock`, or a
