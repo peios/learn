@@ -1787,3 +1787,6 @@ the caller's PIP state. Emitted by kacs:kacs_mntns. Verdict is `ret`.
 | `KACS_MNTNS_GATE_OP_NOT_ADMITTED` | `4` | op needs the privilege whatever the SD says |
 | `KACS_MNTNS_GATE_SD_DECISION` | `5` | access check against the namespace SD |
 | `KACS_MNTNS_GATE_PIP_CONTEXT` | `6` | caller PIP context unavailable |
+| `KACS_MNTNS_GATE_FS_NOT_ADMITTED` | `7` | filesystem type not on the unprivileged allowlist |
+| `KACS_MNTNS_SB_STAMP` | `8` | unprivileged tmpfs stamped synth-ephemeral, creator template |
+| `KACS_MNTNS_SB_STAMP_FAIL` | `9` | creator template could not be built |

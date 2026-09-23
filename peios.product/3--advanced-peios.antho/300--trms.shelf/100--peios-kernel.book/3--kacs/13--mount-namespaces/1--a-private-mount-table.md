@@ -67,12 +67,14 @@ with the privilege is copied as upstream copies it, peers and all.
 
 ## The mount gate
 
-`may_mount()` in `fs/namespace.c` is the single gate for `mount`,
-`umount2`, `pivot_root`, `open_tree(OPEN_TREE_CLONE)`, `fsmount`,
-`move_mount` and `mount_setattr`. Under KACS it takes the operation as
-an argument and asks `pkm_kacs_may_mount_op()` in three rungs, against
-the caller's effective token and the descriptor of the caller's current
-namespace: [*mntns.gate-rungs]
+`may_mount()` in `fs/namespace.c` is the gate for `mount`, `umount2`,
+`pivot_root`, `open_tree(OPEN_TREE_CLONE)`, `fsmount`, `move_mount` and
+`mount_setattr`, and `mount_capable()` in `fs/super.c` is the second
+gate a new filesystem passes, when its superblock is brought into being.
+Under KACS both take the operation as an argument, with the filesystem
+type where one is being created, and ask `pkm_kacs_may_mount_op()` in
+three rungs, against the caller's effective token and the descriptor of
+the caller's current namespace: [*mntns.gate-rungs]
 
 1. **Privilege.** A token holding `SeManageVolumePrivilege` or
    `SeTcbPrivilege`, enabled, is admitted to every operation in every
@@ -89,18 +91,29 @@ namespace: [*mntns.gate-rungs]
    namespace's descriptor under the caller's PIP context, exactly as it
    does for a socket or a SysV object. [*mntns.gate-descriptor-check]
 
-The operations the descriptor can admit are the three that put no
-kernel filesystem parser in reach of the caller: [*mntns.admissible-operations]
+The operations the descriptor can admit are the ones that put no
+kernel filesystem parser of an untrusted image in reach of the caller: [*mntns.admissible-operations]
 
 | `mount(2)` shape | Gate operation | Admissible by descriptor |
 |---|---|---|
 | `MS_BIND`, with or without `MS_REC` | bind | yes |
 | `umount2` without `MNT_FORCE` | unmount | yes |
 | `pivot_root` | pivot_root | yes |
-| a filesystem type (`do_new_mount`) | other | no |
+| a new `tmpfs` or `proc` (`do_new_mount`) | new filesystem | yes |
+| any other filesystem type | new filesystem | no |
 | `MS_REMOUNT`, including `MS_REMOUNT\|MS_BIND` | other | no |
 | `MS_MOVE`; `MS_SHARED`, `MS_PRIVATE`, `MS_SLAVE`, `MS_UNBINDABLE` | other | no |
 | `open_tree(OPEN_TREE_CLONE)`, `fsmount`, `move_mount`, `mount_setattr` | other | no |
+
+The filesystem types a descriptor can admit are an allowlist KACS keeps,
+and it holds exactly `tmpfs` and `proc`: both read nothing but the
+caller's own mount options, tmpfs having no backing image and proc
+being a view of the kernel's own state. A type that parses an image —
+ext4, squashfs, iso9660, ntfs3 — or that KACS governs specially, as it
+does stratafs, is refused before the type is even looked up. The list is
+an attack-surface list and not a policy knob: who may change a table is
+decided by the table's descriptor alone, and the same descriptor that
+admits tmpfs refuses ext4. [*mntns.fs-type-allowlist]
 
 Everything in the *no* rows needs the privilege whatever the descriptor
 grants, and `MNT_FORCE` additionally keeps its own `CAP_SYS_ADMIN` test
@@ -110,6 +123,27 @@ looked up through the caller's own table, an unmount needs a mount
 point that belongs to it, and `pivot_root` needs the propagation
 conditions it always needed, which the slave copy of an unprivileged
 table satisfies.
+
+### An unprivileged tmpfs is stamped for its creator
+
+A fresh tmpfs is deny-missing under FACS (§3.9.5): nothing on it carries
+a descriptor, so nothing on it is reachable until someone sets the
+superblock's mount policy, which `kacs_set_mount_policy` reserves to the
+mount privilege. That is right for the system's own overlays, which are
+seeded deliberately, and it would leave a tmpfs admitted by a namespace
+descriptor permanently empty. So at `sb_kern_mount`, a tmpfs brought
+into being by a token that holds no mount privilege is stamped
+synthesize-ephemeral with a template descriptor the kernel mints itself:
+owner and group from the mounter's token, one allow ACE granting the
+mounter's user SID `GENERIC_ALL` — the same shape as the namespace
+descriptor. [*mntns.unprivileged-tmpfs-stamped] The policy generation moves to 1, which retires the
+deny-missing default the root inode's creation cached during
+`fill_super`. The mounter cannot choose the template, and a superblock
+whose policy `kacs_set_mount_policy` has already set is left alone. A
+privileged mounter's tmpfs is untouched: it keeps the magic default and
+the mounter seeds it, as before. [*mntns.privileged-tmpfs-untouched] proc is unmanaged and needs no
+stamp; a second proc mount in the same pid namespace shows the same
+processes under the same per-process checks.
 
 So a process whose whole world is a directory of its choosing is:
 
@@ -142,8 +176,9 @@ compares signatures at `mmap` rather than paths. [*mntns.no-new-authority]
 ## Tracing
 
 The `kacs:kacs_mntns` event records a descriptor minted at namespace
-creation and each rung of the gate, with the operation code, the right
-asked of the descriptor where a rung reached it, a reason from
-`<pkm/trace.h>` — `sd-alloc`, `sd-alloc-fail`, `gate-privilege`,
-`gate-no-sd`, `gate-op-not-admitted`, `gate-sd-decision`,
-`gate-pip-context` — and the verdict. [*mntns.trace-event]
+creation, each rung of the gate, and a tmpfs stamped for its creator,
+with the operation code, the right asked of the descriptor where a rung
+reached it, a reason from `<pkm/trace.h>` — `sd-alloc`, `sd-alloc-fail`,
+`gate-privilege`, `gate-no-sd`, `gate-op-not-admitted`,
+`gate-sd-decision`, `gate-pip-context`, `gate-fs-not-admitted`,
+`sb-stamp`, `sb-stamp-fail` — and the verdict. [*mntns.trace-event]

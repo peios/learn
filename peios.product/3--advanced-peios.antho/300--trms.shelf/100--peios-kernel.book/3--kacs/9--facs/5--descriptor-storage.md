@@ -185,7 +185,11 @@ one it found used; `kacs_get_mount_policy` is gated the same
 way. [*facs.storage.set-mount-policy-privilege] The
 public ABI accepts only the three managed classes; `unmanaged`,
 unknown values, nonzero reserved flags and malformed arguments all
-fail closed. [*facs.storage.set-mount-policy-input-validation]
+fail closed. [*facs.storage.set-mount-policy-input-validation] The one
+policy the kernel sets on its own initiative is for a tmpfs that a token
+without the privilege brought into being inside its own mount namespace,
+which is stamped `synth-ephemeral` with a creator-owned template at
+`sb_kern_mount` (§3.13).
 
 The optional template is accepted only with a synthesise class. [*facs.storage.template-requires-synthesise] It is
 a complete self-relative descriptor rather than a subset, passes
