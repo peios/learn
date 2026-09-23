@@ -151,6 +151,43 @@ already deduplicated per file. Debugedit's tools are `org.sourceware.debugedit`;
 its RPM-style `find-debuginfo` driver is the separate
 `org.sourceware.debugedit-find-debuginfo`, which brings in GDB and DWZ.
 
+util-linux's libblkid and `getopt` are joined by three command packages:
+`org.kernel.util-linux-schedutils` (`taskset`, `chrt`, `ionice` and `renice`,
+for CPU affinity and scheduling), `org.kernel.util-linux-script` (`script`,
+`scriptreplay` and `scriptlive`, for recording terminal sessions) and
+`org.kernel.util-linux-extra` (`flock`, `setsid`, `rev`, `col`, `colcrt` and
+`colrm`). util-linux commands that duplicate peiosutils, or that manage logons,
+storage, capabilities or namespaces, are not included.
+
+Tcl 8.6 is installed as `org.tcl-lang.tcl`: `tclsh`, libtcl and the script
+library. Its headers (including the private ones under
+`/usr/include/tcl-private`), stubs library, `tclConfig.sh` and C API manuals
+are in `org.tcl-lang.tcl-devel`. Expect is `org.tcl-lang.expect`, providing
+the `expect` interpreter and `package require Expect`, with
+`org.tcl-lang.expect-devel` for embedding; Expect's example scripts
+(`autoexpect`, `unbuffer`, `mkpasswd` and the rest) are not shipped. The
+DejaGnu test harness, `runtest`, is `org.gnu.dejagnu`, and its `dejagnu.h`
+unit-test header is `org.gnu.dejagnu-devel`.
+
+Three C and C++ unit-testing frameworks are available for building and running
+test suites:
+
+- GoogleTest and GoogleMock are `com.google.googletest`, with headers, the
+  CMake package (`find_package(GTest)`) and pkg-config modules in
+  `com.google.googletest-devel` and static libraries in
+  `com.google.googletest-static`. The shared libraries' sonames carry the full
+  release version, so test binaries rebuild with each GoogleTest update.
+- CUnit (the maintained CUnity continuation of SourceForge CUnit) is
+  `com.gitlab.cunity.cunit`, which holds the XML report stylesheets; headers,
+  the pkg-config module and the CMake package are in
+  `com.gitlab.cunity.cunit-devel`. CUnit builds only a static library,
+  `com.gitlab.cunity.cunit-static`, which the development package brings in.
+- Check is `io.github.libcheck.check`, with headers, the pkg-config module and
+  the `AM_PATH_CHECK` Autoconf macro in `io.github.libcheck.check-devel` and
+  the static library in `io.github.libcheck.check-static`. `checkmk`, which
+  generates Check test programs from compact descriptions, is the separate
+  `io.github.libcheck.check-checkmk`.
+
 GNU Gettext's catalog commands are installed as `org.gnu.gettext`, with
 manuals, extraction rules, project templates and the commands' translated
 messages in `org.gnu.gettext-common`. Project maintainers install
