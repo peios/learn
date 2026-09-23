@@ -130,6 +130,27 @@ enabled. Persistent arrays are disabled because their process-wide ASLR
 manipulation is outside the Peios process contract. The interactive debugger
 (`gawk -D`) has GNU Readline line editing and command history.
 
+The GNU debugger is installed as `org.gnu.gdb`, with the `gcore`, `gstack` and
+`gdb-add-index` helpers, Python scripting, the text user interface (`gdb
+-tui`), Readline line editing and iconv character-set conversion. It reads
+compressed debug sections (zlib, zstd and LZMA MiniDebugInfo) and finds a
+program's symbols in the matching `-debuginfo` package by build ID under
+`/usr/lib/debug`. The remote debugging stub is the separate
+`org.gnu.gdb-gdbserver`, and `org.gnu.gdb-devel` adds the JIT reader interface
+header. Guile scripting, CTF trace files, Intel Processor Trace, debuginfod
+lookups and source highlighting are not included.
+
+The Expat XML parser library is installed as `io.github.libexpat.expat`; its
+headers, pkg-config and CMake files are in `io.github.libexpat.expat-devel`, the
+static library in `io.github.libexpat.expat-static`, and the `xmlwf`
+well-formedness checker in `io.github.libexpat.expat-tools`.
+
+DWZ, the DWARF duplicate-removal tool, is installed as `org.sourceware.dwz`.
+Catalogue packages are built with it, so their `-debuginfo` payloads are
+already deduplicated per file. Debugedit's tools are `org.sourceware.debugedit`;
+its RPM-style `find-debuginfo` driver is the separate
+`org.sourceware.debugedit-find-debuginfo`, which brings in GDB and DWZ.
+
 GNU Gettext's catalog commands are installed as `org.gnu.gettext`, with
 manuals, extraction rules, project templates and the commands' translated
 messages in `org.gnu.gettext-common`. Project maintainers install
