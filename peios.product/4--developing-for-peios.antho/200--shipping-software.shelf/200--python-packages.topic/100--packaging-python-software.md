@@ -75,6 +75,13 @@ if __name__ == '__main__':
 
 The interpreter is `/bin/python3`, not `/usr/bin/python3`: `/bin` is the runtime view every program is reached through, and a payload never names `/usr` directly. A private application's launcher carries one more line before the import — `sys.path.insert(0, '/lib/x86_64-linux-peios/meson')` — again through the view.
 
+Modules can carry a `#!` line of their own for running them directly: a
+`#!/usr/bin/env python3` or `#!/usr/bin/python3` at the top of an installed
+file. Rewrite it to `#!/bin/python3` as well, and do it **before** compiling the
+bytecode. A checked-hash `.pyc` records the hash of its source, so editing the
+file afterwards leaves the bytecode stale, and Python recompiles it on every
+import.
+
 ## Bytecode
 
 The recipe compiles bytecode and ships it in the package:
