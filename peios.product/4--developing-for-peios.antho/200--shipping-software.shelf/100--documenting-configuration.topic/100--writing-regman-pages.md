@@ -225,7 +225,9 @@ spelling that resolves.
 
 There is no `summary:` field. The **first non-empty line of the body** is taken as the one-sentence summary — it is what shows next to the value name in a key doc's index and in `regman -k` search results. So write the body like a good commit message or docstring: lead with one self-contained sentence, then elaborate in the paragraphs below.
 
-The body is Markdown: `**bold**`, `` `code` ``, headings, and bullet lists render; prose is wrapped to the terminal width. On a non-tty (piped) it renders plain, honouring `NO_COLOR`.
+The body is Markdown: `**bold**`, `*emphasis*`, `` `code` ``, headings, and bullet lists render; prose is wrapped to the terminal width. On a non-tty (piped) it renders plain, honouring `NO_COLOR`. Emphasis carries no styling of its own — the markers simply come off — because italic is not dependable across terminals and bold already covers making something stand out.
+
+A delimiter only counts as markup when its closer is present, so a lone `*` or backtick stays in the text where you put it rather than disappearing. `*` and `**` also need no whitespace just inside either end, which is what keeps a matched pair that was never markup — `2 * 3 * 4`, or `*.conf and *.h` — from being read as one.
 
 ## A complete fragment
 
