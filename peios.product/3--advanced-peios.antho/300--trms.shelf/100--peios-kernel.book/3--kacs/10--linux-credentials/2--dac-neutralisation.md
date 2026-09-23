@@ -86,15 +86,24 @@ one: `CAP_SYS_ADMIN` gates dozens of unrelated operations, so widening
 it would hand out far more than mounting.
 
 Mounting is handled outside the capability table instead. `may_mount()`
-(`fs/namespace.c`, patched) calls `pkm_kacs_may_manage_volumes()`, which
-accepts `SeManageVolumePrivilege` **or** `SeTcbPrivilege`, before falling
-back to the ordinary `CAP_SYS_ADMIN` check. [*cred.dac.may-mount-manage-volume] Every other `CAP_SYS_ADMIN`
-caller still needs the TCB.
+(`fs/namespace.c`, patched) calls `pkm_kacs_may_mount_op()`, whose first
+rung accepts `SeManageVolumePrivilege` **or** `SeTcbPrivilege`, before
+falling back to the ordinary `CAP_SYS_ADMIN` check. [*cred.dac.may-mount-manage-volume] In a mount
+namespace the caller created for itself, a second rung admits a bind
+mount, an unmount or a `pivot_root` on the namespace's own security
+descriptor instead (§3.13); in the initial namespace the privilege is
+the only route. Every other `CAP_SYS_ADMIN` caller still needs the TCB.
 
 It has to be asked there rather than through the `sb_mount` LSM hook:
 `may_mount()`'s capability check runs *before* `security_sb_mount()`, so
 an LSM is never consulted about a mount the capability check already
 refused. A hook can narrow that decision; it cannot widen it.
+
+The `CAP_SYS_ADMIN` gate on creating a namespace (`kernel/nsproxy.c`,
+patched) has one carve-out of the same kind: a request for a mount
+namespace alone passes without it, because the table it yields is an
+object its creator owns. Any other namespace type, alone or in
+combination, still needs the TCB. [*cred.dac.mount-namespace-ungated]
 
 `CAP_SYS_BOOT` carries an extra condition the table cannot express: a
 token whose logon session is of a remote origin — Network,

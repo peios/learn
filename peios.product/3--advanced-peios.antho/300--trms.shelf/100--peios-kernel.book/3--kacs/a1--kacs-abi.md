@@ -751,6 +751,18 @@ a NULL path. The object is looked up in the caller's IPC namespace. [*kacs-abi.s
 | `KACS_SD_AT_SYSV_SEM` | `0x04000000` |
 | `KACS_SD_AT_SYSV_MASK` | `117440512` |
 
+## mntns.h
+
+From `uapi/pkm/mntns.h`.
+
+*KACS access rights for mount namespaces.* [*kacs-abi.mntns-access-rights]
+
+| Constant | Value | Notes |
+|---|---|---|
+| `KACS_MNTNS_MOUNT` | `0x00000001` (1) | change the mount table |
+| `KACS_MNTNS_ENTER` | `0x00000002` (2) | join the namespace with setns(2) |
+| `KACS_MNTNS_ALL_ACCESS` | `917507` |  |
+
 ## AccessCheck constants
 
 From `uapi/pkm/access.h`.
@@ -1755,3 +1767,23 @@ prefix-table replacement. Emitted by kacs:kacs_tlp. Verdict is `ret`.
 |---|---|---|
 | `KACS_TLP_CHECK_PATH` | `0` | executable transition denied: no prefix match |
 | `KACS_TLP_REPLACE` | `1` | TLP prefix table replaced |
+
+*kacs_mntns reason — mount-namespace object lifecycle and the mount gate.*
+
+SD_ALLOC / SD_ALLOC_FAIL mark a namespace minted with (or without) its
+creator descriptor; the gate reasons say which rung admitted or refused
+a mount-table change: PRIVILEGE is SeManageVolume / SeTcb, NO_SD is a
+namespace with no descriptor (the initial one), OP_NOT_ADMITTED is an
+operation the descriptor can never grant, SD_DECISION is the access
+check against the namespace descriptor, PIP_CONTEXT a failure to read
+the caller's PIP state. Emitted by kacs:kacs_mntns. Verdict is `ret`.
+
+| Constant | Value | Notes |
+|---|---|---|
+| `KACS_MNTNS_SD_ALLOC` | `0` | namespace minted with a creator descriptor |
+| `KACS_MNTNS_SD_ALLOC_FAIL` | `1` | descriptor could not be built |
+| `KACS_MNTNS_GATE_PRIVILEGE` | `2` | admitted by SeManageVolume / SeTcb |
+| `KACS_MNTNS_GATE_NO_SD` | `3` | namespace has no descriptor; refused |
+| `KACS_MNTNS_GATE_OP_NOT_ADMITTED` | `4` | op needs the privilege whatever the SD says |
+| `KACS_MNTNS_GATE_SD_DECISION` | `5` | access check against the namespace SD |
+| `KACS_MNTNS_GATE_PIP_CONTEXT` | `6` | caller PIP context unavailable |

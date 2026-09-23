@@ -145,7 +145,11 @@ Two further flag groups select **separation** rather than sharing, each document
 where it belongs:
 
 - The `CLONE_NEW*` flags create **namespaces** — separate views of system
-  resources (mounts, process IDs, networking, and more), covered under namespaces.
+  resources (mounts, process IDs, networking, and more). Only `CLONE_NEWNS`
+  is available to an ordinary process: a private mount table is an object its
+  creator owns, described in the Peios Kernel TRM (§3.13). Every other
+  namespace type needs `SeTcbPrivilege`, which is what `CAP_SYS_ADMIN` means
+  on Peios.
 - `CLONE_INTO_CGROUP` places the new process into a **resource group** at creation,
   covered under resource management.
 
