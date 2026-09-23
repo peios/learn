@@ -62,6 +62,17 @@ rule nor the `noarch` restriction: it is a plain permitted destination
 that both arch-specific and `noarch` packages MAY use. The same applies
 to `/usr/src/dist/`, the home of corresponding-source packages.
 
+Files retained inside `/usr/src/dist/` are reconstruction inputs rather than
+installed library providers. Captured upstream or vendored inputs MAY include
+library-shaped test fixtures or import archives for other target platforms
+(such as Cargo's Windows crates), including in a `noarch` source package. Their
+`.so` or `.a` suffix does not make that reserved source-data tree a runtime
+library installation. The normal library-placement rule still applies outside
+this subtree; source data remains subject to path and symlink containment.
+Automatic ELF and pkg-config capability derivation MUST ignore `/usr/src/`
+inputs: their libraries and `.pc` fixtures do not provide installed interfaces
+or create runtime dependencies of a source package.
+
 > [!NOTE]
 > A corresponding-source package conventionally lays out
 > `/usr/src/dist/<name>-<version>/` with `upstream/` — the pristine
