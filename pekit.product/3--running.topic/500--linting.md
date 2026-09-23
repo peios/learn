@@ -182,7 +182,7 @@ Checked for each package definition the recipe produces.
 | `package.license_class` | `true` | A peipkg-format package declares `license_class`. Other formats are not checked. |
 | `package.homepage` | `true` or `"https"` | A homepage is declared; with `"https"`, it is an https URL. |
 | `package.description` | `true` or a length | A description exists, is one line, is at most the given length (80 when `true`), does not end with a full stop, and does not start with the package name or its last dotted label. |
-| `package.dependencies` | `"consistent"` | No self-dependency; no dependency on a name the package itself provides; no name both depended on and conflicted with; no name in both `[dependencies]` and `[optional_dependencies]`; no provide or conflict on the package's own name. |
+| `package.dependencies` | `"consistent"` | No self-dependency; no dependency on a name the package itself provides; no name both depended on and conflicted with; no name in both `[dependencies]` and `[optional_dependencies]`; no provide or conflict on the package's own name; no dependency, optional dependency or provide whose version spells out `"{{version}}-N"` by hand (use `"= {{release}}"`). |
 | `package.references` | `"reverse-dns"` | Every concrete package reference in package metadata and every Peipkg target dependency uses its canonical reverse-DNS name. Structured virtual capabilities such as `pkgconfig(foo)`, `python(abi)` and ELF SONAMEs remain valid. Other deliberately unqualified interfaces must be listed in `package.virtual_capabilities`. |
 | `package.architecture` | `"consistent"` **payload** | A package declared architecture-independent ships no ELF object and nothing under an architecture-specific directory; a package declared for an architecture ships at least one such thing. The architecture-independent name is the `package.noarch` parameter, default `noarch`. |
 
@@ -233,7 +233,7 @@ recipe does not use do nothing.
 
 | Rule | Value | Checks |
 |---|---|---|
-| `build.dependencies.providers` | array of provider names | Every build target declares a `[build.<name>.dependencies.<provider>]` table for each listed provider. An empty table is an explicit "none". |
+| `build.dependencies.providers` | array of provider names | Every build and test target declares a `[build.<name>.dependencies.<provider>]` (or `[test.<name>.dependencies.<provider>]`) table for each listed provider. An empty table is an explicit "none". |
 | `build.test` | `true` | The recipe defines a test target. A delegate recipe whose targets live in its source is not checked. |
 
 ### `[payload]`

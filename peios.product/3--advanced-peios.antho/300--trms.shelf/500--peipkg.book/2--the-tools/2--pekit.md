@@ -23,6 +23,6 @@ upstream". Package versions are compared by PSPU §5.6. The two are
 separate, and where a recipe's template variables expose version
 components they come from pekit's model.
 
-**pekit signs.** A package is signed at pack time with a key named by
-the recipe's signing configuration, and the signature entry is the last
+**pekit signs.** A package is signed at pack time with the keyring's
+`signing.package_key`, and the signature entry is the last
 thing written into the archive before compression.

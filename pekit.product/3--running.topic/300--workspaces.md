@@ -244,14 +244,18 @@ own tags count, never a delegated source's.
 
 Tags and ordering together are how a distribution bootstraps from nothing: build
 the tagged seed in an environment that needs none of the catalogue, then
-everything else in dependency order, then the seed again natively. Here the
-workspace's default profile is the native one, and `debian` is the named
-profile used only for the seed:
+everything else in dependency order, then the seed again natively, then
+everything else against the native seed. Here the workspace's default profile is
+the native one, and `debian` is the named profile used only for the seed. The
+later rounds publish versions that already exist, so they overwrite them with
+[`--replace`](~pekit/reference/cli), which is only for a repository nobody
+consumes yet:
 
 ```console
 $ pekit workspace publish --all --latest --tag bootstrap --env debian
 $ pekit workspace publish --all --latest --exclude-tag bootstrap
-$ pekit workspace publish --all --latest --tag bootstrap
+$ pekit workspace publish --all --latest --tag bootstrap --replace
+$ pekit workspace publish --all --latest --exclude-tag bootstrap --replace
 ```
 
 ### Summary

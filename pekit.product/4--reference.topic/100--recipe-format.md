@@ -534,7 +534,13 @@ The package file accepts exactly these top-level keys; anything else is an
 
 Most string-valued fields (metadata, dependency names/constraints, file refs
 and destinations, claim paths/targets) are run through the template engine,
-where `{{version}}` and `{{multipack}}` are available. See
+where `{{version}}` and `{{multipack}}` are available. After
+`[package].version` is rendered, `{{release}}` is also available: the package's
+own full version, including its revision (`1.13.2-3` for
+`version = "{{version}}-3"`). Pin packages built from the same source to each
+other with `"= {{release}}"`, so the pins follow the revision automatically; the
+`package.dependencies` lint rule reports relations that spell out
+`"{{version}}-N"` by hand. See
 [Versions](~pekit/recipes/versions) and
 [Multi-package recipes](~pekit/recipes/multi-package).
 

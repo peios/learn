@@ -424,6 +424,7 @@ file/symlink paths, excludes, claims, multipack `enum.files.path`, publish
 | `{{prerelease}}` | pre-release component (after `-`) | Empty string when absent. |
 | `{{buildmeta}}` | build-metadata component (after `+`) | Empty string when absent. |
 | `{{multipack}}` | the current multipack instance value | Only available while expanding a multipack package's per-instance values; errors in any non-multipack context. |
+| `{{release}}` | the package's own rendered version, including its revision (`1.13.2-3`) | Only available in a package definition's fields after `[package].version` has been rendered, such as dependencies, provides and conflicts. Errors anywhere else, including in `version` itself. |
 
 A version string has one or more dot-separated numeric components, an optional
 unseparated alphanumeric suffix beginning with a letter (for example `2026c`),

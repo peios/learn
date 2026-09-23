@@ -146,8 +146,6 @@ checked there. Pip and the test ecosystem are not added to the build backend's
 runtime package or to the system interpreter. Nested virtualenv tests can clear
 `PYTHONPATH` and still find their tools. The worker has no external network;
 local `file://` package-index fixtures and recorded wheel files remain usable.
-Rust acquisition infrastructure is added only when the target declares Cargo or
-rustc, so Python acquisition does not install an unrelated compiler stack.
 
 The gates run all Flit Core tests and Setuptools's offline functional suite. Setuptools tests explicitly marked `uses_network` are excluded: these
 include its live-PyPI project integration matrix. Release-upload tooling and

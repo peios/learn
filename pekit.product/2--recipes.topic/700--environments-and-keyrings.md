@@ -104,11 +104,14 @@ values literal if your target uses the array form without a wrapper.)
 ## Env files and `--env`
 
 An **env file** is a supporting file at the workspace root or beside a recipe. It
-carries an `[env]` block, a `[wrap]` wrapper, a `dependency_provider`, or any
-combination of the three. It lets you keep environment- or profile-specific
-settings out of the recipe proper. An env file must declare at least one of
-those keys; the only recognised top-level keys are `env`, `wrap`, and
-`dependency_provider`.
+carries an `[env]` block, a `[wrap]` wrapper, a `dependency_provider`, a
+`[sandbox]` root preparer, a `[lint]` table, or any combination of them. It
+lets you keep environment- or profile-specific settings out of the recipe
+proper. An env file must declare at least one of `env`, `wrap`,
+`dependency_provider` and `sandbox` (see
+[Isolated production jobs](#isolated-production-jobs)). The only other
+recognised top-level key is `lint`, which adds rule exceptions that belong to
+the environment rather than to any package.
 
 Which env file is loaded is controlled by `--env <name>`. The default is `main`,
 so `env.pekit.toml` is picked up automatically when present and silently skipped

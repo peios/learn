@@ -38,6 +38,14 @@ consumer like an unrecoverable rollback.
 already exists. That is the retention guarantee of PSPU §5.35 enforced
 at the point where it could be broken.
 
+The one exception is explicit: `publish --replace` lets a package take
+the place of an archived entry with the same identity, and reports the
+digest it replaced. It exists for a distribution bootstrap, which builds
+its seed in a foreign environment and then rebuilds it natively at the
+same versions. It breaks retention for those versions, so it is only for
+a repository nobody consumes yet. Two packages with one identity in the
+same publish are still refused.
+
 `publish` refuses a URL template that cannot distinguish one version
 from another, because such a template makes retention unkeepable: the
 second version published would overwrite the first.

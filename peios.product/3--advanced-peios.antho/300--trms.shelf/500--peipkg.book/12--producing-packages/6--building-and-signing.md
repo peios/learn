@@ -9,10 +9,14 @@ pekit fetches or updates the source, applies the patch series, and runs
 the targets a package's `builds` list names, each into its own stage
 directory, honouring the dependency edges between them.
 
-Every command runs with the assembled environment: the workspace layer,
-the source layer, the recipe layer, the selected environment file, and
-the keyring, in that order, wrapped by the recipe's wrapper if it
-declares one.
+Every command runs with the assembled environment: pekit's managed
+variables, then any explicitly granted keyring values, then the user
+layers in order (the workspace, its selected environment file, the
+delegated source and its environment file, the recipe, and the recipe's
+environment file). In an isolated workspace every target runs in the
+sandbox the selected environment prepares, and no wrapper can replace it.
+See [Environments and keyrings](~pekit/recipes/environments-and-keyrings)
+for the complete rules.
 
 Generation targets run their verification where the gating keys direct,
 so a build fails if a committed generated artifact is stale.
