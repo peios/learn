@@ -126,14 +126,12 @@ also require a separate `build.vendor` target and offline tests.
 The catalogue installer and staged-module checks share the distribution path
 `/usr/lib/x86_64-linux-peios/python<major>.<minor>/site-packages`, using the
 executing interpreter's major/minor version. Native Python must also report
-that exact path through `sysconfig`. Debian reference builds stage the same
-package layout instead of their interpreter's `/usr/local` installation default;
-their gates import explicitly from that staged location. Only native archives
-are eligible for promotion; reference bytecode is tied to the reference Python
-version and is not a substitute for a native package.
+that exact path through `sysconfig`.
 
-Test-only Python tools are resolved during the explicit acquisition stage using
-Debian's packaged pip and TLS trust. The selected backend version constrains the
+Test-only Python tools are resolved during the explicit acquisition stage, in a
+native root. Pip runs from its own current wheel, which the acquisition step
+downloads and checks against the digest PyPI publishes for it, so the root
+needs only the Peios Python. The selected backend version constrains the
 candidate tool wheel automatically; other requirements follow the upstream test
 requirements and current compatible releases. Only portable Python wheels are
 accepted. The acquisition output retains every wheel, a requirements file and
