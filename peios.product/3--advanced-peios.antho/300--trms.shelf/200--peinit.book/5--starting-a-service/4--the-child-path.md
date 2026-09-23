@@ -1,6 +1,6 @@
 ---
 title: The Child Path
-description: The deliberately minimal straight line between clone3 returning and execve — streams, signals, oom_score_adj and the environment.
+description: The deliberately minimal straight line between clone3 returning and execve — streams, signals, resources, the token and the environment.
 ---
 
 Between `clone3` returning in the child and `execve`, peinit runs a
@@ -22,9 +22,9 @@ The steps, in the order the child runs them:
 | 3 | Set the standard streams | 2 |
 | 4 | `ioctl(TIOCSCTTY)` — only with a `TTYPath` | 13 |
 | 5 | Reset the signal environment | 3 |
-| 6 | Install the KACS token, then close its descriptor | 4 |
-| 7 | Set `RLIMIT_NOFILE` and `RLIMIT_CORE` | 5 |
-| 8 | Set `oom_score_adj` | 6 |
+| 6 | Set `RLIMIT_NOFILE` and `RLIMIT_CORE` | 5 |
+| 7 | Set `oom_score_adj` | 6 |
+| 8 | Install the KACS token, then close its descriptor | 4 |
 | 9 | Change the working directory | 7 |
 | 10 | Confirm `NOTIFY_SOCKET` is present in the environment | 9 |
 | 11 | Inject stored descriptors from fd 3 upward | 10 |
@@ -71,6 +71,21 @@ classic ways for a daemon to behave inexplicably.
 for everything else. A Critical service is one whose loss reboots the
 machine, so letting the OOM killer choose it would convert memory
 pressure into a reboot.
+
+## Resources before the token [*child.resources-are-set-before-the-token-is-installed]
+
+The resource limits and `oom_score_adj` are set while the child still
+holds peinit's credentials, and only then is the service token
+installed. Both are peinit's policy rather than authority the service
+holds: raising a hard limit or lowering `oom_score_adj` needs
+`CAP_SYS_RESOURCE`, which KACS projects from `SeIncreaseQuotaPrivilege`.
+Setting them after the install would make every Critical service,
+and every service with a raised limit, depend on that privilege. A
+`RequiredPrivileges` list that leaves it out would then stop the
+service from starting at all.
+
+The step identifiers are unchanged by this order. They name steps, not
+positions.
 
 ## The environment
 
