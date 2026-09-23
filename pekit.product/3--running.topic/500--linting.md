@@ -58,7 +58,14 @@ that says how many.
 `lint` takes the version-selection and local-source flags, `--env` and
 `--keyring`, and the global flags. It accepts no selectors and no `--all`:
 every package a recipe defines is checked. `pekit workspace lint` fans out
-across every member like any other command.
+across every member like any other command. A versioned run applies the
+selected environment's [`[lint.allow]`](~pekit/reference/supporting-files#lint-allow)
+exemptions, as the package gate does.
+
+`pekit package` and `pekit publish` also run this policy, as the
+[lint gate](~pekit/running/commands-and-targets#the-lint-gate): the static
+rules against the recipe and the payload rules against the archives the run
+just wrote. Any finding stops the run before publication.
 
 Output is one `lint` event per finding, with `rule`, `package` and `path`
 fields under `--json`, an event per exemption that applied (`lint_allowed`),

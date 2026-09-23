@@ -303,12 +303,3 @@ same-named file beside one recipe overlays it. This lets a workspace define
 shared build rungs without per-member symlinks.
 
 For the full flag surface and remote locators, read [Invocation and flags](~pekit/running/invocation).
-
-
-## Release batches
-
-`pekit workspace --jobs 4 release --all --latest --keyring production` uses the
-workspace's `[release]` policy. Unlike ordinary per-member `publish` fan-out,
-release waits for all selected members and required environments to pass, then
-promotes their frozen artifacts in one repository batch. Failure in any member
-prevents promotion. See [Qualified releases](~pekit/running/qualified-releases).

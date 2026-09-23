@@ -39,7 +39,6 @@ distro-wide defaults.
 | `[policy]` | table | no | Distro-wide derivation policy. See below. |
 | `[isolation]` | table | no | `enabled` (bool, default false) requires workspace sandbox policy; `inputs` (array of relative paths) grants copied, read-only shared workspace inputs, also captured in source bundles. |
 | `[source_package]` | table | no | `inputs` (array of canonical relative paths) captures coordinator-side support source, such as root-preparation scripts, without mounting it into workers. Workspace configuration, package/lint policy and environment profiles are captured automatically. |
-| `[release]` | table | no | Production `path`, `name`, `signing_key`, ordered `environments`, and required coordinator `checks`; see [Qualified releases](~pekit/running/qualified-releases). |
 
 ### `[policy]`
 
@@ -77,6 +76,7 @@ An env file must declare **at least one** of `[env]`, `[wrap]`, `[sandbox]`, or
 | `[env]` | table | one of the four | Environment variables. See [env table](#env-table). |
 | `[wrap]` | table | one of the four | Command wrapper. See [wrap table](#wrap-table). |
 | `dependency_provider` | string | one of the four | Selector naming which of a build target's declared dependency-provider blocks (`[build.<target>.dependencies.<provider>]`) is exported as the `PEKIT_DEPENDENCIES*` variables. Validated as a [selector](#selectors). |
+| `[lint.allow]` | table (rule → reason) | no | Whole lint rules exempted for artifacts built in this environment. See below. |
 
 ### `[sandbox]`
 
@@ -86,6 +86,32 @@ Optional `network_targets` is an array containing only `"build:vendor"`.
 Pekit owns process isolation; the preparer only supplies dependencies. This table
 requires `[isolation] enabled = true` in the workspace. Member/source profiles
 cannot override it. See [isolated production jobs](~pekit/recipes/environments-and-keyrings#isolated-production-jobs).
+
+If a prepared root has a missing or empty `/etc/hosts`, pekit supplies fixed
+IPv4 and IPv6 localhost entries before starting the worker. A populated regular
+hosts file is left intact; a symlink is replaced without following its target.
+Offline loopback tests therefore work without importing the host's aliases or
+granting network access.
+
+### `[lint.allow]`
+
+Some lint findings are a property of the build environment rather than of any
+recipe: a foreign toolchain whose startup objects carry no CET notes, say. An
+env file names those rules, each with its reason:
+
+```toml
+[lint.allow]
+"elf.cet" = "Debian startup/runtime objects carry no CET markers; native builds enforce the rule"
+```
+
+The exemptions apply to the package [lint gate](~pekit/running/commands-and-targets#the-lint-gate)
+and to a versioned `pekit lint` run under that `--env`, and to nothing built in
+another environment. Each key must be a known rule — not a parameter — and each
+reason must be non-empty. Both the workspace's and the recipe's selected env
+file contribute. An exemption a `lint.pekit.toml` already states keeps that
+file's reason, and allowed findings are reported like any other exemption.
+Use this only for an environment's own limitation; a package's defects belong
+in its recipe's lint file, or fixed.
 
 ### `--env <name>` selection
 

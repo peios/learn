@@ -28,8 +28,8 @@ For the flags themselves (how they parse, global flags like `--dry-run`), see
 | `build` | `build` targets + their `needs` | multiple | no | Runs build targets; stages their output under `out_dir`. |
 | `test` | `test` targets + the builds they need | **single resolved** | no | Stages needed builds, then runs the selected test targets. |
 | `install` | `install` targets + the builds they need | **single resolved** | no | Stages needed builds, then runs the selected install targets. |
-| `package` | package members + release gates | multiple | yes | Stages builds, runs gated tests, and writes `.peipkg` artifacts under `out_dir`. Recipes with a reproducible source also emit a [corresponding-source package](~pekit/recipes/sources#source-packages). |
-| `publish` | package members (as `package`) | multiple | yes | Runs release gates, packages, then publishes to configured `localdir` and/or Peipkg repository destinations. |
+| `package` | package members + gates | multiple | yes | Stages builds, runs gated tests, writes `.peipkg` artifacts under `out_dir`, then lints them. Recipes with a reproducible source also emit a [corresponding-source package](~pekit/recipes/sources#source-packages). |
+| `publish` | package members (as `package`) | multiple | yes | Packages as above, then publishes to configured `localdir` and/or Peipkg repository destinations. |
 | `clean` | one optional `clean` target | none | no | Runs a clean target and/or removes the managed output directory. |
 | `gen` | `gen` targets | none | yes | Runs gen commands; writes generated source **into the tree**. |
 | `verify` | `gen` targets | none | yes | Runs gen `verify_command`s; a read-only drift check (writes nothing). |
@@ -71,7 +71,8 @@ not support is an **error** up front (`unsupported_flag`), unless you pass
 `--allow-unused`, which downgrades it to a suppressed warning. Broadly:
 `build`, `test`, `install`, `package`, and `publish` share the version-selection,
 local-source, `--no-build`, `--no-verify`, and `--refresh-source` groups;
-`--no-gates` is `package`/`publish` only; `--all` is
+`--no-gates` is `package`/`publish` only; `--strict` is
+`build`/`test`/`package`/`publish` only; `--all` is
 `package`/`publish`/`gen`/`verify` only; `--allow-unanchored` and
 `--allow-unsigned` are `publish` only; `clean` takes only `--env`, `--keyring`, and its own mode flags
 (`--output-only` / `--target-only`); `gen` and `verify` take only `--env`,
@@ -190,9 +191,14 @@ target_cycle: build dependency cycle: a -> b -> a
 `--no-build` may name already-staged build targets to skip re-running them;
 naming a build target that does not exist is likewise a `missing_target` error.
 
-## Release gates
+## Gates
 
-A test target with `gate = true` is part of the recipe's release contract:
+`pekit package` and `pekit publish` run two kinds of gate: gated tests before
+any artifact is written, and lint over the artifacts before any is published.
+
+### Gated tests
+
+A test target with `gate = true` is part of what the recipe's packages promise:
 
 ```toml
 [test.release]
@@ -202,9 +208,9 @@ command = "./tests/release-check"
 ```
 
 `pekit package` and `pekit publish` stage the union of the selected packages'
-build requirements and every release gate's `needs`, then run each gate once
-for the resolved source version. Package artifacts are written only after all
-gates succeed. A failed gate therefore cannot create or publish a new artifact.
+build requirements and every gate's `needs`, then run each gate once for the
+resolved source version. Package artifacts are written only after all gates
+succeed. A failed gate therefore cannot create or publish a new artifact.
 
 A gate succeeds when its command exits successfully. Some upstream runners
 print failed comparisons but still exit zero; wrapping one in `make check` does
@@ -216,9 +222,50 @@ Gates are recipe-wide: selecting one package from a multi-package recipe still
 runs every gated test in that recipe. `pekit build` does not run gates, and an
 explicit `pekit test` runs a selected target whether or not it is a gate.
 
+### The lint gate
+
+Once the artifacts are written, pekit runs the recipe's
+[lint policy](~pekit/running/linting) over them: the static rules against the
+recipe, then the payload rules against the archives themselves, read back from
+the signed files rather than from the build stage. Symlinks, derived
+dependencies and anything else packing produced are judged as they will ship.
+Any finding stops the run before publication, leaving the artifacts on disk for
+inspection. A recipe with no `lint.pekit.toml` in its chain skips the lint gate.
+
+When only some of a recipe's packages are selected, the others are still
+resolved from their build stages for cross-package lookups — a `-devel`
+symlink into the runtime package, a binary's debug file in `-debuginfo` — but
+only the selected ones are linted.
+
+### Skipping gates
+
 For rapid local iteration, `pekit package --no-gates` and `pekit publish
---no-gates` skip release gates and print a warning naming them. `--no-build`
-only controls build-stage reuse and never implies `--no-gates`.
+--no-gates` skip both the gated tests and the lint gate, and print a warning
+naming them. `--no-build` only controls build-stage reuse and never implies
+`--no-gates`.
+
+## Strict mode
+
+`--strict` holds `build`, `test`, `package` or `publish` to the contract a
+reviewed publication needs:
+
+- the workspace (or, outside one, the recipe) is a git checkout with no
+  uncommitted changes, apart from `pekit.lock` files, which `lock --latest`
+  maintains unattended and which verify themselves against upstream;
+- every resolved source is pinned in `pekit.lock`; a `--local` source or an
+  unlocked one is refused;
+- no bypass flag is present: `--no-gates`, `--no-build`, `--no-verify`,
+  `--local`, `--prefer-local`, `--allow-unanchored` and `--allow-unsigned` are
+  rejected when the command line is parsed.
+
+On `publish`, `--strict` also has the Peipkg repository publisher check the
+repository it is about to produce before writing anything. Every active package
+must resolve a fresh install closure on each architecture the repository serves,
+and every previously active package's closure must upgrade cleanly to the new
+set. Each closure is checked for missing dependencies and capabilities,
+conflicts, root placement and two packages shipping the same path. Ordinary
+`publish` omits these checks, so a bootstrap can publish packages ahead of the
+dependencies they need.
 
 ### Stages that did not finish
 
@@ -462,15 +509,6 @@ separator. Two rules apply to all of them:
 - [Command-line reference](~pekit/reference/cli) — the full command-by-flag capability matrix.
 - [Versions](~pekit/recipes/versions) — the version selectors these commands accept.
 - [Workspaces](~pekit/running/workspaces) — running a command across every member.
-
-
-## Production release
-
-`release` selects the same package definitions as `package`, builds and qualifies
-them in the ordered workspace release environments, then promotes one checked
-batch. It never rediscovers upstream between checks. Required workspace checks
-run against the frozen candidate before promotion. See
-[Qualified releases](~pekit/running/qualified-releases).
 
 
 `pekit workspace clean --output-only` removes managed output without running
