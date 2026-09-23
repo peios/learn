@@ -83,6 +83,12 @@ An env file must declare **at least one** of `[env]`, `[wrap]`, `[sandbox]`, or
 A workspace profile's `command` (string or argv array, required) prepares the
 fresh `PEKIT_SANDBOX_ROOT` destination. No `{{command}}` placeholder is used.
 Optional `network_targets` is an array containing only `"build:vendor"`.
+Optional `entry` is an argv array whose first element is a clean absolute path
+inside the prepared root. Pekit runs it inside the sandbox ahead of every target
+command of the profile, passing the target's shell invocation as its remaining
+arguments; the entry must `exec` them. The preparer must supply the program as
+an executable regular file, or the job fails with `sandbox_entry` before the
+worker starts. Processes the entry leaves behind end with the job.
 Pekit owns process isolation; the preparer only supplies dependencies. This table
 requires `[isolation] enabled = true` in the workspace. Member/source profiles
 cannot override it. See [isolated production jobs](~pekit/recipes/environments-and-keyrings#isolated-production-jobs).

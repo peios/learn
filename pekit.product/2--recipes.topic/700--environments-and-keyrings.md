@@ -355,10 +355,24 @@ An acquisition profile may set `network_targets = ["build:vendor"]`; this shares
 the host network for acquisition, including its DNS configuration, without
 mounting the host root or home. Other target names cannot enable network access.
 The worker receives its dependency manifest through a read-only file at
-`PEKIT_DEPENDENCIES_FILE`. The Peios acquisition profile uses the recipe's `apt`
-dependencies, adding Cargo, Rust, Git and TLS trust when not already declared;
-recipe constraints take precedence. Its installed Debian inventory records the
-actual acquisition toolchain.
+`PEKIT_DEPENDENCIES_FILE`.
+
+A profile may also name an `entry` program, which the preparer places in the
+root. Pekit runs it inside the sandbox ahead of each target command and it
+`exec`s the command, so a profile can start job-scoped services that the
+isolated root needs; anything it leaves running ends with the job. The Peios
+acquisition profile (`peipkg-net`) uses this for name resolution. Peios glibc
+resolves hosts only through resolvd's socket, which no sandbox runs, so a
+native acquisition root gets resolvd's NSS module and a small build-root
+resolver that answers on that socket from the copied `resolv.conf`.
+
+That profile acquires natively whenever the vendor target declares a
+non-empty `peipkg` dependency set, adding only a shell, Python for the
+resolver, the NSS module and TLS trust. A vendor target whose native set is
+still empty acquires in a clean Debian root from its `apt` set, adding Cargo,
+Rust, Git and TLS trust when not already declared; its installed Debian
+inventory records the actual acquisition toolchain. In both cases recipe
+constraints take precedence.
 
 Delegated and member `[env]` layers still apply inside the worker. Their wrappers
 cannot replace workspace isolation or its dependency provider. `--env none` or a
