@@ -61,3 +61,17 @@ satisfied failed outright.
 
 Candidate selection for a dependency also filters by installability now,
 as selection for a goal and for a name already did.
+
+## Concrete dependencies are resolved before capabilities
+
+Package names and virtual capabilities use the same dependency syntax. Peipkg
+therefore treats a dependency as concrete when an available package has that
+exact name, and resolves those dependencies before capability-only entries.
+
+This matters when packaging derives a shared-library dependency automatically.
+A package may explicitly depend on its intended library package and also carry
+a derived dependency on that library's SONAME. Resolving the SONAME first could
+select another provider; resolving the explicitly named package first installs
+the intended provider, after which its SONAME satisfies the derived dependency.
+The result does not depend on the order in which those two dependencies appear
+in the manifest.

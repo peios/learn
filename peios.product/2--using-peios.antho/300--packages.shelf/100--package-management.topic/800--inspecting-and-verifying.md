@@ -48,6 +48,8 @@ license:      BSD-2-Clause
 homepage:     https://nginx.org
 ```
 
+With `--json` it emits the same record as one JSON object: `Name`, `Version`, `Architecture` and `Origin` as `list --json` gives them, `orphaned`, `installed_at`, and — where the manifest has them — `description`, `license`, `license_class`, `homepage` and `alternate_upgrade`.
+
 ## Listing the files a package owns
 
 ```
