@@ -60,7 +60,7 @@ Every service is a key under `Machine\System\Services\<name>`; these are the val
 
 | Field | Type | Default | Meaning |
 |---|---|---|---|
-| `Triggers` | multi_string | — | `boot` and/or `timer:<schedule>`. Absent = demand-only. |
+| `Triggers` | multi_string | — | Any of `boot`, `boot:settled`, `tty:released` (needs a `TTYPath`) and `timer:<schedule>`. Absent = demand-only. Bare `tty` and bare `timer` are errors, and an unrecognised sub-trigger is rejected rather than ignored. |
 | `Disabled` | dword | 0 | If 1, triggers must not activate the service. |
 | `SafeMode` | dword | 0 | If 1, attempt to start in Safe mode. Critical implies SafeMode. |
 | `Conditions` | multi_string | — | Start-time checks; a failure *skips* the service. |
@@ -81,10 +81,11 @@ Every service is a key under `Machine\System\Services\<name>`; these are the val
 
 | Field | Type | Default | Meaning |
 |---|---|---|---|
-| `Requires` | multi_string | — | Hard dependencies. |
+| `Requires` | multi_string | — | Hard dependencies. Each entry may carry a readiness level (`netd:routed`). |
 | `Wants` | multi_string | — | Soft dependencies. |
 | `BindsTo` | multi_string | — | Runtime coupling. |
-| `Conflicts` | multi_string | — | Mutual exclusion. |
+| `Conflicts` | multi_string | — | Mutual exclusion. A level parses here but is inert. |
+| `Provides` | multi_string | — | Roles this service fills, so others can depend on the role rather than the implementation. Bare names only — a level is rejected. |
 | `OnFailure` | string | — | Service to start when this one enters Failed. |
 
 **Supervision and health** — see [Keeping services running](~peios/services-and-jobs/supervision)
