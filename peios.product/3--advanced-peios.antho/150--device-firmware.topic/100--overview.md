@@ -80,10 +80,19 @@ no tool needs to know.
 Firmware blobs are almost never free software. Vendors permit
 redistribution of the unmodified binary and nothing more, each under their
 own terms, and there is no source. Peios does not pretend otherwise: each
-`org.kernel.linux-firmware-<family>` package declares its vendor licence as a `LicenseRef-`
-SPDX expression, ships the licence text under
-`/usr/share/licenses/org.kernel.linux-firmware-<family>/`, and carries
-`license_class = "firmware"` in its manifest.
+`org.kernel.linux-firmware-<family>` package declares its vendor licences as
+`LicenseRef-` SPDX identifiers and carries `license_class = "firmware"` in its
+manifest.
+
+The licences come from upstream's `WHENCE` manifest, file by file. Each
+package's SPDX expression is derived from exactly the licences its own files
+cite, vendor terms and the GPL, MIT or Apache texts a few blobs are under
+alike. Those texts are shipped under
+`/usr/share/licenses/org.kernel.linux-firmware-<family>/`, together with a
+`WHENCE` excerpt: upstream's own licence statements and copyright notices for
+every entry the package draws on, verbatim. Where upstream hedges ("Allegedly
+GPL, but no source visible"), the excerpt keeps that wording rather than
+stating more than upstream does.
 
 That class is the machine-readable fact. `peipkg info org.kernel.linux-firmware-iwlwifi`
 shows it, a composed image's `/usr/share/licenses.json` lists it for every
