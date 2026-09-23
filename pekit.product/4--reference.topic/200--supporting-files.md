@@ -305,7 +305,7 @@ Each `[[source]]` entry carries the keys for its source kind:
 | `path` | tracked-path git sources | Fixed repository-relative regular file selected by the recipe. |
 | `blob` | tracked-path git sources | Git blob object ID reached by `commit:path`. |
 | `blob_sha256` | tracked-path git sources | SHA-256 of the exact blob bytes; the transport-independent content assertion. |
-| `signature_key` | url sources with `[source.url.signature]` | Hex fingerprint of the pinned upstream key that verified the artifact at lock time. |
+| `signature_key` | url sources with `[source.url.signature]`; git sources with `[source.git.signature]` | Hex fingerprint of the pinned upstream key that verified the artifact or release at lock time. A git entry locked before its recipe gained the signature block records it on the next resolve. |
 | `[[source.patch]]` | url sources with `[source.url.patch_series]` | Ordered patch inputs applied for this version. Each carries `url`, `sha256`, and optional `signature_key` with the same meanings as the base artifact fields. |
 | `locked_at` | all | UTC timestamp of the pinning run (RFC 3339). |
 

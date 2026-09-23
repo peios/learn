@@ -224,7 +224,7 @@ recipe does not use do nothing.
 | `source.ref` | `"immutable"` | A git `ref` is a template (`v{{version}}`), a full commit hash, a `refs/tags/` path or a tag-like `v1.2`, not a branch name that the lock could never pin. |
 | `source.url.scheme` | `"https"` | Every source URL (`url`, `listing_url`, signature and patch-series URLs) is https. A git URL may also be `ssh://`, `git+ssh://` or `user@host:path`. |
 | `source.lock` | `true` | `pekit.lock` exists with at least one entry; every URL entry carries a sha256 (and each patch its own); every git entry a commit hash; and, when the recipe verifies signatures, every URL entry records the key that verified it. |
-| `source.signature.required` | `true` | A URL source has a `[source.url.signature]` block. |
+| `source.signature.required` | `true` | A URL source has a `[source.url.signature]` block, and a git source (tracked paths included) a `[source.git.signature]` block. An upstream that publishes nothing verifiable is recorded as a reasoned allowance. |
 | `source.signature.fingerprint` | `"full"` | A signature block lists at least one fingerprint, and each is the full 40- or 64-hex-digit fingerprint, never a short key id. |
 | `source.signature.keys` | `true` | Every `key_files` entry exists and is not empty. |
 | `source.patches.headers` | `true` | Every patch in the series has, ahead of its first hunk, a non-empty `Description:` or `Subject:` line and an `Origin:`, `Author:` or `From:` line (DEP-3). `git format-patch` output satisfies this as written. |

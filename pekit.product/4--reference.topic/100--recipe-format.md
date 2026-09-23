@@ -159,6 +159,26 @@ trust-on-first-use in the recipe's machine-written
 | `versions` | string | no | Version **cap**: a constraint string filtering enumerated or requested versions (see [Versions](~pekit/recipes/versions)). |
 | `tag_regex` | string | no | Regex filtering tags during enumeration. A named `version` capture supplies the complete version; named `major`, `minor`, and `patch` captures compose a dotted version. Optional `revision` (fourth numeric component), `suffix` (unseparated), `prerelease`, and `buildmeta` captures may extend it. Unnamed captures have no extraction semantics. |
 | `tracked_path` | string | no | Track one repository-relative regular file on a fixed moving `ref`. Versions are synthesized from changed blob observations and matching lock history. Requires a non-templated `ref`; incompatible with `tag_regex`. See [Tracking one file on a moving ref](~pekit/recipes/sources#tracking-one-file-on-a-moving-ref). |
+| `signature` | table | no | Upstream release-signature verification. See `[source.git.signature]` below. Incompatible with `tracked_path`. |
+
+#### `[source.git.signature]`
+
+Optional sub-table of `[source.git]`. If present, every resolve requires a
+valid OpenPGP signature on the release. The signature is checked after the
+mirror fetch and before the lock is written or the tree is checked out. An
+unsigned or lightweight tag, or an unsigned commit, is `signature_missing`. An
+SSH or X.509 signature is `signature_unsupported`. A signature that fails, or a
+tag object that names another tag or points somewhere other than the resolved
+commit, is `signature_invalid`. Each of these aborts the run and writes no lock
+entry. The verified signer's fingerprint is recorded as the lock entry's
+`signature_key`.
+
+| Key | Type | Required | Meaning |
+| --- | --- | --- | --- |
+| `object` | string | no | What carries the signature: `"tag"` (the rendered `ref` is an annotated, signed tag naming the resolved commit; default) or `"commit"` (the resolved commit has a `gpgsig` header). Any other value is `invalid_signature`. |
+| `key_files` | string array | **yes** | Pinned public keys (armored or binary, one or more per file), relative to the recipe directory. An empty or absent list is `missing_key`. |
+| `fingerprints` | string array | no | Allowlist of signer primary-key fingerprints, as for `[source.url.signature]`. A valid signature by any other pinned key is `signature_untrusted_key`. |
+| `ignore_expiry` | bool | no | Permit a signature made after the pinned signing key expired, as for `[source.url.signature]`. Default `false`. |
 
 #### `[source.url]`
 

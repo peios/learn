@@ -40,13 +40,15 @@ be mistaken for the release version.
 
 ### `[source.git]`
 
-Clones a git repository and checks out a ref. It takes exactly five fields —
+Clones a git repository and checks out a ref. It takes five fields —
 a required `url` (passed to `git clone --mirror`), a `ref` to check out
 (templated with the [selected version](~pekit/recipes/versions); defaults to
 `{{version}}` and must render non-empty), a `versions` **cap** that filters
 enumerated or requested versions, and a `tag_regex` used when enumerating tags
 (see [Enumeration](#enumeration)). The fifth, `tracked_path`, selects the
-moving-ref snapshot mode described below. The field-by-field schema is in the
+moving-ref snapshot mode described below. An optional `[source.git.signature]`
+table verifies the upstream's release signatures; see
+[Signed Git releases](#signed-git-releases). The field-by-field schema is in the
 [recipe format reference](~pekit/reference/recipe-format).
 
 ```toml
@@ -64,6 +66,53 @@ non-templated `ref`.
 > [!NOTE]
 > There is **no** submodule option. A `submodules` key is an `unknown_key`
 > error.
+
+#### Signed Git releases
+
+Many upstreams sign their release tags. A `[source.git.signature]` table pins
+the signing maintainer's OpenPGP key, and pekit then requires a valid
+signature for every version it resolves:
+
+```toml
+[source.git]
+url       = "https://git.kernel.org/pub/scm/libs/libtrace/libtraceevent.git"
+ref       = "libtraceevent-{{version}}"
+tag_regex = '^libtraceevent-(?P<version>[0-9]+\.[0-9]+\.[0-9]+)$'
+
+[source.git.signature]
+key_files    = ["keys/steven-rostedt.asc"]
+fingerprints = ["5ED9A48FC54C0A22D1D0804CEBC26CDB5A56DE73"]
+```
+
+By default the rendered `ref` must be an annotated tag with an OpenPGP
+signature. The tag object must name that same tag and point straight at the
+commit the ref resolved to, so a signed tag from another release can't vouch
+for this one. For an upstream that signs commits rather than tags, set
+`object = "commit"`: the resolved commit must then carry the signature.
+
+Verification is in-process, like URL signatures: no host `gpg`, no keyring, no
+Git signing configuration. It runs after the mirror fetch, which only stores
+objects, and before the lock is written or the tree is checked out. A
+lightweight tag, an unsigned tag or commit, or a signature pekit cannot read is
+`signature_missing` (or `signature_unsupported` for SSH and X.509 signatures).
+A bad signature is `signature_invalid`, and a valid signature from a key outside
+`fingerprints` is `signature_untrusted_key`. Any of these stops the run with
+nothing locked. Key expiry works the same way as for
+[URL signatures](#source-url), including `ignore_expiry`.
+
+Unlike a URL signature, a Git signature is checked on **every** resolve, not
+only on the first. The signer's fingerprint goes into the version's lock entry,
+and a later resolve that finds the release signed by a different pinned key
+stops with `lock_mismatch`.
+
+`[source.git.signature]` cannot be combined with `tracked_path`: a tracked
+snapshot follows a branch, not a signed release.
+
+An upstream that signs nothing — lightweight tags, no signed commits — cannot
+use this table. The [`source.signature.required`](~pekit/running/linting) lint
+rule reports it, and the recipe records why the upstream can't be verified as a
+reasoned allowance in `lint.pekit.toml`. The exception is then a deliberate
+declaration, not a silent default.
 
 #### Tracking one file on a moving ref
 
@@ -477,7 +526,8 @@ Fetched inputs are pinned **trust-on-first-use** in a machine-written
 `pekit.lock` beside `pekit.toml`. The first time a source resolves for a
 version, pekit records what it fetched — the artifact's SHA-256 for a url or
 PyPI source, every ordered remote-patch URL and SHA-256 when present, or the
-resolved commit for an ordinary git source. A tracked-path git entry records
+resolved commit for an ordinary git source, with the verified signer's
+fingerprint when the recipe has a `[source.git.signature]`. A tracked-path git entry records
 the repository, fixed ref, path, commit, blob object ID, and blob SHA-256. Every
 later resolve verifies against
 that entry instead, cache hits included. A mismatch is a hard
