@@ -11,10 +11,13 @@ are evaluated.
 ## Entitlement [*mount.create-requires-init-userns-cap]
 
 Establishing a mount with no create stratum takes no privilege of its
-own. The filesystem type carries `FS_USERNS_MOUNT`, so an unprivileged
-mount in a user namespace is permitted; what the caller needs is only
+own. The filesystem type carries `FS_USERNS_MOUNT`, and stratafs is on
+the allowlist of types a mount namespace's descriptor may admit
+(§3.13), so a caller may establish one in a mount namespace it created
+without the mount privilege; what the caller needs beyond that is only
 the access that resolving the stratum paths already requires, which
-falls out of the resolution itself.
+falls out of the resolution itself. A user namespace by itself confers
+nothing here, as everywhere under KACS.
 
 A stack that carries `create` is different. Copy-up is authorised by
 the outer handle and deliberately requires no add-entry right on the

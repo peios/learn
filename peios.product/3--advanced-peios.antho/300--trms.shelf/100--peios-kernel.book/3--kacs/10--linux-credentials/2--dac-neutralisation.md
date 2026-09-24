@@ -90,9 +90,9 @@ Mounting is handled outside the capability table instead. `may_mount()`
 rung accepts `SeManageVolumePrivilege` **or** `SeTcbPrivilege`, before
 falling back to the ordinary `CAP_SYS_ADMIN` check. [*cred.dac.may-mount-manage-volume] In a mount
 namespace the caller created for itself, a second rung admits a bind
-mount, an unmount, a `pivot_root`, or a new tmpfs or proc on the
-namespace's own security descriptor instead (§3.13); in the initial
-namespace the privilege is the only route. Every other `CAP_SYS_ADMIN` caller still needs the TCB.
+mount, an unmount, a `pivot_root`, or a new tmpfs, proc or read-only
+stratafs on the namespace's own security descriptor instead (§3.13); in
+the initial namespace the privilege is the only route. Every other `CAP_SYS_ADMIN` caller still needs the TCB.
 
 It has to be asked there rather than through the `sb_mount` LSM hook:
 `may_mount()`'s capability check runs *before* `security_sb_mount()`, so

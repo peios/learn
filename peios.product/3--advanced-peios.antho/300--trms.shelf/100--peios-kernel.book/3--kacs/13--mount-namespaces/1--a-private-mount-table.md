@@ -99,21 +99,37 @@ kernel filesystem parser of an untrusted image in reach of the caller: [*mntns.a
 | `MS_BIND`, with or without `MS_REC` | bind | yes |
 | `umount2` without `MNT_FORCE` | unmount | yes |
 | `pivot_root` | pivot_root | yes |
-| a new `tmpfs` or `proc` (`do_new_mount`) | new filesystem | yes |
+| a new `tmpfs`, `proc` or `stratafs` (`do_new_mount`) | new filesystem | yes |
 | any other filesystem type | new filesystem | no |
 | `MS_REMOUNT`, including `MS_REMOUNT\|MS_BIND` | other | no |
 | `MS_MOVE`; `MS_SHARED`, `MS_PRIVATE`, `MS_SLAVE`, `MS_UNBINDABLE` | other | no |
 | `open_tree(OPEN_TREE_CLONE)`, `fsmount`, `move_mount`, `mount_setattr` | other | no |
 
 The filesystem types a descriptor can admit are an allowlist KACS keeps,
-and it holds exactly `tmpfs` and `proc`: both read nothing but the
-caller's own mount options, tmpfs having no backing image and proc
-being a view of the kernel's own state. A type that parses an image —
-ext4, squashfs, iso9660, ntfs3 — or that KACS governs specially, as it
-does stratafs, is refused before the type is even looked up. The list is
-an attack-surface list and not a policy knob: who may change a table is
-decided by the table's descriptor alone, and the same descriptor that
-admits tmpfs refuses ext4. [*mntns.fs-type-allowlist]
+and it holds exactly `tmpfs`, `proc` and `stratafs`: all three read
+nothing but the caller's own mount options. tmpfs has no backing image,
+proc is a view of the kernel's own state, and stratafs is a view of
+directories the caller can already traverse, every access through it
+decided on the providing object (§4.6.1). A type that parses an image —
+ext4, squashfs, iso9660, ntfs3 — is refused before the type is even
+looked up. The list is an attack-surface list and not a policy knob:
+who may change a table is decided by the table's descriptor alone, and
+the same descriptor that admits tmpfs refuses ext4. [*mntns.fs-type-allowlist]
+
+A stratafs stack admitted this way is read-only or absent-tolerant.
+stratafs's own admission (§4.2.3) refuses a `create` stratum to any
+caller outside the initial user namespace or without `CAP_SYS_ADMIN`,
+which is `SeTcbPrivilege`, and that test runs after the gate, so an
+unprivileged caller that asks for one gets `EPERM` from stratafs
+whatever its table's descriptor grants. Copy-up carries no add-entry
+right of its own, which is why a writable stack is authority in itself
+and stays with the TCB; a private table's writable paths are tmpfs, or
+bind mounts of directories the caller owns. [*mntns.stratafs-read-only-only] Admitting the type does put
+stratafs's option parser and stack validation in reach of unprivileged
+input for the first time; both fail closed with `EINVAL` on a relative
+stratum, a duplicate, `create` combined with `ro`, an empty stack or
+more than sixteen strata, and with `ENOENT` on a missing stratum not
+marked `am`.
 
 Everything in the *no* rows needs the privilege whatever the descriptor
 grants, and `MNT_FORCE` additionally keeps its own `CAP_SYS_ADMIN` test
