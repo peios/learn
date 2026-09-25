@@ -1,7 +1,7 @@
 ---
 title: Workspaces
 type: concept
-description: "The workspace.pekit.toml file, member discovery, the workspace command and its flag placement, --jobs and --fail-fast, and cross-member publish checks."
+description: "The workspace.pekit.toml file, member discovery, the workspace command and its flag placement, --jobs, --fail-fast and --journal, and cross-member publish checks."
 related:
   - pekit/running/invocation
   - pekit/recipes/dependencies-and-claims
@@ -121,7 +121,7 @@ come after the workspace flags.
 The tail after `workspace` is parsed specially, and the
 placement rules are strict:
 
-- **Workspace flags — `--jobs N` and `--fail-fast` — must appear after
+- **Workspace flags — `--jobs N`, `--fail-fast` and `--journal <file>` — must appear after
   `workspace` and before the delegated command.** They are recognised only in
   this slot.
 - **Command-level flags** (version selection, `--local`, `--env`, `--keyring`,
@@ -145,7 +145,7 @@ $ pekit workspace --version 1.2.3 build
 #   workspace command flag version selection must appear after the delegated command
 ```
 
-Because `--jobs`/`--fail-fast` are recognised *only* in the workspace slot,
+Because the workspace flags are recognised *only* in the workspace slot,
 writing them after the delegated command hands them to the delegated command's
 own parser, which rejects them as an `unknown_flag`. Keep them in the workspace
 slot.
@@ -184,6 +184,36 @@ further members are started**. Members that had not yet begun are recorded as
 > `--fail-fast` stops *starting* new members; it does **not** cancel members
 > that are already running. In-flight members run to completion. There is no
 > mid-member cancellation.
+
+### Resumable runs: `--journal`
+
+`--journal <file>` makes a long run resumable. Each member that succeeds is
+appended to the journal as it finishes, and the file is synced, so it survives
+a power loss straight afterwards. Repeating the same run with the same
+journal skips the members it lists (they count as skipped in the summary) and
+runs the rest. Members that failed, or never started, are not listed, so they
+run again.
+
+To stop a run cleanly, create `<file>.stop`. At the next point where a member
+finishes, pekit starts nothing more, waits for the members still running, and
+exits with `workspace_stopped`. It removes the stop file as it honours it, and
+also removes one left over when a new run starts. Anything stopped by other
+means, such as a power-off, loses only the members that were running.
+
+```console
+$ pekit workspace --jobs 3 --journal round2.journal publish --all --latest --locked
+$ touch round2.journal.stop     # later: finish what is running, then stop
+$ pekit workspace --jobs 3 --journal round2.journal publish --all --latest --locked
+```
+
+The journal's first line records the run it belongs to: the delegated command,
+version selection (including `--locked`), `--all`, `--replace`, `--strict`,
+`--no-gates`, `--env`, tags and selectors. A journal from a different run is
+refused with `journal_mismatch`, so one round's journal cannot skip another
+round's members. `--jobs` and `--fail-fast` are not part of it and may change
+between attempts. `--dry-run` reads an existing journal but never creates or
+writes one. The journal is opt-in; without it a workspace run behaves as
+before.
 
 ### Dependency order
 
@@ -268,8 +298,9 @@ At the end of a run pekit emits a `workspace_summary` event tallying members as
 ```
 
 *Succeeded* and *failed* count members that actually ran; *skipped* covers
-members not started because of `--fail-fast`, and members skipped by selector
-planning (below). The overall command exits non-zero if any member failed.
+members not started because of `--fail-fast` or a stop request, members
+already finished in the [journal](#resumable-runs-journal), and members skipped
+by selector planning (below). The overall command exits non-zero if any member failed.
 
 ## Per-member strictness
 
