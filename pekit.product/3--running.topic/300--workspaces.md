@@ -191,7 +191,10 @@ further members are started**. Members that had not yet begun are recorded as
 appended to the journal as it finishes, and the file is synced, so it survives
 a power loss straight afterwards. Repeating the same run with the same
 journal skips the members it lists (they count as skipped in the summary) and
-runs the rest. Members that failed, or never started, are not listed, so they
+runs the rest. A skipped member still takes part in
+[dependency order](#dependency-order): the packages it defines carry their
+runtime dependencies, so a member installing one still waits for whatever
+those need. Members that failed, or never started, are not listed, so they
 run again.
 
 To stop a run cleanly, create `<file>.stop`. At the next point where a member
