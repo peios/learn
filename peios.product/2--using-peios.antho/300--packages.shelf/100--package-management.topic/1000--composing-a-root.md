@@ -46,7 +46,7 @@ The `<manifest>` positional is required. Flag order is not significant: the mani
 ```
 peipkg-compose build <manifest> --out <dir> [--locked | --update]
                      [--dangerously-bypass-path-restrictions]
-                     [--record-xattrs <file>]
+                     [--record-xattrs <file>] [--no-dependencies]
 ```
 
 Assemble the root directory. The `<manifest>` positional is required; flag order is not significant.
@@ -60,6 +60,7 @@ Assemble the root directory. The `<manifest>` positional is required; flag order
 | `--update` | Re-resolve from scratch, overwrite the lock, then build. |
 | `--dangerously-bypass-path-restrictions` | Permit packages that declare `special_system_package` to compose payloads outside the payload layout rules. An image built from a package set including the base filesystem needs this; `peiso` passes it through from `bypass_path_restrictions` in the image's build spec, so the grant stays a visible decision of the image rather than something the composer assumes. |
 | `--record-xattrs <file>` | Record each implied `security.peios.sig` or `security.peios.sd` attribute in deterministic JSONL instead of setting it on the output tree. Use this when an unprivileged builder will carry the attributes into an image, or when composing a disposable build root. Each line has `path`, `name`, and a base64-encoded `value`; the file must not already exist. |
+| `--no-dependencies` | Install exactly the packages the manifest names and ignore their dependencies. The result is **not** a self-sufficient root: it is for a builder that lifts only those packages' own files out of the composition and meets their run-time needs elsewhere, and so can draw on a repository that does not yet hold their dependencies. Signature and hash verification are unchanged. The lock records `no_dependencies = true`, and a build refuses a lock resolved in the other mode. |
 
 `--locked` and `--update` are **mutually exclusive**.
 
