@@ -135,6 +135,29 @@ not expose indexes. Artifact download, lock checks, and signature verification
 still apply. A range such as `">= 1.83.0"` still requires discovery, and an
 explicit `listing_url` is always consulted.
 
+### Selecting from the lock
+
+Discovery runs every time: `--latest` on Monday and `--latest` on Tuesday can
+build different versions if upstream released in between. For a run that must
+stay on one version set, such as a workspace rebuilt in several rounds, lock
+the versions once and add `--locked`:
+
+```text
+pekit workspace lock --latest
+pekit workspace publish --all --latest --locked
+```
+
+With `--locked`, `--latest`, `--all-versions` and constraints draw their
+candidates from the `[[source]]` entries in the recipe's
+[`pekit.lock`](~pekit/reference/supporting-files#pekit-lock) instead of
+upstream. The source's own `versions` cap still applies. A recipe with no
+locked versions fails with `version_selection_empty`; a recipe with no source
+runs once, as it does without the flag. `--locked` only chooses versions:
+fetching the chosen source and checking it against the lock work as usual.
+
+`--locked` is refused on its own, with an exact `--version` (which does not
+enumerate anyway), and on `lock`, whose job is to discover.
+
 ### `--version` as an exact selector
 
 The simplest form is one or more exact versions, comma-separated:
