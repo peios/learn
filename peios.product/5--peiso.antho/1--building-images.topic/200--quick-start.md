@@ -8,7 +8,7 @@ related:
   - peios/peiso/reference/the-spec
 ---
 
-This page builds the Peios Experimental medium and boots it. It assumes a checkout of the Peios tree with a populated package pool (`pkgs/_pkgsOut_`), which is where the edition and its closure come from today.
+This page builds the Peios Experimental medium and boots it. It assumes a checkout of the Peios tree with a populated signed package repository (`pkgs/_repo2_`), which supplies the edition and its closure.
 
 ## What you need on the build host
 
@@ -24,33 +24,33 @@ No root. If any step asks for it, that is a bug.
 
 ```toml
 [[packages.repository]]
-url = "file://../../pkgs/_pkgsOut_/"
+url = "file://../../pkgs/_repo2_"
+trust_anchors = ["63977c7be45624999b88bac5aa55ab5280656ee076617a285c87602a0d980602"]
 keys = ["../../pkgs/dev-signing.pub"]
 
 [baseline]
 edition = "Experimental"
+package = "dev.peios.peios-experimental"
 source_date = "2026-06-22T00:00:00Z"
 ```
 
-That is the whole thing. The edition name is lowercased and hyphenated to find
-the `peios-experimental` capability, which the canonical
-`dev.peios.peios-experimental` package provides; with no `version`, the newest
-provider wins. `keys` names the public key the pool's packages were signed
-with; the medium repository has to trust it to carry them. [The
+The explicit package selects `dev.peios.peios-experimental`; without a version,
+the newest available version wins. The trust anchor authenticates repository
+metadata, and `keys` supplies the package-signing public key. [The
 spec](~peios/peiso/reference/the-spec) lists every key.
 
 ## Build
 
 ```sh
 cd dist/release
-peiso iso experimental.toml
+make iso
 ```
 
 peiso reports each stage:
 
 ```text
 resolving peios-experimental
-resolved dev.peios.peios-experimental 2026.8-12 (79 packages)
+resolved dev.peios.peios-experimental 2026.8-1 (… packages)
 composing dist/peios-experimental-2026.8/root
 resolving medium packages
 publishing dist/peios-experimental-2026.8/repo
@@ -75,6 +75,32 @@ make boot
 ```
 
 runs QEMU with UEFI firmware, the ISO attached as a virtio disk, and the serial console on your terminal. You will see the kernel, then `prelude` (the initramfs PID 1) running its hooks — `live-boot` finds the medium and mounts the live root — then `peinit` bringing up the services the release's seeds define, and finally a login prompt. The image autologs in a development account.
+
+### Open the web desktop
+
+`make iso` includes GXWI, the Fenestra compositor, the fenesh desktop shell,
+Gexora file explorer and the Hello demonstration app. Their packages supply
+binaries, application declarations, icons and registry seeds; no development
+share or checkout is needed in the guest.
+
+After `make boot` reaches the console, open **http://127.0.0.1:7780/** on the
+host. The live image has the `peios` development account with no password.
+Fenestra and its apps run as the logged-on principal using a `RemoteInteractive`
+session. Installed systems use their provisioned account instead.
+
+GXWI currently uses **plain HTTP**. The Experimental edition enables TCP 7780
+on all guest interfaces and admits it through the guest packet policy. Use this
+image only on a trusted development network. The Makefile's host port forwards
+bind to localhost; that protects the QEMU host listener, not a machine booted
+directly from the ISO or a VM configured with bridged networking.
+
+The edition opts into `gxwid-service`, `gxwi-config`, `gxwi-network`,
+`fenestra-config` and `fenesh-config`. `Machine\Software\GXWI` selects the
+listener and compositor; `Machine\Software\Fenestra` selects the shell.
+Package installation alone does not activate these policy seeds.
+
+SSH remains available on host port 2222 after provisioning a permitted key or
+password credential. GXWI does not currently offer SSH-key authentication.
 
 The same Makefile has `boot-dwe`, `boot-install` and `boot-installed`; [Running a build](~peios/peiso/building-images/running-a-build) covers them.
 
