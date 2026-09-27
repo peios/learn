@@ -152,3 +152,13 @@ For the identity half of the launch â€” how the token is chosen and installed â€
 For what happens to the stdout/stderr pipes peinit holds, read [Service output and logging](~peios/services-and-jobs/output-and-logging).
 
 For how conditions, asserts, and hooks fit into the start sequence and its states, read [The service lifecycle](~peios/services-and-jobs/the-service-lifecycle).
+
+### System-console aliases and logout
+
+Peinit pins `TTYPath=/dev/console` to the kernel-selected terminal when reading
+service definitions. A display's moving `tty0` alias becomes `tty1`, so switching
+the foreground console does not move the session. Both arbitration and launch
+use this fixed endpoint. When a terminal service's main process exits, peinit
+kills its remaining session processes before handing the terminal on. A clean
+exit under `RestartPolicy=Always` restarts the prompt at the base delay without
+spending the crash budget.
