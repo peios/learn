@@ -200,3 +200,6 @@ scope stays SYSTEM-only, excluding Administrators unless explicitly granted.
 SYSTEM remains trusted across private scopes. A service-specific grant isolates
 a lower-privilege service from unrelated stores; it does not contain another
 process that retains SYSTEM identity or equivalent machine-wide privileges.
+
+The credential store under `/var/state/lpsd` grants the distinct lpsd service
+account and SYSTEM; it continues to exclude Administrators and other services.

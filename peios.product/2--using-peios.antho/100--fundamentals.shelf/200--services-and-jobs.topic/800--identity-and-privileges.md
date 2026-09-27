@@ -130,3 +130,11 @@ Services that need token minting/installation, raw network administration,
 device management or pre-authd bootstrap still require separate assessment.
 Granting SeTcbPrivilege solely to make an identity change work defeats the
 purpose of moving a service out of the machine-wide trust boundary.
+
+The local principal source lpsd also runs as Service, with only
+SeChangeNotifyPrivilege and System integrity for handling client tokens. Its
+package provisions its private state scope; credential files are owned by lpsd
+and admit only lpsd and SYSTEM. Its administrative API still admits SYSTEM and
+Administrators. `/run/psi.sock` admits service connections, but authd registers a
+source only when its enabled service SID matches the configured source allowlist.
+Transport admission does not confer source authority.
