@@ -100,3 +100,33 @@ The identity model rests on a few rules peinit never breaks:
 To see how the token is installed alongside the rest of the process setup, read [The execution environment](~peios/services-and-jobs/execution-environment).
 
 For the identity primitives themselves — tokens, SIDs, privileges — start at [Tokens](~peios/tokens/overview).
+
+## A distinct virtual service account
+
+Set `Identity` to `Service` to run under the service's own `S-1-5-80-…` SID as
+its user identity. authd derives it from the attested service name, using the same
+case-insensitive derivation as the existing service group. Only SYSTEM PID 1 may
+request the attestation. No local principal record or stored credential is
+created, and this does not provide an interactive logon path.
+
+Unlike shared LocalService, two differently named virtual services have distinct
+file and process owners. Grant storage access and policy privileges to the
+individual service SID. Renaming the service changes its identity and requires
+coordinated updates to those grants. The default remains LocalService for
+existing definitions; choosing Service is explicit.
+
+The standard timed, resolvd and trustd deployments also use distinct Service
+identities, retaining their existing service-SID grants. Their SYSTEM
+preparation hooks, where present, remain separate from their main processes.
+
+The standard eventd deployment uses this identity with SeChangeNotifyPrivilege,
+SeSecurityPrivilege (KMES consumption), and SeAuditPrivilege (event emission).
+Its System integrity level allows reception of higher-integrity client tokens;
+it does not grant SYSTEM account membership or SeTcbPrivilege. A short SYSTEM
+pre-start hook initializes registry authorization defaults, then exits before
+the long-running daemon starts. Private stores name eventd's own SID.
+
+Services that need token minting/installation, raw network administration,
+device management or pre-authd bootstrap still require separate assessment.
+Granting SeTcbPrivilege solely to make an identity change work defeats the
+purpose of moving a service out of the machine-wide trust boundary.

@@ -181,3 +181,22 @@ This is one of the reasons creators usually pass **no** explicit DACL (relying o
 For ACEs whose effect is gated by an expression rather than fixed at write time, read [Conditional ACEs](~peios/security-descriptors/conditional-aces).
 
 To sweep a tree and propagate inheritable ACEs from a shell, read [The sd command](~peios/security-descriptors/sd-command).
+
+## Private state and data defaults
+
+The base filesystem gives `/var/state`, `/var/cache`, `/var/log`, `/var/crash`,
+`/data` and `/srv` protected, inheritable SYSTEM/Administrators full access.
+Everyone may traverse each container to an explicitly shared child, but may not
+list it, create entries, or inherit public access into new contents. The reduced
+initramfs skeleton carries the same policies for its `/var` branches.
+
+A package or administrator must establish an explicit child scope before a
+service writes there: grant the service's own SID and any intended readers.
+Changing a directory descriptor does not recursively rewrite existing children.
+Public software under `/usr` and the designated `/lcl` branches remains readable;
+`/var/tmp` keeps its separate creator-private temporary-file policy. The secrets
+scope stays SYSTEM-only, excluding Administrators unless explicitly granted.
+
+SYSTEM remains trusted across private scopes. A service-specific grant isolates
+a lower-privilege service from unrelated stores; it does not contain another
+process that retains SYSTEM identity or equivalent machine-wide privileges.

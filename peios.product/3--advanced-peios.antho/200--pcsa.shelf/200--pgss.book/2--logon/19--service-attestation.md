@@ -99,6 +99,13 @@ Identities the authority defines for itself — the platform's own service
 identities, which no principal source holds and for which no credential
 could exist — are designated by construction.
 
+On Peios, `identity = "Service"` (case-insensitive) selects a distinct virtual
+account whose user SID is the service SID derived from `service`. It uses the
+same policy evaluation and Service logon groups as other attestations, without
+LocalService or SYSTEM membership. The peer checks above precede this selection;
+no credential-bearing logon is added. LocalService and NetworkService remain
+available as shared account identities.
+
 A refusal here MUST NOT distinguish "no such principal" from "not
 designated for service logon", for the reason given in §2.10.
 
