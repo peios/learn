@@ -122,3 +122,13 @@ There are exactly three exceptions, and each is stated where it applies:
 capability rather than an instruction (§2.7); `LogonStart.logon_type`,
 which only the authority ever receives (§2.7); and the field mask of
 `Lookup`, whose reply says which bits it answered (§2.16).
+
+## Initial unpublished layout replacement
+
+The coordinated SSH credential extension replaced the unpublished version-1
+layout without retaining older codecs. Current LogonStart capability,
+required-method and binding fields, Prompt parameters, and all current
+Assertion fields are mandatory, including explicit empty/zero values.
+Omitted mandatory fields fail decoding. The compatibility rules above apply
+to future extensions of this replacement contract; they do not require
+accepting the superseded development layout. See PGSS Logon §2.D.

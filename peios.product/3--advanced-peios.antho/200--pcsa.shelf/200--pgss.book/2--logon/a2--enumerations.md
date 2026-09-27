@@ -46,6 +46,7 @@ when a new one is warranted.
 | Value | Name | Collection |
 |---|---|---|
 | 1 | Password | A line of text, not echoed |
+| 2 | SshPublicKey | Bound SSH candidate or signature proof; §2.D |
 
 ## Message severities
 

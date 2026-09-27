@@ -9,6 +9,7 @@ not tell it what the answer means.
 | Value | Name | Collection |
 |---|---|---|
 | 1 | Password | A line of text, not echoed |
+| 2 | SshPublicKey | Bound SSH candidate or signature proof; §2.D |
 
 The registry is deliberately short. A type is added when a client would
 need to collect something differently, not when an authority acquires a
@@ -28,8 +29,9 @@ new way of checking something.
 
 ## Adding a type
 
-Adding a value to this enumeration is a **breaking change** and requires
-a version bump (§2.6).
+The initial unpublished type-2 extension replaced the version-1 layout
+and all consumers together (§2.D). Future incompatible changes to a
+published contract require the version discipline in §2.6.
 
 An authority MUST NOT send a prompt for a type absent from the client's
 `supported_credential_types`, so an authority using a new type simply
@@ -37,10 +39,13 @@ cannot reach an older client — which is the correct outcome, and is why
 the capability list exists. The converse — a newer *client* reaching an
 older authority — is what the dropping rule in §2.7 exists for.
 
-## Why credentials cross in the clear
+## Why passwords cross the local socket in the clear
 
-Credential material travels this socket as **plaintext**. That is
-deliberate, and the alternative is worse.
+Passwords travel this local socket as **plaintext**. SSH public-key
+authentication instead carries public keys and signatures; private keys
+never cross it. Remote SSH transport encrypts both authentication methods.
+The local password choice allows the source to retain a memory-hard
+password verifier without storing a password-equivalent secret.
 
 Challenge-response requires the verifier to store something it can
 recompute the response from: either the plaintext, or a value that is

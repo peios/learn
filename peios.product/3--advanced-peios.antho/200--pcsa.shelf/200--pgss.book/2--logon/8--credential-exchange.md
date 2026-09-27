@@ -26,6 +26,7 @@ description: CredentialRequest and CredentialResponse — messages, prompts, the
 | `credential_ref` | `u32` | — |
 | `credential_type` | `u8` | §2.B |
 | `credential_name` | string | 128 |
+| `parameters` | length-framed bytes | 4096 |
 
 Both arrays MAY be empty.
 
@@ -110,3 +111,10 @@ Both parties encode and decode this message under the obligations of
 > — MAY send a response omitting it rather than closing the connection.
 > That gives the authority the opportunity to deny cleanly with a reason
 > the principal can read.
+
+## Typed parameters
+
+Prompt parameters are mandatory, empty for Password, and carry the bounded
+SshPublicKey disposition structure described in §2.D. They are protocol
+input to the matching collector, never instructions to render or execute.
+An ordinary password client must refuse an unsupported SSH prompt.

@@ -22,13 +22,15 @@ outcome a source can produce.**
 | `profile` | length-framed structure (PGSS §2.9) | |
 | `claims` | array of claim entries | 64 |
 | `permitted_logon_types` | `u32` | PGSS §2.16 |
+| `authenticated_credential_type` | `u8`; 0 none, 1 Password, 2 SshPublicKey | PGSS §2.D |
 
 Note what is absent: no session, no token, no privileges, no integrity
 level. A source has no way to express them (§2.4).
 
-Every field after `groups` is optional in the way §2.7 requires: a
-source that does not write one has said nothing about it, and the
-authority substitutes the default named below rather than failing.
+All listed fields are mandatory in the coordinated replacement layout.
+Empty arrays/strings and zero values represent absent assertions; omitted
+fields are malformed. The authority checks the authenticated method against
+the client's capabilities and any required method before granting a token.
 
 ### canonical_name
 
@@ -67,8 +69,7 @@ it MUST NOT send "everything", which would assert that a principal may
 be used for a credential-free service logon (PGSS §2.19) on no evidence
 at all.
 
-An appended field: a source predating it simply does not write it, which
-the authority reads as zero and therefore as its own default.
+Sources that state no restriction send zero explicitly.
 
 ### groups
 
@@ -87,9 +88,8 @@ build a token, and building tokens is the authority's (§2.4). A source
 saying "this principal is an administrator" is identity; a source saying
 "and mark that group deny-only" would be reaching into derivation.
 
-The per-entry framing is what allowed `unix_id` to be added here without
-breaking a decoder that predates it, and it will allow the next field
-the same way.
+Both current group fields are mandatory. The per-entry framing preserves
+the boundary of any future trailing extension.
 
 A `unix_id` of **0** means the source does not number this group — the
 honest answer for a group it does not own. A source naming a well-known

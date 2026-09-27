@@ -112,3 +112,13 @@ field after it. Nesting lets the two evolve independently.
 
 The same reasoning applies to every shared body PSI carries, and §2.C
 lists them.
+
+## Initial unpublished layout replacement
+
+The coordinated SSH credential extension replaced the unpublished version-1
+layout without retaining older codecs. Current LogonStart capability,
+required-method and binding fields, Prompt parameters, and all current
+Assertion fields are mandatory, including explicit empty/zero values.
+Omitted mandatory fields fail decoding. The compatibility rules above apply
+to future extensions of this replacement contract; they do not require
+accepting the superseded development layout. See PGSS Logon §2.D.
