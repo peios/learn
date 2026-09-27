@@ -103,7 +103,10 @@ mysterious.
 
 **A fresh handshake needs a clock too.** So the cookies from the last one
 are kept under `/var/state/timed`, and a reboot usually needs no handshake
-at all.
+at all. The startup hook establishes a complete protected, inheritable
+descriptor before creating the cookie directory: SYSTEM, Administrators and
+timed's service SID have access. Inherited public read grants are removed from
+the state directory; a Unix mode on a cookie file is not the security boundary.
 
 ## Steering, not jumping
 

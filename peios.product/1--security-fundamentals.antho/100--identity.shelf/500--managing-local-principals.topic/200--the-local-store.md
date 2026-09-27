@@ -82,7 +82,13 @@ It is also why `lps` talks to `lpsd` over a socket rather than editing the file.
 
 ## A file, not a database
 
-The store is serialised whole and replaced atomically: written to a temporary file, flushed, then renamed over the old one.
+The store is serialised whole and replaced atomically. Its temporary inode
+is created with a protected SYSTEM-only descriptor **before the first byte is
+written**, flushed, then renamed over the old one. Stale temporary files are
+unlinked and recreated exclusively; they are never truncated or followed.
+At startup lpsd establishes a protected SYSTEM-only inheritable descriptor on
+its state directory before loading or provisioning the store. The final file
+has the same SYSTEM-only access policy, independent of parent inheritance.
 
 A few hundred principals, rewritten when an administrator changes an account, is not a workload that needs a write-ahead log. And because the swap is a rename, a reader sees the old file or the new one and there is no third outcome — which means there is no recovery code, and code that does not exist cannot be wrong.
 

@@ -107,7 +107,7 @@ Which source wins for each component of the child SD, in order:
 
 Whenever the parent has inheritable ACEs, they are **appended** to an explicit DACL or SACL rather than replacing it, so a creator who supplies an explicit DACL gets that DACL plus the inheritable ACEs from the parent. They cannot exclude the parent's ACEs except by setting the protected flag (see below).
 
-The token's `default_dacl` is a fallback, not a base. It is consulted only when the creator supplied no DACL and inheritance produced nothing, which on a Peios filesystem is rare: every root descriptor carries inheritable ACEs. The cases that reach it are objects with no parent to inherit from, such as an abstract socket, and children of a container whose descriptor was deliberately written without inheritable ACEs.
+The token's `default_dacl` is a fallback, not a base. It is consulted only when the creator supplied no DACL and inheritance produced nothing, which depends on the filesystem and its explicit subtree policies. The cases that reach it are objects with no parent to inherit from, such as an abstract socket, and children of a container whose descriptor was deliberately written without inheritable ACEs.
 
 ## Protected ACLs
 
@@ -128,18 +128,23 @@ The flags can also be set after creation, via a subsequent `kacs_set_sd`. Doing 
 
 The Peios filesystem is a worked example, and a useful one because it is small enough to hold in your head.
 
-The root's DACL is inheritable and grants SYSTEM and Administrators full control, Everyone read and execute, and CREATOR OWNER full control of whatever it makes. Every path on the system takes its descriptor from that by inheritance, which is what makes `/usr` readable and executable without anything having to say so per file.
+`dev.peios.fsbase` declares protected inheritance scopes for the intended
+public software trees: `/usr`, and `/lcl/bin`, `/lcl/sbin`, `/lcl/libexec`,
+`/lcl/lib`, `/lcl/include`, `/lcl/share`, `/lcl/etc` and `/lcl/conf`.
+SYSTEM and Administrators have full control; Everyone inherits read/execute.
+Thus newly installed software stays readable to ordinary principals, including
+on a live image whose lower filesystem synthesises non-inheritable descriptors.
+This is not a public inheritance policy for all of `/var`.
 
-Two directories opt out, and both have to:
-
-| Path | Protected because |
+| Path | Protected policy |
 |---|---|
-| `/home` | Everyone would otherwise inherit read, and every account could enumerate the others. It grants Everyone traverse and **not** list, so a principal reaches its own directory without seeing who else has one. |
-| `/tmp` | Everyone would otherwise inherit read on every file in it. Protecting it, plus CREATOR OWNER, makes each temporary file private to whoever made it. |
+| `/home` | SYSTEM and Administrators can list it; Everyone can traverse but cannot list. Individual homes receive their own principal-specific descriptor. |
+| `/tmp`, `/var/tmp` | Everyone can create entries but cannot delete another principal's entries. CREATOR OWNER inheritance makes children private to their creator, SYSTEM and Administrators. `/var/tmp` retains its persistent semantics. |
+| `/var/state/secrets` | SYSTEM-only, inherited by children. Other consumers require explicit grants. |
 
-Neither could be expressed by editing the root's ACL, because the root's ACL is also `/usr`'s and `/var`'s. That is the whole reason the protected flag exists: one inheritable ACL is one policy, and a system needs more than one.
-
-Both descriptors are declared by the `dev.peios.fsbase` package rather than stamped at boot, so the statement of what `/home` is lives beside the thing that creates it.
+A protected parent does not retroactively protect an existing child. Runtime
+credential writers must establish protection before writing; a later rename
+or a Unix mode such as `0600` does not replace the Peios security descriptor.
 
 ## Auto-inherit flags
 

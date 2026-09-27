@@ -54,26 +54,25 @@ symlink. §5.20 requires all of that to happen up front, because
 deferring it to the moment a descriptor is applied turns a malformed
 package into a partially completed install.
 
-Overrides are applied last, after the payload is written and after any
-signature attributes are stamped. A descriptor can withhold `WRITE_DAC`
-from the installing process, so nothing may still be waiting to be
-written when one takes effect.
+Overrides take effect **before content is written**. On Peios, a new file
+or directory receives its descriptor in the native create call. A staged
+filename is observable too; protecting only the final rename is insufficient.
 
-Where the descriptor lands depends on the entry:
+All directory overrides in the transaction are collected and authorised
+before planning creates parent directories. Parent scopes are established
+before their children, including when a different package supplies the scope.
+Conflicting descriptors for the same directory are rejected. Image composition
+also establishes these scopes before parallel payload extraction.
 
-| Entry | Stamped on |
-|---|---|
-| Regular file | its staged sibling, before the commit rename |
-| Directory | its final path, after the payload beneath it exists |
+A declared override on an existing directory is applied to that directory.
+Existing descendants are not recursively reset, and existing directories
+without an override retain their policy. This preserves unrelated operator
+customisations; changing a subtree's policy is not a migration of its children.
 
-Stamping a file before the rename means it becomes visible already
-carrying its descriptor, rather than briefly wearing an inherited one.
-A directory has no staged sibling — it is created at its final path —
-so it is stamped in place once its children are there.
-
-If the kernel rejects a descriptor, most often because it names a
-principal the system does not know, the install fails and rolls back.
-It is never warned past.
+Off Peios, composition stamps or records image metadata before copying file
+content. The native creation path falls back only when the native syscall is
+unavailable. Access denial or an invalid descriptor fails the operation; the
+installer does not temporarily broaden the descriptor to let itself write.
 
 ### The override policy
 
