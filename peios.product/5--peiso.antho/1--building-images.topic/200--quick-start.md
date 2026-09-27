@@ -98,6 +98,8 @@ The edition opts into `gxwid-service`, `gxwi-config`, `gxwi-network`,
 `fenestra-config` and `fenesh-config`. `Machine\Software\GXWI` selects the
 listener and compositor; `Machine\Software\Fenestra` selects the shell.
 Package installation alone does not activate these policy seeds.
+The GXWI service retains `SeImpersonatePrivilege` so it can hand the authenticated
+principal's token to peinit for the session job.
 
 SSH remains available on host port 2222 after provisioning a permitted key or
 password credential. GXWI does not currently offer SSH-key authentication.
