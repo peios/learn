@@ -70,6 +70,12 @@ The pattern matters in environments where a user has local rights on one machine
 
 A desktop session driven from somewhere else — the user has a screen, a keyboard and a full graphical session, but none of the hardware is here.
 
+GXWI requests this type when logging on through authd. The kernel and authd
+must both support value 10; an older authd refuses the request rather than
+substituting another type. After updating GXWI and authd, log off existing
+GXWI sessions and start new ones: reconnecting to an existing compositor
+retains that session's original token and logon type.
+
 It is a separate type from Interactive rather than a flavour of it because the two differ in exactly one respect that an administrator may want to act on: whether the person is physically at the machine. Everything else about the session is the same, which is why a RemoteInteractive token carries the Interactive group SID as well as its own — see [Well-known principals](~peios/identity/well-known-principals) for what that pair lets you write.
 
 Rebooting from a RemoteInteractive session needs `SeRemoteShutdownPrivilege` on top of `SeShutdownPrivilege`, as it does from a Network, NetworkCleartext or NewCredentials session. The screen being remote is what counts, not the session being graphical.
