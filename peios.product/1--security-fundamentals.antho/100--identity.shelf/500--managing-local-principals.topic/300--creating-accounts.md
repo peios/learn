@@ -61,6 +61,13 @@ You need to be an administrator to do this. See [the `lps` command](~peios/manag
 
 **The home directory is not created here.** `lps` records the path and nothing more. The directory appears at the principal's **first sign-in**, made by the authority when it grants the logon — and only when the account has a home recorded, which is why a service principal never grows one.
 
+The shipped authd service explicitly retains `SeRestorePrivilege` so it can
+assign the new directory's owner and group to that principal. Removing it
+from `RequiredPrivileges` can leave a newly created home accessible only to
+SYSTEM and Administrators, preventing an ordinary user's session from
+starting there. Authd reports this failure and leaves existing directories
+alone; an administrator must repair their descriptors deliberately.
+
 It is created owned by the principal, with a protected DACL: full control for its owner, for SYSTEM and for Administrators, and nothing for anybody else. Protected matters — without it the root's inheritable "Everyone may read" ACE would apply and every account could read every other account's files.
 
 A principal whose home could not be created still signs in, starting in `/`, and `login` says so. A directory is not worth failing a logon over.
