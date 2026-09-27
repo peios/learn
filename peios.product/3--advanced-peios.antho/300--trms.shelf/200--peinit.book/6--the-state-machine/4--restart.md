@@ -49,6 +49,12 @@ elapses the service transitions to Starting and the ordinary activation
 sequence begins, with its own fresh `StartTimeout`.
 [*restart.a-relaunch-gets-a-fresh-starttimeout]
 
+The elapsed backoff timer is consumed when the relaunch is admitted. If a
+pre-start check needs an asynchronous filesystem helper, the service remains
+in Backoff until that check finishes, retaining its terminal reservation.
+The pending check drives progress; the expired timer cannot admit another
+restart while it waits.
+
 The relaunch runs the pre-start checks like any other start, and the
 machine can have changed while the service waited. If its terminal is
 now held (§11.6) or a condition no longer holds, the service goes from
