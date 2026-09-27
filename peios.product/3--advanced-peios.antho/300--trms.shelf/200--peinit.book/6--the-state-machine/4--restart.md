@@ -24,11 +24,7 @@ evaluate_restart(service, cause):
         // cause has no exit code and is always a failure here.
         if cause == ProcessCrash and exit_code in success_exit_codes:
             return STAY_FAILED
-    // A clean terminal logout is not a failure.
-    if cause == CleanExitRestart and TTYPath is set:
-        consecutive_failures = 0
-        return RESTART_AFTER(min(restart_delay, 60))
-    // Other Always exits fall through.
+    // Always falls through unconditionally.
 
     // 2. Budget.
     if consecutive_failures >= restart_max_retries:
@@ -106,11 +102,6 @@ short-circuiting it;
 [*restart.an-explicit-start-during-backoff-honours-the-remaining-delay] a
 `stop` cancels the pending restart and takes the service to Inactive.
 [*restart.a-stop-during-backoff-cancels-the-pending-restart]
-
-For a terminal-attached service, a successful `Always` exit is a normal session
-logout. It resets the failure counter and uses the base delay (capped at 60
-seconds), without spending or exhausting the crash budget. Failed exits and
-startup failures still use the ordinary budget and exponential backoff.
 
 ## The budget, and when it resets
 

@@ -81,7 +81,7 @@ If that lookup cannot be answered, `login` attempts the sign-in anyway rather th
 A console that signs in on its own is a passwordless principal plus `--try-no-password`. On a live image, `peinit` starts:
 
 ```
-/bin/login --console --try-no-password peios
+/bin/login --try-no-password peios
 ```
 
 The same service definition suits an image where `peios` has a password: the attempt is refused before anything is rendered, and an ordinary prompt appears. No second seed, and no conditional configuration.
@@ -94,7 +94,6 @@ To turn autologon off, give the principal a password with [`lps password`](~peio
 |---|---|
 | `--try <name>` | Attempt `name`, falling back to a full prompt. |
 | `--try-no-password <name>` | Attempt `name` collecting nothing, falling back to a full prompt. |
-| `--console` | Reset terminal input and wait for first-boot setup to finish before collecting credentials. Serial speed is preserved; registry errors prevent logon. |
 | `-p` | Keep the inherited environment instead of building a fresh one. |
 | `-h <host>` | Record the remote peer for a sign-in originated on its behalf. Unverified. |
 | `-H` | Accepted and ignored. Suppresses the hostname banner on other systems. |
@@ -119,27 +118,3 @@ The home directory comes from the profile the authority sent, and **a missing on
 | Code | Meaning |
 |---|---|
 | `1` | A usage error, a denied sign-in, or the shell could not be started. |
-
-## Multiple local consoles
-
-The Experimental edition provides independent login sessions on `tty1`, `tty2`
-and `tty3`. Switch between them with Alt+F1, Alt+F2 and Alt+F3 at a text console,
-or use `chvt 1`, `chvt 2` and `chvt 3` with the required console authority.
-Switching does **not** lock or log out the session you leave.
-
-`login-console` follows the kernel's primary console: peinit resolves a display
-console to the fixed `tty1`, or uses the selected serial/paravirtual terminal.
-It retains the live-medium passwordless `peios` attempt. Additional services
-`login-tty1`, `login-tty2` and `login-tty3` show ordinary username prompts. On a
-display-primary machine, the duplicate `login-tty1` service is skipped because
-`login-console` already owns that terminal. On a serial-primary machine all
-three local prompts can run alongside the serial session. Missing terminals
-are skipped.
-
-First-boot setup retains the primary console. Additional terminals wait until
-both setup service definitions have been removed; they collect no credentials
-while setup is pending. Logging out terminates that terminal service's remaining
-processes and produces a fresh prompt with canonical input and echo restored.
-A normal logout does not consume the crash-restart budget. This resets terminal
-input settings; it does not implement a session lock or promise to erase all
-screen history.

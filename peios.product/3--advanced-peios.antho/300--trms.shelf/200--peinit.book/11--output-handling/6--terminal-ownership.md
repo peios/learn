@@ -162,19 +162,3 @@ And naming the holder would mean rewriting every waiter each time the
 set of things that might take the console changed.
 
 What is left is a queue on a device, which is what this is.
-
-## Fixed system-console endpoints
-
-When the LCS boundary reads service definitions, `/dev/console` in `TTYPath` is
-resolved from the first entry in `/sys/class/tty/console/active`. A `tty0` endpoint
-is pinned to `/dev/tty1`; an explicit `/dev/tty0` is also pinned to `/dev/tty1`.
-The selected system-console endpoint is cached for the boot so registry reloads
-and foreground VT changes do not move existing sessions. Resolution failure
-makes the affected definition undecodable, rather than silently opening a moving
-alias. Arbitration and process launch use the same resolved path.
-
-On terminal main-process exit the runtime kills the exiting job's cgroup before
-releasing the terminal or scheduling its successor. Descendants belong to the
-session that ended, not the next login. Other terminal services and ordinary
-daemon lifecycle semantics are unaffected. An error killing the cgroup fails
-terminal-event processing; a new prompt must not be scheduled through that error.
