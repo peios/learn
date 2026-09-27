@@ -50,9 +50,10 @@ multi-console logins require separate system configuration.
 
 The PAM-based `vlock` screen locker and optional XKB-to-console conversion
 are disabled. Native kbd keymaps remain available. `openvt` is a process
-launcher for a virtual console; it does not grant a Peios identity or
-authenticate a user. Its upstream `--user` mode invokes `login -f`, which
-Peios login deliberately rejects. Use peinit and the authenticated login
+launcher for a virtual console. It preserves the caller's Peios token and
+the console device's existing security descriptor. It does not grant an
+identity or authenticate a user. Its `--user` mode is explicitly rejected
+on Peios; that upstream mode infers a numeric user and invokes `login -f`. Use peinit and the authenticated login
 service for managed login sessions.
 
 The `-debuginfo`, `-debugsource` and `-source` packages provide debugging
