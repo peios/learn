@@ -31,8 +31,9 @@ values for those are never even consulted.
 
 ## Persisted metadata
 
-`Machine\System\Registry\Layers\base\` may exist, and it usually does,
-but it decorates the base layer rather than defining it. What LCS takes
+`Machine\System\Registry\Layers\base\` may exist, though nothing in a
+Peios system creates it, and where it does it decorates the base layer
+rather than defining it. What LCS takes
 from it is the metadata key's GUID and its cached Security Descriptor —
 which is to say, who may write into the base layer (§5.3.4). [*layer.base.metadata-key-supplies-guid-and-descriptor]
 
@@ -46,13 +47,16 @@ existence is hardcoded and layer mechanics cannot reach it.
 ## The default target
 
 A write that names no layer targets the base layer. [*layer.base.is-the-default-write-target] That is the default
-for manual administration and for system initialisation.
+for manual administration, for system initialisation, and for what a
+person keeps under their own `Users\<SID>\`.
 
-Before the base layer's metadata key exists — first boot, before seed
-restore — LCS uses a compiled-in default descriptor granting SYSTEM and
-Administrators `KEY_ALL_ACCESS`, so writes into the base layer are
-possible from the very beginning. The compiled-in default is replaced by
-the real descriptor as soon as seed restore creates the key (§5.3.4).
+While the base layer's metadata key does not exist, LCS uses a
+compiled-in default descriptor granting SYSTEM and Administrators
+`KEY_ALL_ACCESS` and Authenticated Users `KEY_SET_VALUE`, so writes into
+the base layer are possible from the very beginning, by anyone who has
+authenticated, to whatever the target key's own descriptor lets them
+write. The compiled-in default is replaced by the key's descriptor as
+soon as the key is created (§5.3.4).
 
 ## `base` is matched like every other layer name [*layer.base.name-matched-by-case-folding]
 

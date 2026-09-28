@@ -47,6 +47,8 @@ The usual convenience bundles apply — `KEY_READ` (query, enumerate, notify, re
 
 Ordinary access — reading a value, writing one, creating or listing subkeys — is decided entirely by the key's SD through AccessCheck. **No privilege grants ordinary registry access.** A few privileges appear only where a write means more than storage: establishing a layer that *outranks* others (policy — see [Layers](~peios/registry-layers/layers)), creating a link, or bulk [backup and restore](~peios/registry-administration/lcs-and-sources). Those are special operations, covered where they arise; everyday access is the SD's job alone.
 
+A write is checked a second time, against the [layer](~peios/registry-layers/layers) it goes into. For an ordinary write that is the base layer, which anyone who has authenticated may write into, so the check never refuses a person or a service what a key's SD allows them. It is there for the layers that carry policy, which only their owners may write.
+
 ## No traversal check
 
 One surprise sets the registry apart from a filesystem: **only the SD on the key you open is checked.** The keys above it on the path are not. A process can open `Machine\System\Services\Jellyfin` with no access whatsoever to `Machine\System\Services` or `Machine\System`. There is no "execute/traverse" right that you must hold on every ancestor the way a filesystem demands. Access is decided at the destination, full stop.

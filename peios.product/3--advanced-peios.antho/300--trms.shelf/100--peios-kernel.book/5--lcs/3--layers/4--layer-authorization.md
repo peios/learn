@@ -12,8 +12,9 @@ This is a second AccessCheck, against a different object, and it is in
 addition to the fd's granted mask on the target key. Both must pass. [*layer.authz.is-a-second-check-additional-to-the-fd-mask]
 
 The descriptor on a layer's metadata key is therefore the answer to
-"who may write into this layer". The base layer's inherits from the
-`Machine` hive root — SYSTEM and Administrators with `KEY_ALL_ACCESS`. [*layer.authz.base-descriptor-inherits-from-the-machine-root]
+"who may write into this layer". The base layer's, where the key has
+been created, is the one inheritance computes from the `Machine` hive
+root, like any other key's. [*layer.authz.base-descriptor-inherits-from-the-machine-root]
 Group Policy layers get restrictive descriptors from the GP client at
 creation; role layers get theirs from the role installer.
 
@@ -21,19 +22,42 @@ That closes two escalation paths at once. An unprivileged process
 cannot write into a GP layer, and one role's service cannot write into
 another role's.
 
+The base layer is the one layer meant to be written by everybody. It
+is where a write goes that names no layer, a person's own settings
+under `Users\<SID>\` included, so its descriptor lets in anyone who has
+authenticated and leaves what they may write to the descriptor of the
+key they are writing. A layer check that refused them would make every
+key read-only to everyone but SYSTEM and Administrators, whatever the
+key's own descriptor said.
+
 The layer metadata descriptors are cached alongside the layer table and
 invalidated by the same self-watch (§5.3.3). A layer that is not in the
 table is `ENOENT` for any operation naming it. [*layer.authz.unknown-layer-is-enoent]
 
 ## The base layer before it exists
 
-On first boot, before seed restore, `Layers\base\` does not exist. LCS
-falls back to a compiled-in default descriptor granting
-`KEY_ALL_ACCESS` to SYSTEM and Administrators, so base-layer writes
-work from the start. [*layer.authz.base-falls-back-to-a-compiled-in-descriptor]
+While `Layers\base\` does not exist, LCS falls back to a compiled-in
+default descriptor, so base-layer writes work from the start. It is
+owned by SYSTEM and grants `KEY_ALL_ACCESS` to SYSTEM and
+Administrators and `KEY_SET_VALUE`, the one right this check asks for,
+to Authenticated Users. Nobody else is granted anything: a principal
+that has not authenticated cannot write into the base layer, whatever
+the target key allows. [*layer.authz.base-falls-back-to-a-compiled-in-descriptor]
 
-It is replaced by the persisted descriptor the moment seed restore
-creates the key. [*layer.authz.base-fallback-replaced-at-seed-restore]
+Nothing in a Peios system creates `Layers\base\`, so on a system as
+shipped the compiled-in default is the descriptor in force for as long
+as the system runs.
+
+It is replaced by the persisted descriptor the moment the key is
+created. [*layer.authz.base-fallback-replaced-at-seed-restore]
+
+> [!WARNING]
+> Creating `Layers\base\` changes who may write the registry. The new
+> key inherits from the `Machine` hive root, which grants Authenticated
+> Users `KEY_READ` and not `KEY_SET_VALUE`, so from that moment no
+> ordinary principal can write anything, its own `Users\<SID>\`
+> included. Whoever creates the key has to give it a descriptor that
+> says what they mean, in the transaction that creates it.
 
 ## Layer lifecycle
 
