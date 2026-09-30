@@ -33,6 +33,10 @@ Before it shows the page, `installerd` looks at what each disk holds: its partit
 
 If the machine has a storage controller that no driver has claimed, the page says so with the table: what kind of controller, its PCI vendor and device, and where it is on the bus. That is the usual reason a machine's disks are missing from the list — they are behind a controller in a RAID or VMD mode — and the way out is in the firmware's settings, not here.
 
+**Whether you mean it.** Choosing a disk to install onto leads to a page that says which disk, that all of it will be erased, and what you would miss of what is on it: a system by the name it gives itself, and any other filesystem with files in it by its label and how much is in use. An EFI system partition or a Windows recovery partition is not named in its own right, and a filesystem the installer could not look into is not claimed to hold anything. The disk is read again for this page rather than remembered from the one before, and the same facts go with the sentence as structure, for a surface that draws the disk. Back returns to the disk page with the disk still chosen.
+
+`installerd` goes on only with a disk it can see and that is not the medium. A disk pulled since the page was drawn, or the medium named by a script, is turned down on the disk page with the reason.
+
 **The console.** The form is drawn to the size of the terminal, read once when it starts, and the kernel is kept quiet on the console while it is open; the [first-boot](~peios/disks-and-filesystems/first-boot-setup) page explains both. On a serial line the renderer assumes a modern terminal emulator — rounded corners, ticks, a spinner. On a real machine's console it detects the Linux VT and uses only what the kernel's font can draw, and sets the VT's sixteen colours to the same palette an emulator would have, so the two look alike. `--plain` forces the conservative set, for a serial terminal that really is one.
 
 First-boot setup is the same renderer with a different daemon, so all of this holds there too.
