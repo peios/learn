@@ -41,7 +41,9 @@ If the machine has a storage controller that no driver has claimed, the page say
 
 How far along the copy is means how much of the system has been written. `installerd` works out what the image will come to on the disk before it copies anything and says so (`1.2 GiB to copy`), then asks the target filesystem several times a second how much it holds. The image is copied one top-level directory at a time and `/usr` is nearly all of it, so a figure that counted directories would stand still through most of the copy. The total is an estimate and runs a little under, so the phase waits just short of finished until the copy itself is over.
 
-The job's end is the conversation's. It ends complete, with a sentence saying so, or failed, with why: the step that failed and how. Nothing is picked up where it stopped. After a failure the next conversation starts from the first page, and an install that stopped after partitioning has already erased the disk.
+**When it is done.** A job that fails ends the conversation, with why: the step that failed and how. Nothing is picked up where it stopped. After a failure the next conversation starts from the first page, and an install that stopped after partitioning has already erased the disk.
+
+A job that finishes goes on to one more page, which says what it came to (for an install, *Installation complete. Reboot to start Peios.*) and offers **Reboot now** and **Back to the start**. Every job here changes what the machine starts from, so each offers the restart. It is `installerd` that restarts the machine, by asking peinit as `reboot` does, because the form holds no privilege to. If peinit takes the request, the conversation ends saying the machine is restarting, and the machine goes down. If it does not, the page says why and stays. Back to the start goes back to the first page in the same conversation.
 
 **The console.** The form is drawn to the size of the terminal, read once when it starts, and the kernel is kept quiet on the console while it is open; the [first-boot](~peios/disks-and-filesystems/first-boot-setup) page explains both. On a serial line the renderer assumes a modern terminal emulator — rounded corners, ticks, a spinner. On a real machine's console it detects the Linux VT and uses only what the kernel's font can draw, and sets the VT's sixteen colours to the same palette an emulator would have, so the two look alike. `--plain` forces the conservative set, for a serial terminal that really is one.
 
@@ -180,7 +182,7 @@ The first page offers **Repair an existing system** beside the install. Choose t
 
 **Reseed security descriptors** re-stamps the descriptor on the root of the tree — the single inheritable one that is the whole tree's access policy, as the last section below explains — with the value the install wrote.
 
-Each ends with a finish screen; press a key and you are back at the shell, and `install-tui` again starts the next one. The three can be run in one boot.
+Each ends on the page that offers the restart. Back to the start leads to the first page, and from there to the next repair, so the three can be run in one boot.
 
 ## What the installer does not do
 
