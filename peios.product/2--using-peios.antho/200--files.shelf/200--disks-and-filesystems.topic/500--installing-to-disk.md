@@ -37,6 +37,10 @@ If the machine has a storage controller that no driver has claimed, the page say
 
 `installerd` goes on only with a disk it can see and that is not the medium. A disk pulled since the page was drawn, or the medium named by a script, is turned down on the disk page with the reason.
 
+**While it works.** The page a job runs on asks nothing. It says what the job is being done to and that the machine and the medium are to be left alone until it finishes, lists the job's phases with how far along each is, and under them shows what the job says of itself: every command it runs, and what that command prints. For an install the disk goes with the sentence as structure again, exactly as the confirmation had it, because a surface can join while the job is under way and this page is then the first it sees.
+
+The job's end is the conversation's. It ends complete, with a sentence saying so, or failed, with why: the step that failed and how. Nothing is picked up where it stopped. After a failure the next conversation starts from the first page, and an install that stopped after partitioning has already erased the disk.
+
 **The console.** The form is drawn to the size of the terminal, read once when it starts, and the kernel is kept quiet on the console while it is open; the [first-boot](~peios/disks-and-filesystems/first-boot-setup) page explains both. On a serial line the renderer assumes a modern terminal emulator — rounded corners, ticks, a spinner. On a real machine's console it detects the Linux VT and uses only what the kernel's font can draw, and sets the VT's sixteen colours to the same palette an emulator would have, so the two look alike. `--plain` forces the conservative set, for a serial terminal that really is one.
 
 First-boot setup is the same renderer with a different daemon, so all of this holds there too.
