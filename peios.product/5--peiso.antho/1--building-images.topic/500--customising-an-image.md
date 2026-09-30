@@ -31,7 +31,9 @@ dest = "usr/etc/motd"                        # inside the root
 sddl = "O:SYG:SYD:(A;;GA;;;SY)(A;;FR;;;WD)" # optional
 ```
 
-The file is copied into the composed root before anything is packed, so a `dest` under `boot/initramfs/` lands in the initramfs — a hook you are still writing, say — and one under `lcl/` lands in the operator tree.
+The file is copied into the composed root before anything is packed, so a `dest` under `boot/initramfs/` lands in the initramfs — a hook you are still writing, say — and one under `lcl/` lands in the operator tree. A file at a `dest` the release already has replaces it.
+
+A program stays a program: a file whose source anyone can execute is injected with mode `0755`, and any other with `0644`. The mode means nothing more than that on Peios, but Linux still refuses to execute a file with no execute bit, whatever its descriptor allows.
 
 `sddl` gives the file a [security descriptor](~peios/security-descriptors/sddl). Peios has no file modes; the descriptor is the whole of a file's access control. peiso compiles the SDDL and writes it into the squashfs as the file's `security.peios.sd` attribute — the same route as the firmware signatures, and just as privilege-free. Without `sddl` the file gets whatever the mount synthesises for an object with no descriptor, which follows its parent. The initramfs carries no attributes at all, so `sddl` on a file under `boot/initramfs/` is refused.
 
