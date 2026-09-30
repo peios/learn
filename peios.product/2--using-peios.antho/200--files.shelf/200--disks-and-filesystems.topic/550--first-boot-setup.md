@@ -31,6 +31,8 @@ An overlay runs as an account that needs no credential, and before setup the mac
 > [!WARNING]
 > While setup is pending, whoever opens the machine's address first answers its questions, including the administrator's name and password. The same is true of the console. Keep a machine that has not been set up off networks you do not trust.
 >
+> The page is served over plain HTTP, so the password you choose crosses the network unencrypted when you press Next, readable by anything that can see the traffic. The account page says so when it is opened over a network. On a network you do not trust, set the password at the machine's own screen.
+>
 > `peios-oobe-setup` has no password, so anything that signs in without a credential can sign in as it while it exists. It has no groups; what it can reach is setup itself, which the address offers anyone.
 
 The account page will not take the name `peios-oobe-setup`: setup keeps an account that already exists, and would otherwise finish with no account you can use.
@@ -42,6 +44,10 @@ The account page will not take the name `peios-oobe-setup`: setup keeps an accou
 
    **Configure manually** gives one wired interface an address of its own, with a gateway and name servers if you want them. It is checked as you save it (an address needs the length of its network, `192.168.1.20/24`, and a gateway must be on that network) but not applied: setup keeps it, says so on the network page, and applies it last, after the account and the machine's name. Until then the machine keeps the address it has, so a browser setting it up keeps reaching it. What it writes is an ordinary [profile and rule](~peios/networking/configuring-profiles), `Profiles\default\manual-<interface>` and an exception under `Rules\Interface\wired` naming the interface by its stable id, which you can change or delete afterwards like any other.
 3. **An account and a password.** This is the one that matters, and the reason first-boot setup exists: it is where an installed machine gets its first administrator.
+
+   The account is made at the very end, and a name or password the [principal store](~peios/managing-local-principals/creating-accounts) would refuse there would fail the whole of setup. So the page refuses them itself, when you press Next, and says why on the field: an empty password, two passwords that differ, and a name that is empty, is not plain ASCII, is longer than 256 characters, contains any of `@ \ / : ,`, or is the name of a group every machine has (`Administrators`, `Users`, `Guests`, `Everyone`, `Authenticated Users`). Spaces inside a name are fine; spaces around it are trimmed.
+
+   In a browser, what you type stays in your browser until you press Next, and is never shown to anyone else who has the page open. The page shows who the account will be as you type the name, and whether the second password matches the first.
 4. **A name for the machine**, offered as a suggestion you can accept with one keypress. Domain join is shown and disabled.
 
 Then it applies, and says so.
