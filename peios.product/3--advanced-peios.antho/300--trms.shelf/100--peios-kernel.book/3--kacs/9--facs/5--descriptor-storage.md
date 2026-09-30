@@ -129,12 +129,27 @@ root inodes are kernel-created, never passing through a
 userspace-supplied artifact, so they carry no descriptor at the moment
 they become reachable. To make the class viable the kernel seeds one.
 
+The mutable root filesystem is a tmpfs whatever the command line says.
+[*facs.storage.rootfs-always-tmpfs] Upstream Linux makes it a ramfs
+when the command line carries `root=`, or a `rootfstype=` that does not
+name tmpfs, and ramfs stores no extended attributes: the seed below
+would have nowhere to go, nothing the boot archive unpacks would
+inherit a descriptor, and StrataFS, which reads a provider's stored
+descriptor and never a synthesised one, would refuse every view an
+initramfs mounts over it. An installed system always boots with
+`root=`, so the upstream rule is not followed.
+
 The rootfs root is seeded inside `init_mount_tree`, immediately after
 `vfs_kern_mount` returns and before the mount is published into
 `init_mnt_ns`, with the inode's `i_rwsem` held. [*facs.storage.rootfs-seed-timing] The devtmpfs root is
 seeded inside `devtmpfs_init`, after `vfs_kern_mount` and before
 `kdevtmpfs` starts, likewise under `i_rwsem`. [*facs.storage.devtmpfs-seed-timing] The nullfs root is not
 seeded — it is unmanaged, empty, and incapable of xattr storage. [*facs.storage.nullfs-not-seeded]
+
+A rootfs seed that fails panics the kernel. [*facs.storage.rootfs-seed-failure-is-fatal]
+A boot that went on without it would fail later, in whatever first
+reached the initramfs through a StrataFS view, with nothing to connect
+the refusal to its cause.
 
 The seeded descriptor is byte-for-byte identical in both places: owner
 and group SYSTEM (`S-1-5-18`), a DACL of one `ACCESS_ALLOWED` ACE
