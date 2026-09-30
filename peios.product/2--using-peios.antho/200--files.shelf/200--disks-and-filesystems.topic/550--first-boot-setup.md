@@ -20,6 +20,21 @@ It is two services and one conversation:
 
 The split is the same one the installer makes, for the same reason: creating an administrator needs privilege that a program drawing boxes on a terminal must not have.
 
+## In a browser
+
+A machine with no screen has nobody at its console, so setup can also be done from a browser on another device, by opening the machine's address. This needs `oobe-gxwi`, the graphical surface, installed at `/bin/oobe-gxwi`; without it setup is on the console alone.
+
+Where it is installed, `oobed` makes it GXWI's overlay for as long as setup is pending. Everyone who opens the address is sent to setup instead of the sign-in page. Both surfaces draw the same conversation, so it can be started on one and finished on the other.
+
+An overlay runs as an account that needs no credential, and before setup the machine has no accounts. So `oobed` makes one as it starts: `peios-oobe-setup`, with no password and no groups, which its socket admits. When setup completes, `oobed` removes the overlay, so the sign-in page comes back, and then the account and its home directory. A setup that fails leaves all of it in place, as it leaves everything else, and the next boot offers it again.
+
+> [!WARNING]
+> While setup is pending, whoever opens the machine's address first answers its questions, including the administrator's name and password. The same is true of the console. Keep a machine that has not been set up off networks you do not trust.
+>
+> `peios-oobe-setup` has no password, so anything that signs in without a credential can sign in as it while it exists. It has no groups; what it can reach is setup itself, which the address offers anyone.
+
+The account page will not take the name `peios-oobe-setup`: setup keeps an account that already exists, and would otherwise finish with no account you can use.
+
 ## What it asks
 
 1. **Language and keyboard**, shown but not yet answerable — the fields are there so the flow's shape is settled, and disabled so it does not pretend to a choice it cannot honour.
