@@ -56,7 +56,7 @@ picking one.
 | State | Meaning |
 |---|---|
 | `columns` | Array of `{key, name, align?}`, in display order. `align` is `left` (default) or `right`; numbers and sizes read better right-aligned. |
-| `rows` | Array of `{value, cells, enabled?, note?}`, in display order. `cells` maps a column `key` to display text; a key a row omits renders empty. `enabled` defaults to true; a false row is listed but is not an acceptable answer. `note` is a short remark shown with the row — typically why it is disabled. |
+| `rows` | Array of `{value, cells, enabled?, note?, detail?}`, in display order. `cells` maps a column `key` to display text; a key a row omits renders empty. `enabled` defaults to true; a false row is listed but is not an acceptable answer. `note` is a short remark shown with the row — typically why it is disabled. `detail` is described below. |
 | `empty` | Text shown in place of the rows when there are none. |
 
 Answer value: one enabled row's `value`. Values are compared as exact
@@ -65,6 +65,17 @@ JSON values.
 A surface that cannot fit every column SHOULD drop columns from the
 right rather than truncate every cell, so the daemon's column order
 is also its priority order.
+
+A row's `detail` is an object of further facts about what the row
+stands for, as structure rather than as text: a disk's size in bytes
+and its partitions, where its cells say "931.5 GiB" and nothing of
+what is on it. It exists for a surface that knows the page by its
+template id (§3.2) and draws it as more than a table. Its keys are
+the daemon's, documented with the daemon's refs; this chapter defines
+none. A surface that does not know them MUST ignore `detail`, and a
+daemon MUST NOT put there anything a person needs in order to answer:
+the cells and the note remain everything a row says to a surface that
+draws a table.
 
 ## `progress` — output
 
