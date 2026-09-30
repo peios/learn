@@ -111,6 +111,8 @@ Where packages come from. At least one is required; several are searched togethe
 | `keys` | optional | Public key files (raw 32 bytes or PEM) of the signers of this source's packages. The medium repository must list a package's signer to carry it, and a plain directory of packages publishes no keys of its own — so a pool source needs this. |
 | `trust_anchors` | optional | Key fingerprints to verify a repository source against. Ignored for a directory of packages. |
 
+A source is where the build gets its packages, and only sometimes where the image will get more. An `http(s)://` repository is written into the image's repository configuration as `source<N>`, numbered in declaration order. A `file://` one is not: it is a path on the build machine. See [the build pipeline](~peios/peiso/building-images/the-build-pipeline).
+
 ## `[baseline]`
 
 | Key | | |

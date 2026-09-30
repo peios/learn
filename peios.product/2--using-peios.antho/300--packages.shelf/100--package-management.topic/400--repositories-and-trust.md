@@ -63,7 +63,7 @@ If the fetched descriptor does not verify against any anchor, `repo add` fails a
 
 An image can ship a repository's configuration — its base URL, its policy, and its trust anchors — as a `.repo` file in `/conf/peipkg/` (stored at `/lcl/conf/peipkg/`, which is what that view exposes). A Peios installation medium does exactly that for the offline repository it carries.
 
-Configuration alone is **not** trust. peipkg does not trust a configured repository on sight: until the ceremony has run there is no recorded trust state, and every operation skips the repository with a warning rather than quietly using it. The decision to trust a key is yours, never a default.
+Configuration alone is **not** trust. peipkg does not trust a configured repository on sight: until the ceremony has run there is no recorded trust state, and peipkg neither uses the repository nor carries on without it. An install, upgrade or removal is refused, naming the repository, until you add it or remove it from the configuration: going on with the others would let a lower-priority repository's package quietly take the place of one this repository was meant to supply. The decision to trust a key is yours, never a default.
 
 What a baked-in `.repo` file changes is only where the anchor comes from. It arrived with the image rather than being typed at the prompt, which is still out-of-band — it did not come from the repository it authenticates. So the ceremony can run against it without you retyping a 64-character fingerprint that is already on disk:
 
