@@ -38,7 +38,7 @@ The account page will not take the name `peios-oobe-setup`: setup keeps an accou
 ## What it asks
 
 1. **Language and keyboard**, shown but not yet answerable — the fields are there so the flow's shape is settled, and disabled so it does not pretend to a choice it cannot honour.
-2. **Network**, which never gates anything. Setup does not need a network; the page reports what the machine can currently do and moves on.
+2. **Network**, which never gates anything. Setup does not need a network; the page says what `net status` reports, a line for each interface (connected, not connected, not used), and **Check again** asks again, so a cable plugged in while the page is open shows up without leaving it. Joining a wireless network and addressing an interface by hand are shown and disabled. In a browser, the interface whose address the page was opened by is marked as the way in.
 3. **An account and a password.** This is the one that matters, and the reason first-boot setup exists: it is where an installed machine gets its first administrator.
 4. **A name for the machine**, offered as a suggestion you can accept with one keypress. Domain join is shown and disabled.
 
