@@ -56,6 +56,8 @@ Then it applies, and says so: the account, then the name, then an address given 
 
 In a browser, the page then goes on to the sign-in page by itself, where you sign in as the account you just made. Setup's last act is to give the machine's address back to GXWI, so the page waits for the sign-in page to answer there. If you gave the interface your browser came in through an address of its own, the machine moves out from under the page as setup ends; the page asks the new address too, and follows the machine there once it answers. Where nothing answers, as when the new address is on a network your browser cannot reach, the page says so: the machine's own screen shows where it is.
 
+GXWI's sign-in page has the same backdrop as setup: the same glows, a field of stars and the Peios lockup in the same corner. So setup does not cut to it. "Setup is complete" stays on screen for a moment, then setup's page fades, leaving the stars and the lockup, and the sign-in form rises into place over the same stars. They carry on from where setup left them, through each step of signing in. Following the machine to an address given by hand, the page fades the same way, but the sign-in page there starts with stars of its own.
+
 ## How it gets the console
 
 Both first-boot setup and the [login prompt](~peios/signing-in/overview) want `/dev/console`, and a terminal has one owner at a time. Setup's surface names a higher [`TTYPrecedence`](~peios/services-and-jobs/triggers-and-timers), so peinit gives it the console and **skips** the login prompt for that boot — the prompt is not started and written over, it is not started at all.
