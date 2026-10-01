@@ -50,6 +50,8 @@ The account page will not take the name `peios-oobe-setup`: setup keeps an accou
    In a browser, what you type stays in your browser until you press Next, and is never shown to anyone else who has the page open. The page shows who the account will be as you type the name, and whether the second password matches the first.
 4. **A name for the machine**, offered as a suggestion you can accept with one keypress. Domain join is shown and disabled.
 
+   The name is what the machine calls itself and what it tells a DHCP server it is called, so it has to be one name a network will carry: letters, digits and hyphens, at most 63 of them, with no hyphen at either end, no dots and no spaces. `localhost` is refused, since every machine is that to itself. Anything else is turned down on the page when you press Finish; spaces around the name are trimmed. In a browser, the page says as you type whether the name fits, and can put back the one setup offered.
+
 Then it applies, and says so.
 
 ## How it gets the console
