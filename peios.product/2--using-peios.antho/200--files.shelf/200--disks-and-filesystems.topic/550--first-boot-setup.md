@@ -52,7 +52,9 @@ The account page will not take the name `peios-oobe-setup`: setup keeps an accou
 
    The name is what the machine calls itself and what it tells a DHCP server it is called, so it has to be one name a network will carry: letters, digits and hyphens, at most 63 of them, with no hyphen at either end, no dots and no spaces. `localhost` is refused, since every machine is that to itself. Anything else is turned down on the page when you press Finish; spaces around the name are trimmed. In a browser, the page says as you type whether the name fits, and can put back the one setup offered.
 
-Then it applies, and says so.
+Then it applies, and says so: the account, then the name, then an address given by hand, each as a step of its own.
+
+In a browser, the page then goes on to the sign-in page by itself, where you sign in as the account you just made. Setup's last act is to give the machine's address back to GXWI, so the page waits for the sign-in page to answer there. If you gave the interface your browser came in through an address of its own, the machine moves out from under the page as setup ends; the page asks the new address too, and follows the machine there once it answers. Where nothing answers, as when the new address is on a network your browser cannot reach, the page says so: the machine's own screen shows where it is.
 
 ## How it gets the console
 
