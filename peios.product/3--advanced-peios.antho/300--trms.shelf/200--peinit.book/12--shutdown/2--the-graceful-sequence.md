@@ -82,6 +82,21 @@ stops in waves:
 3. On expiry, SIGKILL to the service's entire cgroup.
 4. No service is stopped until everything depending on it has stopped.
 
+The compiled-in Phase 1 service, registryd, stops in a wave of its own
+after every other participant, though no definition declares a
+dependency on it. [*graceful.registryd-stops-after-every-other-service]
+Every service defined in the registry rests on it, as it started before
+any of them; stopped by the graph alone it would land in the first wave
+and go while the services still running needed it. The rule follows the
+definition's compiled-in provenance, not its name.
+
+A participant the service table no longer has counts as stopped.
+[*graceful.a-participant-gone-from-the-table-counts-as-stopped] A
+service whose definition is withdrawn while it runs is kept until it
+stops and then discarded (first-boot setup withdraws its own service
+this way), and the plan fixed at step 3 still names it. Waiting for it
+would hold its wave open for good.
+
 A service that sent `STOPPING=1` does not receive a SIGTERM at all: it
 has already said it is shutting down, and peinit goes straight to the
 stop deadline. [*graceful.a-service-that-sent-stopping-gets-no-sigterm]
@@ -154,6 +169,27 @@ Live submitted jobs
 are killed in the same sweep, whatever phase their stop had reached,
 and abandoned on the same terms.
 [*graceful.the-global-timeout-sweep-kills-live-jobs-too]
+
+The global timeout fires once. [*graceful.the-global-timeout-fires-once]
+What its sweep killed is then governed by the post-kill timeout alone:
+sweeping again would kill the survivors again and push their post-kill
+checks back each time, so nothing would ever be abandoned and the
+sequence would never reach step 6.
+
+The console says what the sequence was waiting for when the timeout
+fired, and, after any later timeout turn that leaves it still waiting,
+what remains: participants with their state and wave, pending stop and
+post-kill checks, and live jobs.
+[*graceful.the-console-names-what-the-global-timeout-waited-for]
+
+```
+peinit: shutdown global timeout expired waiting for lpsd (Active, wave 1), job <id>
+peinit: shutdown still waiting for post-kill check of lpsd
+```
+
+Submitted jobs are named on the console as they are stopped, killed and
+abandoned: `peinit: shutdown stopping job <id>`, `killing job <id>` and
+`abandoned job <id>`.
 
 The sequence does not move to step 6 while a submitted job is live.
 [*graceful.step-6-waits-for-every-live-submitted-job] A
