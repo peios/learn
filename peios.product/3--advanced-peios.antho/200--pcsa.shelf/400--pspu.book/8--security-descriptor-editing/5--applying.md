@@ -19,8 +19,9 @@ when they ask for it. A descriptor applied part way through a change
 can take away the access the person needs to finish it: denying
 Everyone before granting oneself, say.
 
-The editor MUST NOT name `owner` in `parts` unless the request's
-`can.owner` was true, nor `sacl` unless `can.audit` was. It MUST NOT
+The editor MUST NOT name `dacl` in `parts` unless the request's
+`can.dacl` was true or left out, nor `owner` unless `can.owner` was
+true, nor `sacl` unless `can.audit` was. It MUST NOT
 send an `apply` while one is unanswered, and SHOULD NOT send one whose
 `parts` is empty.
 

@@ -75,6 +75,26 @@ So out of the box, administrators can do anything with a service, and everyone w
 
 ServiceSecurity is **hot-reloaded**: a change to the value in the registry takes effect on the **next control request**, with no service restart. peinit picks the change up through a [registry notification](~peios/registry-concepts/watches). This is why ServiceSecurity is in its own [mutability class](~peios/services-and-jobs/defining-a-service) — access policy should be able to change without disturbing a running service.
 
+## Changing them from the desktop
+
+On a GXWI desktop, select the service in **Services Manager**. Below what you may do with it, the details pane says where its ServiceSecurity comes from: set for this service, set for every service on `Machine\System\Services`, or peinit's built-in default. Two buttons open the permissions editor, and both are also on each row's right-click menu.
+
+- **Who may control it…** opens the ServiceSecurity descriptor. Its boxes are the service rights in words: **Full control**, **Start**, **Stop**, **Reload** (`SERVICE_INTERROGATE`) and **See its state** (`SERVICE_QUERY_STATUS`). Restart needs Start and Stop together, and Reset needs Stop. When you apply, Services Manager writes the result as the service's **own** `ServiceSecurity` value. From then on, a change to the descriptor on `Machine\System\Services`, or to the built-in default, no longer reaches that service. peinit applies the new descriptor on the next command, and the window's buttons change to match.
+- **Who may change its definition…** opens the descriptor of the service's registry key. Its boxes are **Full control**, **Read** and **Write** on the key. Entries you add there apply to the key and to any keys under it.
+
+Each opens for changing only if you are allowed to change it:
+
+- ServiceSecurity is a value in the service's definition, so changing it needs the right to set values on the service's key (`KEY_SET_VALUE`).
+- The key's own descriptor needs `WRITE_DAC`, and `WRITE_OWNER` for its owner.
+
+If you are not allowed, the editor still shows who may do what, and says why it can't be changed. Services Manager finds this out by asking the registry for those rights, not from your group memberships.
+
+There is no button yet to go back to the default. To make a service use the descriptor on `Machine\System\Services` (or the built-in default) again, delete its own value:
+
+```
+$ reg del 'Machine\System\Services\sshd' ServiceSecurity
+```
+
 ## The system control descriptor
 
 Some operations are not about any one service — `shutdown` and `reload-config` act on the whole system. These are checked against **peinit's own** descriptor, stored at `Machine\System\Init\ControlSecurity`:

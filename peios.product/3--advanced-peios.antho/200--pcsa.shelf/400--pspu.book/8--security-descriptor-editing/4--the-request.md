@@ -12,6 +12,7 @@ only one that has no `type`. It is one JSON object:
 | `object.name` | string | Yes | What the object is called where the person found it: `notes.txt`, not a full path, unless a path is how they know it. |
 | `object.kind` | string | Yes | What kind of thing it is, in words for the person: `File`, `Folder`, `Service`. |
 | `object.container` | boolean | No, `false` | Whether other objects inherit from it (PCDS §5.6). |
+| `object.children` | string | No, `"all"` | What a container holds, which is what the entries made for it are passed on to: `all` or `containers` (see [Containers](#containers)). Ignored unless `container` is true. |
 | `sd` | string | Yes | The descriptor as it is now: a self-relative Security Descriptor (PCDS §5.1), in base64 with padding (RFC 4648 §4). |
 | `rights` | array | Yes | The object's rights by name, in the order a person should see them. |
 | `rights[].name` | string | Yes | What the right is called. |
@@ -19,9 +20,11 @@ only one that has no `type`. It is one JSON object:
 | `rights[].general` | boolean | No, `false` | Whether it is a general right (§8.2). |
 | `generic` | object | Yes | What each generic right stands for on this kind of object (PCDS §5.3). |
 | `generic.read`, `.write`, `.execute`, `.all` | number | Yes | The access mask each generic right maps to. |
-| `can` | object | No | Which components besides the DACL the requester is able to change. |
+| `can` | object | No | Which components the requester is able to change. |
+| `can.dacl` | boolean | No, `true` | Whether it can change the DACL. It is true when left out because, before this member, a requester always could. |
 | `can.owner` | boolean | No, `false` | Whether it can change the owner. |
 | `can.audit` | boolean | No, `false` | Whether it can change the SACL. |
+| `can.why` | string | No | Why the requester cannot change what `can` says it cannot, as text for the person. |
 
 ## The descriptor
 
@@ -50,6 +53,33 @@ and SHOULD keep such an entry as it found it.
 `generic` lets the editor read an entry that grants generic rights
 (PCDS §5.3) as the rights they stand for. The requester MUST give the
 mapping its kind of object actually uses.
+
+## Containers
+
+On a container, the entries an editor makes apply to the container and
+are passed on to what it holds. `object.children` says what that is,
+and so which inheritance flags (PCDS §5.6) those entries carry:
+
+| Value | Holds | Flags of an entry made here |
+|---|---|---|
+| `all` | Containers and other objects, as a folder holds folders and files. | Object inherit and container inherit. |
+| `containers` | Containers alone, as a registry key holds keys and nothing else. | Container inherit. |
+
+An entry with other inheritance flags is one the editor cannot express
+in its general rights (above), and is shown as a whole and kept.
+
+## What the requester can change
+
+`can` says what the requester is able to change. It MUST NOT say it
+can change a component it cannot. It SHOULD find out by asking the
+system, for example by an AccessCheck of the person's token against the
+descriptor, or by opening the object for the rights that changing it
+takes. It SHOULD NOT infer it from the person's group memberships.
+
+A requester that cannot change the DACL still sends it, so that the
+person can read it. The editor MUST then show the DACL without offering
+to change it, and SHOULD say why, with `can.why` if it was given. An
+editor whose requester can change nothing SHOULD offer only to close.
 
 ## Validation
 
