@@ -31,7 +31,7 @@ On a GXWI desktop, **Services Manager** does the same from a window. It lists ev
 
 Services Manager is another client of the same control socket, so it has exactly your authority and no more:
 
-- **A command is offered only where it will act.** A button is available only if you hold the right the command needs (see the table below) *and* the service is in a state where the command does something (see [the command × state matrix](#the-command-state-matrix)). Otherwise the button is unavailable, and pointing at it says why.
+- **A command is offered only where it will act.** A button is available only if you hold the right the command needs (see the table below) *and* the service is in a state where the command does something (see [the command × state matrix](#the-command-state-matrix)). Otherwise the button is unavailable. The details pane says which commands you may use on the selected service.
 - **Commands do not block the window.** A command is sent without waiting. Services Manager follows its operation and reports the result, such as "SSH server was restarted." or the reason it failed.
 - **Hidden services are listed, not silently dropped.** `list` omits the services you cannot query. If you can read the service definitions in the registry, Services Manager still lists those services, marked **Not yours to see**, and says how many there are.
 - **If peinit does not let you connect at all,** Services Manager says so. The control socket admits only SYSTEM and Administrators. Any definitions you can read are still listed, and no command is offered.
