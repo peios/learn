@@ -77,19 +77,25 @@ ServiceSecurity is **hot-reloaded**: a change to the value in the registry takes
 
 ## Changing them from the desktop
 
-On a GXWI desktop, select the service in **Services Manager**. Below what you may do with it, the details pane says where its ServiceSecurity comes from: set for this service, set for every service on `Machine\System\Services`, or peinit's built-in default. Two buttons open the permissions editor, and both are also on each row's right-click menu.
+On a GXWI desktop, select the service in **Services Manager**. Below what you may do with it, the details pane says where its ServiceSecurity comes from: set for this service, the default set for every service, or peinit's built-in default. Two buttons open the permissions editor, and both are also on each row's right-click menu.
 
-- **Who may control it…** opens the ServiceSecurity descriptor. Its boxes are the service rights in words: **Full control**, **Start**, **Stop**, **Reload** (`SERVICE_INTERROGATE`) and **See its state** (`SERVICE_QUERY_STATUS`). Restart needs Start and Stop together, and Reset needs Stop. When you apply, Services Manager writes the result as the service's **own** `ServiceSecurity` value. From then on, a change to the descriptor on `Machine\System\Services`, or to the built-in default, no longer reaches that service. peinit applies the new descriptor on the next command, and the window's buttons change to match.
+- **Who may control it…** opens the ServiceSecurity descriptor. Its boxes are the service rights in words: **Full control**, **Start**, **Stop**, **Reload** (`SERVICE_INTERROGATE`) and **See its state** (`SERVICE_QUERY_STATUS`). Restart needs Start and Stop together, and Reset needs Stop. When you apply, Services Manager writes the result as the service's **own** `ServiceSecurity` value. From then on, a change to the default no longer reaches that service. peinit applies the new descriptor on the next command, and the window's buttons change to match.
+- **Use the default** appears beside it once the service has its own value. After you confirm, it deletes that value, so the service takes the default again.
 - **Who may change its definition…** opens the descriptor of the service's registry key. Its boxes are **Full control**, **Read** and **Write** on the key. Entries you add there apply to the key and to any keys under it.
 
-Each opens for changing only if you are allowed to change it:
+Under **Every service**, the pane says what a service without its own value takes:
 
-- ServiceSecurity is a value in the service's definition, so changing it needs the right to set values on the service's key (`KEY_SET_VALUE`).
-- The key's own descriptor needs `WRITE_DAC`, and `WRITE_OWNER` for its owner.
+- **Default permissions…** opens the `ServiceSecurity` on `Machine\System\Services`. If there isn't one, it starts from peinit's built-in default. Applying writes it to that key, and it reaches every service without its own value at the next command.
+- **Use the built-in default** appears once that key has a value. After you confirm, it deletes the value, so services without their own go back to peinit's built-in default.
 
-If you are not allowed, the editor still shows who may do what, and says why it can't be changed. Services Manager finds this out by asking the registry for those rights, not from your group memberships.
+Each of these is offered for changing only if you are allowed to change it:
 
-There is no button yet to go back to the default. To make a service use the descriptor on `Machine\System\Services` (or the built-in default) again, delete its own value:
+- ServiceSecurity is a value on a registry key: the service's key, or `Machine\System\Services` for the default. Changing it, or deleting it, needs the right to set values on that key (`KEY_SET_VALUE`).
+- The service key's own descriptor needs `WRITE_DAC`, and `WRITE_OWNER` for its owner.
+
+If you are not allowed, the editor still shows who may do what and says why it can't be changed, and the two "use the default" buttons are unavailable with the reason. Services Manager finds this out by asking the registry for those rights, not from your group memberships.
+
+The same can be done from a terminal with `reg`. For example, this makes sshd take the default again:
 
 ```
 $ reg del 'Machine\System\Services\sshd' ServiceSecurity
