@@ -61,7 +61,7 @@ If that key has no `ServiceSecurity` either, peinit applies a built-in
 default: [*svcsd.the-built-in-default-grants-system-and-administrators-everything]
 
 ```
-O:SY G:BA D:(A;;0x000F;;;SY)(A;;0x000F;;;BA)
+O:SY G:BA D:(A;;0x000F;;;SY)(A;;0x000F;;;BA)(A;;0x0001;;;AU)
 ```
 
 SYSTEM and Administrators both get `SERVICE_ALL_ACCESS`. An
@@ -69,6 +69,11 @@ administrator who may stop any service and shut the machine down gains
 nothing by being unable to start one, so the default does not attempt a
 narrower grant; a service that wants one carries its own
 `ServiceSecurity` value.
+
+Every authenticated principal gets `SERVICE_QUERY_STATUS`: what a service
+is doing is not, by default, a secret from the people using the machine,
+and a service whose state is carries a `ServiceSecurity` that says so.
+[*svcsd.the-built-in-default-lets-everyone-query]
 
 ## The check
 
@@ -101,5 +106,12 @@ every time.
 on. Services the caller cannot query are **omitted**, not denied: a
 caller with no query rights anywhere receives an empty list and a
 successful response. The denials are recorded as audit events rather
-than surfaced to the caller, because reporting them would answer the
-question the filtering exists to avoid answering.
+than surfaced to the caller.
+
+What the filtering protects is a service's *state*, which is what
+`SERVICE_QUERY_STATUS` grants. That a service exists is not protected:
+a command naming one is answered `UNKNOWN_SERVICE` or `ACCESS_DENIED`
+according to whether it exists, and the definitions under
+`Machine\System\Services` are readable. A client that can read the
+definitions may therefore show a service `list` left out as one whose
+state the caller may not see.

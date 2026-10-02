@@ -42,6 +42,14 @@ declined to enter the protocol at all, and a client MUST treat an
 immediate close with no response as a refusal rather than as a protocol
 error.
 
+The limit MUST be applied to each caller, counted by the user SID of the
+peer's token, as well as to the connections in all: a connection
+accepted while its caller already holds its limit is closed the same
+way. The manager MAY exempt the machine's own principal (SYSTEM) from
+the per-caller limit. A channel that admits every authenticated
+principal and bounds only the total lets any one of them fill it and
+shut everyone else out, administrators included.
+
 **Request size.** A request frame whose content exceeds the limit MUST
 be answered with `REQUEST_TOO_LARGE` and the connection MUST then be
 closed. The limit applies to the frame's content and MUST NOT count the

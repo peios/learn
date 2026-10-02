@@ -376,7 +376,8 @@ Three things, before Phase 2 begins:
 
 1. **The control socket** at `/run/services/peinit/control.sock`, which
    serves every runtime command for the lifetime of the system, stamped
-   for SYSTEM and Administrators (§10.1).
+   so that any authenticated principal may connect and every command is
+   then checked on its own (§10.1).
    [*phase1.the-control-socket-is-created]
 2. **The jobs socket** at `/run/services/peinit/jobs.sock`, on which
    any authenticated principal may submit a job once Phase 2 runs,

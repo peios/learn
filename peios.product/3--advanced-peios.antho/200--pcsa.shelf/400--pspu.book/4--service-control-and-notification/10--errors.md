@@ -26,9 +26,9 @@ does not recognise as an unrecoverable error for that request (§4.21).
 **`UNKNOWN_SERVICE` versus `ACCESS_DENIED`.** A caller that may not
 query a service still receives `UNKNOWN_SERVICE` for a name that does
 not exist and `ACCESS_DENIED` for one that does but which it may not
-touch. This chapter does not attempt to hide the existence of services
-from a caller that can name them: the `list` filtering (§4.7) hides them
-from a caller that cannot.
+touch. This chapter does not attempt to hide the existence of services:
+the `list` filtering (§4.7) keeps a service's state from a caller that
+may not query it, not the fact that the service exists.
 
 **`INVALID_STATE` versus `ACCESS_DENIED` during shutdown.** During
 shutdown the state restriction is evaluated first, so a caller who would

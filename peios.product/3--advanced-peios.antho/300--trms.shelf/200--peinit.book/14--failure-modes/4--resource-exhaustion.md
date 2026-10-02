@@ -13,7 +13,10 @@ supervised process for output pipes, one per armed timer, one per
 control connection, two per jobs connection (the socket and the peer's
 pidfd), one per submitted job's output sink, plus the sockets, the
 epoll instance and the signalfd.
-[*exhaust.the-descriptors-peinit-holds] A submission also holds its
+[*exhaust.the-descriptors-peinit-holds] Control connections are bounded
+in all by `MaxControlConnections` (256), which is set for descriptors
+rather than for fairness: what keeps one caller from taking them is
+`MaxControlConnectionsPerUser` (§10.1). A submission also holds its
 prepared token and attached descriptors from acceptance until the launch
 takes them, which is bounded by `MaxJobsPerSubmitter` times the
 descriptor cap per message.

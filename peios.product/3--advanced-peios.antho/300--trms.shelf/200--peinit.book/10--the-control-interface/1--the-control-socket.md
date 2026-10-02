@@ -32,8 +32,16 @@ explicitly, after binding and before anything can connect
 [*control.the-socket-descriptor]:
 
 ```
-O:SYG:SYD:(A;;GA;;;SY)(A;;GA;;;BA)
+O:SYG:SYD:(A;;GA;;;SY)(A;;GA;;;BA)(A;;FW;;;AU)
 ```
+
+Every authenticated principal may connect. `FW` is the file-write generic
+right, which is what `connect()` on a pathname socket needs. Reaching the
+socket grants nothing on its own: every command is checked against the
+control descriptor or the target service's descriptor, with the token
+captured at accept (§10.2). Admitting only SYSTEM and Administrators would
+make that check moot for everyone else, since a descriptor that grants a
+principal something could never be reached by them.
 
 The notification socket is stamped explicitly too, with a descriptor of
 its own that grants SYSTEM and the Service group rather than
@@ -43,15 +51,22 @@ again, because reaching it is a different permission (§10.7).
 ## Connections
 
 peinit accepts a connection, obtains the peer's token, and only then
-admits it against the connection limit:
+admits it against the connection limits:
 
 | Key | Default | Meaning |
 |---|---|---|
-| `Machine\System\Init\MaxControlConnections` | 32 | Concurrent connections. [*control.max-control-connections] |
+| `Machine\System\Init\MaxControlConnectionsPerUser` | 16 | Concurrent connections one caller may hold, counted by the user SID of its token. SYSTEM is exempt. [*control.max-control-connections-per-user] |
+| `Machine\System\Init\MaxControlConnections` | 256 | Concurrent connections in all: a bound on peinit's descriptors, set well above what callers reach. [*control.max-control-connections] |
 | `Machine\System\Init\MaxRequestSize` | 65536 | Maximum request size, in bytes. [*control.max-request-size] |
 | `Machine\System\Init\ConnectionTimeout` | 30 | Seconds before an idle connection is closed. [*control.connection-timeout] |
 
-A connection over the limit is closed at the socket level, before any
+The per-user limit is what keeps one caller from taking the connections
+everyone shares: with every authenticated principal able to connect, a
+single overall limit would let anyone fill it and lock administrators
+out. SYSTEM is exempt, as it is from `MaxJobsPerSubmitter`, because what
+it does is the machine's.
+
+A connection over either limit is closed at the socket level, before any
 request is read and without a response — there is no error code for it,
 because there is no protocol state in which to deliver one. A peer whose
 token cannot be obtained is closed the same way.

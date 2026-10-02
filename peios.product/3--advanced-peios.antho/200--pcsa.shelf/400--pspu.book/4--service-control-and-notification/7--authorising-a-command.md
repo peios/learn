@@ -104,18 +104,23 @@ tail of stopping something rather than the head of starting it.
 query rights on anything receives an empty list and a successful
 response.
 
-The manager MUST NOT reveal, through the response, that services were
-omitted. Reporting the omissions would answer the question the filtering
-exists to leave unanswered.
+The response does not say whether services were omitted. What the
+filtering protects is each service's state, which is what
+`SERVICE_QUERY_STATUS` grants, and not whether the service exists: a
+command naming a service is answered `UNKNOWN_SERVICE` or by its access
+check according to whether it exists (step 2 above), and §4.10 does not
+hide existence either. A client MAY therefore learn from elsewhere which
+services are defined and show the ones `list` left out as ones whose
+state the caller may not see.
 
 `job-list` MUST be filtered the same way, by `JOB_QUERY` on each job,
 and MUST NOT reveal that jobs were omitted.
 
 ## Not revealing what a caller may not see
 
-Where a command names an object the caller may not query,
-the manager MUST NOT let the answer distinguish "this does not exist"
-from "you may not see this".
+A service's existence is not protected (above). Where a command names
+an operation the caller may not query, the manager MUST NOT let the
+answer distinguish "this does not exist" from "you may not see this".
 
 For `operation-status` this means the authorisation check MUST be
 evaluated before the operation's existence is reported: a caller lacking

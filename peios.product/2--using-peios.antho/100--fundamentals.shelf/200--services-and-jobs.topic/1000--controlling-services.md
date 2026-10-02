@@ -34,7 +34,7 @@ Services Manager is another client of the same control socket, so it has exactly
 - **A command is offered only where it will act.** A button is available only if you hold the right the command needs (see the table below) *and* the service is in a state where the command does something (see [the command × state matrix](#the-command-state-matrix)). Otherwise the button is unavailable. The details pane says which commands you may use on the selected service.
 - **Commands do not block the window.** A command is sent without waiting. Services Manager follows its operation and reports the result, such as "SSH server was restarted." or the reason it failed.
 - **Hidden services are listed, not silently dropped.** `list` omits the services you cannot query. If you can read the service definitions in the registry, Services Manager still lists those services, marked **Not yours to see**, and says how many there are.
-- **If peinit does not let you connect at all,** Services Manager says so. The control socket admits only SYSTEM and Administrators. Any definitions you can read are still listed, and no command is offered.
+- **If peinit does not let you connect at all,** Services Manager says so. By default the control socket admits everyone who is signed in, but it can be locked down. Any definitions you can read are still listed, and no command is offered.
 
 The status refreshes every two seconds. Press **F5**, or select **Refresh**, to refresh it immediately.
 
@@ -49,7 +49,7 @@ The socket speaks **newline-delimited JSON**: one request object per line, one r
 
 Two properties are worth knowing even if you only ever use `svctl`:
 
-- **Every command is access-controlled.** When you connect, peinit captures your [token](~peios/services-and-jobs/identity-and-privileges) from the kernel and runs [AccessCheck](~peios/access-decisions/overview) against the target service's descriptor for *every* command. There is no "trust localhost," no override. Who may do what is the subject of [Who can manage a service](~peios/services-and-jobs/who-can-manage-a-service).
+- **Every command is access-controlled.** Anyone who is signed in may connect. When you connect, peinit captures your [token](~peios/services-and-jobs/identity-and-privileges) from the kernel and runs [AccessCheck](~peios/access-decisions/overview) against the target service's descriptor for *every* command. There is no "trust localhost," no override. Who may do what is the subject of [Who can manage a service](~peios/services-and-jobs/who-can-manage-a-service).
 - **Lifecycle commands create [operations](~peios/services-and-jobs/jobs-and-operations).** A `start`/`stop`/`restart`/`reload`/`reset` returns an `operation_id` — a GUID you can poll. Conflict resolution between concurrent commands happens at the operation layer, which is why two simultaneous `start`s merge instead of colliding.
 
 ## Service commands
@@ -249,7 +249,8 @@ peinit enforces hard limits on the control socket, all tunable under `Machine\Sy
 
 | Key | Default | Limits |
 |---|---|---|
-| `MaxControlConnections` | 32 | Concurrent client connections (excess are refused at connect). |
+| `MaxControlConnectionsPerUser` | 16 | Concurrent client connections one user may hold; SYSTEM is exempt (excess are refused at connect). |
+| `MaxControlConnections` | 256 | Concurrent client connections in all (excess are refused at connect). |
 | `MaxRequestSize` | 65536 | Bytes per request. |
 | `ConnectionTimeout` | 30 | Seconds an *idle* connection may sit before it is closed. |
 

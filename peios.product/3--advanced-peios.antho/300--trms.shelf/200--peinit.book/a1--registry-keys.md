@@ -33,7 +33,8 @@ referenced.
 | Key | Type | Default | Purpose | Defined in |
 |---|---|---|---|---|
 | `Machine\System\Init\ControlSecurity` | binary | SYSTEM and Administrators, both rights | The descriptor for system-level control operations. | §4.7 |
-| `Machine\System\Init\MaxControlConnections` | dword | 32 | Concurrent control socket connections. | §10.1 |
+| `Machine\System\Init\MaxControlConnectionsPerUser` | dword | 16 | Concurrent control socket connections one caller's user SID may hold. SYSTEM is exempt. | §10.1 |
+| `Machine\System\Init\MaxControlConnections` | dword | 256 | Concurrent control socket connections in all. | §10.1 |
 | `Machine\System\Init\MaxRequestSize` | dword | 65536 | Maximum control request size, in bytes. | §10.1 |
 | `Machine\System\Init\ConnectionTimeout` | dword | 30 | Seconds before an idle control connection is closed. | §10.1 |
 | `Machine\System\Init\MaxJobsConnections` | dword | 64 | Concurrent jobs socket connections. | §10.7 |

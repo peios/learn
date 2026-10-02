@@ -77,10 +77,10 @@ terminal view. [*dispatch.job-stop-creates-no-operation]
 caller can query are returned; services it cannot are omitted, and the
 denials become audit events rather than anything the caller sees. A
 caller with no query rights anywhere gets an empty list and a successful
-response, not a denial [*dispatch.list-filters-rather-than-denies] — the
-filtering exists to avoid answering the
-question "does this service exist", and reporting the denials would
-answer it.
+response, not a denial [*dispatch.list-filters-rather-than-denies]. The
+filtering keeps a service's state from whoever may not query it; it does
+not hide that the service exists, which step 2 above already answers
+for any command that names one (§4.6).
 
 Definition-removed services are listed, and the list entry does not say
 so. A `status` query on one does.

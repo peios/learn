@@ -65,12 +65,13 @@ Every control command runs the same gate:
 
 ## The default descriptor
 
-If a service has no `ServiceSecurity` value, it **inherits** its parent key's. If no ancestor sets one either, peinit applies a built-in default:
+If a service has no `ServiceSecurity` value, it **inherits** the one on `Machine\System\Services` itself. If that key has none either, peinit applies a built-in default:
 
 - **SYSTEM** (`S-1-5-18`) — full access.
-- **Administrators** (`S-1-5-32-544`) — query and stop only.
+- **Administrators** (`S-1-5-32-544`) — full access.
+- **Authenticated Users** (`S-1-5-11`) — query only.
 
-So out of the box, administrators can see and stop a service but not start or reload it unless a descriptor grants more — a conservative default that you widen deliberately.
+So out of the box, administrators can do anything with a service, and everyone who is signed in can see what it is doing. To let someone else start or stop a particular service, give that service a `ServiceSecurity` that grants it; anyone signed in can reach the control socket, so a grant to them takes effect.
 
 ServiceSecurity is **hot-reloaded**: a change to the value in the registry takes effect on the **next control request**, with no service restart. peinit picks the change up through a [registry notification](~peios/registry-concepts/watches). This is why ServiceSecurity is in its own [mutability class](~peios/services-and-jobs/defining-a-service) — access policy should be able to change without disturbing a running service.
 
@@ -100,7 +101,7 @@ A [submitted job](~peios/services-and-jobs/jobs-and-operations) is a securable o
 
 ## The list command filters, it does not deny
 
-`list` is access-control-aware in a quieter way: it returns only the services the caller has `SERVICE_QUERY_STATUS` on, and simply **omits** the rest. A caller with no query rights gets an empty list, not a denial. This means a low-privilege principal cannot even enumerate the services it cannot see — the existence of a service is itself information the descriptor controls.
+`list` is access-control-aware in a quieter way: it returns only the services the caller has `SERVICE_QUERY_STATUS` on, and simply **omits** the rest. A caller with no query rights gets an empty list, not a denial. What this protects is a service's *state*; that a service exists is not a secret. A command naming a service is answered `UNKNOWN_SERVICE` only if it does not exist, and the definitions under `Machine\System\Services` are readable.
 
 ## The boundaries that hold
 

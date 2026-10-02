@@ -5,7 +5,7 @@ description: What the socket descriptors mean in practice, and what the autorun 
 
 | Surface | Reachable by | Controls | Protected by |
 |---|---|---|---|
-| Control socket | Anything that can connect | Service lifecycle, shutdown, observing and stopping jobs | The socket inode's descriptor, then the peer token and AccessCheck against the target's descriptor |
+| Control socket | Every authenticated principal, by default | Service lifecycle, shutdown, observing and stopping jobs | The peer token and AccessCheck against the target's descriptor for every command; a per-user connection limit |
 | Jobs socket | Every authenticated principal, by default | Running a program under supervision as an identity the submitter holds; managing the jobs it submitted | The socket inode's descriptor, which is the whole of the submission permission; the kernel's gating of the attached token; the job's own descriptor for every later command; a per-submitter quota |
 | Notification socket | Anything that can connect | Service readiness, watchdog, stored descriptors | The socket inode's descriptor, then PID matching verified through a pidfd, plus the start generation |
 | Registry keys | Anything with registry access | Definitions, triggers, configuration | Registry key descriptors, enforced by LCS |
@@ -17,17 +17,24 @@ description: What the socket descriptors mean in practice, and what the autorun 
 
 ## What the socket descriptors mean in practice
 
-The control socket is stamped for SYSTEM and Administrators (§10.1).
+The control socket admits every authenticated principal (§10.1), and
+what each may then do is decided per command by the control descriptor
+and each service's own. The `ACCESS_DENIED` path and its audit event are
+therefore reachable by anyone who can log on, and so is peinit's request
+parser, which bounds every request by `MaxRequestSize` before parsing
+it. What one caller can hold open is bounded by
+`MaxControlConnectionsPerUser`, so no one caller can fill the
+connections everyone shares.
+
 The notification socket is stamped for SYSTEM and for the Service group
 `S-1-5-6` (§10.5) — every process started as a service, and nothing
 else. Administrators are deliberately absent from it: an administrator
 has no business asserting that a service is ready, and the two sockets
 have different populations however alike their paths look.
 
-A connection from any other principal is refused at `connect()`, by the
-filesystem, before peinit ever obtains a peer token — which means the
-`ACCESS_DENIED` path and the audit event are unreachable for such a
-caller on those two sockets.
+A connection to the notification socket from any other principal is
+refused at `connect()`, by the filesystem, before peinit ever obtains a
+peer token — which means no audit event records it.
 [*surface.a-refused-connect-never-reaches-peinit]
 
 The jobs socket is deliberately wider: `FILE_WRITE_DATA` for

@@ -151,7 +151,8 @@ Under `Machine\System\Init\`:
 | Key | Type | Default | Purpose | See |
 |---|---|---|---|---|
 | `ControlSecurity` | binary | SYSTEM full; Administrators shutdown + reload-config | Descriptor for system-level control operations. | [Who can manage a service](~peios/services-and-jobs/who-can-manage-a-service) |
-| `MaxControlConnections` | dword | 32 | Maximum concurrent control-socket connections. | [Controlling services](~peios/services-and-jobs/controlling-services) |
+| `MaxControlConnectionsPerUser` | dword | 16 | Maximum concurrent control-socket connections one user may hold; SYSTEM is exempt. | [Controlling services](~peios/services-and-jobs/controlling-services) |
+| `MaxControlConnections` | dword | 256 | Maximum concurrent control-socket connections in all. | [Controlling services](~peios/services-and-jobs/controlling-services) |
 | `MaxRequestSize` | dword | 65536 | Maximum control-socket request size (bytes). | [Controlling services](~peios/services-and-jobs/controlling-services) |
 | `ConnectionTimeout` | dword | 30 | Seconds before an idle control connection is closed. | [Controlling services](~peios/services-and-jobs/controlling-services) |
 | `MaxJobsConnections` | dword | 64 | Maximum concurrent jobs-socket connections. | [Controlling services](~peios/services-and-jobs/controlling-services) |

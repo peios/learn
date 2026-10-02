@@ -12,7 +12,8 @@ administrator through the same surface that sets it.
 | Bound | Value | Configurable | Defined in |
 |---|---|---|---|
 | Socket path | `/run/services/peinit/control.sock` | No | §4.4 |
-| Concurrent connections | 32 | Yes | §4.4 |
+| Concurrent connections per caller | 16; SYSTEM exempt | Yes | §4.4 |
+| Concurrent connections in all | 256 | Yes | §4.4 |
 | Request size | 65536 bytes, excluding the terminating newline | Yes | §4.4 |
 | Idle timeout | 30 seconds | Yes | §4.4 |
 | Listen backlog | 32 | No | §4.4 |
