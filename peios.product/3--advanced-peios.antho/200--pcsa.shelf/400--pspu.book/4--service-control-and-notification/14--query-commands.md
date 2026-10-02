@@ -36,7 +36,8 @@ Returns everything the manager knows about one service.
     "health": "healthy",
     "uptime_seconds": 86400,
     "definition_removed": false,
-    "warnings": []
+    "warnings": [],
+    "timers": []
 }
 ```
 
@@ -54,6 +55,7 @@ Returns everything the manager knows about one service.
 | `uptime_seconds` | integer or null | Whole seconds since the current job started. Null when nothing is running. |
 | `definition_removed` | bool | True while the service's definition has been withdrawn and an instance is still draining (§4.12). |
 | `warnings` | array of objects | Conditions worth an operator's attention. |
+| `timers` | array of objects | The service's calendar timer triggers, as the manager has them armed. Empty when it has none. |
 
 `current_job` carries `id`, `type` (§4.B), `pid`, `started_at` and
 `identity`. `pid` and `started_at` are independently nullable.
@@ -87,6 +89,42 @@ A client MUST accept a `type` it does not recognise and MUST NOT discard
 the warning, since a warning it cannot classify is still one an operator
 should see.
 
+### Status timers
+
+`timers` has one object for each calendar timer trigger of a service
+that is not disabled (for peinit, the peinit TRM §9), ordered by
+schedule:
+
+```json
+{"schedule": "*-*-* 02:00:00",
+ "scheduled_at": "2026-06-02T02:00:00.000000000Z",
+ "fires_at": "2026-06-02T02:07:12.000000000Z",
+ "last_fired_at": "2026-06-01T02:03:40.000000000Z",
+ "not_armed": null}
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `schedule` | string | The calendar expression, as the trigger gives it. |
+| `scheduled_at` | string or null | The schedule's next occurrence. §4.5. |
+| `fires_at` | string or null | When the timer will fire: that occurrence, delayed by the jitter drawn for it. Equal to `scheduled_at` without jitter. §4.5. |
+| `last_fired_at` | string or null | When it last fired. Null when it has not fired since the manager started and no earlier firing is recorded. §4.5. |
+| `not_armed` | string or null | Why the manager has not armed it, when it has not: its schedule does not parse, or has no occurrence within the manager's search horizon. Null when armed. |
+
+An armed timer has `scheduled_at` and `fires_at`, and null
+`not_armed`. A timer not armed has only `schedule` and `not_armed`.
+
+These are the manager's own figures, not a calculation a client could
+repeat. The jitter is drawn at random each time the timer is armed, and
+only the manager knows which schedules it refused, so a client MUST
+NOT compute a next firing from the definition and present it as when
+the service will run.
+
+`last_fired_at` is the firing, not the run: it is when the manager
+acted on the timer (the peinit TRM §9.2), whatever came of that. For a
+persistent timer that has not fired since the manager started, it is
+the timestamp the manager recorded before (the peinit TRM §9.3).
+
 ## list
 
 Returns every service the caller may query, with a compact summary.
@@ -98,18 +136,20 @@ Returns every service the caller may query, with a compact summary.
         {"service": "jellyfin", "display_name": "Jellyfin",
          "description": "Media server for the living room.",
          "state": "active", "cause": "explicit_start",
-         "health": "healthy"},
-        {"service": "registryd", "display_name": null,
-         "description": null, "state": "active",
-         "cause": "dependency_start", "health": null}
+         "health": "healthy", "next_timer_at": null},
+        {"service": "logrotate", "display_name": null,
+         "description": null, "state": "inactive",
+         "cause": "clean_exit", "health": null,
+         "next_timer_at": "2026-06-02T00:03:51.000000000Z"}
     ]
 }
 ```
 
-Exactly six fields per entry: the name, the definition's nullable
-`display_name` and `description`, and the state, cause and health of
-the status shape. Services the caller may not query are omitted
-(§4.7).
+Exactly seven fields per entry: the name, the definition's nullable
+`display_name` and `description`, the state, cause and health of the
+status shape, and `next_timer_at`, the soonest `fires_at` among the
+service's armed timers, or null when it has none. Services the caller
+may not query are omitted (§4.7).
 
 A service whose definition has been withdrawn is listed, and the list
 entry does not say so. A client that needs to know MUST issue a

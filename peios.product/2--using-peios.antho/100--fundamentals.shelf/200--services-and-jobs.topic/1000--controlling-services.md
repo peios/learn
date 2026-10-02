@@ -37,6 +37,7 @@ Services Manager is another client of the same control socket, so it has exactly
 - **If peinit does not let you connect at all,** Services Manager says so. By default the control socket admits everyone who is signed in, but it can be locked down. Any definitions you can read are still listed, and no command is offered.
 - **Its definition opens in a window of its own,** from **Edit definition…** in the details pane or on a row's menu. **New service…** on the bar defines one. Both are covered in [Defining a service](~peios/services-and-jobs/defining-a-service#creating-and-changing-a-definition), with `svctl definition`, which does the same from a terminal.
 - **Who may control a service, and who may change its definition,** open from the details pane in the permissions editor. They are covered in [Who can manage a service](~peios/services-and-jobs/who-can-manage-a-service#changing-them-from-the-desktop).
+- **Timers show when they run.** The **Next run** column shows when each service's soonest [timer](~peios/services-and-jobs/triggers-and-timers) fires. The details pane lists each timer under its schedule, with its next run and its last run, in the machine's local time. A timer with jitter says that its run is put back by a random delay, and the next run shown already includes that delay. A timer peinit could not arm says why it never runs. These are peinit's own figures, read from `status`, not worked out from the definition.
 
 The status refreshes every two seconds. Press **F5**, or select **Refresh**, to refresh it immediately.
 
@@ -63,8 +64,8 @@ Two properties are worth knowing even if you only ever use `svctl`:
 | `restart` | Stop then start, as one operation. | `SERVICE_STOP` + `SERVICE_START` |
 | `reload` | Re-read configuration (`ExecReload`, or SIGHUP). | `SERVICE_INTERROGATE` |
 | `reset` | Clear `Failed`/`Abandoned`/`Skipped` → `Inactive`. | `SERVICE_STOP` |
-| `status` | Report state, cause, PID, uptime, health, current job and operation, warnings. | `SERVICE_QUERY_STATUS` |
-| `list` | List services and states (filtered to what you can query). | (per-service `SERVICE_QUERY_STATUS`) |
+| `status` | Report state, cause, PID, uptime, health, current job and operation, warnings, and when each timer fires. | `SERVICE_QUERY_STATUS` |
+| `list` | List services, their states and their next timer firing (filtered to what you can query). | (per-service `SERVICE_QUERY_STATUS`) |
 
 ```
 $ svctl restart jellyfin
@@ -181,7 +182,8 @@ The [Backoff](~peios/services-and-jobs/the-service-lifecycle) column is the subt
     "health": "healthy",
     "uptime_seconds": 86400,
     "definition_removed": false,
-    "warnings": []
+    "warnings": [],
+    "timers": []
 }
 ```
 
@@ -191,15 +193,45 @@ The [Backoff](~peios/services-and-jobs/the-service-lifecycle) column is the subt
 - `health` is `healthy`, `unhealthy`, `unknown`, or `null` (no health check).
 - `definition_removed` is `true` when the definition was deleted but an instance is still [draining](~peios/services-and-jobs/defining-a-service).
 - `warnings` lists leaked sub-cgroups and other operator-relevant notices.
+- `timers` has one entry for each [timer trigger](~peios/services-and-jobs/triggers-and-timers), described below.
+
+Each entry in `timers` describes one schedule as peinit has it armed:
+
+```json
+{"schedule": "*-*-* 02:00:00",
+ "scheduled_at": "2026-06-02T02:00:00.000000000Z",
+ "fires_at": "2026-06-02T02:07:12.000000000Z",
+ "last_fired_at": "2026-06-01T02:03:40.000000000Z",
+ "not_armed": null}
+```
+
+- `scheduled_at` is the schedule's next occurrence.
+- `fires_at` is when the timer will actually fire. It is later than `scheduled_at` by the random delay `TimerJitter` drew for this firing.
+- `last_fired_at` is when it last fired, or `null` if it has not fired since peinit started and has no recorded run.
+- `not_armed` is set only for a schedule peinit refused, such as one that never comes round. It gives the reason, and the times are then `null`.
+
+Times are in UTC. `svctl status` prints them to the second:
+
+```
+$ svctl status logrotate
+logrotate: inactive
+cause: clean_exit
+timers:
+  *-*-* 02:00:00
+    next: 2026-06-02T02:00:00Z, firing at 2026-06-02T02:07:12Z after jitter
+    last fired: 2026-06-01T02:03:40Z
+```
 
 `list` returns a compact summary of every service you can query — services you lack `SERVICE_QUERY_STATUS` on are simply **omitted**, not denied:
 
 ```json
 {"status": "ok", "services": [
-    {"service": "jellyfin", "state": "active", "cause": "explicit_start", "health": "healthy"},
-    {"service": "registryd", "state": "active", "cause": "dependency_start", "health": null}
+    {"service": "jellyfin", "state": "active", "cause": "explicit_start", "health": "healthy", "next_timer_at": null},
+    {"service": "logrotate", "state": "inactive", "cause": "clean_exit", "health": null, "next_timer_at": "2026-06-02T02:07:12.000000000Z"}
 ]}
 ```
+
+`next_timer_at` is the soonest `fires_at` of the service's timers. `svctl list` shows it in a **NEXT TIMER** column.
 
 `operation-status` returns one operation by GUID; an unknown or expired GUID is the `UNKNOWN_OPERATION` error. (Operations are dropped after a short retention grace once terminal — long enough for a polling client to read the result, not forever.)
 

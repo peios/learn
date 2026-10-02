@@ -203,6 +203,28 @@ There is one boot-time case worth calling out on its own. When peinit reads a ti
 > [!CAUTION]
 > If a machine boots with a wildly wrong clock (a dead RTC battery) and NTP corrects it only later, the boot-time persistent catch-up decision is made against the wrong time and may fire spuriously or not at all. The *runtime* half self-heals once NTP steps the clock, but the boot-time decision is already made by then. This is a known edge case short of NTP-aware rescheduling — worth knowing if you run timers on hardware with unreliable clocks.
 
+## Seeing when a timer runs
+
+peinit reports each timer as it has it armed, in the service's `status`:
+- the schedule's next occurrence;
+- when the timer will actually fire, with its jitter added;
+- when it last fired.
+
+A schedule peinit refused, such as `*-02-30`, which never comes round, is reported with the reason, rather than left out.
+
+```
+$ svctl status logrotate
+...
+timers:
+  *-*-* 02:00:00
+    next: 2026-06-02T02:00:00Z, firing at 2026-06-02T02:07:12Z after jitter
+    last fired: 2026-06-01T02:03:40Z
+```
+
+`svctl list` has a **NEXT TIMER** column, with each service's soonest firing. On the desktop, Services Manager shows the same things in local time: a **Next run** column, and each timer in the details pane. See [Controlling services](~peios/services-and-jobs/controlling-services#reading-status) for the fields.
+
+These times are peinit's own. Jitter is drawn at random each time a timer is armed, so the time a timer fires can't be worked out from its definition.
+
 ## Where to start
 
 To see how a timer-started run appears as a job and an operation, read [Jobs and operations](~peios/services-and-jobs/jobs-and-operations).

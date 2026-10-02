@@ -20,7 +20,7 @@ A disabled service gets neither a registration nor a firing.
 
 A schedule that fails to parse, or whose next occurrence cannot be
 computed, fails that trigger. Every other timer arms normally, and what
-did not arm is reported to the console.
+did not arm is reported to the console and in the service's `status`.
 [*evalt.a-bad-schedule-fails-only-its-own-trigger-and-is-reported]
 This matches how graph
 validation already treats an invalid schedule (§7.4), so the outcome no
@@ -102,3 +102,25 @@ Triggers on one service are independent: each has its own timerfd, its
 own next-firing computation, and its own last-run history. Only the
 Oneshot pending flag is shared.
 [*evalt.triggers-on-one-service-are-independent]
+
+## Reporting
+
+`status` reports every trigger of a service that is not disabled, as it
+stands: the occurrence armed, the time it will fire with its jitter, and
+when it last fired; or, for a trigger that did not arm, why not (PSPU
+§4.14). `list` carries the soonest firing of each service.
+[*evalt.status-reports-each-trigger-as-armed]
+
+The figures are the armed ones, given to the supervisor whenever a
+trigger is armed: at boot, on a reload, after each firing and after a
+clock change. A client cannot compute them itself, because the jitter
+is drawn at random when the trigger is armed.
+[*evalt.what-is-reported-is-what-is-armed]
+
+When a trigger last fired is held in memory as well as the registry.
+It is seeded at boot from the recorded timestamp of a persistent
+trigger, set by each firing, including a boot catch-up, and kept across
+a reload for a trigger the reload keeps. A non-persistent trigger,
+which records nothing (§9.3), reports only its firings since peinit
+started.
+[*evalt.the-last-firing-is-seeded-at-boot-and-kept-across-a-reload]
