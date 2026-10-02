@@ -116,9 +116,9 @@ A change takes effect at the next relevant event, with no restart:
 `HealthCheck` and its three parameters, `RestartPolicy`, `Environment`,
 `WorkingDirectory`, `ExecStartPre`, `ExecStartPost`, `ExecReload`,
 `HookIdentity`, `Readiness`, `NotifyAccess`, `LimitNOFILE`,
-`LimitCORE`, `FdStoreMax`, `TTYPath`, `RuntimeDirectories`,
-`TimerPersistent`, `TimerJitter`, `SafeMode`, `DisplayName`,
-`Description`, and `ServiceSecurity`.
+`LimitCORE`, `FdStoreMax`, `TTYPath`, `TTYPrecedence`,
+`RuntimeDirectories`, `Provides`, `TimerPersistent`, `TimerJitter`,
+`SafeMode`, `DisplayName`, `Description`, and `ServiceSecurity`.
 
 `ServiceSecurity` is the one whose reload is immediately observable:
 a change takes effect on the very next control request against that

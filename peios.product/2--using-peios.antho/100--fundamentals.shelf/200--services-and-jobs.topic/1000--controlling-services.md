@@ -35,6 +35,7 @@ Services Manager is another client of the same control socket, so it has exactly
 - **Commands do not block the window.** A command is sent without waiting. Services Manager follows its operation and reports the result, such as "SSH server was restarted." or the reason it failed.
 - **Hidden services are listed, not silently dropped.** `list` omits the services you cannot query. If you can read the service definitions in the registry, Services Manager still lists those services, marked **Not yours to see**, and says how many there are.
 - **If peinit does not let you connect at all,** Services Manager says so. By default the control socket admits everyone who is signed in, but it can be locked down. Any definitions you can read are still listed, and no command is offered.
+- **Its definition opens in a window of its own,** from **Edit definition…** in the details pane or on a row's menu. **New service…** on the bar defines one. Both are covered in [Defining a service](~peios/services-and-jobs/defining-a-service#creating-and-changing-a-definition), with `svctl definition`, which does the same from a terminal.
 - **Who may control a service, and who may change its definition,** open from the details pane in the permissions editor. They are covered in [Who can manage a service](~peios/services-and-jobs/who-can-manage-a-service#changing-them-from-the-desktop).
 
 The status refreshes every two seconds. Press **F5**, or select **Refresh**, to refresh it immediately.

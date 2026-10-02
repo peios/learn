@@ -114,6 +114,57 @@ The schema version lives at `Machine\System\Services\SchemaVersion` (currently `
 
 One defensive rule cuts the other way: a *known* field must not appear more than once in a collected definition. A duplicated known field is a validation error, even though the registry would ordinarily give you at most one value per name.
 
+## Creating and changing a definition
+
+A definition is a registry key, so `reg` can write one. Two tools also know what each field means, and check a definition before writing it.
+
+### From a terminal: `svctl definition`
+
+```
+$ svctl definition show sshd
+$ svctl definition validate sshd
+$ svctl definition create web --set ImagePath=/usr/bin/web --set Requires=lpsd --set Requires=netd:routed
+$ svctl definition edit web --set StopTimeout=20 --unset Wants
+$ svctl definition delete web
+```
+
+`def` is short for `definition`.
+
+- **Fields go by their registry names**, in any case.
+- **Values are given as text:**
+  - a number as digits;
+  - `yes` or `no`;
+  - a choice by its name (`Type=Oneshot`);
+  - a list with one `--set` for each item, in order.
+- **A change is checked first, as peinit checks it.** It goes through peinit's own decoder, and every `timer:` schedule is parsed. If peinit would reject it, nothing is written and you are told why.
+- **Only the values that change are written,** in one registry transaction. If one of them has changed since svctl read it, nothing is written.
+- **Values that are not fields are kept** as they are.
+- **`edit` names any changed fields that wait for a restart** on a running service. See [the mutability classes](#field-mutability-when-a-change-takes-effect).
+
+Some things can't be checked until later:
+
+- **privilege names**, when the token is made;
+- **whether the services a definition names exist**, when the graph is built;
+- **the identity**, by authd.
+
+`svctl status` after the change is the final word.
+
+### From the desktop: Services Manager
+
+In [Services Manager](~peios/services-and-jobs/controlling-services#from-the-desktop-services-manager), **Edit definition…** opens the selected service's definition in a window of its own. It's in the details pane and on each row's right-click menu. It reads **Definition…** when you may only read the definition. **New service…** on the bar defines a new one.
+
+- **Every field is shown, by group.** Each has its name in words with the registry name beside it, its default, and when a change takes effect.
+- **What you type is checked when you leave the field,** as peinit checks it. Anything wrong is said beside the field, and **Save** stays unavailable until it is put right.
+- **Save writes as svctl does.** Only the changes are written, in one transaction, and it is refused if someone else changed a value meanwhile. **Revert** reads the definition again. If the service is running, Save says which changes wait for a restart.
+- **Delete…** asks first. A running service carries on until it stops.
+- **What you may do is asked of the registry:**
+  - changing needs the right to set values on the service's key;
+  - defining a service needs the right to create keys under `Machine\System\Services`;
+  - deleting needs `DELETE` on the key.
+
+  Without those rights, the definition is shown with every field fixed and the reason said.
+- **Who may control the service** (`ServiceSecurity`) is changed with **Who may control it…**, not here. See [Who can manage a service](~peios/services-and-jobs/who-can-manage-a-service).
+
 ## peinit works from a snapshot, not the live registry
 
 Here is the idea that explains most surprises. peinit does **not** re-read the registry every time it touches a service. It reads definitions at well-defined moments and operates on an in-memory model in between.
@@ -131,10 +182,12 @@ Every field falls into one of four mutability classes. This table is the one to 
 
 | Class | When a change takes effect | Fields |
 |---|---|---|
-| **Immutable at runtime** | Next **restart** only. | `ImagePath`, `Type`, `Identity`, `RequiredPrivileges`, `ErrorControl` |
+| **Immutable at runtime** | Next **restart** only. | `ImagePath`, `Type`, `Identity`, `RequiredPrivileges`, `ErrorControl`, `RemainAfterExit`, and, while it is running, `Triggers` and `Disabled` |
 | **Apply on next start** | Next **start** or explicit graph reload — not while running. | `Requires`, `Wants`, `BindsTo`, `Conflicts`, `OnFailure`, `Conditions`, `Asserts` |
 | **Hot-reloaded** | Next relevant **event**, no restart. | `ServiceSecurity` (next control request) |
-| **Reloadable at runtime** | Next relevant **operation** (restart, health-check cycle, …), no restart. | `Arguments`, `SuccessExitCodes`, all timeout/retry values, the health-check fields, `RestartPolicy`, `Environment`, `WorkingDirectory`, the hooks, `Readiness`, `NotifyAccess`, `LimitNOFILE`/`LimitCORE`, `FdStoreMax`, `SafeMode`, `DisplayName`, `Description` |
+| **Reloadable at runtime** | Next relevant **operation** (restart, health-check cycle, …), no restart. | `Arguments`, `SuccessExitCodes`, all timeout/retry values, the health-check fields, `RestartPolicy`, `Environment`, `WorkingDirectory`, the hooks and `HookIdentity`, `Readiness`, `NotifyAccess`, `LimitNOFILE`/`LimitCORE`, `FdStoreMax`, `TTYPath`/`TTYPrecedence`, `RuntimeDirectories`, `Provides`, `TimerPersistent`/`TimerJitter`, `SafeMode`, `DisplayName`, `Description` |
+
+On a service that is not running, `Triggers` and `Disabled` take effect as soon as peinit has read the change: that is what arms a timer added to an inactive service.
 
 The practical reading: changing *what a process is or runs as* (`ImagePath`, `Identity`, `Type`, privileges, `ErrorControl`) is fundamental enough that it only applies when a fresh process starts — you must `restart`. Changing *policy that peinit consults each time it acts* (timeouts, restart behaviour, health checks) is picked up the next time peinit acts. And `ServiceSecurity` is special: it is re-read on every control request, so an access-control change takes effect on the very next command without touching the running service.
 
