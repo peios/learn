@@ -39,7 +39,7 @@ Services Manager is another client of the same control socket, so it has exactly
 - **Who may control a service, and who may change its definition,** open from the details pane in the permissions editor. They are covered in [Who can manage a service](~peios/services-and-jobs/who-can-manage-a-service#changing-them-from-the-desktop).
 - **Timers show when they run.** The **Next run** column shows when each service's soonest [timer](~peios/services-and-jobs/triggers-and-timers) fires. The details pane lists each timer under its schedule, with its next run and its last run, in the machine's local time. A timer with jitter says that its run is put back by a random delay, and the next run shown already includes that delay. A timer peinit could not arm says why it never runs. These are peinit's own figures, read from `status`, not worked out from the definition.
 
-The status refreshes every two seconds. Press **F5**, or select **Refresh**, to refresh it immediately.
+peinit doesn't announce state changes, so Services Manager asks it for the services' state every two seconds. Press **F5**, or select **Refresh**, to ask straight away. What the registry holds is different. That covers which services are defined, who may control them, and what you may change. Services Manager watches the `Services` key for changes and reads it again only when something changes, so a change made elsewhere, from svctl or another window, shows at once.
 
 ## How the control interface works
 

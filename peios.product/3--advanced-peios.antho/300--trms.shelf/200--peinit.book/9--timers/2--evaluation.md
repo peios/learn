@@ -61,6 +61,19 @@ Every other state — Backoff, Stopping, Reloading, Abandoned, Skipped —
 records the firing and does nothing.
 [*evalt.a-firing-in-any-other-state-does-nothing]
 
+A timer can outlive its service until the next reload. A service whose
+definition is deleted while it runs carries on, and is discarded when it
+stops, and nothing re-plans the timers then. A firing for a service no
+longer known does nothing, records no last run, and is not armed again;
+the next reload leaves it out.
+[*evalt.a-firing-for-a-service-that-is-gone-does-nothing] It is
+never an error: an error out of a firing takes PID 1 into recovery.
+
+No last run is recorded for a service whose definition has been
+deleted, whether it is still running or already gone: there is no key
+to record it in, and writing one would make the key again.
+[*evalt.no-last-run-is-recorded-for-a-deleted-definition]
+
 The last-run write happens in a forked child so that the event loop
 never waits on the registry [*evalt.the-last-run-write-happens-in-a-forked-child]
 — which matters because the registry is
@@ -120,7 +133,9 @@ is drawn at random when the trigger is armed.
 When a trigger last fired is held in memory as well as the registry.
 It is seeded at boot from the recorded timestamp of a persistent
 trigger, set by each firing, including a boot catch-up, and kept across
-a reload for a trigger the reload keeps. A non-persistent trigger,
+a reload for the same service and schedule. A definition deleted and
+made again between two reloads is the same service and schedule, and
+keeps it too. A non-persistent trigger,
 which records nothing (§9.3), reports only its firings since peinit
 started.
 [*evalt.the-last-firing-is-seeded-at-boot-and-kept-across-a-reload]

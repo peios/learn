@@ -151,11 +151,12 @@ Some things can't be checked until later:
 
 ### From the desktop: Services Manager
 
-In [Services Manager](~peios/services-and-jobs/controlling-services#from-the-desktop-services-manager), **Edit definition…** opens the selected service's definition in a window of its own. It's in the details pane and on each row's right-click menu. It reads **Definition…** when you may only read the definition. **New service…** on the bar defines a new one.
+In [Services Manager](~peios/services-and-jobs/controlling-services#from-the-desktop-services-manager), **Edit definition…** opens the selected service's definition in a window of its own. It's in the details pane and on each row's right-click menu. It reads **Definition…** when you may only read the definition. **New service…** on the bar defines a new one. A service's definition opens in one window at a time: while it is open, **Edit definition…** is unavailable for that service.
 
 - **Every field is shown, by group.** Each has its name in words with the registry name beside it, its default, and when a change takes effect.
 - **What you type is checked when you leave the field,** as peinit checks it. Anything wrong is said beside the field, and **Save** stays unavailable until it is put right.
-- **Save writes as svctl does.** Only the changes are written, in one transaction, and it is refused if someone else changed a value meanwhile. **Revert** reads the definition again. If the service is running, Save says which changes wait for a restart.
+- **Each timer's schedule says when it next comes round,** under **Triggers**, in local time. A schedule that never comes round, such as `*-02-30`, is marked as one that never starts the service. peinit takes such a definition and arms its other timers, so it does not stop you saving. These times are the schedule's, before any jitter. When the timer will really fire is in the details pane, once it is saved (see [Controlling services](~peios/services-and-jobs/controlling-services#from-the-desktop-services-manager)).
+- **Save writes as svctl does,** from the button or with **Ctrl+S**. Only the changes are written, in one transaction, and it is refused if someone else changed a value meanwhile. **Revert** reads the definition again. If the service is running, Save says which changes wait for a restart.
 - **Delete…** asks first. A running service carries on until it stops.
 - **What you may do is asked of the registry:**
   - changing needs the right to set values on the service's key;
