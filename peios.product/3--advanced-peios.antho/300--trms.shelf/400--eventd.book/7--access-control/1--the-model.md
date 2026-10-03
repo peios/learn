@@ -71,6 +71,7 @@ with until it disconnects (§7.5).
 | `EVENTD_READ` | 0 | 0x0001 | Read records matching the pattern. [*access.eventd-read-is-bit-0-value-0x0001] |
 | `EVENTD_CLEAR` | 1 | 0x0002 | Delete records matching the pattern. [*access.eventd-clear-is-bit-1-value-0x0002] |
 | `EVENTD_ADMINISTER` | 2 | 0x0004 | Change eventd's own policy — the `INDEX` command (§7.2). [*access.eventd-administer-is-bit-2-value-0x0004] |
+| `EVENTD_PUBLISH` | 3 | 0x0008 | Publish metric records under the matching name (§7.6). [*access.eventd-publish-is-bit-3-value-0x0008] |
 
 The generic mapping passed to AccessCheck is in §B.
 
