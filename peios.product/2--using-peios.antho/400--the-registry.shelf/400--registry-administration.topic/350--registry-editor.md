@@ -110,8 +110,8 @@ To delete a value, select it and choose **Delete…**, then confirm.
 - **Delete key…** deletes the key shown and everything under it, keys and
   values, after asking. It is all or nothing: if any part can't be
   deleted, nothing is. Links under it are deleted; the keys they point to
-  are not. A key with more than 4,096 keys under it can't be deleted at
-  once; delete some of them first.
+  are not. A key with more than about a thousand keys under it can't be
+  deleted at once; delete some of them first.
 
 The root keys can't be deleted. Changes go to the base layer, the one
 every change goes to unless it names another.
