@@ -28,6 +28,7 @@ configuration is catalogued in the eventd TRMP §A.
 | Query timeout | 30000 ms | 1000 – 300000 | `QueryTimeoutMs` | §3.16 |
 | Concurrent queries | 128 | 1 – 4096 | `MaxConcurrentQueries` | §3.14 |
 | Concurrent streaming queries | 64 | 1 – 1024 | `MaxStreamingQueries` | §3.14 |
+| Concurrent queries per caller | 16 | 1 – 4096 | `MaxQueriesPerUser` | §3.14 |
 | Memory all running queries hold together | 268435456 B | 16777216 – 4294967295 | `MaxQueryHeldBytes` | §3.16 |
 | Values per DISTINCT stream | 100000 | 1000 – 10000000 | `MaxDistinctStreamValues` | §3.27 |
 

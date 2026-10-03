@@ -45,6 +45,17 @@ Three reasons make this the only workable arrangement:
 - **Callers differ.** Several principals with different access levels
   query the same store, and there is one copy of the data.
 
+## Who may connect
+
+The query socket lets every authenticated caller connect: its
+descriptor is `D:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;GA;;;OW)(A;;FW;;;AU)`,
+set in place of the one it would inherit from eventd's closed runtime
+directory. [*access.every-authenticated-caller-may-connect-to-the-query-socket]
+What a caller may read is decided by eventd, per identifier and per
+field, against the descriptors below, not by the socket. A socket that
+admitted fewer callers would only leave a grant to anyone else unusable.
+How many queries one caller may hold is bounded per user (§6.5).
+
 ## Caller identity
 
 When a client connects to the query socket, eventd obtains its token by

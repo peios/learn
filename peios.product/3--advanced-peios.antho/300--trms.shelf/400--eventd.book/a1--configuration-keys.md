@@ -94,6 +94,7 @@ No compiled-in defaults. A missing or invalid value fails startup
 | `QueryTimeoutMs` | REG_DWORD | 30000 | 1000–300000 | Maximum query execution time. [*config.query-timeout-defaults-to-30000-ms] |
 | `MaxConcurrentQueries` | REG_DWORD | 128 | 1–4096 | Concurrent queries globally, streaming and non-streaming. [*config.max-concurrent-queries-defaults-to-128-globally-including-streaming] |
 | `MaxStreamingQueries` | REG_DWORD | 64 | 1–1024 | Concurrent streaming queries globally. [*config.max-streaming-queries-defaults-to-64-globally] |
+| `MaxQueriesPerUser` | REG_DWORD | 16 | 1–4096 | Concurrent queries, streaming or not, held by one caller's user SID; SYSTEM's are not counted (§6.5). [*config.max-queries-per-user-defaults-to-16-and-does-not-count-system] |
 | `MaxDistinctStreamValues` | REG_DWORD | 100000 | 1000–10000000 | Values tracked by one DISTINCT streaming query. [*config.max-distinct-stream-values-defaults-to-100000-per-query] |
 | `MaxQueryRequestBytes` | REG_DWORD | 65536 | 1024–16777216 | Hard maximum query request payload. [*config.max-query-request-bytes-is-a-hard-limit-defaulting-to-65536] |
 | `QueryResponseTargetBytes` | REG_DWORD | 65536 | 1024–16777216 | Soft response batching target; one complete record may exceed it (§6). [*config.query-response-target-bytes-is-a-soft-target-defaulting-to-65536] |

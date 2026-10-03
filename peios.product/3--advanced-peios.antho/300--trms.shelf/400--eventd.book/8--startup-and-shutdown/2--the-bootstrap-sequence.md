@@ -102,7 +102,10 @@ entirely. [*bootstrap.startup-proceeds-through-seven-phases-in-order]
     by a crash is unlinked first if it is an `AF_UNIX` socket; if the
     path exists and is not a socket, startup fails.
     [*bootstrap.a-stale-socket-at-a-socket-path-is-unlinked-first]
-    [*bootstrap.a-non-socket-at-a-socket-path-fails-startup]
+    [*bootstrap.a-non-socket-at-a-socket-path-fails-startup] Its
+    inherited descriptor is replaced with the protected one that lets
+    every authenticated caller connect (§7.1).
+    [*bootstrap.the-query-socket-gets-the-authenticated-users-descriptor]
 18. Create the log socket at `LogSocketPath`, then replace its inherited
     descriptor with the protected deny-Service, allow-SYSTEM broker
     descriptor (§7.6).

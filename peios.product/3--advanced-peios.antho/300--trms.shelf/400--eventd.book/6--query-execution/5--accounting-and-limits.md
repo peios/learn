@@ -48,20 +48,25 @@ query holds its resources for as long as its client stays connected,
 where an ordinary one holds them for at most a timeout, so the two
 populations need different bounds.
 
-Both are global rather than per-caller.
-[*account.both-query-limits-are-global-not-per-caller] eventd cannot
-attribute connections to a caller beyond the token it holds, so one
-client can occupy every slot — and the interim protection is that
-queries and ingestion are separate channels, so exhausting the query
+Both are global. Every authenticated caller may connect (§7.1), so
+eventd also bounds the queries one caller may have running at once, at
+`MaxQueriesPerUser`. [*account.max-queries-per-user-bounds-one-callers-running-queries]
+The caller is the user SID of the token read at connect.
+[*account.the-per-user-limit-counts-by-the-user-sid-of-the-peer-token]
+The slot is taken as soon as the token is read, before the request, so
+connections held open without a query count too.
+[*account.the-per-user-slot-is-taken-before-the-request-is-read]
+SYSTEM's queries are not counted: SYSTEM is the machine, not one caller
+among others. [*account.system-queries-are-not-counted-per-user] Over
+the limit, the query is rejected with an error, as over the global ones.
+[*account.a-query-over-the-per-user-limit-is-rejected-with-an-error]
+
+The per-user limit counts users, not processes or sessions: two windows
+of the same person share one budget, and two people never share one.
+
+Queries and ingestion are separate channels, so exhausting the query
 side cannot exhaust ingestion (PSPU §3.3).
 [*account.exhausting-the-query-slots-cannot-exhaust-ingestion]
-
-> [!NOTE]
-> Per-caller limits would need a way to identify the connecting process
-> beyond its token — a process GUID from the connection. That is the same
-> class of missing primitive as the datagram peer identity that leaves
-> `origin` unverifiable (PSPU §3.28), and the global limit is what stands
-> in for it.
 
 ## Memory
 

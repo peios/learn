@@ -35,12 +35,13 @@ not bound the number of active series between retention passes.
 
 ## Query slots
 
-Reaching `MaxConcurrentQueries` or `MaxStreamingQueries` rejects new
-queries with an error rather than queueing them (§6.5).
+Reaching `MaxConcurrentQueries`, `MaxStreamingQueries` or
+`MaxQueriesPerUser` rejects new queries with an error rather than
+queueing them (§6.5).
 [*exhaust.a-query-beyond-the-concurrency-limits-is-rejected-not-queued]
-Both bounds are
-global, so one client can occupy every slot.
-[*exhaust.the-query-concurrency-limits-are-global-not-per-client]
+The per-user bound keeps one caller from occupying every slot; several
+callers together, or SYSTEM, still can.
+[*exhaust.one-user-cannot-occupy-every-query-slot]
 
 Ingestion is unaffected, because queries and ingestion are separate
 channels and separate threads.

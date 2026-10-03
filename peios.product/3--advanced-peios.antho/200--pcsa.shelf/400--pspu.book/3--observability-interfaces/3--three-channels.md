@@ -73,6 +73,11 @@ The metric socket descriptor is coarse admission only. Every metric
 datagram also carries a KACS sender token and every metric name is
 authorized for `EVENTD_PUBLISH` (§3.9).
 
+The query socket descriptor MUST let every authenticated caller connect.
+What a caller may read is decided per identifier against the read policy
+(§3.28), so a socket that admitted fewer callers would only make a
+policy grant to anyone else impossible to use.
+
 A collector MUST NOT rely on the socket's POSIX mode bits for this. On
 Peios an access decision is routed through the object's Security
 Descriptor, not through mode bits, so a mode set on a socket pathname

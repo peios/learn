@@ -67,8 +67,13 @@ stays connected while an ordinary one holds them for at most a timeout
 > §3.A gives the mainline value and adjustable range
 > for this bound and every other in this chapter.
 
-Both bounds are global. Neither is per-client, because a collector
-cannot attribute connections to a caller beyond the token it has, and
-one client MAY therefore occupy every slot. A collector MUST NOT allow
-that to affect ingestion: queries and ingestion are separate channels
-precisely so that exhausting one cannot exhaust the other (§3.3).
+Both bounds are global. Because every authenticated caller may connect
+(§3.3), a collector MUST also bound the queries one caller may have
+running at once, so that one caller cannot occupy every slot. The
+caller is the user SID of the token captured at connect. A collector
+MAY leave SYSTEM's queries uncounted. A query beyond the caller's bound
+is rejected with an error, like one beyond the global bounds.
+
+Neither bound may affect ingestion: queries and ingestion are separate
+channels precisely so that exhausting one cannot exhaust the other
+(§3.3).
