@@ -56,6 +56,7 @@ No compiled-in defaults. A missing or invalid value fails startup
 | `MaxMetricDatagramBytes` | REG_DWORD | 262144 | 262144–1048576 | Maximum accepted metric datagram size; the PSPU portable floor cannot be lowered. [*config.max-metric-datagram-bytes-defaults-to-the-262144-floor-and-cannot-go-lower] |
 | `MetricSeriesCacheSize` | REG_DWORD | 50000 | 1000–1000000 | Entries in the LRU series resolution cache. [*config.metric-series-cache-size-defaults-to-50000-entries] |
 | `MetricAuthorizationCacheSize` | REG_DWORD | 16384 | 256–1000000 | Cached KACS publication verdicts, invalidated by security-policy generation. [*config.metric-authorization-cache-size-defaults-to-16384-verdicts] |
+| `HealthMetricIntervalSeconds` | REG_DWORD | 15 | 0–3600 | How often eventd records its own health as `eventd.*` metrics; 0 turns them off (§5.7). [*config.health-metric-interval-defaults-to-15-seconds-and-zero-turns-it-off] |
 
 ## Adaptive indexing
 

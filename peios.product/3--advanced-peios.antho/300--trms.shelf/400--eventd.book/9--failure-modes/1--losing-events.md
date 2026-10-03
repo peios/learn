@@ -16,6 +16,7 @@ buffers fill and KMES overwrites its oldest entries.
   [*lostevents.an-overrun-is-detected-as-a-sequence-gap-on-the-affected-cpu]
 - A `synthetic.gap` record is written, naming the missing range.
   [*lostevents.an-overrun-writes-a-synthetic-gap-naming-the-missing-range]
+- The range is added to that CPU's `eventd.events.lost` (§5.7).
 - Draining resumes from the oldest survivor at `tail_pos`.
   [*lostevents.after-an-overrun-draining-resumes-from-the-oldest-survivor-at-tail-pos]
 
@@ -58,7 +59,7 @@ set rather than only as an error to retry.
 
 When a log or metric socket's receive queue is full, the kernel discards
 the datagram. Neither the sender nor eventd is notified, and eventd does
-not count it.
+not count it, so no health metric shows it (§5.7).
 [*lostevents.a-datagram-dropped-on-a-full-receive-queue-is-not-counted]
 
 This is by design and is not a failure to be tuned away (PSPU §3.4). The

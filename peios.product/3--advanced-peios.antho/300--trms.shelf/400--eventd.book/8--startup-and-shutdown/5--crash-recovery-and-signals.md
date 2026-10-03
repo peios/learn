@@ -82,10 +82,14 @@ least:
 
 The format is not a stable machine interface and its wording may change.
 
-The set is chosen to answer the questions an operator has about a
-misbehaving eventd that a query cannot: how far behind the writers are,
-whether the series cache is thrashing (§5.3), whether query slots are
-exhausted (§6.5), and whether a store has been failing writes quietly.
-Standard error is the destination because peinit captures it, so the
-dump reaches the log store by the ordinary path — and reaches standard
-error directly when the log store is the thing that is broken.
+Most of what an operator asks of a running eventd — whether the writers
+keep up, whether the series cache is thrashing (§5.3), whether query
+slots are exhausted (§6.5), whether a store has been failing writes —
+is answered over time by its health metrics (§5.7). The dump is for
+what those cannot carry: the counts of rejected ingestion input, which
+no query client may see (PSPU §3.4), the latest error text and rejected
+names, and the receipt coverage. It also still works when the metric
+store is the thing that is broken. Standard error is the destination
+because peinit captures it, so the dump reaches the log store by the
+ordinary path — and reaches standard error directly when the log store
+is broken.

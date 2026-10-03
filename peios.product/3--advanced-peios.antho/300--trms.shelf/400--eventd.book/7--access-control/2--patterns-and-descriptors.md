@@ -90,14 +90,15 @@ them with the ordinary registry tools rather than through eventd.
 
 ## Defaults on first boot [*pattern.missing-default-descriptors-are-created]
 
-eventd creates the three wildcard keys and administrative descriptor if
-they do not exist:
+eventd creates the three wildcard keys, the descriptor for its own
+health metrics and the administrative descriptor if they do not exist:
 
 | Key | Default |
 |---|---|
 | `…\Security\Events\*` | SYSTEM and Administrators: `EVENTD_READ` on all fields. [*pattern.the-default-events-descriptor-grants-read-to-system-and-administrators] |
 | `…\Security\Logs\*` | SYSTEM, Administrators and Authenticated Users: `EVENTD_READ`. [*pattern.the-default-logs-descriptor-also-grants-read-to-authenticated-users] |
 | `…\Security\Metrics\*` | SYSTEM and Administrators: `EVENTD_READ \| EVENTD_PUBLISH`; Authenticated Users: `EVENTD_READ`. [*pattern.the-default-metrics-descriptor-grants-publish-only-to-system-and-administrators] |
+| `…\Security\Metrics\eventd` | SYSTEM, Administrators and Authenticated Users: `EVENTD_READ`; nobody `EVENTD_PUBLISH`, because eventd writes its own health without the socket (§5.7). [*pattern.the-default-eventd-metrics-descriptor-grants-publish-to-nobody] |
 | `…\Security\Admin` | SYSTEM and Administrators: `EVENTD_ADMINISTER`. [*pattern.the-default-admin-descriptor-grants-administer-to-system-and-administrators] |
 
 The asymmetry reflects sensitivity. Events include security audit data

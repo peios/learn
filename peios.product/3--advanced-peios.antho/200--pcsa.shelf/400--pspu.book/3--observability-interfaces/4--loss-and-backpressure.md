@@ -55,8 +55,8 @@ is the defence. In-memory diagnostic counters and rate-limited standard
 error output are permitted because they do not grow with durable input.
 
 The rule binds only on responses to *input*. A collector MAY record its
-own internal conditions, and the mainline collector records several
-(eventd TRMP §2.6).
+own internal conditions, and the mainline collector records several,
+as synthetic events and as health metrics (eventd TRMP §2.6, §5.7).
 
 ## Ordering and duplication
 
