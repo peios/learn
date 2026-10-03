@@ -56,7 +56,9 @@ This document does not cover:
   produces the artifacts it emits — its own design
 - Which counterparts a system is configured to trust, and how that
   configuration is expressed — the consuming component's own design
-- Administering a component's contents — its own design
+- Administering a component's contents — its own design, unless the
+  component publishes a protocol for other programs to administer it
+  with, as the local principal store does (§10)
 
 The fourth of those is the point of the whole document. A component is
 asked a question and gives an answer, or is asked for an artifact and

@@ -15,7 +15,7 @@ related:
 /run/lpsd/admin.sock
 ```
 
-`lps` is its only client today. If you are writing tooling against it, or diagnosing why a command was refused, this page is what you need.
+`lps` and [Principals Manager](~peios/managing-local-principals/principals-manager) are its clients. If you are writing tooling against it, or diagnosing why a command was refused, this page is what you need.
 
 ## Who may use it
 
@@ -32,9 +32,9 @@ The word *enabled* is load-bearing. A group that is present in a token but marke
 
 **The peer's token decides.** `lpsd` asks the kernel who is on the other end of the connection. Nothing in any message contributes to that answer, and nothing a client sends could.
 
-**A KACS descriptor is defence in depth.** `lpsd` stamps one on its runtime directory and socket, admitting `LocalSystem` and `BUILTIN\Administrators`.
+**The socket's KACS descriptor admits the same callers.** `lpsd` stamps one on the socket when it creates it, admitting `LocalSystem` and `BUILTIN\Administrators`, so anyone else is refused at `connect` rather than after sending a request. Its runtime directory, `/run/lpsd`, is `peinit`'s, provisioned before `lpsd` starts.
 
-That descriptor is load-bearing in a way worth knowing about: `/run` is seeded with a descriptor admitting `LocalSystem` alone, and everything created under it inherits that. Without `lpsd` stamping its own, an administrator running `lps` would be refused by KACS before a byte was exchanged.
+That descriptor is load-bearing, not decoration: `/run` is seeded with a descriptor admitting `LocalSystem` alone, and everything created under it inherits that. Without `lpsd` stamping its own, an administrator running `lps` would be refused by KACS before a byte was exchanged.
 
 **The Unix mode decides nothing.** KACS grants every managed process the capabilities that override the DAC check, so file modes do not gate anything on Peios. The socket's mode is permissive to say so rather than to imply a control that is not operating.
 
@@ -57,9 +57,9 @@ So a command that reports success has persisted. A command that reports failure 
 
 ## The protocol itself
 
-The wire protocol is `PLPS`, sharing its codec and header layout with PGSS Logon ([PGSS §2](~peios/logon/scope-and-roles)) and PSI ([PSPU §2](~peios/principal-source-interface/scope-and-roles)). It is not itself specified, because unlike those two it is one daemon's administrative interface rather than a contract anyone else implements.
+The wire protocol is `PLPS`, sharing its codec and header layout with PGSS Logon ([PGSS §2](~peios/logon/scope-and-roles)) and PSI ([PSPU §2](~peios/principal-source-interface/scope-and-roles)). It is specified in [PSPU §10](~peios/local-principal-administration/scope-and-roles): every request, its reply, and how a request is refused.
 
-If you are writing tooling, prefer driving `lps` and parsing its output over speaking the protocol directly. The command's surface is stable; the protocol's is not promised to be.
+If you are writing tooling in Rust, the `libauthd-client` crate in the authd repository speaks it, as `lps` and Principals Manager do, and reports a refusal with `lpsd`'s reason. A program that only needs to *read* principals should ask the identity socket instead, which anyone may use: see [Resolving names](~peios/managing-local-principals/resolving-names).
 
 ## See also
 
