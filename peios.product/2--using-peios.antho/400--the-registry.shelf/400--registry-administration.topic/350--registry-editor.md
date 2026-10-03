@@ -1,7 +1,7 @@
 ---
 title: Registry Editor
 type: how-to
-description: Browse the registry from the desktop — its keys as a tree, each key's values with their types, any value in full, and a word on anything you may not read.
+description: Browse and change the registry from the desktop — its keys as a tree, each key's values with their types, typed forms to edit them, new and deleted keys, and a word on anything you may not read or change.
 related:
   - peios/registry-concepts/overview
   - peios/registry-concepts/keys-values-and-types
@@ -10,7 +10,7 @@ related:
 ---
 
 **Registry Editor** shows the registry: its keys as a tree, and the values
-of the key you pick. A *key* is a container in the registry, like a folder,
+of the key you pick, which you can change. A *key* is a container in the registry, like a folder,
 and a *value* is a named, typed piece of data in a key. It reads the
 registry as you, so it shows what you may read, and it says what you may
 not.
@@ -77,6 +77,48 @@ With no value selected, the pane describes the key: when it last changed,
 how many keys and values it holds, and whether it is a link or is kept only
 until the machine restarts. **Copy path** copies the key's path.
 
+## Changing values
+
+To change a value, double-click it, or select it and choose **Edit…** in the
+pane or on its right-click menu. The pane shows a form for its type:
+
+- **Text** and **Link** take one line.
+- **List of text** takes one item to a line. Empty lines are left out.
+- **Numbers** take a whole number, typed in **Decimal** or
+  **Hexadecimal**. Changing between them rewrites the number in the other
+  form.
+- **Bytes** take two hexadecimal digits to a byte. Spaces and new lines
+  are ignored.
+
+Data that doesn't fit its type is edited as bytes, and keeps its type.
+**Save** writes it, and **Cancel** or **Esc** leaves it as it was.
+
+If someone else changes the value while you're editing it, **Save**
+refuses, and the list shows the value as it now is. Select **Save** again
+to replace their change with yours.
+
+**New value…** adds a value to the key shown. Give it a name, or leave the
+name empty for the key's default value, and pick its type: text, text
+with variables, a list of text, a number, a large number or bytes. A name
+the key already uses is refused.
+
+To delete a value, select it and choose **Delete…**, then confirm.
+
+## Changing keys
+
+- **New key…** creates a key under the one shown, and shows it.
+- **Delete key…** deletes the key shown and everything under it, keys and
+  values, after asking. It is all or nothing: if any part can't be
+  deleted, nothing is. Links under it are deleted; the keys they point to
+  are not. A key with more than 4,096 keys under it can't be deleted at
+  once; delete some of them first.
+
+The root keys can't be deleted. Changes go to the base layer, the one
+every change goes to unless it names another.
+
+The key shown has these on its right-click menu in the tree too, with
+**Copy path**.
+
 ## Changes made elsewhere
 
 The window watches the keys it shows. A value or key added, changed or
@@ -99,8 +141,16 @@ Some keys let you list their subkeys but not read their values, or the
 other way round. Registry Editor shows whichever you may, and says which
 you may not.
 
+What you may change of a key is its own permissions' to say: changing its
+values, creating keys under it and deleting it are each a separate right.
+Registry Editor asks the registry which of them you hold. What you may
+not do is still shown, greyed out, and the pane says why, such as **You
+may read this key but not change it.**
+
 ## In a terminal
 
 `reg` does the same in a terminal. The tree is `reg ls` and `reg tree`, the
 values are `reg get` on a key, and a value in full is `reg get KEY NAME`.
-See [reg](~peios/registry-tools/reg).
+Saving a value is `reg set`, a new key is `reg new`, and deleting is
+`reg del`, with `-r` for a key and everything under it. See
+[reg](~peios/registry-tools/reg).
