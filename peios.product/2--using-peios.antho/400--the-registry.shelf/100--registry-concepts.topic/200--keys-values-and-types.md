@@ -57,6 +57,11 @@ A value's **type** is a small tag stored alongside its data. The full set:
 
 There are also three hardware-resource types carried over for format fidelity. Peios assigns them no meaning — they behave exactly like `REG_BINARY` and the registry never produces them itself. You will essentially never author one.
 
+Peios' tools agree on how each type's data is laid out in bytes. `reg`, Registry Editor and the `peios` Rust crate all use this layout:
+- **Strings** (`REG_SZ`, `REG_EXPAND_SZ`, `REG_LINK`): UTF-8, not the UTF-16 Windows uses, ending in one null byte.
+- **`REG_MULTI_SZ`:** each string followed by a null byte, then one more null byte to end the list.
+- **Integers:** little-endian, except `REG_DWORD_BIG_ENDIAN`.
+
 ## Typed, but opaque
 
 Here is the property the rest of the topic leans on. The registry stores a value's type tag and its raw bytes, and that is **all** it does with them. It does not check that the bytes match the type. It does not parse a `REG_DWORD` into a number. It does not know that `Machine\System\KMES\BufferCapacity` is supposed to be a power of two, what its default is, or which subsystem reads it. The single exception is `REG_LINK` on a link key, which the kernel follows during path resolution.
