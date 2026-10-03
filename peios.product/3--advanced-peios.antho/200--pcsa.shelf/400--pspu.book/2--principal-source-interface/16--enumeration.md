@@ -28,6 +28,14 @@ as to make enumerating possible.
 An empty `of` enumerates every object of `kind` the source holds. A
 non-empty `of` MUST name a group, and enumerates that group's members.
 
+That group is one the source holds, or a `BUILTIN` group (`S-1-5-32-…`)
+named by its SID. A `BUILTIN` group is no source's object, but a source
+permitted to assert memberships outside its domain records who is in it
+(§2.19), and the authority asks every such source for its members (PGSS
+§2.16). Such a source MUST answer with the principals it records in the
+group — by a listed membership or as their primary group — and with an
+empty `Found` where it records none.
+
 `cursor` is empty on the first request, and otherwise carries the `next`
 from the source's immediately preceding reply.
 

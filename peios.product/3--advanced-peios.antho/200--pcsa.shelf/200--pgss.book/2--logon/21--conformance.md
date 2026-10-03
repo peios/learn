@@ -134,7 +134,9 @@ of the following.
 41. Withhold `MEMBERS` with a reason rather than returning a partial or
     empty list, where it will not or cannot produce it (§2.16).
 42. Report `Absent` rather than `Declined` for a group whose membership
-    is a rule rather than a record (§2.16).
+    is a rule rather than a record, and gather a `BUILTIN` group's
+    recorded members from the sources rather than reporting it `Absent`
+    (§2.16).
 43. Encode "no POSIX identifier" as zero, and never substitute a number
     a caller could mistake for a real one (§2.16).
 44. Answer a `passwd` record, a `group` record, a principal's

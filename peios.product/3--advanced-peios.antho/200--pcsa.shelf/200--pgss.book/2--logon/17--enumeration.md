@@ -36,6 +36,13 @@ enumerates **that group's members**. This is the continuation path for a
 An authority that withholds `MEMBERS` as `TooLarge` MUST serve this
 mode, since there is otherwise no way to obtain what it said existed.
 
+A group's members are asked of the one source that holds the group. A
+`BUILTIN` group is no source's, and its members are walked across every
+source that may record them, in search order, as the whole table is
+(§2.16); a source in the order that did not contribute is reported in
+`incomplete`. A well-known group whose membership is a rule has no
+members to walk, and is `NotFound` here.
+
 > [!NOTE]
 > Members are a field of `Lookup` for the common case and a mode of
 > `Enumerate` for the large one, rather than a message of their own. The

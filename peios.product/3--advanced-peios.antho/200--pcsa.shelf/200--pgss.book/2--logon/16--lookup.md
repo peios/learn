@@ -230,6 +230,28 @@ An authority MUST report `Absent` for such a group rather than
 manufacturing a list, and MUST NOT report `Declined`, which would
 suggest an answer exists somewhere.
 
+### The BUILTIN groups
+
+The `BUILTIN` groups (`S-1-5-32-…`, such as `Administrators`, `Users`
+and `Guests`) are well-known, and the authority answers for them
+itself (§2.15), but their membership is **recorded**, not a rule.
+"`jack` is in `Administrators`" is a record a source keeps on this
+machine's behalf (PSPU §2.19), as it keeps a local group's.
+
+For `MEMBERS` on a `BUILTIN` group, an authority MUST therefore gather
+the members each source records, from every source in its search order
+that is permitted to assert memberships outside its domain (PSPU §2.19),
+and MUST NOT report `Absent`. A source without that permission records
+none that a token would carry, and is not asked.
+
+- Where every such source answered and the list fits one reply, the
+  members are present, in source order.
+- Where it will not fit, `MEMBERS` is withheld as `TooLarge`, and the
+  members are walked with `Enumerate` (§2.17).
+- Where a source in the order could not be reached, or would not
+  enumerate, `MEMBERS` is withheld as `Declined`. A list missing one
+  source's members would look complete.
+
 > [!NOTE]
 > This asymmetry is deliberate and follows the shape of the data. "Which
 > groups is this principal in" is answered by every source cheaply,

@@ -89,7 +89,7 @@ Ask who is in a local group and you get its members. Ask who is in `Everyone` an
 
 Membership comes in three kinds:
 
-**Recorded.** Local groups, and `BUILTIN\Administrators`. A source holds the edges, so it can list them. (Note that being well-known has nothing to do with it — `Administrators` is well-known and perfectly enumerable.)
+**Recorded.** Local groups, and the `BUILTIN` groups: `Administrators`, `Users` and `Guests`. A source holds the edges, so it can list them, and `authd` gathers a `BUILTIN` group's members from every source that may record them. (Note that being well-known has nothing to do with it — `Administrators` is well-known and perfectly enumerable.)
 
 **Stapled.** `Everyone`, `Authenticated Users`. Nothing records who is in them; `authd` adds them to every token it mints. Membership is a rule, not data, so there is no list to produce.
 

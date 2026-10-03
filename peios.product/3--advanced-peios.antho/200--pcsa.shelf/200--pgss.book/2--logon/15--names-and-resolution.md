@@ -105,8 +105,9 @@ first source that answers.
 An authority MAY answer from its own knowledge, without consulting any
 source. Well-known principals and groups — those whose SIDs are fixed by
 the system rather than issued by anybody — are the ordinary case: their
-names, and the fact that nothing records their membership (§2.16), are
-properties of the system.
+names, and, for those whose membership is a rule, the fact that nothing
+records it (§2.16), are properties of the system. Who is in a `BUILTIN`
+group is not: it is recorded by the sources, and asked of them (§2.16).
 
 Such an answer is subject to every rule in this section. In particular
 an authority MUST apply the reserved-character and comparison rules to
