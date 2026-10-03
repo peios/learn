@@ -1,7 +1,7 @@
 ---
 title: Registry Editor
 type: how-to
-description: Browse and change the registry from the desktop — its keys as a tree, each key's values with their types, typed forms to edit them, new and deleted keys, and a word on anything you may not read or change.
+description: Browse and change the registry from the desktop — its keys as a tree, each key's values with their types, typed forms to edit them, new and deleted keys, permissions, and a word on anything you may not read or change.
 related:
   - peios/registry-concepts/overview
   - peios/registry-concepts/keys-values-and-types
@@ -118,6 +118,28 @@ every change goes to unless it names another.
 
 The key shown has these on its right-click menu in the tree too, with
 **Copy path**.
+
+## Permissions
+
+Each key has its own permissions, which say who may read it, change it
+and so on. **Permissions…** in the pane, or on the key's right-click
+menu, opens them in the permissions editor. **Read** covers reading the
+key's values and listing the keys under it, and **Write** covers changing
+values and creating keys. Each person or group added to a key applies to
+the keys under it as well.
+
+Some values hold a security descriptor: a list of who may do what, kept
+for a program that reads it, such as a service's `ServiceSecurity`.
+Registry Editor recognises one by its bytes, and shows it as **Security
+descriptor**, written in SDDL, a short text form, rather than as bytes.
+**Permissions…** beside it opens it in the permissions editor. What its
+rights mean is the reading program's to say, so only the general ones
+are named there: **Full control**, **Read**, **Write** and **Execute**.
+Anything else it grants is shown as special and kept as it is. To change
+one, you need to be allowed to change the key's values; otherwise it
+opens read-only and says why. For a service's own permissions, Services
+Manager names its rights properly: see [Who can manage a
+service](~peios/services-and-jobs/who-can-manage-a-service).
 
 ## Changes made elsewhere
 
