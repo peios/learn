@@ -97,9 +97,18 @@ measured from the allocator, so the budget is approximate. It is still a
 bound: with the default of 256 MiB, no number of concurrent queries
 holds much more than that.
 
-Metric queries are not yet counted against it: they gather the samples
-of a range before transforming and aggregating them, and holding them
-within the budget waits for windows to fold as samples are read.
+A metric query reads each series' samples in order and holds none of
+them: a transform keeps only the sample before, and an aggregation folds
+each sample into its window, or its series, as it is read.
+[*account.a-metric-query-folds-samples-as-it-reads-them]
+What it holds is what its result needs, and that counts against the
+same budget: the matched series, one fold per window or per series, the
+latest point of each series, and the result rows. A query whose result
+is the samples themselves — a range without an aggregation — holds them
+all, and is refused when they pass the budget like a sorted query.
+[*account.a-metric-querys-held-series-folds-and-rows-count-against-the-budget]
+A window aggregation over the same range holds one fold per window,
+however many samples fall in it.
 
 ## Request and response sizes
 
