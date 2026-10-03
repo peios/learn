@@ -83,6 +83,6 @@ of the two it is.
 ## Where to look
 
 - **On the desktop:** [Event Viewer](~peios/logs-and-events/event-viewer)
-  shows logs and events, newest first, as they arrive.
+  shows events and logs, newest first, as they arrive.
 - **In a terminal:** `evctl` runs a query in eventd's query language and
   prints what comes back. See [Using evctl](~peios/evctl/using-evctl).

@@ -1,15 +1,15 @@
 ---
 title: Event Viewer
 type: how-to
-description: Read a machine's logs and events from the desktop — newest first and live, narrowed by source, text, type and time, with every field of a record and a word on anything you may not see.
+description: Read a machine's events and logs from the desktop — newest first and live, narrowed by source, text, type and time, with every field of a record and a word on anything you may not see.
 related:
   - peios/logs-and-events/overview
   - peios/services-and-jobs/controlling-services
   - peios/evctl/using-evctl
 ---
 
-**Event Viewer** shows what eventd has recorded on the machine: the logs
-of its services and the events of its kernel and programs. It shows the
+**Event Viewer** shows what eventd has recorded on the machine: the events
+of its kernel and programs and the logs of its services. It shows the
 newest first, adds new ones at the top as they are recorded, and shows any
 record in full.
 
@@ -18,21 +18,34 @@ when something is kept from you.
 
 ## Opening it
 
-- From the launcher: start **Event Viewer**.
+- From the launcher: start **Event Viewer**. It opens on the events.
 - From Services Manager: select a service and choose **Logs…**, in the
   details pane or on the row's right-click menu. Event Viewer opens on
   that service's logs, including its hooks' and health checks'.
-- From a program: `gxwi-event-viewer --logs NAME` opens on what `NAME`
-  logged, and `gxwi-event-viewer --events` opens on the events.
+- From a program: `gxwi-event-viewer` opens on the events, and
+  `gxwi-event-viewer --logs NAME` on what `NAME` logged.
 
 A window opened on one service or one type of event says so in its title,
 such as **Event Viewer: sshd**, so several windows can be told apart.
 
+## Events
+
+**Events** is the first tab. Each row is one event, with when it happened,
+its type and its source. Select one to see its fields.
+
+To narrow them:
+
+- **Type** takes an event type, such as `access.denied`. A `*` stands
+  for any part of a type, so `job.*` is every job event and `*.denied`
+  every refusal. It suggests the types that have been recorded.
+- **Source** shows only events from programs, the kernel, security
+  (KACS) or the registry (LCS).
+
 ## Logs
 
-Select **Logs** at the top left. Each row is one line, with when it was
-written, where it came from and what it says. Lines written to standard
-error are shown in red.
+Select **Logs**, beside **Events**. Each row is one line, with when it
+was written, where it came from and what it says. Lines written to
+standard error are shown in red.
 
 To narrow them:
 
@@ -43,19 +56,6 @@ To narrow them:
 - **Errors only** shows only lines written to standard error. Many
   programs write everything to standard error, so this narrows less than
   its name suggests.
-
-## Events
-
-Select **Events**. Each row is one event, with when it happened, its
-type, its source, and its own fields in one line.
-
-To narrow them:
-
-- **Type** takes an event type, such as `access.denied`. A `*` stands
-  for any part of a type, so `job.*` is every job event and `*.denied`
-  every refusal. It suggests the types that have been recorded.
-- **Source** shows only events from programs, the kernel, security
-  (KACS) or the registry (LCS).
 
 ## The time range and applying a filter
 
@@ -95,6 +95,9 @@ Select a row to see all of it in the pane on the right: for a log line,
 its whole text, its stream, its job and its boot; for an event, every
 field, the standard ones first under plain names, with the field's own
 name beneath. Times are shown to the nanosecond, on this machine's clock.
+
+Drag the pane's left edge to make it wider or narrower. The width is
+kept while the window is open. On a narrow screen the pane is put away.
 
 - **Show only…** narrows the list to that record's source or type. A
   row's right-click menu does the same.
