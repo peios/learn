@@ -1,7 +1,7 @@
 ---
 title: Registry Editor
 type: how-to
-description: Browse and change the registry from the desktop — its keys as a tree, each key's values with their types and what the registry manual says of them, typed forms to edit them, new and deleted keys, permissions, and a word on anything you may not read or change.
+description: Browse and change the registry from the desktop — its keys as a tree, each key's values with their types and what the registry manual says of them, typed forms to edit them, new and deleted keys, permissions, layers, export, import, backup and restore, and a word on anything you may not read or change.
 related:
   - peios/registry-concepts/overview
   - peios/registry-concepts/keys-values-and-types
@@ -191,6 +191,33 @@ opens read-only and says why. For a service's own permissions, Services
 Manager names its rights properly: see [Who can manage a
 service](~peios/services-and-jobs/who-can-manage-a-service).
 
+## Files
+
+**Files**, in the key's pane, takes the key to a file and back. Each
+opens a file dialog, where you choose where to save or what to open:
+
+- **Export…** writes the key and everything under it to a *registry
+  document*, a JSON file of keys and values that you can read and change
+  by hand, and that `reg apply` reads too. It keeps every value exactly.
+- **Import…** reads a registry document and, after showing where it
+  will write, writes it into the registry, into the layer chosen in the
+  bar. It is all or nothing: if any part can't be written, none is.
+- **Back up…** copies the key and everything under it, permissions and
+  layers included, to a backup file.
+- **Restore…** replaces the key and everything under it with what a
+  backup holds, after asking.
+
+Backing up needs the privilege to back up files and keys
+(SeBackupPrivilege), and restoring the privilege to restore them
+(SeRestorePrivilege). Administrators hold both. Without them, the
+buttons are shown disabled, with the reason.
+
+The file dialog shows one folder at a time, starting in your home folder.
+Open a folder to go into it; **Up** and **Home** move about, and you can
+type a path. It can also make a folder, rename and delete, as you, and
+says which of those you may not do, and which folders you may not list.
+Saving over a file that is there asks first.
+
 ## Changes made elsewhere
 
 The window watches the keys it shows. A value or key added, changed or
@@ -224,5 +251,7 @@ may read this key but not change it.**
 `reg` does the same in a terminal. The tree is `reg ls` and `reg tree`, the
 values are `reg get` on a key, and a value in full is `reg get KEY NAME`.
 Saving a value is `reg set`, a new key is `reg new`, and deleting is
-`reg del`, with `-r` for a key and everything under it. See
+`reg del`, with `-r` for a key and everything under it. Export and
+import are `reg export --json` and `reg apply`, back up and restore are
+`reg backup` and `reg restore`, and layers are `reg layer`. See
 [reg](~peios/registry-tools/reg).
