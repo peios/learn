@@ -24,14 +24,20 @@ follows is the sequence within that phase.
    [*enforce.a-broad-selector-is-authorized-identifier-by-identifier]
 4. **Resolve and check** each discovered identifier: find its descriptor
    by hierarchical matching (§7.2), build the object type list for the
-   fields the query references (§7.3), call `kacs_access_check_list`,
-   and cache the verdicts for this `(token, identifier, field set)`
-   (§7.5).
+   fields the query references (§7.3), and add a node for every field
+   the descriptor's allowing object ACEs name, since those may make its
+   records visible though the query names none of them. Call
+   `kacs_access_check_list`.
    [*enforce.each-discovered-identifier-is-resolved-checked-and-cached]
-5. **Apply root verdicts.** An identifier whose root is denied is
-   invisible: its records are excluded from the logical row set before
-   aggregation, ordering, pagination and formatting.
+   [*enforce.the-identifier-check-adds-the-fields-the-descriptor-grants-by-name]
+5. **Apply record verdicts.** An identifier is invisible when the caller
+   may read neither its root nor any field: its records are excluded
+   from the logical row set before aggregation, ordering, pagination and
+   formatting.
    [*enforce.a-root-denied-identifiers-records-are-excluded-before-aggregation]
+   One whose root is denied but some field granted stays, for its
+   records to be shaped to those fields (step 10).
+   [*enforce.an-identifier-with-only-fields-granted-stays-visible]
    For a cross-type
    source, a denied identifier is treated as having no matching data.
    [*enforce.a-denied-cross-type-identifier-has-no-matching-data]
@@ -42,8 +48,9 @@ follows is the sequence within that phase.
    [*enforce.a-denied-referenced-field-excludes-that-identifiers-records]
    The query is **not** rejected.
    [*enforce.a-denied-referenced-field-does-not-reject-the-query]
-7. **Cross-type sources** get the same treatment. A denied root, or a
-   denied field needed to evaluate the condition, makes the condition
+7. **Cross-type sources** get the same treatment. An invisible
+   identifier, or a denied field needed to evaluate the condition, makes
+   the condition
    evaluate as though no matching cross-source data existed.
    [*enforce.a-denied-cross-source-root-or-field-evaluates-as-no-matching-data]
 8. **Execute**, with root filtering already part of the logical row set.
@@ -55,10 +62,15 @@ follows is the sequence within that phase.
    context naming the identifier, and cache the per-field results.
    [*enforce.each-result-identifier-is-rechecked-for-eventd-read-with-field-guids]
 10. **Shape each record.** Look up the cached results for its
-    identifier; exclude the record entirely if the root was denied;
-    otherwise include it, and include each field only if its node was
-    granted.
+    identifier and fields. Exclude the record entirely if neither the
+    root nor any of its fields was granted; otherwise include it, with
+    each field only if its node was granted.
     [*enforce.each-record-is-shaped-by-its-identifiers-cached-verdicts]
+    A grant of the root alone grants every field, since an ACE with no
+    object type applies to the whole tree (§7.3). A grant of some fields
+    alone gives records holding exactly those fields, and a record
+    carrying none of them is excluded.
+    [*enforce.a-field-only-grant-gives-records-holding-exactly-those-fields]
 
 ## Which clauses count as referencing a field
 

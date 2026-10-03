@@ -87,9 +87,14 @@ the same descriptors eventd checks (§7). The `access` module does that.
   origin's producer left off (§7.2).
 - `access` checks a descriptor the way eventd does: the calling
   process's own token, eventd's mapping, and an object type list of the
-  data type's root and any fields asked about. A record is visible only
-  with `EVENTD_READ` on the root.
-  [*client.a-record-is-visible-only-with-read-on-the-root]
+  data type's root, any fields asked about, and every field the
+  descriptor grants by name. Records are visible with `EVENTD_READ` on
+  the root or on any field, as eventd shows them (§7.4).
+  [*client.records-are-visible-with-read-on-the-root-or-any-field]
+- `field_grants` lists the fields a descriptor grants by name: the
+  object GUIDs of its allowing object ACEs. eventd uses it too, to find
+  which identifiers a field-only grant makes visible.
+  [*client.field-grants-are-the-object-guids-of-allowing-object-aces]
 - `readable` says how much of events, logs or metrics the caller may
   read across **every** pattern written for them, since a more specific
   pattern can grant what `*` denies, and the other way round: everything,
