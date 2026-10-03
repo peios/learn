@@ -64,9 +64,23 @@ for. See [Auditing](~peios/auditing/overview).
 
 ### Metrics
 
-A metric is a named series of numbers, such as a counter or a measurement,
-sampled every few seconds. Event Viewer does not show metrics yet; `evctl`
-can query them.
+A metric is a named number that a program measures again and again, such
+as how many requests a server has answered or how full a disk is. Each
+measurement is a *sample*. A metric can have several *series*, one for
+each set of its labels: `eventd.store.bytes` has a series for each of
+eventd's stores, labelled `store=logs`, `store=events` and so on.
+
+Every metric is one of three types:
+
+- a **counter** only goes up, such as requests answered, so what matters
+  is how fast it rises;
+- a **gauge** goes up and down, such as bytes in use;
+- a **histogram** is a spread of measurements, such as how long requests
+  took, read by its percentiles.
+
+A program publishes metrics only under names it has been allowed to.
+eventd publishes its own health as metrics named `eventd.*`. Like logs,
+metrics are best effort.
 
 ## Who may read what
 
@@ -83,6 +97,7 @@ of the two it is.
 ## Where to look
 
 - **On the desktop:** [Event Viewer](~peios/logs-and-events/event-viewer)
-  shows events and logs, newest first, as they arrive.
+  shows events and logs, newest first, as they arrive, and charts metrics
+  on dashboards of your own.
 - **In a terminal:** `evctl` runs a query in eventd's query language and
   prints what comes back. See [Using evctl](~peios/evctl/using-evctl).
