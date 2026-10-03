@@ -1,7 +1,7 @@
 ---
 title: Registry Editor
 type: how-to
-description: Browse and change the registry from the desktop — its keys as a tree, each key's values with their types, typed forms to edit them, new and deleted keys, permissions, and a word on anything you may not read or change.
+description: Browse and change the registry from the desktop — its keys as a tree, each key's values with their types and what the registry manual says of them, typed forms to edit them, new and deleted keys, permissions, and a word on anything you may not read or change.
 related:
   - peios/registry-concepts/overview
   - peios/registry-concepts/keys-values-and-types
@@ -76,6 +76,24 @@ to a row, after the offset of the first.
 With no value selected, the pane describes the key: when it last changed,
 how many keys and values it holds, and whether it is a link or is kept only
 until the machine restarts. **Copy path** copies the key's path.
+
+## What the registry manual says
+
+Packages document their keys and values in the registry manual, which
+[`regman`](~peios/registry-tools/regman) shows in a terminal. Registry
+Editor shows the same, at the foot of the pane:
+
+- For a key, what it is for, and the values documented for it that aren't
+  set here, each with its default and what it does. **Set…** beside one
+  starts a new value with that name and the type the manual gives it.
+- For a value, the type the manual expects, its default, the values it
+  may take, and when a change applies: at once, when the program that
+  reads it next starts, or when the machine next starts. Then what it is
+  for.
+
+If a value's type isn't the one the manual expects, the pane says so in
+red, since whatever reads it may not accept it. A key or value the manual
+doesn't mention says so too.
 
 ## Changing values
 
