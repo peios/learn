@@ -137,6 +137,38 @@ every change goes to unless it names another.
 The key shown has these on its right-click menu in the tree too, with
 **Copy path**.
 
+## Layers
+
+A [layer](~peios/registry-layers/layers) is a set of registry entries
+that can override another. **Layers…** in the bar opens them in a window
+of their own, each with its precedence, whether it is enabled, and who
+owns it. Where entries for the same value are in several layers, the one
+in the layer of highest precedence wins.
+
+- **New layer…** creates one. A layer may be disabled from the start: it
+  then takes part only for programs that name it.
+- **Disable** and **Enable** switch a layer off and on.
+- **Set** gives a layer a new precedence.
+- **Delete…** deletes a layer after asking, and every entry written into
+  it goes with it.
+
+A precedence above 0 needs the privilege to act as part of the operating
+system (SeTcbPrivilege), which administrators don't hold, so for them only
+0 may be set, and the window says so. The base layer is always there, at
+precedence 0, and can't be changed.
+
+**Writes go to**, in the bar, picks the layer your changes are written
+into, base unless you choose another. You need to be allowed to write into
+it as well as to change the key: if you may not, the key is shown
+read-only, with the reason. Deleting a value deletes only that layer's
+entry for it; an entry beneath, in a lower layer, then shows.
+
+The pane says which layer a value's data came from. The registry can't
+yet list a value's entries in the layers beneath the one that wins, so
+only the winning entry is shown. If your changes go to a lower layer than
+the one a value comes from, the pane warns that they won't show while
+that entry is there.
+
 ## Permissions
 
 Each key has its own permissions, which say who may read it, change it
