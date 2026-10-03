@@ -9,7 +9,8 @@ the metric store, independent of both the event and log paths.
 the same single-thread shape as the log writer, with the same
 consequence during a commit (§4.1).
 
-The wire contract is PSPU §3.9 to §3.13.
+The wire contract is PSPU §3.9 to §3.13. The same thread also writes
+eventd's own health samples, which skip step 1 below (§5.7).
 
 ## Processing a record
 
