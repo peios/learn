@@ -110,8 +110,10 @@ entirely. [*bootstrap.startup-proceeds-through-seven-phases-in-order]
     descriptor with the protected deny-Service, allow-SYSTEM broker
     descriptor (§7.6).
     [*bootstrap.the-log-socket-gets-the-deny-service-allow-system-broker-descriptor]
-19. Create the metric socket at `MetricSocketPath`, same rule.
-    [*bootstrap.the-metric-socket-gets-the-deny-service-allow-system-broker-descriptor]
+19. Create the metric socket at `MetricSocketPath`, then replace its
+    inherited descriptor with the protected one that lets every
+    authenticated caller send (§7.6).
+    [*bootstrap.the-metric-socket-gets-the-authenticated-users-descriptor]
 20. Establish and verify the Security Descriptor on all three, before
     any of them accepts or receives anything (§7.6).
     [*bootstrap.socket-descriptors-are-verified-before-any-socket-accepts-or-receives]

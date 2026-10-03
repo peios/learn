@@ -51,6 +51,22 @@ line. It does not prove that the line's message is truthful.
 
 ## Metrics carry the producer token
 
+Every authenticated caller may send to the metric socket: eventd replaces
+the descriptor it would inherit from its closed runtime directory with
+`D:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;GA;;;OW)(A;;FW;;;AU)`.
+[*writepath.every-authenticated-caller-may-send-to-the-metric-socket]
+Who may publish what is decided below, per metric name, against the
+token each datagram carries, so a socket that admitted fewer callers
+would only leave a grant of `EVENTD_PUBLISH` to anyone else unusable.
+
+The cost of an open socket is that anyone signed in can send datagrams,
+and the socket is lossy (§9.1): a caller sending in bulk can crowd out
+other producers' samples, though none of its own unauthorized records
+is stored. An operator who wants the socket narrower sets another
+descriptor on it after eventd starts, for example with `sd set`. eventd
+sets its own again each time it starts.
+[*writepath.eventd-sets-the-metric-socket-descriptor-again-at-each-start]
+
 A metric producer enables `KACS_SO_PASS_TOKEN` once on its persistent
 sending socket. KACS attaches the producer's effective identity to each
 datagram as `KACS_SCM_TOKEN`. eventd uses `recvmsg` with room for exactly

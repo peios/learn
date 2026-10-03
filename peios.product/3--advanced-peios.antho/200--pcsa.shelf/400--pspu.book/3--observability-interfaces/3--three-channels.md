@@ -71,7 +71,9 @@ one (§3.6).
 
 The metric socket descriptor is coarse admission only. Every metric
 datagram also carries a KACS sender token and every metric name is
-authorized for `EVENTD_PUBLISH` (§3.9).
+authorized for `EVENTD_PUBLISH` (§3.9). A collector SHOULD let every
+authenticated caller send by default, so that a publish grant to anyone
+can be used; an operator MAY narrow it.
 
 The query socket descriptor MUST let every authenticated caller connect.
 What a caller may read is decided per identifier against the read policy
