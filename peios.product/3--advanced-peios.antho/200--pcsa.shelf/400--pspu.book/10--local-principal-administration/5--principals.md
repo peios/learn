@@ -1,6 +1,6 @@
 ---
 title: Principals
-description: Listing the store's principals, one in full, the store's domain, and creating, deleting, enabling, disabling and changing a principal.
+description: Listing the store's principals, one in full, the store's domain, and creating, deleting, renaming, enabling, disabling and changing a principal.
 ---
 
 Every request naming a principal names it by `name`, a string of at most
@@ -47,6 +47,12 @@ most 4096 length-framed entries:
 | `shell` | string, 4096 bytes | empty |
 | `display_name` | string, 256 bytes | empty |
 | `claims` | array of at most 64 claims (§10.4) | none |
+| `permitted_logon_types` | `u32`, as on `Add` | `0`, not stated |
+| `credential_policy` | `u8` (§10.8) | not said |
+
+`credential_policy` is closed, as §10.8 says: a client MUST treat a
+value it does not know as a reply it cannot read. A client given no
+`credential_policy` MUST NOT show one; the store daemon did not say.
 
 A **group reference** is a length-framed structure:
 
@@ -87,6 +93,10 @@ carrying its RID.
 | `enabled` | boolean | |
 | `groups` | array of at most 128 length-framed strings: groups as written (§10.2) | |
 | `permitted_logon_types` | `u32` | `0`, not stated |
+| `primary_group` | optional string (§10.4), 256 bytes: a group as written | absent |
+| `home` | optional string, 4096 bytes | absent |
+| `shell` | optional string, 4096 bytes | absent |
+| `display_name` | optional string, 256 bytes | absent |
 
 `credential_kind` says plainly whether the principal has a password,
 rather than an empty `secret` meaning none, so that a client cannot make
@@ -103,10 +113,17 @@ the policy `Password`.
 (§2.13). Zero is *not stated*, which the authority reads as its default:
 every kind of sign-in a person could use, and never a service sign-in.
 
-The principal gets the store's next RID, a home directory, a shell and a
-primary group the store daemon chooses (on Peios, `/home/<name>`,
-`/bin/sh` and `Authenticated Users`). A client changes them afterwards
-with `SetProfile` and `SetPrimaryGroup`.
+The principal gets the store's next RID. Where `primary_group`, `home`,
+`shell` or `display_name` is absent, it gets what the store daemon
+chooses (on Peios, `Authenticated Users`, `/home/<name>`, `/bin/sh` and
+no display name). A present field is checked as `SetProfile` and
+`SetPrimaryGroup` check it, and a store daemon MUST refuse the whole
+request if it refuses any field, creating nothing: a principal is made
+whole or not at all.
+
+A store daemon that predates the last four fields ignores them, and
+makes the principal with its own choices. A client cannot tell that
+from the reply; one that must know reads the principal back with `Show`.
 
 A store daemon MUST refuse a name it already holds, a principal's or a
 local group's, as `Exists`, and a name it will not accept as `Invalid`
@@ -155,9 +172,47 @@ An absent field is left as it is. A present empty `display_name` clears
 it. A store daemon MAY refuse a value it will not accept as `Invalid`;
 on Peios `home` and `shell` must be absolute paths.
 
+## Rename
+
+`msg_type` = `0x0015`. Changes what a principal is called. Answered with
+`Done`.
+
+| Field | Encoding |
+|---|---|
+| `name` | string, 256 bytes: the principal |
+| `new_name` | string, 256 bytes: what it is to be called |
+
+Its SID, RID and Unix ID stay, so everything that names it by SID, every
+descriptor and every token already minted, still does. Its home directory
+stays too: a store daemon MUST NOT change `home` on a rename. A client
+that means the home directory to follow sends `SetProfile` as well.
+
+A store daemon MUST refuse a `new_name` another principal or a local
+group holds as `Exists`, and applies the rules for a name as `Add` does.
+A `new_name` differing from the principal's name only in case is a
+rename; one equal to it is `Done` and changes nothing.
+
+## SetLogonTypes
+
+`msg_type` = `0x0016`. Sets which kinds of sign-in a principal may be
+used for. Answered with `Done`.
+
+| Field | Encoding |
+|---|---|
+| `name` | string, 256 bytes |
+| `permitted_logon_types` | `u32`, as on `Add` |
+
+Zero returns the principal to *not stated*, the authority's default.
+There is no value meaning "no sign-in at all"; a client disables the
+principal for that. A store daemon MUST keep bits for logon types it
+does not know as they are given, as it does on `Add`: the authority
+checks the types it knows.
+
 ## Last administrator
 
 A store daemon MUST refuse, as `Invalid`, a request that would leave the
-store with no enabled principal in `BUILTIN\Administrators`: removing or
-disabling the last one, or removing the last one from that group
-(§10.6). A machine left so has nobody to administer it.
+store with no enabled principal in `BUILTIN\Administrators` who can sign
+in: removing or disabling the last one, removing the last one from that
+group (§10.6), or setting the last one's `permitted_logon_types` to a
+set that permits none of interactive, remote interactive or network
+sign-in. A machine left so has nobody to administer it.

@@ -46,9 +46,6 @@ that no longer exists. A client removes the members first.
 A store daemon MUST answer `NotFound` where it holds no local group by
 `name`, a well-known group's name included.
 
-> [!NOTE]
-> `lpsd` up to 0.0.22 answers `Internal` there, not `NotFound`.
-
 ## GroupAdd and GroupRemove
 
 `GroupAdd`, `msg_type` = `0x0008`, puts a principal in a group;
@@ -78,9 +75,6 @@ the last enabled one there (§10.5).
 
 A store daemon MUST answer `NotFound` for a `group` that names nothing it
 can resolve.
-
-> [!NOTE]
-> `lpsd` up to 0.0.22 answers `Internal` there, not `NotFound`.
 
 ## SetPrimaryGroup
 

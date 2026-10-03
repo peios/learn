@@ -27,6 +27,8 @@ description: Every PLPS message by number, which reply answers which request, th
 | `0x0012` | `KeyAdd` | client → store daemon | `Done` | §10.8 |
 | `0x0013` | `KeyRemove` | client → store daemon | `Done` | §10.8 |
 | `0x0014` | `CredentialPolicy` | client → store daemon | `Done` | §10.8 |
+| `0x0015` | `Rename` | client → store daemon | `Done` | §10.5 |
+| `0x0016` | `SetLogonTypes` | client → store daemon | `Done` | §10.5 |
 | `0x8001` | `Principals` | store daemon → client | | §10.5 |
 | `0x8002` | `Principal` | store daemon → client | | §10.5 |
 | `0x8003` | `DomainIs` | store daemon → client | | §10.5 |

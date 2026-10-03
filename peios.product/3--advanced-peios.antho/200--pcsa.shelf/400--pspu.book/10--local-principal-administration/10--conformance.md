@@ -24,10 +24,14 @@ held, and `Invalid`, with the reason, for anything it will not do
 (§10.5 to §10.9).
 
 **Its rules.** Refuses to leave the store with no enabled administrator
-(§10.5); to delete a group anyone is in or has as their primary group
-(§10.6); a claim PSI could not carry (§10.7); and a key it cannot read,
-or holds already (§10.8). Gives a principal made without a password the
-policy `NoCredential`, and one made with one `Password` (§10.5). Never
+who can sign in (§10.5); to delete a group anyone is in or has as their
+primary group (§10.6); a claim PSI could not carry (§10.7); and a key it
+cannot read, or holds already (§10.8). Gives a principal made without a
+password the policy `NoCredential`, and one made with one `Password`
+(§10.5). Makes a principal whole or not at all, refusing an `Add` if it
+refuses any field of it (§10.5). Keeps a renamed principal's SID, RID,
+Unix ID and home directory (§10.5). Holds one name for one principal or
+local group, matched without regard to case (§10.5, §10.6). Never
 reissues a RID (§10.2).
 
 **Changes.** Acknowledges a change only once it is durable, undoes one
@@ -44,7 +48,10 @@ the store again before saying the change failed (§10.3).
 **Requests.** Passes a group as the person wrote it, resolving nothing
 itself (§10.2). Sends `credential_kind` `0` only where a principal is
 meant to need no credential (§10.5). Sends `CredentialPolicy` alongside
-`SetPassword` where the password is meant to be used (§10.5).
+`SetPassword` where the password is meant to be used (§10.5). Reads a
+principal back with `Show` where it must know that an `Add`'s profile
+was applied (§10.5). Shows no credential policy where the store daemon
+gave none (§10.5).
 
 **Refusals.** Shows a refusal's `reason` as it is (§10.9).
 

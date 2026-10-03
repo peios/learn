@@ -64,10 +64,14 @@ state          enabled
 primary group  Authenticated Users [S-1-5-11]
 home           /home/jack
 shell          /bin/sh
+logon types    default (interactive, remote-interactive, network, network-cleartext, batch, new-credentials)
+credential     password
 groups         Administrators [S-1-5-32-544]
                developers [S-1-5-21-2847362817-1094533892-3310298447-1001] (gid 1001001)
 claims         Department (string) = "Engineering"
 ```
+
+`logon types` are the kinds of sign-in the principal may be used for (see `lps logon-types` below); `default` means none were chosen, and the machine's default applies. `credential` is what it signs in with: `password`, `key` (an SSH key), `either`, `none` (nothing is asked for), or `denied`.
 
 Groups show a name where this machine knows one, and always show the SID. The two are kept side by side deliberately: the name is what you recognise, the SID is what a security descriptor actually holds, and the moment they disagree is exactly when you need to see both.
 
@@ -126,7 +130,7 @@ Any option you supply is not asked for, so scripted invocations keep working unc
 | `--service` | Create a principal that exists to run a service, and can do nothing else. See below. |
 | `--no-prompt` | Fail rather than ask for anything missing. |
 
-Nothing is sent until you confirm, so answering `n` creates nothing.
+Nothing is sent until you confirm, so answering `n` creates nothing. Everything is sent in one request, so a principal is created whole or not at all: if `lpsd` refuses the shell, say, no principal is made.
 
 **`lps` never prompts when standard input is not a terminal.** A prompt down a pipe would consume the next line of whatever is driving the tool. See *From a script* below.
 
@@ -191,6 +195,19 @@ Deletes a principal.
 
 The RID is **not** reclaimed. Files the principal owned keep naming a SID that now resolves to nobody, and nothing will ever hold that SID again. `lps disable` is usually what you wanted — see [creating accounts](~peios/managing-local-principals/creating-accounts).
 
+### `lps rename <name> <new-name>`
+
+Renames a principal.
+
+```
+$ lps rename erin erin.k
+renamed erin to erin.k
+```
+
+Its SID stays, so every file, permission and group membership that names it still does, and it signs in by the new name from now on. Its **home directory stays** where it was; move it with `lps set --home` if you want it to follow.
+
+A name held by another principal or by a local group is refused. Changing only the case, `erin` to `Erin`, is allowed.
+
 ## Enabling and disabling
 
 ### `lps enable <name>` / `lps disable <name>`
@@ -198,6 +215,31 @@ The RID is **not** reclaimed. Files the principal owned keep naming a SID that n
 A disabled principal keeps everything except the ability to sign in.
 
 Both are refused if they would leave the machine with no enabled administrator.
+
+### `lps logon-types <name> <type>...`
+
+Sets the kinds of sign-in a principal may be used for. Any other kind is refused, even with the right credential.
+
+```
+$ lps logon-types backup network batch
+set the logon types for backup
+$ lps logon-types backup default
+set the logon types for backup
+```
+
+| Type | Signing in |
+|---|---|
+| `interactive` | at this machine: its console or desktop |
+| `remote-interactive` | to a desktop from somewhere else |
+| `network` | over the network, such as with SSH |
+| `network-cleartext` | over the network, with the password sent to this machine |
+| `batch` | as a scheduled job |
+| `new-credentials` | as a second identity for outgoing connections |
+| `service` | as a service, started by the service manager |
+
+`default` returns the principal to the machine's default: every kind a person uses, and never `service`. There is no setting for "no sign-in at all"; `lps disable` is that.
+
+The last enabled administrator must keep `interactive`, `remote-interactive` or `network`, so the machine always has someone who can sign in to administer it.
 
 ## Passwords
 
