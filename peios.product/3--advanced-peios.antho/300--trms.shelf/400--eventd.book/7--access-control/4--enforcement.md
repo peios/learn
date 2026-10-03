@@ -27,7 +27,8 @@ follows is the sequence within that phase.
    fields the query references (§7.3), and add a node for every field
    the descriptor's allowing object ACEs name, since those may make its
    records visible though the query names none of them. Call
-   `kacs_access_check_list`.
+   `kacs_access_check_list`, and cache the verdict for this
+   `(token, identifier, field set)` (§7.5).
    [*enforce.each-discovered-identifier-is-resolved-checked-and-cached]
    [*enforce.the-identifier-check-adds-the-fields-the-descriptor-grants-by-name]
 5. **Apply record verdicts.** An identifier is invisible when the caller
