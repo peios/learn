@@ -24,7 +24,8 @@ when something is kept from you.
   details pane or on the row's right-click menu. Event Viewer opens on
   that service's logs, including its hooks' and health checks'.
 - From a program: `gxwi-event-viewer` opens on the events,
-  `gxwi-event-viewer --metrics` on your dashboards, and
+  `gxwi-event-viewer --metrics` on your dashboards,
+  `gxwi-event-viewer --settings` on eventd's settings, and
   `gxwi-event-viewer --logs NAME` on what `NAME` logged.
 
 A window opened on one service or one type of event says so in its title,
@@ -184,6 +185,63 @@ may read every metric.
 
 If eventd does not let you ask it anything at all, the list says so
 instead of showing nothing.
+
+## Settings
+
+Select **Settings**, the last tab, to see how eventd is set up and who
+may read what. Anyone may look. Only those allowed to change eventd's
+settings may change them, by default administrators; everyone else sees
+them read-only, with a line saying why.
+
+### eventd's settings
+
+The settings are in groups: **Keeping records** first, then taking in
+events, logs and metrics, answering queries, and storage. Each one says
+what it is, what it is set to or that it has its default, the values it
+may take, and whether a change applies at once or when eventd next
+starts. These descriptions are eventd's own, from its regman page, which
+`regman` shows in a terminal.
+
+- Type a value and press **Enter** or **Save** to change one. A value
+  outside its range is refused, with the range given, and nothing is
+  changed.
+- **Use the default** takes a setting back to its default.
+
+eventd notices a change by itself and records it as a
+`synthetic.config_change` event, which the Events tab shows. The paths
+of its stores and sockets are shown but not changed here: eventd needs
+them to point at places made ready for it.
+
+### Who may read what
+
+eventd's **read policy** says who may read which events, logs and
+metrics. It is a list of **patterns**, each a name with the permissions
+for it:
+
+- `*` covers everything of its kind that no other pattern covers.
+- A name, such as `sshd` for logs or `kacs` for events, covers that name
+  and every name under it, such as `kacs.access_denied`.
+
+The most specific pattern that matches decides. Each pattern says, in
+words, who may read it, who may only read some of its fields, and who may
+not. For metrics it also says who may publish them.
+
+- **Change…** opens the pattern in the permissions editor. Changes apply
+  from the next question anyone asks eventd.
+- **Add a pattern** starts a new pattern for a name, with the permissions
+  that apply to that name now, and opens it to be changed. Nothing changes
+  until you change it there.
+- **Remove…** takes a pattern away after asking. The broader pattern
+  above it then decides. The `*` patterns cannot be removed, since eventd
+  would let nobody read what they cover.
+
+**Changing eventd's indexes**, at the end, says who may ask eventd to
+index a field.
+
+For example, to keep sshd's logs from everyone but administrators, add a
+pattern `sshd` under Logs and, in the editor, take **Read** away from
+Authenticated Users. Anyone else then sees "Hidden from you: logs from
+sshd\*" on the Logs tab.
 
 ## In a terminal
 
