@@ -95,6 +95,18 @@ including for integers outside the range binary64 can represent exactly.
 A collector MUST NOT resolve `9007199254740993 > 9007199254740992.0` by
 converting the left operand to a float, which would make it false.
 
+### NaN
+
+An event payload may carry a NaN (§3.5), though a literal never can
+(§3.19). Every NaN is one value: it equals every other NaN and nothing
+else, so `x == 5` is false and `x != 5` is true for a record whose `x`
+is a NaN.
+
+An ordering operator with a NaN on either side evaluates **false**, as
+IEEE 754 has it. `x < 5` and `x >= 5` are both false for that record.
+Sorting and grouping still need a place for a NaN, and §3.21 gives it
+one.
+
 ## Types do not coerce
 
 Values of different non-numeric types are never equal. The string `"1"`

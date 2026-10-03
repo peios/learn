@@ -18,46 +18,56 @@ predicate on `cpu_id` scans all of them.
 
 How results combine depends on the query.
 
-**Non-aggregating queries.** Each shard produces rows sorted by the
-effective sort key, tiebreakers included (§6.2), and the coordinator
-performs an N-way merge of the sorted streams.
+**Queries in the default order.** A non-aggregating query with no
+`SORT` reads every shard at once, each newest first through
+`idx_events_timestamp`, and the coordinator takes whichever shard's
+next row comes first under the tiebreakers of §6.2: an N-way merge of
+the sorted streams.
 [*fanout.non-aggregating-results-are-an-n-way-merge-of-sorted-shard-streams]
+Each row that passes access control and every predicate is sent as soon
+as it is taken.
+[*fanout.merged-results-are-streamed-incrementally-not-materialised]
+Once `SKIP + TAKE` rows have passed, the merge stops.
+[*fanout.with-take-the-merge-stops-once-skip-plus-take-rows-have-passed]
+What the query holds is one row per shard, the merge frontier, whatever
+the size of its result.
+[*fanout.a-default-order-query-holds-one-row-per-shard]
 
-With `TAKE` present, each shard returns at most `SKIP + TAKE` rows — or
-`TAKE` rows when there is no `SKIP` — and the coordinator applies
-`SKIP` and `TAKE` after merging.
-[*fanout.with-take-each-shard-returns-at-most-skip-plus-take-and-paging-follows-the-merge]
-The total read is therefore at most
-`(SKIP + TAKE) × shard_count`, which is the price of not knowing in
-advance which shard holds the winning rows.
+**Sorted queries.** A `SORT` on any other field reads the shards in
+turn and gathers the visible rows. With `TAKE` it keeps only the best
+`SKIP + TAKE` of them, trimming to that whenever it holds twice as many
+or a thousand, whichever is more.
+[*fanout.a-sorted-query-with-take-keeps-only-its-best-skip-plus-take-rows]
+Without `TAKE` it holds every visible row. Either way it holds them
+within `MaxQueryHeldBytes` (§6.5).
 
-With `TAKE` absent, each shard streams every matching row until the
-query completes or times out.
-[*fanout.without-take-each-shard-streams-every-matching-row]
+**Aggregating queries.** Rows from every shard fold into one set of
+groups as they are read, and no row is kept.
+[*fanout.aggregating-queries-fold-rows-into-groups-as-they-are-read]
+Each group keeps:
 
-**Aggregating queries.** Each shard computes a partial aggregate and the
-coordinator combines them:
-[*fanout.aggregating-queries-combine-per-shard-partial-aggregates]
+| Query | Each group keeps |
+|---|---|
+| `COUNT BY`, `TOP N BY`, `GROUP … COUNT` | a count; at the end the groups are sorted by count descending and `TAKE` applies [*fanout.grouped-counts-are-sorted-descending-then-taken] |
+| `GROUP … SUM` | the exact integer sum while every value is an integer and it fits, and the binary64 sum [*fanout.group-sum-keeps-the-exact-and-binary64-sums] |
+| `GROUP … AVG` | the binary64 **sum and count**, divided once at the end [*fanout.group-avg-divides-the-whole-sum-by-the-whole-count] |
+| `GROUP … MIN` / `MAX` | the extreme so far [*fanout.group-min-and-max-keep-the-extreme-so-far] |
+| `DISTINCT` | the value [*fanout.distinct-keeps-each-value] |
 
-| Query | Shard returns | Coordinator does |
-|---|---|---|
-| `COUNT` | its local count | sums [*fanout.count-sums-the-per-shard-counts] |
-| `COUNT BY`, `TOP N BY`, `GROUP … COUNT` | per-group counts | sums per group key, sorts by count descending, applies `TAKE` [*fanout.grouped-counts-are-summed-per-key-sorted-descending-then-taken] |
-| `GROUP … SUM` | per-group sums | sums per group [*fanout.group-sum-sums-the-per-shard-group-sums] |
-| `GROUP … AVG` | per-group **sum and count** | computes the average from the combined pair [*fanout.group-avg-divides-the-combined-per-shard-sum-by-the-combined-count] |
-| `GROUP … MIN` / `MAX` | per-group min or max | takes the min or max [*fanout.group-min-and-max-take-the-extreme-of-the-per-shard-results] |
-| `DISTINCT` | local distinct values | unions [*fanout.distinct-unions-the-per-shard-distinct-values] |
+`AVG` is the one that cannot be composed from its own output: averaging
+partial averages weights each part equally, regardless of how many rows
+it held, so the sum and the count are kept and divided once.
 
-`AVG` is the one that cannot be composed from its own output. Averaging
-per-shard averages weights each shard equally regardless of how many
-rows it held, so a shard is asked for the sum and the count and the
-coordinator divides once. Averaging shard averages would weight shards
-rather than rows and give a different answer.
+A group is found by hashing a key that every pair of language-equal
+values shares — numbers by their nearest binary64, text with ASCII case
+folded — and then by the language's own equality against each group's
+representative in the order the groups appeared (§6.2). The hash only
+narrows the search; equality decides.
+[*fanout.groups-are-found-by-a-hash-that-equal-values-share]
 
-Pushing aggregation down bounds the coordinator's memory to the group
-key cardinality times the shard count, rather than to the total row
-count.
-[*fanout.coordinator-aggregation-memory-is-bounded-by-group-cardinality-times-shard-count]
+What an aggregation holds is bounded by the number of its groups rather
+than by its rows, within `MaxQueryHeldBytes` (§6.5).
+[*fanout.aggregation-memory-is-bounded-by-group-cardinality]
 
 ## The unbounded case
 
@@ -66,12 +76,11 @@ A non-aggregating query without `TAKE` has no implicit row limit.
 `EVENTS SINCE 7d ago` may match millions of rows, all of which pass
 through the merge.
 
-The query timeout is the only backstop (§6.5).
+In the default order that costs time and no memory, so the query
+timeout is the only backstop (§6.5).
 [*fanout.the-query-timeout-is-the-only-backstop-for-an-unbounded-query]
-Streaming merged results to the client incrementally, rather than
-materialising the whole set before sending, is what keeps the memory
-cost proportional to the merge frontier instead of to the result.
-[*fanout.merged-results-are-streamed-incrementally-not-materialised]
+The timeout covers sending as well as reading, so a client that reads
+slowly can run out of time on a result the merge would have finished.
 
 ## Descriptors
 

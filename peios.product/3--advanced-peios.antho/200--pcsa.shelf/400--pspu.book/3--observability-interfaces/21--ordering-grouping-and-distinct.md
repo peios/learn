@@ -52,6 +52,13 @@ by type first, in this order:
 
 `DESC` reverses the whole ordering, type order included.
 
+A NaN is numeric and sorts **after every other number**, the infinities
+included. Every NaN is one value, so NaNs tie with each other and fall
+to the tiebreakers. Without a place for it the order would not be
+total: a NaN is neither less than, greater than nor equal to any number
+under IEEE 754, and a sort given such a comparison may produce any order
+at all, or fail.
+
 Strings and GUIDs compare with the same ASCII folding as predicates. Two
 strings equal under folding are ordered by their original UTF-8 bytes,
 so that folding never costs totality. Binary values compare as unsigned
@@ -67,6 +74,7 @@ equality:
 
 - missing and null are one group
 - integers and floats that are numerically equal are one group
+- every NaN is one group
 - strings and GUIDs group under ASCII folding
 - binary values group by exact bytes
 

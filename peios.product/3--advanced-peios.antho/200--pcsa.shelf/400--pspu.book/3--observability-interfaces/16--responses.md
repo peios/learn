@@ -92,3 +92,24 @@ distinct-value limit (§3.27), and the client's own ability to keep up
 On expiry a collector MUST cancel the query and send `"error"`. Any
 `"ok"` messages already sent are discarded by the client under the rule
 above.
+
+## Memory
+
+A non-aggregating query in the default order (§3.21) needs to hold
+nothing while it runs: its records can be read in that order and sent
+as they are read. A collector SHOULD answer it so, and MUST NOT refuse
+it for the size of its result, however large. A client that wants every
+record of a large store asks for exactly this.
+
+Other queries must hold something to answer: a sort on another field
+holds the records it orders, or with `TAKE` only the best `SKIP + TAKE`
+of them, and an aggregation holds its groups. A collector MAY bound the
+memory queries hold. When a query would exceed the bound, the collector
+MUST fail it with `"error"`. It MUST NOT truncate the result, drop
+groups, or answer from part of the data instead.
+
+> [!NOTE]
+> §3.A gives the mainline bound. The mainline collector applies one
+> bound to every running query together, as it does for concurrency
+> (§3.14), so a query can fail because others hold memory. Retrying it
+> later may succeed.

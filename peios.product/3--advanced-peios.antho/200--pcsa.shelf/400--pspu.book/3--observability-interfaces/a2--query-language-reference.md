@@ -61,6 +61,7 @@ METRIC name[label_selector] [transform] [aggregation] [clauses…]
 | Unbracketed metric query with `SINCE` resolving to several series | execution | §3.25 |
 | Cross-type metric selector resolving to several series | execution | §3.26 |
 | Aggregation producing a non-finite value | execution | §3.23, §3.25 |
+| A sort or aggregation needing more memory than the collector allows queries | execution | §3.16 |
 
 "Parse" failures need no data. "Execution" failures depend on what the
 store holds, so the same query string may succeed on one system and fail

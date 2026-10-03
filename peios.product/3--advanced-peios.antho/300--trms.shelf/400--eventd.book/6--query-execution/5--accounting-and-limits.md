@@ -1,6 +1,6 @@
 ---
 title: Accounting and Limits
-description: What every query records for the adaptive indexer, and the concurrency and timeout limits it runs under.
+description: What every query records for the adaptive indexer, and the concurrency, memory and timeout limits it runs under.
 ---
 
 ## Recording what was asked
@@ -62,6 +62,39 @@ side cannot exhaust ingestion (PSPU §3.3).
 > class of missing primitive as the datagram peer identity that leaves
 > `origin` unverifiable (PSPU §3.28), and the global limit is what stands
 > in for it.
+
+## Memory
+
+eventd may not be killed: it runs with `oom_score_adj` −1000, so if its
+memory alone fills the machine, the kernel has nothing left to reclaim
+and panics. What bounds a query's memory therefore has to hold however
+many queries run at once.
+
+A query in the default order holds one row per shard and nothing more
+(§6.4), and is never refused for the size of its result (PSPU §3.16).
+[*account.a-default-order-query-is-never-refused-for-its-size]
+
+Everything else a query must hold — a sorted query's rows, an
+aggregation's groups, a watch batch — counts against
+`MaxQueryHeldBytes` (§A), **one budget for every running query
+together**.
+[*account.max-query-held-bytes-bounds-what-all-running-queries-hold-together]
+A query takes from it in 64 KiB granules as it grows, gives back what
+it no longer needs when a sorted query trims, and gives back all of it
+when it ends.
+[*account.held-memory-is-reserved-in-granules-and-given-back]
+A query that would take more than is left fails with an error, rather
+than being truncated or answered from part of the data.
+[*account.a-query-past-the-held-budget-fails-with-an-error]
+
+What a row or group costs is estimated from its fields and values, not
+measured from the allocator, so the budget is approximate. It is still a
+bound: with the default of 256 MiB, no number of concurrent queries
+holds much more than that.
+
+Metric queries are not yet counted against it: they gather the samples
+of a range before transforming and aggregating them, and holding them
+within the budget waits for windows to fold as samples are read.
 
 ## Request and response sizes
 

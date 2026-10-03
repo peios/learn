@@ -97,6 +97,7 @@ No compiled-in defaults. A missing or invalid value fails startup
 | `MaxDistinctStreamValues` | REG_DWORD | 100000 | 1000–10000000 | Values tracked by one DISTINCT streaming query. [*config.max-distinct-stream-values-defaults-to-100000-per-query] |
 | `MaxQueryRequestBytes` | REG_DWORD | 65536 | 1024–16777216 | Hard maximum query request payload. [*config.max-query-request-bytes-is-a-hard-limit-defaulting-to-65536] |
 | `QueryResponseTargetBytes` | REG_DWORD | 65536 | 1024–16777216 | Soft response batching target; one complete record may exceed it (§6). [*config.query-response-target-bytes-is-a-soft-target-defaulting-to-65536] |
+| `MaxQueryHeldBytes` | REG_DWORD | 268435456 (256 MiB) | 16777216–4294967295 | What every running query together may hold to answer: sorted rows, aggregation groups and watch batches. A query in the default order holds nothing against it (§6.5). [*config.max-query-held-bytes-defaults-to-256-mib-across-all-queries] |
 
 ## Adaptive metric rollups
 
