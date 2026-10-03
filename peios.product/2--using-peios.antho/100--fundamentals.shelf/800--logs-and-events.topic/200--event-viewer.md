@@ -38,7 +38,8 @@ To narrow them:
 
 - **From** takes a service's name, and shows its lines and those of its
   hooks and health checks. It suggests the names that have logged.
-- **Containing** shows only lines with that text in them, in any case.
+- **Containing** shows only lines with that text in them, whatever the
+  case of the letters.
 - **Errors only** shows only lines written to standard error. Many
   programs write everything to standard error, so this narrows less than
   its name suggests.
@@ -64,7 +65,8 @@ Searching for text and the suggestions cover the whole range, so a
 shorter range is quicker on a busy machine.
 
 Typed filters apply when you press **Enter** or select **Apply**. **Errors
-only**, **Source** and the time range apply as soon as you change them.
+only**, **Source** and the time range apply as soon as you change them,
+and so does anything typed and not yet applied.
 
 ## Following new records
 
