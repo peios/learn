@@ -83,13 +83,19 @@ Packages document their keys and values in the registry manual, which
 [`regman`](~peios/registry-tools/regman) shows in a terminal. Registry
 Editor shows the same, at the foot of the pane:
 
-- For a key, what it is for, and the values documented for it that aren't
-  set here, each with its default and what it does. **Set…** beside one
-  starts a new value with that name and the type the manual gives it.
+- For a key, what it is for.
 - For a value, the type the manual expects, its default, the values it
   may take, and when a change applies: at once, when the program that
   reads it next starts, or when the machine next starts. Then what it is
   for.
+
+Values the manual documents that aren't set on the key are listed after
+the values that are, greyed, with **Not set** and the default the manual
+gives, as in **Not set · default 30**. Whatever reads a value that isn't
+set uses its default. They aren't values, so they aren't counted or
+exported. Select one to see what the manual says of it, and double-click
+it or choose **Set…** to start a new value with its name, the type the
+manual gives it and, where the default is a plain value, the default.
 
 If a value's type isn't the one the manual expects, the pane says so in
 red, since whatever reads it may not accept it. A key or value the manual
