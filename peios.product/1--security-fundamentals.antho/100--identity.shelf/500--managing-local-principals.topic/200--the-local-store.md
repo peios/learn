@@ -31,7 +31,7 @@ A principal's SID is the domain plus their RID. `jack` with RID 1000 in domain `
 
 **RIDs start at 1000 and are never reused.** Not even after an account is deleted. That is deliberate and it is the property that makes deletion safe to offer at all: a reissued RID would give a new person the SID of an old one, silently inheriting every access the descriptors on this machine still grant them. It is the one identity mistake that cannot be undone by fixing the account afterwards.
 
-**The local groups.** A group created here is an object: a RID from the same counter, a name, and a Unix ID. Sharing the counter with principals is what stops a group ever colliding with a user's SID.
+**The local groups.** A group created here is an object: a RID from the same counter, a name, a Unix ID, and a description of what it is for, which anyone may read. Sharing the counter with principals is what stops a group ever colliding with a user's SID.
 
 Well-known groups — `BUILTIN\Administrators`, `Everyone`, `Authenticated Users` — are **not** stored. Their SIDs are the same on every Peios machine, so a stored copy could only ever drift from the real one, and provisioning would freeze whatever the table said that day. `lpsd` resolves their names from a table in its own code.
 
@@ -94,13 +94,19 @@ A few hundred principals, rewritten when an administrator changes an account, is
 
 The file carries a checksum. Not to catch a half-written file, which atomic replacement makes impossible, but because a corrupted store that decoded *short* would present as an account quietly no longer existing.
 
+## Its format, and upgrading
+
+The file also carries a format number. `lpsd` reads the format it writes and the one before it: a store written before groups had descriptions loads with every description empty, and is written in the new format the next time anything changes. Nothing has to be done to upgrade it.
+
+Going back is another matter. An older `lpsd` refuses a store in a format newer than it knows, and does not start, rather than guess at what it cannot read. So once a newer `lpsd` has changed the store, an older one cannot be put back in its place.
+
 ## Missing versus corrupt
 
 These are treated as opposite outcomes, and the distinction is the most important behaviour in this page.
 
 **No store at all** means an unprovisioned machine. `lpsd` generates a domain, writes an empty store, and carries on.
 
-**A store that will not read** is fatal. `lpsd` refuses to start.
+**A store that will not read**, damaged or in a format this `lpsd` doesn't know, is fatal. `lpsd` refuses to start.
 
 Collapsing the two — "cannot read it, so make a new one" — would turn a flipped bit into every account on the machine silently ceasing to exist, and then reappearing under a *new domain* with different SIDs, orphaning every security descriptor that named them. Refusing to start is loud, reversible, and leaves the evidence intact.
 

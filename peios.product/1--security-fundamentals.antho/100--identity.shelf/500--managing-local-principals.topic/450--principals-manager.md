@@ -24,13 +24,14 @@ Start it from the launcher: **Principals Manager**.
 - A user is listed with their full name, if they have one, whether they
   are local or built-in, and whether they are enabled. A disabled user
   keeps everything but can't sign in, and is greyed.
-- A group is listed with whether it is local or built-in, and how many
-  members it has. Some built-in groups, such as `Everyone`, have no list
-  of members at all: who is in them is decided by a rule as each person
-  signs in, and they say **By rule**.
+- A group is listed with whether it is local or built-in, how many
+  members it has, and its description: what it is for. Some built-in
+  groups, such as `Everyone`, have no list of members at all: who is in
+  them is decided by a rule as each person signs in, and they say **By
+  rule**.
 
-Type in **Find** to narrow the list to names, full names or SIDs
-containing what you type.
+Type in **Find** to narrow the list to names, full names, descriptions or
+SIDs containing what you type.
 
 ## A user or group in full
 
@@ -42,9 +43,10 @@ over the network; the groups they are in; and their **claims**, the
 named values that permissions written with conditions are checked
 against. **Copy SID** copies their SID.
 
-For a group, it is its group ID and SID, and who is in it. Who is in a
-built-in group such as `Administrators` is recorded on this machine, as
-a local group's is, so it is listed too.
+For a group, it is its description, group ID and SID, and who is in it.
+Who is in a built-in group such as `Administrators` is recorded on this
+machine, as a local group's is, so it is listed too. Someone whose
+primary group it is, is in it.
 
 Select a group a user is in, or a member of a group, to go to it.
 
@@ -70,8 +72,10 @@ says why.
 
 Select a local user, and their buttons are below their details:
 
-- **Edit** changes their full name, home and shell. Their home folder is
-  made at their first sign-in, and is not moved if you change it.
+- **Edit** changes their full name, home, shell and primary group. Their
+  home folder is made at their first sign-in, and is not moved if you
+  change it. Their primary group is the one their new files belong to,
+  and they are in it whatever their other groups.
 - **Rename** changes the name they sign in with. They keep their SID, so
   their files, permissions and groups stay theirs. Their home stays where
   it is; change it under **Edit** if it should follow.
@@ -83,13 +87,39 @@ Select a local user, and their buttons are below their details:
   rest a person uses), or only the ways you tick. **To run a service**
   lets the service manager start a service as them without any password,
   and is never part of the default.
+- **Add to group** puts them in a local group, or in a built-in one whose
+  members are recorded here, such as `Administrators` or `Users`.
+  **Remove**, beside a group they are in, takes them out of it.
 - **Disable** stops them signing in and keeps everything else; **Enable**
   lets them again.
 - **Delete** removes them, after asking. Their SID is never given to
   anyone again, so files and permissions that name it name nobody;
   **Disable instead** is offered, and is usually what you want.
 
-Changes to how a user signs in apply from their next sign-in.
+Changes to how a user signs in, and to the groups they are in, apply
+from their next sign-in.
+
+## Groups
+
+In **Groups**, **New group** (or **Ctrl+N**) makes a local group, with a
+name and a description of what it is for. Anyone may read the
+description.
+
+Select a local group, and its buttons are below its details:
+
+- **Edit** changes its description; empty, it has none.
+- **Rename** changes its name. It keeps its SID, so its members, and the
+  permissions that name it, stay as they are.
+- **Add member** puts a local user in it. **Remove**, beside a member,
+  takes them out; a member whose primary group it is has to be given
+  another under **Edit** first.
+- **Delete** removes it, after asking, once nobody is in it. Its SID is
+  never given to anything again.
+
+A built-in group whose members are recorded here, such as
+`Administrators`, has **Add member** and **Remove** too, but can't be
+renamed, described or deleted: `authd` defines it, the same on every
+Peios machine.
 
 The machine always keeps an enabled administrator who can sign in.
 Disabling or deleting the last one, or taking away every way they could

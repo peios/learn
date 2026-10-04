@@ -290,26 +290,46 @@ The primary group need not be a membership: `authd` adds it to the token if it i
 
 ## Groups
 
-Local groups are objects with a name, a RID and a gid — unlike well-known groups, which exist on every Peios machine and are not stored here.
+Local groups are objects with a name, a RID, a gid and a description — unlike well-known groups, which exist on every Peios machine and are not stored here.
 
 ### `lps group list`
 
 ```
 $ lps group list
-NAME          RID       GID  MEMBERS  SID
-developers   1001   1001001        2  S-1-5-21-2847362817-1094533892-3310298447-1001
+NAME          RID       GID  MEMBERS  SID                                             DESCRIPTION
+developers   1001   1001001        2  S-1-5-21-2847362817-1094533892-3310298447-1001  Builds the software
 ```
 
-`MEMBERS` counts principals in *this* store, which is the only count `lpsd` can answer for.
+`MEMBERS` counts principals in *this* store, which is the only count `lpsd` can answer for. `DESCRIPTION` appears when any group has one.
 
-### `lps group create <name>` / `lps group delete <name>`
+### `lps group create <name> [description]` / `lps group delete <name>`
 
 ```
-$ lps group create developers
+$ lps group create developers "Builds the software"
 created the group developers with RID 1001
 ```
 
+A group's description says what it is for. Anyone may read it — `getent` doesn't show it, but Principals Manager does, to everyone.
+
 Deleting is refused while anyone is still a member, or while the group is anybody's primary group. Either would leave a record pointing at something that no longer exists.
+
+### `lps group rename <name> <new-name>`
+
+```
+$ lps group rename developers engineers
+renamed the group developers to engineers
+```
+
+It keeps its SID, so its members, and every permission that names it, stay as they are. A name held by a principal or another group is refused.
+
+### `lps group describe <name> <description>`
+
+```
+$ lps group describe engineers "Builds and ships the software"
+set the description of the group engineers
+```
+
+An empty description, `lps group describe engineers ""`, clears it.
 
 ### `lps group add <name> <group>` / `lps group remove <name> <group>`
 
