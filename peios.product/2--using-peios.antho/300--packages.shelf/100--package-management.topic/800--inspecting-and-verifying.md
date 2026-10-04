@@ -26,7 +26,7 @@ pcre2  10.44   x86_64
 zlib   1.3.2   x86_64
 ```
 
-With `--json` it emits the same set as JSON, with each package's origin repository included.
+With `--json` it emits the same set as a JSON array. Each package has `name`, `version`, `architecture`, `origin` (the repository it came from, empty for a local file), `orphaned`, `installed_at`, `size_installed` in bytes, and `description` where its manifest has one.
 
 ## Showing one package's details
 
@@ -48,7 +48,7 @@ license:      BSD-2-Clause
 homepage:     https://nginx.org
 ```
 
-With `--json` it emits the same record as one JSON object: `Name`, `Version`, `Architecture` and `Origin` as `list --json` gives them, `orphaned`, `installed_at`, and — where the manifest has them — `description`, `license`, `license_class`, `homepage` and `alternate_upgrade`.
+With `--json` it emits the same record as one JSON object: the members `list --json` gives, and — where the manifest has them — `license`, `license_class`, `homepage`, `alternate_upgrade`, `dependencies` (each a name and any version constraint) and `provides`.
 
 ## Listing the files a package owns
 
@@ -65,6 +65,8 @@ $ peipkg files zlib
 /usr/include/zlib.h
 ```
 
+With `--json` it emits an array of objects, each with `path`, `type` (`file`, `dir` or `symlink`) and, for a symlink, `target`.
+
 ## Finding which package owns a path
 
 ```
@@ -78,7 +80,7 @@ $ peipkg owns /usr/lib/libz.so.1
 zlib
 ```
 
-If no installed package owns the path, `owns` says so and exits non-zero. A path that nothing owns is either not part of any package or was created outside peipkg.
+If no installed package owns the path, `owns` says so and exits non-zero. A path that nothing owns is either not part of any package or was created outside peipkg. With `--json` it emits the owners' names as an array, empty when nothing owns the path.
 
 ## Searching the repositories
 
@@ -94,7 +96,7 @@ nginx     1.27.5  [official]  HTTP and reverse proxy server
 haproxy   2.9.7   [official]  Reliable, high-performance TCP/HTTP load balancer
 ```
 
-`search` reads the cached repository metadata, so run [`peipkg refresh`](~peios/package-management/keeping-a-system-current) first if you want it to reflect the latest catalog. A repository with no usable cached metadata is skipped with a warning rather than failing the search. `--json` emits the matches as JSON.
+`search` reads the cached repository metadata, so run [`peipkg refresh`](~peios/package-management/keeping-a-system-current) first if you want it to reflect the latest catalog. A repository with no usable cached metadata is skipped with a warning rather than failing the search. `--json` emits the matches as an array, empty when nothing matches. Each has `name`, `version`, `architecture`, `repository`, `size_download` and `size_installed` in bytes, and `description`, `license` and `homepage` where the repository gives them.
 
 ## Verifying installed files
 

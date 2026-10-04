@@ -47,6 +47,18 @@ modified since install: it is put to the operator per file — remove,
 keep, or abort — and with no answer on the input the uninstall aborts
 (§6.6).
 
+## Run by a program
+
+`peipkg --driven <verb>` is for a program, such as Package Manager, in
+place of a person: the plan, each question, progress and the outcome
+are JSON Lines on standard output, and the answers are read from
+standard input. It asks the same questions and refuses `--yes`. See
+[The Driven Mode](~peios/the-tools/the-driven-mode).
+
+The query verbs (`list`, `info`, `files`, `owns`, `search`, `history`,
+`repo list`, `root list`) take `--json` and print one JSON document
+instead.
+
 ## Exit behaviour
 
 A refused plan, a failed verification, and a rolled-back transaction all

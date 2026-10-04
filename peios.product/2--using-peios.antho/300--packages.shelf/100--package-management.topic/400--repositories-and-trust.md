@@ -140,7 +140,7 @@ peipkg repo list
 peipkg repo remove <name>
 ```
 
-`repo list` prints the configured repositories — name, base URL, priority, signature policy. It accepts `--json`.
+`repo list` prints the configured repositories — name, base URL, priority, signature policy. With `--json` it also gives each repository's trust state: `name`, `base_url`, `priority`, `signature_policy`, `trust_anchors`, `allow_insecure_transport`, `trusted` (whether the trust ceremony has run), `last_refresh` and `index_generated` as RFC 3339 times, `stale` (whether either is past its maximum age), and `packages`, the number its cached index offers.
 
 ```
 $ peipkg repo list
