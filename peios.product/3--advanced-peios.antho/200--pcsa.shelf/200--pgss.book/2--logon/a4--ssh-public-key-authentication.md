@@ -407,7 +407,15 @@ session child installs the granted principal token before accepting the
 post-authentication network state.
 
 Defaults are `/usr/etc/ssh/sshd_config`; administrator overrides may use
-`/lcl/etc/ssh/sshd_config`. The service generates an Ed25519 host key on first
+`/lcl/etc/ssh/sshd_config`. The port and password authentication are not
+chosen there. They are machine policy, `Machine\Software\OpenSSH` `Port` and
+`PasswordAuthentication` (both `REG_DWORD`, seeded 22 and 1), which
+`start-sshd` reads at each start and passes to `sshd` as `-p` and
+`-o PasswordAuthentication=`; `-p` makes `sshd` ignore every `Port` line. The
+port, the service SID's reservation of it and the `ssh` firewall rule's
+`DstPort.Equal` must agree, so the package's `ssh-settings` moves all three in
+one registry transaction and then restarts the service; see
+[Signing in over SSH](~peios/signing-in/signing-in-over-ssh). The service generates an Ed25519 host key on first
 start in protected persistent `/var/state/sshd`, validates and reuses it on
 subsequent starts, and fails on an invalid existing key. It never rotates a
 key automatically. Client private keys remain with the client.
