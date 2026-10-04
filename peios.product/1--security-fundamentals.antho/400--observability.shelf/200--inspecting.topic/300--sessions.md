@@ -112,7 +112,9 @@ A session can have many tokens. The number of tokens belonging to a session is t
 - Impersonation tokens currently installed on threads whose `auth_id` matches.
 - Token fds open against tokens with that `auth_id`.
 
-Counting these from the outside is awkward — there is no "tokens per session" query. The standard way is to walk `/proc/*/token` and `/proc/*/task/*/token`, query `TokenStatistics` on each, and count matches. This is what session-revocation tooling does (authd specifically).
+Counting these from the outside is awkward — there is no "tokens per session" query. The standard way is to walk `/proc/*/token` and `/proc/*/task/*/token`, query `TokenStatistics` on each, and count matches.
+
+authd's forced sign-out walks only the first half of that: it looks at each process's **primary** token and ends the processes whose `auth_id` matches. It deliberately does not count a thread impersonating a token of the session, which is usually a service answering one request for the person, and ending it would end the service for everybody.
 
 The reason for the awkward enumeration: each token is a separate kernel object, and there is no per-session index. The kernel knows tokens reference sessions (via `auth_id`); it does not maintain a reverse index of which tokens reference which session. Walking the running processes is the way to find tokens that exist.
 
@@ -127,7 +129,7 @@ A session's `created_at` is set at creation; there is no `expires_at` in the lis
 
 The token's session continues to exist regardless of any token's expiration value.
 
-If a deployment needs strict session timeouts, the enforcement is in userspace. authd can monitor `created_at` against a policy maximum and revoke sessions whose age exceeds the limit. Revocation is the userspace-coordinated process described in [Session lifecycle](~peios/logon-sessions/lifecycle): authd walks `/proc/*/token`, finds tokens with the target `auth_id`, kills the holding processes.
+If a deployment needs strict session timeouts, the enforcement is in userspace, and nothing ships it today: authd does not watch session ages. What authd does provide is the means: a program with the right to sign people out (by default SYSTEM and Administrators) can compare `created_at` against its own maximum and ask authd to end a session that has run too long, with a `SessionEnd` request on `/run/logon.sock` ([PGSS §2.22](~peios/logon/ending-a-session)). authd then ends every process whose primary token belongs to the session — `SIGTERM`, a grace period, `SIGKILL` — as described in [Session lifecycle](~peios/logon-sessions/lifecycle).
 
 The lack of kernel-side timer enforcement is a deliberate simplification. Adding kernel timers for session expiry would push expiry policy into the kernel; keeping it in userspace lets administrators define their own rules.
 

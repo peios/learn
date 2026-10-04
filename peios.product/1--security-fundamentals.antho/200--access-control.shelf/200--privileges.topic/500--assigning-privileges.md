@@ -179,7 +179,7 @@ An empty list revokes: it is "may originate nothing", distinct from the value be
 
 ### `LogonSocketDescriptor` — `REG_SZ`, on the `Policy` key itself
 
-The security descriptor `/run/logon.sock` carries, as SDDL, read once at `authd` startup. The built-in value gives `SYSTEM` and `Administrators` full access, and gives every authenticated principal connect access alone, so that anyone signed in can [change their own password](~peios/signing-in/the-passwd-command):
+The security descriptor `/run/logon.sock` carries, as SDDL, read once at `authd` startup. The built-in value gives `SYSTEM` and `Administrators` full access, and gives every authenticated principal connect access alone, so that anyone signed in can [change their own password](~peios/signing-in/the-passwd-command) and [sign themselves out](~peios/logon-sessions/lifecycle):
 
 ```
 O:SYG:SYD:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;0x100082;;;AU)
@@ -187,7 +187,21 @@ O:SYG:SYD:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;0x100082;;;AU)
 
 Connect access is `FILE_WRITE_DATA`; `0x100082` grants it with stat and sync. Reaching the socket does not let a peer originate a logon: that is the `LogonTypes` record above, and a peer without one originates nothing however it connected. So admitting a new originator that is not already an authenticated principal takes both edits, and one that is takes only the record.
 
-A replacement descriptor that leaves out the `AU` entry turns off self-service password change for every principal it leaves out.
+A replacement descriptor that leaves out the `AU` entry turns off self-service password change, and signing yourself out, for every principal it leaves out.
+
+### `SessionEndSecurity` — `REG_SZ`, on the `Policy` key itself
+
+Who may sign somebody **else** out: end a logon session that is not their own. `authd` does the work when asked over `/run/logon.sock` ([Session lifecycle](~peios/logon-sessions/lifecycle)); this value, as SDDL, is the security descriptor it access-checks the caller's token against, for the one right `0x1` (every generic right maps to it). It is read on every request, so an edit applies to the next one. With the value absent, the descriptor is:
+
+```
+O:SYG:SYD:(A;;0x1;;;SY)(A;;0x1;;;BA)
+```
+
+— `SYSTEM` and `Administrators`. Granting `0x1` to a group lets its members sign anybody out.
+
+Signing yourself out needs nothing here: a person may always end their own session. And nothing here lets anyone end `SYSTEM`'s session, `Anonymous`'s, or a service's — a service is stopped through the service manager.
+
+A value that is present but unusable — not a `REG_SZ`, empty, or not valid SDDL — lets **nobody** sign anybody else out until it is fixed or removed, and `authd` logs why on each request. It does not fall back to the default, which might grant more than the site meant.
 
 ## Locking a machine down
 

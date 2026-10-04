@@ -18,8 +18,10 @@ session — linked pairs, and tokens derived by duplication. [*token.session.sha
 
 When the last token referencing a session is freed, the kernel
 destroys the session object and emits a `logon-session-destroyed`
-event through KMES. [*token.session.destroyed-with-last-token] authd subscribes to those events and uses them to
-clean up associated credentials such as cached Kerberos tickets.
+event through KMES. [*token.session.destroyed-with-last-token] The event is for whatever keeps per-session state
+outside the kernel — an audit pipeline, an accounting tool, an authority
+that caches credentials per session. authd keeps none and does not
+subscribe.
 
 There is one rollback path for the case where authd creates a session
 but no token ever becomes live for it:
@@ -79,25 +81,42 @@ X" syscall, and no syscall destroys a LogonSession while tokens still
 reference it. [*token.session.no-revocation-primitive] `kacs_destroy_empty_logon_session` is only authd's
 rollback for a session that never acquired live tokens.
 
-Terminating a LogonSession is therefore userspace coordination:
+Terminating a LogonSession is therefore userspace coordination. On
+Peios authd does it, when asked over `/run/logon.sock` (PGSS Logon
+§2.22):
 
-1. authd decides a session has to end — an admin request, a security
-   incident, an account deletion, or a user logging off.
-2. authd enumerates processes whose tokens carry the target `auth_id`
-   or `interactivity_scope` by walking `/proc/*/token`, opening each
-   node's query-only inspection handle, and reading `TokenStatistics`,
-   which includes `auth_id`. No dedicated enumeration syscall exists
-   or is needed.
-3. authd requests termination — through peinit for supervised
-   services, through signals for user processes.
-4. The processes terminate, dropping their token references.
-5. The last reference drops and the session object is cleaned up.
+1. A caller asks authd to end the session, and authd decides whether it
+   may: its own session as a person, anyone else's by an access check
+   against local policy. SYSTEM's session (999), Anonymous's (998) and
+   every session of logon type Service are never ended this way; a
+   service is stopped through peinit.
+2. authd enumerates processes whose **primary** token carries the
+   target `auth_id`, by walking `/proc`, opening each process with
+   `pidfd_open`, opening its primary token with
+   `kacs_open_process_token` on that pidfd, and reading
+   `TokenStatistics`, which includes `auth_id`. No dedicated enumeration
+   syscall exists or is needed. A thread's impersonation token is not
+   consulted, so a service impersonating a member of the session is not
+   one of its processes.
+3. authd sends each `SIGTERM` with `pidfd_send_signal`, waits up to a
+   grace period (5 seconds) for them to exit, and sends `SIGKILL` to the
+   survivors.
+4. It walks again, since a process may have forked meanwhile, for at
+   most three rounds.
+5. The processes terminate, dropping their token references.
+6. The last reference drops and the session object is cleaned up.
+
+Each token handle authd opens in the walk is itself a reference to the
+session, and is closed as soon as `auth_id` has been read.
 
 Token file descriptors can be passed between processes over IPC, so a
 reference held by a process outside the target session survives that
-session's process termination. [*token.session.fd-reference-survives-termination] authd has to account for this when
-enumerating token holders — the walk finds processes running under the
-session, not every process holding one of its tokens.
+session's process termination. [*token.session.fd-reference-survives-termination] The walk finds processes running under the
+session, not every process holding one of its tokens, so such a
+reference keeps the session alive after authd has ended every process
+in it, and authd reports nothing about it. A process that has exited
+but not been reaped likewise keeps its token, and the session, until it
+is reaped.
 
 Kernel-side invalidation — a dead flag on the LogonSession object
 checked during AccessCheck, so that access checks against its tokens

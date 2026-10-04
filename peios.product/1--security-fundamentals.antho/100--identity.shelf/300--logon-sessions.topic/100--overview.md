@@ -16,7 +16,7 @@ Sessions exist to answer two questions cleanly:
 - "Did all of these tokens come from the same sign-in?"
 - "When this principal logs out, what should we tear down?"
 
-The first matters for audit and for revocation. The second matters because logging out has to do more than just close a shell — it has to release Kerberos tickets, drop linked-pair associations, fire the right events. Sessions are the unit at which those teardowns happen.
+The first matters for audit and for signing somebody out. The second matters because logging out has to do more than just close a shell — it has to end every process of the sign-in, drop linked-pair associations, fire the right events. Sessions are the unit at which those teardowns happen.
 
 ## What a session contains
 
@@ -69,7 +69,7 @@ flowchart LR
 
 The kernel keeps a reference count of how many tokens belong to a session. When the count drops to zero — every token of the session has been released — the session itself is destroyed and a `logon-session-destroyed` event is emitted.
 
-The implication is that destroying a session is not a primitive operation. There is no `kacs_destroy_session` syscall. You destroy a session by ensuring every token belonging to it is released, which usually means killing every process running on those tokens. Session **revocation** — what authd does when an administrator forces a logout — is implemented this way in user space.
+The implication is that destroying a session is not a primitive operation. There is no `kacs_destroy_session` syscall. You destroy a session by ensuring every token belonging to it is released, which usually means ending every process running on those tokens. **Forced sign-out** is implemented this way, in user space: asked by a person signing themselves out, or by an administrator signing somebody else out, authd ends every process whose primary token belongs to the session, and the kernel does the rest.
 
 ## Bootstrap sessions
 
@@ -80,7 +80,7 @@ Two sessions exist before authd is up, created by the kernel during boot:
 | **SYSTEM session** | 999 | The session of the SYSTEM token, attached to init and inherited by every process until authd assigns real tokens. |
 | **Anonymous session** | 998 | The session of the Anonymous token, used as the user SID for Anonymous-level impersonation. |
 
-Both are created by direct kernel initialisation — they do not go through `kacs_create_session`. They are also never destroyed during a running system's lifetime: the SYSTEM token always exists somewhere, and the Anonymous token is a singleton.
+Both are created by direct kernel initialisation — they do not go through `kacs_create_logon_session`. They are also never destroyed during a running system's lifetime: the SYSTEM token always exists somewhere, and the Anonymous token is a singleton.
 
 You will see these IDs in audit logs and `/sys/kernel/security/kacs/sessions` listings. They are not bugs.
 
@@ -97,7 +97,7 @@ This matters in two practical ways:
 
 If you want the catalog of logon types — what Interactive, Network, Service, Batch, NewCredentials, and the rest each mean — read [Logon types](~peios/logon-sessions/logon-types).
 
-If you want the creation, destruction, and revocation mechanics — including the `logon-session-destroyed` event and what authd does for forced logout — read [Session lifecycle](~peios/logon-sessions/lifecycle).
+If you want the creation, destruction, and forced sign-out mechanics — including the `logon-session-destroyed` event and what authd does to sign somebody out — read [Session lifecycle](~peios/logon-sessions/lifecycle).
 
 If you want to see which sessions are currently active on a running system, read [Inspecting tokens, sessions, and processes](~peios/inspecting/overview).
 

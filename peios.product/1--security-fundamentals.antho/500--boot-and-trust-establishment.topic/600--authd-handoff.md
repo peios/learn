@@ -20,7 +20,7 @@ This page covers what authd does at startup, how the handoff from SYSTEM-everywh
 
 - **Authenticate principals.** When a user signs in, authd verifies their credentials against the directory (locally for standalone systems, against the domain's directory for domain-joined ones).
 - **Mint tokens.** Once a principal is authenticated, authd produces a token reflecting their identity, group memberships, privileges, integrity level, claims. The token is what the principal's processes run on.
-- **Manage logon sessions.** authd creates a session per authentication event, attaches the minted tokens to it, tracks lifecycle via the `logon-session-destroyed` event.
+- **Manage logon sessions.** authd creates a session per authentication event and attaches the minted tokens to it. The kernel destroys the session when its last token goes; authd keeps no per-session state, so it has nothing to clean up then. On request, it ends a session early by ending its processes.
 - **Distribute CAAP.** authd reads central access policies from its source (registry or the domain's directory) and pushes them into the kernel's policy cache via `kacs_set_caap`.
 - **Resolve identity-related queries.** authd is the answer to "what privileges does this user have?", "what claims should be on this token?", "is this user a member of this group?". These queries go to authd, which consults the directory.
 
@@ -66,7 +66,7 @@ Each authentication request follows a similar pattern:
 1. Client connects to authd's socket and presents credentials.
 2. authd verifies the credentials against the directory.
 3. authd resolves the principal's full identity (groups, privileges, claims) from the directory.
-4. authd creates a logon session via `kacs_create_session`.
+4. authd creates a logon session via `kacs_create_logon_session`.
 5. authd calls `kacs_create_token` to mint the token, passing the wire-format specification with everything resolved.
 6. authd returns the token (or token fd) to the client.
 
@@ -88,9 +88,8 @@ After startup, authd's day-to-day work is:
 
 - **Authenticate users when they sign in.** Each login produces a session and a token (or a pair of tokens for UAC-style elevation).
 - **Mint tokens for new service starts.** When peinit needs a token for a service it's about to launch, authd produces one.
-- **Track session lifecycle.** authd subscribes to the kernel's `logon-session-destroyed` event and uses it to release session-scoped state (Kerberos tickets, cached directory data).
 - **Distribute CAAP updates.** When a policy in the directory changes, authd re-pushes it via `kacs_set_caap`. The kernel's cache is kept in sync with the directory.
-- **Handle session revocation.** When a user must be forcibly logged out, authd walks `/proc/*/token` to find tokens with the offending `auth_id`, identifies the holding processes, and signals them to exit. This is the userspace-coordinated revocation pattern documented in [Session lifecycle](~peios/logon-sessions/lifecycle).
+- **End sessions on request.** When a person signs themselves out everywhere, or an administrator signs somebody out, a program asks authd over `/run/logon.sock`. authd checks the caller may, finds every process whose primary token belongs to the session, and sends each `SIGTERM`, then `SIGKILL` after a grace period, looking again for anything forked meanwhile. The kernel destroys the session when the last token goes. See [Session lifecycle](~peios/logon-sessions/lifecycle) and [PGSS §2.22](~peios/logon/ending-a-session).
 
 authd is a long-running daemon. It is not periodically restarted. Its uptime equals the system's uptime (modulo any administrative restarts in response to configuration changes).
 

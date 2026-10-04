@@ -133,7 +133,7 @@ Every attachment is a reference. A token is alive as long as any of these are tr
 
 When the last reference drops, the kernel destroys the token: frees the storage, releases the reference on the logon session. If the destroyed token's session loses its last token reference too, the session itself is destroyed and a `logon-session-destroyed` event is emitted via KMES. See [Logon sessions](~peios/logon-sessions/overview).
 
-A token's `expiration` field has no effect on the lifecycle in v0.20 — it is stored for future use but not enforced. A token lives until its references drop. Session revocation, when needed, is implemented by userspace (authd) walking `/proc/*/token`, identifying tokens with the offending `auth_id`, and killing the holding processes. This is documented under [Inspecting security state](~peios/inspecting/overview).
+A token's `expiration` field has no effect on the lifecycle in v0.20 — it is stored for future use but not enforced. A token lives until its references drop. Ending a session early is done in userspace: asked to, authd finds every process whose primary token belongs to the session and ends it, and the kernel destroys the session when the last reference goes. A token descriptor held by a process outside the session survives that, and keeps the session alive. This is documented under [Session lifecycle](~peios/logon-sessions/lifecycle).
 
 ## Quick reference: which transitions change what
 

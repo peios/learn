@@ -8,7 +8,7 @@ related:
   - peios/logon-sessions/logon-types
 ---
 
-The binary specs that `kacs_create_token` and `kacs_create_session` accept, and the payload format of every token query class, are laid out in the **Peios Kernel TRM §3.A**, the KACS ABI reference. All 46 header offsets and all 24 query classes are there.
+The binary specs that `kacs_create_token` and `kacs_create_logon_session` accept, and the payload format of every token query class, are laid out in the **Peios Kernel TRM §3.A**, the KACS ABI reference. All 46 header offsets and all 24 query classes are there.
 
 The conceptual field list — what a token holds and what each field does — is [Token types](~peios/tokens/token-types).
 

@@ -1,7 +1,7 @@
 ---
 title: Session lifecycle
 type: concept
-description: A logon session is created by authd at successful authentication and destroyed when its last token reference drops — there is no kernel revocation primitive.
+description: A logon session is created by authd at successful authentication and destroyed when its last token reference drops — there is no kernel revocation primitive, so authd signs a session out by ending its processes.
 related:
   - peios/logon-sessions/overview
   - peios/logon-sessions/logon-types
@@ -10,13 +10,13 @@ related:
   - peios/inspecting/overview
 ---
 
-A session's life is bracketed by two kernel events: a successful `kacs_create_session` call that brings it into existence, and the implicit drop of its last token reference that destroys it. There is nothing in between — no resize, no rename, no kernel-side timeout. Sessions are simple objects whose lifecycle is driven entirely by the tokens attached to them.
+A session's life is bracketed by two kernel events: a successful `kacs_create_logon_session` call that brings it into existence, and the implicit drop of its last token reference that destroys it. There is nothing in between — no resize, no rename, no kernel-side timeout. Sessions are simple objects whose lifecycle is driven entirely by the tokens attached to them.
 
-This page covers the three phases that matter: creation, destruction, and revocation (the userspace pattern for forcing a session to end before the user logs out voluntarily).
+This page covers the three phases that matter: creation, destruction, and forced sign-out (ending a session before the person signs out themselves, which authd does on request).
 
 ## Creation
 
-A session is created by `kacs_create_session`. The call requires `SeTcbPrivilege`, so in practice the only callers are **authd** (every interactive and network sign-in) and **peinit** (services launched during boot before authd is available).
+A session is created by `kacs_create_logon_session`. The call requires `SeTcbPrivilege`, so in practice the only callers are **authd** (every interactive and network sign-in) and **peinit** (services launched during boot before authd is available).
 
 The call takes a wire-format specification with three fields:
 
@@ -35,13 +35,15 @@ The kernel:
 5. Initialises the session's token reference count at zero.
 6. Returns the new session ID to the caller.
 
-The session now exists but has no tokens. It is in a transient state: any subsequent `kacs_create_token` call that references this `session_id` in its `auth_id` field bumps the count, and the session is "live". If no token is ever created against the session — vanishingly rare — the session stays at refcount zero and is reaped after a brief grace period.
+The session now exists but has no tokens. It is in a transient state: any subsequent `kacs_create_token` call that references this `session_id` in its `auth_id` field bumps the count, and the session is "live".
 
-The grace period is what avoids a race: authd's flow is "create session, then mint primary token referencing it". Between those two calls the session has no tokens, and a strict "destroy when refcount hits zero" rule would tear it down before authd's second call. The kernel solves this by only triggering destruction on a refcount that transitions from positive to zero, not on a refcount that has been zero since creation. After a successful first attachment, normal destruction rules apply.
+authd's flow is "create session, then mint primary token referencing it". Between those two calls the session has no tokens, and a strict "destroy when refcount hits zero" rule would tear it down before authd's second call. So the kernel only destroys a session on a refcount that transitions from positive to zero, not on one that has been zero since creation. After a successful first attachment, normal destruction rules apply.
+
+The consequence is that a session no token ever attaches to is **never reaped**. Nothing times it out. If authd's mint fails after it created the session, authd rolls the session back itself with `kacs_destroy_empty_logon_session`, which refuses any session that has a live token. An empty session left by some other caller stays in the listing until the machine restarts, or until a caller holding `SeTcbPrivilege` destroys it — `logonse destroy` does exactly that.
 
 ## The boot sessions
 
-Two sessions exist without ever passing through `kacs_create_session`:
+Two sessions exist without ever passing through `kacs_create_logon_session`:
 
 | Session | ID | Created by |
 |---|---|---|
@@ -70,9 +72,9 @@ The event carries enough information for consumers to clean up downstream state:
 | `auth_package` | The auth package string. |
 | `created_at` | The session's creation timestamp. |
 
-The most important consumer of this event is **authd itself**. authd subscribes to `logon-session-destroyed` because it needs to release session-scoped state of its own: Kerberos tickets, cached directory data, any per-session credentials it has been holding. Without the subscription, authd would have no way to know that a session it created is gone.
+The consumers are audit pipelines, accounting tools and session-aware services. **authd is not one of them**: it keeps no per-session state — no tickets, no cached credentials, no handle on the tokens it mints — so there is nothing of its own for it to release when a session goes. An authority that did hold session-scoped state would subscribe here to learn when to drop it.
 
-Other consumers (audit pipelines, accounting tools, session-aware services) may also subscribe. The event is fire-and-forget — there is no acknowledgement, no retry, no replay. A consumer that misses an event misses it.
+The event is fire-and-forget — there is no acknowledgement, no retry, no replay. A consumer that misses an event misses it.
 
 ## What ends a session
 
@@ -92,22 +94,29 @@ Practically, this means a session ends when:
 
 The fourth condition is satisfied automatically when the session reaches refcount zero — the kernel dissolves the pair as part of destruction. The first three are user-space's responsibility.
 
-For an ordinary logout, this happens naturally: the user's shell exits, child processes exit, the authority broker process closes its hold on the Full token. Once all of those happen, the kernel sees refcount zero, fires the event, frees the session.
+For an ordinary logout, this happens naturally: the user's shell exits, its child processes exit, and anything that was handed a descriptor for one of the session's tokens closes it. Once all of those happen, the kernel sees refcount zero, fires the event, frees the session. (authd holds nothing: it closes its descriptor for a token the moment it has handed the token over.)
 
-## Revocation: there is no kernel call
+## Forced sign-out: there is no kernel call
 
-There is **no syscall** to forcibly end a session. No `kacs_destroy_session`, no `kacs_kill_session`. The session model is reference-counted, and the only way to end one is to ensure every reference drops. (The one destroy syscall that exists, `kacs_destroy_empty_session`, is a rollback primitive for empty sessions only — it refuses with `-EBUSY` any session that still has live tokens. This is what `logonse destroy` wraps.)
+There is **no syscall** to forcibly end a session. No `kacs_destroy_session`, no `kacs_kill_session`. The session model is reference-counted, and the only way to end one is to ensure every reference drops. (The one destroy syscall that exists, `kacs_destroy_empty_logon_session`, is a rollback primitive for empty sessions only — it refuses with `-EBUSY` any session that still has live tokens. This is what `logonse destroy` wraps.)
 
-Forced logout — an administrator deciding that user X should not be signed in any more — is therefore a userspace operation. The pattern, implemented by authd:
+Forced sign-out — an administrator deciding that a person should not be signed in any more, or a person signing themselves out everywhere — is therefore a userspace operation, and **authd** performs it. A program that signs somebody out — a task manager, a command-line tool — asks with a `SessionEnd` request on `/run/logon.sock` ([PGSS §2.22](~peios/logon/ending-a-session)) and does none of the work itself. authd:
 
-1. Walk `/proc/*/token` to find tokens whose `auth_id` matches the target session.
-2. For each matching token, identify the process holding it.
-3. Send the appropriate signal to terminate the process (typically SIGTERM with a grace period, then SIGKILL if needed).
-4. Continue until no processes hold any token of the session.
+1. Checks that the caller may. Anyone may end their own session, when they are a person signed in as themselves. Ending anyone else's needs the right granted by the `SessionEndSecurity` descriptor on `Machine\Generic\Authn\Policy` — by default SYSTEM and Administrators have it. Nobody may end SYSTEM's session (999), Anonymous's (998), or a service's: a service is stopped through the service manager.
+2. Finds every process whose **primary** token belongs to the session: it walks `/proc`, opens each process by pidfd, and reads `auth_id` from that process's primary token. A thread that is only impersonating a token of the session — a service answering the person's request — is not in the session, and is left alone.
+3. Sends each `SIGTERM` through its pidfd, so the signal reaches the process whose token was read even if its pid has since been reused. It waits up to five seconds for them to exit, then sends `SIGKILL` to what is left.
+4. Walks again, because a process may have forked during the grace period, and repeats — at most three rounds.
+5. Answers with how many processes it ended and how many still hold the session, and records the request, who made it and the result in its log.
 
-Once the last process exits, the session reaches refcount zero, the event fires, and the user is logged out.
+Once the last process exits, the session reaches refcount zero, the event fires, and the person is signed out.
 
-The kernel cooperates by exposing `auth_id` through token query interfaces (specifically the `TokenStatistics` query class via `KACS_IOC_QUERY`) and by providing the per-PID token handles at `/proc/<pid>/token`. authd uses both to do the walk.
+A program that ends the session it is itself running in is ended with it. authd therefore answers such a request **first**, saying how many processes it found, and does the work afterwards.
+
+What this cannot reach:
+
+- **A token descriptor held outside the session.** Token descriptors can be passed between processes; a process outside the session holding one keeps the session alive after every process in it has gone. authd walks processes, not descriptors, so it neither finds nor counts these.
+- **A thread impersonating a token of the session**, by design (step 2). The session lasts until that thread reverts.
+- **A process that has exited but not been reaped.** It holds its token until its parent reaps it, and counts as remaining until then.
 
 There are two reasons the kernel does not provide a direct revoke:
 

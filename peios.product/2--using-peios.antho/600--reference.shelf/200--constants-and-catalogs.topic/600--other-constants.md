@@ -148,7 +148,7 @@ The `KACS_MIT_*` flags on the PSB. The catalogue of what each one gates is [Proc
 | Min SID size | 8 bytes | Revision, count and authority, no sub-authorities |
 | Max SID size | 68 bytes | 15 sub-authorities |
 | Max token wire spec | 64 KB | `kacs_create_token` input |
-| Max session wire spec | 4096 bytes | `kacs_create_session` input |
+| Max session wire spec | 4096 bytes | `kacs_create_logon_session` input |
 | Max CAAP wire spec | 256 KB | `kacs_set_caap` input |
 | Max CAAP rules per policy | 256 | |
 | Max applies-to expression | 64 KB | Per CAAP rule |
