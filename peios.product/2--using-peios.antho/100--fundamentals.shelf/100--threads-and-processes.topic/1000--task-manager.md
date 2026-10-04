@@ -114,6 +114,20 @@ The full list is the kernel's, which only Administrators may read.
 Anyone else sees the sessions their own processes are in, and the window
 says so.
 
+### Signing someone out
+
+**Sign out**, in a session's details, ends the session: authd ends every
+process running in it, asking each to end and, after a few seconds,
+ending any that haven't. The window asks first, and says so when the
+session is its own. What came of it is said afterwards, including any
+process authd couldn't end, which keeps the session open.
+
+You may sign out your own sessions, and anyone's the machine's
+permissions allow, which as shipped is Administrators. Where you may not,
+the window says why. A service's session ends when its service is
+stopped, and the kernel's own sessions never end. See
+[Ending a session](~peios/logon-sessions/lifecycle).
+
 ## What you may see
 
 What you may see of a process is its own permissions' to say:
