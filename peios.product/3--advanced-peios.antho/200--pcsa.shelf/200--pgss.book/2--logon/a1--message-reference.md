@@ -17,6 +17,10 @@ description: Every message type by number and socket, the protocol constants, an
 | `0x0020` | `ServiceAttest` | client → authority | §2.19 |
 | `0x0030` | `CredentialChangeStart` | client → authority | §2.20 |
 | `0x8030` | `CredentialChanged` | authority → client | §2.20 |
+| `0x0040` | `SessionEnd` | client → authority | §2.22 |
+| `0x0041` | `SessionEndQuery` | client → authority | §2.22 |
+| `0x8040` | `SessionEnded` | authority → client | §2.22 |
+| `0x8041` | `SessionEndAllowed` | authority → client | §2.22 |
 
 ### On `/run/ident.sock`
 
@@ -41,6 +45,8 @@ other socket (§2.14).
 | Version | `1` | §2.6 |
 | Header size | 12 bytes | §2.6 |
 | Maximum message size | 65536 bytes | §2.6 |
+| Longest grace before a forced end | 10 seconds | §2.22 |
+| Longest a `SessionEnd` may take to answer | 60 seconds | §2.22 |
 
 ## Field limits
 

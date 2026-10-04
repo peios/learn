@@ -4,7 +4,9 @@ description: The terminal failure message — a deliberately small denial vocabu
 ---
 
 `msg_type` = `0x8003`. Authority to client. The terminal failure message
-of a logon and of a credential change (§2.20) alike; nothing follows it.
+of a logon, of a credential change (§2.20), and of a request to end a
+logon session or to ask whether one may (§2.22) alike; nothing follows
+it.
 
 | Field | Encoding | Limit |
 |---|---|---|
@@ -21,6 +23,11 @@ system fault.
 the first says the peer may not use this socket for this at all, the
 second that it may originate logons but not of this kind. A client can
 act differently on each.
+
+`NoSuchSession` answers only `SessionEnd` and `SessionEndQuery`, and
+only a caller who would otherwise have been permitted (§2.22). Anybody
+else is told `PermissionDenied`, so the code cannot be used to learn
+which sessions exist.
 
 ## reason
 

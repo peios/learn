@@ -4,7 +4,7 @@ description: Every enumerated value the protocol carries — logon and identifie
 ---
 
 Adding a value to any enumeration here is a breaking change requiring a
-version bump — see §2.6, which states the three exceptions and where
+version bump — see §2.6, which states the four exceptions and where
 each is stated in full.
 
 ## Logon types
@@ -72,6 +72,15 @@ Carried in `AccessDenied.denial` (§2.10) as a `u32`.
 | 7 | `AuthorityUnavailable` | The authority cannot reach what it needs to decide. |
 | 8 | `ConversationLimit` | Too many rounds, or too long without an answer. |
 | 9 | `Internal` | The authority failed for a reason it will not describe. |
+| 10 | `NoSuchSession` | There is no live logon session by that identifier. Answers only `SessionEnd` and `SessionEndQuery` (§2.22). |
+
+A denial code MAY be added without a version bump where it only ever
+answers messages newer than it is — messages no peer that predates the
+code can send — because such a peer is then never sent it. `NoSuchSession`
+was added under this rule. A client of the newer messages SHOULD treat a
+code it does not recognise as a refusal, reporting the code and
+`reason`, rather than as an unreadable answer; it is the one place in
+this chapter where a client may meet a denial newer than itself.
 
 ## Key types
 

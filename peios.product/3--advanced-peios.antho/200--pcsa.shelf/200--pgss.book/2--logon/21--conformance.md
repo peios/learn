@@ -35,8 +35,9 @@ of the following.
 
 ### Conversation
 
-9. Require `LogonStart`, or `CredentialChangeStart`, as the first
-   message, and reject a conversation opening otherwise (§2.3).
+9. Require `LogonStart`, `CredentialChangeStart`, `SessionEnd` or
+   `SessionEndQuery` as the first message, and reject a conversation
+   opening otherwise (§2.3).
 10. Send exactly one terminal message, nothing after it, and close the
     connection (§2.3).
 11. Bound the number of rounds, the time spent awaiting an answer, and
@@ -230,9 +231,52 @@ message with `PermissionDenied`, and is conforming. Obligations 10 to
     one, and never treat reaching the socket as that permission (§2.20,
     §2.4).
 
+### Ending a session
+
+An authority that implements `SessionEnd` and `SessionEndQuery` MUST
+satisfy all of the following. An authority that does not implement them
+MUST refuse both with `PermissionDenied`, and is conforming. Obligations
+5 to 8, 10 and 14 bind these requests as they bind a logon.
+
+73. Never accept `SessionEndQuery` as `SessionEnd` or the reverse, and
+    change nothing in answering `SessionEndQuery` (§2.22).
+74. Answer `SessionEndQuery` with `SessionEndAllowed` exactly where a
+    `SessionEnd` from the same peer would be permitted, and otherwise
+    with the denial it would draw (§2.22).
+75. Refuse, with `PermissionDenied`, a peer whose token is restricted,
+    the SYSTEM and Anonymous sessions the kernel creates, and every
+    session of logon type `Service`, whoever asks (§2.22).
+76. Permit a caller to end a session whose user is the caller, of a
+    logon type a person has, where the caller is a principal of an
+    issued domain (§2.22).
+77. Decide any other request by an access check of the caller's token
+    against a descriptor local policy states — SYSTEM and Administrators
+    alone where it states none, and nobody where it states one that
+    cannot be used (§2.22).
+78. Answer `NoSuchSession` only to a caller who may end other
+    principals' sessions, and `PermissionDenied` to any other where the
+    session does not exist (§2.22, §2.10).
+79. End every process whose primary token belongs to the session —
+    asking first, then, after a grace period of at most 10 seconds,
+    without asking — and never a process only because one of its
+    threads impersonates a token of the session (§2.22).
+80. Address each signal by a reference that cannot come to name a
+    different process, never by a process identifier looked up again
+    (§2.22).
+81. Look again after each round, bound the number of rounds, and answer
+    within 60 seconds (§2.22).
+82. Count in `remaining` every process it could not examine or end, and
+    never fail the request for one (§2.22).
+83. Hold no token of the session longer than it takes to read which
+    session it belongs to, and never end its own process (§2.22).
+84. Where the session is the one the connected peer's token belongs to,
+    send `SessionEnded` before signalling anything, carrying what it
+    found to end and a `remaining` of zero (§2.22).
+85. Start nothing in ending a session (§2.1, §2.22).
+
 ## Client obligations
 
-There are three client roles, and they are independent. A program may
+There are four client roles, and they are independent. A program may
 be any of them, several, or none: a logon originator never looks a
 principal up; a name resolver does the reverse.
 
@@ -240,7 +284,8 @@ An implementation originating logons MUST satisfy obligations 1 to 20.
 An implementation performing identity lookup MUST satisfy 21 to 27. An
 implementation changing its own principal's credential MUST satisfy
 obligations 2 to 12 and 18 to 20, reading `CredentialChangeStart`
-wherever they say `LogonStart`, and 28 and 29.
+wherever they say `LogonStart`, and 28 and 29. An implementation ending
+logon sessions MUST satisfy obligations 4 to 7 and 30 to 33.
 
 ### Conversation
 
@@ -331,6 +376,19 @@ same thing to every principal at once.
 29. Treat `CredentialChanged` as the only successful outcome, expect no
     token with it, and close any descriptor that arrives with it
     (§2.20).
+
+### Ending a session
+
+30. Send exactly one `SessionEnd` or `SessionEndQuery`, as the only
+    message, and use `SessionEndQuery` — never `SessionEnd` — to learn
+    whether ending a session would be permitted (§2.22).
+31. Wait up to 60 seconds for the answer to `SessionEnd` before treating
+    it as unanswered, and then not assume either outcome (§2.22).
+32. Treat a non-zero `remaining` as a session that may still exist, and
+    never read the counts as an outcome where the session was the
+    caller's own (§2.22).
+33. Treat a denial code it does not recognise as a refusal, not as an
+    unreadable answer (§2.B).
 
 ## What a client is not required to do
 

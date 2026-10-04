@@ -18,8 +18,9 @@ it.
 ## Access control
 
 The socket MUST carry a security descriptor granting connect access to
-the principals permitted to originate logons, and to the principals
-permitted to change their own credential (§2.20). See §2.4 for why this,
+the principals permitted to originate logons, to the principals
+permitted to change their own credential (§2.20), and to those
+permitted to end a logon session (§2.22). See §2.4 for why this,
 and not process integrity, is the control — and why reaching the socket
 is not, on its own, permission to originate a logon.
 
@@ -49,6 +50,11 @@ every respect except how the authority was satisfied — it creates a
 session and mints a token — and because the volume is a handful of
 requests at start-up rather than the sustained load §2.14 exists to
 separate.
+
+`SessionEnd` and `SessionEndQuery` (§2.22) are bound by the same rule:
+one request per connection, one terminal message, and the connection
+closed. They are here because ending a session is a decision about
+logons, made by the party that created the session.
 
 > [!NOTE]
 > A protocol whose connections are long-lived and shared reaches the

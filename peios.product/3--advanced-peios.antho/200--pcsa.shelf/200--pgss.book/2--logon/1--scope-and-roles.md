@@ -53,6 +53,8 @@ This chapter covers:
   credential to exchange (§2.19)
 - how a principal changes their own credential (§2.20)
 - the obligations binding on each role (§2.21)
+- how a caller asks the authority to end a logon session — its own, or,
+  where policy permits, somebody else's (§2.22)
 
 This chapter does not cover:
 
@@ -95,6 +97,11 @@ The caller installs the token and proceeds. This keeps the most
 privileged process on the system out of the business of launching
 arbitrary programs, and it means a client can obtain a token for a
 purpose the authority need never have anticipated.
+
+The authority still starts nothing when it is asked to end a logon
+session (§2.22). It MAY then end the processes running in that session,
+and only those: ending what exists launches nothing, and the
+prohibition is on launching.
 
 > [!NOTE]
 > This is why `AccessGranted` carries a descriptor and a session

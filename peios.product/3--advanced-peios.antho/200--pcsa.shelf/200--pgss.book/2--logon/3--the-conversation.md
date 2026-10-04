@@ -45,17 +45,24 @@ unlocks a requirement for another.
 
 A conversation MUST proceed as follows.
 
-1. The client sends exactly one opening message: `LogonStart`, or
-   `CredentialChangeStart` to change its own credential (§2.20). It MUST
-   be the first message. An authority MUST reject any conversation that
-   opens with something else.
+1. The client sends exactly one opening message: `LogonStart`,
+   `CredentialChangeStart` to change its own credential (§2.20), or
+   `SessionEnd` or `SessionEndQuery` about a logon session (§2.22). It
+   MUST be the first message. An authority MUST reject any conversation
+   that opens with something else.
 2. The authority sends zero or more `CredentialRequest` messages. Each
    MUST be answered by exactly one `CredentialResponse` before the
    authority sends anything further.
 3. The authority sends exactly one terminal message: `AccessGranted` or
    `AccessDenied` for a logon, `CredentialChanged` or `AccessDenied` for
-   a credential change.
+   a credential change, `SessionEnded` or `AccessDenied` for a
+   `SessionEnd`, and `SessionEndAllowed` or `AccessDenied` for a
+   `SessionEndQuery`.
 4. Both parties close the connection.
+
+`SessionEnd` and `SessionEndQuery` exchange no credentials: the
+authority sends no `CredentialRequest` in reply to either, and the
+conversation is the opening message and its terminal.
 
 The authority MAY send a terminal message at any point after
 `LogonStart`, including before any `CredentialRequest`. Zero rounds is a
