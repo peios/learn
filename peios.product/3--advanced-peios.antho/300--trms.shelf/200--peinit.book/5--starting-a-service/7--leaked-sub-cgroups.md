@@ -38,6 +38,17 @@ contains the unkillable process.
 
 The leaked cgroup stays in the hierarchy until the next reboot.
 
+A tree the service's next instance is already running in is not
+checked. A restart can relaunch before the post-kill deadline of the
+instance it replaced — the default restart delay is one second, the
+post-kill deadline five — and it relaunches into the same tree, since
+nothing has leaked yet to move the generation on. When the deadline
+fires, the tree is populated by the live instance, not by a survivor,
+so peinit drops the check rather than record a leak.
+[*cgroup.a-tree-back-in-use-is-not-a-leak] A survivor of the killed
+instance that shares that tree goes unreported until the tree is next
+killed and checked.
+
 ## Visibility [*cgroup.a-leak-is-both-pushed-and-queryable]
 
 Leaks are not silent. peinit both pushes one when it is detected and

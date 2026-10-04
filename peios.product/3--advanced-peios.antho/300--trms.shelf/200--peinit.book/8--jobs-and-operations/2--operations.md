@@ -60,6 +60,13 @@ small `event.oversized`, shutdown finalisation — ends the loop and
 enters recovery (§2.8). A bug peinit can attribute to one service costs
 that service; it does not cost the machine its control socket.
 
+A lifecycle deadline that raised is removed once its error is
+contained, so it is announced once, not again on every timer turn.
+[*op.a-deadline-that-raised-is-contained-once] One that peinit cannot
+remove is retried at most once a second, and a retry that raises the
+same error and changes nothing is not announced again.
+[*op.a-deadline-that-keeps-raising-is-paced]
+
 Cancelled and Aborted are the same idea at different points: never ran
 versus was running. Why it happened is a property of the event, not of
 the state.
@@ -70,6 +77,12 @@ is draining — the stop still finishes, but there is nothing to start, so
 the operation is aborted with the reason
 `definition_removed_during_restart_stop_leg` (§3.8).
 [*op.a-restart-is-aborted-when-its-definition-is-withdrawn-mid-stop]
+
+A start that is aborted or cancelled takes its readiness deadline with
+it: the start is no longer waiting for `READY=1`, and ending its main
+process is the superseding operation's job. A readiness deadline whose
+operation has ended by the time it comes due is dropped, not acted on.
+[*op.an-ended-start-leaves-no-readiness-deadline]
 
 ## Fields
 
