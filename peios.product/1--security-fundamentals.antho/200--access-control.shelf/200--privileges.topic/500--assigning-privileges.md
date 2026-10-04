@@ -62,6 +62,8 @@ Two limits are worth knowing before you hit them:
 
 A subkey that is neither a known name nor a parseable SID is **ignored with a warning**. It is worth checking for that warning after editing: a record naming nobody sits in the key looking authoritative and applying to no one.
 
+Two subkeys naming one principal, such as `\Administrators` and `\S-1-5-32-544`, **both apply**, and `authd` warns about them. Their privileges add up like any two records', but for integrity, `Owner` and `DefaultDacl` whichever is read first wins, which is an order nobody chose. Merge them into one. Principals Manager shows the warning above its Privileges list.
+
 ## If the key exists, the key is the whole policy
 
 This is the most important behaviour on the page.
