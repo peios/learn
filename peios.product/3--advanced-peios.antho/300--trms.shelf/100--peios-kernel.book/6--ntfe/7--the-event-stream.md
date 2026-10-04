@@ -23,7 +23,9 @@ protocol, flow state, interface index, ports, ethertype, both addresses,
 the stack-view length, the effect counts the evaluation yielded packed
 eight bits each (tags, counts, reports, prompts, saturating), [*ntfe-stream.event-effect-counts-packed-saturating] and the
 attributing rule's path — the winning rule, or `backstop`, or
-`fail-closed` — truncated to 96 bytes. [*ntfe-stream.event-attributed-path-truncated-96] A `Flow` event also carries both
+`fail-closed` — in a 96-byte field (`PEIOS_NTFE_EV_ATTR_LEN`), so a
+longer path is cut to 95 bytes, at a byte rather than a character
+boundary, and NUL-terminated. [*ntfe-stream.event-attributed-path-truncated-96] A `Flow` event also carries both
 endpoints' identities as the judgment read them (§6.9): the kind, the
 process GUID, pid and comm, the user SID and the service SID — binary
 SIDs, so the viewer, not the kernel, turns them into names. [*ntfe-stream.flow-event-carries-endpoint-identities]

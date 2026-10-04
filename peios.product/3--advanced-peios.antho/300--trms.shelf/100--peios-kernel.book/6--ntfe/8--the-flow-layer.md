@@ -16,9 +16,13 @@ connection. [*ntfe-flow.decisions-run-once-per-connection]
 
 ## One judgment per local endpoint
 
-`peios_ntfe_flow_dispatch()` (`flow.c`) is called at the IP seats for
-every packet the Packet layer passed. [*ntfe-flow.dispatch-after-packet-pass] An untracked packet (`snap->flow ==
-NULL`) has no flow to judge: the Packet verdict stands, `NF_ACCEPT`. [*ntfe-flow.untracked-packet-keeps-packet-verdict] A
+`peios_ntfe_flow_dispatch()` (`flow.c`) is called at the IP seats:
+inbound, at `LOCAL_IN`, for every packet the Packet layer passed;
+outbound, at `LOCAL_OUT`, for every packet, before any Packet judgment
+— the Packet layer judges outbound traffic at egress, after it (§6.2). [*ntfe-flow.dispatch-after-packet-pass]
+An untracked packet (`snap->flow == NULL`) has no flow to judge and is
+accepted, `NF_ACCEPT`: inbound the Packet verdict stands, outbound the
+Packet layer judges it next at egress. [*ntfe-flow.untracked-packet-keeps-packet-verdict] A
 tracked packet reads its flow's **sentence**:
 
 - a *current* sentence — the policy generation that wrote it is the
@@ -55,7 +59,10 @@ originator's side. [*ntfe-flow.direction-is-originator-side] A **loopback** flow
 sentences: the outbound one (slot 0) at `LOCAL_OUT` and the inbound one
 (slot 1) at `LOCAL_IN`, both on the same first packet, [*ntfe-flow.loopback-two-sentences-same-first-packet] and every packet
 of it answers to the *stricter* of the two (DROP > REJECT(Refused) >
-REJECT(Prohibited) > PASS). [*ntfe-flow.loopback-stricter-sentence-applies] Loopback-ness is the seat's device
+REJECT(Prohibited) > PASS). [*ntfe-flow.loopback-stricter-sentence-applies] The comparison is made before any
+refusal is sent: a `REJECT` overruled by the other end's `DROP` sends
+nothing, and one overruled by the other end's stricter `REJECT` sends
+that one's kind. [*ntfe-flow.loopback-stricter-decided-before-refusal] Loopback-ness is the seat's device
 (`IFF_LOOPBACK`, `snap->loopback`); [*ntfe-flow.loopback-by-seat-device] a stale other-endpoint sentence is
 not applied — it is that seat's to refresh when it next sees the flow. [*ntfe-flow.stale-other-slot-not-applied]
 
@@ -64,9 +71,10 @@ not applied — it is that seat's to refresh when it next sees the flow. [*ntfe-
 `struct peios_ntfe_sentence` lives in NTFE's conntrack extension
 (`include/linux/peios_ntfe.h`), two per flow: the generation that judged
 (0 = empty), `expires_at` (epoch seconds, 0 = never), the FNV-1a-64 hash
-of the attributing rule's path (the same identity the tag and counter
-stores use for names, so the viewer resolves it against the policy), the
-verdict and the reject kind. [*ntfe-flow.sentence-fields] Alongside: `start_secs`, stamped when
+of the attributing rule's whole path (the outcome's `attributed_hash`:
+the event's `attributed` text is cut short, the hash never is; the same
+identity the tag and counter stores use for names, so the viewer
+resolves it against the policy), the verdict and the reject kind. [*ntfe-flow.sentence-fields] Alongside: `start_secs`, stamped when
 conntrack created the entry (`peios_ntfe_ct_ext_add()`) — the `Start.*`
 facts — [*ntfe-flow.start-secs-stamped-at-ct-creation] and, from the first judgment, the interface, the direction and
 whether the flow is loopback, for the dump. [*ntfe-flow.extension-records-first-judgment-facts]
@@ -77,17 +85,27 @@ store. [*ntfe-flow.sentence-write-publishes-generation-last] Reads are lock-free
 generation, the fields, then a re-check of the generation — a torn
 sentence (a writer in between) reads as absent and the flow is simply
 evaluated. [*ntfe-flow.torn-sentence-reads-absent] Two packets of a new flow racing on two CPUs may both
-evaluate; the second write wins, and the effects ran twice — the only
+evaluate; the second sentence write wins (both judged the identities
+the first resolution recorded, §6.9), and the effects ran twice — the only
 place NTFE tolerates that, because the alternative is a lock on the fast
 path for a race that needs a flow's first two packets to arrive
 concurrently. [*ntfe-flow.first-packet-race-second-write-wins]
 
 The cache holds the verdict only. [*ntfe-flow.cache-holds-verdict-only] Effects run at every evaluation of the
 flow and never per packet. [*ntfe-flow.effects-per-evaluation-not-per-packet] `DROP` and `REJECT` sentences persist for the
-flow's life (a cached `REJECT` refuses every subsequent packet, so a
-retransmitted SYN gets its answer); [*ntfe-flow.drop-reject-sentences-persist] a `DROP` or `REJECT` on a *new* flow
-kills the unconfirmed entry, so the retransmit is a fresh flow, judged
-again. [*ntfe-flow.new-flow-drop-reject-kills-entry] A flow whose extension could not be allocated has nowhere to hold
+life of a flow conntrack has confirmed: a cached `REJECT` refuses every
+subsequent packet of it. [*ntfe-flow.drop-reject-sentences-persist] A `DROP` or `REJECT` on a flow's first packet
+at a seat that stands before confirmation — `LOCAL_IN` for an inbound
+flow, `LOCAL_OUT` for an outbound one — leaves nothing to persist:
+nothing kills the entry, but its packet is dropped before conntrack
+confirms it (the refusal is filed as the entry's reply, which confirms
+nothing), so the unconfirmed entry dies with the packet, sentence and
+all. A retransmitted SYN is then a fresh flow, judged again — effects
+included — and refused again. [*ntfe-flow.new-flow-drop-reject-kills-entry] So the cached refusal answers only on a
+confirmed flow: one re-judged mid-life, or a loopback flow's inbound
+end, judged at `LOCAL_IN` after `POST_ROUTING` confirmed the entry. A
+`Refused` reset to a confirmed TCP flow also moves it to conntrack's
+`CLOSE` state (`nf_ct_set_closing()`), whose short timeout ends it. [*ntfe-flow.refused-tcp-flow-set-closing] A flow whose extension could not be allocated has nowhere to hold
 a sentence and is evaluated on every packet (`flow_uncached`). [*ntfe-flow.no-extension-evaluated-per-packet]
 
 ## Staleness
@@ -121,11 +139,15 @@ original-direction entries of `init_net` that are neither expired nor
 dying [*ntfe-flow.dump-walks-live-original-entries] — and fills `struct peios_ntfe_flow_rec` per flow: conntrack's id,
 family, protocol, the original tuple (ports, or ICMP id and type/code),
 `seen_reply`/`assured`/`related`, the remaining lifetime, packet and
-byte counts (NTFE turns `sysctl_acct` on at init — it is conntrack's
-consumer now), [*ntfe-flow.init-enables-conntrack-acct] and the extension: start time, first-judgment interface
-and direction, loopback, both sentences, and up to eight tags by hash. [*ntfe-flow.dump-record-contents]
-Records are batched in kernel memory and copied to user between
-buckets, never under a lock; [*ntfe-flow.dump-copies-out-between-buckets] the walk counts every live flow it saw so
+byte counts (NTFE turns conntrack accounting on at init — the
+`net.netfilter.nf_conntrack_acct` sysctl, `init_net.ct.sysctl_acct` —
+since it is conntrack's consumer now), [*ntfe-flow.init-enables-conntrack-acct] and the extension: start time, first-judgment interface
+and direction, loopback, both sentences, both ends' identities, and up
+to eight tags by hash with the flow's total tag count. [*ntfe-flow.dump-record-contents]
+Records are batched in kernel memory (32 to a batch) and copied to user
+between passes over the buckets, never under a lock; a bucket holding
+more flows than the batch has room for is walked again under its lock
+from where the batch filled, rather than losing the rest. [*ntfe-flow.dump-copies-out-between-buckets] The walk counts every live flow it saw so
 a short buffer is visible, and is best-effort against a table that
 changes under it. [*ntfe-flow.dump-counts-every-live-flow]
 

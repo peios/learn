@@ -64,7 +64,7 @@ tag is a no-op, not a refusal. [*ntfe-store.clearing-absent-tag-is-no-op]
 `Counter.Name([window][, key])` a rule reads is a **view**. Nothing is
 declared: views are compile-time constants (rules are their only
 source), so at publication (§6.5) the store receives the complete view
-set of both forests and materializes exactly that — one **table** per
+set of all three forests — `Packet`, `RawPacket` and `Flow` — and materializes exactly that — one **table** per
 distinct `(stream hash, key-spec)`, each answering every window any
 view of that pair asks for, plus the cumulative total. [*ntfe-store.one-table-per-stream-and-key-spec] A `COUNT`
 increments every table of its stream; [*ntfe-store.count-increments-every-table-of-stream] the amplification is bounded by
@@ -104,26 +104,37 @@ table list and the cell lists under RCU; [*ntfe-store.counter-reads-under-rcu] t
 
 `PEIOS_NTFE_IOC_COUNTERS` dumps every cell of every table for the viewer:
 stream name, key-spec, the key, the total, the last-write time, and the
-current value of each window. [*ntfe-store.counters-ioctl-dumps-every-cell] It is a best-effort snapshot (the RCU read
-lock is dropped around each `copy_to_user()`), which is fine for
-counters that are approximate by design. [*ntfe-store.counters-dump-is-best-effort]
+current value of each window. [*ntfe-store.counters-ioctl-dumps-every-cell] It is a best-effort snapshot, which is fine
+for counters that are approximate by design: the cells are gathered
+into a kernel batch under one RCU read section and copied out after
+it, and a store with more cells than a batch holds (4096) takes
+further passes, each resuming after the cells already written, so a
+cell created or retired between passes may be missed or seen twice. [*ntfe-store.counters-dump-is-best-effort]
 
 ## Reports
 
-`REPORT(level)` past `CurrentReportingLevel` becomes one KMES event:
+`REPORT(level)` at or above `CurrentReportingLevel` becomes one KMES event:
 origin class `KMES_ORIGIN_NTFE` (4), event type `network-report`, [*ntfe-store.report-becomes-one-kmes-event] and a
-msgpack payload — a string-keyed map of the attribution (`rule`), the
+msgpack payload — a string-keyed map of the attribution (`rule`, and
+`rule_hash`, the FNV-1a-64 of the whole path), the
 `level`, where the judgment stood (`layer`, `seat`), what it said
 (`verdict`, and `reject_kind` when it was a reject), the packet
 (`direction`, `interface`, `ifindex`, `ether_type`, `family`,
 `protocol`, `src`, `dst`, `src_port`, `dst_port`, `flow_state`,
-`length`), the `generation`, and `t_ns`. [*ntfe-store.report-payload-keys] Only keys the packet has are
-present. [*ntfe-store.report-omits-absent-packet-keys]
+`length`), the `generation`, and `t_ns`. [*ntfe-store.report-payload-keys] A packet key whose fact can be
+absent is present only when the packet has it: `protocol`, `src` and
+`dst` when it has an address family, the ports when it has ports,
+`flow_state` when the fact is present. `direction`, `interface`,
+`ifindex`, `ether_type`, `family` and `length` are always emitted — an
+absent one as the empty string or 0. [*ntfe-store.report-omits-absent-packet-keys]
 
 The payload is built on the stack (512 bytes, map16 header patched with
-the final count; [*ntfe-store.report-payload-built-on-stack] a hypothetical overflow drops the event rather than
-emit a lie) [*ntfe-store.report-overflow-drops-event] because the packet path runs in softirq and
+the final count) [*ntfe-store.report-payload-built-on-stack] because the packet path runs in softirq and
 `pkm_kmes_emit_kernel()` is a preempt-disabled per-CPU ring write with
-no allocation of its own. Flood control is the author's by design — the
+no allocation of its own. Every key but `rule` is bounded, and `rule`
+goes in last: a path too long for the room left is cut at a character
+boundary to fit, and `rule_truncated = 1` says so. The event is always
+emitted, and `rule_hash` still names the whole path, so a reader
+resolves the rule against the policy. [*ntfe-store.report-long-rule-cut-and-said] Flood control is the author's by design — the
 level gate — with KMES's own ring accounting as the backstop.
 `reports_emitted` counts what reached the ring. [*ntfe-store.reports-emitted-counts-ring-arrivals]

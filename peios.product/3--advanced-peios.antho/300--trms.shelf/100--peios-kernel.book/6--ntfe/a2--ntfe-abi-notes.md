@@ -21,18 +21,24 @@ identities to the event and the flow record, the `IDENTITY_UNRESOLVED`
 event flag and the `identity_unresolved` counter (in a reserved slot,
 so the status kept its size). Version 5 renamed the device and every
 symbol from `pnp` to `ntfe`, let more than one file hold the device open,
-and added `changes_noted`, `changes_walked` and `contexts` to the status,
-which grew by two words. [*ntfe-abi-notes.abi-v5-changes] pnpd and the kernel ship together on the
+and added `changes_noted`, `changes_walked` and `contexts` to the status:
+the first took one of the two reserved words version 4 left, the other
+two are new, so the status grew by two words and keeps one reserved. [*ntfe-abi-notes.abi-v5-changes] pnpd and the kernel ship together on the
 experimental edition, so the check is a guard, not a negotiation.
 
 ## `/dev/peios-ntfe`
 
-A misc device, mode 0600, root-only by ownership. [*ntfe-abi-notes.device-misc-0600-root-only]
+A misc device, created mode 0600 and owned by uid 0 — but on Peios mode
+bits and uids decide nothing (DAC is neutralised): KACS decides an
+`open()` by the opener's token against the node's security descriptor
+(§3.9.5). On devtmpfs that descriptor is inherited from the seeded
+root's, which grants `GENERIC_ALL` to SYSTEM alone, so the device is
+SYSTEM's unless trusted userspace sets another. [*ntfe-abi-notes.device-misc-0600-root-only]
 
 | Operation | Semantics | Errors |
 |---|---|---|
 | `open()` | Any number of openers. | — [*ntfe-abi-notes.open-any-number-of-openers] |
-| `read(buf, len)` | Returns whole `struct peios_ntfe_event` records only — never a partial one — up to 64 per call, oldest first, consuming them. Blocks on an empty ring unless `O_NONBLOCK`. | `EINVAL` — `len` smaller than one record; `EBUSY` — another open file is the stream's reader; `EAGAIN` — empty and non-blocking; `EINTR`; `ENOMEM`; `EFAULT` [*ntfe-abi-notes.read-whole-records-oldest-first] [*ntfe-abi-notes.read-einval-len-below-one-record] [*ntfe-abi-notes.read-ebusy-other-file-is-reader] [*ntfe-abi-notes.read-eagain-empty-nonblocking] [*ntfe-abi-notes.read-eintr] [*ntfe-abi-notes.read-enomem] [*ntfe-abi-notes.read-efault] |
+| `read(buf, len)` | Returns whole `struct peios_ntfe_event` records only — never a partial one — up to 64 per call, oldest first, consuming them. Blocks on an empty ring unless `O_NONBLOCK`. | `EINVAL` — `len` smaller than one record; `EBUSY` — another open file is the stream's reader; `EAGAIN` — empty and non-blocking; `EINTR`; `ENOMEM`; `EFAULT` — the records it took are lost (below) [*ntfe-abi-notes.read-whole-records-oldest-first] [*ntfe-abi-notes.read-einval-len-below-one-record] [*ntfe-abi-notes.read-ebusy-other-file-is-reader] [*ntfe-abi-notes.read-eagain-empty-nonblocking] [*ntfe-abi-notes.read-eintr] [*ntfe-abi-notes.read-enomem] [*ntfe-abi-notes.read-efault] |
 | `poll()` | `POLLIN \| POLLRDNORM` when at least one event waits. | — [*ntfe-abi-notes.poll-readable-when-event-waits] |
 | `ioctl(PEIOS_NTFE_IOC_STATUS, struct peios_ntfe_status *)` | Fills the status snapshot. Cumulative counters since boot. | `EFAULT` [*ntfe-abi-notes.status-ioctl-fills-snapshot] |
 | `ioctl(PEIOS_NTFE_IOC_COUNTERS, struct peios_ntfe_counters_query *)` | `buf`/`buf_len` describe a user buffer of `struct peios_ntfe_counter_rec`; on return `count` is how many were written and `total` how many cells exist. A short buffer is not an error — the two numbers disagree. Best-effort snapshot: cells may change between records. | `EFAULT`; `ENOMEM` [*ntfe-abi-notes.counters-ioctl-count-and-total] [*ntfe-abi-notes.counters-ioctl-efault] [*ntfe-abi-notes.counters-ioctl-enomem] |
@@ -41,14 +47,17 @@ A misc device, mode 0600, root-only by ownership. [*ntfe-abi-notes.device-misc-0
 | other ioctls | — | `ENOTTY` [*ntfe-abi-notes.unknown-ioctl-enotty] |
 
 Sequence numbers are monotonic per boot. [*ntfe-abi-notes.sequence-monotonic-per-boot] A gap between consecutive
-records read is exactly the number of events the ring overwrote while
-the reader was away; [*ntfe-abi-notes.sequence-gap-equals-overwritten] `events_dropped` in the status is the running
-total. [*ntfe-abi-notes.events-dropped-running-total]
+records read is the number of events the ring overwrote while the
+reader was away, plus any a faulting `read()` consumed; [*ntfe-abi-notes.sequence-gap-equals-overwritten] `events_dropped` in the status is the running
+total of the overwrites. [*ntfe-abi-notes.events-dropped-running-total] A `read()` that fails with `EFAULT` has
+already taken its records off the ring: they are lost, and counted
+nowhere but in that gap. [*ntfe-abi-notes.read-efault-consumes-records]
 
 ## Event fields
 
 - `attributed` is the winning rule's path relative to its layer key,
-  UTF-8, NUL-terminated, truncated to `PEIOS_NTFE_EV_ATTR_LEN` − 1 bytes. [*ntfe-abi-notes.event-attributed-relative-nul-truncated]
+  UTF-8, NUL-terminated, truncated to `PEIOS_NTFE_EV_ATTR_LEN` − 1 bytes
+  (95), which may split a multi-byte character. [*ntfe-abi-notes.event-attributed-relative-nul-truncated]
   Two reserved values: `backstop` (nothing yielded) and `fail-closed`
   (evaluation failed). [*ntfe-abi-notes.event-attributed-reserved-values]
 - `effects` packs the effect counts the evaluation *yielded* — `tags |
@@ -106,17 +115,24 @@ total. [*ntfe-abi-notes.events-dropped-running-total]
   `dst_port` is 0. [*ntfe-abi-notes.flow-rec-icmp-fields]
 - `direction`, `ifindex` and `loopback` are meaningful only when `judged`
   is 1: they were recorded at the Flow layer's first judgment. [*ntfe-abi-notes.flow-rec-judged-gates-first-judgment-fields] A flow
-  with `judged == 0` began under a permissive generation. [*ntfe-abi-notes.flow-rec-unjudged-began-permissive]
+  with `judged == 0` has had no Flow judgment recorded: every packet of
+  it that reached the flow dispatch (§6.8) found no Flow forest (a
+  permissive generation) or failed closed, or none did — or it has no
+  extension at all, and so nowhere to record one (`flow_uncached`; its
+  sentences and identities read empty too). [*ntfe-abi-notes.flow-rec-unjudged-began-permissive]
 - The sentences are parallel arrays indexed by slot (UAPI records hold
   scalars only): slot 0 is the flow's sentence; slot 1 is only ever
   filled for a loopback flow (its inbound endpoint). [*ntfe-abi-notes.flow-rec-sentence-slots] A slot with
   `sentence_generation == 0` is empty. [*ntfe-abi-notes.flow-rec-generation-0-empty] `sentence_expires_at` 0 means
   never. [*ntfe-abi-notes.flow-rec-expires-0-never] `sentence_rule_hash` is FNV-1a-64 (offset
-  `0xcbf29ce484222325`, prime `0x100000001b3`) of the attributing path
-  relative to the layer key — `backstop` and `fail-closed` hash like any
-  other path. [*ntfe-abi-notes.flow-rec-rule-hash-fnv1a-64]
+  `0xcbf29ce484222325`, prime `0x100000001b3`) of the whole attributing
+  path relative to the layer key, however long — not of the event's
+  truncated `attributed`. `backstop` hashes like any other path; [*ntfe-abi-notes.flow-rec-rule-hash-fnv1a-64]
+  `fail-closed` is never a sentence's, since a failed evaluation is
+  not cached. [*ntfe-abi-notes.flow-rec-fail-closed-never-cached]
 - `packets`/`bytes` are conntrack's accounting, original then reply; [*ntfe-abi-notes.flow-rec-accounting-original-then-reply]
-  NTFE enables `nf_conntrack_acct` at init. [*ntfe-abi-notes.init-enables-conntrack-acct]
+  NTFE turns conntrack accounting on at init
+  (`net.netfilter.nf_conntrack_acct`). [*ntfe-abi-notes.init-enables-conntrack-acct]
 - `timeout_secs` is the entry's remaining lifetime as conntrack sees it; [*ntfe-abi-notes.flow-rec-timeout-remaining]
   `start_secs` is `CLOCK_REALTIME` seconds when conntrack created it. [*ntfe-abi-notes.flow-rec-start-secs]
 - `tag_hash`/`tag_value` hold up to `PEIOS_NTFE_FLOW_MAX_TAGS` (8)
@@ -124,7 +140,9 @@ total. [*ntfe-abi-notes.events-dropped-running-total]
   so a value above 8 means some are not listed. [*ntfe-abi-notes.flow-rec-n-tags-is-total]
 - The identities (ABI 4) are per sentence slot, recorded at the flow's
   first judgment and fixed: `owner_kind[slot]` is `PEIOS_NTFE_EV_LOCAL_*`
-  (`ABSENT` = not yet resolved); [*ntfe-abi-notes.flow-rec-owner-kind-per-slot] the per-slot arrays are flattened at a
+  (`ABSENT` = not resolved; `ABSENT` with `owner_unresolved[slot]` set
+  = judged but unattributed, such as a loopback sender the outbound seat
+  never recorded); [*ntfe-abi-notes.flow-rec-owner-kind-per-slot] the per-slot arrays are flattened at a
   fixed stride — `owner_guid` 16 bytes per slot, `owner_comm` 16,
   `owner_user` 68, `owner_service` 32 — so slot 1's user SID starts at
   byte 68. [*ntfe-abi-notes.flow-rec-owner-array-strides] Slot 1 is filled only for a loopback flow. [*ntfe-abi-notes.flow-rec-owner-slot-1-loopback-only]
@@ -152,7 +170,7 @@ total. [*ntfe-abi-notes.events-dropped-running-total]
 | Records per `read()` | 64 [*ntfe-abi-notes.bound-read-64-records] |
 | Counter cells per table | 4096 (`PEIOS_NTFE_COUNTER_MAX_KEYS`, kernel-internal) [*ntfe-abi-notes.bound-counter-cells-per-table-4096] |
 | Distinct tags per flow | 64 (`PEIOS_NTFE_TAG_MAX_PER_FLOW`, kernel-internal) [*ntfe-abi-notes.bound-tags-per-flow-64] |
-| Rule depth / rules per layer | 12 / 4096 (ingestion) [*ntfe-abi-notes.bound-rule-depth-12-rules-4096] |
+| Rule depth / rules per layer | 12 (roots are depth 0: 13 levels) / 4096 (ingestion) [*ntfe-abi-notes.bound-rule-depth-12-rules-4096] |
 | Longest counter window | 86 400 s [*ntfe-abi-notes.bound-counter-window-86400s] |
 | Sentences per flow | 2 (slot 1 only for loopback flows) [*ntfe-abi-notes.bound-sentences-per-flow-2] |
 | Flow records batched per copy-out | 32 (kernel-internal) [*ntfe-abi-notes.bound-flow-batch-32] |
@@ -160,8 +178,8 @@ total. [*ntfe-abi-notes.events-dropped-running-total]
 
 ## Build configuration
 
-`CONFIG_PEIOS_NTFE` (bool) depends on `SECURITY_PKM`, `NETFILTER_INGRESS`,
-`NETFILTER_EGRESS` and `NF_CONNTRACK=y` — NTFE is built in and reads flow
+`CONFIG_PEIOS_NTFE` (bool) depends on `SECURITY_PKM`, `NETFILTER`,
+`NETFILTER_INGRESS`, `NETFILTER_EGRESS` and `NF_CONNTRACK=y` — NTFE is built in and reads flow
 facts on the packet path, so conntrack must be too. [*ntfe-abi-notes.config-ntfe-dependencies] `CONFIG_PEIOS_NTFE_KUNIT`
 builds the kernel-resident tests (`pkm_kunit_ntfe`), defaulting to
 `SECURITY_PKM_KUNIT`. [*ntfe-abi-notes.config-kunit-default] The production fragment (`build/config/pkm.fragment`)

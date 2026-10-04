@@ -67,9 +67,12 @@ per-packet layer is evaluated once per traversal, [*ntfe-seat.per-packet-layer-o
 verdict ends the traversal. [*ntfe-seat.first-non-pass-ends-traversal] A layer with no published forest is
 *permissive* and counted as such — at generation 0 that is every layer. [*ntfe-seat.unpublished-layer-permissive-and-counted]
 
-At the IP seats, a packet the Packet layer passed goes on to the flow
-dispatch (§6.8): an untracked packet has no flow to judge and the Packet
-verdict stands; [*ntfe-seat.untracked-packet-keeps-packet-verdict] a tracked packet with a current sentence gets that
+At the IP seats, a packet goes on to the flow dispatch (§6.8) — at
+`LOCAL_IN` once the Packet layer has passed it, at `LOCAL_OUT` before
+any Packet judgment, since the Packet layer judges outbound traffic at
+egress, after it: an untracked packet has no flow to judge and is
+accepted, so inbound the Packet verdict stands and outbound egress
+judges it next; [*ntfe-seat.untracked-packet-keeps-packet-verdict] a tracked packet with a current sentence gets that
 sentence, [*ntfe-seat.tracked-packet-gets-current-sentence] and one without is evaluated by the Flow forest and sentenced. [*ntfe-seat.unsentenced-flow-evaluated-and-sentenced]
 
 ## Applying a verdict
@@ -83,7 +86,8 @@ rule chose and the packet's protocol: [*ntfe-seat.reject-is-drop-plus-refusal]
 | `Refused` (default) | TCP: RST; else ICMP port-unreachable | TCP: RST; else ICMPv6 port-unreachable [*ntfe-seat.refused-kind-rst-or-port-unreachable] |
 | `Prohibited` | ICMP `ICMP_PKT_FILTERED` (type 3, code 13) | ICMPv6 `ICMPV6_ADM_PROHIBITED` (type 1, code 1) [*ntfe-seat.prohibited-kind-admin-filtered] |
 
-Every seat can refuse IP traffic. [*ntfe-seat.every-seat-can-refuse-ip] `refuse.c` builds the answer with the
+Every seat can refuse IP traffic — the ingress seat only on an Ethernet
+device. [*ntfe-seat.every-seat-can-refuse-ip] `refuse.c` builds the answer with the
 kernel's frame-less reject builders (`nf_reject_skb_v4_tcp_reset()`,
 `nf_reject_skb_v4_unreach()` and the v6 pair — the ones nftables' netdev
 reject uses), attaches the flow to it (`nf_ct_attach()`, so conntrack
@@ -91,15 +95,31 @@ files it as the reply it claims to be), marks it, and delivers it: [*ntfe-seat.r
 
 - from the **ingress** seat, to the peer on the wire — `dev_hard_header()`
   with the offending frame's MACs swapped, then `dev_queue_xmit()`; [*ntfe-seat.ingress-refusal-sent-to-wire-peer]
+  that needs an Ethernet device (`ARPHRD_ETHER`) and a link header to
+  swap, so at the ingress seat of any other device — the loopback
+  device, a tunnel — a `REJECT` always degrades (below); [*ntfe-seat.ingress-refusal-needs-ethernet]
 - from **every other seat**, to ourselves — `skb_dst_set_noref()` from
   the offending packet's route, `ip_route_me_harder()` (or the v6
   helper), then `ip_local_out()`. [*ntfe-seat.non-ingress-refusal-routed-through-local-out] Inbound, that routes the answer out to
   the peer with our address as its source; [*ntfe-seat.inbound-refusal-routed-to-peer] outbound, the answer is the
   peer's, addressed to us, so the route lands on the loopback device and
-  the stack's own RST and ICMP-error handlers fail the local socket with
-  `ECONNREFUSED` or `EHOSTUNREACH` at once. [*ntfe-seat.outbound-refusal-fails-local-socket-at-once] The loopback device retains
+  the stack's own RST and ICMP-error handlers fail the local socket at
+  once, with the error the kernel maps the answer to: `ECONNREFUSED`
+  for a reset or a port unreachable, `EHOSTUNREACH` for IPv4's
+  admin-filtered, `EACCES` for IPv6's admin-prohibited. TCP takes an
+  ICMP error that reaches a socket its owner is holding as a soft error,
+  and a refused SYN is refused inside `connect()`, which holds it: so an
+  ICMP answer to a held TCP socket is sent a tick later (one jiffy, on
+  the system workqueue), once the call has let go. A reset needs no
+  wait: TCP queues it on the socket's backlog. [*ntfe-seat.outbound-refusal-fails-local-socket-at-once] The loopback device retains
   the route the packet was sent with, so the foreign source address
   never meets source validation. [*ntfe-seat.outbound-refusal-skips-source-validation]
+
+The builders read the offending packet from `skb->data` as though it
+pointed at the network header, as it does at the IP hooks; at the
+egress seat it points at the link header the device has pushed, so
+`refuse.c` pulls the packet to its network header for the build and
+pushes it back after. [*ntfe-seat.refusal-built-from-network-header]
 
 When the refused packet belongs to an **established TCP** flow, the far
 end is torn down too: `peios_ntfe_teardown_build()` turns the refused
@@ -115,9 +135,17 @@ seat has no flow facts and never tears down. [*ntfe-seat.ingress-never-tears-dow
 The answer is not sent, and the `REJECT` **degrades to `DROP`** (counted
 in `reject_degraded`, flagged `REJECT_DEGRADED` in the event, the kind
 still named), when there is nothing to send: a non-IP frame, a broadcast
-or multicast destination, a builder that declines (a fragment, a failed
-checksum, a refusal of a refusal), a packet with no route to reason from,
-or an allocation failure. [*ntfe-seat.reject-degrades-to-drop-when-nothing-to-send] Refusals sent are counted in
+or multicast destination, an ingress frame on a non-Ethernet device, a
+builder that declines (a non-first fragment, which has no transport
+header to answer from; a failed checksum; a refusal of a refusal), a
+packet with no route to reason from, or an allocation failure. [*ntfe-seat.reject-degrades-to-drop-when-nothing-to-send] A
+*first* fragment passes the builders' fragment check and is declined by
+their checksum check instead — its transport checksum covers a payload
+it carries only part of — so one whose checksum the builder does not
+verify (one the stack has already marked as checked, or a protocol the builders
+skip: UDP with a zero checksum, SCTP, ESP, AH, GRE, UDP-Lite) is
+answered. Fragments meet the builders only at the device seats:
+`LOCAL_IN` sees reassembled packets. [*ntfe-seat.first-fragment-declined-by-checksum] Refusals sent are counted in
 `refusals_emitted`. [*ntfe-seat.refusals-sent-counted]
 
 ## The refusal law

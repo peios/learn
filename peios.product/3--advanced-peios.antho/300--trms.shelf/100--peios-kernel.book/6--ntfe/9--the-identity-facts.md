@@ -16,7 +16,8 @@ Every inet socket carries a **governing identity**, recorded by KACS in
 the socket's security state (§3.12.2): the caller's *effective* token —
 so a service thread impersonating a client attributes the socket to the
 client, as audit does — and the process facts of that moment: the
-process GUID, the thread-group id and the task's `comm`. [*ntfe-identity.socket-stamp-effective-token-and-process-facts] The stamp is
+process GUID, the thread-group id and the `comm` of the thread that
+made the stamp (a thread's own name, which need not be its process's). [*ntfe-identity.socket-stamp-effective-token-and-process-facts] The stamp is
 taken at every act that commits the socket to a role: creation, `bind`,
 `listen`, `connect`, inheritance at `accept`, and `KACS_SO_RESTAMP`. [*ntfe-identity.stamp-taken-at-role-acts] The
 last stamp governs, which is how a listener handed to another program
@@ -49,7 +50,10 @@ very packet:
 - TCP, UDP and UDP-Lite are looked up by tuple, the way the netfilter
   socket match does — listeners included, and through the same hash a
   `SO_REUSEPORT` group steers by, so the sentence names the socket that
-  will actually receive. [*ntfe-identity.inbound-transport-lookup-by-tuple] Early demux may already have found it. Any
+  will actually receive. [*ntfe-identity.inbound-transport-lookup-by-tuple] Early demux may already have found it, and
+  its socket is used in place of the lookup — for UDP only once the
+  datagram has passed the `shared` test above, since early demux also
+  attaches the one socket a multicast datagram happens to match. Any
   other protocol is looked up among raw sockets bound to it. [*ntfe-identity.inbound-other-protocol-raw-lookup]
 - A socket found is `program` (a request minisock stands for its
   listener; a `TIME_WAIT` minisock is nobody's: `kernel`). [*ntfe-identity.inbound-found-socket-program]
@@ -92,8 +96,9 @@ same principal, and a later restamp of the socket, a fork after
 nothing for flows already judged. [*ntfe-identity.fixed-at-first-judgment] The extension holds one counted token
 reference per slot and releases it when conntrack frees the flow. [*ntfe-identity.token-ref-per-slot-released-on-free] Two
 CPUs racing on a new flow's first packets may both resolve; the first
-record stands, as the first sentence does, and the loser releases its
-reference. [*ntfe-identity.resolve-race-first-record-stands]
+record stands — unlike the sentence, where the second write wins
+(§6.8) — and the loser releases its reference and judges the recorded
+identity instead of its own. [*ntfe-identity.resolve-race-first-record-stands]
 
 ## Across the bridge
 
@@ -102,13 +107,21 @@ borrowed token pointer. [*ntfe-identity.flow-view-carries-borrowed-token] The br
 pnp-core's `Principal` trait over the token — user SID, enabled-group
 membership (deny-only groups are invisible to policy), [*ntfe-identity.deny-only-groups-invisible] integrity level,
 confinement SID and capabilities, the per-service SID found among the
-enabled groups, the process GUID as text — without copying the group
+enabled groups, the process GUID as text (PCDS's string form —
+`Data1`, `Data2` and `Data3` read as little-endian numbers and written
+most significant digit first, `Data4` bytes in order — lowercase and unbraced, `8-4-4-4-12`; ingestion lowercases a
+`Local.Process` or `Remote.Process` pattern and strips braces from a
+braced one to match) — without copying the group
 list: a token may carry a thousand groups and the judgment runs in
 softirq context, so the snapshot borrows a view and asks membership
 questions of it. [*ntfe-identity.principal-view-without-copying-groups] The view is lock-free: group SIDs are fixed at token
 creation and each group's attributes are an atomic. [*ntfe-identity.principal-view-lock-free]
 
-Nothing about a SID's meaning lives in the kernel. [*ntfe-identity.no-sid-meaning-in-kernel] `Local.Service.Equal
+The judgment compares SIDs and nothing else; what NTFE knows of a SID's
+meaning is only what pnp-core compiles into it — the service-SID
+derivation and a table of well-known names — used once, at ingestion,
+to turn a name a rule wrote into a SID. The engine holds no directory
+of principals and resolves no SID back to a name. [*ntfe-identity.no-sid-meaning-in-kernel] `Local.Service.Equal
 = resolvd` is turned into the service's SID at ingestion by pnp-core,
 with the same derivation peinit and authd use to mint it (the SHA-1 of
 the uppercased UTF-16LE name under `S-1-5-80`); [*ntfe-identity.service-name-to-sid-at-ingestion] `Local.User.Equal =

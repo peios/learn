@@ -230,16 +230,20 @@ three above all refuse the generation.
 
 Everywhere, for IP traffic. Inbound, the refusal goes back to the peer.
 Outbound, the answer the peer would have sent is delivered to the local
-socket, so the program's connect fails at once with *connection refused*
-(`Refused`, TCP) or *host unreachable* (`Prohibited`, or any UDP
-refusal). Only a packet with no refusal vocabulary — ARP and other
+socket, so the program fails at once — a TCP `connect`, or the next call
+on a connected UDP socket — with *connection refused* for `Refused`
+(a reset for TCP, a port unreachable for UDP and the rest), and for
+`Prohibited` with *host unreachable* over IPv4 or *permission denied*
+over IPv6. Only a packet with no refusal vocabulary — ARP and other
 non-IP frames, a broadcast or multicast destination, a fragment — is
 applied as a `DROP` and counted as *degraded*; the verdict event still
 says `REJECT` and names the kind. The refusals PNP sends pass its own
 seats unjudged.
 
 In the `Flow` layer a `REJECT` sentence answers every later packet of
-the flow the same way, so a retransmitted SYN gets its reset too. When
+the flow the same way, so a retransmitted SYN gets its reset too —
+from the sentence, or, where refusing the first packet took the new
+flow with it, from a fresh judgment of the retransmit as a new flow. When
 the refused packet belongs to an *established* TCP connection (a flow
 re-judged after a policy change or at a time edge), the other end is
 torn down as well: the refused packet is turned into a reset and sent

@@ -19,7 +19,11 @@ viewer daemon (pnpd) observes and authors, it never decides. [*ntfe-engine.no-us
 Peios ships a clean slate below NTFE. The netfilter **hook framework**
 and **conntrack** (built in, with events, zones and timeouts; helpers
 off) are kept, as are `nf_defrag` and the `nf_reject` machinery NTFE uses
-to phrase refusals. [*ntfe-engine.keeps-hooks-conntrack-defrag-reject] Everything that was a policy *frontend* is
+to phrase refusals. [*ntfe-engine.keeps-hooks-conntrack-defrag-reject] With helpers off nothing assigns a
+helper to a flow (only a conntrack entry a privileged process creates
+over ctnetlink, naming one, could carry it), so no flow is *expected*
+by another: `ct->master` stays NULL, and the Flow layer's `Related`
+fact (§6.3) is false on every flow the stack tracks. [*ntfe-engine.helpers-off-related-never-true] Everything that was a policy *frontend* is
 configured out: nf_tables, the xtables family (`iptables`, `ip6tables`,
 `ebtables`, `arptables`), ipset, NFQUEUE, NFLOG, the flow table offload,
 bridge netfilter, the netfilter BPF link and IPVS. [*ntfe-engine.policy-frontends-configured-out] `NF_NAT` is built but

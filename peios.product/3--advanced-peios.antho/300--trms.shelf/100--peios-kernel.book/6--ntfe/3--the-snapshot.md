@@ -53,18 +53,25 @@ Then IP, from `skb_network_offset()`:
 
 - **IPv4** — addresses, TTL, DSCP (`tos >> 2`), the fragment flag (`IP_MF`
   set or a non-zero fragment offset), the protocol, and the L4 facts
-  from `ihl * 4` on. [*ntfe-snapshot.ipv4-facts]
+  from `ihl * 4` on. [*ntfe-snapshot.ipv4-facts] A *non-first* fragment (non-zero offset) has no
+  L4 facts — its payload begins mid-datagram — though it still reads
+  the protocol its header names. [*ntfe-snapshot.ipv4-non-first-fragment-has-no-l4]
 - **IPv6** — addresses, hop limit, DSCP from the traffic class, and a
   bounded walk (eight hops) of the extension-header chain: hop-by-hop,
   routing and destination options are skipped by `(hdrlen + 1) * 8`; [*ntfe-snapshot.ipv6-extension-walk-bounded-eight-hops] a
   fragment header sets the fragment fact, [*ntfe-snapshot.ipv6-fragment-header-sets-fragment] and a *non-first* fragment
   ends the walk with no L4 facts (there are none to read). [*ntfe-snapshot.ipv6-non-first-fragment-has-no-l4] The protocol
   fact is the header the walk stops at — so an MLD report behind a
-  hop-by-hop header reads `Protocol = icmpv6`, as a rule would expect. [*ntfe-snapshot.ipv6-protocol-is-walk-terminus]
+  hop-by-hop header reads `Protocol = icmpv6`, as a rule would expect.
+  Every way out of the walk names one: a non-first fragment reads the
+  protocol its fragment header names, as a later IPv4 fragment reads
+  its own; an extension header too short to read is itself the
+  protocol; and after eight hops the next header is the protocol, with
+  L4 facts if it is not another extension header. [*ntfe-snapshot.ipv6-protocol-is-walk-terminus]
 
 Then L4, by protocol: ports for TCP, UDP and SCTP; [*ntfe-snapshot.ports-for-tcp-udp-sctp] the flag byte for TCP
-(`TcpFlags` is `FIN..CWR` as the eight low bits of the 13th byte, the
-same encoding `tcp_flag_byte()` uses); [*ntfe-snapshot.tcp-flags-encoding] type and code for ICMP and
+(`TcpFlags` is the TCP header's byte at offset 13, `FIN` in bit 0
+through `CWR` in bit 7, the same encoding `tcp_flag_byte()` uses); [*ntfe-snapshot.tcp-flags-encoding] type and code for ICMP and
 ICMPv6. [*ntfe-snapshot.icmp-type-and-code] Every header read goes through `skb_header_pointer()`, so a
 packet whose headers are paged or truncated yields absent facts rather
 than a fault. [*ntfe-snapshot.truncated-headers-yield-absent-facts]
@@ -107,7 +114,9 @@ forest reads that the store can answer for this packet. [*ntfe-snapshot.bridge-f
 resolved *before* evaluation, against the forest being evaluated, which
 is why the forest carries its name sets (§6.5). [*ntfe-snapshot.machinery-facts-resolved-before-evaluation]
 
-Three visibility laws are enforced here rather than in the core: a
+Three visibility laws are enforced here, and again in the core, which
+builds a condition over a fact its layer never has never to hold
+(§6.5): a
 `RawPacket` forest is given no tags whatever the flow says (tags flow
 upward only, and RawPacket is the lowest layer; `Packet` and `Flow`
 forests read them); [*ntfe-snapshot.rawpacket-forest-gets-no-tags] an ingress snapshot has no flow, so no tags exist to
@@ -130,13 +139,19 @@ bit is set, [*ntfe-snapshot.network-id-lifted-when-bit-set] and the name and tru
 operator has not labelled). [*ntfe-snapshot.empty-network-name-and-trust-absent] No entry, no bit: an interface no network
 has been identified on carries no context, and every condition over the
 three facts is false there. [*ntfe-snapshot.no-context-entry-no-network-facts] The strings are bounded (40, 64 and 32
-bytes, `PEIOS_NTFE_NETWORK_*_LEN`); [*ntfe-snapshot.network-strings-bounded] a longer registry value is truncated
-at ingestion and the truncation logged once. [*ntfe-snapshot.long-network-value-truncated-and-logged-once]
+bytes with their NUL, `PEIOS_NTFE_NETWORK_*_LEN`); [*ntfe-snapshot.network-strings-bounded] a longer registry value — a
+record's `Name` or `Trust`, or the `Network` an interface's `Status`
+names — is truncated at ingestion and the truncation logged once. [*ntfe-snapshot.long-network-value-truncated-and-logged-once]
+The id of a record is its key *name* under `Networks\`, not a value,
+and is not truncated: a name of 40 bytes or more is ignored, record and
+all (§6.5). [*ntfe-snapshot.overlong-network-id-name-ignored]
 
-The fields are the same as the interface layer's (§6.1): netd fills
-them from the interface record when it judges an interface, the kernel
-from the table when it judges a packet, so `Network.Trust.Equal` reads
-the same record in either layer. [*ntfe-snapshot.network-facts-match-interface-layer]
+The fields are the three `Network.*` facts the interface layer — the
+fourth layer, which netd builds and judges in userspace — conditions on
+beside its own (see [the interface layer](~peios/networking/network-policy-reference#the-interface-layer)):
+netd fills them from the interface record when it judges an interface,
+the kernel from the table when it judges a packet, so
+`Network.Trust.Equal` reads the same record in either layer. [*ntfe-snapshot.network-facts-match-interface-layer]
 
 ## The identity fields
 

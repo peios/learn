@@ -20,7 +20,10 @@ kernel-owned subtrees: [*ntfe-ingest.key-discovered-at-bootstrap] `pkm_lcs_walk_
 resolved locally against the hive root, not round-tripped), [*ntfe-ingest.machine-component-resolved-locally] and its
 absence is not an error — no key, no policy and no context, generation
 stays where it is. [*ntfe-ingest.absent-network-key-is-not-an-error] When the key exists one internal watch is armed on
-it, depth-unbounded, for every mutation: [*ntfe-ingest.one-unbounded-watch-on-network-key] `Rules\`, `Interfaces\` and
+it, depth-unbounded, for every change of content at any depth — LCS
+delivers it a value set, a value deleted, a subkey created, a subkey
+deleted and a key deleted; a security-descriptor change is not
+delivered: [*ntfe-ingest.one-unbounded-watch-on-network-key] `Rules\`, `Interfaces\` and
 `Networks\` beneath it are what NTFE reads; [*ntfe-ingest.ntfe-reads-rules-interfaces-networks] `Profiles\` and `Dns\` are
 netd's and resolvd's, and a write there fires the watch and costs a
 walk that publishes nothing. [*ntfe-ingest.foreign-subtree-write-publishes-nothing]
@@ -58,23 +61,33 @@ The rules stage:
    (its effective, layering-resolved values, delivered in the batch
    record format `u32 name_len | name | u32 type | u32 data_len | data`)
    followed by one `RSI_ENUM_CHILDREN` round trip for its exceptions,
-   recursively, [*ntfe-ingest.rule-read-is-two-round-trips] bounded by depth 12 and 4096 rules per layer. [*ntfe-ingest.walk-bounded-depth-12-and-4096-rules]
+   recursively, [*ntfe-ingest.rule-read-is-two-round-trips] bounded by depth 12 and 4096 rules per layer: a root rule
+   is depth 0, so a chain of 13 keys is the deepest read, and a rule
+   deeper than that or a 4097th rule refuses the walk. [*ntfe-ingest.walk-bounded-depth-12-and-4096-rules]
 
 Registry types are lowered as the builder ABI expects: `REG_SZ` and
 `REG_EXPAND_SZ` to strings (NUL termination stripped), `REG_DWORD` and
 `REG_DWORD_BIG_ENDIAN` to integers, `REG_QWORD` to a signed 64-bit
 integer, `REG_MULTI_SZ` to a list of strings. [*ntfe-ingest.registry-type-lowering] Any other type in a rule
 refuses the walk: [*ntfe-ingest.other-value-type-refuses-walk] atomic transitions prefer a loud rejection over a
-silently half-read rule.
+silently half-read rule. So does an integer of the wrong length — a
+`REG_DWORD` or `REG_DWORD_BIG_ENDIAN` whose data is not 4 bytes, a
+`REG_QWORD` not 8 — in a rule or in `CurrentReportingLevel`. [*ntfe-ingest.wrong-length-integer-refuses-walk]
 
-Everything the stage feeds the builder — layer, rule name and depth,
-value name, type and bytes, and the reporting level — also goes through
-an FNV-1a digest. [*ntfe-ingest.rules-input-digested] When the digest equals the one of the last walk that
-published and a policy is in force, the forests are discarded unbuilt
-into a generation: [*ntfe-ingest.unchanged-digest-publishes-nothing] the active one already *is* this policy, and
-republishing would only make every sentence stale for nothing. A walk
-fired by an inventory write, or by the second of the two watch
-deliveries a transaction produces, therefore changes no generation. [*ntfe-ingest.inventory-write-changes-no-generation]
+Everything the stage feeds the builder — each layer and whether its key
+exists, rule name and depth, value name, type and bytes — also goes
+through an FNV-1a digest, and so does the reporting level's *value*
+(not its bytes: the same level re-written as another integer type
+digests the same). [*ntfe-ingest.rules-input-digested] When the digest equals the one of the last walk that
+published (none before the first), the stage publishes nothing: the
+built forests are freed and the generation does not move. [*ntfe-ingest.unchanged-digest-publishes-nothing] The
+active generation already *is* this policy — even when that policy is
+no forests at all — and republishing would only make every sentence
+stale for nothing. A walk fired by an inventory write therefore
+publishes no rules; it moves the generation only if the context stage
+finds the table changed (below). The writes of a transaction reach the
+watch together at its commit and, like any burst, coalesce into one
+walk. [*ntfe-ingest.inventory-write-changes-no-generation]
 
 ### The context stage
 
@@ -82,7 +95,8 @@ The inventory is read into one `struct peios_ntfe_context_table`, at
 most 64 entries of interface name, network id, name and trust: [*ntfe-ingest.context-table-at-most-64-entries]
 
 1. every child of `Networks\` is a record; its key name is the id (a
-   UUID — a longer name is ignored, once loudly), [*ntfe-ingest.overlong-network-id-ignored-once-loudly] and one
+   UUID — a name of 40 bytes or more, which no id field can hold, is
+   ignored with its record, once loudly), [*ntfe-ingest.overlong-network-id-ignored-once-loudly] and one
    `RSI_QUERY_VALUES` round trip reads its `Name` and `Trust`
    (`REG_SZ`; absent or unreadable is empty, and the id is still a
    fact), [*ntfe-ingest.unreadable-name-or-trust-is-empty] up to 256 records; [*ntfe-ingest.network-records-up-to-256]
@@ -93,10 +107,18 @@ most 64 entries of interface name, network id, name and trust: [*ntfe-ingest.con
    of that id for its name and trust; [*ntfe-ingest.interface-entry-joins-network-record] either absent — no link, no
    offer yet, an `IGNORE`d or `DOWN` interface — makes none. [*ntfe-ingest.incomplete-status-makes-no-entry]
 
-Nothing in the stage refuses. [*ntfe-ingest.context-stage-never-refuses] A record that cannot be read is logged
-and skipped, [*ntfe-ingest.unreadable-record-skipped] an interface beyond the 64th carries no context, [*ntfe-ingest.interface-beyond-64th-has-no-context] a value
-longer than its field is truncated with one warning. [*ntfe-ingest.overlong-context-value-truncated] The table then
-goes to `peios_ntfe_context_publish()` (§6.3): if it equals the active
+Nothing in the stage refuses a generation. [*ntfe-ingest.context-stage-never-refuses] A record that cannot be read is
+logged and skipped — an interface key whose subkeys cannot be listed,
+or whose `Status` cannot be read, carries no context; a network record
+whose values cannot be read keeps its id with no name and no trust; [*ntfe-ingest.unreadable-record-skipped]
+an interface beyond the 64th carries no context, [*ntfe-ingest.interface-beyond-64th-has-no-context] a value
+longer than its field is truncated with one warning. [*ntfe-ingest.overlong-context-value-truncated] If the list of
+`Networks\` or `Interfaces\` itself cannot be read, the stage publishes
+nothing and the previous table stands: a table built from half a list
+would strip every network after the failure point of its name and
+trust, and with them every rule that names them. That failure is the
+walk's error — it shows in `last_ingest_error` — and the rules stage's
+outcome is untouched by it. [*ntfe-ingest.unreadable-list-keeps-previous-table] Otherwise the table goes to `peios_ntfe_context_publish()` (§6.3): if it equals the active
 one entry for entry it is freed and nothing happens; [*ntfe-ingest.equal-context-table-publishes-nothing] otherwise it is
 `rcu_assign_pointer()`ed into place, the generation counter advances,
 the old table is freed after grace, and the kernel log says how many
@@ -114,7 +136,7 @@ ones last (§6.4), [*ntfe-ingest.build-orders-live-time-conditions-last] resolve
 facts (a `FlowState` or tag condition in a `RawPacket` forest; a
 per-packet fact — `Length`, `TcpFlags`, `Fragment`, `Ttl`, `Dscp`,
 `EtherType`, `DstMac`, `FlowState` — in a `Flow` forest; `Related` or
-`Start.*` anywhere but `Flow` — all legal, never true; the kernel drops
+`Start.*` anywhere but `Flow` — all legal, and built never to hold; the kernel drops
 lints, the authoring surface shows them), [*ntfe-ingest.layer-impossible-facts-lint-not-refuse] and collects the forest's
 **name sets**: every tag name mentioned in a `TAG` action, a `PROMPT`
 fallback, or a `Tag.<n>` condition, split into the names the forest
@@ -129,10 +151,18 @@ unknown fact, [*ntfe-ingest.refuse-unknown-fact] unsupported operator, [*ntfe-in
 that does not parse (bad duration, unknown key fact, duplicate
 arguments, a window over the one-day horizon), [*ntfe-ingest.refuse-unparsable-counter-view] a non-list `Actions`, [*ntfe-ingest.refuse-non-list-actions] an
 unparsable action, [*ntfe-ingest.refuse-unparsable-action] a `REJECT` kind that is not `Refused` or
-`Prohibited`, [*ntfe-ingest.refuse-unknown-reject-kind] a `Priority` that is not an integer, [*ntfe-ingest.refuse-non-integer-priority] an `Enabled` that is
-not 0 or 1, [*ntfe-ingest.refuse-enabled-not-0-or-1] a rule name containing a path separator [*ntfe-ingest.refuse-rule-name-with-path-separator] — and, over the
-name sets, two distinct tag names (or stream names) whose 64-bit hashes
-collide. [*ntfe-ingest.refuse-name-hash-collision]
+`Prohibited`, [*ntfe-ingest.refuse-unknown-reject-kind] a `PROMPT` chain nested deeper than `MAX_PROMPT_CHAIN`
+(4), refused as an unparsable action, [*ntfe-ingest.refuse-prompt-chain-too-deep] an action the layer does not
+speak (`JOIN`, `IGNORE` or `DOWN`, the interface layer's verdicts, in
+a kernel layer, directly or as a `PROMPT` fallback), [*ntfe-ingest.refuse-action-not-at-layer] a `Present`
+condition on a fact that never exists at the rule's layer (every other
+operator over such a fact is only linted, below; `Present` looks
+through the absent-fact law, so `X.Present = 0` there would always
+hold), [*ntfe-ingest.refuse-present-never-at-layer] a `Priority` that is not an integer, [*ntfe-ingest.refuse-non-integer-priority] an `Enabled` that is
+not 0 or 1, [*ntfe-ingest.refuse-enabled-not-0-or-1] a rule name that is empty or contains a path separator [*ntfe-ingest.refuse-rule-name-with-path-separator]
+(a backstop: LCS refuses such a key name before the walk could read
+it) — and, over the name sets, two distinct tag names (or stream names)
+whose 64-bit hashes collide. [*ntfe-ingest.refuse-name-hash-collision]
 
 After all three layers build, `ntfe_rust_forests_check()` runs the checks
 that span forests, because the stores are machine-wide: tag and stream

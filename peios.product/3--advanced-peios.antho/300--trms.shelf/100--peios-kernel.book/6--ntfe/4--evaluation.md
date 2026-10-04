@@ -42,8 +42,9 @@ returns "matched" to the parent so the parent knows it was shadowed. [*ntfe-eval
 
 Every triggered rule's action list is resolved once. [*ntfe-eval.triggered-rule-resolved-once] Verdict actions fold
 to the strictest listed; [*ntfe-eval.verdict-actions-fold-to-strictest] `TAG` and `COUNT` push effects; [*ntfe-eval.tag-and-count-push-effects] `REPORT` folds
-to the highest level listed and pushes one effect if that level clears
-`CurrentReportingLevel` (one report per rule per evaluation); [*ntfe-eval.report-folds-to-highest-level-and-gates] `PROMPT`
+to the highest level listed and pushes one effect if that level is at
+or above `CurrentReportingLevel` (`level >= CurrentReportingLevel`; one
+report per rule per evaluation); [*ntfe-eval.report-folds-to-highest-level-and-gates] `PROMPT`
 pushes a prompt-issued effect and, with no handler transport in this
 release, resolves its fallback in place [*ntfe-eval.prompt-resolves-fallback-in-place] (nesting bounded by
 `MAX_PROMPT_CHAIN`, 4). [*ntfe-eval.prompt-chain-bounded-at-four] Side effects always execute — they are pushed
@@ -103,9 +104,10 @@ length, or 0 when the packet has none), [*ntfe-eval.count-length-is-packet-lengt
    `peios_ntfe_counter_read()` for every view — and gives a `Flow` forest
    its own facts, `Related` and `Start.*`; [*ntfe-eval.bridge-resolves-machinery-facts-before-eval]
 2. evaluates with `EvalContext { reporting_level }`; [*ntfe-eval.bridge-passes-reporting-level]
-3. writes the verdict, the reject kind, the backstop flag, the truncated
-   attribution and `expires_at` (0 = never) into `struct
-   peios_ntfe_outcome`; [*ntfe-eval.bridge-writes-outcome]
+3. writes the verdict, the reject kind, the backstop flag, the
+   attribution (cut to 95 bytes), the FNV-1a-64 of the whole
+   attributing path (`attributed_hash`) and `expires_at` (0 = never)
+   into `struct peios_ntfe_outcome`; [*ntfe-eval.bridge-writes-outcome]
 4. **then** applies the effects — `peios_ntfe_tag_apply()`,
    `peios_ntfe_counter_add()`, `peios_ntfe_report_emit()` with the verdict
    it just computed — counting each species into the outcome. [*ntfe-eval.effects-applied-after-verdict]
