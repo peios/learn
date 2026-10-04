@@ -118,6 +118,7 @@ anything.
 | `unowned` | A file that belongs to no package would be replaced (§5) | Run again with `--overwrite-unowned`; the displaced copy is kept |
 | `alternate-upgrade` | A package is upgraded by some other means (§6) | Run again with `--bypass-alternate-upgrade` |
 | `unresolvable` | No plan satisfies the request (§4) | Change the request |
+| `untrusted` | A configured repository's trust ceremony has never run, as with one an image ships (§3) | `peipkg repo add <name>` runs it, or remove the repository |
 | `failed` | Anything else | Read `message` |
 
 `message` is the text a terminal run prints, for showing to a person.
