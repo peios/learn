@@ -37,7 +37,16 @@ reg set -p Machine/System/Locale LANG sz:en_GB.UTF-8
 ```
 
 A principal's own values, under `Users\<SID>\Locale`, override the
-machine's. The principal may set them, and so may Administrators. Use
+machine's. The principal may set them, and so may Administrators.
+
+On the desktop, a person sets their own in **My Settings** (type `my` in
+the launcher), under **Language and formats**. The lists are the same as
+System Settings', and the first entry in each, **As this machine has it**
+and **As the language writes them**, removes the person's own value.
+**Save** writes `LANG` and the same five format categories under
+`CurrentUser\Locale`, which is the person's `Users\<SID>\Locale`.
+
+From a shell, use `reg`. Use
 `lps show NAME` to find a local principal's SID, or `token user` within
 that principal's session, then substitute the SID after the principal has
 logged in at least once:
