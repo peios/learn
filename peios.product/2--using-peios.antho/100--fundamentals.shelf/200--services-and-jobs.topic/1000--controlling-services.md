@@ -20,6 +20,7 @@ svctl <command> [service] [flags]
 $ svctl status jellyfin        # current state of one service
 $ svctl start jellyfin         # start it, wait until Active or Failed
 $ svctl list                   # every service you can query
+$ svctl boot                   # how this boot went
 $ svctl shutdown reboot        # graceful reboot
 ```
 

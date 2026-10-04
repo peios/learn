@@ -86,7 +86,9 @@ A console that signs in on its own is a passwordless principal plus `--try-no-pa
 
 The same service definition suits an image where `peios` has a password: the attempt is refused before anything is rendered, and an ordinary prompt appears. No second seed, and no conditional configuration.
 
-To turn autologon off, give the principal a password with [`lps password`](~peios/managing-local-principals/lps-command). To move the prompt to another terminal, change the service's `TTYPath` — see [controlling services](~peios/services-and-jobs/controlling-services).
+To turn autologon off, give the principal a password with [`lps password`](~peios/managing-local-principals/lps-command), or take `--try-no-password` out of the `login-console` service's `Arguments`. To move the prompt to another terminal, change the service's `TTYPath` — see [controlling services](~peios/services-and-jobs/controlling-services).
+
+**System Settings** chooses it on its **Startup & shutdown** tab, under **Signing in at the console**: **Nobody: always ask**, or one of the local accounts. Saving writes `Arguments` as `--console`, followed by `--try-no-password` and the account if one is chosen. It applies the next time `login-console` starts, at the latest the next boot. Changing it needs write access to `Machine\System\Services\login-console`, which as shipped only Administrators have.
 
 ## Options
 

@@ -149,6 +149,28 @@ A [Critical service](~peios/services-and-jobs/supervision) exhausting its restar
 | `Machine\System\Boot\BootSuccessGrace` | 30 | Seconds a Critical service must hold a satisfying state before boot counts as successful. |
 | `Machine\System\Boot\ShutdownTimeout` | 90 | Maximum seconds for the whole [shutdown](~peios/services-and-jobs/shutdown) sequence. |
 | `Machine\System\Boot\PostKillTimeout` | 5 | Seconds a service cgroup may take to drain after SIGKILL before it counts as stuck. |
+| `Machine\System\Boot\SettleTimeout` | 5 | Seconds peinit waits for devices to settle before services that wait for them start. |
+
+All but `ShutdownTimeout` are read at boot, so a change applies at the next one; `ShutdownTimeout` applies the next time peinit re-reads its configuration (`svctl reload-config`). **System Settings** shows and changes them on its **Startup & shutdown** tab, under **Timeouts**, which needs write access to `Machine\System\Boot` — as shipped, Administrators.
+
+## How this boot went
+
+`svctl boot` asks peinit, and so does **System Settings**, under **This boot** on the **Startup & shutdown** tab:
+
+```
+$ svctl boot
+boot: full
+reason: normal
+unconfirmed boots before this one: 0 (recovery at 3)
+confirmed: yes
+grace: 30s
+```
+
+- **boot** is the mode, and **reason** why: `normal`, `requested` (`peios.safemode=1`), or a Safe mode peinit chose itself because a full boot couldn't be planned, with what stopped it.
+- **unconfirmed boots before this one** is the boot-attempt counter as this boot found it, and the threshold at which the machine starts in Recovery.
+- **confirmed** says whether this boot has counted as a success yet: every Critical service holding for `BootSuccessGrace`, and the counter put back to 0. Until then it names what it is waiting for.
+
+Recovery mode never answers: it runs a recovery shell and no services, so there is no peinit control socket to ask. Anyone signed in may ask; see [who can manage a service](~peios/services-and-jobs/who-can-manage-a-service) for the descriptor.
 
 ## The kernel command line
 
@@ -185,6 +207,12 @@ A few lines escape all of this: whatever peinit and prelude print *before* they 
 
 > [!NOTE]
 > `peios.quiet` governs what **peinit** writes, and nothing else. The **kernel's** own console output is governed separately by the standard `loglevel` parameter, which shipped images set to `4` — errors and worse — so that peinit's narrative is not buried under the kernel's. The two are independent: setting `peios.quiet=0` to debug a boot does not bring the kernel's messages back, and `loglevel=7 ignore_loglevel` does not make peinit any louder. Note also that raising `loglevel` alone will not undo a shipped `ignore_loglevel`, and that the image ships no `dmesg`, so at the default a kernel warning is not recoverable after the fact.
+
+### Seeing and changing it
+
+**System Settings** shows the command line this boot was started with, under **Kernel command line** on the **Startup & shutdown** tab, and the one the next boot image will be made from, `/lcl/etc/boot/cmdline`, where they differ.
+
+On an installed machine the command line is part of the boot image, which is made when Peios is installed or upgraded, so editing that file changes nothing on its own. With the dynamic-boot feature installed, its `mkuki-watch` service makes the boot image again whenever the file changes; then System Settings offers `peios.bootattempts` and `peios.quiet` as choices — how many boots may fail before Recovery, and what peinit writes on the console — and writes them into the file, to apply at the next boot. Nothing else on the line is offered: a mistake there can leave a machine that doesn't boot. Writing the file needs write access to it, which as shipped only Administrators have.
 
 Unknown `peios.*` tokens are ignored, as is a malformed value on either of the two valued tokens — this parser runs before anything exists to report a diagnostic to, and refusing to boot over a typo in a tuning knob is the worse outcome.
 

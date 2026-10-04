@@ -169,6 +169,8 @@ reg set Machine/System/Network Hostname workshop
 
 netd applies it on the next pass. A profile with `Hostname.Offered` on adopts a network-supplied name when this value is unset; `Hostname.Announce` tells DHCP servers the name so their DNS can register it. Both are off in a bare profile.
 
+netd sets whatever is written, but a network carries the name as one label: letters, digits and hyphens, at most 63 of them, not beginning or ending with a hyphen, and not `localhost`. **System Settings** holds it to that as it is typed: on its **About** tab, **Name** says what is wrong with a name before it can be saved, and shows the name the machine has now if netd hasn't applied the new one yet. The About tab also shows what the machine is and runs: the system and its edition, the kernel, how long it has been up, the hardware, and the disks.
+
 ## When netd refuses
 
 A rule with an unknown fact, a `JOIN` naming a profile that does not exist, a profile with an unknown value, or two rules tied on priority naming different profiles for one interface refuses the whole generation: netd keeps the last good one and `net status` says why, as a `policy REFUSED` line. A `JOIN` of a profile that exists but has `Enabled = 0` is not a fault — that rule abstains and its parent, another rule or the backstop answers.

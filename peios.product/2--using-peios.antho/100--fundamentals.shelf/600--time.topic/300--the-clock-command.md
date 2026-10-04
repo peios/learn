@@ -5,12 +5,14 @@ description: Every verb of the clock command, what each field of its output mean
 related:
   - peios/time/overview
   - peios/time/configuring-sources
+  - peios/time/time-zone-and-setting-the-clock
 ---
 
-`clock` reads over timed's socket and prints. It **writes nothing** —
+`clock` reads over timed's socket and prints. It **writes no policy** —
 time policy is registry configuration, and `reg` is how a registry value is
 set, so there is no second permission model to keep in step with the
-first. The one verb that acts is `reload`.
+first. The two verbs that act are `reload`, and `set`, which asks timed to
+set the clock while it isn't being set automatically.
 
 It is called `clock` and not `time` because `time` is a shell keyword:
 `time status` would run `status` and report how long it took.
@@ -22,6 +24,7 @@ It is called `clock` and not `time` because `time` is a shell keyword:
 | `clock status` | socket | — |
 | `clock sources` | socket | — |
 | `clock reload` | — | asks timed to re-read `Machine\System\Time` |
+| `clock set TIME` | — | asks timed to set the clock, while `Automatic` is 0 |
 
 `status` is the default, so bare `clock` is `clock status`.
 
@@ -30,6 +33,7 @@ It is called `clock` and not `time` because `time` is a shell keyword:
 ```
 $ clock status
 generation   118
+time zone    Europe/London
 state        synchronised
 following    1.time.peios.org (stratum 3)
 offset       -412.0us
@@ -44,6 +48,10 @@ stepped      +2.1d in total since start
 floor        1788142329 (the build timestamp; the clock is never set below it)
 ```
 
+**time zone** is the zone timed has put in `/etc/localtime`, or `UTC (none
+chosen)`. A zone chosen in the registry that timed couldn't use leaves the
+one before it, so this is the one in force.
+
 **state** is the field to read first:
 
 | State | Meaning |
@@ -51,7 +59,29 @@ floor        1788142329 (the build timestamp; the clock is never set below it)
 | `synchronised` | Normal. |
 | `settling` | Being steered, but the frequency estimate is still converging. Usual for the first few minutes after boot. |
 | `spike` | A large offset has appeared and is being timed to see whether it is real. The clock is deliberately untouched meanwhile. |
-| `unsynchronised` | Nothing is believed and the clock is free-running. |
+| `unsynchronised` | Nothing is believed and the clock is free-running. With `Automatic is 0: the clock is set by hand` after it, nothing is being asked: the clock is set by hand. |
+
+## Setting the clock
+
+```
+$ clock set 2026-10-04 14:05
+the clock is set
+$ clock set 2026-10-04T14:05:30
+$ clock set @1791122700
+```
+
+The time is local, in the machine's time zone, to the minute or the
+second, or `@` and a number of seconds since 1970 in UTC. timed sets the
+clock only while `Machine\System\Time Automatic` is 0; otherwise it keeps
+the clock from its sources, the next poll would put it back, and it
+refuses:
+
+```
+$ clock set 2026-10-04 14:05
+clock: the clock is kept from its sources; set Automatic to 0 to set it by hand
+```
+
+Like `reload`, it needs the control right.
 
 **accuracy** is the honest bound: how wrong this machine's time might be,
 with every uncertainty between here and the reference clock added up. It
@@ -126,8 +156,8 @@ $ clock reload
 clock: not permitted
 ```
 
-`reload` needs the control right on timed's control object. Reading does
-not: what time the machine thinks it is, and how well it knows, is not a
+`reload` and `set` need the control right on timed's control object.
+Reading does not: what time the machine thinks it is, and how well it knows, is not a
 secret, and a program deciding whether the clock is trustworthy enough to
 validate a certificate should not need a privilege to find out.
 

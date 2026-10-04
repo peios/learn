@@ -4,17 +4,20 @@ type: concept
 description: How a Peios machine knows what time it is — timed, authenticated network sources, and why the default is three independent operators rather than one.
 related:
   - peios/time/configuring-sources
+  - peios/time/time-zone-and-setting-the-clock
   - peios/time/the-clock-command
   - peios/trust/overview
 ---
 
-The machine's clock is kept by **timed**, and timed is the only process on
-the machine permitted to set it.
+The machine's clock is kept by **timed**, a service that runs from boot.
 
-That is not a figure of speech. Setting the clock needs
-`SeSystemtimePrivilege`, which is granted to timed's service identity and
-to nothing else, so "what on this machine can change the time" has a
-one-line answer that an administrator can check.
+Setting the clock needs `SeSystemtimePrivilege`. timed's service identity
+holds it, and so do Administrators. timed keeps the clock from network
+time servers, and treats any change it didn't make as an error to correct:
+a clock set behind its back is put back at the next poll. To set the clock
+yourself, turn off setting it automatically and ask timed to set it; see
+[the time zone, and setting the clock by
+hand](~peios/time/time-zone-and-setting-the-clock).
 
 ## Why this is worth caring about
 
@@ -152,3 +155,8 @@ privilege at all. Keeping them apart is the point.
 **It does not touch the hardware clock directly.** Once timed reports the
 clock as synchronised, the kernel writes it back to the RTC every eleven
 minutes on its own.
+
+**It does not decide how the time is shown.** The clock runs in UTC.
+The time zone, `Machine\System\Time TimeZone`, only changes how programs
+show it; timed copies the chosen zone into `/etc/localtime`, which every
+program reads.

@@ -150,7 +150,7 @@ Under `Machine\System\Init\`:
 
 | Key | Type | Default | Purpose | See |
 |---|---|---|---|---|
-| `ControlSecurity` | binary | SYSTEM full; Administrators shutdown + reload-config | Descriptor for system-level control operations. | [Who can manage a service](~peios/services-and-jobs/who-can-manage-a-service) |
+| `ControlSecurity` | binary | SYSTEM and Administrators all; Authenticated Users query | Descriptor for system-level control operations. | [Who can manage a service](~peios/services-and-jobs/who-can-manage-a-service) |
 | `MaxControlConnectionsPerUser` | dword | 16 | Maximum concurrent control-socket connections one user may hold; SYSTEM is exempt. | [Controlling services](~peios/services-and-jobs/controlling-services) |
 | `MaxControlConnections` | dword | 256 | Maximum concurrent control-socket connections in all. | [Controlling services](~peios/services-and-jobs/controlling-services) |
 | `MaxRequestSize` | dword | 65536 | Maximum control-socket request size (bytes). | [Controlling services](~peios/services-and-jobs/controlling-services) |

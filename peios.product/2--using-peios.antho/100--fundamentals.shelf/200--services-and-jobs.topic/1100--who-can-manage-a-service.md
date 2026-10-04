@@ -103,23 +103,22 @@ $ reg del 'Machine\System\Services\sshd' ServiceSecurity
 
 ## The system control descriptor
 
-Some operations are not about any one service — `shutdown` and `reload-config` act on the whole system. These are checked against **peinit's own** descriptor, stored at `Machine\System\Init\ControlSecurity`:
+Some operations are not about any one service — `shutdown` and `reload-config` act on the whole system, and `boot` reports on it. These are checked against **peinit's own** descriptor, stored at `Machine\System\Init\ControlSecurity`:
 
 | Right | Bit | Grants |
 |---|---|---|
 | `SYSTEM_SHUTDOWN` | 0x0001 | Initiate poweroff, reboot, or halt. |
 | `SYSTEM_RELOAD_CONFIG` | 0x0002 | Re-read all definitions and rebuild the graph. |
-
-Its generic mapping deliberately gives `GENERIC_READ` *nothing* — there is no "read" of the system control object, only the two actions:
+| `SYSTEM_QUERY_STATUS` | 0x0004 | Ask how this boot went (`svctl boot`). |
 
 | Generic | Maps to |
 |---|---|
-| `GENERIC_READ` | (nothing) |
+| `GENERIC_READ` | `SYSTEM_QUERY_STATUS` |
 | `GENERIC_WRITE` | `SYSTEM_RELOAD_CONFIG` |
 | `GENERIC_EXECUTE` | `SYSTEM_SHUTDOWN` |
-| `GENERIC_ALL` | `SYSTEM_SHUTDOWN` \| `SYSTEM_RELOAD_CONFIG` |
+| `GENERIC_ALL` | all three |
 
-The default grants **SYSTEM** full access and **Administrators** both rights. peinit loads this descriptor at boot and hot-reloads it on registry change, exactly like ServiceSecurity.
+The default grants **SYSTEM** and **Administrators** all three rights, and **Authenticated Users** `SYSTEM_QUERY_STATUS`, as the default service descriptor lets everyone signed in query a service. peinit loads this descriptor at boot and hot-reloads it on registry change, exactly like ServiceSecurity. A descriptor written before `SYSTEM_QUERY_STATUS` existed grants it only through `GENERIC_READ`, `GENERIC_ALL` or the bit itself.
 
 ## Jobs have descriptors too
 
