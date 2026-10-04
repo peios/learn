@@ -32,7 +32,7 @@ referenced.
 
 | Key | Type | Default | Purpose | Defined in |
 |---|---|---|---|---|
-| `Machine\System\Init\ControlSecurity` | binary | SYSTEM and Administrators, both rights | The descriptor for system-level control operations. | §4.7 |
+| `Machine\System\Init\ControlSecurity` | binary | SYSTEM and Administrators, every right; Authenticated Users, `SYSTEM_QUERY_STATUS` | The descriptor for system-level control operations and the boot query. | §4.7 |
 | `Machine\System\Init\MaxControlConnectionsPerUser` | dword | 16 | Concurrent control socket connections one caller's user SID may hold. SYSTEM is exempt. | §10.1 |
 | `Machine\System\Init\MaxControlConnections` | dword | 256 | Concurrent control socket connections in all. | §10.1 |
 | `Machine\System\Init\MaxRequestSize` | dword | 65536 | Maximum control request size, in bytes. | §10.1 |

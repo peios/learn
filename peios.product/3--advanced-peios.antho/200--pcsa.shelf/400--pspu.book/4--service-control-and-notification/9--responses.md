@@ -44,7 +44,7 @@ Returned by `shutdown`:
 ```
 
 Nothing else. A shutdown has no operation to observe and no service to
-report on. `reload-config` has its own shape (§4.15).
+report on. `reload-config` and `boot` have shapes of their own (§4.15).
 
 ## The error shape
 

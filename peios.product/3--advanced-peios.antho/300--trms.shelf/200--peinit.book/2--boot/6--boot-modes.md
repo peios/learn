@@ -78,6 +78,9 @@ by a cycle *and* a conflict at once, and an operator who fixed only the
 one they were shown would reboot straight back into Safe mode.
 [*mode.every-downgrade-finding-is-reported]
 
+They stay available for the rest of the boot: the control socket's
+`boot` command reports the mode, why, and every finding (§10.8).
+
 peinit rebuilds the dependency graph from scratch using only the
 eligible services. Dependencies on excluded services are dropped: if A
 depends on non-Critical B and B is excluded, A's dependency on B does

@@ -1,6 +1,6 @@
 ---
 title: Wire Vocabulary
-description: Every enumerated value on the control channel — response status, service state, transition cause, health, job and operation types, and granted rights.
+description: Every enumerated value on the control channel — response status, service state, transition cause, health, job and operation types, granted rights, and boot modes and their reasons.
 ---
 
 Every enumerated value that appears on the control channel. All are
@@ -119,3 +119,19 @@ for, and the rights it does know are still correctly reported.
 `poweroff`, `reboot`, `halt`
 
 Request-only; the manager does not echo it.
+
+## Boot mode
+
+`full`, `safe`, `recovery`
+
+The modes §4.15 defines. Only `boot` returns one, and a manager in
+`recovery` does not serve this channel, so in practice a client reads
+`full` or `safe`.
+
+## Boot mode reason
+
+| Value | Meaning |
+|---|---|
+| `normal` | A `full` boot, which is what a boot is unless something says otherwise. |
+| `requested` | The boot was asked for in this mode, on the kernel command line or its equivalent. |
+| `safe_mode_downgrade` | A `full` boot that the manager downgraded to `safe` because it found a fault it could not start the full configuration past, such as a critical service in a dependency cycle. `downgrade` lists each finding. |

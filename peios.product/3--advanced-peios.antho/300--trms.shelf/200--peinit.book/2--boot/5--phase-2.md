@@ -190,7 +190,10 @@ Completed and never reaches Active, so a test for Active would make such
 a service unable to ever mark a boot successful. Skipped counts too.
 [*success.the-criterion-is-satisfying-not-active]
 
-Success resets the boot attempt counter to zero (§2.7).
+Success resets the boot attempt counter to zero (§2.7). The control
+socket's `boot` command says where a boot stands: which Critical
+services it is waiting for, or when it will count, or that it has
+(§10.8).
 
 ## Failure summary
 

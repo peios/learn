@@ -41,6 +41,10 @@ reason to escalate. [*attempts.a-write-failure-reads-as-zero]
 The counter resets to 0 on a successful Full or Safe boot, after the
 grace period. [*attempts.a-successful-boot-resets-the-counter]
 
+The control socket's `boot` command reports the count this boot began
+with, the threshold, and whether this boot has reset the counter yet
+(§10.8).
+
 ## Recovery threshold
 
 The threshold is `peios.bootattempts=N` on the kernel command line,

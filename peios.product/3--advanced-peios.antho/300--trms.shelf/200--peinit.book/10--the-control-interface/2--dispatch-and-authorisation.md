@@ -6,8 +6,10 @@ description: The fixed sequence a parsed command runs before it does anything �
 A parsed command runs a fixed sequence before it does anything.
 
 1. **The shutdown gate.** If peinit is shutting down, everything except
-   `status`, `list`, `operation-status`, `job-status`, `job-list` and
-   `job-stop` is rejected. [*dispatch.the-shutdown-gate] The three job
+   `status`, `list`, `operation-status`, `boot`, `job-status`,
+   `job-list` and `job-stop` is rejected. [*dispatch.the-shutdown-gate]
+   `boot` stays open because, like the service queries, it changes
+   nothing. [*dispatch.boot-passes-the-shutdown-gate] The three job
    commands stay open because a
    shutdown stops every submitted job anyway (§12.2), and an
    administrator watching that happen, or wanting a job gone sooner
@@ -51,6 +53,7 @@ A parsed command runs a fixed sequence before it does anything.
 | `job-stop` | `JOB_STOP` on the job [*dispatch.right-job-stop] |
 | `shutdown` | `SYSTEM_SHUTDOWN` [*dispatch.right-shutdown] |
 | `reload-config` | `SYSTEM_RELOAD_CONFIG` [*dispatch.right-reload-config] |
+| `boot` | `SYSTEM_QUERY_STATUS` on the control descriptor, which by default every authenticated principal holds (§4.7) [*dispatch.right-boot] |
 
 `operation-status` resolves the operation before it checks the right, so
 an unknown identifier is reported as unknown regardless of who asked.

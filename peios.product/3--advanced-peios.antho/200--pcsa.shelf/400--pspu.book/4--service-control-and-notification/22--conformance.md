@@ -28,9 +28,10 @@ exist. Reports a status's and a job view's `granted` from that same
 check asking for `MAXIMUM_ALLOWED`, and does not record it as a denial
 (§4.14).
 
-**Commands.** Implements all thirteen, with the outcomes in §4.12 for
+**Commands.** Implements all fourteen, with the outcomes in §4.12 for
 every command-and-state pair, the response shapes in §4.9, §4.14 and
-§4.15, and only the error codes in §4.10. Filters `job-list` by
+§4.15, and only the error codes in §4.10. Reports a boot as confirmed
+only once its attempt count has been put back to 0 (§4.15). Filters `job-list` by
 `JOB_QUERY` as it filters `list`, and answers `job-status` and
 `job-stop` against the job's own descriptor (§4.7, §4.14).
 

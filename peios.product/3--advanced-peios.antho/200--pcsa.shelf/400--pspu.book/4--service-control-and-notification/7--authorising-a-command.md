@@ -31,6 +31,7 @@ descriptor:
 |---|---|---|
 | `SYSTEM_SHUTDOWN` | 0x0001 | Initiate a shutdown. |
 | `SYSTEM_RELOAD_CONFIG` | 0x0002 | Re-read the configuration. |
+| `SYSTEM_QUERY_STATUS` | 0x0004 | Ask how the machine booted (`boot`). |
 
 ## Generic mappings
 
@@ -51,13 +52,13 @@ For the manager's descriptor:
 
 | Generic right | Maps to |
 |---|---|
-| `GENERIC_READ` | 0 |
+| `GENERIC_READ` | `SYSTEM_QUERY_STATUS` |
 | `GENERIC_WRITE` | `SYSTEM_RELOAD_CONFIG` |
 | `GENERIC_EXECUTE` | `SYSTEM_SHUTDOWN` |
-| `GENERIC_ALL` | `SYSTEM_SHUTDOWN` \| `SYSTEM_RELOAD_CONFIG` |
+| `GENERIC_ALL` | `SYSTEM_SHUTDOWN` \| `SYSTEM_RELOAD_CONFIG` \| `SYSTEM_QUERY_STATUS` |
 
-`GENERIC_READ` maps to nothing on the manager's descriptor because it
-governs two actions and no queries.
+`GENERIC_READ` maps to the one right on the manager's descriptor that
+changes nothing, as it maps to `SERVICE_QUERY_STATUS` on a service.
 
 ## Per command
 
@@ -76,6 +77,11 @@ governs two actions and no queries.
 | `job-stop` | `JOB_STOP` on the job |
 | `shutdown` | `SYSTEM_SHUTDOWN` |
 | `reload-config` | `SYSTEM_RELOAD_CONFIG` |
+| `boot` | `SYSTEM_QUERY_STATUS` |
+
+`boot` is checked like any other command, although what it reports is
+not a secret: a descriptor decides who may ask, and §4.15 asks that the
+default one let every authenticated principal.
 
 `reset` requires `SERVICE_STOP` because clearing a terminal state is the
 tail of stopping something rather than the head of starting it.

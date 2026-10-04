@@ -1,12 +1,13 @@
 ---
 title: The Control Descriptor
-description: Shutdown and configuration reload are checked against peinit's own descriptor rather than any service's.
+description: Shutdown, configuration reload and the boot query are checked against peinit's own descriptor rather than any service's.
 ---
 
-Two operations are not about any one service: shutting the system down,
-and re-reading the configuration. They are checked against peinit's own
-descriptor, stored at `Machine\System\Init\ControlSecurity` as a binary
-value. [*svcsd.control-operations-use-peinits-own-descriptor]
+Three commands are not about any one service: shutting the system down,
+re-reading the configuration, and asking how the machine booted. They
+are checked against peinit's own descriptor, stored at
+`Machine\System\Init\ControlSecurity` as a binary value.
+[*svcsd.control-operations-use-peinits-own-descriptor]
 
 ## Access rights
 
@@ -14,32 +15,51 @@ value. [*svcsd.control-operations-use-peinits-own-descriptor]
 |---|---|---|
 | `SYSTEM_SHUTDOWN` | 0x0001 | Initiate poweroff, reboot or halt. [*svcsd.control-shutdown-grants-poweroff-reboot-halt] |
 | `SYSTEM_RELOAD_CONFIG` | 0x0002 | Re-read all definitions from the registry. [*svcsd.control-reload-config-grants-a-definition-reread] |
+| `SYSTEM_QUERY_STATUS` | 0x0004 | Read peinit's own status: how this boot went, with `boot` (§10.2). [*svcsd.control-query-status-grants-the-boot-query] |
 
 The generic mapping:
 
 | Generic right | Maps to |
 |---|---|
-| `GENERIC_READ` | nothing [*svcsd.control-generic-read-conveys-nothing] |
+| `GENERIC_READ` | `SYSTEM_QUERY_STATUS` [*svcsd.control-generic-read-is-query-status] |
 | `GENERIC_WRITE` | `SYSTEM_RELOAD_CONFIG` [*svcsd.control-generic-write-is-reload-config] |
 | `GENERIC_EXECUTE` | `SYSTEM_SHUTDOWN` [*svcsd.control-generic-execute-is-shutdown] |
-| `GENERIC_ALL` | both [*svcsd.control-generic-all-is-both] |
+| `GENERIC_ALL` | all three [*svcsd.control-generic-all-is-all-three] |
 
-`GENERIC_READ` maps to nothing because there is nothing to read: the
-control descriptor governs two actions and no queries. A grant of
-`GENERIC_READ` on it is not an error, it simply conveys no access.
+`GENERIC_READ` maps to the one right that changes nothing, as it maps to
+`SERVICE_QUERY_STATUS` on a service. Before `boot` existed the control
+descriptor governed two actions and no queries, and `GENERIC_READ` on it
+conveyed nothing; a descriptor written then that grants `GENERIC_READ`
+now lets its holder ask how the machine booted, and nothing more.
 
-## The default [*svcsd.the-control-default-grants-system-and-administrators-both]
+## The default [*svcsd.the-control-default]
 
 Absent a value in the registry, peinit applies:
 
 ```
-O:SY G:BA D:(A;;0x0003;;;SY)(A;;0x0003;;;BA)
+O:SY G:BA D:(A;;0x0007;;;SY)(A;;0x0007;;;BA)(A;;0x0004;;;AU)
 ```
 
-SYSTEM and Administrators both get shutdown and reload-config, as they
-both get every service right in the ServiceSecurity default (§4.6). An
-administrator who can stop services one at a time can already stop the
-system, so withholding shutdown would be theatre.
+SYSTEM and Administrators both get every right, as they both get every
+service right in the ServiceSecurity default (§4.6). An administrator
+who can stop services one at a time can already stop the system, so
+withholding shutdown would be theatre.
+[*svcsd.the-control-default-grants-system-and-administrators-everything]
+
+Authenticated Users get `SYSTEM_QUERY_STATUS` and nothing else.
+[*svcsd.the-control-default-lets-every-authenticated-user-ask-how-the-machine-booted]
+How a machine booted is machine status, like what `/proc` shows, not a
+secret; and it is what a person signed in to the machine needs to tell
+that it came up in Safe mode, or is a failed boot or two from recovery.
+The ServiceSecurity default lets the same group query every service for
+the same reason.
+
+The default applies only while `ControlSecurity` is absent or
+malformed. A descriptor already written to the registry is used as it
+stands: one written before `SYSTEM_QUERY_STATUS` existed grants it only
+where it grants `GENERIC_READ`, `GENERIC_ALL` or the bit itself, and a
+machine that wants every signed-in user to read its boot status adds an
+ACE for them.
 
 ## Loading [*svcsd.controlsecurity-is-loaded-at-phase-2-and-hot-reloaded]
 
