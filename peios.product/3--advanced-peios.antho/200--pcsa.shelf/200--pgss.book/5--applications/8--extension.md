@@ -18,6 +18,9 @@ version behaves correctly in their presence:
   as a person's own. A consumer built to this version does not see it,
   and shows the system's applications where a newer one would show
   more.
+- A subkey of a key of §5.7, or a new key beside `Defaults` under
+  either `Applications` key. A consumer built to this version ignores
+  them, and finds the same defaults as before.
 
 ## Changes requiring a new version
 
@@ -33,9 +36,11 @@ version behaves correctly in their presence:
 - A change to what makes a declaration unusable (§5.3), or to the
   match rule (§5.5). Two consumers on one system would then disagree
   about what is installed, or what a program is.
-- A default application for a type (§5.6). Where it is kept and who
-  sets it are a new version's to say, and a consumer built to this
-  version must not have been reading one.
+- A change to where choices are kept, to the form of a choice, or to
+  the order they are tried in (§5.7), including a place for choices
+  consulted between the person's and the machine's, such as a group's.
+  Two consumers on one system would then open one file with different
+  applications.
 
 ## Reserved
 
@@ -44,3 +49,7 @@ The directory `/usr/share/apps/` is this chapter's, and so is the
 a specification or a provider that wants a declaration to carry
 something else MUST use another key, and SHOULD prefix it with a domain
 it owns.
+
+The registry keys `Machine\Generic\Applications` and
+`CurrentUser\Generic\Applications`, and everything in them, are this
+chapter's. Nothing else may keep anything there.

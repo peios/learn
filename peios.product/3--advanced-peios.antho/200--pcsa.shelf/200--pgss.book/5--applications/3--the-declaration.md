@@ -61,7 +61,7 @@ MUST NOT rely on any key not in the table above being read.
 ## What a consumer makes of it
 
 A consumer MUST ignore a key it does not know. That is how a later
-version of this chapter adds to a declaration (§5.7) without breaking
+version of this chapter adds to a declaration (§5.8) without breaking
 a consumer built to this one.
 
 A declaration is **unusable**, and a consumer MUST treat it as no

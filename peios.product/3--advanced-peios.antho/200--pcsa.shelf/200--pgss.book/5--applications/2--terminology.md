@@ -1,6 +1,6 @@
 ---
 title: Terminology
-description: The nouns this chapter is specified in — application, declaration, id, catalogue, program, title, listed, media type pattern.
+description: The nouns this chapter is specified in — application, declaration, id, catalogue, program, title, listed, media type pattern, candidate, choice, default.
 ---
 
 **Application.** A program as a desktop knows it: something with a
@@ -35,7 +35,20 @@ declaration.
 top-level type and `*`, `image/*`, which stands for every subtype of
 it. A declaration says what an application opens in these.
 
+**Candidate.** An application that says it opens a file's media type,
+and so may open the file (§5.6).
+
+**Choice.** A media type pattern and the id of the application chosen
+to open it, kept in the registry by a person for themselves or for the
+machine as a whole (§5.7).
+
+**Default.** The application a consumer opens a file with when it picks
+one: the candidate the choices give the file's type, by the order of
+§5.7. A type no usable choice is for has no default.
+
 Terms defined in PGSS Icons (identifier, chain, consumer as one who
-draws) are used with the same meaning and are not redefined. *Media
-type* is used as RFC 6838 defines it. *TOML* is the format at
+draws) are used with the same meaning and are not redefined, and nor are those of the registry (key, value, `REG_SZ`,
+`CurrentUser\`), which are the Peios Kernel TRM's, or security
+descriptor, which is PCDS's. *Media type* is used as RFC 6838 defines
+it. *TOML* is the format at
 toml.io, version 1.0.

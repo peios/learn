@@ -40,12 +40,15 @@ This chapter covers:
 - how a consumer finds the declaration for a program it has met,
   running or on disk, and so the program's title and icon (§5.5)
 - how a consumer starts an application, bare or with a file (§5.6)
+- which application opens a type of file when several could: the
+  choices a person and the machine make, where they are kept, and how a
+  consumer finds the default from them (§5.7)
 
 This chapter does not cover:
 
-- Which application opens a kind of file when several could. §5.6 gives
-  a consumer the candidates; choosing among them, and remembering the
-  choice, is a later version's.
+- How a program that offers to set choices presents them. §5.7 says
+  where a choice is kept and who may write it; a settings application's
+  shape is its own.
 - Declarations of a person's own, or of a system's local layer, beyond
   what the catalogue's directory admits. This version has one catalogue.
 - How a consumer determines a file's type. §5.6 takes the type as given,

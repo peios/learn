@@ -1,6 +1,6 @@
 ---
 title: Prior Art
-description: Where this chapter sits against freedesktop desktop entries, Windows' shortcuts, App Paths and registered applications, MSIX manifests and Atrium's catalogue, and which resemblances are deliberate.
+description: Where this chapter sits against freedesktop desktop entries and MIME applications, Windows' shortcuts, App Paths, registered applications and default choices, MSIX manifests and Atrium's catalogue, and which resemblances are deliberate.
 ---
 
 ## The freedesktop desktop entry specification
@@ -33,13 +33,41 @@ directory whose presence is the listing, which is the shape of §5.4.
 `App Paths` in the registry lets a name resolve to an absolute path
 without a `PATH` lookup, which is why `program` is absolute. Registered
 applications and `Default Programs` let a program say what it opens,
-which is `opens`, though the default that Windows keeps beside it is
-left to a later version here.
+which is `opens`. The default Windows keeps beside it, a machine's in
+`HKEY_LOCAL_MACHINE` and a person's own `UserChoice` under
+`HKEY_CURRENT_USER`, is the shape of §5.7: a person's choice before the
+machine's, each a registry value.
 
-What this chapter does not take is the registry as the place. Peios
-has a registry and does not use it for this, because a package installs
-files, and a file is present or it is not: there is no second thing to
-keep consistent with the first.
+What this chapter does not take is the registry as the place for
+declarations. Peios has a registry and does not use it for them,
+because a package installs files, and a file is present or it is not:
+there is no second thing to keep consistent with the first. A choice is
+another kind of thing. It is not installed by a package but made by a
+person, it belongs to someone, and who may change it is a question of
+access control. Keeping who-may-change-what is what the registry is
+for, and `CurrentUser\` gives each person their own place without a
+file in their home directory for every consumer to find.
+
+Windows protects `UserChoice` with a hash, so that a program cannot
+quietly make itself a person's default. §5.7 does not: a program
+running as a person can already do whatever it would have done by
+being the default, so the hash protects little that the person's own
+token does not already give away. What a choice can never do here is
+add a candidate, or run anything a package did not install.
+
+## freedesktop MIME applications
+
+The freedesktop MIME applications specification keeps defaults in
+`mimeapps.list` files, a person's in their configuration directory
+before the system's, under `[Default Applications]`, with a list of
+applications per type to try in order. §5.7 keeps the order, the
+person's before the system's, and takes one application per choice
+rather than a list: a choice that is not usable falls through to the
+machine's, which is the second entry such a list exists for. It drops
+the `[Added Associations]` and `[Removed Associations]` sections, which
+let a person make an application a candidate for a type it does not
+declare, or stop it being one; here a candidate is what a declaration
+says, and nothing a person keeps can change it.
 
 ## MSIX
 
@@ -84,3 +112,10 @@ placeholders, no shell and no lookup.
 the flat directory is chosen so that no state has to be built,
 rebuilt or kept consistent, and so that a package's install and remove
 are the whole of the provider's work.
+
+**A choice selects; it never adds.** What may open a file is what
+declarations say, and a person's or the machine's choice only says
+which of those comes first. A choice that no longer fits is passed
+over rather than repaired, so that removing an application, or a
+package changing what it opens, needs nobody to tidy the registry
+after it.

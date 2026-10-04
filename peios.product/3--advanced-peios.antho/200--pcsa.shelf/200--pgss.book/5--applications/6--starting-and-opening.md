@@ -1,6 +1,6 @@
 ---
 title: Starting and Opening
-description: What a consumer runs to start an application bare or with a file, what it passes and how, which applications are candidates to open a file, and what a consumer must take from the catalogue rather than from a request.
+description: What a consumer runs to start an application bare or with a file, what it passes and how, which applications are candidates to open a file and which of them it picks, and what a consumer must take from the catalogue rather than from a request.
 ---
 
 ## Starting
@@ -36,10 +36,12 @@ type matches is a **candidate** to open the file. A media type matches
 `type/*` when its top-level type is `type`. How the consumer knows the
 file's type is its own, as in PGSS Icons §4.6.
 
-A consumer that opens a file offers the candidates, or picks among
-them; which it does, and by what rule, is the consumer's. This version
-has no default application for a type, and a consumer MUST NOT read one
-from anywhere this chapter does not define.
+A consumer that opens a file offers the candidates, or picks one of
+them; which it does is the consumer's. A consumer that picks MUST pick
+the file's default when its type has one (§5.7), and picks by a rule of
+its own only when it has none. A consumer that offers SHOULD offer the
+default first, or otherwise show which it is. A consumer MUST NOT read
+a default from anywhere §5.7 does not name.
 
 An application with no `opens` is a candidate for nothing, and is
 started bare.
