@@ -64,13 +64,16 @@ Two combinations are hard errors:
 
 ## The claim command
 
-`peipkg claim` inspects a claim and reassigns its holder. It has three forms.
+`peipkg claim` inspects a claim and reassigns its holder. It has three forms, and a fourth that lists every claim.
 
 ```
 peipkg claim <claim>
 peipkg claim <claim> grant <package>
 peipkg claim <claim> revoke
+peipkg claim --json
 ```
+
+**List every claim.** `--json` with no claim name emits every claim that an installed package can fill or a package holds, as an array. Each has `role`, `holder` when it is held, `links` (each a `path` and `target`), and `providers`, the installed eligible providers.
 
 **Report status.** With just a claim name, peipkg prints the current state of the claim: the current holder, the materialised links shown as `path -> target`, and the installed eligible providers.
 

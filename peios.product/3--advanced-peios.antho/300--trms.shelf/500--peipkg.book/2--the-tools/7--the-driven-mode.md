@@ -126,6 +126,11 @@ Act on `code`.
 ## Cancelling
 
 Before `proceed` is answered, refusing any question cancels and changes
-nothing. Once it is answered, the transaction runs to its end. Stopping
-the process mid-transaction leaves a pending journal, which the next
-`peipkg` run rolls back before doing anything else (§8).
+nothing. Once it is answered, the transaction runs to its end.
+
+If the driving program goes away, the transaction still finishes:
+`peipkg` ignores the broken pipe, and a question still to come reads the
+end of input, a refusal. A `modified` question refused this way aborts
+the transaction, which rolls back. Killing `peipkg` itself
+mid-transaction leaves a pending journal, which the next run rolls back
+before doing anything else (§8).
