@@ -1,14 +1,14 @@
 ---
-title: PNP ABI Reference
-description: Every PNP ioctl number, event and status structure layout, counter record layout and constant, generated from the uapi header and measured by compilation.
+title: NTFE ABI Reference
+description: Every NTFE ioctl number, event and status structure layout, counter record layout and constant, generated from the uapi header and measured by compilation.
 ---
 
 Every name, value, offset and size in this appendix is generated from
-`pkm/uapi/pkm/pnp.h` by `pkm/tools/gen-pnp-abi.py`, with struct
+`pkm/uapi/pkm/ntfe.h` by `pkm/tools/gen-ntfe-abi.py`, with struct
 layouts measured by compiling a probe against the real header.
 Regenerate it whenever the ABI changes; do not edit it by hand. The
 names here are the ones a program actually compiles
-against. [*abi.pnp-generated-from-source]
+against. [*abi.ntfe-generated-from-source]
 
 What a compiler cannot measure -- the device's read and poll
 semantics, what each ioctl expects, the error vocabulary, and the
@@ -17,21 +17,21 @@ which this generator does not touch.
 
 ## Ioctl requests [*abi.ioctl-numbers]
 
-Request numbers on `/dev/peios-pnp`, packed as `<linux/ioctl.h>`
+Request numbers on `/dev/peios-ntfe`, packed as `<linux/ioctl.h>`
 packs them (direction, argument size, type `'N'`, number).
 
 | Constant | Value | Definition |
 |---|---|---|
-| `PEIOS_PNP_IOC_STATUS` | `0x81604E01` | `_IOR(PEIOS_PNP_IOC_TYPE, PEIOS_PNP_IOC_STATUS_NR, struct peios_pnp_status)` |
-| `PEIOS_PNP_IOC_COUNTERS` | `0xC0184E02` | `_IOWR(PEIOS_PNP_IOC_TYPE, PEIOS_PNP_IOC_COUNTERS_NR, struct peios_pnp_counters_query)` |
-| `PEIOS_PNP_IOC_FLOWS` | `0xC0184E03` | `_IOWR(PEIOS_PNP_IOC_TYPE, PEIOS_PNP_IOC_FLOWS_NR, struct peios_pnp_flows_query)` |
-| `PEIOS_PNP_IOC_LISTENERS` | `0xC0184E04` | `_IOWR(PEIOS_PNP_IOC_TYPE, PEIOS_PNP_IOC_LISTENERS_NR, struct peios_pnp_listeners_query)` |
+| `PEIOS_NTFE_IOC_STATUS` | `0x81704E01` | `_IOR(PEIOS_NTFE_IOC_TYPE, PEIOS_NTFE_IOC_STATUS_NR, struct peios_ntfe_status)` |
+| `PEIOS_NTFE_IOC_COUNTERS` | `0xC0184E02` | `_IOWR(PEIOS_NTFE_IOC_TYPE, PEIOS_NTFE_IOC_COUNTERS_NR, struct peios_ntfe_counters_query)` |
+| `PEIOS_NTFE_IOC_FLOWS` | `0xC0184E03` | `_IOWR(PEIOS_NTFE_IOC_TYPE, PEIOS_NTFE_IOC_FLOWS_NR, struct peios_ntfe_flows_query)` |
+| `PEIOS_NTFE_IOC_LISTENERS` | `0xC0184E04` | `_IOWR(PEIOS_NTFE_IOC_TYPE, PEIOS_NTFE_IOC_LISTENERS_NR, struct peios_ntfe_listeners_query)` |
 
 ## Structure layouts
 
 Offsets and sizes are measured, not declared.
 
-### `struct peios_pnp_event` [*abi.struct-peios-pnp-event]
+### `struct peios_ntfe_event` [*abi.struct-peios-ntfe-event]
 
 Total size 456 bytes.
 
@@ -57,7 +57,7 @@ Total size 456 bytes.
 | 52 | 16 | `__u8[16]` | `dst_addr` |
 | 68 | 4 | `__u32` | `length` |
 | 72 | 4 | `__u32` | `effects` |
-| 76 | 96 | `__u8[PEIOS_PNP_EV_ATTR_LEN]` | `attributed` |
+| 76 | 96 | `__u8[PEIOS_NTFE_EV_ATTR_LEN]` | `attributed` |
 | 172 | 4 | `__u32` | `_pad1` |
 | 176 | 1 | `__u8` | `local_kind` |
 | 177 | 1 | `__u8` | `remote_kind` |
@@ -65,19 +65,19 @@ Total size 456 bytes.
 | 179 | 1 | `__u8` | `remote_unresolved` |
 | 180 | 4 | `__s32` | `local_pid` |
 | 184 | 4 | `__s32` | `remote_pid` |
-| 188 | 16 | `__u8[PEIOS_PNP_GUID_LEN]` | `local_guid` |
-| 204 | 16 | `__u8[PEIOS_PNP_GUID_LEN]` | `remote_guid` |
-| 220 | 16 | `__u8[PEIOS_PNP_COMM_LEN]` | `local_comm` |
-| 236 | 16 | `__u8[PEIOS_PNP_COMM_LEN]` | `remote_comm` |
-| 252 | 68 | `__u8[PEIOS_PNP_SID_LEN]` | `local_user` |
-| 320 | 68 | `__u8[PEIOS_PNP_SID_LEN]` | `remote_user` |
-| 388 | 32 | `__u8[PEIOS_PNP_SERVICE_SID_LEN]` | `local_service` |
-| 420 | 32 | `__u8[PEIOS_PNP_SERVICE_SID_LEN]` | `remote_service` |
+| 188 | 16 | `__u8[PEIOS_NTFE_GUID_LEN]` | `local_guid` |
+| 204 | 16 | `__u8[PEIOS_NTFE_GUID_LEN]` | `remote_guid` |
+| 220 | 16 | `__u8[PEIOS_NTFE_COMM_LEN]` | `local_comm` |
+| 236 | 16 | `__u8[PEIOS_NTFE_COMM_LEN]` | `remote_comm` |
+| 252 | 68 | `__u8[PEIOS_NTFE_SID_LEN]` | `local_user` |
+| 320 | 68 | `__u8[PEIOS_NTFE_SID_LEN]` | `remote_user` |
+| 388 | 32 | `__u8[PEIOS_NTFE_SERVICE_SID_LEN]` | `local_service` |
+| 420 | 32 | `__u8[PEIOS_NTFE_SERVICE_SID_LEN]` | `remote_service` |
 | 452 | 4 | `__u32` | `_pad2` |
 
-### `struct peios_pnp_status` [*abi.struct-peios-pnp-status]
+### `struct peios_ntfe_status` [*abi.struct-peios-ntfe-status]
 
-Total size 352 bytes.
+Total size 368 bytes.
 
 | Offset | Size | Type | Field |
 |---|---|---|---|
@@ -123,15 +123,18 @@ Total size 352 bytes.
 | 312 | 8 | `__u64` | `refusals_bypassed` |
 | 320 | 8 | `__u64` | `teardowns_emitted` |
 | 328 | 8 | `__u64` | `identity_unresolved` |
-| 336 | 16 | `__u64[2]` | `_reserved` |
+| 336 | 8 | `__u64` | `changes_noted` |
+| 344 | 8 | `__u64` | `changes_walked` |
+| 352 | 8 | `__u64` | `contexts` |
+| 360 | 8 | `__u64[1]` | `_reserved` |
 
-### `struct peios_pnp_counter_rec` [*abi.struct-peios-pnp-counter-rec]
+### `struct peios_ntfe_counter_rec` [*abi.struct-peios-ntfe-counter-rec]
 
 Total size 232 bytes.
 
 | Offset | Size | Type | Field |
 |---|---|---|---|
-| 0 | 64 | `__u8[PEIOS_PNP_COUNTER_NAME_LEN]` | `name` |
+| 0 | 64 | `__u8[PEIOS_NTFE_COUNTER_NAME_LEN]` | `name` |
 | 64 | 8 | `__u64` | `hash` |
 | 72 | 1 | `__u8` | `keyspec` |
 | 73 | 1 | `__u8` | `family` |
@@ -143,10 +146,10 @@ Total size 232 bytes.
 | 120 | 8 | `__u64` | `last_secs` |
 | 128 | 4 | `__u32` | `n_windows` |
 | 132 | 4 | `__u32` | `_pad1` |
-| 136 | 32 | `__u32[PEIOS_PNP_COUNTER_MAX_WINDOWS]` | `window_secs` |
-| 168 | 64 | `__u64[PEIOS_PNP_COUNTER_MAX_WINDOWS]` | `window_value` |
+| 136 | 32 | `__u32[PEIOS_NTFE_COUNTER_MAX_WINDOWS]` | `window_secs` |
+| 168 | 64 | `__u64[PEIOS_NTFE_COUNTER_MAX_WINDOWS]` | `window_value` |
 
-### `struct peios_pnp_counters_query` [*abi.struct-peios-pnp-counters-query]
+### `struct peios_ntfe_counters_query` [*abi.struct-peios-ntfe-counters-query]
 
 Total size 24 bytes.
 
@@ -158,7 +161,7 @@ Total size 24 bytes.
 | 16 | 4 | `__u32` | `total` |
 | 20 | 4 | `__u32` | `_pad0` |
 
-### `struct peios_pnp_flow_rec` [*abi.struct-peios-pnp-flow-rec]
+### `struct peios_ntfe_flow_rec` [*abi.struct-peios-ntfe-flow-rec]
 
 Total size 568 bytes.
 
@@ -186,24 +189,24 @@ Total size 568 bytes.
 | 64 | 8 | `__u64` | `start_secs` |
 | 72 | 16 | `__u64[2]` | `packets` |
 | 88 | 16 | `__u64[2]` | `bytes` |
-| 104 | 16 | `__u64[PEIOS_PNP_FLOW_SENTENCES]` | `sentence_generation` |
-| 120 | 16 | `__s64[PEIOS_PNP_FLOW_SENTENCES]` | `sentence_expires_at` |
-| 136 | 16 | `__u64[PEIOS_PNP_FLOW_SENTENCES]` | `sentence_rule_hash` |
-| 152 | 2 | `__u8[PEIOS_PNP_FLOW_SENTENCES]` | `sentence_verdict` |
-| 154 | 2 | `__u8[PEIOS_PNP_FLOW_SENTENCES]` | `sentence_reject_kind` |
+| 104 | 16 | `__u64[PEIOS_NTFE_FLOW_SENTENCES]` | `sentence_generation` |
+| 120 | 16 | `__s64[PEIOS_NTFE_FLOW_SENTENCES]` | `sentence_expires_at` |
+| 136 | 16 | `__u64[PEIOS_NTFE_FLOW_SENTENCES]` | `sentence_rule_hash` |
+| 152 | 2 | `__u8[PEIOS_NTFE_FLOW_SENTENCES]` | `sentence_verdict` |
+| 154 | 2 | `__u8[PEIOS_NTFE_FLOW_SENTENCES]` | `sentence_reject_kind` |
 | 156 | 4 | `__u8[4]` | `_pad1` |
-| 160 | 64 | `__u64[PEIOS_PNP_FLOW_MAX_TAGS]` | `tag_hash` |
-| 224 | 64 | `__u64[PEIOS_PNP_FLOW_MAX_TAGS]` | `tag_value` |
-| 288 | 2 | `__u8[PEIOS_PNP_FLOW_SENTENCES]` | `owner_kind` |
-| 290 | 2 | `__u8[PEIOS_PNP_FLOW_SENTENCES]` | `owner_unresolved` |
+| 160 | 64 | `__u64[PEIOS_NTFE_FLOW_MAX_TAGS]` | `tag_hash` |
+| 224 | 64 | `__u64[PEIOS_NTFE_FLOW_MAX_TAGS]` | `tag_value` |
+| 288 | 2 | `__u8[PEIOS_NTFE_FLOW_SENTENCES]` | `owner_kind` |
+| 290 | 2 | `__u8[PEIOS_NTFE_FLOW_SENTENCES]` | `owner_unresolved` |
 | 292 | 4 | `__u8[4]` | `_pad2` |
-| 296 | 8 | `__s32[PEIOS_PNP_FLOW_SENTENCES]` | `owner_pid` |
+| 296 | 8 | `__s32[PEIOS_NTFE_FLOW_SENTENCES]` | `owner_pid` |
 | 304 | 32 | `__u8[32]` | `owner_guid` |
 | 336 | 32 | `__u8[32]` | `owner_comm` |
 | 368 | 136 | `__u8[136]` | `owner_user` |
 | 504 | 64 | `__u8[64]` | `owner_service` |
 
-### `struct peios_pnp_flows_query` [*abi.struct-peios-pnp-flows-query]
+### `struct peios_ntfe_flows_query` [*abi.struct-peios-ntfe-flows-query]
 
 Total size 24 bytes.
 
@@ -215,7 +218,7 @@ Total size 24 bytes.
 | 16 | 4 | `__u32` | `total` |
 | 20 | 4 | `__u32` | `_pad0` |
 
-### `struct peios_pnp_listener_rec` [*abi.struct-peios-pnp-listener-rec]
+### `struct peios_ntfe_listener_rec` [*abi.struct-peios-ntfe-listener-rec]
 
 Total size 168 bytes.
 
@@ -234,12 +237,12 @@ Total size 168 bytes.
 | 12 | 4 | `__s32` | `ifindex` |
 | 16 | 16 | `__u8[16]` | `addr` |
 | 32 | 4 | `__s32` | `owner_pid` |
-| 36 | 16 | `__u8[PEIOS_PNP_GUID_LEN]` | `owner_guid` |
-| 52 | 16 | `__u8[PEIOS_PNP_COMM_LEN]` | `owner_comm` |
-| 68 | 68 | `__u8[PEIOS_PNP_SID_LEN]` | `owner_user` |
-| 136 | 32 | `__u8[PEIOS_PNP_SERVICE_SID_LEN]` | `owner_service` |
+| 36 | 16 | `__u8[PEIOS_NTFE_GUID_LEN]` | `owner_guid` |
+| 52 | 16 | `__u8[PEIOS_NTFE_COMM_LEN]` | `owner_comm` |
+| 68 | 68 | `__u8[PEIOS_NTFE_SID_LEN]` | `owner_user` |
+| 136 | 32 | `__u8[PEIOS_NTFE_SERVICE_SID_LEN]` | `owner_service` |
 
-### `struct peios_pnp_listeners_query` [*abi.struct-peios-pnp-listeners-query]
+### `struct peios_ntfe_listeners_query` [*abi.struct-peios-ntfe-listeners-query]
 
 Total size 24 bytes.
 
@@ -255,16 +258,16 @@ Total size 24 bytes.
 
 Grouped as the header groups them.
 
-*PNP — Peios Network Policy: the verdict event stream and engine status.*
+*NTFE — the Network Traffic Filtering Engine: the verdict event stream and engine status.*
 
-The engine (net/pnp) judges every traversal at its standing seats and
-appends one event per evaluation to a bounded ring. /dev/peios-pnp (mode
-0600; one reader at a time) drains it: read() returns whole events only
-— never a partial record — and blocks when the ring is empty unless
-O_NONBLOCK; poll() raises POLLIN when events are waiting. A slow reader
-loses the OLDEST events, and the loss is confessed in
-peios_pnp_status.events_dropped (the honesty rule: drops are counted,
-never silent).
+The engine (net/ntfe) judges every traversal at its standing seats and
+appends one event per evaluation to a bounded ring. /dev/peios-ntfe
+(mode 0600; any number of openers, one reader of the stream at a time)
+drains it: read() returns whole events only — never a partial record —
+and blocks when the ring is empty unless O_NONBLOCK; poll() raises
+POLLIN when events are waiting. A slow reader loses the OLDEST events,
+and the loss is confessed in peios_ntfe_status.events_dropped (the
+honesty rule: drops are counted, never silent).
 
 Events are emitted for real evaluations (a published forest judged the
 traversal) and for fail-closed drops; permissive traversals (a layer
@@ -272,83 +275,83 @@ with no forest — all of them at generation 0) emit nothing, because
 there is no decision to attribute. Status tells that story instead:
 generation 0 means "not enforcing", loudly.
 
-This ABI is EXPERIMENTAL while PNP grows: no stability promise until the
-design ships (PEI-598). Check `abi` before trusting the rest.
+This ABI is EXPERIMENTAL while NTFE grows: no stability promise until
+the design ships (PEI-598). Check `abi` before trusting the rest.
 
 | Constant | Value |
 |---|---|
-| `PEIOS_PNP_ABI_VERSION` | `4` |
+| `PEIOS_NTFE_ABI_VERSION` | `5` |
 
 *Which standing seat judged the traversal.* [*abi.seat-values]
 
 | Constant | Value |
 |---|---|
-| `PEIOS_PNP_EV_SEAT_INGRESS` | `1` |
-| `PEIOS_PNP_EV_SEAT_EGRESS` | `2` |
-| `PEIOS_PNP_EV_SEAT_LOCAL_IN` | `3` |
-| `PEIOS_PNP_EV_SEAT_LOCAL_OUT` | `4` |
+| `PEIOS_NTFE_EV_SEAT_INGRESS` | `1` |
+| `PEIOS_NTFE_EV_SEAT_EGRESS` | `2` |
+| `PEIOS_NTFE_EV_SEAT_LOCAL_IN` | `3` |
+| `PEIOS_NTFE_EV_SEAT_LOCAL_OUT` | `4` |
 
 *Which rules layer.* [*abi.layer-values]
 
 | Constant | Value |
 |---|---|
-| `PEIOS_PNP_EV_LAYER_PACKET` | `0` |
-| `PEIOS_PNP_EV_LAYER_RAWPACKET` | `1` |
-| `PEIOS_PNP_EV_LAYER_FLOW` | `2` |
+| `PEIOS_NTFE_EV_LAYER_PACKET` | `0` |
+| `PEIOS_NTFE_EV_LAYER_RAWPACKET` | `1` |
+| `PEIOS_NTFE_EV_LAYER_FLOW` | `2` |
 
 *The verdict, in strictness order.* [*abi.verdict-values]
 
 | Constant | Value |
 |---|---|
-| `PEIOS_PNP_EV_VERDICT_PASS` | `0` |
-| `PEIOS_PNP_EV_VERDICT_REJECT` | `1` |
-| `PEIOS_PNP_EV_VERDICT_DROP` | `2` |
+| `PEIOS_NTFE_EV_VERDICT_PASS` | `0` |
+| `PEIOS_NTFE_EV_VERDICT_REJECT` | `1` |
+| `PEIOS_NTFE_EV_VERDICT_DROP` | `2` |
 
 *The story a REJECT told (meaningful iff verdict == REJECT).* [*abi.reject-kinds]
 
 | Constant | Value | Notes |
 |---|---|---|
-| `PEIOS_PNP_EV_REJECT_REFUSED` | `0` | RST / port-unreachable |
-| `PEIOS_PNP_EV_REJECT_PROHIBITED` | `1` | admin-prohibited |
+| `PEIOS_NTFE_EV_REJECT_REFUSED` | `0` | RST / port-unreachable |
+| `PEIOS_NTFE_EV_REJECT_PROHIBITED` | `1` | admin-prohibited |
 
 *Traversal direction.* [*abi.direction-values]
 
 | Constant | Value |
 |---|---|
-| `PEIOS_PNP_EV_DIR_IN` | `0` |
-| `PEIOS_PNP_EV_DIR_OUT` | `1` |
+| `PEIOS_NTFE_EV_DIR_IN` | `0` |
+| `PEIOS_NTFE_EV_DIR_OUT` | `1` |
 
 *Flow state as the snapshot carried it (0 = the fact was absent).* [*abi.flow-state-values]
 
 | Constant | Value |
 |---|---|
-| `PEIOS_PNP_EV_FLOW_ABSENT` | `0` |
-| `PEIOS_PNP_EV_FLOW_NEW` | `1` |
-| `PEIOS_PNP_EV_FLOW_ESTABLISHED` | `2` |
-| `PEIOS_PNP_EV_FLOW_RELATED` | `3` |
-| `PEIOS_PNP_EV_FLOW_INVALID` | `4` |
-| `PEIOS_PNP_EV_FLOW_UNTRACKED` | `5` |
+| `PEIOS_NTFE_EV_FLOW_ABSENT` | `0` |
+| `PEIOS_NTFE_EV_FLOW_NEW` | `1` |
+| `PEIOS_NTFE_EV_FLOW_ESTABLISHED` | `2` |
+| `PEIOS_NTFE_EV_FLOW_RELATED` | `3` |
+| `PEIOS_NTFE_EV_FLOW_INVALID` | `4` |
+| `PEIOS_NTFE_EV_FLOW_UNTRACKED` | `5` |
 
 *Event flags.* [*abi.event-flags]
 
 | Constant | Value | Notes |
 |---|---|---|
-| `PEIOS_PNP_EV_F_BACKSTOP` | `0x01` | nothing yielded; DROP |
-| `PEIOS_PNP_EV_F_FAIL_CLOSED` | `0x02` | evaluation failed; DROP |
-| `PEIOS_PNP_EV_F_REJECT_DEGRADED` | `0x04` | REJECT emitted as DROP |
-| `PEIOS_PNP_EV_F_REJUDGED` | `0x08` | Flow: a stale sentence re-judged |
-| `PEIOS_PNP_EV_F_IDENTITY_UNRESOLVED` | `0x10` | Flow: an endpoint could not be attributed |
+| `PEIOS_NTFE_EV_F_BACKSTOP` | `0x01` | nothing yielded; DROP |
+| `PEIOS_NTFE_EV_F_FAIL_CLOSED` | `0x02` | evaluation failed; DROP |
+| `PEIOS_NTFE_EV_F_REJECT_DEGRADED` | `0x04` | REJECT emitted as DROP |
+| `PEIOS_NTFE_EV_F_REJUDGED` | `0x08` | Flow: a stale sentence re-judged |
+| `PEIOS_NTFE_EV_F_IDENTITY_UNRESOLVED` | `0x10` | Flow: an endpoint could not be attributed |
 
 *What stood at an endpoint: the Flow layer's Local / Remote facts (ABI 4).*
 
 | Constant | Value | Notes |
 |---|---|---|
-| `PEIOS_PNP_EV_LOCAL_ABSENT` | `0` | not a Flow event / not local |
-| `PEIOS_PNP_EV_LOCAL_PROGRAM` | `1` | a process's socket |
-| `PEIOS_PNP_EV_LOCAL_KERNEL` | `2` | the stack itself |
-| `PEIOS_PNP_EV_LOCAL_SHARED` | `3` | inbound multicast / broadcast |
-| `PEIOS_PNP_EV_LOCAL_NONE` | `4` | nothing receives it |
-| `PEIOS_PNP_EV_ATTR_LEN` | `96` |  |
+| `PEIOS_NTFE_EV_LOCAL_ABSENT` | `0` | not a Flow event / not local |
+| `PEIOS_NTFE_EV_LOCAL_PROGRAM` | `1` | a process's socket |
+| `PEIOS_NTFE_EV_LOCAL_KERNEL` | `2` | the stack itself |
+| `PEIOS_NTFE_EV_LOCAL_SHARED` | `3` | inbound multicast / broadcast |
+| `PEIOS_NTFE_EV_LOCAL_NONE` | `4` | nothing receives it |
+| `PEIOS_NTFE_EV_ATTR_LEN` | `96` |  |
 
 A SID's binary form: revision, sub-authority count, a 48-bit authority,
 up to 15 sub-authorities. Self-sized by its count byte; all zero =
@@ -356,15 +359,15 @@ absent.
 
 | Constant | Value |
 |---|---|
-| `PEIOS_PNP_SID_LEN` | `68` |
+| `PEIOS_NTFE_SID_LEN` | `68` |
 
 *A per-service SID (S-1-5-80 + five sub-authorities) is exactly this.*
 
 | Constant | Value |
 |---|---|
-| `PEIOS_PNP_SERVICE_SID_LEN` | `32` |
-| `PEIOS_PNP_COMM_LEN` | `16` |
-| `PEIOS_PNP_GUID_LEN` | `16` |
+| `PEIOS_NTFE_SERVICE_SID_LEN` | `32` |
+| `PEIOS_NTFE_COMM_LEN` | `16` |
+| `PEIOS_NTFE_GUID_LEN` | `16` |
 
 One counter cell, as the counters dump reports it: the stream and key-
 spec of its table, the key it holds (only the facts the key-spec names
@@ -373,35 +376,35 @@ of every window the table answers.
 
 | Constant | Value |
 |---|---|
-| `PEIOS_PNP_COUNTER_NAME_LEN` | `64` |
-| `PEIOS_PNP_COUNTER_MAX_WINDOWS` | `8` |
+| `PEIOS_NTFE_COUNTER_NAME_LEN` | `64` |
+| `PEIOS_NTFE_COUNTER_MAX_WINDOWS` | `8` |
 
 *Key-spec bits.* [*abi.keyspec-bits]
 
 | Constant | Value |
 |---|---|
-| `PEIOS_PNP_KEY_SRC_ADDR` | `0x01` |
-| `PEIOS_PNP_KEY_DST_ADDR` | `0x02` |
-| `PEIOS_PNP_KEY_INTERFACE` | `0x04` |
+| `PEIOS_NTFE_KEY_SRC_ADDR` | `0x01` |
+| `PEIOS_NTFE_KEY_DST_ADDR` | `0x02` |
+| `PEIOS_NTFE_KEY_INTERFACE` | `0x04` |
 
 One live flow, as the flows dump reports it (ABI 3): conntrack's view of
 the flow (original-direction tuple, state, remaining lifetime,
-accounting), PNP's extension (start time, the interface and direction at
-first judgment, the sentences, the tags). Tags are reported by hash; the
-policy names them.
+accounting), NTFE's extension (start time, the interface and direction
+at first judgment, the sentences, the tags). Tags are reported by hash;
+the policy names them.
 
 | Constant | Value |
 |---|---|
-| `PEIOS_PNP_FLOW_MAX_TAGS` | `8` |
-| `PEIOS_PNP_FLOW_SENTENCES` | `2` |
+| `PEIOS_NTFE_FLOW_MAX_TAGS` | `8` |
+| `PEIOS_NTFE_FLOW_SENTENCES` | `2` |
 
 The listeners dump: fills `buf` with as many records as fit; `count` is
 how many were written, `total` how many sockets the walk saw.
 
 | Constant | Value |
 |---|---|
-| `PEIOS_PNP_IOC_TYPE` | `0x0000004E` |
-| `PEIOS_PNP_IOC_STATUS_NR` | `0x00000001` |
-| `PEIOS_PNP_IOC_COUNTERS_NR` | `0x00000002` |
-| `PEIOS_PNP_IOC_FLOWS_NR` | `0x00000003` |
-| `PEIOS_PNP_IOC_LISTENERS_NR` | `0x00000004` |
+| `PEIOS_NTFE_IOC_TYPE` | `0x0000004E` |
+| `PEIOS_NTFE_IOC_STATUS_NR` | `0x00000001` |
+| `PEIOS_NTFE_IOC_COUNTERS_NR` | `0x00000002` |
+| `PEIOS_NTFE_IOC_FLOWS_NR` | `0x00000003` |
+| `PEIOS_NTFE_IOC_LISTENERS_NR` | `0x00000004` |

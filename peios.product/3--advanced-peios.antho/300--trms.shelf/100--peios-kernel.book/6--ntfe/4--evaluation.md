@@ -94,20 +94,20 @@ length, or 0 when the packet has none), `Effect::Report { rule, level }`,
 
 ## The bridge
 
-`pnp_rust_evaluate(forest, snap, layer, reporting_level, out)` is what
+`ntfe_rust_evaluate(forest, snap, layer, reporting_level, out)` is what
 `policy.c` calls under `rcu_read_lock()`. It:
 
 1. lifts the C snapshot (§6.3) and resolves the forest's machinery facts
-   through the stores — `peios_pnp_tag_lookup()` for every tag name the
+   through the stores — `peios_ntfe_tag_lookup()` for every tag name the
    forest mentions (`Packet` and `Flow` layers; `RawPacket` reads none),
-   `peios_pnp_counter_read()` for every view — and gives a `Flow` forest
+   `peios_ntfe_counter_read()` for every view — and gives a `Flow` forest
    its own facts, `Related` and `Start.*`;
 2. evaluates with `EvalContext { reporting_level }`;
 3. writes the verdict, the reject kind, the backstop flag, the truncated
    attribution and `expires_at` (0 = never) into `struct
-   peios_pnp_outcome`;
-4. **then** applies the effects — `peios_pnp_tag_apply()`,
-   `peios_pnp_counter_add()`, `peios_pnp_report_emit()` with the verdict
+   peios_ntfe_outcome`;
+4. **then** applies the effects — `peios_ntfe_tag_apply()`,
+   `peios_ntfe_counter_add()`, `peios_ntfe_report_emit()` with the verdict
    it just computed — counting each species into the outcome.
 
 Ordering 4 after 2 is what the snapshot-immutability law requires: a

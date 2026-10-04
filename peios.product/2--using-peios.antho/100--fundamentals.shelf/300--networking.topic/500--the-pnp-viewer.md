@@ -33,7 +33,7 @@ discovery spelled out), DNS, DHCP and DHCPv6. Each packet expands into a
 per-layer field view and a hex dump; filter by protocol or free text.
 
 Packets carry a **verdict badge** — PASS, DROP, or REJECT — painted from
-the engine's own event stream (`/dev/peios-pnp`), never inferred: each badge
+the engine's own event stream (`/dev/peios-ntfe`), never inferred: each badge
 names the rule that decided, as a registry path like
 `no-inbound/ssh-from-lan`, plus the layer and standing seat. A REJECT badge
 also names the story it told the sender: `REJECT·Refused` (nothing is

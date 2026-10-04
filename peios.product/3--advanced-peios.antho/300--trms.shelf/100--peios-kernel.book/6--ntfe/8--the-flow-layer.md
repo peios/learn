@@ -16,7 +16,7 @@ connection.
 
 ## One judgment per local endpoint
 
-`peios_pnp_flow_dispatch()` (`flow.c`) is called at the IP seats for
+`peios_ntfe_flow_dispatch()` (`flow.c`) is called at the IP seats for
 every packet the Packet layer passed. An untracked packet (`snap->flow ==
 NULL`) has no flow to judge: the Packet verdict stands, `NF_ACCEPT`. A
 tracked packet reads its flow's **sentence**:
@@ -25,7 +25,7 @@ tracked packet reads its flow's **sentence**:
   active one, and its expiry (if any) has not passed — is applied
   without evaluation (`flow_cached`);
 - otherwise the Flow forest is evaluated against the snapshot
-  (`peios_pnp_policy_eval(PEIOS_PNP_LAYER_FLOW)`, counted in `judged`
+  (`peios_ntfe_policy_eval(PEIOS_NTFE_LAYER_FLOW)`, counted in `judged`
   and `flow_judged`), the outcome is written as the new sentence, an
   event is emitted (with `REJUDGED` when a stale sentence was replaced,
   `flow_rejudged` or `flow_expired` saying why), and the verdict is
@@ -37,7 +37,7 @@ counted, and caches nothing.
 
 What the Flow forest judges is the **flow view**, not the packet's
 snapshot: a Flow fact is one identical for every packet of the flow, so
-`pnp_flow_view()` builds it from the flow. A reply-direction packet's
+`ntfe_flow_view()` builds it from the flow. A reply-direction packet's
 addresses and ports are swapped back to the original tuple (and its
 ICMP type replaced by the tuple's); the direction is the originator's,
 recorded at the first judgment along with the interface, the VLAN, the
@@ -61,13 +61,13 @@ not applied — it is that seat's to refresh when it next sees the flow.
 
 ## The sentence
 
-`struct peios_pnp_sentence` lives in PNP's conntrack extension
-(`include/linux/peios_pnp.h`), two per flow: the generation that judged
+`struct peios_ntfe_sentence` lives in NTFE's conntrack extension
+(`include/linux/peios_ntfe.h`), two per flow: the generation that judged
 (0 = empty), `expires_at` (epoch seconds, 0 = never), the FNV-1a-64 hash
 of the attributing rule's path (the same identity the tag and counter
 stores use for names, so the viewer resolves it against the policy), the
 verdict and the reject kind. Alongside: `start_secs`, stamped when
-conntrack created the entry (`peios_pnp_ct_ext_add()`) — the `Start.*`
+conntrack created the entry (`peios_ntfe_ct_ext_add()`) — the `Start.*`
 facts — and, from the first judgment, the interface, the direction and
 whether the flow is loopback, for the dump.
 
@@ -78,7 +78,7 @@ generation, the fields, then a re-check of the generation — a torn
 sentence (a writer in between) reads as absent and the flow is simply
 evaluated. Two packets of a new flow racing on two CPUs may both
 evaluate; the second write wins, and the effects ran twice — the only
-place PNP tolerates that, because the alternative is a lock on the fast
+place NTFE tolerates that, because the alternative is a lock on the fast
 path for a race that needs a flow's first two packets to arrive
 concurrently.
 
@@ -115,13 +115,13 @@ never contribute, which is the point of them.
 
 ## The flows dump
 
-`PEIOS_PNP_IOC_FLOWS` walks conntrack's table the way `ctnetlink` does —
+`PEIOS_NTFE_IOC_FLOWS` walks conntrack's table the way `ctnetlink` does —
 `local_bh_disable()`, each bucket under its `nf_conntrack_locks` lock,
 original-direction entries of `init_net` that are neither expired nor
-dying — and fills `struct peios_pnp_flow_rec` per flow: conntrack's id,
+dying — and fills `struct peios_ntfe_flow_rec` per flow: conntrack's id,
 family, protocol, the original tuple (ports, or ICMP id and type/code),
 `seen_reply`/`assured`/`related`, the remaining lifetime, packet and
-byte counts (PNP turns `sysctl_acct` on at init — it is conntrack's
+byte counts (NTFE turns `sysctl_acct` on at init — it is conntrack's
 consumer now), and the extension: start time, first-judgment interface
 and direction, loopback, both sentences, and up to eight tags by hash.
 Records are batched in kernel memory and copied to user between

@@ -4,8 +4,8 @@ description: How one traversal's facts are extracted from the sk_buff into the f
 ---
 
 Every judgment reads a **snapshot**: a fixed-size, stack-allocated
-`struct peios_pnp_snapshot` built once per seat by
-`peios_pnp_snapshot_from_skb()` and never mutated during evaluation.
+`struct peios_ntfe_snapshot` built once per seat by
+`peios_ntfe_snapshot_from_skb()` and never mutated during evaluation.
 That immutability is a ratified law, not an implementation detail —
 nothing a rule writes is visible to the same evaluation's matching, so
 temporal feedback (the next packet sees it) is the only feedback there
@@ -14,7 +14,7 @@ is.
 ## Validity bits
 
 Many facts have meaningful zero values (port 0, TTL 0, VLAN 0), so
-presence is carried separately in `has`, a bitmask of `PEIOS_PNP_HAS_*`:
+presence is carried separately in `has`, a bitmask of `PEIOS_NTFE_HAS_*`:
 ethertype, MACs, source MAC alone, VLAN, TTL, DSCP, fragment, ports, TCP
 flags, ICMP, time, the flow's start time, and the network context. Address facts use
 `addr_family` (0, 4 or 6) as their validity; the protocol is valid iff a
@@ -97,7 +97,7 @@ builder (§6.8) uses it to turn the packet's tuple back into the flow's.
 
 ## What the core sees
 
-`PnpSnapshotC` in `kacs/pnp_runtime.rs` mirrors the C struct field for
+`NtfeSnapshotC` in `kacs/ntfe_runtime.rs` mirrors the C struct field for
 field (`#[repr(C)]`; keep them in lockstep). `snapshot_from_c()` lifts
 it into the core's `Snapshot` — an `Option` per fact — and the bridge
 then fills in the two machinery fact tables: `tags`, as `(name hash,
@@ -121,7 +121,7 @@ given to every layer, and so is the trace of consulted time conditions
 
 Three string fields are not read from the packet either:
 `network_id`, `network_name` and `network_trust`, the `Network.*` facts.
-`peios_pnp_context_fill()` (`context.c`) looks the device's name up in
+`peios_ntfe_context_fill()` (`context.c`) looks the device's name up in
 the active context table — the kernel's reading of netd's inventory,
 one entry per interface standing on an identified network, built by
 ingestion (§6.5) and published under RCU — and copies the entry's three
@@ -130,7 +130,7 @@ bit is set, and the name and trust only when non-empty (a record the
 operator has not labelled). No entry, no bit: an interface no network
 has been identified on carries no context, and every condition over the
 three facts is false there. The strings are bounded (40, 64 and 32
-bytes, `PEIOS_PNP_NETWORK_*_LEN`); a longer registry value is truncated
+bytes, `PEIOS_NTFE_NETWORK_*_LEN`); a longer registry value is truncated
 at ingestion and the truncation logged once.
 
 The fields are the same as the interface layer's (§6.1): netd fills

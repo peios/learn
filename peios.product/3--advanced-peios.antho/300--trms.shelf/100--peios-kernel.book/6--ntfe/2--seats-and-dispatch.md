@@ -1,11 +1,11 @@
 ---
 title: Seats and dispatch
-description: The netfilter hooks PNP stands at, the dispatch law that gives every traversal exactly one proper seat per layer, and how verdicts — refusals included — are applied where they land.
+description: The netfilter hooks NTFE stands at, the dispatch law that gives every traversal exactly one proper seat per layer, and how verdicts — refusals included — are applied where they land.
 ---
 
 ## The seats
 
-PNP registers at four kinds of netfilter hook.
+NTFE registers at four kinds of netfilter hook.
 
 - **Device ingress** (`NF_NETDEV_INGRESS`) and **device egress**
   (`NF_NETDEV_EGRESS`), per interface. A netdevice notifier registers
@@ -43,7 +43,7 @@ The ratified law, with the Flow layer's clause:
 > packet of the flow.
 
 "Will never reach its proper seat" is decidable at ingress from two
-facts, and `peios_pnp_traversal_reaches_ip_seat()` decides it: the
+facts, and `peios_ntfe_traversal_reaches_ip_seat()` decides it: the
 ethertype (only `ETH_P_IP` and `ETH_P_IPV6` cross the IP hooks) and the
 device's disposition (`netif_is_bridge_port()` — a frame on a
 bridge-enslaved port is switched at L2 and never enters this device's IP
@@ -102,7 +102,7 @@ files it as the reply it claims to be), marks it, and delivers it:
   never meets source validation.
 
 When the refused packet belongs to an **established TCP** flow, the far
-end is torn down too: `peios_pnp_teardown_build()` turns the refused
+end is torn down too: `peios_ntfe_teardown_build()` turns the refused
 packet itself into a reset — same addresses, ports, sequence and
 acknowledgement numbers, `RST` set, no data — marks it, and sends it
 where the packet was going by the same routed path (outbound, to the
@@ -122,8 +122,8 @@ or an allocation failure. Refusals sent are counted in
 
 ## The refusal law
 
-**PNP does not judge its own refusals.** The answer `refuse.c` builds
-carries `skb->pnp_refusal`, a bit the `pnp-refusal-bit` patch adds to
+**NTFE does not judge its own refusals.** The answer `refuse.c` builds
+carries `skb->ntfe_refusal`, a bit the `ntfe-refusal-bit` patch adds to
 `struct sk_buff` inside its `headers` group (so clones and copies keep
 it); every hook checks it first and returns `NF_ACCEPT` without a
 snapshot, an evaluation or an event, counting `refusals_bypassed`.

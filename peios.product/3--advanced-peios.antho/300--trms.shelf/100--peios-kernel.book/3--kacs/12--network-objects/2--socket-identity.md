@@ -45,7 +45,7 @@ treats as the kernel's and confesses. [*net.socket.unstamped-reads-kernel]
 ## Reading it
 
 The engine reads the stamp with `pkm_kacs_socket_owner()`
-(`<linux/peios_pnp.h>`): a counted token reference the caller releases
+(`<linux/peios_ntfe.h>`): a counted token reference the caller releases
 with `pkm_kacs_socket_owner_put()`, and a copy of the kind, GUID, pid and
 comm. [*net.socket.owner-accessor] The copy is what makes the facts outlive the process; the
 reference is what makes them outlive the socket — a flow keeps its

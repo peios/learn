@@ -1,10 +1,14 @@
 ---
 title: Overview
-description: PNP is the Peios packet engine — where it stands in the kernel, what it replaced, how its C glue and Rust core divide the work, and the terms this chapter uses.
+description: NTFE is the Peios packet engine — where it stands in the kernel, what it replaced, how its C glue and Rust core divide the work, and the terms this chapter uses.
 ---
 
-PNP — Peios Network Policy — is the kernel's packet filter. It stands at
-the netfilter seats, judges every traversal against a policy it reads
+NTFE — the Network Traffic Filtering Engine — is the kernel's packet
+filter. It executes the packet layers of PNP, the Peios Network Policy:
+PNP is the policy language and its registry layout under
+`Machine\System\Network`, and NTFE is one of the components that carry
+it out (netd is another, for the interface layer). It stands at
+the netfilter seats, judges every traversal against the policy it reads
 from the LCS registry itself, and applies the result: a verdict on the
 packet, side effects on the flow and machine, and an event for whoever
 is watching. No userspace process is in the enforcement path; the
@@ -12,9 +16,9 @@ viewer daemon (pnpd) observes and authors, it never decides.
 
 ## What it replaced
 
-Peios ships a clean slate below PNP. The netfilter **hook framework**
+Peios ships a clean slate below NTFE. The netfilter **hook framework**
 and **conntrack** (built in, with events, zones and timeouts; helpers
-off) are kept, as are `nf_defrag` and the `nf_reject` machinery PNP uses
+off) are kept, as are `nf_defrag` and the `nf_reject` machinery NTFE uses
 to phrase refusals. Everything that was a policy *frontend* is
 configured out: nf_tables, the xtables family (`iptables`, `ip6tables`,
 `ebtables`, `arptables`), ipset, NFQUEUE, NFLOG, the flow table offload,
@@ -23,7 +27,7 @@ dormant. The kernel config gate (`kernel/verify-kernel-config.sh`)
 asserts both halves so a merge cannot quietly bring a frontend back.
 
 One consequence is worth knowing: conntrack's hooks are demand-activated,
-historically by a ct-using iptables rule. With no frontend left, PNP pins
+historically by a ct-using iptables rule. With no frontend left, NTFE pins
 them itself at init (`nf_ct_netns_get(&init_net, NFPROTO_INET)`); without
 that pin `nf_ct_get()` is NULL on every packet and the `FlowState` fact
 reads `untracked` forever.
@@ -33,7 +37,7 @@ reads `untracked` forever.
 The engine is split along the line that kernels are good at and pure
 code is good at.
 
-**`net/pnp/` (C)** owns everything that touches the kernel: the hook
+**`net/ntfe/` (C)** owns everything that touches the kernel: the hook
 registrations and the dispatch law (`seats.c`), building the fact
 snapshot from an `sk_buff` (`snapshot.c`), RCU publication of policy
 generations (`policy.c`), walking the registry into the builder
@@ -41,7 +45,7 @@ generations (`policy.c`), walking the registry into the builder
 extension (`tags.c`), counter tables (`counters.c`), report emission into
 KMES (`report.c`) — the Flow layer's sentence cache and dispatch
 (`flow.c`), the refusals a `REJECT` sends (`refuse.c`), and the verdict
-event ring behind `/dev/peios-pnp` (`events.c`).
+event ring behind `/dev/peios-ntfe` (`events.c`).
 
 **`pnp-core` (Rust, `pkm/crates/pnp-core`)** owns everything the policy
 *means*: the action language, the fact vocabulary and operators,
@@ -50,7 +54,7 @@ algorithm. It is `no_std`, allocates only through the fallible PKM
 wrappers, and has no I/O. The same source compiles twice: under cargo,
 where a test suite encodes every ratified law by name, and into the
 kernel, staged by `kernel/stage-rust-core.sh` as modules of the
-`security/pkm` Rust crate and reached over a C ABI (`kacs/pnp_runtime.rs`,
+`security/pkm` Rust crate and reached over a C ABI (`kacs/ntfe_runtime.rs`,
 the bridge). Nothing about a rule's semantics exists in C.
 
 The bridge is the only place the two meet. C hands it a snapshot and a
@@ -62,7 +66,7 @@ collation, so a `COUNT` lands after this packet's own reads and a
 ## Terms
 
 - **Traversal** — one packet passing one direction through the machine.
-- **Seat** — a netfilter hook PNP stands at: the device *ingress* and
+- **Seat** — a netfilter hook NTFE stands at: the device *ingress* and
   *egress* seats (per interface) and the two IP seats, *inbound*
   (`LOCAL_IN`) and *outbound* (`LOCAL_OUT`).
 - **Layer** — one of the three rule forests, `RawPacket`, `Packet` and
@@ -82,7 +86,7 @@ collation, so a `COUNT` lands after this packet's own reads and a
 - **Effect** — a side effect an evaluation yields (`TAG`, `COUNT`,
   `REPORT`, a prompt), applied by the glue.
 - **Confession** — a counter in the engine status for something the
-  engine refused or could not do. Nothing in PNP fails silently.
+  engine refused or could not do. Nothing in NTFE fails silently.
 - **Owner** — the identity KACS stamps on an inet socket (§3.12.2): the
   effective token and process facts at the last act that committed the
   socket to a role. What the Flow layer's `Local.*` facts are read from.
@@ -94,4 +98,4 @@ taken of it (§6.3), how the forest judges it (§6.4), where that forest
 came from (§6.5), the stores its effects land in (§6.6), the event that
 records it (§6.7), what happens when it is the first packet of a flow
 (§6.8), and who stands at its local end (§6.9). §6.A is the generated
-ABI of `/dev/peios-pnp`; §6.B is what the ABI tables cannot say.
+ABI of `/dev/peios-ntfe`; §6.B is what the ABI tables cannot say.

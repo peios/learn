@@ -1,10 +1,10 @@
 ---
 title: The event stream
-description: The verdict ring behind /dev/peios-pnp — what each evaluation records, how a reader drains it, the status and counters ioctls, and the engine's confessions.
+description: The verdict ring behind /dev/peios-ntfe — what each evaluation records, how a reader drains it, the status and counters ioctls, and the engine's confessions.
 ---
 
 Every real evaluation — a published forest judged the traversal, or a
-fail-closed drop — appends one `struct peios_pnp_event` to a bounded
+fail-closed drop — appends one `struct peios_ntfe_event` to a bounded
 ring. Permissive traversals emit nothing: there is no decision to
 attribute, and the status tells that story instead. A packet answered by
 its flow's cached sentence emits nothing either: there was no
@@ -38,8 +38,11 @@ in softirq). A full ring overwrites the **oldest** event and counts the
 loss in `events_dropped` — the honesty rule: a slow reader loses data
 and is told so, in the status and by the gap in sequence numbers.
 
-`/dev/peios-pnp` is a misc device, mode 0600, with a single-reader gate
-(`open()` returns `-EBUSY` to a second opener). `read()` returns whole
+`/dev/peios-ntfe` is a misc device, mode 0600. Any number of files may
+be open on it, because the status and dump ioctls are asked by tools
+while a viewer holds the stream, but the ring has one drain: the first
+file to `read()` claims it until it closes, and another file's `read()`
+returns `-EBUSY` meanwhile. `read()` returns whole
 records only, up to 64 per call, and blocks on an empty ring unless
 `O_NONBLOCK`; `poll()` raises `POLLIN` when events wait. A reader that
 reconnects resumes from whatever the ring still holds, and catches the
@@ -53,9 +56,9 @@ which is the same treatment the wire tap gives its own frames.
 
 ## Status
 
-`PEIOS_PNP_IOC_STATUS` fills `struct peios_pnp_status`: the ABI version
+`PEIOS_NTFE_IOC_STATUS` fills `struct peios_ntfe_status`: the ABI version
 (check it before trusting the rest — the ABI is experimental and
-versioned, currently 4), the generation, whether any layer is enforcing,
+versioned, currently 5), the generation, whether any layer is enforcing,
 the ring's confessed drops, and the engine counters. The counters are
 plain 64-bit atomics rather than per-CPU — legibility over throughput
 while the engine is young, to be revisited with a compiled evaluator.
@@ -66,7 +69,7 @@ while the engine is young, to be revisited with a compiled evaluator.
 | Evaluation | `judged`, `permissive`, `parse_errors`, `fail_closed` |
 | Verdicts | `verdict_pass`, `verdict_drop`, `verdict_reject`, `reject_degraded` |
 | Effects yielded | `fx_tags`, `fx_counts`, `fx_reports`, `fx_prompts` |
-| Ingestion | `last_ingest_error`, `last_ingest_t_ns`, `reporting_level` |
+| Ingestion | `last_ingest_error`, `last_ingest_t_ns`, `reporting_level`, `changes_noted` and `changes_walked` (§6.5, in force), `contexts` (interfaces in the network context table) |
 | The stores | `tag_writes`, `tag_untracked`, `tag_refused`, `count_writes`, `count_key_absent`, `count_refused`, `reports_emitted`, `counter_cells` |
 | The Flow layer | `flow_judged` (evaluations, sentences written), `flow_cached` (packets answered by a current sentence), `flow_rejudged` (stale by generation), `flow_expired` (stale by time edge), `flow_uncached` (flows with no extension to hold a sentence, evaluated per packet) |
 | Refusals | `refusals_emitted` (answers built and sent), `refusals_bypassed` (own refusals waved through a seat), `teardowns_emitted` (far-end resets for refused established TCP flows) |
@@ -78,16 +81,16 @@ included, so `judged − flow_judged` is the per-packet count), and
 `permissive` counts layer evaluations that found no forest — at
 generation 0, every one.
 
-`PEIOS_PNP_IOC_COUNTERS` is the counter dump described in §6.6: the
-caller supplies a buffer of `struct peios_pnp_counter_rec`, the kernel
+`PEIOS_NTFE_IOC_COUNTERS` is the counter dump described in §6.6: the
+caller supplies a buffer of `struct peios_ntfe_counter_rec`, the kernel
 fills as many as fit and reports both how many it wrote and how many
-cells exist, so a short buffer is visible. `PEIOS_PNP_IOC_FLOWS` is the
+cells exist, so a short buffer is visible. `PEIOS_NTFE_IOC_FLOWS` is the
 flows dump described in §6.8, with the same short-buffer contract over
-`struct peios_pnp_flow_rec`.
+`struct peios_ntfe_flow_rec`.
 
 ## Confessions, collected
 
-Everything PNP declines to do is counted somewhere in the status, and
+Everything NTFE declines to do is counted somewhere in the status, and
 the viewer shows every one of them. A reader should never have to infer
 a refusal from a missing effect:
 

@@ -7,7 +7,7 @@ The identity facts (rung 3 on PEI-598) answer the question the address
 facts cannot: not *where* a flow goes but *who* on this machine is
 speaking or listening. They are Flow-layer facts by the same law as
 `Related` and `Start.*` — a flow has one answer for its whole life — and
-they are the first facts PNP reads from somewhere other than the packet.
+they are the first facts NTFE reads from somewhere other than the packet.
 KACS provides them; the engine resolves them once per flow.
 
 ## What KACS stamps on a socket
@@ -24,7 +24,7 @@ last stamp governs, which is how a listener handed to another program
 A kernel socket is stamped as the kernel's, with no token.
 
 The engine reads the stamp through one accessor,
-`pkm_kacs_socket_owner()` (`<linux/peios_pnp.h>`), which hands it a
+`pkm_kacs_socket_owner()` (`<linux/peios_ntfe.h>`), which hands it a
 counted reference to the token and a copy of the process facts. The
 facts outlive the process; the reference outlives the socket.
 
@@ -98,7 +98,7 @@ reference.
 ## Across the bridge
 
 The flow view carries, per end, the kind, the process facts and a
-borrowed token pointer. The bridge (`kacs/pnp_runtime.rs`) implements
+borrowed token pointer. The bridge (`kacs/ntfe_runtime.rs`) implements
 pnp-core's `Principal` trait over the token — user SID, enabled-group
 membership (deny-only groups are invisible to policy), integrity level,
 confinement SID and capabilities, the per-service SID found among the
@@ -122,12 +122,12 @@ GUID, pid and comm, the user SID and the service SID (ABI 4, §6.A,
 §6.B). An end that could not be attributed — a socket with no KACS
 state, an inet socket nobody stamped, a loopback sender the inbound
 seat could not see — is confessed: `identity_unresolved` in the status,
-`PEIOS_PNP_EV_F_IDENTITY_UNRESOLVED` on the event, and the flag on the
+`PEIOS_NTFE_EV_F_IDENTITY_UNRESOLVED` on the event, and the flag on the
 flow record's slot.
 
 ## At rest: the listeners dump
 
-The same stamp, read without a packet: `PEIOS_PNP_IOC_LISTENERS`
+The same stamp, read without a packet: `PEIOS_NTFE_IOC_LISTENERS`
 (`listeners.c`) walks the listening TCP hash and the bound UDP and
 UDP-Lite tables of the root namespace the way `/proc/net/tcp` and
 `/proc/net/udp` do — each bucket under its lock, records copied out

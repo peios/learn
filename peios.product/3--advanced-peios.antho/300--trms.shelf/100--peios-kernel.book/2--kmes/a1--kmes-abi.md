@@ -58,7 +58,7 @@ Grouped as the header groups them.
 | `KMES_ORIGIN_KMES` | `1` |  |
 | `KMES_ORIGIN_KACS` | `2` |  |
 | `KMES_ORIGIN_LCS` | `3` |  |
-| `KMES_ORIGIN_PNP` | `4` | net/pnp: network-report |
+| `KMES_ORIGIN_NTFE` | `4` | net/ntfe: network-report |
 
 *Ring-slot discovery.* [*abi.ring-slot-discovery]
 

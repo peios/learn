@@ -1,7 +1,7 @@
 ---
 title: The net command
 type: reference
-description: net shows what netd made of the network — interfaces, verdicts, readiness, leases — lists the interface layer's rules and profiles, and asks netd to renew, reconcile, or wait for a readiness level.
+description: net shows what netd made of the network — interfaces, verdicts, readiness, leases — lists the interface layer's rules and profiles, asks netd to renew, reconcile, or wait for a readiness level, and reports whether the packet policy is in force.
 related:
   - peios/networking/overview
   - peios/networking/configuring-profiles
@@ -18,6 +18,8 @@ related:
 | `net wait <level> [seconds]` | Block until the machine reaches `link`, `addressed` or `routed`, or the timeout (default 60) passes. For scripts that need the network. |
 | `net renew <interface>` | Renew the DHCP lease now. Accepts a kernel name or an interface id. |
 | `net reconcile` | Re-run the reconciler immediately rather than waiting for an event. |
+| `net policy` | The kernel's side of the packet policy: whether the filtering engine (NTFE) is enforcing, its generation, whether every change written so far is in force, whether the last re-read was refused, and how many interfaces have a network context. |
+| `net policy wait [seconds]` | Block until every change made to `Machine\System\Network` before the command started is in force in the kernel, or the timeout (default 10) passes. Fails if the kernel refused the new generation. For scripts that write a rule and then rely on it. |
 | `net rules` | The interface layer, one rule per line: path, priority, conditions, actions. |
 | `net profiles` | The profile tree, one profile per line with the values it sets itself. |
 
@@ -47,14 +49,14 @@ A `warning` line reports something the operator should see: discovery went unans
 
 ## Who may run it
 
-The control object is a security descriptor: `Machine\System\Network\ControlSecurity`, or a compiled default when that is unset. `status` and `wait` need `NETWORK_QUERY`, which the default grants to everyone. `renew` and `reconcile` need `NETWORK_CONTROL`, which the default grants to SYSTEM and Administrators. `rules` and `profiles` read the registry directly and need only read access to it. A denied request reports `access denied`.
+The control object is a security descriptor: `Machine\System\Network\ControlSecurity`, or a compiled default when that is unset. `status` and `wait` need `NETWORK_QUERY`, which the default grants to everyone. `renew` and `reconcile` need `NETWORK_CONTROL`, which the default grants to SYSTEM and Administrators. `rules` and `profiles` read the registry directly and need only read access to it. `policy` asks the kernel through `/dev/peios-ntfe`, which ordinary users may not open. A denied request reports `access denied`.
 
 ## Exit status
 
 | Code | Meaning |
 |---|---|
-| 0 | Done; for `wait`, the level was reached. |
-| 1 | netd refused or could not be reached; for `wait`, the timeout passed. |
+| 0 | Done; for `wait`, the level was reached; for `policy wait`, the changes are in force. |
+| 1 | netd refused or could not be reached; for `wait`, the timeout passed; for `policy wait`, the timeout passed or the kernel refused the generation. |
 | 2 | Usage error. |
 
 ## See also

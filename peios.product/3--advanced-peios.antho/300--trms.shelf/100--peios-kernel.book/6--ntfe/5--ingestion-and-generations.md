@@ -14,19 +14,19 @@ policy change as a rule being written.
 
 ## Discovery and change notification
 
-At LCS bootstrap, PNP's key is discovered fifth alongside the other
+At LCS bootstrap, NTFE's key is discovered fifth alongside the other
 kernel-owned subtrees: `pkm_lcs_walk_absolute_components()` resolves
 `Machine\System\Network` (the leading `Machine` hive component is
 resolved locally against the hive root, not round-tripped), and its
 absence is not an error — no key, no policy and no context, generation
 stays where it is. When the key exists one internal watch is armed on
 it, depth-unbounded, for every mutation: `Rules\`, `Interfaces\` and
-`Networks\` beneath it are what PNP reads; `Profiles\` and `Dns\` are
+`Networks\` beneath it are what NTFE reads; `Profiles\` and `Dns\` are
 netd's and resolvd's, and a write there fires the watch and costs a
 walk that publishes nothing.
 
 Watch events arrive per key and uncoalesced.
-`peios_pnp_network_registry_changed()` records the source and key, sets
+`peios_ntfe_network_registry_changed()` records the source and key, sets
 a pending flag, and `mod_delayed_work()`s a re-walk with a 50 ms
 debounce: a burst of writes (a transaction touching a rule and its
 values, an autoapply seeding a whole policy, netd syncing every
@@ -37,7 +37,7 @@ and the deferred work may overlap.
 
 ## The walk
 
-`peios_pnp_network_refresh_from_key()` snapshots the LCS runtime limits,
+`peios_ntfe_network_refresh_from_key()` snapshots the LCS runtime limits,
 sequence and layer view, enumerates the Network key's children for
 `Rules`, `Interfaces` and `Networks`, and runs two independent stages —
 the rules, then the context; a failure in the first does not skip the
@@ -78,7 +78,7 @@ deliveries a transaction produces, therefore changes no generation.
 
 ### The context stage
 
-The inventory is read into one `struct peios_pnp_context_table`, at
+The inventory is read into one `struct peios_ntfe_context_table`, at
 most 64 entries of interface name, network id, name and trust:
 
 1. every child of `Networks\` is a record; its key name is the id (a
@@ -96,7 +96,7 @@ most 64 entries of interface name, network id, name and trust:
 Nothing in the stage refuses. A record that cannot be read is logged
 and skipped, an interface beyond the 64th carries no context, a value
 longer than its field is truncated with one warning. The table then
-goes to `peios_pnp_context_publish()` (§6.3): if it equals the active
+goes to `peios_ntfe_context_publish()` (§6.3): if it equals the active
 one entry for entry it is freed and nothing happens; otherwise it is
 `rcu_assign_pointer()`ed into place, the generation counter advances,
 the old table is freed after grace, and the kernel log says how many
@@ -107,7 +107,7 @@ sentence is now stale and is re-judged on its flow's next packet
 
 ## Building and validating
 
-The builder (`pnp_rust_builder_*`) accumulates `RuleInput` trees; `build`
+The builder (`ntfe_rust_builder_*`) accumulates `RuleInput` trees; `build`
 runs `pnp_core::ingest::build_forest`, which parses every condition key
 and action expression, orders each rule's conditions with the live-time
 ones last (§6.4), resolves priority inheritance, lints layer-impossible
@@ -134,7 +134,7 @@ not 0 or 1, a rule name containing a path separator — and, over the
 name sets, two distinct tag names (or stream names) whose 64-bit hashes
 collide.
 
-After all three layers build, `pnp_rust_forests_check()` runs the checks
+After all three layers build, `ntfe_rust_forests_check()` runs the checks
 that span forests, because the stores are machine-wide: tag and stream
 hashes must be distinct across *every* forest; every counter view must
 have a writer in *some* forest — a view over a stream no rule writes is
@@ -146,25 +146,46 @@ read is refused statically, with the reading rule and the name.
 
 ## Publication
 
-`peios_pnp_policy_publish(packet, raw, flow, reporting_level)` is
+`peios_ntfe_policy_publish(packet, raw, flow, reporting_level)` is
 process context under a mutex. It runs the cross-forest check, then
 materializes the counter store for the union of every forest's views
 (§6.6) — so a store that cannot be built (allocation, more than eight
 windows on one table) refuses the generation before anything is
 swapped. Only then does it advance the generation counter, allocate the
-new `struct peios_pnp_policy` (three opaque forest pointers plus the
+new `struct peios_ntfe_policy` (three opaque forest pointers plus the
 reporting level) and `rcu_assign_pointer()` it into place. Hook-path
 readers dereference it under `rcu_read_lock()` and never block; they see
 the old generation or the new one, never a mix. The old policy is
-released by `call_rcu()`, and its forests by `pnp_rust_forest_free()` in
+released by `call_rcu()`, and its forests by `ntfe_rust_forest_free()` in
 the callback after grace.
 
 Every walk records its outcome: `last_ingest_error` (0, or the positive
 errno of the last failed walk) and `last_ingest_t_ns`, both in the
 status. A refusal leaves the previous generation active and says so in
-the kernel log. The status does not yet count the interfaces carrying a
-context; that field waits on the next ABI revision, and the kernel log
-line at each context publication is the record meanwhile.
+the kernel log. `contexts` in the status is the number of interfaces in
+the active context table.
+
+### In force
+
+A registry write that has returned is delivered, not enforced: the walk
+that reads it runs after the debounce. Two status counters say which a
+writer is looking at. `changes_noted` is incremented by
+`peios_ntfe_network_registry_changed()` for every watch event, and LCS
+delivers its internal watches inside the write that caused them, after
+the commit and before the syscall returns, so a writer that reads the
+status after its write sees its own change counted. The deferred work
+reads `changes_noted` under the same lock that clears the pending flag,
+before it walks, and stores that value in `changes_walked` when the walk
+returns, whether it published or was refused.
+
+So a writer is in force once `changes_walked` reaches the `changes_noted`
+it read after writing: the walk that satisfied it started after the
+write committed. A change that lands mid-walk raises `changes_noted`
+again and re-arms the work, so the pair stays unequal until a later walk
+covers it. A refused walk still advances `changes_walked`; the writer
+then reads `last_ingest_error` to learn that what it wrote is not what
+is enforced. The bootstrap walk is not a noted change and moves neither
+counter. `net policy wait` is this loop.
 
 ## Generation 0
 

@@ -1,16 +1,16 @@
 ---
-title: PNP ABI Notes
-description: What the PNP ABI tables cannot say for themselves — the device's read and poll semantics, what each ioctl expects and returns, the error vocabulary, and the stability promise.
+title: NTFE ABI Notes
+description: What the NTFE ABI tables cannot say for themselves — the device's read and poll semantics, what each ioctl expects and returns, the error vocabulary, and the stability promise.
 ---
 
-§6.A is generated from `pkm/uapi/pkm/pnp.h` and holds only what a
+§6.A is generated from `pkm/uapi/pkm/ntfe.h` and holds only what a
 compiler can measure. This appendix holds the rest.
 
 ## Stability
 
-The ABI is **experimental** while PNP grows (PEI-598): no stability
-promise until the design ships. `peios_pnp_status.abi` carries
-`PEIOS_PNP_ABI_VERSION`; a consumer checks it before trusting any other
+The ABI is **experimental** while NTFE grows (PEI-598): no stability
+promise until the design ships. `peios_ntfe_status.abi` carries
+`PEIOS_NTFE_ABI_VERSION`; a consumer checks it before trusting any other
 field or record layout. Version 2 (the machinery slice) added the
 event's `reject_kind`, the store confessions and `counter_cells` and
 `reporting_level` in the status, and the counters ioctl. Version 3 (the
@@ -19,22 +19,25 @@ Flow layer) added the `LOCAL_OUT` seat and `Flow` layer ids, the
 the flows ioctl. Version 4 (the identity facts) added the endpoints'
 identities to the event and the flow record, the `IDENTITY_UNRESOLVED`
 event flag and the `identity_unresolved` counter (in a reserved slot,
-so the status kept its size). pnpd and the kernel ship together on the
+so the status kept its size). Version 5 renamed the device and every
+symbol from `pnp` to `ntfe`, let more than one file hold the device open,
+and added `changes_noted`, `changes_walked` and `contexts` to the status,
+which grew by two words. pnpd and the kernel ship together on the
 experimental edition, so the check is a guard, not a negotiation.
 
-## `/dev/peios-pnp`
+## `/dev/peios-ntfe`
 
 A misc device, mode 0600, root-only by ownership.
 
 | Operation | Semantics | Errors |
 |---|---|---|
-| `open()` | One reader at a time. | `EBUSY` — already open elsewhere |
-| `read(buf, len)` | Returns whole `struct peios_pnp_event` records only — never a partial one — up to 64 per call, oldest first, consuming them. Blocks on an empty ring unless `O_NONBLOCK`. | `EINVAL` — `len` smaller than one record; `EAGAIN` — empty and non-blocking; `EINTR`; `ENOMEM`; `EFAULT` |
+| `open()` | Any number of openers. | — |
+| `read(buf, len)` | Returns whole `struct peios_ntfe_event` records only — never a partial one — up to 64 per call, oldest first, consuming them. Blocks on an empty ring unless `O_NONBLOCK`. | `EINVAL` — `len` smaller than one record; `EBUSY` — another open file is the stream's reader; `EAGAIN` — empty and non-blocking; `EINTR`; `ENOMEM`; `EFAULT` |
 | `poll()` | `POLLIN \| POLLRDNORM` when at least one event waits. | — |
-| `ioctl(PEIOS_PNP_IOC_STATUS, struct peios_pnp_status *)` | Fills the status snapshot. Cumulative counters since boot. | `EFAULT` |
-| `ioctl(PEIOS_PNP_IOC_COUNTERS, struct peios_pnp_counters_query *)` | `buf`/`buf_len` describe a user buffer of `struct peios_pnp_counter_rec`; on return `count` is how many were written and `total` how many cells exist. A short buffer is not an error — the two numbers disagree. Best-effort snapshot: cells may change between records. | `EFAULT`; `ENOMEM` |
-| `ioctl(PEIOS_PNP_IOC_FLOWS, struct peios_pnp_flows_query *)` | Same contract over `struct peios_pnp_flow_rec`: `count` written, `total` live flows the walk saw. Records are copied out between hash buckets, so the dump is a best-effort picture of a table that changes under it. | `EFAULT`; `ENOMEM` |
-| `ioctl(PEIOS_PNP_IOC_LISTENERS, struct peios_pnp_listeners_query *)` | Same contract over `struct peios_pnp_listener_rec`: every TCP socket in the listening state and every bound UDP / UDP-Lite socket of the root network namespace, with the identity KACS stamped on it (§6.9). `total` is how many the walk saw. | `EFAULT`; `ENOMEM` |
+| `ioctl(PEIOS_NTFE_IOC_STATUS, struct peios_ntfe_status *)` | Fills the status snapshot. Cumulative counters since boot. | `EFAULT` |
+| `ioctl(PEIOS_NTFE_IOC_COUNTERS, struct peios_ntfe_counters_query *)` | `buf`/`buf_len` describe a user buffer of `struct peios_ntfe_counter_rec`; on return `count` is how many were written and `total` how many cells exist. A short buffer is not an error — the two numbers disagree. Best-effort snapshot: cells may change between records. | `EFAULT`; `ENOMEM` |
+| `ioctl(PEIOS_NTFE_IOC_FLOWS, struct peios_ntfe_flows_query *)` | Same contract over `struct peios_ntfe_flow_rec`: `count` written, `total` live flows the walk saw. Records are copied out between hash buckets, so the dump is a best-effort picture of a table that changes under it. | `EFAULT`; `ENOMEM` |
+| `ioctl(PEIOS_NTFE_IOC_LISTENERS, struct peios_ntfe_listeners_query *)` | Same contract over `struct peios_ntfe_listener_rec`: every TCP socket in the listening state and every bound UDP / UDP-Lite socket of the root network namespace, with the identity KACS stamped on it (§6.9). `total` is how many the walk saw. | `EFAULT`; `ENOMEM` |
 | other ioctls | — | `ENOTTY` |
 
 Sequence numbers are monotonic per boot. A gap between consecutive
@@ -45,7 +48,7 @@ total.
 ## Event fields
 
 - `attributed` is the winning rule's path relative to its layer key,
-  UTF-8, NUL-terminated, truncated to `PEIOS_PNP_EV_ATTR_LEN` − 1 bytes.
+  UTF-8, NUL-terminated, truncated to `PEIOS_NTFE_EV_ATTR_LEN` − 1 bytes.
   Two reserved values: `backstop` (nothing yielded) and `fail-closed`
   (evaluation failed).
 - `effects` packs the effect counts the evaluation *yielded* — `tags |
@@ -53,10 +56,10 @@ total.
   What the stores then *applied* is in the status confessions, not in
   the event.
 - `reject_kind` is meaningful only when `verdict` is
-  `PEIOS_PNP_EV_VERDICT_REJECT`; a degraded reject (`flags &
-  PEIOS_PNP_EV_F_REJECT_DEGRADED`) still carries the kind the rule
+  `PEIOS_NTFE_EV_VERDICT_REJECT`; a degraded reject (`flags &
+  PEIOS_NTFE_EV_F_REJECT_DEGRADED`) still carries the kind the rule
   chose.
-- `PEIOS_PNP_EV_F_REJUDGED` marks a `Flow`-layer evaluation that
+- `PEIOS_NTFE_EV_F_REJUDGED` marks a `Flow`-layer evaluation that
   replaced a stale sentence (policy change or time edge). A packet
   answered by a current sentence produces no event at all.
 - `layer` 2 is `Flow`; `seat` 4 is `LOCAL_OUT`. A `Flow` event's
@@ -68,7 +71,7 @@ total.
 - `flow_state` 0 means the fact was absent (the ingress seat), not that
   the flow was untracked; untracked is 5.
 - The identity fields (ABI 4) are set on `Flow` events only and zero
-  elsewhere. `local_kind` / `remote_kind` are `PEIOS_PNP_EV_LOCAL_*`:
+  elsewhere. `local_kind` / `remote_kind` are `PEIOS_NTFE_EV_LOCAL_*`:
   `ABSENT` (0) for a non-Flow event, and for `remote` whenever the
   other end is not local; `remote` is filled only on a loopback flow.
   For a `PROGRAM` end, `*_guid`, `*_pid` and `*_comm` are the process
@@ -113,14 +116,14 @@ total.
   relative to the layer key — `backstop` and `fail-closed` hash like any
   other path.
 - `packets`/`bytes` are conntrack's accounting, original then reply;
-  PNP enables `nf_conntrack_acct` at init.
+  NTFE enables `nf_conntrack_acct` at init.
 - `timeout_secs` is the entry's remaining lifetime as conntrack sees it;
   `start_secs` is `CLOCK_REALTIME` seconds when conntrack created it.
-- `tag_hash`/`tag_value` hold up to `PEIOS_PNP_FLOW_MAX_TAGS` (8)
+- `tag_hash`/`tag_value` hold up to `PEIOS_NTFE_FLOW_MAX_TAGS` (8)
   present tags by name hash and value; `n_tags` is the flow's *total*,
   so a value above 8 means some are not listed.
 - The identities (ABI 4) are per sentence slot, recorded at the flow's
-  first judgment and fixed: `owner_kind[slot]` is `PEIOS_PNP_EV_LOCAL_*`
+  first judgment and fixed: `owner_kind[slot]` is `PEIOS_NTFE_EV_LOCAL_*`
   (`ABSENT` = not yet resolved); the per-slot arrays are flattened at a
   fixed stride — `owner_guid` 16 bytes per slot, `owner_comm` 16,
   `owner_user` 68, `owner_service` 32 — so slot 1's user SID starts at
@@ -147,8 +150,8 @@ total.
 |---|---|
 | Event ring | 4096 records, overwrite-oldest |
 | Records per `read()` | 64 |
-| Counter cells per table | 4096 (`PEIOS_PNP_COUNTER_MAX_KEYS`, kernel-internal) |
-| Distinct tags per flow | 64 (`PEIOS_PNP_TAG_MAX_PER_FLOW`, kernel-internal) |
+| Counter cells per table | 4096 (`PEIOS_NTFE_COUNTER_MAX_KEYS`, kernel-internal) |
+| Distinct tags per flow | 64 (`PEIOS_NTFE_TAG_MAX_PER_FLOW`, kernel-internal) |
 | Rule depth / rules per layer | 12 / 4096 (ingestion) |
 | Longest counter window | 86 400 s |
 | Sentences per flow | 2 (slot 1 only for loopback flows) |
@@ -157,10 +160,10 @@ total.
 
 ## Build configuration
 
-`CONFIG_PEIOS_PNP` (bool) depends on `SECURITY_PKM`, `NETFILTER_INGRESS`,
-`NETFILTER_EGRESS` and `NF_CONNTRACK=y` — PNP is built in and reads flow
-facts on the packet path, so conntrack must be too. `CONFIG_PEIOS_PNP_KUNIT`
-builds the kernel-resident tests (`pkm_kunit_pnp`), defaulting to
+`CONFIG_PEIOS_NTFE` (bool) depends on `SECURITY_PKM`, `NETFILTER_INGRESS`,
+`NETFILTER_EGRESS` and `NF_CONNTRACK=y` — NTFE is built in and reads flow
+facts on the packet path, so conntrack must be too. `CONFIG_PEIOS_NTFE_KUNIT`
+builds the kernel-resident tests (`pkm_kunit_ntfe`), defaulting to
 `SECURITY_PKM_KUNIT`. The production fragment (`build/config/pkm.fragment`)
-enables PNP and configures the nf_tables/xtables family out;
+enables NTFE and configures the nf_tables/xtables family out;
 `kernel/verify-kernel-config.sh` asserts both.

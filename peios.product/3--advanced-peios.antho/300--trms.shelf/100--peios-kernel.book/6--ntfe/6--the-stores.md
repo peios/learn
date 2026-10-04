@@ -1,6 +1,6 @@
 ---
 title: The stores
-description: The three machinery stores behind PNP's effects — flow tags on a conntrack extension, counter tables materialized from the forest's views, and REPORT emission into KMES — with their bounds and confessions.
+description: The three machinery stores behind NTFE's effects — flow tags on a conntrack extension, counter tables materialized from the forest's views, and REPORT emission into KMES — with their bounds and confessions.
 ---
 
 Effects need somewhere to land. Three stores, each with a small C
@@ -24,12 +24,12 @@ and not defended.
 ## Flow tags
 
 A tag is a named unsigned integer on a conntrack entry. The store is the
-`tags` pointer of PNP's **conntrack extension** — `NF_CT_EXT_PNP`,
-`struct peios_pnp_ct` (`include/linux/peios_pnp.h`), added to every flow
-at creation (`init_conntrack()`, by the `pnp-conntrack-ext.patch`), with
+`tags` pointer of NTFE's **conntrack extension** — `NF_CT_EXT_NTFE`,
+`struct peios_ntfe_ct` (`include/linux/peios_ntfe.h`), added to every flow
+at creation (`init_conntrack()`, by the `ntfe-conntrack-ext.patch`), with
 the pointer NULL until the flow's first `TAG`. The extension *block* of
 a confirmed conntrack entry is immutable (upstream removed post-confirm
-resizing as an RCU-reader race), and PNP's egress seat runs after
+resizing as an RCU-reader race), and NTFE's egress seat runs after
 confirmation, so the extension must exist before it is needed; a fixed
 extension on every flow is the cheapest way to guarantee that. Since the
 Flow slice the extension also holds the flow's start time and its two
@@ -48,7 +48,7 @@ shift under it, and a later `Set` reuses the slot. `Add` saturates at
 exposes it (`smp_wmb()` then `WRITE_ONCE(len)`), so a reader that sees
 the new length sees a complete entry.
 
-When the flow dies, `nf_conntrack_free()` calls `peios_pnp_ct_destroy()`
+When the flow dies, `nf_conntrack_free()` calls `peios_ntfe_ct_destroy()`
 (the same patch), which `kfree_rcu()`s the table — a reader that found
 the entry under RCU may still be walking it.
 
@@ -102,7 +102,7 @@ converge), and retires tables no forest views any more — `list_del_rcu()`
 then free after grace, cells included. Reads on the packet path walk the
 table list and the cell lists under RCU; the publisher holds a mutex.
 
-`PEIOS_PNP_IOC_COUNTERS` dumps every cell of every table for the viewer:
+`PEIOS_NTFE_IOC_COUNTERS` dumps every cell of every table for the viewer:
 stream name, key-spec, the key, the total, the last-write time, and the
 current value of each window. It is a best-effort snapshot (the RCU read
 lock is dropped around each `copy_to_user()`), which is fine for
@@ -111,7 +111,7 @@ counters that are approximate by design.
 ## Reports
 
 `REPORT(level)` past `CurrentReportingLevel` becomes one KMES event:
-origin class `KMES_ORIGIN_PNP` (4), event type `network-report`, and a
+origin class `KMES_ORIGIN_NTFE` (4), event type `network-report`, and a
 msgpack payload — a string-keyed map of the attribution (`rule`), the
 `level`, where the judgment stood (`layer`, `seat`), what it said
 (`verdict`, and `reject_kind` when it was a reject), the packet

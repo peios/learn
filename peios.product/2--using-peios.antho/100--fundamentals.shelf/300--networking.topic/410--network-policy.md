@@ -15,7 +15,9 @@ under `Machine\System\Network`. There is no rule language file, no
 `iptables`-style command, and for the packet layers no daemon in the path
 — the kernel reads them from `Machine\System\Network\Rules` itself, and
 every change there becomes a new **policy generation** within a fraction
-of a second. The interface layer is judged by netd, the network manager,
+of a second. The part of the kernel that does this is **NTFE**, the
+Network Traffic Filtering Engine: PNP is the policy, and NTFE is what
+enforces its packet layers. The interface layer is judged by netd, the network manager,
 from the same key and by the same rules. The
 [PNP viewer](~peios/networking/the-pnp-viewer) is the place to watch that
 happen and to write rules by hand; the
@@ -273,6 +275,12 @@ the *entire* new generation — and the previous one stays in force,
 loudly (the viewer shows a banner; the status reports the error). Policy
 never half-applies.
 
+**Written is not yet in force.** A registry write returns before the
+kernel has re-read the policy. `net policy wait` blocks until every
+change made so far is in force, and fails if the new generation was
+refused; a script that writes a rule and then depends on it runs that
+in between.
+
 **Tags flow upward only.** A layer reads tags written at or below its
 own height (`RawPacket` < `Packet` < `Flow`): a `Flow` rule may read a
 tag a `Packet` rule wrote, and the reverse is refused at ingestion. Tags
@@ -317,7 +325,7 @@ from. That is exactly what the rule says, and PNP will do it.
 
 ## Where things are visible
 
-Every evaluation emits an event on `/dev/peios-pnp` carrying the verdict,
+Every evaluation emits an event on `/dev/peios-ntfe` carrying the verdict,
 the attributing rule's path, the layer and seat, and how many effects
 ran; the [viewer](~peios/networking/the-pnp-viewer) paints those onto the wire,
 lists every live flow with its sentence, and shows the counter store
