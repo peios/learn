@@ -24,7 +24,7 @@ The SYSTEM token is what init runs on. Specifically:
 | Field | Value |
 |---|---|
 | `user_sid` | `S-1-5-18` (the SYSTEM well-known SID) |
-| `groups` | `BUILTIN\Administrators` (with `SE_GROUP_OWNER`), `Everyone`, `Authenticated Users`, `Local`, and the bootstrap logon SID `S-1-5-5-0-0` |
+| `groups` | `BUILTIN\Administrators` (with `SE_GROUP_OWNER`), `Everyone`, `Authenticated Users`, `Local`, and the bootstrap logon SID `S-1-5-5-0-999` |
 | `integrity_level` | `S-1-16-16384` (System integrity — the highest) |
 | `mandatory_policy` | `NO_WRITE_UP` |
 | `privileges` | Every privilege defined in the catalog, all present, all enabled |
@@ -78,7 +78,7 @@ At the end of kernel init:
 
 - **SYSTEM token.** Constructed; ready.
 - **Anonymous token.** Constructed; ready.
-- **SYSTEM session (ID 0).** Constructed; the SYSTEM token is bound to it.
+- **SYSTEM session (ID 999).** Constructed; the SYSTEM token is bound to it.
 - **Anonymous session (ID 998).** Constructed; the Anonymous token is bound to it.
 - **init process.** About to start; will have the SYSTEM token attached to it.
 
@@ -97,7 +97,7 @@ Both bootstrap tokens are never destroyed during the kernel's lifetime. They are
 
 On reboot, the kernel re-constructs them at init. They are not persistent — there is no on-disk SYSTEM-token record — they are re-built fresh every boot. The fields are deterministic, so the new instances are equivalent to the previous ones structurally; the actual token instances are different objects.
 
-The session IDs (0 for SYSTEM, 998 for Anonymous) are also fixed across boots. The logon SID derived from the SYSTEM session is `S-1-5-5-0-0`.
+The session IDs (999 for SYSTEM, 998 for Anonymous) are also fixed across boots. The logon SID derived from the SYSTEM session is `S-1-5-5-0-999`.
 
 ## Why these specific shapes
 

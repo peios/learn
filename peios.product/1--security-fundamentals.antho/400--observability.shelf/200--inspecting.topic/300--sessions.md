@@ -18,26 +18,28 @@ The primary inspection surface is **`/sys/kernel/security/kacs/sessions`** — a
 `/sys/kernel/security/kacs/sessions` is a text file produced by the kernel on each read. Each line describes one active session:
 
 ```
-session_id=<decimal-u64> user_sid=<lowercase-hex-sid> logon_type=<decimal-u32> auth_package=<lowercase-hex-utf8> created_at=<decimal-u64>
+logon_session_id=<decimal-u64> user_sid=<lowercase-hex-sid> logon_type=<decimal-u32> auth_package=<lowercase-hex-utf8> created_at=<decimal-u64>
 ```
 
 Fields are space-separated, in `key=value` form. The format is stable for the listed fields; consumers should **ignore unknown additional fields**, which future versions may append.
 
 | Field | Type | Meaning |
 |---|---|---|
-| `session_id` | decimal u64 | The session's LUID. Same as the `auth_id` recorded on every token belonging to this session. |
+| `logon_session_id` | decimal u64 | The session's LUID. Same as the `auth_id` recorded on every token belonging to this session. |
 | `user_sid` | lowercase hex | The SID of the principal who signed in. |
 | `logon_type` | decimal u32 | The logon type. See [Logon types](~peios/logon-sessions/logon-types). |
 | `auth_package` | lowercase hex of UTF-8 | The auth-package name (e.g. "Kerberos", "NTLM", "local") encoded as lowercase hex of the UTF-8 bytes. |
-| `created_at` | decimal u64 | Creation timestamp (kernel-internal monotonic units). |
+| `created_at` | decimal u64 | When the session was made, in seconds since the Unix epoch (wall-clock time). |
 
 The `user_sid` and `auth_package` fields are hex-encoded for parser stability — the SID is a binary structure, and the auth-package name could in principle contain characters that complicate text parsing. Hex encoding is uniform.
 
 ### Access rule
 
-The file's SD grants read to `BUILTIN\Administrators` and `SYSTEM` only. A non-administrative caller will get `EACCES` on `open()`. This is intentional: the listing reveals every active session on the machine, including their identities and timestamps, which is information you do not want a low-privileged process to read.
+The kernel checks every read of the file against a fixed descriptor that grants read to `BUILTIN\Administrators` and `SYSTEM` only. Anyone signed in may open it; a non-administrative caller gets `EACCES` when it reads. This is intentional: the listing reveals every active session on the machine, including their identities and timestamps, which is information you do not want a low-privileged process to read.
 
-For a sysadmin running as `root` (which projects to a token in the administrative group), reading the file is straightforward. For service accounts that need session enumeration capability, the right approach is to grant the relevant SID access via the file's SD, not to weaken the default protection.
+The descriptor is built into the kernel, not stored on the file, so it cannot be widened. A service that needs to list sessions runs as SYSTEM or in Administrators; anything else can still find the sessions of the processes it may inspect, through their tokens (below).
+
+securityfs itself cannot store descriptors, so peinit gives the mount a synthesised one at boot that lets Authenticated Users open and traverse it. Before that the file cannot be opened at all.
 
 ### Bootstrap sessions
 
@@ -45,7 +47,7 @@ Two sessions exist before authd is up:
 
 | Session ID | Use |
 |---|---|
-| 0 | The SYSTEM session. Attached to init, inherited by every early-boot process. Stays present for the lifetime of the system. |
+| 999 | The SYSTEM session. Attached to init, inherited by every early-boot process. Stays present for the lifetime of the system. |
 | 998 | The Anonymous session. Backs the singleton Anonymous token. |
 
 Both appear in the listing. They are not bugs; their presence is the normal state of any running system.
@@ -56,7 +58,7 @@ The standard pattern: given a thread or process, find its session.
 
 1. **Open the token.** For a thread, use `/proc/<pid>/task/<tid>/token`. For a process's primary, use `/proc/<pid>/token`. For yourself, use `kacs_open_self_token` or `/sys/kernel/security/kacs/self`.
 2. **Query `TokenStatistics`** via `KACS_IOC_QUERY`. The response includes `auth_id` (the session's LUID).
-3. **Look up `auth_id`** in `/sys/kernel/security/kacs/sessions` to find the matching `session_id`. The line gives you the session's full details.
+3. **Look up `auth_id`** in `/sys/kernel/security/kacs/sessions` to find the matching `logon_session_id`. The line gives you the session's full details.
 
 This is the standard "which session is this process in" query. The session ID is the key; the listing has the rest.
 

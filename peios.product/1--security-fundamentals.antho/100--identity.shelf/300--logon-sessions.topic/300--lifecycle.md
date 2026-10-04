@@ -45,7 +45,7 @@ Two sessions exist without ever passing through `kacs_create_session`:
 
 | Session | ID | Created by |
 |---|---|---|
-| **SYSTEM session** | 0 | Direct kernel init |
+| **SYSTEM session** | 999 | Direct kernel init |
 | **Anonymous session** | 998 | Direct kernel init |
 
 Both are constructed in early boot, before any process exists. The SYSTEM session is attached to the kernel's bootstrap SYSTEM token, which init inherits and which propagates through every process until authd assigns real tokens. The Anonymous session backs the well-known Anonymous token used by Anonymous-level impersonation.
@@ -121,7 +121,7 @@ The cost is that revocation is observable: a thread can detect that its session 
 The kernel exposes the active session list at `/sys/kernel/security/kacs/sessions`. The file is a text listing, one session per line:
 
 ```
-session_id=42 user_sid=<hex-encoded SID> logon_type=2 auth_package=<hex-encoded name> created_at=...
+logon_session_id=1042 user_sid=<hex-encoded SID> logon_type=2 auth_package=<hex-encoded name> created_at=...
 ```
 
 Lines are stable in their leading fields; new fields may be appended in a future version, so consumers must ignore unknown trailing fields. The file's own SD grants read to `BUILTIN\Administrators` and `SYSTEM` only.

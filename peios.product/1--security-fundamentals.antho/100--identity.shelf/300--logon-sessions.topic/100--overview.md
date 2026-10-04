@@ -77,7 +77,7 @@ Two sessions exist before authd is up, created by the kernel during boot:
 
 | Session | ID | Purpose |
 |---|---|---|
-| **SYSTEM session** | 0 | The session of the SYSTEM token, attached to init and inherited by every process until authd assigns real tokens. |
+| **SYSTEM session** | 999 | The session of the SYSTEM token, attached to init and inherited by every process until authd assigns real tokens. |
 | **Anonymous session** | 998 | The session of the Anonymous token, used as the user SID for Anonymous-level impersonation. |
 
 Both are created by direct kernel initialisation — they do not go through `kacs_create_session`. They are also never destroyed during a running system's lifetime: the SYSTEM token always exists somewhere, and the Anonymous token is a singleton.
