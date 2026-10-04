@@ -50,7 +50,7 @@ package; **Delete It** removes it and keeps a copy beside it; **Stop
 Everything** cancels the removal.
 
 Once you approve the plan, the change finishes even if you close the
-window: Package Manager stays open until it has.
+window.
 
 ## When peipkg refuses
 
