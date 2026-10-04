@@ -1,7 +1,7 @@
 ---
 title: logonse
 type: reference
-description: The logonse command lists logon sessions and their processes, creates and destroys them, and sets a process's mitigation flags.
+description: The logonse command lists logon sessions and their processes, creates and destroys them, and shows or sets a process's PSB.
 related:
   - peios/logon-sessions/overview
   - peios/logon-sessions/lifecycle
@@ -9,7 +9,7 @@ related:
   - peios/process-mitigations/overview
 ---
 
-`logonse` is the command-line tool for **logon sessions** — the kernel's records of authentication events that this topic describes. It lists the active sessions, shows which processes belong to one, creates and destroys sessions, and (as a related low-level job) sets a process's mitigation flags.
+`logonse` is the command-line tool for **logon sessions** — the kernel's records of authentication events that this topic describes. It lists the active sessions, shows which processes belong to one, creates and destroys sessions, and (as a related low-level job) shows a process's Process Security Block (PSB) and sets its mitigation flags.
 
 ```
 logonse subcommand [arguments]
@@ -26,30 +26,35 @@ $ logonse show 4711
 
 ### `logonse list`
 
-Enumerates the active logon sessions, and the process IDs in each.
+Lists every live logon session: who it is for, what kind of sign-in made it, the authentication package, when it was made, and the processes in it.
 
 ```
 $ logonse list
-session 0     pids: [1, 2, 14, 22]
-session 4711  pids: [820, 844, 901]
+session 999  Local System (S-1-5-18)  service
+  package: Negotiate
+  created: when the machine started
+  pids:    [562, 571, 620, 667, 670]
+session 1007  jack (S-1-5-21-…-1000)  remote-interactive
+  package: lpsd
+  created: 2026-10-04 10:02:41
+  pids:    [2611, 2633, 2650]
 ```
 
 ### `logonse show`
 
-Shows the process IDs that belong to one session.
+Shows one session, the same way.
 
 ```
-$ logonse show 4711
+$ logonse show 1007
 ```
 
-### A caveat on list and show
+### Where the answers come from
 
-There is no syscall that enumerates logon sessions, and `logonse` does not read the kernel's sessions file (whose SD restricts it to Administrators and SYSTEM). `logonse list` and `logonse show` work by walking the running processes and reading each one's token to find which session it belongs to. That has two consequences worth knowing:
+The sessions come from the kernel's own list, [`/sys/kernel/security/kacs/sessions`](~peios/inspecting/sessions), which only `BUILTIN\Administrators` and SYSTEM may read. It lists every session, including one that has no process — held alive only by a token file descriptor somewhere, or made and not yet used — and such a session shows `pids: none you can see`.
 
-- It is **best-effort**. A session that has no running process — held alive only by a token file descriptor somewhere — will not appear, because there is no process to find it through.
-- It is a **snapshot under change**. Processes start and exit while the walk runs, so the result is a close approximation of the moment, not a locked one.
+The processes come from walking the running processes and reading each one's token (`/proc/<pid>/token`) to find which session it belongs to. That shows only the processes you may inspect: an administrator sees every process but the protected ones, such as `peinit` and `authd`, which no administrator can inspect. Processes start and exit while the walk runs, so it is a close approximation of the moment, not a locked one.
 
-For routine "who is signed in" use this is fine. For an authoritative listing, the kernel's own sessions surface — described in [Inspecting sessions](~peios/inspecting/sessions) — is the source of record.
+Without Administrators, the kernel's list is refused, and `logonse` says so and shows only the sessions of processes you can inspect — your own.
 
 ## Creating and destroying sessions
 
@@ -82,11 +87,23 @@ $ logonse destroy 4711
 
 A session with live tokens cannot be destroyed this way; its tokens must go first. See [Session lifecycle](~peios/logon-sessions/lifecycle).
 
-## Setting process mitigation flags
+## A process's PSB
 
 ### `logonse psb`
 
-`logonse psb` sets the **mitigation flags** in a process's Process Security Block.
+With only `--pid`, `logonse psb` shows a process's **Process Security Block**: whether it is protected by PIP (Process Integrity Protection, which shields signed system processes from everyone else), which mitigations are on, and the process's GUID, which events carry.
+
+```
+$ logonse psb --pid 1
+psb pid=1
+  pip:         protected, Peios TCB
+  mitigations: none
+  guid:        3f2c9a1e-6b0d-4c8e-9a41-2d7e5f10b6c3
+```
+
+Anyone the process's descriptor lets query it may read this, which by default is everyone — even for a protected process whose everything else is closed to you.
+
+With `--mitigations`, it turns those mitigation flags on instead.
 
 ```
 $ logonse psb --pid 4821 --mitigations 0x1c0
@@ -95,7 +112,7 @@ $ logonse psb --pid 4821 --mitigations 0x1c0
 | Flag | Meaning |
 |---|---|
 | `--pid PID` | The process to act on. |
-| `--mitigations MASK` | The mitigation bitmask to apply, in hexadecimal or decimal. |
+| `--mitigations MASK` | The mitigation bitmask to turn on, in hexadecimal or decimal. Without it, the PSB is shown. |
 
 This subcommand is about process hardening rather than logon sessions — it lives in `logonse` because both deal with low-level per-process kernel state. For what the mitigation flags mean and how they behave, see [Process mitigations](~peios/process-mitigations/overview).
 

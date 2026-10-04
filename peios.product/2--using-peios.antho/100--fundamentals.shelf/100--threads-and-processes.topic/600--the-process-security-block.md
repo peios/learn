@@ -46,9 +46,18 @@ may no longer create children, for instance — but those four are the core.
 
 ## Inspecting and managing the PSB
 
-Because the PSB is where a process's trust level and hardening live, there is a
-dedicated tool for working with it: the **`psb`** command, which inspects a
-process's PSB and manages its mitigations and PIP mode.
+A process's PSB can be read by anyone the process's permissions let see its
+name and CPU use, which by default is everyone — even where the process is
+protected and nothing else about it can be seen. That is what lets a tool say
+*why* a process is closed to you.
+
+- On a terminal, [`logonse psb --pid PID`](~peios/system-and-processes/logonse)
+  shows a process's protection, mitigations and GUID, and with `--mitigations`
+  turns mitigations on.
+- On the desktop, [Task Manager](~peios/threads-and-processes/task-manager)
+  shows them for the process you pick.
+- From a program, read `/proc/<pid>/psb`, or call `peios_process_psb` in the
+  SDK.
 
 ## Where to go next
 
