@@ -221,6 +221,12 @@ must be a group the token carries.
 Reuses PGSS Logon's denial vocabulary rather than inventing a parallel
 one, so that relaying a refusal outward needs no lossy translation.
 
+A source MUST NOT refuse with `NoSuchSession` (PGSS §2.B). It answers
+only a request to end a logon session (PGSS §2.22), which the authority
+decides alone and never puts to a source, so in a refusal it can only
+be a mistake. An authority that receives it MUST NOT relay it, and
+SHOULD end the conversation with `Internal` instead.
+
 A source MUST NOT distinguish an unknown principal from a bad credential
 — by code, by reason, or by timing (PGSS §2.10, §2.12). The obligation
 is the source's here, because the source is where the distinction exists

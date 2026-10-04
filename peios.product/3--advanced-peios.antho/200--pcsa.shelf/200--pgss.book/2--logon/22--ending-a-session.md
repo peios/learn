@@ -171,8 +171,9 @@ holds the session too. So after each round an authority MUST look again,
 and end what it finds in a further round. It MUST bound the number of
 rounds, and MUST bound the grace period. Both bounds are
 implementation-defined, but the grace period MUST NOT exceed 10 seconds,
-and the whole request MUST be answered within 60 seconds, which is what
-a client may wait.
+and the whole request MUST be answered within 30 seconds — half of the
+60 a client waits (§2.21), so that a slow authority and a patient client
+never meet at the same instant.
 
 A process the authority cannot examine, or cannot signal, is not a
 failure of the request. It is counted in `remaining`, and the authority

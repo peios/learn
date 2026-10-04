@@ -91,3 +91,8 @@ A new `Denial` value, a new `CredentialType`, or any change to the
 header's first twelve bytes is a **breaking change to both** and requires a
 coordinated version bump. An implementer maintaining both MUST NOT bump
 one alone.
+
+The one exception is a denial added under PGSS §2.6's rule for codes
+that only newer messages draw. `NoSuchSession` is one: it answers only
+requests a source is never party to, a source never sends it (§2.13),
+and so no PSI peer of either age meets it.

@@ -264,7 +264,7 @@ MUST refuse both with `PermissionDenied`, and is conforming. Obligations
     different process, never by a process identifier looked up again
     (§2.22).
 81. Look again after each round, bound the number of rounds, and answer
-    within 60 seconds (§2.22).
+    within 30 seconds (§2.22).
 82. Count in `remaining` every process it could not examine or end, and
     never fail the request for one (§2.22).
 83. Hold no token of the session longer than it takes to read which

@@ -46,7 +46,8 @@ other socket (§2.14).
 | Header size | 12 bytes | §2.6 |
 | Maximum message size | 65536 bytes | §2.6 |
 | Longest grace before a forced end | 10 seconds | §2.22 |
-| Longest a `SessionEnd` may take to answer | 60 seconds | §2.22 |
+| Longest a `SessionEnd` may take to answer | 30 seconds | §2.22 |
+| Least a client waits for that answer | 60 seconds | §2.21 |
 
 ## Field limits
 
