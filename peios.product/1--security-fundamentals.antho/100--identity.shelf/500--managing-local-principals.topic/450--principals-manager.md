@@ -192,9 +192,11 @@ asked about first: without it, nobody who has it only from there can
 pass through a folder, so no shell starts for them.
 
 A record names a user or local group by its SID, since `authd` doesn't
-ask `lpsd` what a name means; the window does this for you. A record
-`authd` ignores, such as one named by a name it doesn't know, is shown
-above the list with why.
+ask `lpsd` what a name means; the window does this for you. What `authd`
+warns about in the records is shown above the list, with why: a record it
+ignores, such as one named by a name it doesn't know, or two records for
+the same principal, such as `Administrators` and `S-1-5-32-544`, which
+both apply and should be one.
 
 On a machine with no policy at all, `authd` gives `Everyone`
 `SeChangeNotifyPrivilege` and nothing more, and the list says so. The

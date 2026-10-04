@@ -111,6 +111,12 @@ Names that are fixed by specification rather than held by any source — `Everyo
 
 Name service switch lookups — `getpwnam` and friends — are not cached anywhere. Each is its own connection and its own round trip.
 
+## Asking from a program
+
+A Linux program asks through `getpwnam` and friends, and needs nothing more. A Rust program that wants the answer itself — a SID's name, or every principal there is — can use the `libauthd-client` crate in the authd repository. The name service switch module, `ls` and the other userland tools, Principals Manager and the permissions editor all ask through it.
+
+It keeps the three answers apart: *not found* comes back as no principal, and a failure says what it was. Its `transient` says whether asking again could help, which is true when `authd` didn't answer in time or a source that could have answered didn't. Each question has a connection of its own, unless the program holds one for a walk through a long listing, a page at a time.
+
 ## Where to go next
 
 For how Linux programs reach this resolution through `getpwnam` and friends, read [Name service switch](~peios/linux-compatibility/name-service-switch).
