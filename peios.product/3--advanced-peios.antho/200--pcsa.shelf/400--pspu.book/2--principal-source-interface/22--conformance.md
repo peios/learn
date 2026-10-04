@@ -158,6 +158,20 @@ change conversation as they bind an authentication.
     change conversation or a `CredentialChanged` in any other, minting
     nothing and reporting no change (§2.21).
 
+### Credential enrolment
+
+An authority that relays PGSS Logon's enrolment (PGSS §2.23) over PSI
+MUST also satisfy the following. Obligations 19 to 21 and 50 to 53 bind
+an enrolment conversation as they bind a change, reading
+`EnrollCredential` for `ChangeCredential`.
+
+54. Never send `EnrollCredential` to a source that did not declare
+    `ENROLLS_CREDENTIALS`, and answer the client `PermissionDenied` where
+    the source holding the principal did not (§2.23, §2.8).
+55. Relay `CredentialRejected` only from an enrolment conversation, and
+    end any other conversation carrying it with `Internal` (§2.23,
+    §2.13).
+
 ## Source obligations
 
 A principal source MUST satisfy all of the following.
@@ -285,6 +299,24 @@ following.
     credential for (§2.21).
 45. Send `CredentialChanged` only once the new credential is the one its
     next `Authenticate` for that principal will verify (§2.21).
+
+### Credential enrolment
+
+A source that declares `ENROLLS_CREDENTIALS` MUST also satisfy the
+following.
+
+46. Add or remove credentials only of `principal`, and never take a
+    principal from anything the client supplied (§2.23).
+47. For both adding and removing, establish that the principal can
+    present a credential they already have before changing anything,
+    refuse with `AuthenticationFailed` where they cannot, and refuse with
+    `AccountRestricted`, before asking, a principal it can ask for no such
+    credential (§2.23).
+48. Check the material again when applying the change, refuse material it
+    will not accept with `CredentialRejected`, and send that code in no
+    other conversation (§2.23).
+49. Send `CredentialChanged` only once the change is durable, and, where
+    it declares `PUSHES_CHANGES`, only after `Changed` (§2.23, §2.17).
 
 ## What a source is not required to do
 

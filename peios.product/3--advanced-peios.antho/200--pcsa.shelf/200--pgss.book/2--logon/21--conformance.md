@@ -35,9 +35,9 @@ of the following.
 
 ### Conversation
 
-9. Require `LogonStart`, `CredentialChangeStart`, `SessionEnd` or
-   `SessionEndQuery` as the first message, and reject a conversation
-   opening otherwise (§2.3).
+9. Require `LogonStart`, `CredentialChangeStart`,
+   `CredentialEnrollStart`, `SessionEnd` or `SessionEndQuery` as the
+   first message, and reject a conversation opening otherwise (§2.3).
 10. Send exactly one terminal message, nothing after it, and close the
     connection (§2.3).
 11. Bound the number of rounds, the time spent awaiting an answer, and
@@ -274,6 +274,35 @@ MUST refuse both with `PermissionDenied`, and is conforming. Obligations
     found to end and a `remaining` of zero (§2.22).
 85. Start nothing in ending a session (§2.1, §2.22).
 
+### Credential enrolment
+
+An authority that implements `CredentialEnrollStart` MUST satisfy all of
+the following. An authority that does not implement it MUST refuse the
+message with `PermissionDenied`, and is conforming. Obligations 10 to
+13, 19, 20, 24, 25, 68, 69 and 72 bind an enrolment as they bind a
+credential change.
+
+86. Add or remove only the credentials of the principal the connected
+    peer's token names, established from the socket and never from a
+    message (§2.23, §2.4).
+87. For both `Add` and `Remove`, establish within the conversation that
+    the principal can present their current credential before changing
+    anything, and refuse with `AuthenticationFailed` where they cannot
+    (§2.23).
+88. Refuse with `AccountRestricted` a principal it holds no credential
+    for that it can ask for as proof, including every service identity
+    (§2.23, §2.19).
+89. Refuse an `action` or `credential_type` it does not recognise with
+    `MalformedRequest`, a `credential_type` it does not enrol with
+    `PermissionDenied`, and a `CredentialEnrollStart` that ends before
+    `material` with `MalformedRequest` (§2.23).
+90. Refuse material it will not accept with `CredentialRejected`, check
+    it again when applying the change, and never send
+    `CredentialRejected` for a failed proof or in answer to any other
+    message (§2.23, §2.B).
+91. Leave unchanged which credentials the principal may sign in with
+    (§2.23).
+
 ## Client obligations
 
 There are four client roles, and they are independent. A program may
@@ -284,8 +313,11 @@ An implementation originating logons MUST satisfy obligations 1 to 20.
 An implementation performing identity lookup MUST satisfy 21 to 27. An
 implementation changing its own principal's credential MUST satisfy
 obligations 2 to 12 and 18 to 20, reading `CredentialChangeStart`
-wherever they say `LogonStart`, and 28 and 29. An implementation ending
-logon sessions MUST satisfy obligations 4 to 7 and 30 to 33.
+wherever they say `LogonStart`, and 28 and 29. An implementation adding
+or removing its own principal's credentials MUST satisfy the same, reading
+`CredentialEnrollStart` for `CredentialChangeStart`, and 34 and 35. An
+implementation ending logon sessions MUST satisfy obligations 4 to 7 and
+30 to 33.
 
 ### Conversation
 
@@ -389,6 +421,15 @@ same thing to every principal at once.
     caller's own (§2.22).
 33. Treat a denial code it does not recognise as a refusal, not as an
     unreadable answer (§2.B).
+
+### Credential enrolment
+
+34. Send exactly one `CredentialEnrollStart`, as the first message,
+    with every field, and name no principal in it (§2.23).
+35. Tell `CredentialRejected` (the material) apart from
+    `AuthenticationFailed` (the proof) where it reports a refusal, and
+    treat a denial code it does not recognise as a refusal (§2.23,
+    §2.B).
 
 ## What a client is not required to do
 

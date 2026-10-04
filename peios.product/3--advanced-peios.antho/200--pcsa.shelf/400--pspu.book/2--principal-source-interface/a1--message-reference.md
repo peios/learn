@@ -21,7 +21,8 @@ description: Every PSI message by number and direction, the protocol constants, 
 | `0x8006` | `EnumerateResult` | source → authority | 1+ (terminal) | §2.16 |
 | `0x8007` | `Changed` | source → authority | `0` | §2.17 |
 | `0x0007` | `ChangeCredential` | authority → source | 1+ (opens) | §2.21 |
-| `0x8008` | `CredentialChanged` | source → authority | 1+ (terminal) | §2.21 |
+| `0x8008` | `CredentialChanged` | source → authority | 1+ (terminal) | §2.21, §2.23 |
+| `0x0008` | `EnrollCredential` | authority → source | 1+ (opens) | §2.23 |
 
 The high bit marks a message sent by **the source**, which is the
 authority for its own principals (§2.7).
@@ -45,7 +46,7 @@ authority for its own principals (§2.7).
 | `domain` | 68 bytes | §2.8 |
 | `max_batch` | 64 | §2.8 |
 | `originator` | 68 bytes | §2.11 |
-| `principal` | 68 bytes | §2.21 |
+| `principal` | 68 bytes | §2.21, §2.23 |
 | `user_sid` | 68 bytes | §2.13 |
 | `canonical_name` | 256 bytes | §2.13 |
 | `groups` | 128 entries, each SID 68 bytes | §2.13 |

@@ -55,6 +55,8 @@ This chapter covers:
 - the obligations binding on each role (§2.21)
 - how a caller asks the authority to end a logon session — its own, or,
   where policy permits, somebody else's (§2.22)
+- how a principal adds a credential of their own, such as an SSH public
+  key, or removes one (§2.23)
 
 This chapter does not cover:
 

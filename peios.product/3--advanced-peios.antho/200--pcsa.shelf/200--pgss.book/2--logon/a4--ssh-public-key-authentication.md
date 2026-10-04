@@ -82,11 +82,13 @@ fails; it does not select another mode. In particular, deleting the last
 key on a key-only principal leaves that principal unable to authenticate.
 NoCredential mode is never inferred from an empty verifier or key list.
 
-Initial enrollment is administrative, through lpsd's existing protected
-administrative interface. The `lps key add`, `lps key list`, and
-`lps key remove` operations operate on one principal and use its existing
-administration authorization checks. Adding a key does not silently change
-the principal's authentication policy. An explicit policy operation selects
+Keys are enrolled in two ways. An administrator enrolls them through
+lpsd's protected administrative interface: the `lps key add`,
+`lps key list`, and `lps key remove` operations operate on one principal
+and use its existing administration authorization checks. A principal
+enrolls and removes their own through PGSS Logon's `CredentialEnrollStart`
+(§2.23), described under *Self-service enrollment* below. Neither way
+silently changes the principal's authentication policy. An explicit policy operation selects
 password-only, key-only, either credential, NoCredential, or Denied.
 NoCredential and Denied cannot be combined with credential methods.
 
@@ -97,9 +99,46 @@ key line, including an optional label, but rejects private-key input and
 `authorized_keys` options rather than silently ignoring them. Credential
 inventory is not exposed through unauthenticated identity lookup.
 
-Self-service enrollment and compound authentication such as password AND
-key are separate extensions. Possessing a session token does not implicitly
-authorize adding a persistent credential.
+Compound authentication such as password AND key is a separate extension.
+
+## Self-service enrollment
+
+A principal adds or removes their own SSH public keys with
+`CredentialEnrollStart` on `/run/logon.sock` (§2.23). The account is the
+user of the caller's token; the message names nobody. Possessing a session
+token does not by itself authorize adding a persistent credential, so both
+adding and removing re-prove the principal's current password inside the
+conversation, and a wrong one ends it with `AuthenticationFailed` and the
+fixed `Authentication failed.` wording.
+
+authd routes the conversation to the source that holds the principal as
+PSI's `EnrollCredential` (PSPU §2.23), and only to a source declaring the
+`ENROLLS_CREDENTIALS` capability; a source that does not is sent nothing,
+and the caller is refused `PermissionDenied`. lpsd declares it, and:
+
+- resolves the principal from the SID authd vouched for, with the rules a
+  password change uses. A principal with no password to prove — policy
+  `key` or `none`, or a password policy with no password set — is refused
+  `AccountRestricted`, with words telling them to ask an administrator,
+  before anything is asked;
+- checks an added key line, or a removal's fingerprint, by the same store
+  paths `lps key add` and `lps key remove` use — the same import, algorithm
+  and size rules, duplicate rejection, 32-key limit and last-administrator
+  rule — before asking for the password, and again when it applies the
+  change. Material it refuses is `CredentialRejected`, with the store's
+  reason;
+- names a key for removal by its `SHA256:` fingerprint rather than the
+  record ID `lps key remove` takes, because the fingerprint is what a person
+  can read from their own `.pub` file. The key's comment becomes its label;
+- persists the change with the administrative write's rollback, sends authd
+  the same change notification an administrative write sends, and only then
+  answers `CredentialChanged`.
+
+Adding a key does not let it sign the principal in unless their policy is
+`key` or `either`, which only an administrator sets. A principal whose
+policy is `key` cannot use this path at all, since they have no password
+to prove themselves with; removing the last key of such an account is
+therefore never reachable here.
 
 ## Store replacement and revocation
 
@@ -385,8 +424,10 @@ lps key list alice
 ```
 
 Use `lps policy alice either` to allow either an enrolled key or an existing
-password. Key removal uses the record ID printed by `lps key list`:
-`lps key remove alice RECORD_ID`. Changing material does not change policy.
+password. Administrative key removal uses the record ID printed by
+`lps key list`: `lps key remove alice RECORD_ID`. Self-service removal names
+the key by fingerprint instead (§2.23). Changing material does not change
+policy.
 
 ## References
 

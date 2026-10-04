@@ -320,6 +320,22 @@ key removed
 
 Removing the last key of the last enabled administrator, when a key is all they may sign in with, is refused.
 
+### Changing your own keys
+
+`lps` is for administrators, but a principal does not need one to manage their own SSH keys. Anyone signed in to an account this machine holds can add a key to it or remove one, through a program that asks on their behalf, such as a desktop settings app. Nothing is changed for anybody else's account: the account is always the one the program's token belongs to.
+
+Three things differ from `lps key`:
+
+- **The current password is asked for, every time.** Being signed in shows that someone signed in as you, not that you are at the keyboard now, and a key added from an unattended session would be a way back into the account. A wrong password changes nothing and says `Authentication failed.`
+- **An account with no password cannot do it.** That is an account whose policy is `key` or `none`, or one whose policy is `password` but that has no password set. There is nothing to prove who you are with, so the change is refused and you are told to ask an administrator, who can make it with `lps key`.
+- **A key is removed by its fingerprint**, the `SHA256:` value `ssh-keygen -l` prints for your `.pub` file, rather than by `lps key list`'s `ID`.
+
+Everything else is as `lps key add` and `lps key remove`: the same key types and sizes, a key you already have or a 33rd refused, the key's comment as its label. Adding a key does not let you sign in with it unless your credential policy is `key` or `either`, which only an administrator can set.
+
+The same programs can show you your own account as `lpsd` holds it — your name, display name, credential policy, whether you have a password, and your keys — and set your **display name**, the human name shown beside your account name. Setting a display name asks for no password, since it is not something you sign in with. Both are served on `/run/lpsd/self.sock`; see [the administrative socket](~peios/managing-local-principals/the-admin-socket#the-self-socket).
+
+Your password is changed with [`passwd`](~peios/signing-in/the-passwd-command).
+
 ## Profiles
 
 ### `lps set <name> [options]`

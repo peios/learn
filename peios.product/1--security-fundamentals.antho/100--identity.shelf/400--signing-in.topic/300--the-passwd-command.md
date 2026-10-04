@@ -41,6 +41,12 @@ The prompts come from the principal source that holds your account, not from `pa
 
 Nothing is minted. Your current session carries on as it was, and so does every other session you hold.
 
+## Other ways to change it
+
+`passwd` is one client of this conversation, not the only one. A program can hold the same conversation for you — a desktop settings app, for example, which collects your current password and the new one in a form and hands them over when the authority asks. The authority asks the same questions, applies the same rules and gives the same refusals whichever program asks; only how the questions are shown differs. A program written in Rust gets the conversation from the `credential` module of `libauthd-client`, which `passwd` itself uses.
+
+Adding or removing your own SSH keys is a sibling conversation on the same socket, and asks for your current password the same way: see [Changing your own keys](~peios/managing-local-principals/lps-command#changing-your-own-keys).
+
 ## From a script
 
 When standard input is not a terminal, `passwd` prints no prompts and reads one line for each, in order:

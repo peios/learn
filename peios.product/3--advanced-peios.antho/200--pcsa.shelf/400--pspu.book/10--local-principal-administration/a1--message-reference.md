@@ -42,11 +42,24 @@ description: Every PLPS message by number, which reply answers which request, th
 
 Any request may be answered with `Failed` instead.
 
+### On the self socket
+
+| `msg_type` | Message | Direction | Answered with | Defined in |
+|---|---|---|---|---|
+| `0x0040` | `ShowSelf` | client → store daemon | `Self` | §10.11 |
+| `0x0041` | `SetDisplayName` | client → store daemon | `Done` | §10.11 |
+| `0x8040` | `Self` | store daemon → client | | §10.11 |
+
+`Done` and `Failed` (§10.9) answer here too. Each socket refuses the
+other's requests with `Invalid`.
+
 ## Protocol constants
 
 | Constant | Value | Defined in |
 |---|---|---|
 | Socket path | `/run/lpsd/admin.sock` on Peios | §10.3 |
+| Self socket path | `/run/lpsd/self.sock` on Peios | §10.11 |
+| Largest self-socket request | 4096 bytes | §10.11 |
 | Magic | `PLPS` (`50 4c 50 53`) | §10.4 |
 | Version | `1` | §10.4 |
 | Header size | 12 bytes | §10.4 |
@@ -74,6 +87,7 @@ Any request may be answered with `Failed` instead.
 | An SSH public key | 16384 bytes |
 | A key's label | 128 bytes |
 | A key's fingerprint | 128 bytes |
+| A key's algorithm | 64 bytes |
 | A refusal's `reason` | 512 bytes |
 
 ## Enumerations

@@ -1,7 +1,7 @@
 ---
 title: The administrative socket
 type: reference
-description: The socket lps talks to lpsd over — where it is, who may use it, and what decides that. Useful if you are writing tooling against it or diagnosing a refusal.
+description: The socket lps talks to lpsd over — where it is, who may use it, and what decides that — and the self socket on which any principal reads their own account and sets their display name. Useful if you are writing tooling against them or diagnosing a refusal.
 related:
   - peios/managing-local-principals/lps-command
   - peios/managing-local-principals/overview
@@ -59,7 +59,25 @@ So a command that reports success has persisted. A command that reports failure 
 
 The wire protocol is `PLPS`, sharing its codec and header layout with PGSS Logon ([PGSS §2](~peios/logon/scope-and-roles)) and PSI ([PSPU §2](~peios/principal-source-interface/scope-and-roles)). It is specified in [PSPU §10](~peios/local-principal-administration/scope-and-roles): every request, its reply, and how a request is refused.
 
-If you are writing tooling in Rust, the `libauthd-client` crate in the authd repository speaks it, as `lps` and Principals Manager do, and reports a refusal with `lpsd`'s reason. A program that only needs to *read* principals should ask the identity socket instead, which anyone may use: see [Resolving names](~peios/managing-local-principals/resolving-names).
+If you are writing tooling in Rust, the `libauthd-client` crate in the authd repository speaks it, as `lps` and Principals Manager do, and reports a refusal with `lpsd`'s reason. A program that only needs to *read* principals should ask the identity socket instead, which anyone may use: see [Resolving names](~peios/managing-local-principals/resolving-names). A program reading or changing the account of the person running it uses the self socket, below.
+
+## The self socket
+
+`lpsd` listens on a second socket:
+
+```
+/run/lpsd/self.sock
+```
+
+It is for every principal rather than for administrators. Any authenticated principal may connect, and it answers two requests, both about the caller and nobody else: show me my account (name, display name, credential policy, whether a password is set, and SSH keys), and set my display name. There is no field in either request for naming another account. `lpsd` reads whose account it is from the connecting process's token, as it does on the admin socket, and a caller whose account `lpsd` does not hold, such as `LocalSystem`, is told so.
+
+Its descriptor admits `LocalSystem` and `BUILTIN\Administrators` fully, and **Authenticated Users** (every principal that signed in) with only what a connection needs.
+
+Because everyone can reach it, `lpsd` never waits on a connection there. Each one gets five seconds from connecting to the end of its answer, a request may be at most 4 KiB, and `lpsd` holds at most 32 such connections at once and 4 from any one user. A program that connects and says nothing holds up nobody else's sign-in.
+
+A changed display name is saved before the answer, and `lpsd` tells `authd` at once, so name lookups show the new name straight away.
+
+Changing a password or an SSH key is not done here, because it asks for the current password: see [Changing your own keys](~peios/managing-local-principals/lps-command#changing-your-own-keys). In Rust, `libauthd-client`'s `own` module speaks the self socket and its `credential` module holds the password and key conversations. The protocol is [PSPU §10.11](~peios/local-principal-administration/the-self-socket).
 
 ## See also
 

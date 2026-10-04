@@ -43,16 +43,22 @@ This chapter covers:
   claims (§10.7), and SSH keys and credential policy (§10.8)
 - the replies, and how a request is refused (§10.9)
 - the obligations binding on each role (§10.10)
+- the self socket, on which any principal reads their own account and
+  sets their own display name (§10.11)
 
 This chapter does not cover:
 
 - How the store is kept on disk, or how a credential verifier is
   derived — the store daemon's own design.
-- Signing in, and a principal changing their own password. Those are
-  PGSS Logon, and reach the store through PSI (§2.21).
-- Looking principals up. Anyone may ask who a name or a SID is, and who
-  is in a group, on the authority's identity socket (PGSS §2.14); a
-  client that only reads SHOULD read there rather than here, since that
-  socket answers everyone.
+- Signing in, and a principal changing their own password or adding or
+  removing their own SSH keys. Those are PGSS Logon (PGSS §2.20 and
+  PGSS §2.23), and reach the store through PSI (§2.21, §2.23).
+- Looking other principals up. Anyone may ask who a name or a SID is,
+  and who is in a group, on the authority's identity socket (PGSS
+  §2.14); a client that only reads about principals in general SHOULD
+  read there rather than on the admin socket, since that socket answers
+  everyone. A principal reading their *own* account, including what
+  the identity socket does not carry — their credential policy and SSH
+  keys — reads it on the self socket (§10.11).
 - What policy applies to a principal at sign-in, such as its privileges.
   That is the authority's (PGSS §2.13).

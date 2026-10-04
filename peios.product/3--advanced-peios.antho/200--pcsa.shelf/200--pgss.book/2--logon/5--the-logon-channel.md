@@ -19,7 +19,8 @@ it.
 
 The socket MUST carry a security descriptor granting connect access to
 the principals permitted to originate logons, to the principals
-permitted to change their own credential (§2.20), and to those
+permitted to change their own credential (§2.20) or enrol one (§2.23),
+and to those
 permitted to end a logon session (§2.22). See §2.4 for why this,
 and not process integrity, is the control — and why reaching the socket
 is not, on its own, permission to originate a logon.

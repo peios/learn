@@ -4,7 +4,8 @@ description: The terminal failure message — a deliberately small denial vocabu
 ---
 
 `msg_type` = `0x8003`. Authority to client. The terminal failure message
-of a logon, of a credential change (§2.20), and of a request to end a
+of a logon, of a credential change (§2.20), of an enrolment (§2.23),
+and of a request to end a
 logon session or to ask whether one may (§2.22) alike; nothing follows
 it.
 
@@ -28,6 +29,10 @@ act differently on each.
 only a caller who would otherwise have been permitted (§2.22). Anybody
 else is told `PermissionDenied`, so the code cannot be used to learn
 which sessions exist.
+
+`CredentialRejected` answers only `CredentialEnrollStart`, and says the
+credential offered or named was refused, not the principal's proof of
+who they are (§2.23).
 
 ## reason
 

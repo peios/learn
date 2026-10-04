@@ -23,6 +23,9 @@ client                                   authority
   |         or AccessDenied                  |
 ```
 
+Adding a credential beside the ones a principal has, such as an SSH
+public key, or removing one, is the sibling conversation of §2.23.
+
 Everything §2.3 says about the shape of a conversation applies
 unchanged: one conversation per connection, bounded rounds, exactly one
 terminal message. The client stays generic here as it does in a logon.

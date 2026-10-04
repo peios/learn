@@ -57,6 +57,18 @@ Carried in `Message.severity` (§2.8) as a `u8`.
 | 0 | Info |
 | 1 | Error |
 
+## Enrolment actions
+
+Carried in `CredentialEnrollStart.action` (§2.23) as a `u8`.
+
+| Value | Name | `material` holds |
+|---|---|---|
+| 1 | `Add` | The credential to enrol: for `SshPublicKey`, one line of an OpenSSH public key file |
+| 2 | `Remove` | Which credential to remove: for `SshPublicKey`, its `SHA256:` fingerprint |
+
+`CredentialEnrollStart.credential_type` takes a value from the
+credential types above; only `SshPublicKey` is defined for enrolment.
+
 ## Denial codes
 
 Carried in `AccessDenied.denial` (§2.10) as a `u32`.
@@ -73,11 +85,12 @@ Carried in `AccessDenied.denial` (§2.10) as a `u32`.
 | 8 | `ConversationLimit` | Too many rounds, or too long without an answer. |
 | 9 | `Internal` | The authority failed for a reason it will not describe. |
 | 10 | `NoSuchSession` | There is no live logon session by that identifier. Answers only `SessionEnd` and `SessionEndQuery` (§2.22). |
+| 11 | `CredentialRejected` | The credential offered for enrolment, or named for removal, was refused: unreadable, unsupported, already held, one too many, or not held. Answers only `CredentialEnrollStart` (§2.23). |
 
 A denial code MAY be added without a version bump where it only ever
 answers messages newer than it is — messages no peer that predates the
 code can send — because such a peer is then never sent it. `NoSuchSession`
-was added under this rule. A client of the newer messages SHOULD treat a
+and `CredentialRejected` were added under this rule. A client of the newer messages SHOULD treat a
 code it does not recognise as a refusal, reporting the code and
 `reason`, rather than as an unreadable answer; it is the one place in
 this chapter where a client may meet a denial newer than itself.

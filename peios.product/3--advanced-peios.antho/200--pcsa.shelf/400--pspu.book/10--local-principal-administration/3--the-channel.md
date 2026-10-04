@@ -49,9 +49,11 @@ membership.
 boot-time service, before any person exists to be an administrator.
 
 There is nothing finer. A caller that may administer the store may make
-every request in this chapter; one that may not, may make none. In
-particular a principal may not change their own profile here: a
-principal's own password change is PGSS Logon's (§2.21).
+every request on this socket; one that may not, may make none. In
+particular a principal may not change their own profile here. What a
+principal may do about their own account is served elsewhere: their
+display name and a view of their account on the self socket (§10.11),
+and their password and SSH keys through PGSS Logon (PGSS §2.20 and PGSS §2.23).
 
 A store daemon refusing a caller MUST reply `Failed` with `Denied` and
 then close the connection.

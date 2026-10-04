@@ -217,8 +217,9 @@ once.
 Anyone may see the users and groups: the identity socket that
 Principals Manager reads them from answers everyone.
 
-What a user signs in with, and their SSH keys, are shown only to an
-administrator: `lpsd` holds them, and tells nobody else. The privileges
+What a user signs in with, and their SSH keys, are shown here only to an
+administrator: `lpsd` holds them, and tells nobody else, except each user
+about their own (see [Changing your own keys](~peios/managing-local-principals/lps-command#changing-your-own-keys)). The privileges
 records are shown to anyone signed in, and changed by whoever the
 registry key's permissions let, which as shipped is `Administrators`.
 

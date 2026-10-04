@@ -59,3 +59,8 @@ gave none (§10.5).
 **Reading.** Reads principals for display on the identity socket where
 it need not administer them (§10.1), and reads the store again after its
 own changes, since nothing tells it of anyone else's (§10.9).
+
+## The self socket
+
+The obligations of a store daemon serving the self socket, and of its
+clients, are collected in §10.11.

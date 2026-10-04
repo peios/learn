@@ -23,8 +23,8 @@ being authenticated. The principal is not a party to the conversation;
 the client speaks on their behalf.
 
 **Conversation.** One connection's exchange, from the client's opening
-message — a logon's, a credential change's (§2.20), or a request to end
-a logon session (§2.22) — to a terminal message from the authority. One
+message — a logon's, a credential change's (§2.20), an enrolment's
+(§2.23), or a request to end a logon session (§2.22) — to a terminal message from the authority. One
 connection carries exactly one conversation.
 
 **Round.** One `CredentialRequest` from the authority and the
@@ -32,7 +32,8 @@ connection carries exactly one conversation.
 rounds.
 
 **Terminal message.** `AccessGranted` or `AccessDenied` for a logon;
-`CredentialChanged` or `AccessDenied` for a credential change (§2.20);
+`CredentialChanged` or `AccessDenied` for a credential change (§2.20)
+or an enrolment (§2.23);
 `SessionEnded`, `SessionEndAllowed` or `AccessDenied` for a request to
 end a logon session or to ask whether one may (§2.22). Exactly one is
 sent, and nothing follows it.

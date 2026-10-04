@@ -54,6 +54,9 @@ This chapter covers:
 - relaying a principal's change of their own credential to the source
   that holds it (§2.21)
 - the obligations binding on each role (§2.22)
+- relaying a principal's addition or removal of one of their own
+  credentials, such as an SSH public key, to the source that holds it
+  (§2.23)
 
 This chapter does not cover:
 

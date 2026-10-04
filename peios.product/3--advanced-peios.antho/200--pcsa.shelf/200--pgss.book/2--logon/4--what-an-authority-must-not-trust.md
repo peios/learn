@@ -65,7 +65,7 @@ decision happens on the other side of the socket.
 
 The descriptor decides who may reach the socket, not what a peer may do
 once there. Where it admits principals so that they can change their own
-credential (§2.20), it admits peers that may not originate logons, and
+credential (§2.20) or enrol one (§2.23), it admits peers that may not originate logons, and
 an authority MUST decide from each peer's identity whether it may
 originate one.
 

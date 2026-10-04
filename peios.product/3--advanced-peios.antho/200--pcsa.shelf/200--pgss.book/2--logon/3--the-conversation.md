@@ -46,7 +46,8 @@ unlocks a requirement for another.
 A conversation MUST proceed as follows.
 
 1. The client sends exactly one opening message: `LogonStart`,
-   `CredentialChangeStart` to change its own credential (§2.20), or
+   `CredentialChangeStart` to change its own credential (§2.20),
+   `CredentialEnrollStart` to add or remove one of its own (§2.23), or
    `SessionEnd` or `SessionEndQuery` about a logon session (§2.22). It
    MUST be the first message. An authority MUST reject any conversation
    that opens with something else.
@@ -55,7 +56,7 @@ A conversation MUST proceed as follows.
    authority sends anything further.
 3. The authority sends exactly one terminal message: `AccessGranted` or
    `AccessDenied` for a logon, `CredentialChanged` or `AccessDenied` for
-   a credential change, `SessionEnded` or `AccessDenied` for a
+   a credential change or an enrolment, `SessionEnded` or `AccessDenied` for a
    `SessionEnd`, and `SessionEndAllowed` or `AccessDenied` for a
    `SessionEndQuery`.
 4. Both parties close the connection.

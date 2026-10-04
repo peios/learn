@@ -16,7 +16,8 @@ description: Every message type by number and socket, the protocol constants, an
 | `0x8003` | `AccessDenied` | authority → client | §2.10 |
 | `0x0020` | `ServiceAttest` | client → authority | §2.19 |
 | `0x0030` | `CredentialChangeStart` | client → authority | §2.20 |
-| `0x8030` | `CredentialChanged` | authority → client | §2.20 |
+| `0x8030` | `CredentialChanged` | authority → client | §2.20, §2.23 |
+| `0x0031` | `CredentialEnrollStart` | client → authority | §2.23 |
 | `0x0040` | `SessionEnd` | client → authority | §2.22 |
 | `0x0041` | `SessionEndQuery` | client → authority | §2.22 |
 | `0x8040` | `SessionEnded` | authority → client | §2.22 |
@@ -67,6 +68,7 @@ other socket (§2.14).
 | `shell` | 4096 bytes | §2.9 |
 | `display_name` | 256 bytes | §2.9 |
 | `reason` | 512 bytes | §2.10 |
+| `material` | 16384 bytes | §2.23 |
 | `identity` | 128 bytes | §2.19 |
 | `service` | 256 bytes | §2.19 |
 | `name` (lookup key) | 256 bytes | §2.16 |

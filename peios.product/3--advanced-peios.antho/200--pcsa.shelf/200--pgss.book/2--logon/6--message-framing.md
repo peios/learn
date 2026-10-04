@@ -123,7 +123,7 @@ capability rather than an instruction (§2.7); `LogonStart.logon_type`,
 which only the authority ever receives (§2.7); the field mask of
 `Lookup`, whose reply says which bits it answered (§2.16); and a denial
 code that only ever answers a message newer than every peer that does
-not know it, so that no such peer is ever sent it (§2.B, §2.22).
+not know it, so that no such peer is ever sent it (§2.B, §2.22, §2.23).
 
 ## Initial unpublished layout replacement
 

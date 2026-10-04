@@ -227,6 +227,11 @@ decides alone and never puts to a source, so in a refusal it can only
 be a mistake. An authority that receives it MUST NOT relay it, and
 SHOULD end the conversation with `Internal` instead.
 
+`CredentialRejected` is the same kind of code: it answers only an
+enrolment (PGSS §2.23), so a source MUST NOT send it in any other
+conversation, and an authority that receives it elsewhere MUST NOT relay
+it (§2.23).
+
 A source MUST NOT distinguish an unknown principal from a bad credential
 — by code, by reason, or by timing (PGSS §2.10, §2.12). The obligation
 is the source's here, because the source is where the distinction exists
