@@ -69,6 +69,10 @@ If the call fails, eventd denies the query entirely.
 [*access.a-failed-peer-token-read-denies-the-query] It has no fallback
 identification and no anonymous mode.
 [*access.there-is-no-fallback-identification-or-anonymous-mode]
+A client that connects at the Anonymous impersonation level conveys the
+Anonymous token (`S-1-5-7`), and eventd answers it with an error and
+closes the connection, whatever a descriptor would grant Everyone.
+[*access.an-anonymous-level-caller-is-refused]
 
 The snapshot property matters most for streaming queries, which may run
 indefinitely: a client whose group memberships change, or whose access

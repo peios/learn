@@ -35,6 +35,12 @@ No record-type column exists, because the `synthetic.` prefix
 already partitions the type namespace and a second column would be a
 second thing to keep consistent.
 
+The partition holds because eventd reserves the prefix. A KMES event
+whose type begins `synthetic.` is not stored: eventd counts it and
+receipts its sequence, so it is neither a row nor a gap.
+[*events.a-kmes-event-typed-in-the-synthetic-namespace-is-counted-and-not-stored]
+The count appears in the diagnostic dump (§8.5).
+
 ## The payload is not touched
 
 For a KMES event the payload column holds the bytes KMES delivered,
