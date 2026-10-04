@@ -52,7 +52,7 @@ A subkey's name is either a **well-known name** or a **literal SID**:
 \S-1-5-21-2847362817-1094533892-3310298447-1000
 ```
 
-Names are matched case-insensitively. The recognised ones are `SYSTEM`, `Everyone`, `Authenticated Users`, `Administrators`, `Users`, `Guests`, `Local Service`, `Network Service`, and the logon types `Interactive`, `Remote Interactive`, `Network`, `Batch`, `Service` and `Anonymous`.
+Names are matched case-insensitively. The recognised ones are `SYSTEM`, `Everyone`, `Authenticated Users`, `Administrators`, `Users`, `Guests`, `Local Service`, `Network Service`, `Local` (everyone signed in on this machine), and the logon types `Interactive`, `Remote Interactive`, `Network`, `Batch`, `Service` and `Anonymous`.
 
 Two limits are worth knowing before you hit them:
 
