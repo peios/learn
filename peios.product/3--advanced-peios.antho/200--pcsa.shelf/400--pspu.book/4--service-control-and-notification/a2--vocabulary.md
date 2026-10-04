@@ -1,6 +1,6 @@
 ---
 title: Wire Vocabulary
-description: Every enumerated value on the control channel — response status, service state, transition cause, health, job and operation types.
+description: Every enumerated value on the control channel — response status, service state, transition cause, health, job and operation types, and granted rights.
 ---
 
 Every enumerated value that appears on the control channel. All are
@@ -101,6 +101,18 @@ These name what part of a service's process containment could not be
 reclaimed, `service_tree` being the whole of it and therefore the most
 serious. A client MUST accept a value outside this set and MUST NOT
 discard the warning (§4.21).
+
+## Granted right
+
+In a status's `granted`: `query_status`, `start`, `stop`, `interrogate`
+
+In a job view's `granted`, on this channel: `query`, `stop`, `signal`
+
+Each names a right of §4.7 or §7.8, lowercased and without its
+`SERVICE_` or `JOB_` prefix, and they appear in the order given here
+(§4.14). A client MUST ignore a name outside these sets rather than
+treat it as an error: an unrecognised right is one it has no command
+for, and the rights it does know are still correctly reported.
 
 ## Shutdown type
 

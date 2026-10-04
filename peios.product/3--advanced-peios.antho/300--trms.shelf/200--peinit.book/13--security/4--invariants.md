@@ -26,6 +26,8 @@ checked per job (§10.2).
 an `access.denied` event — `job.access_denied` for a job — carrying
 the caller's SID, the target, the requested right by name, and the
 access bits requested and granted. Silent denial is not acceptable.
+The `MAXIMUM_ALLOWED` check that fills a response's `granted` denies
+nothing, and so records nothing (§10.2).
 
 **5. The control descriptor, the ServiceSecurity descriptors and the
 per-job descriptors are the only policy inputs for runtime access

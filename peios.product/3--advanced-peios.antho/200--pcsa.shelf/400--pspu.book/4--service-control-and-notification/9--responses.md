@@ -32,7 +32,8 @@ distinguish them by which command it sent, not by inspecting the array.
 ## The status shape
 
 Returned by `status`, and also by a lifecycle command that had no effect
-— see §4.12. §4.14 gives it in full.
+— see §4.12. §4.14 gives it in full, including `granted`, the rights
+the caller holds on the service, which it carries either way.
 
 ## The system shape
 

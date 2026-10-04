@@ -24,7 +24,9 @@ accept, and uses no UID, GID or asserted identity (§4.6).
 Descriptor with the mappings in §4.7, records every denial, filters
 `list` rather than denying it, and does not let `operation-status`
 distinguish an operation the caller may not see from one that does not
-exist.
+exist. Reports a status's and a job view's `granted` from that same
+check asking for `MAXIMUM_ALLOWED`, and does not record it as a denial
+(§4.14).
 
 **Commands.** Implements all thirteen, with the outcomes in §4.12 for
 every command-and-state pair, the response shapes in §4.9, §4.14 and

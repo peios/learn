@@ -71,6 +71,34 @@ told it by something that had it, and there is no existence to hide.
 with `wait`, registers a job wait on the connection answered by the
 terminal view. [*dispatch.job-stop-creates-no-operation]
 
+## What the caller may do
+
+A `status` response carries `granted`, the service rights the caller
+holds on the service, so that a client can offer only the commands that
+will be allowed rather than learn the rest from `ACCESS_DENIED` (PSPU
+§4.14). peinit finds them with step 3's AccessCheck — the caller's
+token, the service's `ServiceSecurity`, the service mapping — asking
+for `MAXIMUM_ALLOWED` instead of one right, once the query itself has
+been allowed, and reports the service rights among what it grants.
+[*dispatch.status-reports-the-callers-rights] A lifecycle command that
+has nothing to do answers with the status (§10.3), and that carries
+`granted` for its caller too.
+[*dispatch.a-status-answering-a-command-reports-the-callers-rights]
+
+Each job view on the control socket carries `granted` the same way:
+the job rights the caller holds, from the AccessCheck against the job's
+own descriptor with the job mapping (§8.5). `job-stop` with `wait`
+finds them when it is taken and keeps them on the connection's wait,
+because the terminal view is written by the run loop with no caller's
+token to hand; the descriptor is fixed at submission, so they are the
+same as at the answer. The jobs socket's view has no `granted`.
+[*dispatch.job-views-on-the-control-socket-report-the-callers-rights]
+
+The `MAXIMUM_ALLOWED` check is a question, not a command. A right it
+does not grant is left out of `granted`; nothing is denied, and no
+`access.denied` or `job.access_denied` event is recorded for it.
+[*dispatch.a-maximum-allowed-check-is-not-a-denial]
+
 ## Filtering
 
 `list` checks every service and partitions the result. Services the

@@ -16,7 +16,8 @@ it, or block on it. [*protoview.every-lifecycle-command-returns-an-identifier]
 Two cases return no identifier, because no operation exists: a command
 whose target is already in the state it asks for, and one that has no
 effect at all — a stop on an Inactive service. Both return the service's
-status instead of an acknowledgement, which is the honest answer.
+status instead of an acknowledgement, which is the honest answer, and
+which also says what else the caller may do to the service (§10.2).
 [*protoview.a-command-with-nothing-to-do-returns-the-status-instead]
 
 Commands that never create an operation — `status`, `list`,
@@ -85,7 +86,8 @@ survived SIGKILL and are still running, so its `pid` is kept.
 [*protoview.an-abandoned-jobs-pid-is-kept]
 
 What a submitter sees of its job on the jobs socket is exactly what an
-administrator sees of it in `job-status`.
+administrator sees of it in `job-status`, but for one field the control
+socket adds: `granted`, the job rights that caller holds on it (§10.2).
 [*protoview.the-job-view-is-one-shape-on-both-sockets] And `job-list`
 is a list of the same views, filtered by `JOB_QUERY` on each (§10.2).
 [*protoview.job-list-is-filtered-by-job-query] A `job-stop`

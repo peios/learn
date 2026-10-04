@@ -25,6 +25,10 @@ unrecognised key in `current_job` or `current_operation`.
 whose `type` it does not recognise and MUST NOT discard it. An
 unclassifiable warning is still a warning.
 
+**A right in `granted`.** A client MUST ignore a right name it does not
+recognise in a status's or a job view's `granted` (§4.14). A right it
+does not know of is one it offers no command for.
+
 **A command, together with the error codes and enumerated values that
 appear only in responses to it.** A client is exposed to a command only
 by sending it, so a client that does not know a command is never

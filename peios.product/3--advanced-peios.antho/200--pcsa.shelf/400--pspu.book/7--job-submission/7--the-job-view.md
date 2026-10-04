@@ -4,8 +4,9 @@ description: The one JSON object by which a submitted job is reported on either 
 ---
 
 The job view is the shape every successful response on this channel
-carries, and the shape `job-status` and `job-list` return on the
-control channel (§4.14). It is defined once, here.
+carries, and the shape `job-status`, `job-list` and `job-stop` return
+on the control channel (§4.14), which adds one field to it. It is
+defined once, here.
 
 ```json
 {
@@ -53,6 +54,11 @@ control channel (§4.14). It is defined once, here.
 | `ended_at` | string or null | When the job became terminal. |
 
 A field that does not apply MUST be present and null, never omitted.
+
+These are all the view's fields on this channel. On the control
+channel each view carries one more, `granted`: the job rights the
+caller holds on the job (§4.14). It describes the caller rather than
+the job, and a submitter on this channel is not given it.
 
 `identity` and `submitter` are user SIDs. A client that needs the
 identity's groups, privileges or integrity does not get them here;

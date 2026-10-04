@@ -97,6 +97,13 @@ tail of stopping something rather than the head of starting it.
    manager MUST NOT deny silently.
 5. On grant, proceed.
 
+A `status`, and each job view on this channel, also tells the caller
+which of these rights it holds on the target, as `granted` (§4.14). The
+manager finds them with this same check, asking for `MAXIMUM_ALLOWED`
+in step 3 instead of the command's right. That check is a question
+asked on the caller's behalf, not a command: a right it does not grant
+is left out of `granted`, and it is not a denial for step 4.
+
 ## Filtering rather than denying
 
 `list` MUST return only the services the caller may query, and MUST

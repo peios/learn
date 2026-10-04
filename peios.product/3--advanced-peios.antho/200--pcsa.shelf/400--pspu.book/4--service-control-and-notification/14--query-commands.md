@@ -1,6 +1,6 @@
 ---
 title: Query and Job Commands
-description: The three commands that read service state and change nothing — status, list and operation-status — the three that observe and stop submitted jobs, and how long results are retained.
+description: The three commands that read service state and change nothing — status, list and operation-status — the three that observe and stop submitted jobs, how a status or job view tells the caller what it may do, and how long results are retained.
 ---
 
 Three commands read service state and change nothing. Three more
@@ -37,7 +37,8 @@ Returns everything the manager knows about one service.
     "uptime_seconds": 86400,
     "definition_removed": false,
     "warnings": [],
-    "timers": []
+    "timers": [],
+    "granted": ["query_status", "start", "stop"]
 }
 ```
 
@@ -56,6 +57,7 @@ Returns everything the manager knows about one service.
 | `definition_removed` | bool | True while the service's definition has been withdrawn and an instance is still draining (§4.12). |
 | `warnings` | array of objects | Conditions worth an operator's attention. |
 | `timers` | array of objects | The service's calendar timer triggers, as the manager has them armed. Empty when it has none. |
+| `granted` | array of strings | The service rights the caller holds on this service. Never null. |
 
 `current_job` carries `id`, `type` (§4.B), `pid`, `started_at` and
 `identity`. `pid` and `started_at` are independently nullable.
@@ -68,6 +70,33 @@ The manager MUST clear `status_text` and `progress` to null at the
 start of every activation generation. A status string or a progress
 figure from a previous incarnation MUST NOT survive a restart and be
 reported as though it described the current process.
+
+### What the caller may do
+
+`granted` lists the service rights of §4.7 that the caller holds on the
+service, each by its name lowercased and without `SERVICE_`:
+`query_status`, `start`, `stop`, `interrogate`, in that order, and only
+those held. It describes the caller who asked, not the service; two
+callers asking about the same service may be told different things.
+
+The manager MUST compute it with the access check it runs for a command
+(§4.7) — the caller's token, the service's descriptor, the service
+generic mapping — asking for `MAXIMUM_ALLOWED` rather than for one
+right, and MUST report only the service rights among what that check
+grants. A client can therefore offer only the commands that will be
+allowed: while the caller's token and the service's descriptor stay as
+they were, a command whose required rights (§4.7) all appear in
+`granted` passes its access check, and one needing a right that is
+absent fails it. Whether the command will then do anything is a
+separate question, which the service's state answers (§4.12), and
+during a shutdown §4.15's restriction comes first.
+
+This check is a question, not a command. A right the caller lacks is
+simply absent from `granted`, and the manager MUST NOT record the check
+as a denial.
+
+A status returned by a lifecycle command that had no effect (§4.12)
+carries `granted` for the caller of that command.
 
 ### Status warnings
 
@@ -212,8 +241,40 @@ Returns one submitted job by identifier, as the job view of §7.7.
 {"status": "ok", "job": { … }}
 ```
 
-The view is §7.7's, unchanged: what a submitter sees of its job on the
-jobs channel is what a client sees of it here.
+The view is §7.7's, with one field added on this channel: what a
+submitter sees of its job on the jobs channel is what a client sees of
+it here, and the client is also told what it may do to the job.
+
+### What the caller may do to a job
+
+On this channel every job view — in the response to `job-status`,
+`job-list` and `job-stop` — carries one field beyond §7.7's:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `granted` | array of strings | The job rights the caller holds on this job. Never null. |
+
+```json
+{"id": "0190a3b2-…", "type": "submitted", "state": "running", …,
+ "granted": ["query", "stop"]}
+```
+
+It lists the job rights of §7.8 the caller holds, each by its name
+lowercased and without `JOB_`: `query`, `stop`, `signal`, in that
+order, and only those held. The manager MUST compute it as it computes
+a status's `granted`, with the access check it runs for a job command,
+against the job's own descriptor and the job generic mapping (§7.8),
+and the same rules follow: it is a question rather than a command, a
+right the caller lacks is absent rather than denied, and a command whose
+required right is listed passes its access check.
+
+For a `job-stop` that waits, the manager MAY compute `granted` when it
+accepts the command rather than when it answers. A job's descriptor is
+fixed at submission (§7.8), so the two could differ only if the
+caller's token had changed in between.
+
+The jobs channel's view does not carry `granted`. A submitter is
+answered there under §7.8's own rules.
 
 ## job-list
 
@@ -227,8 +288,8 @@ Returns every submitted job the caller may query, as job views.
 {"status": "ok", "jobs": [ { … }, { … } ]}
 ```
 
-Each entry is the full job view (§7.7). Jobs the caller may not query
-are omitted (§4.7). The four filters of §4.8 — `submitter`,
+Each entry is the full job view (§7.7), with `granted` (above). Jobs
+the caller may not query are omitted (§4.7). The four filters of §4.8 — `submitter`,
 `identity`, `logon_session`, `state` — narrow the result before it is
 filtered by right, and the manager MUST NOT let the response reveal
 whether the filters or the rights removed an entry.
@@ -253,9 +314,9 @@ the kill.
 {"command": "job-stop", "job_id": "0190a3b2-…", "wait": true}
 ```
 
-`wait` defaults to true, and the response is the job view when the job
-is terminal; with `wait: false` it is the view as soon as the stop has
-been initiated. A `job-stop` on a terminal job returns the view
+`wait` defaults to true, and the response is the job view, with
+`granted`, when the job is terminal; with `wait: false` it is the view
+as soon as the stop has been initiated. A `job-stop` on a terminal job returns the view
 unchanged, with `"status": "ok"`.
 
 This is the one command on this channel that acts on a job, and it
