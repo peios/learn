@@ -12,52 +12,52 @@ side-effects-always mean every packet walks the whole forest, so an
 (a start time, relatedness, one day an owner) and effect units (a
 connection, not a packet) that packets do not. The Packet layer becomes
 the cheap filter in front; the decisions move here and run once per
-connection.
+connection. [*ntfe-flow.decisions-run-once-per-connection]
 
 ## One judgment per local endpoint
 
 `peios_ntfe_flow_dispatch()` (`flow.c`) is called at the IP seats for
-every packet the Packet layer passed. An untracked packet (`snap->flow ==
-NULL`) has no flow to judge: the Packet verdict stands, `NF_ACCEPT`. A
+every packet the Packet layer passed. [*ntfe-flow.dispatch-after-packet-pass] An untracked packet (`snap->flow ==
+NULL`) has no flow to judge: the Packet verdict stands, `NF_ACCEPT`. [*ntfe-flow.untracked-packet-keeps-packet-verdict] A
 tracked packet reads its flow's **sentence**:
 
 - a *current* sentence — the policy generation that wrote it is the
   active one, and its expiry (if any) has not passed — is applied
-  without evaluation (`flow_cached`);
+  without evaluation (`flow_cached`); [*ntfe-flow.current-sentence-applied-without-evaluation]
 - otherwise the Flow forest is evaluated against the snapshot
   (`peios_ntfe_policy_eval(PEIOS_NTFE_LAYER_FLOW)`, counted in `judged`
   and `flow_judged`), the outcome is written as the new sentence, an
   event is emitted (with `REJUDGED` when a stale sentence was replaced,
   `flow_rejudged` or `flow_expired` saying why), and the verdict is
-  applied. A refusal goes out before the event, so the event can confess
-  a degradation.
+  applied. [*ntfe-flow.stale-sentence-evaluated-and-rewritten] A refusal goes out before the event, so the event can confess
+  a degradation. [*ntfe-flow.refusal-sent-before-event]
 
 No Flow forest at all (generation 0, or no `Flow` key) is permissive,
-counted, and caches nothing.
+counted, and caches nothing. [*ntfe-flow.no-forest-permissive-uncached]
 
 What the Flow forest judges is the **flow view**, not the packet's
 snapshot: a Flow fact is one identical for every packet of the flow, so
-`ntfe_flow_view()` builds it from the flow. A reply-direction packet's
+`ntfe_flow_view()` builds it from the flow. [*ntfe-flow.judges-flow-view-not-packet] A reply-direction packet's
 addresses and ports are swapped back to the original tuple (and its
-ICMP type replaced by the tuple's); the direction is the originator's,
+ICMP type replaced by the tuple's); [*ntfe-flow.reply-view-uses-original-tuple] the direction is the originator's,
 recorded at the first judgment along with the interface, the VLAN, the
 peer's MAC and the endpoints' identities (§6.9), so a re-judgment on a
-reply sees exactly the facts the first judgment saw. (Found live before the fix: an inbound viewer flow
+reply sees exactly the facts the first judgment saw. [*ntfe-flow.rejudgment-sees-first-judgment-facts] (Found live before the fix: an inbound viewer flow
 re-judged on its reply packet as `out`, and matched `outbound-ok`.) A
-loopback flow's view takes the slot's direction. The refusal, when the
-verdict is one, answers the packet in hand; the event describes the flow
-as judged.
+loopback flow's view takes the slot's direction. [*ntfe-flow.loopback-view-takes-slot-direction] The refusal, when the
+verdict is one, answers the packet in hand; [*ntfe-flow.refusal-answers-packet-in-hand] the event describes the flow
+as judged. [*ntfe-flow.event-describes-flow-as-judged]
 
 A normal flow has one local endpoint and one sentence, slot 0, written
 at the originator's seat on the first packet; the reply direction, and
-every later packet, reads it. `Direction` in the judgment is the
-originator's side. A **loopback** flow has two local endpoints and two
+every later packet, reads it. [*ntfe-flow.normal-flow-one-sentence-slot-0] `Direction` in the judgment is the
+originator's side. [*ntfe-flow.direction-is-originator-side] A **loopback** flow has two local endpoints and two
 sentences: the outbound one (slot 0) at `LOCAL_OUT` and the inbound one
-(slot 1) at `LOCAL_IN`, both on the same first packet, and every packet
+(slot 1) at `LOCAL_IN`, both on the same first packet, [*ntfe-flow.loopback-two-sentences-same-first-packet] and every packet
 of it answers to the *stricter* of the two (DROP > REJECT(Refused) >
-REJECT(Prohibited) > PASS). Loopback-ness is the seat's device
-(`IFF_LOOPBACK`, `snap->loopback`); a stale other-endpoint sentence is
-not applied — it is that seat's to refresh when it next sees the flow.
+REJECT(Prohibited) > PASS). [*ntfe-flow.loopback-stricter-sentence-applies] Loopback-ness is the seat's device
+(`IFF_LOOPBACK`, `snap->loopback`); [*ntfe-flow.loopback-by-seat-device] a stale other-endpoint sentence is
+not applied — it is that seat's to refresh when it next sees the flow. [*ntfe-flow.stale-other-slot-not-applied]
 
 ## The sentence
 
@@ -66,68 +66,68 @@ not applied — it is that seat's to refresh when it next sees the flow.
 (0 = empty), `expires_at` (epoch seconds, 0 = never), the FNV-1a-64 hash
 of the attributing rule's path (the same identity the tag and counter
 stores use for names, so the viewer resolves it against the policy), the
-verdict and the reject kind. Alongside: `start_secs`, stamped when
+verdict and the reject kind. [*ntfe-flow.sentence-fields] Alongside: `start_secs`, stamped when
 conntrack created the entry (`peios_ntfe_ct_ext_add()`) — the `Start.*`
-facts — and, from the first judgment, the interface, the direction and
-whether the flow is loopback, for the dump.
+facts — [*ntfe-flow.start-secs-stamped-at-ct-creation] and, from the first judgment, the interface, the direction and
+whether the flow is loopback, for the dump. [*ntfe-flow.extension-records-first-judgment-facts]
 
 Writes take the flow's lock (`ct->lock`, `_bh`), zero the generation
 first, write the fields, and publish the generation last with a release
-store. Reads are lock-free on the hook path: an acquire load of the
+store. [*ntfe-flow.sentence-write-publishes-generation-last] Reads are lock-free on the hook path: an acquire load of the
 generation, the fields, then a re-check of the generation — a torn
 sentence (a writer in between) reads as absent and the flow is simply
-evaluated. Two packets of a new flow racing on two CPUs may both
+evaluated. [*ntfe-flow.torn-sentence-reads-absent] Two packets of a new flow racing on two CPUs may both
 evaluate; the second write wins, and the effects ran twice — the only
 place NTFE tolerates that, because the alternative is a lock on the fast
 path for a race that needs a flow's first two packets to arrive
-concurrently.
+concurrently. [*ntfe-flow.first-packet-race-second-write-wins]
 
-The cache holds the verdict only. Effects run at every evaluation of the
-flow and never per packet. `DROP` and `REJECT` sentences persist for the
+The cache holds the verdict only. [*ntfe-flow.cache-holds-verdict-only] Effects run at every evaluation of the
+flow and never per packet. [*ntfe-flow.effects-per-evaluation-not-per-packet] `DROP` and `REJECT` sentences persist for the
 flow's life (a cached `REJECT` refuses every subsequent packet, so a
-retransmitted SYN gets its answer); a `DROP` or `REJECT` on a *new* flow
+retransmitted SYN gets its answer); [*ntfe-flow.drop-reject-sentences-persist] a `DROP` or `REJECT` on a *new* flow
 kills the unconfirmed entry, so the retransmit is a fresh flow, judged
-again. A flow whose extension could not be allocated has nowhere to hold
-a sentence and is evaluated on every packet (`flow_uncached`).
+again. [*ntfe-flow.new-flow-drop-reject-kills-entry] A flow whose extension could not be allocated has nowhere to hold
+a sentence and is evaluated on every packet (`flow_uncached`). [*ntfe-flow.no-extension-evaluated-per-packet]
 
 ## Staleness
 
 A sentence is stale when its generation is not the current one (a
 policy published, or a network context published — §6.5 — both advance
 the one counter) or
-`t_secs >= expires_at`. Both are checked lazily, on the flow's next
+`t_secs >= expires_at`. [*ntfe-flow.stale-by-generation-or-expiry] Both are checked lazily, on the flow's next
 packet — an idle flow past a policy change is killed when it next
 speaks, or conntrack times it out; there are no timers and no walk of
-the table at publication. Grandfathering was rejected: the registry must
+the table at publication. [*ntfe-flow.staleness-checked-lazily] Grandfathering was rejected: the registry must
 not lie about what is enforced, and a `REJECT` rule must be able to
 reject something already running. A refused packet of an
 established TCP flow tears down both ends at once (§6.2): the end that
 sent it is refused with the kind's story, and the packet, turned into a
-reset, is sent on to the other end. Before the teardown existed, a
+reset, is sent on to the other end. [*ntfe-flow.refused-established-tcp-teardown-both-ends] Before the teardown existed, a
 killed viewer stream froze at the local end while the silent host peer
 waited for its own next packet to meet the cached `REJECT` sentence —
 correct under the lazy law, and half a kill.
 
 The expiry is the evaluation's `expires_at` (§6.4): the earliest moment
-any live-time condition the judgment *consulted* would flip. A forest
-with no time conditions never expires a sentence; `Start.*` conditions
-never contribute, which is the point of them.
+any live-time condition the judgment *consulted* would flip. [*ntfe-flow.expiry-earliest-consulted-flip] A forest
+with no time conditions never expires a sentence; [*ntfe-flow.no-time-conditions-never-expires] `Start.*` conditions
+never contribute, which is the point of them. [*ntfe-flow.start-conditions-never-contribute-expiry]
 
 ## The flows dump
 
 `PEIOS_NTFE_IOC_FLOWS` walks conntrack's table the way `ctnetlink` does —
 `local_bh_disable()`, each bucket under its `nf_conntrack_locks` lock,
 original-direction entries of `init_net` that are neither expired nor
-dying — and fills `struct peios_ntfe_flow_rec` per flow: conntrack's id,
+dying [*ntfe-flow.dump-walks-live-original-entries] — and fills `struct peios_ntfe_flow_rec` per flow: conntrack's id,
 family, protocol, the original tuple (ports, or ICMP id and type/code),
 `seen_reply`/`assured`/`related`, the remaining lifetime, packet and
 byte counts (NTFE turns `sysctl_acct` on at init — it is conntrack's
-consumer now), and the extension: start time, first-judgment interface
-and direction, loopback, both sentences, and up to eight tags by hash.
+consumer now), [*ntfe-flow.init-enables-conntrack-acct] and the extension: start time, first-judgment interface
+and direction, loopback, both sentences, and up to eight tags by hash. [*ntfe-flow.dump-record-contents]
 Records are batched in kernel memory and copied to user between
-buckets, never under a lock; the walk counts every live flow it saw so
+buckets, never under a lock; [*ntfe-flow.dump-copies-out-between-buckets] the walk counts every live flow it saw so
 a short buffer is visible, and is best-effort against a table that
-changes under it.
+changes under it. [*ntfe-flow.dump-counts-every-live-flow]
 
 ## What was decided against
 

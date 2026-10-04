@@ -16,28 +16,28 @@ Every inet socket carries a **governing identity**, recorded by KACS in
 the socket's security state (§3.12.2): the caller's *effective* token —
 so a service thread impersonating a client attributes the socket to the
 client, as audit does — and the process facts of that moment: the
-process GUID, the thread-group id and the task's `comm`. The stamp is
+process GUID, the thread-group id and the task's `comm`. [*ntfe-identity.socket-stamp-effective-token-and-process-facts] The stamp is
 taken at every act that commits the socket to a role: creation, `bind`,
-`listen`, `connect`, inheritance at `accept`, and `KACS_SO_RESTAMP`. The
+`listen`, `connect`, inheritance at `accept`, and `KACS_SO_RESTAMP`. [*ntfe-identity.stamp-taken-at-role-acts] The
 last stamp governs, which is how a listener handed to another program
-(socket activation, descriptor passing) is governed as that program's.
-A kernel socket is stamped as the kernel's, with no token.
+(socket activation, descriptor passing) is governed as that program's. [*ntfe-identity.last-stamp-governs]
+A kernel socket is stamped as the kernel's, with no token. [*ntfe-identity.kernel-socket-stamped-without-token]
 
 The engine reads the stamp through one accessor,
 `pkm_kacs_socket_owner()` (`<linux/peios_ntfe.h>`), which hands it a
-counted reference to the token and a copy of the process facts. The
-facts outlive the process; the reference outlives the socket.
+counted reference to the token and a copy of the process facts. [*ntfe-identity.owner-accessor-counted-ref-and-copy] The
+facts outlive the process; the reference outlives the socket. [*ntfe-identity.facts-outlive-process-and-socket]
 
 ## What stands at an end
 
 `identity.c` classifies each local end of a flow by **whether anyone
 answers**, not by whether a socket structure exists. The result is the
 `Local` fact (`program`, `kernel`, `shared`, `none`) and, for a program,
-the principal behind `Local.*`.
+the principal behind `Local.*`. [*ntfe-identity.local-fact-kinds]
 
 **Outbound**, at `LOCAL_OUT`: the sending socket's stamp. A stamped
-program socket is `program`; a kernel socket, or no socket at all
-(resets, ICMP errors, IGMP) is `kernel`.
+program socket is `program`; [*ntfe-identity.outbound-stamped-socket-program] a kernel socket, or no socket at all
+(resets, ICMP errors, IGMP) is `kernel`. [*ntfe-identity.outbound-kernel-or-no-socket-kernel]
 
 **Inbound**, at `LOCAL_IN`, a transport lookup for the receiver of this
 very packet:
@@ -45,42 +45,42 @@ very packet:
 - UDP to a multicast or broadcast destination is `shared` before any
   lookup: the stack delivers it to every socket bound to the port — one
   flow, many endpoints — and the per-program question belongs to the
-  *join*, not to the packet. `Local.*` is absent.
+  *join*, not to the packet. `Local.*` is absent. [*ntfe-identity.inbound-multicast-broadcast-udp-shared]
 - TCP, UDP and UDP-Lite are looked up by tuple, the way the netfilter
   socket match does — listeners included, and through the same hash a
   `SO_REUSEPORT` group steers by, so the sentence names the socket that
-  will actually receive. Early demux may already have found it. Any
-  other protocol is looked up among raw sockets bound to it.
+  will actually receive. [*ntfe-identity.inbound-transport-lookup-by-tuple] Early demux may already have found it. Any
+  other protocol is looked up among raw sockets bound to it. [*ntfe-identity.inbound-other-protocol-raw-lookup]
 - A socket found is `program` (a request minisock stands for its
-  listener; a `TIME_WAIT` minisock is nobody's: `kernel`).
+  listener; a `TIME_WAIT` minisock is nobody's: `kernel`). [*ntfe-identity.inbound-found-socket-program]
 - Nothing found: `kernel` if the stack has a handler registered for the
   protocol — ICMP and ICMPv6 (neighbour discovery, router advertisements,
   MLD), IGMP, the tunnel and IPsec outers that are decapsulated and
   re-enter the ingress seat as their inner packet — else `none`, which
-  the stack will answer with a reset or an unreachable.
+  the stack will answer with a reset or an unreachable. [*ntfe-identity.inbound-nothing-found-kernel-or-none]
 
 The classification is a rule, not a list of protocols. Two consequences
 are documented rather than special-cased: SCTP, a socket transport whose
 table lives inside its module, reads `kernel` while the module is
-loaded; and a ping socket's echo reply pairs with the outbound request in
+loaded; [*ntfe-identity.sctp-reads-kernel] and a ping socket's echo reply pairs with the outbound request in
 conntrack and inherits the outbound `program` sentence, so the direct
-lookup is deferred.
+lookup is deferred. [*ntfe-identity.ping-reply-inherits-outbound-sentence]
 
 The lookup runs **once per flow**, on the first judgment, and only when
-a `Flow` forest is published: a permissive machine pays nothing.
+a `Flow` forest is published: a permissive machine pays nothing. [*ntfe-identity.lookup-once-per-flow-only-with-flow-forest]
 
 ## Loopback: both ends
 
 A loopback flow has two local ends and two sentences (§6.8). The
 outbound seat resolves both on the first packet — its own end from the
 socket, the other by running the receiver lookup early on the
-loopback-destined packet — and records them on the flow's extension.
+loopback-destined packet — and records them on the flow's extension. [*ntfe-identity.loopback-outbound-seat-resolves-both-ends]
 The inbound seat's judgment, on the same packet, reads both from there:
-`Local.*` is its own end and `Remote.*` the sender's. The inbound seat
+`Local.*` is its own end and `Remote.*` the sender's. [*ntfe-identity.loopback-inbound-local-own-remote-sender] The inbound seat
 cannot see a loopback packet's sender itself (loopback transmission
 orphans the buffer), so a flow whose extension could not be allocated
-reads `Remote` as absent there, confessed. Off loopback `Remote` is
-always absent: nothing is provable about a peer yet.
+reads `Remote` as absent there, confessed. [*ntfe-identity.loopback-no-extension-remote-absent-confessed] Off loopback `Remote` is
+always absent: nothing is provable about a peer yet. [*ntfe-identity.remote-absent-off-loopback]
 
 ## Fixed for the flow's life
 
@@ -89,41 +89,41 @@ judgment, per slot, beside the direction and the interface, and never
 replaced: a re-judgment after a policy change or a time edge sees the
 same principal, and a later restamp of the socket, a fork after
 `accept`, or a `SO_REUSEPORT` sibling taking over the port changes
-nothing for flows already judged. The extension holds one counted token
-reference per slot and releases it when conntrack frees the flow. Two
+nothing for flows already judged. [*ntfe-identity.fixed-at-first-judgment] The extension holds one counted token
+reference per slot and releases it when conntrack frees the flow. [*ntfe-identity.token-ref-per-slot-released-on-free] Two
 CPUs racing on a new flow's first packets may both resolve; the first
 record stands, as the first sentence does, and the loser releases its
-reference.
+reference. [*ntfe-identity.resolve-race-first-record-stands]
 
 ## Across the bridge
 
 The flow view carries, per end, the kind, the process facts and a
-borrowed token pointer. The bridge (`kacs/ntfe_runtime.rs`) implements
+borrowed token pointer. [*ntfe-identity.flow-view-carries-borrowed-token] The bridge (`kacs/ntfe_runtime.rs`) implements
 pnp-core's `Principal` trait over the token — user SID, enabled-group
-membership (deny-only groups are invisible to policy), integrity level,
+membership (deny-only groups are invisible to policy), [*ntfe-identity.deny-only-groups-invisible] integrity level,
 confinement SID and capabilities, the per-service SID found among the
 enabled groups, the process GUID as text — without copying the group
 list: a token may carry a thousand groups and the judgment runs in
 softirq context, so the snapshot borrows a view and asks membership
-questions of it. The view is lock-free: group SIDs are fixed at token
-creation and each group's attributes are an atomic.
+questions of it. [*ntfe-identity.principal-view-without-copying-groups] The view is lock-free: group SIDs are fixed at token
+creation and each group's attributes are an atomic. [*ntfe-identity.principal-view-lock-free]
 
-Nothing about a SID's meaning lives in the kernel. `Local.Service.Equal
+Nothing about a SID's meaning lives in the kernel. [*ntfe-identity.no-sid-meaning-in-kernel] `Local.Service.Equal
 = resolvd` is turned into the service's SID at ingestion by pnp-core,
 with the same derivation peinit and authd use to mint it (the SHA-1 of
-the uppercased UTF-16LE name under `S-1-5-80`); `Local.User.Equal =
-LocalService` by a table of well-known names. The viewer resolves the
-other way, from the service definitions in the registry.
+the uppercased UTF-16LE name under `S-1-5-80`); [*ntfe-identity.service-name-to-sid-at-ingestion] `Local.User.Equal =
+LocalService` by a table of well-known names. [*ntfe-identity.well-known-user-names-by-table] The viewer resolves the
+other way, from the service definitions in the registry. [*ntfe-identity.viewer-resolves-sids-from-registry]
 
 ## What the stream says
 
 A `Flow` event and a flow record carry both ends: the kind, the process
 GUID, pid and comm, the user SID and the service SID (ABI 4, §6.A,
-§6.B). An end that could not be attributed — a socket with no KACS
+§6.B). [*ntfe-identity.event-and-record-carry-both-ends] An end that could not be attributed — a socket with no KACS
 state, an inet socket nobody stamped, a loopback sender the inbound
 seat could not see — is confessed: `identity_unresolved` in the status,
 `PEIOS_NTFE_EV_F_IDENTITY_UNRESOLVED` on the event, and the flag on the
-flow record's slot.
+flow record's slot. [*ntfe-identity.unattributed-end-confessed]
 
 ## At rest: the listeners dump
 
@@ -132,14 +132,14 @@ The same stamp, read without a packet: `PEIOS_NTFE_IOC_LISTENERS`
 UDP-Lite tables of the root namespace the way `/proc/net/tcp` and
 `/proc/net/udp` do — each bucket under its lock, records copied out
 between buckets — and reports every socket prepared to receive with the
-identity that governs it. It is the attack surface as a list, by whom,
+identity that governs it. [*ntfe-identity.listeners-dump-reports-receivers-with-identity] It is the attack surface as a list, by whom,
 and it exercises the stamp before a single flow is judged.
 
 ## What was decided against
 
 - **Identity in the per-packet layers.** A packet carries no owner; the
-  socket does. `Local.*` in a `Packet` rule is linted as never present,
-  and `Present` on it refuses the generation.
+  socket does. `Local.*` in a `Packet` rule is linted as never present, [*ntfe-identity.local-in-packet-rule-linted-never-present]
+  and `Present` on it refuses the generation. [*ntfe-identity.present-local-in-packet-rule-refuses-generation]
 - **Many sentences for a shared receiver.** Inbound multicast is one
   flow with many endpoints; modelling N judgments would have made the
   join-time question a per-packet one. `shared` and a later gate on
