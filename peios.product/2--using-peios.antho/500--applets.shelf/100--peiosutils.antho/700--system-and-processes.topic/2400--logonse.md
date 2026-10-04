@@ -1,7 +1,7 @@
 ---
 title: logonse
 type: reference
-description: The logonse command lists logon sessions and their processes, creates and destroys them, and shows or sets a process's PSB.
+description: The logonse command lists logon sessions and their processes, creates and destroys them, signs them out, and shows or sets a process's PSB.
 related:
   - peios/logon-sessions/overview
   - peios/logon-sessions/lifecycle
@@ -9,7 +9,7 @@ related:
   - peios/process-mitigations/overview
 ---
 
-`logonse` is the command-line tool for **logon sessions** — the kernel's records of authentication events that this topic describes. It lists the active sessions, shows which processes belong to one, creates and destroys sessions, and (as a related low-level job) shows a process's Process Security Block (PSB) and sets its mitigation flags.
+`logonse` is the command-line tool for **logon sessions** — the kernel's records of authentication events that this topic describes. It lists the active sessions, shows which processes belong to one, creates and destroys sessions, signs them out, and (as a related low-level job) shows a process's Process Security Block (PSB) and sets its mitigation flags.
 
 ```
 logonse subcommand [arguments]
@@ -20,7 +20,7 @@ $ logonse list
 $ logonse show 4711
 ```
 
-`logonse` is a low-level administrative and debugging tool. It requires a subcommand: `list`, `show`, `create`, `destroy`, or `psb`.
+`logonse` is a low-level administrative and debugging tool. It requires a subcommand: `list`, `show`, `create`, `destroy`, `end`, or `psb`.
 
 ## Listing sessions
 
@@ -86,6 +86,25 @@ $ logonse destroy 4711
 ```
 
 A session with live tokens cannot be destroyed this way; its tokens must go first. See [Session lifecycle](~peios/logon-sessions/lifecycle).
+
+## Signing a session out
+
+### `logonse end`
+
+Signs a session out: authd ends every process running in it, asking each to end and, after a few seconds, ending any that haven't. Once the last of them has gone, the kernel ends the session.
+
+```
+$ logonse end 1012
+ended session 1012: 2 processes ended
+```
+
+You may end your own sessions, and anyone's that the machine's `SessionEndSecurity` setting allows, which as shipped is Administrators and SYSTEM. A service's session can't be ended this way: it ends when the service is stopped. Nor can the kernel's own sessions, 999 and 998. A refusal says which of these it is. See [Ending a session](~peios/logon-sessions/lifecycle).
+
+| Flag | Meaning |
+|---|---|
+| `--check` | Only ask whether you may end it, and end nothing. |
+
+If authd couldn't end every process, `logonse end` says how many still hold the session and exits with status `1`.
 
 ## A process's PSB
 

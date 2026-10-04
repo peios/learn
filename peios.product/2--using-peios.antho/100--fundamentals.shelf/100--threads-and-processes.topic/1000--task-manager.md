@@ -153,5 +153,5 @@ There is no `ps` yet. [`logonse psb --pid PID`](~peios/system-and-processes/logo
 shows a process's protection and mitigations, `logonse list` the
 signed-in sessions and their processes, `svctl status NAME` a service's
 main process, `svctl stop NAME` stops a service, `svctl job list` lists
-the jobs and `svctl job stop ID` stops one, and `kill PID` ends a
-process.
+the jobs and `svctl job stop ID` stops one, `logonse end ID` signs a
+session out, and `kill PID` ends a process.
