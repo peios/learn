@@ -44,7 +44,7 @@ SYSTEM and Administrators both get every right, as they both get every
 service right in the ServiceSecurity default (§4.6). An administrator
 who can stop services one at a time can already stop the system, so
 withholding shutdown would be theatre.
-[*svcsd.the-control-default-grants-system-and-administrators-everything]
+[*svcsd.the-control-default-grants-system-and-administrators-both]
 
 Authenticated Users get `SYSTEM_QUERY_STATUS` and nothing else.
 [*svcsd.the-control-default-lets-every-authenticated-user-ask-how-the-machine-booted]

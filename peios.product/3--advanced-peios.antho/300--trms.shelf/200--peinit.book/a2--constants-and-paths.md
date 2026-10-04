@@ -84,7 +84,7 @@ The recovery shell additionally receives `TERM=linux` and `HOME=/`.
 | A service's `/run/<name>` runtime directory | `O:SYG:SYD:(A;;GA;;;SY)(A;;GA;;;BA)(A;;GA;;;<service SID>)` |
 | The random seed file | `O:SYG:SYD:(A;;GA;;;SY)` |
 | The default ServiceSecurity | `O:SYG:BAD:(A;;0x000F;;;SY)(A;;0x000F;;;BA)(A;;0x0001;;;AU)` |
-| The default ControlSecurity | `O:SYG:BAD:(A;;0x0003;;;SY)(A;;0x0003;;;BA)` |
+| The default ControlSecurity | `O:SYG:BAD:(A;;0x0007;;;SY)(A;;0x0007;;;BA)(A;;0x0004;;;AU)` |
 | The control socket inode | `O:SYG:SYD:(A;;GA;;;SY)(A;;GA;;;BA)(A;;FW;;;AU)` |
 | The jobs socket inode | `O:SYG:SYD:(A;;GA;;;SY)(A;;GA;;;BA)(A;;FW;;;AU)` |
 | A submitted job with no `security_descriptor` | Owner and group the submitter; `(A;;0x0007;;;<submitter>)(A;;0x0007;;;SY)(A;;0x0007;;;BA)` |
@@ -100,6 +100,7 @@ The recovery shell additionally receives `TERM=linux` and `HOME=/`.
 | `SERVICE_ALL_ACCESS` | 0x000F |
 | `SYSTEM_SHUTDOWN` | 0x0001 |
 | `SYSTEM_RELOAD_CONFIG` | 0x0002 |
+| `SYSTEM_QUERY_STATUS` | 0x0004 |
 | `JOB_QUERY` | 0x0001 |
 | `JOB_STOP` | 0x0002 |
 | `JOB_SIGNAL` | 0x0004 |
