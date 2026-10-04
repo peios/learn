@@ -15,25 +15,25 @@ There is one time zone for the whole machine.
 ## In System Settings
 
 **System Settings**, from the launcher, has the machine's time in its
-**Time & date** section. A choice from a list or a switch applies the
+**Time & Date** section. A choice from a list or a switch applies the
 moment it is made; one that can't be is put back, and the line along the
 bottom of the window says why.
 
-- At the top is the time here, the zone and how far it is from UTC, and how
-  well the clock is being kept: which time server it follows, or that
-  nothing is keeping it yet.
-- **Time zone** lists the zones by region. Every program shows the chosen
+- At the top is the time here, the zone and how far it is from UTC, and
+  whether the clock is synchronised, and with which time server.
+- **Time Zone** lists the zones by region. Every program shows the chosen
   zone from the next time it looks, which for the desktop's clock is the
-  next minute. **UTC — no time zone** takes it away.
-- **Set the time automatically** is on until you turn it off. Then a date
-  and a time open under it, in the zone chosen, with **Set the clock**.
-  Turning the switch on again goes back to the time servers.
-- **Time servers** are where the time comes from; **Change…** opens the
-  list under its row, and the switches and intervals below it apply as
-  they are changed. See [configuring time
-  sources](~peios/time/configuring-sources). Last is what timed hears from
-  each: whether it is followed or agrees with the others, whether it proves
-  who it is, how far it is off and when it last answered.
+  next minute. **UTC** takes it away.
+- **Set Time Automatically** is on until you turn it off. Then a date and
+  a time open under it, in the zone chosen, with **Set Clock**. Turning the
+  switch on again goes back to the time servers.
+- **Time Servers** are where the time comes from: **Change…** opens the
+  list under its row, and **Allow Unauthenticated Servers**, **Use Network
+  Time Servers** and the minimum and maximum poll intervals apply as they
+  are changed. See [configuring time
+  sources](~peios/time/configuring-sources). **Server Status** lists each
+  server: whether it is in use, a candidate, or rejected, whether it is
+  authenticated (NTS), its offset, and when it was last heard.
 
 Changing any of it needs write access to `Machine\System\Time`, which as
 shipped only Administrators have. Anyone else sees all of it, and the

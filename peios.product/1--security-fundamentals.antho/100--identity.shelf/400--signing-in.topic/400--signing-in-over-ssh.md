@@ -80,7 +80,7 @@ The first time someone connects, their SSH client shows the server's host key fi
 
 ## On the desktop
 
-SSH Settings shows the same four things on one page: the server, with how it is and a switch to turn it on or off; **Port**, with **Apply** once it is changed; **Accept passwords**, as a switch; and **Host key**, with **Copy**. Turning the server on happens at once. Anything that restarts or stops it — turning it off, moving the port, password sign-in either way — ends every SSH session, so it asks first, under its row, and changes nothing until it is told to go ahead. What you may not change is shown read-only, with the reason, once. Each change says what it did along the bottom of the window, including whether `sshd` was restarted.
+SSH Settings shows the same four things on one page: the server, with how it is and a switch to turn it on or off; **Port**, with **Apply** once it is changed; **Password Authentication**, as a switch; and **Host Key Fingerprint**, with **Copy**. Turning the server on happens at once. Anything that restarts or stops it — turning it off, moving the port, password sign-in either way — ends every SSH session, so it asks first, under its row, and changes nothing until it is told to go ahead. What you may not change is shown read-only, with the reason, once. Each change says what it did along the bottom of the window, including whether `sshd` was restarted.
 
 ## Exit status
 

@@ -88,7 +88,7 @@ The same service definition suits an image where `peios` has a password: the att
 
 To turn autologon off, give the principal a password with [`lps password`](~peios/managing-local-principals/lps-command), or take `--try-no-password` out of the `login-console` service's `Arguments`. To move the prompt to another terminal, change the service's `TTYPath` — see [controlling services](~peios/services-and-jobs/controlling-services).
 
-**System Settings** chooses it in its **Startup & shutdown** section, under **Signing in at the console**: **Nobody: always ask**, or one of the local accounts. The choice is written the moment it is made, as `Arguments`: `--console`, followed by `--try-no-password` and the account if one is chosen. It applies the next time `login-console` starts, at the latest the next boot. Changing it needs write access to `Machine\System\Services\login-console`, which as shipped only Administrators have.
+**System Settings** chooses it in its **Startup & Shutdown** section, under **Console Sign-In**: **Automatic Sign-In** is **Off**, or one of the local accounts. The choice is written the moment it is made, as `Arguments`: `--console`, followed by `--try-no-password` and the account if one is chosen. It applies the next time `login-console` starts, at the latest the next boot. Changing it needs write access to `Machine\System\Services\login-console`, which as shipped only Administrators have.
 
 ## Options
 

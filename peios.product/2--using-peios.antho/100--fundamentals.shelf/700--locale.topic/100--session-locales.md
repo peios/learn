@@ -24,10 +24,10 @@ The machine default is under `Machine\System\Locale`. An administrator
 can change it after installing the corresponding pack, in System Settings
 or with `reg`.
 
-In **System Settings**, in the **Language & keyboard** section, **Language**
+In **System Settings**, in the **Language & Keyboard** section, **Language**
 lists every locale installed in full, by its language and place, and
 **Formats** chooses how dates, numbers, money, measures and paper sizes are
-written, if not as the language writes them. Each is written as it is
+written, if not **Match Language**. Each is written as it is
 chosen: `LANG`, and `LC_TIME`, `LC_NUMERIC`, `LC_MONETARY`, `LC_MEASUREMENT`
 and `LC_PAPER` for the formats. Anyone may look; changing it needs write access to
 `Machine\System\Locale`, which as shipped only Administrators have.
@@ -40,10 +40,9 @@ A principal's own values, under `Users\<SID>\Locale`, override the
 machine's. The principal may set them, and so may Administrators.
 
 On the desktop, a person sets their own in **My Settings** (type `my` in
-the launcher), in its **Language & formats** section. The lists are the
-same as System Settings', and the first entry in each, **As this machine
-has it** and **As the language writes them**, removes the person's own
-value. Each is written as it is chosen: `LANG` and the same five format
+the launcher), in its **Language & Formats** section. The lists are the
+same as System Settings', and the first entry in each, **System Default**
+and **Match Language**, removes the person's own value. Each is written as it is chosen: `LANG` and the same five format
 categories under `CurrentUser\Locale`, which is the person's
 `Users\<SID>\Locale`.
 

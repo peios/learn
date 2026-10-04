@@ -45,8 +45,8 @@ machine starts with is `Machine\System\Console Keymap`, a keymap name such
 as `uk`, `de` or `dvorak`, loaded at boot by the `console-keymap` service.
 Absent, it is the kernel's built-in US layout.
 
-In **System Settings**, in the **Language & keyboard** section, **Layout**
-under **Keyboard at the console** lists every layout installed, grouped by
+In **System Settings**, in the **Language & Keyboard** section, **Layout**
+under **Console Keyboard** lists every layout installed, grouped by
 kind (QWERTY, QWERTZ, AZERTY and the rest). Choosing one writes the value
 and restarts `console-keymap`, which loads it at once. In a terminal:
 
