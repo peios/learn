@@ -7,8 +7,8 @@ related:
   - peios/desktop-settings/keyboard-shortcuts
 ---
 
-System Settings, My Settings, Desktop Settings, SSH Settings and Security
-Policy are built from one kit, `libgxwi::settings`, so they share a layout
+System Settings, My Settings, Desktop Settings, SSH Settings, Security
+Policy and Package Manager are built from one kit, `libgxwi::settings`, so they share a layout
 and behave alike. An app of your own can use it too. The kit is functions
 that return HTML for a GXWI live surface (`libgxwi::Live`) and a stylesheet
 that draws it; what a setting is and what changing it does stay your app's.
@@ -57,7 +57,9 @@ rows from
 
 Controls are `switch`, `select`, `text`, `button` and `submit`. Above a long
 list, `search` is a field to narrow it, with buttons beside it; on a page
-opened from a list, `back` returns to it.
+opened from a list, `back` returns to it. For something that takes a
+while, `progress(done, of, text)` is a bar with what is being done over
+it; with `of` 0 it moves without saying how far.
 
 ## How changes behave
 

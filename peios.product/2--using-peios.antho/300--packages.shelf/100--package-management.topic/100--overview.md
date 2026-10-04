@@ -21,6 +21,8 @@ $ peipkg upgrade
 $ peipkg list
 ```
 
+On the desktop, [Package Manager](~peios/package-management/package-manager) does the same in a window, running peipkg as you.
+
 This page explains what a package is, where packages come from, and the design principle that peipkg holds no authority of its own. It then names every command and points you at the rest of the topic.
 
 ## What a package is
