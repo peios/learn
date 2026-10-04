@@ -34,13 +34,13 @@ the bottom gives the totals.
 
 **Group by** chooses how they are arranged:
 
+- **None**, which it opens with, lists them all together.
 - **Service** puts each process under the service or job it belongs to,
   as peinit, the service manager, started it. A service's heading says
   its state; a **job**, which is a program someone asked peinit to run and
   watch, such as a person's desktop session, says who it runs as.
   **Not in a service** holds peinit itself.
 - **Person** puts each under the person or service it runs as.
-- **None** lists them all together.
 
 **Name**, **PID**, **CPU** and **Memory**, at the top of the list, sort
 by that. **Find** narrows the list to processes whose name, PID, person or
