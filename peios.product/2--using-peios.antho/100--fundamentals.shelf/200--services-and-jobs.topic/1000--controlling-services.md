@@ -175,26 +175,33 @@ The [Backoff](~peios/services-and-jobs/the-service-lifecycle) column is the subt
 {
     "status": "ok",
     "service": "jellyfin",
+    "display_name": "Jellyfin",
+    "description": "Media server for the living room.",
     "state": "active",
     "cause": "explicit_start",
     "status_text": "Listening on port 8096",
+    "progress": null,
     "current_job": {"id": "a1b2...", "type": "service_main", "pid": 1234, "started_at": "...", "identity": "jellyfin-svc"},
     "current_operation": {"id": "e5f6...", "type": "start", "source": "admin"},
     "health": "healthy",
     "uptime_seconds": 86400,
     "definition_removed": false,
     "warnings": [],
-    "timers": []
+    "timers": [],
+    "granted": ["query_status", "start", "stop", "interrogate"]
 }
 ```
 
+- `display_name` and `description` are the definition's, or `null`.
 - `state` and `cause` are the [lifecycle](~peios/services-and-jobs/the-service-lifecycle) pair — read them together.
 - `status_text` is the latest `STATUS=` string the service sent via sd_notify (`null` if never sent; cleared on each restart).
+- `progress` is how far the service last said it had got, from `PROGRESS=` and `PROGRESS_UNIT=`: `{"current": 3, "total": 10, "bounded": true, "unit": "items"}`, with `total` and `unit` `null` when it didn't say them. `null` if it never sent one; cleared on each restart.
 - `current_job` and `current_operation` are the [job and operation](~peios/services-and-jobs/jobs-and-operations) GUIDs, or `null`.
 - `health` is `healthy`, `unhealthy`, `unknown`, or `null` (no health check).
 - `definition_removed` is `true` when the definition was deleted but an instance is still [draining](~peios/services-and-jobs/defining-a-service).
 - `warnings` lists leaked sub-cgroups and other operator-relevant notices.
 - `timers` has one entry for each [timer trigger](~peios/services-and-jobs/triggers-and-timers), described below.
+- `granted` is what **you** may do to this service, as peinit checks it: the rights the service's [permissions](~peios/services-and-jobs/who-can-manage-a-service) give you, out of `query_status`, `start`, `stop` and `interrogate` (reload). A program shows a control only where its right is listed, rather than offering one that will be refused.
 
 Each entry in `timers` describes one schedule as peinit has it armed:
 
