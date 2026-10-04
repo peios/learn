@@ -56,8 +56,14 @@ If KACS goes away after startup:
 - **Event ingestion is unaffected.** Neither the drain nor the write
   path calls KACS (§8.1).
   [*lostdeps.without-kacs-event-ingestion-is-unaffected]
-- Log and metric ingestion are unaffected.
-  [*lostdeps.without-kacs-log-and-metric-ingestion-are-unaffected]
+- Log ingestion is unaffected.
+  [*lostdeps.without-kacs-log-ingestion-is-unaffected]
+- Metric ingestion continues, but every record needs an `EVENTD_PUBLISH`
+  check (§7.6). A record whose verdict is cached for the sender's token
+  and name is stored as usual; one needing a fresh check is refused and
+  counted as an authorization error, and the rest of its datagram is
+  still taken.
+  [*lostdeps.without-kacs-a-metric-record-needing-a-fresh-publish-check-is-refused]
 
 eventd keeps collecting and cannot answer. Query service resumes when
 KACS does. [*lostdeps.query-service-resumes-when-kacs-returns]
