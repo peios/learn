@@ -95,7 +95,7 @@ recovery (§2.2, §3.5).
 [*bootpart.sequence-checkpoints-and-the-previous-shutdown-payload-are-not-consulted-for-recovery]
 
 The receipt key is sound only while KMES sequence numbers do not restart
-under one kernel boot ID. v0.23 therefore requires KMES to remain
+under one kernel boot ID, so eventd depends on KMES remaining
 initialised for the whole boot. A future KMES ABI may add a stream
 generation GUID to make module reloads distinguishable without relying
 on that lifecycle invariant.

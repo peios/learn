@@ -7,7 +7,7 @@ Log retention works exactly as event retention does (§3.6), on the same
 background thread, running after the event store and before the metric
 store.
 [*logretain.log-retention-runs-on-the-retention-thread-after-events-and-before-metrics]
-As there, the v0.23 model is an early simplification and both
+As there, the model is an early simplification and both
 limits are enforced with the more aggressive one winning.
 [*logretain.both-log-limits-are-enforced-and-the-more-aggressive-one-wins]
 

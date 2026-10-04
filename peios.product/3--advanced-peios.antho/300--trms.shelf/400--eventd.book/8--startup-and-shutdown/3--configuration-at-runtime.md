@@ -32,6 +32,12 @@ The log and metric batch settings
 likewise affect only subsequent transaction thresholds.
 [*runtime.log-and-metric-batch-changes-affect-only-subsequent-transactions]
 
+Every applied change, whichever key it touches, also requests an index
+policy run (§3.4), which writes the metadata database (§3.5), and a
+retention pass (§3.6), so a changed threshold or a shortened retention
+period takes effect without waiting for either interval.
+[*runtime.every-applied-change-requests-an-index-policy-run-and-a-retention-pass]
+
 ## What waits for a restart
 
 | Change | Why |

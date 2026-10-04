@@ -60,7 +60,8 @@ follows is the sequence within that phase.
    identifier in the resulting rows, resolve its descriptor, build the
    object type list with field GUIDs, call `kacs_access_check_list` with
    the token, the descriptor, `EVENTD_READ`, the list and an audit
-   context naming the identifier, and cache the per-field results.
+   context naming the pattern the descriptor was resolved from (below),
+   and cache the per-field results.
    [*enforce.each-result-identifier-is-rechecked-for-eventd-read-with-field-guids]
 10. **Shape each record.** Look up the cached results for its
     identifier and fields. Exclude the record entirely if neither the

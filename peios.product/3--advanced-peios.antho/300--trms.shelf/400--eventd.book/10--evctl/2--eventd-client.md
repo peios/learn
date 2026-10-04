@@ -60,8 +60,11 @@ exactly one value (PSPU §3.19).
 
 Every place the language takes an identifier or a pattern also takes a
 quoted string, so text a person typed should always go through `string`.
-Written bare, an origin called `STREAM` or `WHERE` would be read as the
-clause. [*client.text-a-person-typed-is-always-quoted]
+Written bare, an event type called `STREAM` or `WHERE` would be read as
+the clause, since the pattern after `EVENTS` is optional. After
+`LOGS FROM`, which always takes an origin, the same word is read as the
+origin, but quoting is never wrong there either.
+[*client.text-a-person-typed-is-always-quoted]
 
 eventd's own tests parse the library's quoted text back through eventd's
 parser for strings chosen to break naive quoting, and require the value

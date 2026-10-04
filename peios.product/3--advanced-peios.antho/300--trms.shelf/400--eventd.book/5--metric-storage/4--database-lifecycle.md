@@ -80,7 +80,7 @@ they never open another read-write connection (§3.6, §5.6).
 The single-writer property is load-bearing here in a way it is not for
 the other stores: series resolution checks for an existing row and then
 inserts, without a transaction spanning both, and only one writer makes
-that safe (§5.2).
+that safe (§5.3).
 
 ## Checkpointing
 

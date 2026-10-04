@@ -57,9 +57,10 @@ set rather than only as an error to retry.
 
 ## Ingestion backpressure
 
-When a log or metric socket's receive queue is full, the kernel discards
-the datagram. Neither the sender nor eventd is notified, and eventd does
-not count it, so no health metric shows it (§5.7).
+When a log or metric socket's receive queue is full, the kernel refuses
+the send: a non-blocking sender receives `EAGAIN`, and a blocking one
+waits (§4.1). eventd is not notified and does not count the refusal, so
+no health metric shows it (§5.7).
 [*lostevents.a-datagram-dropped-on-a-full-receive-queue-is-not-counted]
 
 This is by design and is not a failure to be tuned away (PSPU §3.4). The

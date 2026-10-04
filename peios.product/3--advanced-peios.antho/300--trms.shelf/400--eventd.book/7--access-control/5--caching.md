@@ -10,27 +10,34 @@ underneath both.
 
 ## Record-level
 
-When a pattern's descriptor contains **no object ACEs**, the check is a
-plain grant or deny on the root, and the result is cached per
-`(token, pattern)`.
-[*accesscache.without-object-aces-a-root-verdict-is-cached-per-token-and-pattern]
+Verdicts are cached for the life of one query — for a stream, the whole
+stream — under the connection's token (§7.1), and keyed by concrete
+identifier, not by pattern: two event types under one pattern are two
+keys. When a descriptor contains **no object ACEs**, the check is a
+plain grant or deny on the root, so every check of an identifier reaches
+the same verdict.
+[*accesscache.verdicts-are-cached-per-query-and-keyed-by-identifier-not-pattern]
 
-A query returning ten thousand events across twenty distinct event types
-performs at most twenty checks.
-[*accesscache.ten-thousand-events-of-twenty-types-take-at-most-twenty-checks]
+Each identifier costs one pre-check before any record is read, for the
+fields the query references (§7.4 step 4), and one result check for each
+distinct field set its records carry (§7.4 step 9). A query returning
+ten thousand events across twenty event types, each type's records of
+one shape, performs at most forty checks.
+[*accesscache.ten-thousand-events-of-twenty-uniform-types-take-at-most-forty-checks]
 
 ## Field-level
 
 When the descriptor **does** contain object ACEs, the verdict depends on
 which fields the record carries, since different payloads produce
-different object type lists (§7.3). The result is cached per
-`(token, pattern, field set)`.
-[*accesscache.with-object-aces-a-verdict-is-cached-per-token-pattern-and-field-set]
+different object type lists (§7.3). The result check is therefore cached
+per `(identifier, field set)`, and is so whatever the descriptor holds.
+[*accesscache.a-result-verdict-is-cached-per-identifier-and-field-set]
 
 In practice events of one type carry the same fields, so this is
-effectively one check per `(token, event type)`. Log records have a
-fixed field set, so log queries reach one check per origin.
-[*accesscache.a-log-query-takes-one-check-per-origin] Metric
+effectively one result check per event type. Log records have a fixed
+field set, so a log query reaches two checks per origin: the pre-check
+and one result check.
+[*accesscache.a-log-query-takes-two-checks-per-origin] Metric
 records vary by series label keys.
 
 The pathological case is an event type whose payload fields differ from
@@ -59,9 +66,11 @@ the watch is re-established.
 A cache it cannot trust to be current is
 worse than none: continuing to serve from stale entries would make a
 revocation silently ineffective, and the failure would be invisible.
-This is a degraded state, not a failure — eventd keeps ingesting, and
-keeps answering queries for descriptors already resolved (§9.3).
-[*accesscache.a-failed-watch-degrades-but-ingestion-and-resolved-queries-continue]
+With the cache discarded every resolution is new, so the descriptors
+resolved before the failure are not kept either. This is a degraded
+state, not a failure — eventd keeps ingesting and keeps answering
+queries, which see no records until the watch is re-established (§9.3).
+[*accesscache.a-failed-watch-degrades-ingestion-continues-and-queries-see-no-records-until-it-recovers]
 
 ## During a stream
 

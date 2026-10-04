@@ -28,8 +28,9 @@ reconfiguration.
 creation and removal thresholds, and computes the **desired index set**
 — an ordered list of fields, highest priority first.
 [*index.the-policy-computes-the-desired-set-as-fields-in-priority-order] It runs every
-`AdaptiveIndexPolicyIntervalMinutes` (§A), and it is the only writer to
-the desired set.
+`AdaptiveIndexPolicyIntervalMinutes` (§A), and also at once on every
+applied configuration change (§8.3) and every `INDEX` command, and once
+more at shutdown; it is the only writer to the desired set.
 [*index.the-policy-runs-every-policy-interval-and-is-the-only-desired-set-writer]
 
 **Shard convergence.** Writer threads read the desired set and move

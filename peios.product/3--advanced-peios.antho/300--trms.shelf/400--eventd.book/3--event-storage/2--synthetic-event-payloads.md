@@ -8,8 +8,10 @@ in `payload`, with the schema below.
 [*payload.every-synthetic-event-carries-a-messagepack-map] These field names are stable
 query-language payload field names after flattening (PSPU §3.22), except
 where a value is a nested array or map, which flattening does not
-traverse.
-[*payload.synthetic-field-names-are-stable-query-fields-except-nested-values]
+traverse, and except `boot_id` in `synthetic.startup` and `cpu_id` in
+`synthetic.gap`, which collide with header columns: flattening
+suppresses them, and a query naming either reads the column (§3.1).
+[*payload.synthetic-field-names-are-stable-query-fields-except-nested-values-and-header-collisions]
 
 ## `synthetic.startup` [*payload.the-synthetic-startup-payload-schema]
 
@@ -47,8 +49,9 @@ receipt ranges, never from this payload (§2.2).
 
 `cpu_id` appears both here and in the `cpu_id` column (§2.5).
 [*payload.a-gap-carries-cpu-id-in-both-the-payload-and-the-column] The column
-is what a `WHERE cpu_id == N` predicate matches; the payload field is
-what a reader of the record sees without joining anything.
+is what a `WHERE cpu_id == N` predicate matches and what a query
+presents as `cpu_id`; the payload field is what a reader of the stored
+payload sees without joining anything.
 [*payload.a-cpu-id-predicate-matches-the-gap-column-not-the-payload-field]
 
 ## `synthetic.config_change` [*payload.the-synthetic-config-change-payload-schema]

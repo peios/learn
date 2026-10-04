@@ -147,9 +147,9 @@ The metadata database's sequence checkpoints and the shutdown event are
 diagnostic only (§3.5, §8.4). Neither participates in recovery.
 [*kmes.sequence-checkpoints-and-the-shutdown-event-take-no-part-in-recovery]
 
-KMES sequence numbering MUST remain continuous while the kernel boot ID
-is unchanged. The v0.23 deployment therefore initialises KMES once for
-the whole boot and does not unload or reload it. A sequence regression
+eventd depends on KMES sequence numbering remaining continuous while the
+kernel boot ID is unchanged, and so on KMES being initialised once for
+the whole boot and never unloaded or reloaded. A sequence regression
 under the same boot ID, other than duplicates deliberately encountered
 during replacement scanning, is a fatal incompatibility: eventd stops
 rather than confuse two KMES stream lifetimes under one receipt key.

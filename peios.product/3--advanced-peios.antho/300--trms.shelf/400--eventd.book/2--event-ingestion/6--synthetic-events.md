@@ -22,7 +22,7 @@ column exists (§3.1).
 | Lost events detected on a CPU | `synthetic.gap` (§2.5) [*synthetic.lost-events-on-a-cpu-emit-synthetic-gap] |
 | eventd started and attached to KMES | `synthetic.startup` [*synthetic.starting-and-attaching-to-kmes-emits-synthetic-startup] |
 | Graceful shutdown beginning | `synthetic.shutdown` [*synthetic.the-start-of-graceful-shutdown-emits-synthetic-shutdown] |
-| A write to any store failed | `synthetic.storage_error` [*synthetic.a-failed-write-to-any-store-emits-synthetic-storage-error] |
+| A store was found corrupt and quarantined, at startup or at write time (§9.2) | `synthetic.storage_error` [*synthetic.a-store-found-corrupt-and-quarantined-emits-synthetic-storage-error] |
 | A configuration value changed at runtime | `synthetic.config_change` [*synthetic.a-runtime-configuration-change-emits-synthetic-config-change] |
 
 Payload schemas for all five are in §3.2.

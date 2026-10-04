@@ -7,7 +7,7 @@ Retention bounds disk growth. eventd deletes on two axes, age and size,
 and enforces both — an event goes when it exceeds either threshold.
 [*eventretain.an-event-is-deleted-when-it-exceeds-either-the-age-or-size-threshold]
 
-The v0.23 model is deliberately minimal, and a later one is expected to
+The retention model is deliberately minimal, and a later one is expected to
 support rules resembling queries: retain KACS events for ninety days,
 synthetic events for seven, userspace-origin events for fourteen; and to
 prune during ingestion rather than only in arrears. What is here is the
@@ -70,15 +70,20 @@ A background retention coordinator processes the event store first,
 then the log store (§4.4), then the metric store (§5.5).
 [*eventretain.the-coordinator-processes-events-then-logs-then-metrics]
 The interval is
-`RetentionCheckIntervalMinutes` (§A).
+`RetentionCheckIntervalMinutes` (§A); an applied configuration change
+(§8.3) and a write refused for want of space (§9.2) each request a pass
+at once.
 [*eventretain.the-coordinator-runs-every-retentioncheckintervalminutes]
 It uses read-only connections to
-measure and plan; it owns no read-write connection.
-[*eventretain.the-coordinator-measures-and-plans-read-only-and-owns-no-read-write-connection]
+measure and plan. The only read-write connections it owns are to
+historical shards, which have no ingestion writer: it opens each one
+read-write for the life of the process and deletes from it and
+checkpoints it directly, as that shard's one writer.
+[*eventretain.the-coordinator-measures-read-only-and-owns-read-write-connections-only-to-historical-shards]
 
-Each database has exactly one read-write connection, owned by its
+Every other database has exactly one read-write connection, owned by its
 ingestion writer.
-[*eventretain.each-database-has-one-read-write-connection-owned-by-its-ingestion-writer]
+[*eventretain.every-database-but-a-historical-shard-has-one-read-write-connection-owned-by-its-ingestion-writer]
 The coordinator submits low-priority maintenance
 commands to that owner.
 [*eventretain.the-coordinator-submits-low-priority-commands-to-the-owning-writer]

@@ -46,6 +46,7 @@ advance.
 | `SIGINT` | Begin graceful shutdown. [*crash.sigint-begins-graceful-shutdown] |
 | `SIGQUIT` | Write a diagnostic dump to standard error, then begin graceful shutdown. [*crash.sigquit-writes-a-diagnostic-dump-then-begins-graceful-shutdown] |
 | `SIGHUP` | Re-read configuration from the registry (§8.3). [*crash.sighup-re-reads-configuration-from-the-registry] |
+| `SIGPIPE` | Ignored, so a write to a socket whose peer has gone — a query client that disconnects mid-response — fails with `EPIPE` on that connection instead of ending the daemon. [*crash.sigpipe-is-ignored] |
 
 Every other signal keeps its default behaviour.
 [*crash.every-other-signal-keeps-its-default-behaviour]

@@ -79,14 +79,14 @@ would otherwise leak the existence of rows the caller cannot read.
 
 ## Aggregation
 
-Aggregation is pushed into SQL wherever the storage engine can express
-it, which is most of the time for simple grouping over columns and none
-of the time for grouping over payload paths whose comparison semantics
-SQL cannot reproduce.
-[*sql.aggregation-is-pushed-into-sql-except-where-sql-cannot-reproduce-the-comparison]
+Aggregation is never pushed into SQL. SQL reads the candidate rows, and
+eventd folds them into groups as they are read (§6.4), under the
+language's own equality (§6.2) and after access filtering has discarded
+what the caller cannot read — grouping over columns included, not only
+grouping over payload paths whose comparison semantics SQL cannot
+reproduce.
+[*sql.aggregation-is-never-pushed-into-sql-and-rows-fold-in-eventd]
 
-For an event query the push-down matters twice over, because it also
-determines what crosses the shard boundary (§6.4): a shard returning
-per-group partial aggregates sends a result proportional to the group
-cardinality, where a shard returning rows sends a result proportional to
-the row count.
+For an event query this means every shard yields its matching rows,
+so the work is proportional to the row count, while what the
+aggregation holds is proportional to the group cardinality (§6.4).

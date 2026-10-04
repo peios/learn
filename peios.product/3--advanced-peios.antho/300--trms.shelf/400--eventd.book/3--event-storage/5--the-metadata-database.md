@@ -15,10 +15,12 @@ reconfiguration untouched.
 It is created on first startup if absent, opened in WAL mode with
 `synchronous=NORMAL`.
 [*meta.created-if-absent-and-opened-in-wal-mode-with-synchronous-normal]
-It is written once per policy interval and read at
-startup, so per-transaction durability buys nothing: losing the last
-interval's counters costs some adaptation, not any data.
-[*meta.written-once-per-policy-interval-and-read-at-startup]
+It is written at each run of the index policy (§3.4) — every policy
+interval, on every applied configuration change and every `INDEX`
+command, and once more at shutdown — and read at startup, so per-transaction durability buys
+nothing: losing the counters since the last run costs some adaptation,
+not any data.
+[*meta.written-at-each-policy-run-including-config-changes-and-shutdown-and-read-at-startup]
 
 The query path excludes it explicitly, since it is in the same directory
 as the shards (§3.3).

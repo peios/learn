@@ -74,6 +74,6 @@ query client can see it is exactly what PSPU §3.4 and §3.12 forbid. Those
 counts stay in memory and reach only the diagnostic dump (§8.5).
 [*health.rejected-ingestion-input-is-not-among-the-health-metrics]
 
-Neither are datagrams the kernel discards at a full socket queue. eventd
+Neither are datagrams the kernel refuses at a full socket queue. eventd
 is never told about them (§9.1), so it has nothing to count.
 [*health.kernel-socket-drops-are-not-among-the-health-metrics]

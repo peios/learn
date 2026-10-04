@@ -83,7 +83,7 @@ Each shard has exactly one writer thread, and that thread is the only
 writer to that database.
 [*shard.each-shard-has-exactly-one-writer-thread-and-no-other-writer] No
 other thread and no other connection writes to it, which is what makes
-the single-writer assumptions in §5.3 and §3.4 safe.
+the single-writer assumptions in §3.3 and §3.4 safe.
 
 Drain threads never write to SQLite.
 [*shard.drain-threads-never-write-to-sqlite] When several drain threads

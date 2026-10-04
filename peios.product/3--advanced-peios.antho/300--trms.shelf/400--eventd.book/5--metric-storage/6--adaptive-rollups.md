@@ -102,7 +102,7 @@ Opening a version-1 metric store creates the table and its pruning index in one
 immediate transaction, then records version 2.
 [*rollup.a-version-1-store-gains-the-table-and-pruning-index-in-one-immediate-transaction]
 Unknown versions still fail
-startup (§5.1, §A.2).
+startup (§5.4, §B).
 
 ## Validity proof
 
@@ -161,7 +161,7 @@ It limits this optional acceleration state; it
 does not delete series or raw samples.
 [*rollup.pruning-never-deletes-series-or-raw-samples]
 
-All three controls are live (§A.1).
+All three controls are live (§A).
 [*rollup.the-three-rollup-controls-take-effect-live]
 Setting `AdaptiveRollupMaxRows` to zero
 immediately disables cache reads and writes without changing query results.

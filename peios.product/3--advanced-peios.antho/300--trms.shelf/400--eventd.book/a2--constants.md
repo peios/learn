@@ -104,7 +104,7 @@ The query language accepts these names as aliases (PSPU §3.23).
 | `synthetic.shutdown` | Graceful shutdown begins. [*constant.synthetic-shutdown-is-emitted-when-graceful-shutdown-begins] |
 | `synthetic.gap` | A sequence gap is detected on a CPU. [*constant.synthetic-gap-is-emitted-when-a-cpu-sequence-gap-is-detected] |
 | `synthetic.config_change` | A configuration value is applied at runtime. [*constant.synthetic-config-change-is-emitted-when-a-value-is-applied-at-runtime] |
-| `synthetic.storage_error` | A write to any store fails. [*constant.synthetic-storage-error-is-emitted-when-a-write-to-any-store-fails] |
+| `synthetic.storage_error` | A store is found corrupt and quarantined. [*constant.synthetic-storage-error-is-emitted-when-a-store-is-found-corrupt-and-quarantined] |
 
 Payload schemas are in §3.2.
 

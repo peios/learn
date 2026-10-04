@@ -17,6 +17,10 @@ Retention is the only lever eventd has that frees space,
 and waiting up to an hour for the next scheduled pass would waste the
 window in which recovery is still cheap.
 
+A write refused for want of space emits no `synthetic.storage_error`;
+that event reports a store found corrupt (§2.6).
+[*storagefail.a-write-refused-for-want-of-space-emits-no-storage-error]
+
 ### The event store
 
 A failed `INSERT` or `COMMIT` does not crash the writer thread.

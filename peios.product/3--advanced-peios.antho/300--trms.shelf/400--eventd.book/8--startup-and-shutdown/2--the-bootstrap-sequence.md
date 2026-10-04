@@ -4,7 +4,13 @@ description: The seven startup phases, which either complete or fail entirely �
 ---
 
 Startup proceeds in seven phases, and either completes or fails
-entirely. [*bootstrap.startup-proceeds-through-seven-phases-in-order]
+entirely. The phases group the work by concern rather than fixing its
+order: eventd reads the boot ID (step 13) before it opens any store, so
+that each shard can be searched for it as it is opened; it opens
+`eventd-meta.db` (step 12) before the shards; and it binds each
+ingestion socket as soon as its store is open, so the log socket
+(step 18) is bound before `metrics.db` (step 11) is opened.
+[*bootstrap.the-seven-phases-group-the-work-rather-than-order-it-and-startup-completes-or-fails-entirely]
 
 ## Phase 1 — Configuration
 
@@ -107,8 +113,8 @@ entirely. [*bootstrap.startup-proceeds-through-seven-phases-in-order]
     every authenticated caller connect (§7.1).
     [*bootstrap.the-query-socket-gets-the-authenticated-users-descriptor]
 18. Create the log socket at `LogSocketPath`, then replace its inherited
-    descriptor with the protected deny-Service, allow-SYSTEM broker
-    descriptor (§7.6).
+    DACL with the protected deny-Service, allow-SYSTEM broker DACL,
+    leaving it owned by eventd's service SID (§7.6).
     [*bootstrap.the-log-socket-gets-the-deny-service-allow-system-broker-descriptor]
 19. Create the metric socket at `MetricSocketPath`, then replace its
     inherited descriptor with the protected one that lets every

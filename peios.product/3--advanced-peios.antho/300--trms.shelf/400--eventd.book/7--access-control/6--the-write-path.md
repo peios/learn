@@ -23,13 +23,19 @@ That is what makes an event's `process_guid` evidence.
 
 Service processes do not reach the log socket.
 [*writepath.service-processes-cannot-reach-the-log-socket] eventd replaces the
-inherited descriptor on `LogSocketPath` with this protected DACL before
+inherited DACL on `LogSocketPath` with this protected DACL before
 its first receive:
 [*writepath.the-log-socket-gets-a-protected-dacl-before-the-first-receive]
 
 ```text
-O:SYG:SYD:P(D;;0x2;;;SU)(A;;GA;;;SY)
+D:P(D;;0x2;;;SU)(A;;GA;;;SY)(A;;GA;;;OW)
 ```
+
+It sets the DACL alone. The socket stays owned by the service SID of
+eventd's own virtual Service identity, which created it, and the `OW`
+allow lets that owner manage it; making SYSTEM the owner would need a
+privilege the long-running daemon deliberately does not hold.
+[*writepath.the-log-socket-stays-owned-by-eventds-service-sid]
 
 `SU` is the Service logon group, S-1-5-6. Every phase-2 service token,
 including a SYSTEM service token, carries it. peinit's bootstrap SYSTEM

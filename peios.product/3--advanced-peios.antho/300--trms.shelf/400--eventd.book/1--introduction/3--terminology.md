@@ -35,8 +35,10 @@ directory as one store (§2.3).
 
 **Active shard**: a shard in the current configuration's numbering.
 **Historical shard**: a shard database left behind by a previous
-configuration, opened read-only and still queried (§3.3).
-[*term.a-historical-shard-is-opened-read-only-and-still-queried]
+configuration. It takes no new events and is still queried, through
+read-only connections; its one writer is the retention coordinator
+(§3.3, §3.6).
+[*term.a-historical-shard-takes-no-new-events-is-still-queried-and-is-written-only-by-retention]
 
 **Handoff channel**: the bounded queue between drain threads and a
 writer thread. It is a small startup-fixed scheduling handoff, bounded

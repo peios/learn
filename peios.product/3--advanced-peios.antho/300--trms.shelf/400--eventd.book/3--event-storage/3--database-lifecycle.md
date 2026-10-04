@@ -15,20 +15,26 @@ databases nowhere else.
 
 The standard path is `/var/state/eventd/events/`.
 [*eventdb.the-standard-event-store-path-is-var-state-eventd-events] The eventd package
-declares `/var/state/eventd/` and its `events/`, `logs/`, and `metrics/`
-children as required peinit provisioned directories.
-[*eventdb.the-package-provisions-the-state-directory-and-its-three-store-directories]
-Each carries an
+ships `/var/state/eventd/` and its `events/`, `logs/`, and `metrics/`
+children.
+[*eventdb.the-package-ships-the-state-directory-and-its-three-store-directories]
+The three store directories are also declared as required peinit
+provisioned directories, so peinit establishes their descriptor before
+eventd starts; `/var/state/eventd/` itself is not a provisioned
+directory.
+[*eventdb.the-three-store-directories-are-required-peinit-provisioned-directories]
+Each of the four carries an
 explicit protected, inheritable descriptor granting full control only
-to SYSTEM and Administrators:
-[*eventdb.provisioned-store-directories-grant-full-control-only-to-system-and-administrators]
+to SYSTEM, Administrators, and the service SID of eventd's own virtual
+Service identity, which is what the daemon runs as:
+[*eventdb.store-directories-grant-full-control-only-to-system-administrators-and-eventds-service-sid]
 
 ```text
-O:SYG:SYD:P(A;OICI;GA;;;SY)(A;OICI;GA;;;BA)
+O:SYG:SYD:P(A;OICI;GA;;;SY)(A;OICI;GA;;;BA)(A;OICI;GA;;;S-1-5-80-1963885778-1835409261-1671587836-2279113866-1994761124)
 ```
 
-A deployment choosing another configured path MUST provision it with
-equivalent protection before eventd starts.
+A deployment choosing another configured path provisions it with this
+descriptor before eventd starts.
 
 eventd does not create store directories.
 [*eventdb.eventd-never-creates-store-directories] It opens every path component
@@ -37,8 +43,10 @@ descriptor, and opens, creates, renames and quarantines database, WAL
 and shared-memory files relative to that descriptor.
 [*eventdb.store-files-are-handled-relative-to-a-directory-descriptor-opened-without-following-symlinks]
 A missing path, a
-non-directory component, a symbolic-link component, or protection that
-allows an untrusted principal to replace children is a startup failure.
+non-directory component, a symbolic-link component, or a store
+directory whose owner, group and DACL are not exactly the descriptor
+above — which is what keeps an untrusted principal from replacing
+children — is a startup failure.
 [*eventdb.a-missing-non-directory-symlinked-or-weakly-protected-store-path-fails-startup]
 SQLite's database, `-wal`, and `-shm` files inherit the directory's
 protection.
@@ -152,7 +160,8 @@ mode do not contend with the writer's connection.
 ## Concurrency
 
 Each shard has exactly one read-write connection, owned by its writer
-thread, and any number of read-only connections owned by query handlers.
+thread — for a historical shard, the retention coordinator (§3.6) — and
+any number of read-only connections owned by query handlers.
 [*eventdb.each-shard-has-exactly-one-read-write-connection-owned-by-its-writer]
 WAL mode permits concurrent readers alongside one writer without
 blocking either.

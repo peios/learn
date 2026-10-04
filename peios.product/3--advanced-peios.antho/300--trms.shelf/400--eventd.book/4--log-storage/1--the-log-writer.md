@@ -18,20 +18,28 @@ The log thread performs both the socket reads and the SQLite writes.
 
 The consequence is direct: **during a batch commit the socket is not
 being drained**, and datagrams arriving in that window occupy the
-receive queue until it fills, after which the kernel discards them.
+receive queue until it fills.
 [*logwriter.the-socket-is-not-drained-during-a-batch-commit]
-The queue — `SO_RCVBUF` — is sized at four times the datagram ceiling,
-and it is the whole cushion.
+A Unix datagram socket's receive queue is bounded in datagrams, by the
+kernel's `net.unix.max_dgram_qlen`, and it is the whole cushion. Once it
+is full the kernel refuses further sends rather than accepting and
+discarding them: a non-blocking sender receives `EAGAIN`, and a blocking
+one waits until the queue drains.
+[*logwriter.a-full-receive-queue-of-max-dgram-qlen-datagrams-refuses-further-sends]
+eventd sets `SO_RCVBUF` to four times the datagram ceiling,
 [*logwriter.so-rcvbuf-is-sized-at-four-times-the-datagram-ceiling]
+but for this socket type the kernel charges a queued datagram to its
+sender's send buffer, and the receive buffer bounds nothing.
 
 > [!NOTE]
-> Linux's default `SO_RCVBUF` for a Unix datagram socket is around
-> 212 KB, roughly a thousand typical log records. A batch commit takes
-> one to ten milliseconds, and that buffer is the only thing absorbing
-> arrivals in the window. A service dumping a stack trace will lose
-> datagrams, which is the intended degradation for a loss-tolerant path
-> (PSPU §3.4) — the alternatives being backpressure or unbounded
-> buffering, and the design forbids both.
+> Linux's default `net.unix.max_dgram_qlen` is ten, and the kernel
+> refuses a send only once more than that many are queued, so the queue
+> holds eleven datagrams. A batch commit takes one to ten milliseconds,
+> and those eleven are the only thing absorbing arrivals in the window. A service dumping a stack trace
+> through non-blocking sends will have datagrams refused, which is the
+> intended degradation for a loss-tolerant path (PSPU §3.4): whatever is
+> lost is lost in the sender, and eventd neither buffers beyond the
+> queue nor learns of the refusal.
 
 Splitting into a reader and a writer with a bounded handoff — the shape
 the event path uses (§2.3) — would decouple them. It is not done, and
