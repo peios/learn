@@ -1,7 +1,7 @@
 ---
 title: Principals Manager
 type: how-to
-description: See this machine's users and groups from the desktop — who each is, what groups they are in, who is in each group, how they may sign in and what claims they carry — and, as an administrator, make, change, rename, disable and delete users.
+description: See this machine's users and groups from the desktop — who each is, what groups they are in, who is in each group, how they may sign in and what claims they carry — and, as an administrator, make, change, rename, disable and delete users and groups, and set what users sign in with, their SSH keys and their claims.
 related:
   - peios/managing-local-principals/overview
   - peios/managing-local-principals/lps-command
@@ -43,6 +43,11 @@ over the network; the groups they are in; and their **claims**, the
 named values that permissions written with conditions are checked
 against. **Copy SID** copies their SID.
 
+An administrator also sees what a local user signs in with, such as a
+password or an SSH key, and their **SSH keys**: the public keys they may
+sign in with over SSH, each with its label, its fingerprint and the day
+it was added.
+
 For a group, it is its description, group ID and SID, and who is in it.
 Who is in a built-in group such as `Administrators` is recorded on this
 machine, as a local group's is, so it is listed too. Someone whose
@@ -82,22 +87,39 @@ Select a local user, and their buttons are below their details:
 - **Set password** gives them a new password. A user who signed in
   without one needs it from then on. Their sessions already signed in
   carry on.
-- **Sign-in** chooses how they may sign in: as the machine's default
-  allows (at the machine, on a remote desktop, over the network, and the
-  rest a person uses), or only the ways you tick. **To run a service**
-  lets the service manager start a service as them without any password,
-  and is never part of the default.
+- **Sign-in** chooses what they sign in with, and the ways they may sign
+  in.
+  - **Signs in with**: a password, an SSH key, either, nothing (no
+    password is asked for, at any sign-in prompt on the machine), or
+    nothing accepted (every sign-in is refused, though nothing shows them
+    as disabled). Giving them a password or a key doesn't change this, so
+    a key added isn't used until this allows one.
+  - **May sign in**: as the machine's default allows (at the machine, on
+    a remote desktop, over the network, and the rest a person uses), or
+    only the ways you tick. **To run a service** lets the service manager
+    start a service as them without any password, and is never part of
+    the default.
 - **Add to group** puts them in a local group, or in a built-in one whose
   members are recorded here, such as `Administrators` or `Users`.
   **Remove**, beside a group they are in, takes them out of it.
+- **Add**, beside **SSH keys**, adds a public key: paste one line of their
+  `.pub` file, such as `~/.ssh/id_ed25519.pub`. Ed25519 keys are
+  accepted, and RSA keys of 3072 bits or more. Without a label, the key's
+  own comment is its label. **Remove**, beside a key, removes it.
+- **Add**, beside **Claims**, gives them a claim: its name, its type, and
+  its values, one to a line. Each value is checked against the type, and
+  one that doesn't fit is named. A claim of SIDs may name a user or group
+  instead of giving a SID. **Edit** changes a claim's type and values,
+  and **Remove** takes it away. A claim with no values is still a claim
+  they have, which conditions treat differently from one they don't.
 - **Disable** stops them signing in and keeps everything else; **Enable**
   lets them again.
 - **Delete** removes them, after asking. Their SID is never given to
   anyone again, so files and permissions that name it name nobody;
   **Disable instead** is offered, and is usually what you want.
 
-Changes to how a user signs in, and to the groups they are in, apply
-from their next sign-in.
+Changes to how a user signs in, to their keys, to the groups they are in
+and to their claims apply from their next sign-in.
 
 ## Groups
 
@@ -122,8 +144,10 @@ renamed, described or deleted: `authd` defines it, the same on every
 Peios machine.
 
 The machine always keeps an enabled administrator who can sign in.
-Disabling or deleting the last one, or taking away every way they could
-sign in to administer, is refused, and the window says why.
+Disabling or deleting the last one, taking away every way they could
+sign in to administer, or leaving them nothing to sign in with, such as
+removing the only key of one who signs in only with a key, is refused,
+and the window says why.
 
 ## Changes made elsewhere
 
@@ -137,6 +161,9 @@ once.
 Anyone may see the users and groups: the identity socket that
 Principals Manager reads them from answers everyone.
 
+What a user signs in with, and their SSH keys, are shown only to an
+administrator: `lpsd` holds them, and tells nobody else.
+
 Changing them needs `BUILTIN\Administrators`, enabled in your token, as
 `lps` does. Without it, the window says **You may look, but not change
 anything**, and why, and offers no changes. Built-in principals and
@@ -147,6 +174,7 @@ selected.
 
 `lps list` lists the users, `lps show NAME` shows one in full, and `lps
 group list` lists the local groups. `getent group Administrators` lists
-who is in a group. `lps add`, `lps set`, `lps rename`, `lps password`,
-`lps logon-types`, `lps disable` and `lps remove` make the same changes as
-the window. See [The `lps` command](~peios/managing-local-principals/lps-command).
+who is in a group, and `lps key list NAME` lists a user's keys. `lps add`,
+`lps set`, `lps rename`, `lps password`, `lps policy`, `lps key`, `lps
+logon-types`, `lps claim`, `lps group`, `lps disable` and `lps remove` make
+the same changes as the window. See [The `lps` command](~peios/managing-local-principals/lps-command).

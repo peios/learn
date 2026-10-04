@@ -136,7 +136,7 @@ Prefer this to `lps remove`. A removed principal's SID keeps appearing in the se
 
 ## You cannot lock yourself out
 
-`lps` refuses to remove the last enabled administrator, to disable them, or to take `Administrators` away from them.
+`lps` refuses to remove the last enabled administrator, to disable them, or to take `Administrators` away from them. It refuses as firmly to leave them no way to sign in: no kind of sign-in at the machine, remotely or over the network (`lps logon-types`), or nothing to sign in with (`lps policy` and `lps key remove`).
 
 ```
 $ lps disable jack

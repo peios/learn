@@ -1,7 +1,7 @@
 ---
 title: The lps command
 type: reference
-description: The lps command administers the local principal store — principals, passwords, groups and memberships, profiles, and claims.
+description: The lps command administers the local principal store — principals, passwords, credential policies and SSH keys, groups and memberships, profiles, and claims.
 related:
   - peios/managing-local-principals/overview
   - peios/managing-local-principals/creating-accounts
@@ -256,13 +256,69 @@ set the password for jack
 
 This is an administrator resetting somebody else's password. A principal changes their own with [`passwd`](~peios/signing-in/the-passwd-command), which goes over PGSS Logon instead, so that it works identically whichever source holds the account.
 
-An empty password is refused here for the same reason it is refused at creation. Giving a passwordless principal a password works and makes them an ordinary account; there is currently no command that takes one away again, so a principal created with `--no-password` can gain a credential but not shed one.
+An empty password is refused here for the same reason it is refused at creation. A password doesn't change what a principal signs in with: one created with `--no-password` keeps signing in with nothing until `lps policy <name> password` says otherwise (see [credentials](#credentials-and-ssh-keys) below). There is no command that deletes a password; `lps policy` decides whether it is used.
 
 **From a script**, `lps` reads a single line from standard input when it is not attached to a terminal, and does not ask for confirmation:
 
 ```
 printf '%s\n' "$password" | lps add alice --group Administrators --no-prompt
 ```
+
+## Credentials and SSH keys
+
+A principal's **credential policy** says what it signs in with. Its **SSH keys** are the public keys it may sign in with over SSH. The two are kept apart: adding a key, or setting a password, never changes the policy, and changing the policy never adds or removes either. Enrolling a key and letting it be used are two decisions.
+
+### `lps policy <name> <policy>`
+
+```
+$ lps policy erin either
+credential policy updated
+```
+
+| Policy | Signs in with |
+|---|---|
+| `password` | their password |
+| `key` | one of their SSH keys |
+| `either` | their password or one of their SSH keys |
+| `none` | nothing: nothing is asked for, at any sign-in prompt on the machine |
+| `denied` | nothing: every sign-in is refused, whatever is offered |
+
+`none` is what `lps add --no-password` gives, and carries the same warning. `denied` stops a principal signing in and keeps everything else, as `lps disable` does, but nothing shows it as disabled, so `lps disable` is usually clearer.
+
+It applies from their next sign-in. `lps show` and `lps key list` both say what it is now.
+
+It is refused if it would leave the last enabled administrator nothing to sign in with: `denied`, `key` when they have no key, or `password` when they have no password.
+
+### `lps key list <name>`
+
+```
+$ lps key list erin
+credential  key
+ID                                FINGERPRINT                                         ADDED       LABEL
+893dab4342ba215def78c4036b598b65  SHA256:QDzrP/cBqV7YSxqoCgCJQqKJlo6ijyJ8U05BIEKmYnI  2026-10-04  laptop
+```
+
+The first line is the credential policy. `ID` is what `lps key remove` takes, `FINGERPRINT` is as `ssh-keygen -l` prints it, and `ADDED` is the day the key was added, in UTC.
+
+### `lps key add <name> <file> [label]`
+
+```
+$ lps key add erin erin.pub laptop
+key enrolled; credential policy unchanged
+```
+
+The file is one line of an OpenSSH public key file, such as `~/.ssh/id_ed25519.pub`. Ed25519 keys are accepted, and RSA keys of 3072 to 8192 bits; nothing else is. Without a label, the key's own comment is its label.
+
+A key the principal already has is refused, as is a 33rd.
+
+### `lps key remove <name> <id>`
+
+```
+$ lps key remove erin 893dab4342ba215def78c4036b598b65
+key removed
+```
+
+Removing the last key of the last enabled administrator, when a key is all they may sign in with, is refused.
 
 ## Profiles
 
