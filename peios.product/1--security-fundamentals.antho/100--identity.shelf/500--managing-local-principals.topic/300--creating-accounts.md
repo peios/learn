@@ -106,14 +106,18 @@ Images built for development ship two things: a script that creates a known acco
 
 That is deliberate rather than an oversight. A live ISO is an unauthenticated medium: anyone holding it can boot it and read everything on it, so a password would be a formality rather than a boundary, and one printed in the image at that. What it is *not* is a posture to carry anywhere else.
 
-Give it a password the moment the machine becomes something you care about, which turns it into an ordinary account and stops the console signing in on its own:
+Give it a password the moment the machine becomes something you care about, then say it signs in with that password. The two together turn it into an ordinary account and stop the console signing in on its own:
 
 ```
 $ lps password peios
 New password for peios:
 Again:
 set the password for peios
+$ lps policy peios password
+credential policy updated
 ```
+
+The password alone changes nothing: until `lps policy` says otherwise, the account still signs in with nothing. Set the password first, since a policy of `password` is refused for the last administrator while they have none.
 
 Better still, build an image without the seed. See *On an image without one* below.
 
@@ -175,7 +179,7 @@ password changed
 
 It goes over PGSS Logon rather than through `lps`, so it works the same way whichever source holds your account — a domain principal changes their password exactly as a local one does. `lps password` is the other operation: an administrator setting somebody else's.
 
-An account created with `--no-password` has no current password to prove, so it cannot give itself one. An administrator sets one with `lps password`.
+An account created with `--no-password` has no current password to prove, so it cannot give itself one. An administrator sets one with `lps password`, and `lps policy <name> password` to have it used, or with Principals Manager's **Set password**, which does both.
 
 ## Where to go next
 

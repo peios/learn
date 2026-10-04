@@ -104,7 +104,7 @@ Select a local user, and their buttons are below their details:
   **Remove**, beside a group they are in, takes them out of it.
 - **Add**, beside **SSH keys**, adds a public key: paste one line of their
   `.pub` file, such as `~/.ssh/id_ed25519.pub`. Ed25519 keys are
-  accepted, and RSA keys of 3072 bits or more. Without a label, the key's
+  accepted, and RSA keys of 3072 to 8192 bits. Without a label, the key's
   own comment is its label. **Remove**, beside a key, removes it.
 - **Add**, beside **Claims**, gives them a claim: its name, its type, and
   its values, one to a line. Each value is checked against the type, and
