@@ -1,7 +1,7 @@
 ---
 title: Principals Manager
 type: how-to
-description: See this machine's users and groups from the desktop — who each is, what groups they are in, who is in each group, how they may sign in and what claims they carry — and, as an administrator, make, change, rename, disable and delete users and groups, and set what users sign in with, their SSH keys and their claims.
+description: See this machine's users and groups from the desktop — who each is, what groups they are in, who is in each group, how they may sign in, what claims they carry and what privileges they get — and, as an administrator, make, change, rename, disable and delete users and groups, set what users sign in with, their SSH keys and their claims, and change the privileges this machine gives.
 related:
   - peios/managing-local-principals/overview
   - peios/managing-local-principals/lps-command
@@ -149,11 +149,65 @@ sign in to administer, or leaving them nothing to sign in with, such as
 removing the only key of one who signs in only with a key, is refused,
 and the window says why.
 
+## Privileges
+
+What a person may do beyond what permissions allow them, such as back up
+any file or shut the machine down, is this machine's **local policy**:
+one **record** per user or group in the registry, which `authd` reads at
+every sign-in. Each record may give **privileges**, an **integrity**
+level, an **owner** for what they make, and a **default DACL**, the
+permissions an object they make gets when it has no parent to inherit
+from. See [Assigning privileges](~peios/privileges/assigning-privileges)
+for what each does and how records combine.
+
+**Privileges**, in the bar, lists the records: who each is for, how many
+privileges it gives, and its integrity. A service's record is named by
+the service. Select one to see it in full, each privilege with what it
+lets its holder do. **Denied to everyone**, the first row, is the
+privileges no record can give.
+
+A user's page says what they would get in all if they signed in now: the
+privileges, integrity, owner and default DACL that their own record,
+their groups' records and `Everyone`'s come to, and which records those
+are. **Signed in** chooses the kind of sign-in, such as at the machine or
+over the network, since a record may be for one kind of sign-in. A
+group's page says what its record gives its members.
+
+Changing them:
+
+- **New record** (or **Ctrl+N**) makes a record, for a user or group
+  here, a well-known name such as `Everyone` or `Network`, or a SID.
+  **Give them their own record**, on a user's page, and **Give it a
+  record**, on a group's, do the same for them.
+- **Edit** changes what a record gives: tick its privileges, choose its
+  integrity, and type an owner or a default DACL, in SDDL. Anything left
+  empty, the record says nothing about. A default DACL that isn't SDDL
+  `authd` could use is refused.
+- **Delete** removes a record, after asking. What it gave is no longer
+  given.
+- **Edit**, on **Denied to everyone**, chooses what no record may give.
+
+Taking `SeChangeNotifyPrivilege` from `Everyone` or `Administrators` is
+asked about first: without it, nobody who has it only from there can
+pass through a folder, so no shell starts for them.
+
+A record names a user or local group by its SID, since `authd` doesn't
+ask `lpsd` what a name means; the window does this for you. A record
+`authd` ignores, such as one named by a name it doesn't know, is shown
+above the list with why.
+
+On a machine with no policy at all, `authd` gives `Everyone`
+`SeChangeNotifyPrivilege` and nothing more, and the list says so. The
+first record saved makes the policy, with that in it, since once there
+is a policy it is all there is.
+
+Changes apply from each person's next sign-in.
+
 ## Changes made elsewhere
 
-The lists are read again every few seconds, so a user or group added,
-changed or removed with `lps`, or by another administrator, appears
-without your doing anything. **Refresh**, or **F5**, reads everything at
+The lists are read again every few seconds, so a user, group or
+privileges record added, changed or removed with `lps` or `reg`, or by
+another administrator, appears without your doing anything. **Refresh**, or **F5**, reads everything at
 once.
 
 ## What you may see and change
@@ -162,7 +216,9 @@ Anyone may see the users and groups: the identity socket that
 Principals Manager reads them from answers everyone.
 
 What a user signs in with, and their SSH keys, are shown only to an
-administrator: `lpsd` holds them, and tells nobody else.
+administrator: `lpsd` holds them, and tells nobody else. The privileges
+records are shown to anyone signed in, and changed by whoever the
+registry key's permissions let, which as shipped is `Administrators`.
 
 Changing them needs `BUILTIN\Administrators`, enabled in your token, as
 `lps` does. Without it, the window says **You may look, but not change
@@ -178,3 +234,6 @@ who is in a group, and `lps key list NAME` lists a user's keys. `lps add`,
 `lps set`, `lps rename`, `lps password`, `lps policy`, `lps key`, `lps
 logon-types`, `lps claim`, `lps group`, `lps disable` and `lps remove` make
 the same changes as the window. See [The `lps` command](~peios/managing-local-principals/lps-command).
+The privileges records are registry keys under
+`Machine\Generic\Authn\Policy`, read and changed with `reg`, and `token
+show --all` lists what a session's token actually holds.

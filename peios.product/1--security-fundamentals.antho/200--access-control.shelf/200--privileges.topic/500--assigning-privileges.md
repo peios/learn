@@ -8,6 +8,7 @@ related:
   - peios/managing-local-principals/overview
   - peios/tokens/overview
   - peios/process-integrity-protection/overview
+  - peios/managing-local-principals/principals-manager
 ---
 
 A principal source says **who someone is** — their SID, their memberships, their POSIX identifiers. It never says how much this machine trusts them. Privileges and integrity are **local policy**: `authd`'s alone, decided here, and there is no message with which a source could ask for one.
@@ -19,6 +20,8 @@ Machine\Generic\Authn\Policy
 ```
 
 `authd` reads it at **every logon**, not once at startup. A policy change takes effect the next time someone signs in, rather than the next time you restart the one daemon on the system that is most disruptive to restart.
+
+[Principals Manager](~peios/managing-local-principals/principals-manager) shows and edits it from the desktop. Its **Privileges** list is the records on this page, and each user's page says what they would get in all, worked out by the same code `authd` mints from.
 
 ## One record per principal
 
@@ -208,6 +211,8 @@ $ token show --all
 ```
 
 `[privileges]` lists what the token holds and `integrity` shows the label. A privilege the tool cannot name appears as `<privilege bit N>` rather than being omitted, so the list is always complete even when the name table is not.
+
+To see what a sign-in *would* get before anyone signs in, open the user in Principals Manager: it works the policy out for them, for each kind of sign-in, and says which records it came from.
 
 ## See also
 
