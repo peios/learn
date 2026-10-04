@@ -119,8 +119,9 @@ requested right by name and the access bits requested and granted;
 `graph.validation_error` and `graph.validation_warning` for validation
 findings; `notify.rejected` for an unauthenticated notification;
 `fd_store.rejected` for a refused descriptor; `notify.status`,
-`notify.errno`, `notify.exit_status` and `notify.stopping` for the four
-event-emitting notification fields; `cgroup.leaked` the first time a
+`notify.errno`, `notify.exit_status`, `notify.stopping` and
+`notify.progress` for the event-emitting notification fields, the last
+at most once a second for each activation (§10.5); `cgroup.leaked` the first time a
 sub-cgroup is found still populated after its post-kill deadline (§5.7);
 `graph.operation_terminal` for a graph member's terminal outcome;
 `recovery.entered` for the reason peinit dropped to a recovery shell

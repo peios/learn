@@ -140,10 +140,9 @@ Most are handled elsewhere: `READY=1` and `RELOADING=1` in §6.5,
 `WATCHDOG=1` and `WATCHDOG_USEC` and `EXTEND_TIMEOUT_USEC` in §6.6,
 `STOPPING=1` in §12.2, and the fd store fields in §10.6. What each does
 to a submitted job — and which are ignored for one, since a job has no
-reload, watchdog or store — is in §8.5, along with `PROGRESS=` and
-`PROGRESS_UNIT=`, which only a submitted job retains.
+reload, watchdog or store — is in §8.5.
 
-Four are event-emitting. `STATUS=`, `ERRNO=` and `EXIT_STATUS=` are
+Six are event-emitting. `STATUS=`, `ERRNO=` and `EXIT_STATUS=` are
 authenticated and then emitted as KMES events — `notify.status`,
 `notify.errno`, `notify.exit_status` — whose payloads carry the service
 name, the job identifier, the operation identifier and the activation
@@ -159,6 +158,16 @@ cannot be inferred from what happened afterwards. Without the event, a
 service that was stopping and correctly received no SIGTERM looks
 identical to one that should have received it and did not.
 
+`PROGRESS=` and `PROGRESS_UNIT=` emit `notify.progress`, carrying the
+same attribution and the progress as retained after the datagram —
+`progress_current`, `progress_total`, `progress_bounded` and
+`progress_unit`, the fields of a submitted job's `job.status`. A
+datagram carrying either yields one event, not one per line, and at
+most one a second for each activation: a datagram inside the second
+updates what a status query reports and emits nothing, so a service
+updating a thousand times a second produces one event a second.
+[*notify.progress-emits-at-most-one-event-a-second]
+
 `READY=1` and `RELOADING=1` emit nothing, deliberately: both are
 observable through the state transitions they cause.
 [*notify.ready-and-reloading-emit-no-event]
@@ -170,6 +179,17 @@ start of every activation generation, in the same step that increments
 the generation, so a status string cannot survive a restart and describe
 a process that no longer exists.
 [*notify.status-text-is-cleared-on-each-activation-generation]
+
+`PROGRESS=` and `PROGRESS_UNIT=` are stored the same way and exposed
+together as `progress` in a status query, in the form a submitted job's
+view gives it: `{current, total, bounded, unit}`, or null until the
+service sends a `PROGRESS=`. [*notify.progress-is-exposed-as-progress]
+Each is parsed as for a submitted job (§8.5): a value outside
+`PROGRESS=`'s three forms, a `T` of zero, an `N` above `T`, or a unit
+other than `bytes`, `items` or `percent` is dropped, never repaired, and
+the rest of the datagram is applied. Each is replaced only by a datagram
+that carries it. Both are cleared with `status_text`, in the same step.
+[*notify.progress-is-cleared-on-each-activation-generation]
 
 `ERRNO=` and `EXIT_STATUS=` are not stored. They are emitted and
 otherwise not retained. [*notify.errno-and-exit-status-are-not-stored]
