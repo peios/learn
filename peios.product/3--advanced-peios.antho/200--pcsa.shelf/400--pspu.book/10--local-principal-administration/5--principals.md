@@ -213,6 +213,9 @@ checks the types it knows.
 A store daemon MUST refuse, as `Invalid`, a request that would leave the
 store with no enabled principal in `BUILTIN\Administrators` who can sign
 in: removing or disabling the last one, removing the last one from that
-group (§10.6), or setting the last one's `permitted_logon_types` to a
+group (§10.6), setting the last one's `permitted_logon_types` to a
 set that permits none of interactive, remote interactive or network
-sign-in. A machine left so has nobody to administer it.
+sign-in, or leaving the last one nothing to sign in with (§10.8): a
+`CredentialPolicy` it would not have something to sign in with under,
+or a `KeyRemove` of the last key it signs in with. A machine left so
+has nobody to administer it.

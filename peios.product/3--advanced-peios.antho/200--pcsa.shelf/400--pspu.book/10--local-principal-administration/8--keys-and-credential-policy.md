@@ -45,8 +45,8 @@ A key:
 | `label` | string, 128 bytes |
 | `created` | `u64`: seconds since the Unix epoch |
 
-`KeyList` is the one request that answers the credential policy, so a
-client reading a principal's policy sends it.
+`Detail` (§10.5) answers the credential policy too, as a trailing
+optional field; `KeyList` answers it from every store daemon.
 
 ## KeyAdd
 
@@ -66,9 +66,15 @@ too long or carrying a control character. It does not change the policy.
 
 `msg_type` = `0x0013`. Body: `name`, then `id`, a byte string of 16
 bytes. Removes the key. Answered with `Done`, or `NotFound` for an `id`
-the principal has no key by.
+the principal has no key by. It is refused as the last-administrator
+rule says (§10.5).
 
 ## CredentialPolicy
 
 `msg_type` = `0x0014`. Body: `name`, then `policy`, a `u8`. Sets the
-principal's credential policy. Answered with `Done`.
+principal's credential policy. Answered with `Done`. It is refused as
+the last-administrator rule says (§10.5).
+
+A principal **has something to sign in with** when its policy is
+`NoCredential`; `Password` and it has a password; `SshPublicKey` and it
+has a key; or `PasswordOrKey` and it has either. `Denied` never does.
