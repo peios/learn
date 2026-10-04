@@ -1,7 +1,7 @@
 ---
 title: Principals Manager
 type: how-to
-description: See this machine's users and groups from the desktop — who each is, what groups they are in, who is in each group, how they may sign in and what claims they carry — and why you may look but not change anything.
+description: See this machine's users and groups from the desktop — who each is, what groups they are in, who is in each group, how they may sign in and what claims they carry — and, as an administrator, make, change, rename, disable and delete users.
 related:
   - peios/managing-local-principals/overview
   - peios/managing-local-principals/lps-command
@@ -48,6 +48,53 @@ a local group's is, so it is listed too.
 
 Select a group a user is in, or a member of a group, to go to it.
 
+## Making a user
+
+**New user**, in the bar, or **Ctrl+N**, asks for:
+
+- a **name**, which they sign in with;
+- a **full name**, if you want one shown;
+- a **password**, typed twice; or tick **Signs in without a password**,
+  and nothing is asked for when they sign in, at any sign-in prompt on
+  the machine;
+- whether they are an **Administrator**, who may change the machine and
+  its users and groups;
+- a **home** folder and a **shell**, if not `/home/<name>` and
+  `/bin/sh`.
+
+**Create** makes the user with all of it, or not at all: if anything is
+refused, such as a name already taken, nothing is made and the window
+says why.
+
+## Changing a user
+
+Select a local user, and their buttons are below their details:
+
+- **Edit** changes their full name, home and shell. Their home folder is
+  made at their first sign-in, and is not moved if you change it.
+- **Rename** changes the name they sign in with. They keep their SID, so
+  their files, permissions and groups stay theirs. Their home stays where
+  it is; change it under **Edit** if it should follow.
+- **Set password** gives them a new password. A user who signed in
+  without one needs it from then on. Their sessions already signed in
+  carry on.
+- **Sign-in** chooses how they may sign in: as the machine's default
+  allows (at the machine, on a remote desktop, over the network, and the
+  rest a person uses), or only the ways you tick. **To run a service**
+  lets the service manager start a service as them without any password,
+  and is never part of the default.
+- **Disable** stops them signing in and keeps everything else; **Enable**
+  lets them again.
+- **Delete** removes them, after asking. Their SID is never given to
+  anyone again, so files and permissions that name it name nobody;
+  **Disable instead** is offered, and is usually what you want.
+
+Changes to how a user signs in apply from their next sign-in.
+
+The machine always keeps an enabled administrator who can sign in.
+Disabling or deleting the last one, or taking away every way they could
+sign in to administer, is refused, and the window says why.
+
 ## Changes made elsewhere
 
 The lists are read again every few seconds, so a user or group added,
@@ -62,11 +109,14 @@ Principals Manager reads them from answers everyone.
 
 Changing them needs `BUILTIN\Administrators`, enabled in your token, as
 `lps` does. Without it, the window says **You may look, but not change
-anything**, and why. Built-in principals and groups can't be renamed or
-deleted, and the window says so when one is selected.
+anything**, and why, and offers no changes. Built-in principals and
+groups can't be renamed or deleted, and the window says so when one is
+selected.
 
 ## In a terminal
 
 `lps list` lists the users, `lps show NAME` shows one in full, and `lps
 group list` lists the local groups. `getent group Administrators` lists
-who is in a group. See [The `lps` command](~peios/managing-local-principals/lps-command).
+who is in a group. `lps add`, `lps set`, `lps rename`, `lps password`,
+`lps logon-types`, `lps disable` and `lps remove` make the same changes as
+the window. See [The `lps` command](~peios/managing-local-principals/lps-command).
