@@ -1,7 +1,7 @@
 ---
 title: Task Manager
 type: how-to
-description: See what is running on the machine from the desktop — every process, which service or job it belongs to, who it runs as, its CPU and memory, its protection and mitigations — and what you may not see of it, and why.
+description: See what is running on the machine from the desktop — every process, which service or job it belongs to, who it runs as, its CPU and memory, its protection and mitigations; the jobs; and who is signed in — end a process, stop its service or job, and see what you may not, and why.
 related:
   - peios/threads-and-processes/overview
   - peios/threads-and-processes/the-process-security-block
@@ -18,7 +18,11 @@ Manager's.
 Start it from the launcher: **Task Manager**.
 
 It looks at the machine as you, so it shows exactly what you may see of
-each process, and says what you may not, and why.
+each process, and says what you may not, and why. It offers to change
+something only where you may.
+
+**Processes**, **Jobs** and **Signed in**, in the bar, switch between its
+three lists.
 
 ## The processes
 
@@ -63,6 +67,53 @@ process runs with, such as no memory being both writable and executable,
 each with what it does. See
 [The process security block](~peios/threads-and-processes/the-process-security-block).
 
+## Ending a process, or stopping its service or job
+
+Below a process's details are what you may do to it:
+
+- **End process** asks first, then asks the process to end. One that
+  hasn't ended after five seconds is offered **End it now**, which ends
+  it at once, without its finishing what it is doing. The process is
+  held onto from the moment you ask, so another process given the same
+  PID later can't be ended by mistake.
+- **Stop service**, for a process that belongs to a service, asks peinit
+  to stop the service, and everything it started. It stays stopped until
+  it is started again. Ending a service's **main process** instead
+  counts, to peinit, as the service crashing, and it may start it again;
+  the window says so before you do.
+- **Stop job**, for a process in a job, asks peinit to stop the job.
+
+Each is there only where you may do it: End process where the process's
+permissions let you end it, and Stop where peinit says you may stop that
+service or job. Where you may not, the pane says why instead. A protected
+process can't be ended by any program not signed at its level.
+
+## Jobs
+
+A **job** is a program someone asked peinit to run and watch, outside any
+service: a person's desktop session is one. **Jobs** lists them: what
+each is, its state, who it runs as, and how far it says it has got. A job
+in full shows what it last said of itself, its progress, its program and
+process, who it runs as and who asked for it, when it started and ended,
+and how it ended. **Stop job** is there where you may stop it.
+
+peinit lists a job only to those who may see it: by default, whoever
+asked for it, and Administrators. The others are left out, and the
+window says so. A job that has ended stays in the list for a minute.
+
+## Who is signed in
+
+**Signed in** lists each **session**, which is one sign-in: who, how
+(at the machine, on the desktop, over SSH, or over the network), since
+when, and how many of its processes you can see. A session in full lists
+its processes, each of which leads to it, and its desktop session, if it
+has one. Services sign in too, each in a session of its own; tick
+**Services' sessions** to show them.
+
+The full list is the kernel's, which only Administrators may read.
+Anyone else sees the sessions their own processes are in, and the window
+says so.
+
 ## What you may see
 
 What you may see of a process is its own permissions' to say:
@@ -79,13 +130,14 @@ What you may see of a process is its own permissions' to say:
   above the list says how many there are. Where peinit can say which
   service a protected process is, it is listed under that service.
 
-A job is listed to whoever may query it, which by default is who asked
-for it and Administrators. A process in a job you may not query is listed
-under **A job**, and says so.
+A process in a job you may not see is listed under **A job**, and says
+so.
 
 ## In a terminal
 
 There is no `ps` yet. [`logonse psb --pid PID`](~peios/system-and-processes/logonse)
 shows a process's protection and mitigations, `logonse list` the
-signed-in sessions and their processes, and `svctl status NAME` a
-service's main process.
+signed-in sessions and their processes, `svctl status NAME` a service's
+main process, `svctl stop NAME` stops a service, `svctl job list` lists
+the jobs and `svctl job stop ID` stops one, and `kill PID` ends a
+process.
