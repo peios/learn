@@ -40,6 +40,23 @@ A build configured for KUnit compiles in a different, hard-coded key
 at the same tier, taken from the test vector header. [*sig.kunit-test-key] Such a kernel
 trusts a publicly known key.
 
+`/sys/kernel/security/kacs/signing_keys` lists the table: one line for
+each entry before the terminator, in table order, reading
+
+```
+key_sha256=<hex> pip_type=<u32> pip_trust=<u32>
+```
+
+where the key is named by the SHA-256 of its raw 1952-byte public key, in
+lowercase hexadecimal, and the type and trust are the entry's own, in
+decimal. [*sig.key-table.securityfs-listing] Entries are listed as they
+are, whether or not the validator would accept them, so a table that
+disables signing shows why. The keys are public, so reading the file is
+not access-checked; whoever can open it can read it. Like every
+securityfs object, it can be opened only once the mount has a
+synthesising policy, which on Peios lets Authenticated Users in.
+[*sig.key-table.securityfs-unchecked]
+
 ## Finding a signature
 
 Verification begins by recording the file's current size. Everything
