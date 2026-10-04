@@ -104,7 +104,7 @@ $ peipkg history
 | Option | Effect |
 |---|---|
 | `-n N` | Show at most `N` transactions. `-n 0` shows all of them. The default is `20`. |
-| `--json` | Emit JSON. |
+| `--json` | Emit JSON: for each transaction its `id`, `state`, `started_at`, `summary`, and `operations`, each an `action` (`install`, `upgrade`, `downgrade`, `remove` or `claim`), the package `name`, and its `from` and `to` versions where they apply. |
 
 The history is what [`undo`](~peios/package-management/keeping-a-system-current) reads to find the most recent transaction, and what ties a stray `*.peipkg-backup-<id>` file back to the operation that created it.
 
