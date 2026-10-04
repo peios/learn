@@ -151,11 +151,11 @@ A [Critical service](~peios/services-and-jobs/supervision) exhausting its restar
 | `Machine\System\Boot\PostKillTimeout` | 5 | Seconds a service cgroup may take to drain after SIGKILL before it counts as stuck. |
 | `Machine\System\Boot\SettleTimeout` | 5 | Seconds peinit waits for devices to settle before services that wait for them start. |
 
-All but `ShutdownTimeout` are read at boot, so a change applies at the next one; `ShutdownTimeout` applies the next time peinit re-reads its configuration (`svctl reload-config`). **System Settings** shows and changes them on its **Startup & shutdown** tab, under **Timeouts**, which needs write access to `Machine\System\Boot` — as shipped, Administrators.
+All but `ShutdownTimeout` are read at boot, so a change applies at the next one; `ShutdownTimeout` applies the next time peinit re-reads its configuration (`svctl reload-config`). **System Settings** shows and changes them in its **Startup & shutdown** section, under **Timeouts**: **Apply** and **Undo** appear once one has been edited. Changing them needs write access to `Machine\System\Boot` — as shipped, Administrators.
 
 ## How this boot went
 
-`svctl boot` asks peinit, and so does **System Settings**, under **This boot** on the **Startup & shutdown** tab:
+`svctl boot` asks peinit, and so does **System Settings**, at the top of its **Startup & shutdown** section:
 
 ```
 $ svctl boot
@@ -210,9 +210,9 @@ A few lines escape all of this: whatever peinit and prelude print *before* they 
 
 ### Seeing and changing it
 
-**System Settings** shows the command line this boot was started with, under **Kernel command line** on the **Startup & shutdown** tab, and the one the next boot image will be made from, `/lcl/etc/boot/cmdline`, where they differ.
+**System Settings** shows the command line this boot was started with, under **Kernel command line** in the **Startup & shutdown** section, and the one the next boot image will be made from, `/lcl/etc/boot/cmdline`, where they differ.
 
-On an installed machine the command line is part of the boot image, which is made when Peios is installed or upgraded, so editing that file changes nothing on its own. With the dynamic-boot feature installed, its `mkuki-watch` service makes the boot image again whenever the file changes; then System Settings offers `peios.bootattempts` and `peios.quiet` as choices — how many boots may fail before Recovery, and what peinit writes on the console — and writes them into the file, to apply at the next boot. Nothing else on the line is offered: a mistake there can leave a machine that doesn't boot. Writing the file needs write access to it, which as shipped only Administrators have.
+On an installed machine the command line is part of the boot image, which is made when Peios is installed or upgraded, so editing that file changes nothing on its own. With the dynamic-boot feature installed, its `mkuki-watch` service makes the boot image again whenever the file changes; then System Settings offers `peios.bootattempts` and `peios.quiet` as choices — how many boots may fail before Recovery, and what peinit writes on the console — and writes them into the file with **Apply at the next boot**, which appears once one has been changed. Nothing else on the line is offered: a mistake there can leave a machine that doesn't boot. Writing the file needs write access to it, which as shipped only Administrators have.
 
 Unknown `peios.*` tokens are ignored, as is a malformed value on either of the two valued tokens — this parser runs before anything exists to report a diagnostic to, and refusing to boot over a typo in a tuning knob is the worse outcome.
 

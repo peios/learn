@@ -169,7 +169,7 @@ reg set Machine/System/Network Hostname workshop
 
 netd applies it on the next pass. A profile with `Hostname.Offered` on adopts a network-supplied name when this value is unset; `Hostname.Announce` tells DHCP servers the name so their DNS can register it. Both are off in a bare profile.
 
-netd sets whatever is written, but a network carries the name as one label: letters, digits and hyphens, at most 63 of them, not beginning or ending with a hyphen, and not `localhost`. **System Settings** holds it to that as it is typed: on its **About** tab, **Name** says what is wrong with a name before it can be saved, and shows the name the machine has now if netd hasn't applied the new one yet. The About tab also shows what the machine is and runs: the system and its edition, the kernel, how long it has been up, the hardware, and the disks.
+netd sets whatever is written, but a network carries the name as one label: letters, digits and hyphens, at most 63 of them, not beginning or ending with a hyphen, and not `localhost`. **System Settings** holds it to that as it is typed: in its **About** section, **This machine's name** says what is wrong with a name before it can be applied, and shows the name the machine has now if netd hasn't applied the new one yet; **Apply** appears once the name has been changed. The About section also shows what the machine is and runs: the system and its edition, the kernel, how long it has been up, the hardware, and the disks.
 
 ## When netd refuses
 

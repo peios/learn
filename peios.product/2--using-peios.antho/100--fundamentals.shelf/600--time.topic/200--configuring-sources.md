@@ -11,7 +11,7 @@ related:
 Everything about where a machine gets its time is under
 `Machine\System\Time`. There is no configuration file, and `clock` writes
 no policy — `reg` is how it is changed, or System Settings, whose **Time
-servers** card on the **Time & date** tab writes the same values. Either
+servers** group in the **Time & date** section writes the same values. Either
 way the key's own security descriptor is the only gate.
 
 ## Naming your own servers
