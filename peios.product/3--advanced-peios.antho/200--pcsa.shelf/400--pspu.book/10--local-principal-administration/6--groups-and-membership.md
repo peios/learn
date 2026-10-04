@@ -1,6 +1,6 @@
 ---
 title: Groups and Membership
-description: Listing, creating and deleting local groups, and putting principals in groups — local, BUILTIN or any other — and setting a principal's primary group.
+description: Listing, creating, renaming, describing and deleting local groups, and putting principals in groups — local, BUILTIN or any other — and setting a principal's primary group.
 ---
 
 ## GroupList
@@ -12,27 +12,68 @@ description: Listing, creating and deleting local groups, and putting principals
 `msg_type` = `0x8007`. Every **local** group in the store, as an array of
 at most 4096 length-framed entries:
 
-| Field | Encoding |
-|---|---|
-| `name` | string, 256 bytes |
-| `rid` | `u32` |
-| `unix_id` | `u32`: its effective Unix ID (§10.2) |
-| `sid` | SID |
-| `members` | `u32`: how many principals list it |
+| Field | Encoding | Default if absent |
+|---|---|---|
+| `name` | string, 256 bytes | |
+| `rid` | `u32` | |
+| `unix_id` | `u32`: its effective Unix ID (§10.2) | |
+| `sid` | SID | |
+| `members` | `u32`: how many principals list it | |
+| `description` | string, 1024 bytes | empty |
 
 The well-known groups are not in it: the store holds none of them as
 objects (§10.2). `members` counts listed memberships, not principals
 whose primary group it is; the identity socket's `MEMBERS` counts both
 (PGSS §2.16).
 
+A group's **description** says what it is for, on one line, for a person
+to read; empty is none. Anyone may read it, on the identity socket's
+`DESCRIPTION` (PGSS §2.16), where a store daemon that is a principal
+source answers it.
+
 ## GroupCreate
 
-`msg_type` = `0x000b`. Body: `name`. Creates a local group, with the
-store's next RID. Answered with `Created` carrying it.
+`msg_type` = `0x000b`. Creates a local group, with the store's next RID.
+Answered with `Created` carrying it.
+
+| Field | Encoding | Default if absent |
+|---|---|---|
+| `name` | string, 256 bytes | |
+| `description` | string, 1024 bytes | empty |
 
 A store daemon MUST refuse a name it already holds, a principal's or a
 group's, as `Exists`, and applies the same rules to a group's name as to
-a principal's (§10.5).
+a principal's (§10.5). It MAY refuse a description it will not keep as
+`Invalid`; on Peios one may hold no control characters, and is kept with
+the spaces at its ends removed.
+
+A store daemon that predates `description` ignores it, and makes the
+group with none, as `Add` describes (§10.5).
+
+## GroupRename
+
+`msg_type` = `0x0017`. Body: `name`, a local group's, then `new_name`,
+as `Rename` (§10.5). Changes what the group is called. Answered with
+`Done`.
+
+Its SID, RID and Unix ID stay, and so does every membership of it, since
+a membership names the group by SID. A store daemon MUST answer
+`NotFound` where it holds no local group by `name`, and refuses
+`new_name` as `Rename` does.
+
+## GroupDescribe
+
+`msg_type` = `0x0018`. Sets a local group's description. Answered with
+`Done`.
+
+| Field | Encoding |
+|---|---|
+| `name` | string, 256 bytes: a local group's |
+| `description` | string, 1024 bytes; empty clears it |
+
+A store daemon MUST answer `NotFound` where it holds no local group by
+`name`. The well-known groups' descriptions are the authority's, and
+cannot be set here.
 
 ## GroupDelete
 

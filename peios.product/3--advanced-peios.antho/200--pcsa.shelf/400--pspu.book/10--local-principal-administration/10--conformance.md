@@ -30,7 +30,8 @@ cannot read, or holds already (§10.8). Gives a principal made without a
 password the policy `NoCredential`, and one made with one `Password`
 (§10.5). Makes a principal whole or not at all, refusing an `Add` if it
 refuses any field of it (§10.5). Keeps a renamed principal's SID, RID,
-Unix ID and home directory (§10.5). Holds one name for one principal or
+Unix ID and home directory (§10.5), and a renamed group's SID, RID, Unix
+ID and memberships (§10.6). Holds one name for one principal or
 local group, matched without regard to case (§10.5, §10.6). Never
 reissues a RID (§10.2).
 

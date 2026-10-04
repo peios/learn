@@ -115,6 +115,7 @@ single bit.
 | 7 | `CLAIMS` | array of claim entries |
 | 8 | `ENABLED` | `u8` |
 | 9 | `LOGON_TYPES` | `u32` |
+| 10 | `DESCRIPTION` | string |
 
 A bit MAY be added without a version bump, because a reply states which
 fields it answered and an authority MUST ignore a bit it does not

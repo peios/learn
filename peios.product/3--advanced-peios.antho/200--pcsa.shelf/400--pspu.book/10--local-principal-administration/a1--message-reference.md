@@ -29,6 +29,8 @@ description: Every PLPS message by number, which reply answers which request, th
 | `0x0014` | `CredentialPolicy` | client → store daemon | `Done` | §10.8 |
 | `0x0015` | `Rename` | client → store daemon | `Done` | §10.5 |
 | `0x0016` | `SetLogonTypes` | client → store daemon | `Done` | §10.5 |
+| `0x0017` | `GroupRename` | client → store daemon | `Done` | §10.6 |
+| `0x0018` | `GroupDescribe` | client → store daemon | `Done` | §10.6 |
 | `0x8001` | `Principals` | store daemon → client | | §10.5 |
 | `0x8002` | `Principal` | store daemon → client | | §10.5 |
 | `0x8003` | `DomainIs` | store daemon → client | | §10.5 |
@@ -59,6 +61,7 @@ Any request may be answered with `Failed` instead.
 | A password | 4096 bytes, never empty |
 | `home`, `shell` | 4096 bytes |
 | `display_name` | 256 bytes |
+| A group's `description` | 1024 bytes |
 | A principal's listed groups | 128 |
 | Principals in `Principals` | 4096 |
 | Groups in `Groups` | 4096 |

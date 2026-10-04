@@ -84,6 +84,7 @@ them.
 | 7 | `CLAIMS` | array of claim entries, 64 |
 | 8 | `ENABLED` | `u8` |
 | 9 | `LOGON_TYPES` | `u32` |
+| 10 | `DESCRIPTION` | string, 1024 bytes |
 
 An authority MUST ignore a bit it does not implement, and MUST NOT
 report it (below). Claim entries use the claim attribute format PCDS
@@ -99,6 +100,12 @@ at once.
 An authority substituting a default for zero MUST NOT include `Service`
 in it. A principal that has never said how it may be used has certainly
 not said it may be used for a credential-free service logon (§2.19).
+
+`DESCRIPTION` says what a group is for, in words for a person to read,
+on one line. A group with none is answered with an empty string: it has
+no description, which is an answer. A principal has none, and the field
+is withheld as `Absent` (below). An authority answers it for its own
+well-known groups as well as relaying a source's.
 
 > [!NOTE]
 > Field bits are the one place in this chapter where an enumeration may

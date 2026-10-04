@@ -73,6 +73,7 @@ other socket (§2.14).
 | `GROUPS` | 128 entries | §2.16 |
 | `MEMBERS` | 256 entries | §2.16 |
 | `CLAIMS` | 64 entries | §2.16 |
+| `DESCRIPTION` | 1024 bytes | §2.16 |
 | `of_name` | 256 bytes | §2.17 |
 | `cursor`, `next` | 256 bytes | §2.17 |
 | `entries` | 256 entries | §2.17 |
