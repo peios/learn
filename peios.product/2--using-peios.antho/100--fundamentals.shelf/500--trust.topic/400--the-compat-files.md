@@ -60,6 +60,10 @@ compat       GenerateLinuxTrustFiles = 0 (no files; the socket is the only store
 The socket keeps serving throughout — `trust list` still answers, and so
 does any program that speaks to trustd directly.
 
+In Security Policy, the **Certificate Files** switch under **Settings**
+writes the same value. Turning it on applies at once; turning it off asks
+first, since it breaks every program that reads a path.
+
 ## Why a copy, when name resolution gets a pointer
 
 `/etc/resolv.conf` on Peios is a constant file naming the resolver, and

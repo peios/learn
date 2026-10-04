@@ -1,7 +1,7 @@
 ---
 title: Adding and distrusting certificates
 type: how-to
-description: Trust a certificate authority the shipped set does not include, stop trusting one it does, and understand what happens when the store cannot be composed.
+description: Trust a certificate authority the shipped set does not include, stop trusting one it does, with the trust command or Security Policy on the desktop, and understand what happens when the store cannot be composed.
 related:
   - peios/trust/overview
   - peios/trust/the-trust-command
@@ -9,7 +9,41 @@ related:
 ---
 
 Two things can be decided about this machine's trust, and both are values
-under `Machine\System\Trust\Certificates`.
+under `Machine\System\Trust\Certificates`. Change them with `trust` on a
+terminal, or **Security Policy** on the desktop (type `security` in the
+launcher), which takes the same steps.
+
+## In Security Policy
+
+Security Policy's **Certificates** sections show what `trust status`,
+`trust list` and `trust list --distrusted` show, and change it.
+
+- **Trusted** lists every certificate authority in force, those shipped
+  with Peios and those added on this machine, with a search above them.
+  Opening one shows who issued it, when it is valid, its key, serial number
+  and SHA-256 fingerprint, and what it is trusted for. **Export…** saves
+  it as a PEM file. **Distrust…** stops trusting it, and **Remove…** takes
+  back one this machine added; both ask first, under their row.
+- **Add Certificate…** opens a PEM or DER file and shows what is in it
+  before anything is trusted. A file that holds several certificates, a
+  certificate that isn't a CA, one that has expired, or one already
+  trusted or distrusted is shown with the reason and can't be added.
+  Otherwise give it a name and choose its purposes, then **Add
+  Certificate**.
+- **Distrusted** lists what is refused, with the reason it was given, and
+  names each certificate where this machine has a copy. **Trust Again…**
+  restores one after asking. **Distrust by Fingerprint…** refuses a
+  certificate the machine doesn't have, by its whole fingerprint, or by a
+  prefix of one it does.
+- **Settings** shows whether trustd is up to date, with **Reload** for
+  those trustd lets reload it; turns the [files under
+  /etc/ssl](~peios/trust/the-compat-files) on and off; and opens the
+  permissions editor on `Machine\System\Trust` (**Changing Trust**) and on
+  trustd's `ControlSecurity` (**Trust Service**).
+
+The window follows trustd, so a change made elsewhere, with `trust` or
+`reg`, appears in it within a few seconds. What you may not change is
+shown read-only, with the reason said once.
 
 ## Trusting a certificate authority
 
