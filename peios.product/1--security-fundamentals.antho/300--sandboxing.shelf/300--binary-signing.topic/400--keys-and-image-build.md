@@ -29,6 +29,13 @@ At exec, when the kernel verifies a signature, it tries each key in the table in
 
 The table is part of the kernel image. It is read-only at runtime; there is no syscall to add an entry, modify an entry, or remove one. Replacing the table requires replacing the kernel.
 
+To see which keys a running kernel trusts, open **Security Policy** on the desktop and choose **Signing Keys**, or read `/sys/kernel/security/kacs/signing_keys`, which lists each key by the SHA-256 of its public key with the PIP type and trust it confers:
+
+```
+$ cat /sys/kernel/security/kacs/signing_keys
+key_sha256=3f9c…e01a pip_type=512 pip_trust=8192
+```
+
 ### Why ML-DSA-65
 
 FIPS 204 defines three parameter sets — ML-DSA-44, ML-DSA-65 and ML-DSA-87 — trading signature size against security margin. Peios uses **ML-DSA-65**, and the deciding constraint is where signatures live rather than cryptographic preference.
