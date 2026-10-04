@@ -122,6 +122,8 @@ A reported file is not necessarily a fault. A configuration file you edited on p
 
 If every checked file is intact, `verify` says so and exits `0`. If anything diverged, it lists each problem and exits non-zero — which makes it usable as a check in a monitoring script.
 
+With `--json` it emits the problems as an array, each a `package` and a `problem`, and exits `0` whether or not it found any: an empty array means every checked file is intact.
+
 ## Cleaning the metadata cache
 
 ```
