@@ -34,10 +34,21 @@ state, or in-flight reference fails with `-EBUSY`. [*token.session.destroy-empty
 A second enumeration surface exists alongside `/proc`:
 `/sys/kernel/security/kacs/sessions` lists every live session, one
 line each, giving the session ID, user SID, logon type, authentication
-package, and creation time. [*token.session.securityfs-listing] securityfs itself is unclassified by FACS,
+package, and creation time. [*token.session.securityfs-listing] Each
+line reads
+
+```
+logon_session_id=<u64> user_sid=<hex> logon_type=<u32> auth_package=<hex> created_at=<u64>
+```
+
+with the user SID's binary form and the package name's bytes in
+lowercase hexadecimal, and `created_at` in seconds since the Unix
+epoch. securityfs itself is unclassified by FACS,
 so its objects sit deny-missing until the mount is given a synthesising
-policy (§3.9.5); only then can the file be opened at all. Reading it is access-checked against a
-synthetic descriptor granting read to SYSTEM and the creator, and is
+policy (§3.9.5); only then can the file be opened at all. On Peios,
+peinit gives it one at boot that lets Authenticated Users open and
+traverse. Reading it is access-checked against a
+synthetic descriptor granting read to SYSTEM and Administrators, and is
 PIP-checked. [*token.session.securityfs-access-check]
 
 AccessCheck never consults `auth_id`, and the logon SID influences a

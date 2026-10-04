@@ -163,6 +163,30 @@ file's current kernel-resolved backing path checked against every
 approved prefix. If the path cannot be resolved, if no prefix matches,
 or if the cache is empty, the mapping is rejected. [*psb.tlp.mmap-rejects-unmatched]
 
+## Reading the PSB
+
+`/proc/<pid>/psb` gives a process's PSB as one line of text, in this
+order:
+
+```
+pip_type=<u32> pip_trust=<u32> mitigations=0x<hex> process_guid=<uuid>
+```
+
+`mitigations` is the committed mitigation bitfield in at least three
+hexadecimal digits, including `ui_access` and `no_child_process`, with
+the bit values of §3.A. `process_guid` is the 16 bytes in order,
+formatted 8-4-4-4-12. [*psb.proc.psb-file]
+
+A process reads its own without any check. Reading another process's
+needs `PROCESS_QUERY_LIMITED` on its process descriptor, with
+`SeDebugPrivilege` rescuing a descriptor denial as it does for every
+process right, and **does not** need PIP dominance. That a process is
+protected is not a secret every other refusal keeps; it is what a
+caller needs to see to understand those refusals. [*psb.proc.psb-read-access]
+
+The PSB is otherwise written only: `kacs_set_psb` sets mitigations and
+returns nothing about them.
+
 ## Identity virtualization (reserved) [*psb.virtualization.reserved]
 
 | Field | Description |

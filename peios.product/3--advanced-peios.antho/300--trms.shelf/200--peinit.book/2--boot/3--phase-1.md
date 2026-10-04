@@ -41,6 +41,7 @@ and mounts only what is not:
 | `/dev/shm` | tmpfs | nosuid, nodev | peinit |
 | `/run` | tmpfs | nosuid, nodev | peinit |
 | `/sys/fs/cgroup` | cgroup2 | nosuid, nodev, noexec | peinit |
+| `/sys/kernel/security` | securityfs | nosuid, nodev, noexec | peinit |
 
 Each `mount(2)` passes the filesystem name as both the source and the
 filesystem type, passes only the listed flags, and passes null mount
@@ -61,6 +62,22 @@ so any authenticated principal may open any slave; per-owner slave
 descriptors need kernel support for stamping the opener's identity at
 materialisation, and are recorded as future work, not provided here.
 
+`/sys/kernel/security` gets the same kind of policy, for the same
+reason: securityfs cannot store descriptors either. Its template grants
+SYSTEM full control and Authenticated Users read and traverse
+[*phase1.securityfs-gets-a-synthesise-ephemeral-policy]:
+
+```
+O:SYG:SYD:(A;;GA;;;SY)(A;;GRGX;;;AU)
+```
+
+KACS publishes `kacs/self` and `kacs/sessions` there (see
+[Logon sessions](~peios/advanced-peios/peios-kernel/kacs/tokens/logon-sessions)), and
+each makes its own check when read, so opening `sessions` is allowed to
+anyone signed in while reading it stays with Administrators and SYSTEM.
+Only SYSTEM may write: `lockdown` is the one writable file on the mount,
+and raising the kernel's lockdown level is not routine administration.
+
 There is a bootstrap wrinkle in reading mountinfo at all: the file lives
 in `/proc`, which is one of the things being checked for. If the read
 fails with `ENOENT` or `ENOTDIR`, peinit mounts `/proc` from the table
@@ -70,13 +87,13 @@ other failure to read or parse mountinfo sends peinit to recovery.
 
 For the three initramfs-provided rows, an already-mounted filesystem is
 success, and so is an `EBUSY` from an attempted mount.
-[*phase1.an-already-mounted-kernel-filesystem-is-success] For the four
+[*phase1.an-already-mounted-kernel-filesystem-is-success] For the five
 peinit owns, a mount failure sends peinit to recovery.
 [*phase1.a-failed-peinit-owned-mount-is-recovery]
 
 ### Seeding descriptors on the new filesystems [*phase1.fresh-mounts-are-seeded]
 
-Three of the four filesystems peinit mounts are fresh and empty:
+Three of the five filesystems peinit mounts are fresh and empty:
 `/dev/shm`, `/run` and `/sys/fs/cgroup`. Under KACS an inode with no
 Security Descriptor is denied to every caller, and there is nothing on a
 newly mounted tmpfs for a new inode to inherit from — so peinit stamps

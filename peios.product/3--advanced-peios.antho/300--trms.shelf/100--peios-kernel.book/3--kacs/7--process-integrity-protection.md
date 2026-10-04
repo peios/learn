@@ -119,7 +119,10 @@ its own right. [*pip.pidfd-getfd.dup-handle]
 memory-open-gated are covered automatically by the ptrace hook. The
 rest would leak information about a protected process, so the
 non-ptrace-gated entries carry their own descriptor requirement plus
-dominance; §3.3.3 gives the mapping. [*pip.proc.metadata-needs-descriptor-and-dominance] Entries stricter than a metadata
+dominance; §3.3.3 gives the mapping. [*pip.proc.metadata-needs-descriptor-and-dominance] The one exception is
+`/proc/<pid>/psb`, which needs `PROCESS_QUERY_LIMITED` and no
+dominance: a protected process's PIP type, trust and mitigations are
+readable to whoever its descriptor lets query it (§3.3.2). [*pip.proc.psb-exempt-from-dominance] Entries stricter than a metadata
 query, such as `/proc/<pid>/stack`, keep their native hardening and
 are not brought under the metadata rule. [*pip.proc.stricter-entries-keep-native]
 

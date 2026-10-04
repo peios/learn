@@ -49,9 +49,11 @@ For **your own state** (your thread's effective token, your process's primary to
 
 For **another process's state**:
 
-- `/proc/<pid>/token` requires `PROCESS_QUERY_INFORMATION` on the target process **plus** PIP dominance.
+- `/proc/<pid>/token` requires `PROCESS_QUERY_INFORMATION` on the target process, PIP dominance, **and** `TOKEN_QUERY` on the token's own descriptor.
 - `/proc/<pid>/task/<tid>/token` requires the same.
-- Token fd from `kacs_open_process_token` requires the same plus the appropriate token rights.
+- Token fd from `kacs_open_process_token` requires the same, with whatever token rights you ask for in place of `TOKEN_QUERY`.
+
+A token's default descriptor grants `TOKEN_QUERY` to its own user, its creator, SYSTEM and `BUILTIN\Administrators`. So an administrator can read who any unprotected process runs as and which session it is in, and anyone else can read only their own.
 
 For **session state**:
 
@@ -60,10 +62,9 @@ For **session state**:
 
 For **process state** beyond the token (process SD, PIP, mitigations):
 
-- Read your own PSB via `kacs_open_self_token` or querying through the process-token's interface — always.
-- Read another process's PSB requires `PROCESS_QUERY_INFORMATION` plus PIP dominance.
+- `/proc/<pid>/psb` gives a process's PIP type and trust, its mitigations and its process GUID. Your own is always readable; another process's needs `PROCESS_QUERY_LIMITED` on its descriptor, and **not** PIP dominance.
 
-The pattern: self is free, others need standard cross-process authority. PIP dominance is the absolute ceiling that nothing — no privilege, no inspection surface — bypasses. The kernel does not expose state of higher-trust processes to lower-trust callers under any conditions.
+The pattern: self is free, others need standard cross-process authority. PIP dominance is the ceiling that nothing — no privilege, no inspection surface — bypasses, with one exception: `/proc/<pid>/psb`. That a process is protected, and how, is not a secret the refusals keep (they already reveal it), and it is what lets a caller see *why* everything else about the process is closed to them.
 
 ## Two ways to read a token
 

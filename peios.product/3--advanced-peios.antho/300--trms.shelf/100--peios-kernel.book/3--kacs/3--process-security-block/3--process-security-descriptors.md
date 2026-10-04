@@ -21,7 +21,7 @@ descriptor evaluation.
 | `PROCESS_SET_INFORMATION` | 0x0200 | Change priority, CPU affinity, I/O priority, resource limits, process group membership where Linux permits it, timer slack, memory-placement policy or pages, and mutable `/proc/<pid>` task state — `sched`, `autogroup`, `timens_offsets`, `timerslack_ns`, `coredump_filter`, `oom_adj`, `oom_score_adj`, `make-it-fail`, `fail-nth`, `latency` and `clear_refs`, plus write intent on the coupled `uid_map`, `gid_map`, `projid_map` and `setgroups` seq files. [*psb.right.set-information] |
 | `PROCESS_QUERY_INFORMATION` | 0x0400 | Inspect the process's token; read the detailed `/proc/<pid>/*` files — `cmdline`, `status`, `io`, `limits`, `sched`, `autogroup`, `timens_offsets`, `personality`, `syscall`, `latency`, `timers`, `timerslack_ns`, `mounts`, `mountinfo`, `mountstats`, `coredump_filter`, `oom_adj`, `oom_score_adj`, `loginuid`, `make-it-fail`, `fail-nth`, `seccomp_cache`, `ksm_merging_pages` and `ksm_stat` — plus read intent on the coupled `uid_map`, `gid_map`, `projid_map` and `setgroups` seq files; query Linux compatibility capability state through `capget(pid)`; and query detailed scheduler, CPU-affinity and I/O-priority state. [*psb.right.query-information] |
 | `PROCESS_SUSPEND_RESUME` | 0x0800 | Send signals whose default action is to stop or continue. [*psb.right.suspend-resume] |
-| `PROCESS_QUERY_LIMITED` | 0x1000 | Read basic process information: PID, process group ID, session ID, image name, state, CPU and memory usage — `stat`, `statm`, `comm`, `wchan`, `schedstat`, `cpuset`, `cgroup`, `cpu_resctrl_groups`, `oom_score`, `sessionid`, `patch_state`, `stack_depth` and `arch_status`. This is what `ps` and `top` show, it covers `/proc/<pid>/stat`, and it is the right required for `pidfd_open()` and for `kill(pid, 0)` existence probes. [*psb.right.query-limited] |
+| `PROCESS_QUERY_LIMITED` | 0x1000 | Read basic process information: PID, process group ID, session ID, image name, state, CPU and memory usage — `stat`, `statm`, `comm`, `wchan`, `schedstat`, `cpuset`, `cgroup`, `cpu_resctrl_groups`, `oom_score`, `sessionid`, `patch_state`, `stack_depth`, `arch_status` and `psb`. This is what `ps` and `top` show, it covers `/proc/<pid>/stat`, and it is the right required for `pidfd_open()` and for `kill(pid, 0)` existence probes. [*psb.right.query-limited] |
 | `READ_CONTROL` | 0x20000 | Read the process's own descriptor. |
 | `WRITE_DAC` | 0x40000 | Modify the process's DACL. |
 | `WRITE_OWNER` | 0x80000 | Change the descriptor's owner. |
@@ -34,6 +34,10 @@ Three `/proc` entries are not where the right names suggest.
 which is defensible but is not what the right's name implies. [*psb.proc.maps-fd-environ-are-vm-read] And
 `cgroup` sits in the **`PROCESS_QUERY_LIMITED`** set rather than the
 detailed one. [*psb.proc.cgroup-in-query-limited]
+
+`psb` is the process's PSB, read under `PROCESS_QUERY_LIMITED` with no
+PIP dominance (§3.3.2). It is the one `/proc` entry whose check is
+KACS's own rather than the metadata rule's.
 
 ## Signal classification [*psb.signal.by-default-action]
 

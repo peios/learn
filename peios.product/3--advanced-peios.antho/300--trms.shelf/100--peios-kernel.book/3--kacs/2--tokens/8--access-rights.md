@@ -16,6 +16,15 @@ A separate variant opens a thread's impersonation token. [*token.rights.open-thr
 another process's token additionally requires
 `PROCESS_QUERY_INFORMATION` on the target process's descriptor. [*token.rights.open-other-needs-process-query]
 
+**Opening through `/proc`.** `/proc/<pid>/token` and
+`/proc/<pid>/task/<tid>/token` open a process's primary token and a
+thread's effective token as a query-only handle: the fd always carries
+`TOKEN_QUERY` and nothing else. Opening another process's file makes
+both of the syscall's checks — `PROCESS_QUERY_INFORMATION` on the
+process's descriptor, with PIP dominance, and `TOKEN_QUERY` on the
+token's own descriptor — so the path reads nothing the syscall would
+refuse. A process opens its own without either check. [*token.rights.proc-token-file]
+
 The peer-token socket option (`getsockopt(SOL_KACS,
 KACS_SO_PEER_TOKEN)`) is the exception: it takes no desired-access
 mask, and the fd it returns always carries the fixed rights
@@ -86,7 +95,14 @@ process's user SID, with a DACL granting:
 - the token's own user SID `TOKEN_QUERY | TOKEN_ADJUST_PRIVILEGES |
   TOKEN_ADJUST_GROUPS | TOKEN_ADJUST_DEFAULT`;
 - the creator `TOKEN_ALL_ACCESS`;
-- SYSTEM (`S-1-5-18`) `TOKEN_ALL_ACCESS`.
+- SYSTEM (`S-1-5-18`) `TOKEN_ALL_ACCESS`;
+- Administrators (`S-1-5-32-544`) `TOKEN_QUERY`.
+
+The Administrators grant is read-only: it lets an administrator see who
+any process runs as, its groups and privileges, and which logon session
+it belongs to, which is what a machine-wide process listing needs.
+Duplicating, impersonating, adjusting or rewriting the token still
+needs the token's own grants. [*token.rights.default-sd-administrators-query]
 
 Self-access is deliberately limited to the adjustment operations that
 cannot escalate. `TOKEN_DUPLICATE`, `TOKEN_IMPERSONATE`, and

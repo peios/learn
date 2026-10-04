@@ -1,7 +1,7 @@
 ---
 title: Inspecting processes
 type: concept
-description: Inspecting a process's PSB (PIP, mitigations) and process SD. Your own state is free; another process needs PROCESS_QUERY_INFORMATION plus PIP dominance.
+description: Inspecting a process's PSB (PIP, mitigations) through /proc/<pid>/psb, and its process SD. Your own state is free; another process's PSB needs PROCESS_QUERY_LIMITED, and its SD needs READ_CONTROL plus PIP dominance.
 related:
   - peios/inspecting/overview
   - peios/inspecting/tokens
@@ -11,7 +11,7 @@ related:
   - peios/process-mitigations/overview
 ---
 
-A process's inspectable state spans three things: its **token** (its identity), its **PSB** (its PIP labels and mitigation flags), and its **process SD** (the policy on the process as an object). Each is read through its own surface but the access rules are similar — your own state is always readable; another process's state needs `PROCESS_QUERY_INFORMATION` plus PIP dominance.
+A process's inspectable state spans three things: its **token** (its identity), its **PSB** (its PIP labels and mitigation flags), and its **process SD** (the policy on the process as an object). Each is read through its own surface. Your own state is always readable; another process's needs a right on its process SD, and for everything but the PSB, PIP dominance too.
 
 This page covers the per-process inspection surfaces beyond the token. Tokens are covered in [Inspecting tokens](~peios/inspecting/tokens); this page is about the PSB and the process SD.
 
@@ -21,42 +21,42 @@ The Process Security Block is the per-process kernel structure with:
 
 | Field | Meaning |
 |---|---|
-| `pip_type` | The process's PIP type (None / Protected / Isolated). |
-| `pip_trust` | The PIP trust level within the type. |
+| `pip_type` | The process's PIP type: 0 for none, 512 for Protected. |
+| `pip_trust` | The PIP trust level within the type: 8192 for `PeiosTcb`. |
 | Mitigation flags | The bitfield of enabled mitigations (WXP, LSV, TLP, CFIF, CFIB, PIE, SML, NO_CHILD, etc.). |
-| `security_descriptor` | The process SD, governing cross-process operations. |
+| `process_guid` | The process's identity for its whole life, unlike its PID, which is reused. Events carry it. |
 
-These are the inspectable fields. Internal fields (refcounts, lock state) are not exposed.
+The process SD sits beside the PSB and is read separately (below). Internal fields (refcounts, lock state) are not exposed.
 
-## Inspecting your own process
+## Reading a PSB
 
-For a thread inspecting its own process's PSB, the path is:
+`/proc/<pid>/psb` is one line of text:
 
-1. **Open the process's primary token** via `kacs_open_self_token` (with the `KACS_REAL_TOKEN` flag if you need the primary specifically, not the impersonation). The returned fd lets you query token state.
-2. **Query the token information you need.** `TokenStatistics.auth_id` identifies its LogonSession; `TokenInteractivityScope` separately identifies its interactive-environment scope.
-3. **Read the process SD** via `kacs_get_sd` with a self-targeted query (using the appropriate flags for "this process").
+```
+pip_type=512 pip_trust=8192 mitigations=0x105 process_guid=3f2c9a1e-6b0d-4c8e-9a41-2d7e5f10b6c3
+```
 
-For some PSB fields, dedicated query routes exist:
+`mitigations` is the bitfield below, in hexadecimal.
 
-- The PIP fields can be read by querying the calling process's PSB through a dedicated path. The typical surface is via the token's session/process classes, which carry the PIP fields as part of the per-token snapshot.
-- The mitigation bitfield is readable from the process itself; the typical pattern is to query the PSB directly via the appropriate ioctl.
+- **Your own** is always readable.
+- **Another process's** needs `PROCESS_QUERY_LIMITED` on its process SD — the right `ps` needs for a process's name and CPU use, which the default process SD gives Everyone.
 
-The exact API for reading the PSB is in the [Kernel ABI reference](~peios/kernel-abi-reference/overview); the conceptual point for this page is that all PSB fields are introspectable by the process itself, with no privilege required.
+PIP dominance is **not** required here, and this is the only inspection surface where it is not. That a process is protected, and at what trust, is not a secret the kernel keeps: every other refusal already reveals it. Reading it is what lets a tool such as Task Manager say *why* the rest of a process is closed — "protected: signed Peios TCB" rather than an unexplained "access denied".
 
-## Inspecting another process's PSB
+## Inspecting another process
 
-To inspect another process's PSB, you need:
+Everything beyond the PSB needs two things:
 
-- **`PROCESS_QUERY_INFORMATION`** on the target's process SD.
+- **The right on the target's process SD**: `PROCESS_QUERY_INFORMATION` for its token and detailed `/proc` entries, `READ_CONTROL` for its process SD.
 - **PIP dominance** over the target (the caller's PIP must dominate the target's, per the [two-check rule](~peios/process-integrity-protection/the-two-check-rule)).
 
-Both requirements apply. A token-bearing principal granted `PROCESS_QUERY_INFORMATION` cannot inspect a higher-PIP process even with the SD grant — the PIP check is independent.
+Both requirements apply. A principal granted `PROCESS_QUERY_INFORMATION` cannot inspect a higher-PIP process even with the SD grant — the PIP check is independent.
 
-Once both checks pass, the same query mechanisms work: open the target's primary token (via `kacs_open_process_token`), query through `KACS_IOC_QUERY`, read the process SD via `kacs_get_sd`.
+Once both checks pass, open the target's primary token (via `/proc/<pid>/token` or `kacs_open_process_token`), query through `KACS_IOC_QUERY`, and read the process SD via `kacs_get_sd`. Reading the token needs `TOKEN_QUERY` on the token's own descriptor as well, which by default its user, its creator, SYSTEM and Administrators have.
 
-The PIP dominance requirement is the same one that gates every cross-process operation. A low-trust caller cannot see into a high-trust process even via inspection. A SeDebugPrivilege-holder can bypass the SD check (`PROCESS_QUERY_INFORMATION` becomes trivially granted) but does not bypass PIP — a privileged debugger still cannot inspect TCB processes.
+A SeDebugPrivilege-holder can bypass the process SD check (`PROCESS_QUERY_INFORMATION` becomes trivially granted) but does not bypass PIP — a privileged debugger still cannot inspect TCB processes.
 
-In practice, only peinit and processes signed at the same PIP level as the target can inspect TCB processes. Ordinary administrators with `SeDebugPrivilege` are blocked at the PIP layer.
+In practice, only peinit and processes signed at the same PIP level as the target can inspect TCB processes. Ordinary administrators with `SeDebugPrivilege` are blocked at the PIP layer, and see such a process's PSB and nothing else.
 
 ## Reading the process SD
 
@@ -80,9 +80,7 @@ A non-privileged caller can read a process's DACL (if granted) but not its SACL.
 
 ## Reading mitigation flags
 
-The mitigation bitfield on the PSB is read via a dedicated query path. For your own process the read is trivial. For another process the same `PROCESS_QUERY_INFORMATION` + PIP dominance rules apply.
-
-The bitfield is the same one the kernel uses internally:
+The mitigation bitfield is the `mitigations` value in `/proc/<pid>/psb`, under the rule in [Reading a PSB](#reading-a-psb). It is the same one the kernel uses internally:
 
 | Flag | Bit | Meaning |
 |---|---|---|
@@ -110,7 +108,7 @@ The sequence:
 1. **Open the process's primary token** via `/proc/<pid>/token` or `kacs_open_process_token`.
 2. **Query `TokenUser`** for the user SID.
 3. **Query `TokenStatistics`** for `auth_id`. Cross-reference with `/sys/kernel/security/kacs/sessions` for session details.
-4. **Read the PSB** for PIP and mitigations.
+4. **Read `/proc/<pid>/psb`** for PIP and mitigations.
 5. **Read the process SD** for who can act on this process.
 
 Each step requires the appropriate access, and each fails closed if the caller lacks authority over the target. For self-targeted queries everything succeeds.
