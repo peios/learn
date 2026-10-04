@@ -1,7 +1,7 @@
 ---
 title: Task Manager
 type: how-to
-description: See what is running on the machine from the desktop — every process, which service or job it belongs to, who it runs as, its CPU and memory, its protection and mitigations; the jobs; and who is signed in — end a process, stop its service or job, and see what you may not, and why.
+description: See what is running on the machine from the desktop — every process, which service or job it belongs to, who it runs as, its CPU and memory, its protection and mitigations; how busy the processors, memory, disks and network are; the jobs; and who is signed in — end a process, stop its service or job, sign someone out, and see what you may not, and why.
 related:
   - peios/threads-and-processes/overview
   - peios/threads-and-processes/the-process-security-block
@@ -21,8 +21,8 @@ It looks at the machine as you, so it shows exactly what you may see of
 each process, and says what you may not, and why. It offers to change
 something only where you may.
 
-**Processes**, **Jobs** and **Signed in**, in the bar, switch between its
-three lists.
+**Processes**, **Performance**, **Jobs** and **Signed in**, in the bar,
+switch between its four views.
 
 ## The processes
 
@@ -87,6 +87,36 @@ Each is there only where you may do it: End process where the process's
 permissions let you end it, and Stop where peinit says you may stop that
 service or job. Where you may not, the pane says why instead. A protected
 process can't be ended by any program not signed at its level.
+
+## Performance
+
+**Performance** shows the machine as a whole: how busy its processors
+are, how much of its memory is in use, and how fast each disk and network
+interface is moving data. Each is listed down the side with a small graph;
+select one to see it in full, with a graph of the last two minutes, newest
+at the right.
+
+- **CPU** graphs how much of the processors' time is in use, and how much
+  of that is the kernel's own work. **Each processor** gives each logical
+  processor a graph of its own. Below are the processor's model and
+  speed, the number of processes and threads, how long the machine has
+  been up, and the **load average**: how many threads were running or
+  waiting to, on average over the last 1, 5 and 15 minutes.
+- **Memory** graphs how much is in use, and shows what all of it is made
+  of: in use, cache the kernel gives back when programs need it, and
+  free. **Available** is what programs could be given now. **Committed**
+  is what programs have been promised, against how much may be.
+- **Each disk** graphs how much of the time it was busy (its **active
+  time**), and how fast it read and wrote. Its capacity, and what it has
+  read and written since the machine started, are below.
+- **Each network interface** graphs how fast it is receiving and sending,
+  in bits a second as networks are measured. Its state, link speed and
+  hardware address are below; its addresses and settings are Network
+  Manager's.
+
+The figures are the kernel's own, which anyone may read, so everyone sees
+the same view. Speeds are worked out between one look and the next, every
+two seconds. Nothing is kept once the window closes.
 
 ## Jobs
 
