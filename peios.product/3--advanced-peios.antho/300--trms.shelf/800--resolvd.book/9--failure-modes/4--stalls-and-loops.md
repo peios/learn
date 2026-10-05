@@ -6,11 +6,13 @@ description: The failures that come from resolvd's single thread and its channel
 ## A client that does not read
 
 Native replies and stub TCP replies are written from the loop, blocking,
-for up to one second each (§2.5). A local client that sends a question
-whose reply is larger than its socket's buffer and then does not read
-holds every door for that second. Repeated, it slows every lookup on
-the machine. Nothing is logged for a stub TCP write that times out; a
-native one logs `control: reply failed`.
+for up to one second per write call, and a reply larger than the
+socket's buffer takes several calls (§2.5). A local client that sends a
+question whose reply is larger than its socket's buffer and then does
+not read holds every door for those seconds: about two on the native
+socket. Repeated, it slows every lookup on the machine. Nothing is
+logged for a stub TCP write that times out; a native one logs
+`control: reply failed`.
 
 ## netd refuses the subscription
 

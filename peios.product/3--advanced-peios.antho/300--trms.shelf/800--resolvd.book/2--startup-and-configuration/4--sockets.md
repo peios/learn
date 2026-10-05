@@ -33,11 +33,13 @@ The DACL written to both the directory and the socket is:
 
 ### The owner of the directory and socket [*sockets.owner-left-as-resolvd]
 
-Only the DACL is written; the owner stays resolvd's account, which
-created both objects. Reaching the socket grants nothing: every request
+Only the DACL is written, so each object keeps the owner it was created
+with. peinit creates `/run/resolvd` before resolvd starts (§2.1), so the
+directory is owned by SYSTEM; resolvd creates the socket, which is owned
+by resolvd's account. Reaching the socket grants nothing: every request
 is checked against the control object (§5.2).
 
-### A descriptor that cannot be written [*sockets.descriptor-failure-logged-not-fatal]
+### A descriptor that cannot be written
 
 If the descriptor cannot be written, resolvd logs at error level
 

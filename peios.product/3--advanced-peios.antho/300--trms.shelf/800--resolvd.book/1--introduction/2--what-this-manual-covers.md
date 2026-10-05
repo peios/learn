@@ -32,7 +32,7 @@ what each part of the system can do:
 | `libresolv` | The native channel's types, MessagePack codec and framing. No I/O beyond framing. |
 | `resolvd` | The engine, the cache, the stub door's DNS rendering, and the daemon around them. |
 | `resolv` | The operator command. |
-| `nss` | The shim. Links `libresolv` and libc and nothing else. |
+| `nss` | The shim. Built on `libresolv` and libc, without libpeios (§7.1). |
 
 ## Covered elsewhere
 

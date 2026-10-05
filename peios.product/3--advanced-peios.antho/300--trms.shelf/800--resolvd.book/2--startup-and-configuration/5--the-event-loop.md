@@ -67,14 +67,23 @@ A question that needs the network sends its first transaction within
 that iteration too, and is answered in the iteration that sees its
 deciding reply or its last deadline.
 
-## Writes are synchronous [*loop.replies-written-blocking-one-second]
+## Writes are synchronous [*loop.replies-written-blocking]
 
 Replies to native clients and to stub TCP clients are written from
-inside the loop, in blocking mode with a one-second write timeout. While
-a write is blocked, nothing else is serviced.
+inside the loop, in blocking mode, with a one-second timeout on each
+write call. While a write is blocked, nothing else is serviced.
 
-A reply that fits in the socket's buffer is written at once; a large
-reply to a client that does not read can hold the whole daemon for up
-to a second (§9.4). Stub UDP replies and upstream queries are not
-written this way. The netd subscription request is written with a
-two-second timeout when the channel is opened (§3.1).
+A reply that fits in the socket's buffer is written at once, in one
+call. A reply that does not is written in as many calls as it takes: a
+call that times out having sent part of the reply is followed by
+another for the rest, and the write ends when the whole reply is sent
+or a call fails, as one that times out having sent nothing does. Each
+call blocks for at most a second, so a large reply to a client that
+does not read holds the whole daemon for several seconds (§9.4): about
+two on the native socket, where the first call fills the socket's
+buffer and the second sends nothing, and about three on a stub TCP
+connection whose send buffer is small.
+
+Stub UDP replies and upstream queries are not written this way. The
+netd subscription request is written with a two-second timeout when
+the channel is opened (§3.1).

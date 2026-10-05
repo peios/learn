@@ -59,7 +59,8 @@ resolvd takes to answer.
 with `via` present when the reply names a server and `on` when it names
 an interface, and fields on record lines separated by tabs. A line
 `rcode <name>` follows the summary when the outcome is `found` and the
-response code is not zero.
+response code is not zero. resolvd answers `found` only with response
+code zero (§4.8), so against resolvd the line does not appear.
 
 ### `lookup` output [*resolv.lookup-output]
 

@@ -72,7 +72,9 @@ as for `FallbackServers`.
   name. The value's name is the host name and its data is one address
   (`REG_SZ` or `REG_EXPAND_SZ`) or several (`REG_MULTI_SZ`), read as
   above. [*config.hosts-value-is-one-static-name]
-- A value name that is not UTF-8 is skipped silently. [*config.hosts-non-utf8-name-skipped]
+- A value name that is not UTF-8 is skipped silently. The registry
+  refuses such a name when the value is written, so the check is
+  defensive. [*config.hosts-non-utf8-name-skipped]
 - A value name that does not parse as a domain name is skipped and
   logged as `Dns Hosts: ignoring malformed name "<name>"`. [*config.hosts-malformed-name-skipped-and-logged]
 - A value name that parses to the root — an empty name, or `.` — is

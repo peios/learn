@@ -10,8 +10,10 @@ resolvd's source tree builds.
 
 - `libnss_peios_net.so.2` is installed by `dev.peios.resolvd-nss` at
   `/usr/lib/x86_64-linux-peios/libnss_peios_net.so.2`. [*nss-module.installed-path]
-- It is built from the `nss` crate and links the native channel codec
-  and libc; it does not link libpeios. [*nss-module.links-codec-and-libc-only]
+- It is built from the `nss` crate, with the native channel codec
+  compiled in. Its shared-object dependencies are `libgcc_s.so.1`,
+  `libc.so.6` and the dynamic loader, `ld-linux-x86-64.so.2`; it does
+  not link libpeios. [*nss-module.link-dependencies]
 
 ### The entry points [*nss-module.entry-points]
 

@@ -59,8 +59,12 @@ The payload is a MessagePack map, decoded as follows:
 - Every key is a string, and a key repeated in the request's top-level
   map is an error. Keys inside a skipped value are not checked for
   repeats. [*native-framing.duplicate-top-level-key-is-error]
-- A key resolvd does not know is skipped, whatever its value — `nil`,
-  boolean, integer, string, binary, array or map. [*native-framing.unknown-keys-skipped]
+- A key resolvd does not know is skipped when its value is `nil`, a
+  boolean, an integer, a string, binary, an array or a map, with one
+  exception among the integers: an integer above
+  9 223 372 036 854 775 807 (a `uint 64` of 2^63 or more) anywhere
+  inside the value, a map key included, fails the request with
+  `malformed message: unexpected value type`. [*native-framing.unknown-keys-skipped]
 - A floating-point or extension value anywhere inside an unknown key's
   value fails the decode, and so does a string inside it that is not
   UTF-8: a skipped string is still checked. [*native-framing.unknown-key-unsupported-value-fails]
@@ -91,7 +95,7 @@ else:
 |---|---|
 | `request too large` | The size checks above |
 | `malformed message: truncated message` | The payload ends inside a value, or an array or map claims more items than bytes remain, a map's keys and values counted separately [*native-framing.error-truncated] |
-| `malformed message: unexpected value type` | A known field, a key, or the payload itself has the wrong MessagePack type; this includes a `type` that is negative or above 9 223 372 036 854 775 807 [*native-framing.error-unexpected-type] |
+| `malformed message: unexpected value type` | A known field, a key, or the payload itself has the wrong MessagePack type; this includes a `type` that is negative or above 9 223 372 036 854 775 807, and an integer above 9 223 372 036 854 775 807 anywhere inside an unknown key's value [*native-framing.error-unexpected-type] |
 | `malformed message: unsupported value type` | A floating-point or extension value [*native-framing.error-unsupported-type] |
 | `malformed message: string is not UTF-8` | A string that is not UTF-8 [*native-framing.error-not-utf8] |
 | `malformed message: nested too deeply` | Nesting beyond 32 levels inside a skipped value [*native-framing.error-nested-too-deeply] |
@@ -107,8 +111,8 @@ After an error reply the connection is closed.
 ## Writing the reply
 
 - The reply is framed the same way — four-byte little-endian length,
-  then the MessagePack map — and written in one blocking write with a
-  one-second timeout (§2.5). A failed write is logged as
+  then the MessagePack map — and written blocking, with a one-second
+  timeout on each write call (§2.5). A failed write is logged as
   `control: reply failed: <error>`. The connection is then closed. [*native-framing.reply-written-then-closed]
 - The size of a reply is not checked against the 65 536-byte ceiling
   before it is written. [*native-framing.reply-size-not-checked]

@@ -97,7 +97,9 @@ Worst cases, from the first transaction to the answer:
   `refused` counter goes up by one. A candidate whose scope has no
   servers left is answered `unavailable` before the ceiling is looked
   at, and is not counted as refused. [*engine-servers.in-flight-ceiling-refuses-first-attempts]
-- Later attempts and TCP retries are not checked against the ceiling,
-  so the count can pass 4 096. [*engine-servers.retries-not-checked-against-ceiling]
+- Later attempts and TCP retries are not checked against the ceiling.
+  Each is sent only after the transaction before it has ended and been
+  removed, so it takes that transaction's place and the count does not
+  rise above 4 096. [*engine-servers.retries-not-checked-against-ceiling]
 - Synthetic names and cache hits are answered as usual whatever the
   count. [*engine-servers.local-answers-unaffected-by-ceiling]

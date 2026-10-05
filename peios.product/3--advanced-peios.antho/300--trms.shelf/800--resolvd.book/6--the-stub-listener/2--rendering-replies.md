@@ -55,5 +55,6 @@ options. A query without `OPT` gets a reply without one.
 - A reply that cannot be encoded at all is not sent. [*stub-render.unencodable-reply-not-sent]
 - Over TCP the whole reply is sent, whatever its size up to the 65 535
   bytes a DNS message can hold. [*stub-render.tcp-sends-whole-reply]
-- A TCP reply is written with its two-byte length in one blocking write
-  with a one-second timeout (§2.5); a failed write is not logged. [*stub-render.tcp-write-failure-not-logged]
+- A TCP reply is written with its two-byte length, blocking, with a
+  one-second timeout on each write call (§2.5); a failed write is not
+  logged. [*stub-render.tcp-write-failure-not-logged]

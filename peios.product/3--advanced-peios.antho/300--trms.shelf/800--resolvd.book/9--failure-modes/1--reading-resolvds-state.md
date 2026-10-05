@@ -32,7 +32,7 @@ Every line resolvd writes, with the level it is written at:
 | `poll: <error>` | error | The loop failed; resolvd exits (§2.2) |
 | `could not set a descriptor on <path> (<error>); …` | error | The native socket is reachable only by SYSTEM and administrators (§2.4) |
 | `removed a stale /run/resolvd/resolv.sock` | warn | A previous instance left its socket behind (§2.4) |
-| `could not build a descriptor: <error>` | warn | As the line above, before writing was attempted [*failure-signals.descriptor-build-failure-line] |
+| `could not build a descriptor: <error>` | warn | As `could not set a descriptor …`, but before writing was attempted (§2.4) |
 | `registry watch unavailable (<error>); configuration is read once` | warn | Configuration changes will not be seen (§2.3) |
 | `registry watch: <error>; re-arming` | warn | The watch failed and is being replaced (§2.3) |
 | `Dns FallbackServers: ignoring malformed address "<s>"` | warn | §2.3 |
