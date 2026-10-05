@@ -52,8 +52,57 @@ Two well-known SIDs receive special treatment during inheritance:
 - **CREATOR GROUP (`S-1-3-1`)** — replaced with the primary group SID of
   the creating principal.
 
-Substitution happens at inheritance time. The resulting ACE on the child
-contains the resolved SID, not the placeholder.
+Substitution happens at inheritance time, in each ACE that applies to the
+new object. An inherit-only ACE keeps the placeholder, so that each object
+further down resolves it to its own owner or group (see the inherited ACEs
+below).
+
+## The ACEs a child inherits
+
+Each ACE of the parent's ACL contributes to a new child as follows. The
+same rule applies to the DACL and the SACL.
+
+1. **Whether it passes.** An ACE passes to a container child if it has CI,
+   or OI without NP. It passes to a non-container child if it has OI.
+   INHERIT_ONLY on the parent's ACE plays no part. An ACE that does not
+   pass contributes nothing.
+
+2. **The copy's flags.** The copy has INHERITED_ACE set and INHERIT_ONLY
+   cleared, with three exceptions:
+   - An ACE with OI and neither CI nor NP reaches a container as
+     inherit-only (OI, IO): it applies to the objects inside, not to the
+     container.
+   - NP clears OI, CI and NP from the copy. The copy applies to the child
+     and goes no further.
+   - A non-container's copy has no OI, CI, NP or IO.
+
+   Flags other than these (SUCCESSFUL_ACCESS_ACE, FAILED_ACCESS_ACE) are
+   kept.
+
+3. **Resolution.** A copy that applies to the child (IO clear) has
+   CREATOR OWNER and CREATOR GROUP substituted, and its generic rights
+   mapped through the child's GenericMapping (see below).
+
+4. **The split.** An ACE that names CREATOR OWNER or CREATOR GROUP, or
+   carries generic rights, and whose copy both applies to a container
+   child and goes on from it (OI or CI still set), gives the child **two**
+   ACEs, written one after the other:
+   - the resolved copy, with OI, CI, NP and IO cleared, applying to the
+     child alone; and
+   - an inherit-only copy (the copy's flags with IO set), **left as
+     written**: the placeholder unsubstituted and the generic rights
+     unmapped.
+
+   Resolving the ACE once and carrying the result down would grant the
+   first creator over everything beneath, and map rights through one
+   object type's mapping for objects of another. Carrying it unresolved
+   would grant nothing here. A non-container gets the resolved copy alone.
+   Every other ACE is inherited as one copy.
+
+For example, a directory whose DACL holds `(A;OICIIO;GA;;;CO)` and
+`(A;OICI;GR;;;AU)` gives a new subdirectory owned by alice
+`(A;ID;FA;;;alice)(A;OICIIOID;GA;;;CO)(A;ID;FR;;;AU)(A;OICIIOID;GR;;;AU)`,
+and a new file in it `(A;ID;FA;;;alice)(A;ID;FR;;;AU)`.
 
 ## Inheritance algorithm
 
@@ -108,15 +157,18 @@ inheritable ACEs from the parent SD:
 In all cases, the resulting DACL is post-processed:
 
 - CREATOR OWNER / CREATOR GROUP SIDs are substituted with the actual
-  owner and group. This substitution applies to the ACE's SID field
+  owner and group in every ACE that applies to the object (INHERIT_ONLY
+  clear). This substitution applies to the ACE's SID field
   only. ApplicationData — conditional expression bytecode — is copied
   verbatim: no SID substitution, no generic mapping, no offset
   adjustment. An implementation MUST NOT scan ApplicationData for
   CREATOR OWNER or CREATOR GROUP SIDs.
-- Generic rights in all ACEs (both explicit and inherited) are mapped to
-  object-specific rights via the object type's GenericMapping. This
-  ensures no unresolved generic bits persist on stored ACEs. Generic
-  rights appearing inside ApplicationData are not mapped.
+- Generic rights in every ACE that applies to the object (both explicit
+  and inherited) are mapped to object-specific rights via the object
+  type's GenericMapping, so no generic bits persist on an ACE the access
+  check reads. An inherit-only ACE keeps its generic rights and
+  placeholders as written, for the objects further down to resolve.
+  Generic rights appearing inside ApplicationData are not mapped.
 - The INHERITED_ACE flag is set on all ACEs that came from the parent.
 - If any ACE was inherited from the parent, SE_DACL_AUTO_INHERITED is
   set on the new SD's control flags; if the DACL came from the token's
@@ -142,6 +194,33 @@ directory tree at access time to find inheritable ACEs.
 A consequence of eager evaluation: modifying an inheritable ACE on a
 parent object does not automatically update existing children. Existing
 children retain the SD they were created with. Propagating the change to
-descendants is an explicit operation outside the scope of this document.
-Children with SE_DACL_PROTECTED or SE_SACL_PROTECTED set MUST be skipped
-during any re-propagation.
+descendants is an explicit operation, done by userspace, as below.
+
+## Re-propagation
+
+Re-propagation brings existing descendants up to date with their parent.
+The kernel has no primitive for it: the program that changed the parent
+walks the tree. Every program that does MUST give the same result, which
+is this.
+
+For one child and one ACL (the DACL, the SACL, or each in turn):
+
+1. If the child protects that ACL (SE_DACL_PROTECTED or
+   SE_SACL_PROTECTED), it is left exactly as it is.
+2. Otherwise, the child's ACEs with INHERITED_ACE set are removed, its
+   other ACEs are kept in their order, and the ACEs the parent's ACL gives
+   it (above, resolved against the child's own owner and group, through
+   the child's object type's GenericMapping) are appended after them. The
+   ACL is marked SE_DACL_AUTO_INHERITED or SE_SACL_AUTO_INHERITED.
+3. A parent without that ACL gives nothing, so only the inherited ACEs are
+   removed. A child without that ACL gets one only if something is
+   inherited into it.
+
+The owner, group and the ACL not being re-propagated are unchanged. A
+child is re-propagated from its parent as the parent is after its own
+re-propagation, so a walk goes parents first. A protected child still
+passes its own ACEs on: its descendants are re-propagated from it as it
+is. A failure on one child does not stop the walk: the rest are
+re-propagated and the failures reported.
+
+libpeios implements this as `reinherit_with` (`peios_sd_reinherit_ex`).
