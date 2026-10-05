@@ -4,7 +4,8 @@ description: How scopes reach the resolver — a subscribe request on the manage
 ---
 
 The live facts of the network — which interface has which servers,
-which carries the default route — never pass through the registry. [*nri-manager.live-facts-never-in-registry] They
+which carries the default route — never reach the resolver through the
+registry, whatever the manager also records there. [*nri-manager.live-facts-never-in-registry] They
 go from the network manager to the resolver directly, over the
 manager's own control socket, and they are gone when the manager is.
 

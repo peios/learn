@@ -86,15 +86,19 @@ answer learned through it MUST be discarded: what a VPN's servers said
 dies with the VPN. [*nri-resolution.cache-discarded-with-scope]
 
 Positive answers live for their least TTL, capped (§6.B). [*nri-resolution.positive-ttl-least-capped] Negative
-answers — `notfound`, and `found` with no records — live for the SOA
-minimum in the authority section (RFC 2308), capped lower. [*nri-resolution.negative-ttl-soa-minimum-capped] `unavailable`
+answers — `notfound`, and `found` with no records — live for the lesser
+of the authority section's SOA record TTL and its MINIMUM field (RFC 2308
+§5), capped lower. [*nri-resolution.negative-ttl-soa-minimum-capped] `unavailable`
 is never cached. A hit reports TTLs reduced by the time spent in cache. [*nri-resolution.cache-hit-ttl-reduced]
 
 ## Upstream behaviour
 
 A resolver MUST send each query from a fresh source port, [*nri-resolution.fresh-source-port] MUST use a
 random message identifier, [*nri-resolution.random-message-id] and MUST randomise the case of the question
-name and require the reply to echo it exactly (0x20 encoding). [*nri-resolution.case-randomised-and-echo-required] A reply
+name and require the reply to echo it exactly (0x20 encoding). Both the
+identifier and the case bits MUST come from a cryptographically secure
+generator: a predictable one hands a spoofer back the entropy these
+measures exist to add. [*nri-resolution.case-randomised-and-echo-required] A reply
 whose identifier, question or case pattern does not match MUST be
 ignored, not treated as a failure. [*nri-resolution.mismatched-reply-ignored]
 

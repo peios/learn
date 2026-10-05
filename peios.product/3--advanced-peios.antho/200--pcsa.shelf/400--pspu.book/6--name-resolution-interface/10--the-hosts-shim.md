@@ -42,6 +42,13 @@ The `unavailable` row is the one that matters: a shim MUST NOT render it
 as `NOTFOUND`. A caller that retries gets its answer when the network
 comes back; a caller told "no such host" may remember that.
 
+> [!NOTE]
+> glibc's `getaddrinfo` reports a module's `UNAVAIL` to its caller as
+> `EAI_NONAME`, the same code as a name that does not exist, so through
+> that interface an unreachable resolver still looks like an absent
+> name. That mapping is glibc's; the shim reports `UNAVAIL` faithfully,
+> and the native channel and `resolv` keep the distinction.
+
 `h_name` is the reply's `canonical` name. [*nri-shim.h-name-is-canonical] TTLs are reported through
 `ttlp` where glibc offers it, as the least TTL among the addresses. [*nri-shim.ttl-is-least-address-ttl]
 
