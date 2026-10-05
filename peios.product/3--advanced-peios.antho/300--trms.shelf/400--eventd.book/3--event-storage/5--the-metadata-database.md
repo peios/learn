@@ -12,7 +12,7 @@ checkpoints — and it is the one database that survives shard
 reconfiguration untouched.
 [*meta.the-metadata-database-survives-shard-reconfiguration-untouched]
 
-It is created on first startup if absent, opened in WAL mode with
+It is created on first startup if absent or holding no schema, opened in WAL mode with
 `synchronous=NORMAL`.
 [*meta.created-if-absent-and-opened-in-wal-mode-with-synchronous-normal]
 It is written at each run of the index policy (§3.4) — every policy
@@ -105,7 +105,8 @@ hold pages — the same rule as every other store (§2.4).
 
 ## Recovery is cheap
 
-If the schema version is missing or unrecognised, or any required table
+If SQLite cannot read the file, or the schema version is missing or
+unrecognised, or any required table
 or `meta` entry is missing or malformed, eventd logs an error and
 **recreates the database from defaults**.
 [*meta.an-invalid-metadata-database-is-logged-and-recreated-from-defaults]

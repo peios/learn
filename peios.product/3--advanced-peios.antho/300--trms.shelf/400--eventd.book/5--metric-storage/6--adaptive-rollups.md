@@ -99,7 +99,8 @@ Empty rows are necessary to prove that a
 complete cached range really has no missing window.
 
 Opening a version-1 metric store creates the table and its pruning index in one
-immediate transaction, then records version 2.
+immediate transaction, then records version 2, and continues to version 3
+(§5.4).
 [*rollup.a-version-1-store-gains-the-table-and-pruning-index-in-one-immediate-transaction]
 Unknown versions still fail
 startup (§5.4, §B).

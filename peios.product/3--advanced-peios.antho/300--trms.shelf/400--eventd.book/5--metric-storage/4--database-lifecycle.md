@@ -25,6 +25,11 @@ directory handle.
 
 ## Creation
 
+A metric store that does not exist, or whose database holds no schema at
+all (what a power cut leaves when it takes the uncheckpointed creating
+transaction), is created, in one transaction, with:
+[*metricdb.a-metric-store-with-no-schema-is-created-as-new]
+
 1. WAL mode. [*metricdb.a-new-store-is-created-in-wal-mode]
 2. `PRAGMA synchronous=NORMAL` — the log store's reasoning, for the same
    reason: metric loss on power failure is acceptable (§4.1).
@@ -45,6 +50,11 @@ directory handle.
    Version 1 is migrated transactionally to version
    2 by adding the adaptive-rollup cache.
    [*metricdb.a-version-1-store-is-migrated-transactionally-to-version-2]
+   Version 2 is migrated transactionally to version 3 by rebuilding the
+   series table under its new uniqueness constraint, foreign keys off for
+   the rebuild and every identifier kept; a version 2 store missing a
+   required table or index fails startup instead.
+   [*metricdb.a-version-2-store-is-migrated-transactionally-to-version-3]
    Missing or unrecognised versions are
    a **startup failure**.
    [*metricdb.a-missing-or-unrecognised-schema-version-is-a-startup-failure]
@@ -58,6 +68,10 @@ directory handle.
    same `.corrupt.<timestamp_ns>` suffix, `.N` appended if the name is
    taken, and a fresh empty store created at the configured path.
    [*metricdb.a-corrupt-store-is-quarantined-and-replaced-with-a-fresh-empty-store]
+   A database holding schema objects but no `metadata` table with
+   entries is not a store eventd could have written; it is quarantined
+   and replaced like a corrupt one.
+   [*metricdb.unrecognised-contents-are-quarantined]
 
 The metric store is a required store; there is no degraded mode without
 one (§8.2).

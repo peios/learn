@@ -67,7 +67,10 @@ never deleted, and remain available to the query path.
 
 ## Creation
 
-A shard database that does not exist is created with:
+A shard database that does not exist, or that holds no schema at all
+(what a power cut leaves when it takes the uncheckpointed creating
+transaction), is created, in one transaction, with:
+[*eventdb.a-shard-with-no-schema-is-created-as-new]
 
 1. WAL mode, `PRAGMA journal_mode=WAL`
    [*eventdb.a-new-shard-is-created-in-wal-mode]
@@ -95,6 +98,10 @@ A shard database that does not exist is created with:
 5. If SQLite reports corruption while opening or verifying, quarantine
    and replace (below).
    [*eventdb.corruption-reported-while-opening-an-active-shard-quarantines-and-replaces-it]
+   A database holding schema objects but no `metadata` table with
+   entries is not a shard eventd could have written; it is quarantined
+   and replaced like a corrupt one.
+   [*eventdb.unrecognised-contents-are-quarantined]
 
 Steps 3 and 4 fail rather than repair because an active shard is
 required: eventd has no degraded mode that runs without one (§8.2).

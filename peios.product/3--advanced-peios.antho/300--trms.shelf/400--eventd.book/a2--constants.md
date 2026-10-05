@@ -154,7 +154,7 @@ string or blob (§5.2).
 |---|---|
 | Event shard | 1 [*constant.the-event-shard-schema-version-is-1] |
 | Log store | 1 [*constant.the-log-store-schema-version-is-1] |
-| Metric store | 2 [*constant.the-metric-store-schema-version-is-2] |
+| Metric store | 3 [*constant.the-metric-store-schema-version-is-3] |
 | `eventd-meta.db` | 1 [*constant.the-metadata-database-schema-version-is-1] |
 
 An unrecognised version is never migrated.

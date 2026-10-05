@@ -69,10 +69,12 @@ series. [*series.colliding-label-sets-are-still-distinct-series]
 
 ### Uniqueness
 
-The table carries `UNIQUE(name, labels, boundaries_hash)`.
-[*series.the-series-table-is-unique-on-name-labels-and-boundaries-hash]
+The table carries `UNIQUE(name, labels, boundaries)`, on the full
+boundary blob. `boundaries_hash` is a lookup key with its own index, and
+two histograms whose boundaries collide on it are two series.
+[*series.the-series-table-is-unique-on-name-labels-and-boundaries]
 
-For counters and gauges `boundaries_hash` is null, and SQLite treats
+For counters and gauges `boundaries` is null, and SQLite treats
 nulls as distinct in a unique constraint — so the constraint does not
 enforce uniqueness for them. What does is the single-writer resolution
 logic (§5.3), which checks before inserting.
@@ -144,6 +146,9 @@ an access-control field, or a reserved label key (PSPU §3.28).
 - `idx_series_label_hash` on `series(label_hash)` — series resolution on
   the ingestion path.
   [*series.idx-series-label-hash-indexes-series-by-label-hash]
+- `idx_series_boundaries_hash` on `series(boundaries_hash)` — narrowing
+  a histogram's lookup by its boundary hash.
+  [*series.idx-series-boundaries-hash-indexes-series-by-boundaries-hash]
 
 ## Schema version
 
@@ -154,5 +159,8 @@ Version 1 comprises `series`, `samples` and `metadata`.
 Version 2 adds the
 disposable `rollups` query cache (§5.6); it does not change raw series or sample
 storage. [*series.schema-version-2-adds-only-the-rollups-cache]
+Version 3 changes only the series table's uniqueness, from the boundary
+hash to the full boundary blob, and adds `idx_series_boundaries_hash`.
+[*series.schema-version-3-makes-series-unique-on-the-full-boundary-blob]
 The current value is in §B. eventd checks it at startup and applies the
 lifecycle and migration rules of §5.4.

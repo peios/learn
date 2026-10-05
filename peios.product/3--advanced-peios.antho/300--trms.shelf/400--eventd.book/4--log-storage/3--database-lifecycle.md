@@ -26,7 +26,10 @@ directory handle.
 
 ## Creation [*logdb.a-log-store-that-does-not-exist-is-created]
 
-A log store that does not exist is created with:
+A log store that does not exist, or whose database holds no schema at
+all (what a power cut leaves when it takes the uncheckpointed creating
+transaction), is created, in one transaction, with:
+[*logdb.a-log-store-with-no-schema-is-created-as-new]
 
 1. WAL mode, `PRAGMA journal_mode=WAL`
    [*logdb.creation-sets-wal-journal-mode]
@@ -55,6 +58,10 @@ A log store that does not exist is created with:
    [*logdb.missing-tables-or-indexes-without-reported-corruption-fail-startup]
 5. On SQLite reporting corruption, quarantine and replace.
    [*logdb.a-corrupt-log-store-is-quarantined-and-replaced]
+   A database holding schema objects but no `metadata` table with
+   entries is not a store eventd could have written; it is quarantined
+   and replaced like a corrupt one.
+   [*logdb.unrecognised-contents-are-quarantined]
 
 Quarantine works exactly as for a shard (§3.3): the database, `-wal` and
 `-shm` files are renamed with a shared `.corrupt.<timestamp_ns>` suffix,
