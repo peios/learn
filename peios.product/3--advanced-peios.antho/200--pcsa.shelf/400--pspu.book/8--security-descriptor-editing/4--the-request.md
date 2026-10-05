@@ -36,6 +36,7 @@ only one that has no `type`. It is one JSON object:
 | `can.owner` | boolean | No, `false` | Whether it can change the owner. |
 | `can.audit` | boolean | No, `false` | Whether it can change the SACL. |
 | `can.label` | boolean | No, `false` | Whether it can apply the label by itself (§8.5). |
+| `can.propagate` | boolean | No, `false` | Whether, on a container, it can push what was applied into what is already inside (§8.5, Pushing into what is inside). |
 | `can.why` | string | No | Why the requester cannot change what `can` says it cannot, as text for the person. |
 
 ## The descriptor
@@ -116,6 +117,11 @@ above the caller's own, SeRelabelPrivilege (KACS set-security). It SHOULD find o
 system, for example by an AccessCheck of the person's token against the
 descriptor, or by opening the object for the rights that changing it
 takes. It SHOULD NOT infer it from the person's group memberships.
+
+`can.propagate` is true only on a container whose requester holds what
+is inside it and can walk it: a file explorer for a folder, a registry
+editor for a key. It says nothing about whether each item inside can be
+changed, which is found out item by item as the walk goes (§8.5).
 
 A requester that cannot change the DACL still sends it, so that the
 person can read it. The editor MUST then show the DACL without offering

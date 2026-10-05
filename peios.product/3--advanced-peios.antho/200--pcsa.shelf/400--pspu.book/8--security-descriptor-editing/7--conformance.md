@@ -22,6 +22,14 @@ Applies the components `parts` names and no others, and the label as a
 label, keeping the rest of the SACL. Answers `applied` only when all of
 them were, and otherwise `failed`, with a reason for the person (§8.5).
 
+**Pushing into what is inside.** Says `can.propagate` only on a
+container it can walk. Asked to, after applying, re-propagates
+everything inside as PCDS §5.6 sets out, for the lists `parts` names:
+parents first, protected lists left, nothing changed but those lists, no
+link followed, past an item it cannot change. Stops after the item in
+hand on `stop` or end-of-file, and answers `applied` with how many were
+done, which could not be and why, and whether it was stopped (§8.5).
+
 **Lines.** Ignores a line type and a member it does not recognise
 (§8.3). Infers nothing from the editor's exit status or standard error
 (§8.3).
@@ -43,7 +51,9 @@ offering to change it. Takes a SACL for the whole SACL only where
 whole descriptor and the components that changed, never `dacl`,
 `owner`, `group`, `sacl` or `label` it was not told it could, never
 `sacl` and `label` together, and never while one is unanswered.
-Shows a `failed` answer's reason and stays (§8.5).
+Shows a `failed` answer's reason and stays (§8.5). Sends `propagate`
+only to a requester that said `can.propagate`, and only where the person
+chose it (§8.5).
 
 **Changing nothing.** Holds no handle to the object and changes nothing
 itself (§8.1, §8.6).

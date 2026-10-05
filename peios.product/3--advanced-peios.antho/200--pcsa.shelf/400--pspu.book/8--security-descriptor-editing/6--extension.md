@@ -29,6 +29,12 @@ send it to a requester that does not know it: an editor names it only
 for a requester that said `can.label`, which an older requester never
 says.
 
+Pushing into what is inside was added the same way. An editor sends
+`propagate` only to a requester that said `can.propagate`. `progress`
+and `stop` are lines that need no answer. What `applied` carries about
+the walk is members of it, and `applied` still means only that the
+object's `parts` were applied.
+
 ## What may never be added
 
 **A way for the editor to apply.** Nothing on the channel may let the
@@ -37,3 +43,9 @@ but a descriptor the person asked to apply. That the editor holds
 nothing and is trusted with nothing is what lets a requester open it on
 any object, and the requester applying exactly what it is sent is the
 whole of the contract between them.
+
+Pushing into what is inside keeps to this. The editor sends no
+descriptor for anything but the object, and `propagate` asks only for
+what PCDS §5.6 says re-propagation of the object's descriptor is, which
+the requester works out itself from the object as it applied it. The
+editor cannot choose what any item inside gets.
