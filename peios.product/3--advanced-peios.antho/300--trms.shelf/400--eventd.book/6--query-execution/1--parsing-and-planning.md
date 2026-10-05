@@ -93,6 +93,11 @@ avoids materialising the payload at all (§C).
 
 Execution uses read-only SQLite connections, which in WAL mode do not
 block writer threads. [*plan.queries-execute-on-read-only-sqlite-connections]
+The one exception is SQLite's own. A reader that catches the wal-index
+header while a writer is updating it takes the write lock for the moment
+it needs to read the header again. A writer therefore waits up to 25
+milliseconds for the write lock rather than failing a commit at once,
+and fails only if the lock is held longer.
 
 An event query opens one connection per shard database in the directory
 (§6.4). A log or metric query opens one.
