@@ -23,6 +23,12 @@ only one that has no `type`. It is one JSON object:
 | `object.parts[].set` | string | No | For a property, the GUID of the set it is in. |
 | `object.kinds` | array | No, empty | On a container of typed things, the kinds of thing it holds: inherited object types. |
 | `object.kinds[].guid`, `.name` | string | Yes | The inherited object type, and what that kind of thing is called. |
+| `object.part_rights` | array | No, empty | The rights a rule for a part can give, as `rights` gives the object's (see [Parts and kinds](#parts-and-kinds)). |
+| `object.part_rights[].name`, `.mask` | string, number | Yes | What the right is called, and its access mask. |
+| `object.naming` | object | No | How a part not listed is named (see [Parts named by the person](#parts-named-by-the-person)). |
+| `object.naming.namespace` | string | Yes, in `naming` | The UUID v5 namespace a part's object type is derived in, as a GUID in its usual text form. |
+| `object.naming.noun` | string | Yes, in `naming` | What one such part is called, for the person: `field`. |
+| `object.naming.example` | string | No | A name the person might give, to show how one is written: `source.name`. |
 | `sd` | string | Yes | The descriptor as it is now: a self-relative Security Descriptor (PCDS §5.1), in base64 with padding (RFC 4648 §4). |
 | `read` | array of strings | No | The components `sd` holds as they are on the object: some of `owner`, `group`, `dacl`, `sacl` and `label` (see [The descriptor](#the-descriptor)). Left out, every component `sd` has. |
 | `rights` | array | Yes | The object's rights by name, in the order a person should see them. |
@@ -75,6 +81,26 @@ password. `object.kinds` lists, for a container of typed things, the
 kinds of thing it holds, which an entry can be passed on to alone. An
 editor MAY offer rules for parts and kinds only where they are listed,
 and MUST keep as it found it an entry naming a GUID it is not told of.
+
+`object.part_rights` names what a rule for a part can give. Left out,
+an editor offers what a directory's parts take: reading and writing a
+property, and using an action. A requester whose parts take other rights
+MUST send them. eventd's fields, for example, take only its Read.
+
+### Parts named by the person
+
+Some objects have more parts than can be listed, each one's object type
+derived from its name. eventd's fields are an example: a payload field
+needs no registration, and its GUID is derived from its name (eventd TRM
+§7.3). `object.naming` tells the editor how such a part is named. Its
+object type is the UUID v5 (RFC 9562 §5.5) of the name, as UTF-8, in
+`naming.namespace`, and it is a property.
+
+An editor MAY then let the person name a part beside those listed. It
+MUST derive the object type exactly so, and SHOULD show the part by the
+name given for as long as the dialog is open. A requester SHOULD still
+list in `parts` the ones it knows, so that an existing rule for one is
+shown by name.
 
 ## The rights
 

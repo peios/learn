@@ -35,6 +35,13 @@ and `stop` are lines that need no answer. What `applied` carries about
 the walk is members of it, and `applied` still means only that the
 object's `parts` were applied.
 
+`object.part_rights` and `object.naming` were added as optional members
+of the request. An editor that does not know `naming` offers only the
+parts listed. An editor that does not know `part_rights` offers a
+directory's rights for a part. A rule made there gives rights the
+object's parts don't take, and so gives nothing. It doesn't give more
+than the person chose.
+
 ## What may never be added
 
 **A way for the editor to apply.** Nothing on the channel may let the
