@@ -12,7 +12,7 @@ time it reads it.
 |---|---|
 | `Hostname` (`REG_SZ`) | the machine's name (§8.4). An empty string counts as unset. |
 | `ControlSecurity` (`REG_BINARY`) | the control object's descriptor (§9.1). An empty value counts as unset. |
-| `Duid` (`REG_SZ`) | the machine's DHCP unique identifier, as hex (§5.7). A value that is not hex is ignored with a warning. |
+| `Duid` (`REG_SZ`) | the machine's DHCP unique identifier, as hex (§5.7). A value that is not hex is ignored with a warning, and replaced when netd next decides the DUID (§5.7). |
 | `Rules\Interface\` and everything under it | the interface layer (§3.2) |
 | `Profiles\` and everything under it | the profiles (§3.1) |
 
@@ -46,8 +46,7 @@ tree compare equal.
 
 A tree is read at most 16 levels deep. Below that the read stops with a
 warning, and whatever lies there is not part of the configuration.
-`pnp-core` refuses rule nesting deeper than 12 anyway (PKM §6.5), so the
-limit matters only to a pathological profile tree.
+Nothing else bounds the depth of a rule tree or a profile tree (§3.2).
 [*config.tree-read-sixteen-deep]
 
 ## A registry change [*config.registry-change]

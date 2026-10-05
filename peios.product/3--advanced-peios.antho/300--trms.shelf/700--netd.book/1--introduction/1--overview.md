@@ -74,7 +74,7 @@ and resolvd subscribes to netd's DNS snapshots over the control socket
 - **Filter packets.** The packet layers are NTFE's. netd's own DHCP and
   router-discovery traffic passes them only because the shipped baseline
   policy permits it.
-- **Decide who may bind a port.** That is the kernel's port reservation
+- **Decide who can bind a port.** That is the kernel's port reservation
   table.
 - **Associate with wireless networks.** A supplicant brings a wireless
   link up; netd then treats it as any other interface.

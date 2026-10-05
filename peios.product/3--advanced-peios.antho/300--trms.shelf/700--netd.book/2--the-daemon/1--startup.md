@@ -34,7 +34,7 @@ netd does these steps in this order:
 2. **Opens the control socket** at `/run/netd/control.sock`, removing a
    stale one first (§9.1). Failure is fatal.
 3. **Opens the udp/68 absorber** (§5.6). Failure is a warning: netd runs
-   without it, and a DHCP server's unicast reply may draw an ICMP
+   without it, and a DHCP server's unicast reply can draw an ICMP
    port-unreachable from the kernel.
 4. **Switches the kernel's RA processing off** on every interface that
    exists, and in `all` and `default` (§6.1). This happens before any

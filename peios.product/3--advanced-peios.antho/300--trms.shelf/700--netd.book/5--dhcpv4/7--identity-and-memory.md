@@ -23,8 +23,9 @@ needs it:
    `/var/state/netd/duid`; a failure to write is logged and changes
    nothing else.
 
-When the registry had no `Duid`, the result of 2 or 3 is written to it,
-as colon-separated lower-case hex. [*dhcp4-memory.duid-written-back]
+When the registry's `Duid` is absent, empty or not hex, the result of 2
+or 3 is written to it, as colon-separated lower-case hex, replacing a
+value that was not hex. [*dhcp4-memory.duid-written-back]
 
 Hex in `Duid` (and `ClientId`) may be written with `:`, `-` or spaces
 between digits, or none. A value with any other character, an odd number
@@ -39,10 +40,11 @@ Per interface, `Interfaces\<id> ClientId`:
   `ff`, then a 4-byte IAID, then the DUID. The IAID is the interface id's
   text folded into 4 bytes by XOR, byte *i* of the text into byte
   *i* mod 4;
-- when it is set but not hex, netd logs `ClientId <value> is not hex;
-  regenerating`, generates one, and overwrites the value.
+- when it is set but not hex, netd logs `<id>: ClientId "<value>" is
+  not hex; regenerating`, where `<id>` is the interface id, generates
+  one, and overwrites the value.
 
-`ClientId` is a value both netd and the operator may write. Writing it is
+`ClientId` is a value both netd and the operator write. Writing it is
 how an operator makes netd present the identifier a server reservation
 expects. It is read when a client starts, so it takes effect at the next
 start (a carrier loss, a profile edit, a restart of netd).
@@ -66,7 +68,7 @@ round trip. One that refuses answers with a NAK and the client
 discovers afresh. Silence for two transmissions does the same (§5.2).
 
 `RequestedAddress` is also the operator's: writing it is a soft
-reservation, an address the client asks for first and the server may
+reservation, an address the client asks for first and the server can
 refuse. [*dhcp4-memory.requested-address-is-a-soft-reservation]
 
 Nothing about a lease itself — its timers, its server, its options — is

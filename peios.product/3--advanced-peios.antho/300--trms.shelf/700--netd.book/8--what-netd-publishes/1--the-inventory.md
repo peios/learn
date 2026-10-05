@@ -48,7 +48,7 @@ identified one on the link (§7.1).
 
 `Status` is created with the descriptor
 `O:SYG:SYD:P(A;;KA;;;SY)(A;;KR;;;WD)`: SYSTEM has full control, Everyone
-may read, and the DACL is protected, so the hive root's inheritable grant
+has read access, and the DACL is protected, so the hive root's inheritable grant
 to Administrators does not reach it. Only netd, as SYSTEM, can write
 there. An administrator's hand edit is refused at the write, not
 reverted at the next pass. The descriptor is set only when netd creates

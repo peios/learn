@@ -27,7 +27,7 @@ or DHCPv6 client holds; with none, netd waits indefinitely.
 
 After a kernel event netd does not fold the event into its model. It
 dumps the whole state again and always runs a full pass, because a dump
-taken after an apply may already show a state whose consequences have not
+taken after an apply can already show a state whose consequences have not
 been decided yet. [*loop.kernel-event-redumps-and-converges]
 
 ## A full pass [*loop.full-pass-sequence]
@@ -36,13 +36,17 @@ A full pass runs these steps, in this order:
 
 1. identify networks on joined interfaces with carrier (§7.1);
 2. bring the interface table in line with the kernel's links and judge
-   every non-loopback interface (§3.3);
-3. start or stop DHCPv4 clients (§5.1);
+   every non-loopback interface (§3.3), stopping the clients of an
+   interface that lost carrier or whose outcome changed;
+3. start DHCPv4 clients where due (§5.1);
 4. start or stop router discovery and DHCPv6 (§6.1, §6.3);
 5. reconcile every interface (§4.3) and dump the kernel's state again.
 
 It then repeats steps 1 to 5 while the dump differs from the one before
-the reconcile, at most four times. [*loop.converge-repeats-until-stable-at-most-four]
+the reconcile. [*loop.converge-repeats-until-stable]
+The steps run at most four times in one pass, the first run included,
+even if the dump is still changing after the fourth.
+
 Applying changes alters what the next decisions see: bringing a link up
 gives it carrier, carrier starts a DHCP client, and a lease adds an
 address. One pass would leave that chain waiting for a later event that,
@@ -61,6 +65,6 @@ without re-judging anything. If the same iteration also needs a full
 pass, only the full pass runs.
 
 A DHCPv4 lease also marks its interface for re-judgement, because the
-network on the other side may now be identifiable (§7.1). Any interface
+network on the other side might now be identifiable (§7.1). Any interface
 so marked makes the iteration run a full pass.
 [*loop.lease-marks-for-rejudgement]

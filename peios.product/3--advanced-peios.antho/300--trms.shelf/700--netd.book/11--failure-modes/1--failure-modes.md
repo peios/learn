@@ -13,7 +13,11 @@ description: What goes wrong with netd, what each failure looks like from outsid
   mirrored to `/dev/kmsg` at `KERN_INFO`, `KERN_WARNING` or `KERN_ERR`, so it
   reaches the kernel log and, at a permissive console log level, the
   console. If the mirror cannot be opened, netd says so once on standard
-  error. [*failure.log-mirrored-to-kmsg]
+  error. netd opens `/dev/kmsg` once and writes every line through that
+  one descriptor, and the kernel rate-limits writes per open file (by
+  default ten lines in five seconds). So in a burst, the lines past the
+  limit are missing from the kernel log, while eventd still has every
+  one. [*failure.log-mirrored-to-kmsg]
 - **The registry**: `Interfaces\<id>\Status`, `Networks\<id>\Status`,
   `Readiness`.
 
@@ -22,8 +26,7 @@ description: What goes wrong with netd, what each failure looks like from outsid
 | What `net status` shows | Likely cause |
 |---|---|
 | `warning    asked for an address; nobody answered`, a 169.254 address or none | no DHCPv4 server answered. Either there is none, or NTFE refused the exchange: the shipped baseline's DHCP rules were deleted or overridden. netd cannot see the verdict stream. |
-| `lease      requesting …` that never becomes `bound` | the server's ACK did not read as a lease: no server identifier, a lease time under 4 s, or a malformed classless route option (§5.3) |
-| no `lease` line, no warning | the profile does not offer the address (`Address.Offered`, `Address.Families`), the interface has no MAC, or the packet socket would not open (logged) |
+| no `lease` line, no warning | the profile does not offer the address (`Address.Offered`, `Address.Families`), the interface has no MAC, or the packet socket would not open (logged). Or a server is answering but its ACK does not read as a lease: no server identifier, a lease time under 4 s, or a malformed classless route option (§5.3). The client then cycles through Selecting and Requesting, neither of which is shown (§5.1). |
 | no IPv6 address | no advertisement arrived, or none was accepted: hop limit under 255, a non-link-local source, a prefix that is not an autonomous /64 (§6.1, §6.2). Also check `Address.Families`. |
 
 ## The wrong interfaces are configured

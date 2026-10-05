@@ -30,14 +30,25 @@ Otherwise no MTU is desired and the link's MTU is left as it is.
 
 ## IPv4 addresses [*desired.ipv4-addresses]
 
-In this order:
+- every IPv4 entry of `Address.Static`, at its prefix;
+- the lease's address at the lease's prefix (§5.3), when a lease is
+  held;
+- the link-local address (§5.5) at prefix 16, only when the client has
+  fallen back to one **and** no lease is held **and** the profile has no
+  static address of either family.
 
-1. every IPv4 entry of `Address.Static`, at its prefix;
-2. the lease's address at the lease's prefix (§5.3), when a lease is
-   held, with the lease's broadcast address (option 28) when it gave one;
-3. the link-local address (§5.5) at prefix 16, only when the client has
-   fallen back to one **and** no lease is held **and** the profile has no
-   static address of either family.
+The order in which they are listed, or written in `Address.Static`, has
+no effect. netd adds the addresses an interface lacks in ascending
+address order (§4.3), and the kernel makes an address primary only when
+the interface holds no other address in the same subnet, so the first
+one added in a subnet is its primary. Of two statics in one subnet written
+`10.0.0.9/24, 10.0.0.3/24`, both added in one pass, `10.0.0.3` is the
+primary.
+
+While a lease that carried a broadcast address (option 28) is held, that
+broadcast is the one netd sets on every IPv4 address it adds to the
+interface: the lease's own address, and a static added in that time,
+whatever its subnet (§4.3).
 
 ## IPv4 routes [*desired.ipv4-routes]
 

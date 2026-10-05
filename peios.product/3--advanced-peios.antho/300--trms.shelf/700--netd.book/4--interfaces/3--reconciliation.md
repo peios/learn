@@ -32,7 +32,7 @@ this order:
 3. **Address deletions**: every address netd owns whose address and
    prefix length together match no desired address.
 4. **Address additions**: every desired address the kernel does not hold
-   with the same flags.
+   with the same flags, in ascending address order, IPv4 before IPv6.
 5. **Route deletions**: every protocol-200 route on the interface that is
    not desired.
 6. **Route additions**: every desired route the kernel does not hold.
@@ -45,6 +45,11 @@ detection still running) is erased before comparing. A change of flags
 alone is therefore an addition of the same address, which replaces it
 (below), never a delete and re-add that would reset standing connections.
 [*reconcile.flag-change-is-a-replace]
+
+An IPv4 address's broadcast address is not compared. An address keeps
+the broadcast it was added with: a lease whose broadcast changes, or a
+lease that arrives after a static was added, changes nothing on an
+address the interface already holds.
 
 Routes compare on everything: destination, prefix length, gateway, metric
 and protocol. A change of metric or gateway is a deletion and an
@@ -71,8 +76,10 @@ How addresses are phrased:
 
 - An **IPv4** address carries `IFA_LOCAL` and `IFA_ADDRESS` set to
   itself, link scope for 169.254/16 and universe scope otherwise. Below
-  a /31 it also carries a broadcast address: the lease's if it gave one,
-  otherwise the subnet's all-ones address.
+  a /31 it also carries a broadcast address: the broadcast of the lease
+  the interface holds, if that lease gave one, otherwise the address's
+  own subnet's all-ones address. The lease's broadcast goes on every
+  IPv4 address added while the lease is held, statics included.
 - An **IPv6** address carries universe scope and, when its prefix is not
   on-link, `IFA_F_NOPREFIXROUTE`. Its lifetimes are netd's to manage, so
   the kernel is told a valid lifetime of forever and a preferred lifetime

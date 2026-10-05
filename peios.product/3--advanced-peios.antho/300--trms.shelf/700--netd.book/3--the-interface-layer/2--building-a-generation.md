@@ -24,7 +24,8 @@ A generation is built whenever the rules or the profiles have changed
 ## Lowering a rule
 
 Integers and strings pass through. A value of any other lowered shape
-(§2.3) refuses the generation with `value <name> has an unsupported type`.
+(§2.3) refuses the generation with `rule <path>: value <name> has an
+unsupported type`.
 
 A list is passed through item by item, except in `Actions`. There, an
 item that is a `JOIN` naming a profile that exists and is **disabled** is
@@ -56,9 +57,12 @@ netd's wording:
 | `Priority` not an integer | `rule <path>: Priority is not an integer` |
 | `Enabled` not 0 or 1 | `rule <path>: Enabled is not 0 or 1` |
 | A malformed rule name | `rule <path>: bad name` |
-| Nesting deeper than 12 | from `pnp-core` |
 | A `JOIN` naming no profile | `JOIN(<path>) names no profile` |
 | A malformed profile | the profile parser's message (§3.1) |
+
+The depth of a rule tree refuses nothing. It is bounded only by netd's
+registry read, which takes rules to 16 levels below `Rules\Interface` and
+ignores anything deeper (§2.3).
 
 [*generation.refusal-causes]
 

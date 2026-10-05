@@ -14,10 +14,23 @@ On every full pass, for each joined interface:
   and IPv4 in its families;
 - it **can** run one when it is up with carrier.
 
-A running client the interface no longer wants, or can no longer run, is
-stopped (§5.4) and netd logs `interface <name>: dhcp stopping`. An
-interface that wants and can run a client but has none starts one, logging
-`interface <name>: dhcp starting`, provided:
+A running client is stopped (§5.4) in the step of the pass that brings
+the interface table in line with the kernel's links, before clients are
+started (§2.2):
+
+- when the link loses carrier or goes down, logged as `interface <name>:
+  carrier lost`;
+- when the interface's outcome changes, logged as the new verdict
+  (§3.3). Any edit to the profile the interface stands in is a change of
+  outcome, so it stops the client even when the edited profile still
+  wants one, and the same pass starts a new one.
+
+Only a change of outcome changes what an interface wants, so a client its
+interface no longer wants is always stopped the second way. A link that
+leaves the kernel takes its client with it (§5.4).
+
+An interface that wants and can run a client but has none starts one,
+logging `interface <name>: dhcp starting`, provided:
 
 - the link has a 6-byte hardware address — otherwise no client is started,
   silently;
@@ -49,11 +62,14 @@ With a previous address the client begins in **Rebooting** (RFC 2131
 | Renewing | T1; or an operator `renew` while bound, renewing or rebinding | an ACK (Bound), a NAK (lease lost, Selecting), T2 (Rebinding) |
 | Rebinding | T2 | an ACK (Bound), a NAK or the lease's end (lease lost, Selecting) |
 
-[*dhcp4-client.states]
+The status reply shows a client's state only inside its `lease`, which is
+present only while the client holds a lease (§9.2), and `net status`
+prints it on the `lease` line. So the state shown is always `bound`,
+`renewing` or `rebinding`. A client in Selecting, Requesting or Rebooting
+holds no lease, and neither shows a state for it. The `init` state exists
+only between a stop and the client being discarded.
 
-`net status` and the status reply show the state as `selecting`,
-`requesting`, `rebooting`, `bound`, `renewing` or `rebinding`. The `init`
-state exists only between a stop and the client being discarded.
+[*dhcp4-client.states]
 
 A new transaction id is drawn on entering Selecting, Rebooting, Renewing
 and Rebinding. Requesting keeps the id of the Selecting exchange it came

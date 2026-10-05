@@ -29,7 +29,7 @@ record's `Status` changes whenever netd runs a pass on a link that is on
 it.
 
 `Status` is created with the descriptor `O:SYG:SYD:P(A;;KA;;;SY)(A;;KR;;;WD)`:
-SYSTEM may do anything and everyone may read. It is protected, so the
+SYSTEM has full control and Everyone has read access. It is protected, so the
 hive root's inheritable grants do not reach it, and a hand edit is
 refused rather than silently reverted at the next pass. The descriptor is
 set only when netd creates the key; a `Status` key that already exists

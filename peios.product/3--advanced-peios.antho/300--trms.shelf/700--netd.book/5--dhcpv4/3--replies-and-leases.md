@@ -99,5 +99,5 @@ How each of these is used — and whether, by the profile — is in §4.2
 A lease is logged as `interface <name>: lease <address>/<prefix> from
 <server> for <seconds>s`. Binding clears the interface's link-local
 address and its warning, and marks the interface for re-judgement,
-because the network may now be identifiable (§7.1).
+because the network might now be identifiable (§7.1).
 [*dhcp4-lease.bound-clears-link-local-and-warning]

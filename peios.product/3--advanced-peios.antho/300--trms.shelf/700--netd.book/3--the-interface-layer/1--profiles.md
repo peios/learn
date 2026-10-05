@@ -55,8 +55,8 @@ Every value is parsed from its lowered form (§2.3):
 | string | a string, or an integer written as its decimal text |
 
 A value of any other shape — a list where a boolean belongs, a binary
-value — refuses the generation with the message `<name> has the wrong
-shape`.
+value — refuses the generation with the message `profile <path>: <name>
+has the wrong shape`, where `<name>` is the value's name in lower case.
 
 ## Values
 
@@ -84,7 +84,8 @@ shape`.
 [*profile.values-as-tabled]
 
 A value name not in this table (case-insensitively) refuses the
-generation with `unknown value <name>`. [*profile.unknown-name-refuses]
+generation with `profile <path>: unknown value <name>`, the name as
+written. [*profile.unknown-name-refuses]
 
 After parsing, any `Address.Static` entry outside the profile's families
 is dropped without an error: the family switch wins.

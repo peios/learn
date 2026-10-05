@@ -18,8 +18,8 @@ startup it:
 The descriptor on both: owner and group SYSTEM, and a DACL allowing SYSTEM
 `GENERIC_ALL` and Everyone `GENERIC_READ | GENERIC_WRITE |
 GENERIC_EXECUTE`. peinit creates `/run` SYSTEM-only and inheritable, so
-without it nobody else could reach the socket. Everyone may connect; the
-control object decides what they may do. A failure to set it is logged
+without it nobody else could reach the socket. Everyone can connect; the
+control object decides what each connection can do. A failure to set it is logged
 as an error and netd carries on.
 
 ## The control object [*control.object-default-descriptor]
