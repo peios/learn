@@ -18,9 +18,11 @@ registry change, a DHCP or router-discovery packet, a timer, a control
 request — it re-derives what each interface should look like and applies
 the difference from what the kernel reports. Nothing happens imperatively
 in a handler. Two consequences follow directly: a manual change to an
-interface netd manages lasts until the next pass, and restarting netd
-changes nothing visible, because the new process derives the same desired
-state and finds the kernel already matching it.
+interface netd manages lasts until the next pass, and a restarted netd
+derives its desired state afresh. That costs a leased interface its
+address and default route until the server answers the new process's
+first request (§2.1); static configuration is desired from the first
+pass and stays.
 
 **It owns addresses wholly and routes only by mark.** On an interface
 netd has joined, every IPv4 address and every non-link-local IPv6 address

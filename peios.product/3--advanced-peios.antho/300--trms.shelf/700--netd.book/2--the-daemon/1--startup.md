@@ -67,14 +67,25 @@ configuration is empty and the watch cannot be armed, so a key created
 later is never read; a restart of netd picks it up.
 [*startup.missing-root-is-read-once]
 
-## Restart
+## Restart [*startup.restart-reacquires-the-lease]
 
-netd re-derives everything from the registry and the kernel. A restarted
-netd finds its own addresses and routes already in place, plans no
-change for them, and so changes nothing visible on an interface whose
-policy and offer are unchanged. [*startup.restart-changes-nothing-visible]
+netd re-derives everything from the registry and the kernel. Its DHCP
+clients start again, and a client remembers nothing across a restart:
+each one begins with an INIT-REBOOT request for the address its network
+last leased (§5.7), and holds no lease until that request is answered.
 
-Its DHCP clients start again, though. A client remembers nothing across
-a restart, so each one begins with an INIT-REBOOT request for the
-address its network last leased (§5.7), and the server's answer decides
-whether the address stays.
+The first pass runs before any answer. An interface's desired state
+includes the lease's address, and the routes the lease offers, only
+while its client holds a lease (§4.2), so the first pass of a restarted
+netd removes the leased address and the lease's default route from an
+interface that had them. Readiness falls with them: on an interface
+with no other usable address, the machine's level drops to `link`
+(§8.2). When the server's ACK arrives, the next pass adds the address
+and the default route back, and the level returns to `routed`.
+
+So a restart takes a leased interface's address and default route away
+for one DHCP exchange, on an interface whose policy and offer are
+unchanged as on any other. The same is true of what router
+advertisements gave the interface, which a restarted netd desires only
+once it has heard an advertisement again (§6.1). Static addresses are
+desired from the first pass and stay in place.

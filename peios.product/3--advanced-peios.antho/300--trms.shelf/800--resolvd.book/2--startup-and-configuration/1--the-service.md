@@ -69,8 +69,11 @@ With `Readiness` 0 peinit waits for a notification. resolvd:
 
 ## Restart
 
-`RestartPolicy` 2 restarts resolvd whenever it exits. Everything resolvd
-holds is in memory, so a restarted resolvd starts with:
+`RestartPolicy` 2 restarts resolvd whenever it exits. A restarted
+resolvd exits again at its first startup step for as long as its
+predecessor's socket file is in place, because the service's account
+cannot remove it (§2.4); once the file is gone, it starts. Everything
+resolvd holds is in memory, so a restarted resolvd that starts has:
 
 - an empty cache; [*service.restart-empties-cache]
 - no demoted servers; [*service.restart-clears-demotions]
@@ -111,9 +114,12 @@ resolvd: warn: /dev/kmsg mirror unavailable (<error>): log lines go to stderr on
 ```
 
 The first two lines on standard error are therefore the first line
-resolvd logs, and then this one. The first logged line is a warning
-from earlier in startup when there is one — `removed a stale …` after
-any restart, or a `Dns …` warning (§2.3) — and otherwise the result of
+resolvd logs, and then this one. On a start that fails, the first
+logged line is the fatal one, such as the
+`native socket: Permission denied (os error 13)` that a restart of the
+service logs while its predecessor's socket is in place (§2.4). On a
+start that succeeds, it is a warning from earlier in startup when there
+is one, such as a `Dns …` warning (§2.3), and otherwise the result of
 the first attempt to reach netd, `subscribed to netd` or
 `netd not reachable (<error>); retrying`, which comes before
 `listening on …` (§2.2). The mirror line is written once, and nothing

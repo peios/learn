@@ -86,6 +86,9 @@ description: What goes wrong with netd, what each failure looks like from outsid
    and the next good write is taken at once.
 2. `net reconcile` runs a full pass without waiting for an event.
 3. `net renew <interface>` renews a lease without releasing it.
-4. Restarting netd changes nothing visible (§2.1). It is safe whenever
-   netd's state is in doubt, and it restarts every client from an
-   INIT-REBOOT.
+4. Restarting netd re-derives everything from the registry and the
+   kernel, and restarts every client from an INIT-REBOOT (§2.1). Until a
+   server answers it, a leased interface has neither its leased address
+   nor its default route, and the machine's readiness falls with them,
+   to `link` where nothing else is usable. A cooperative server restores
+   both in one exchange.
