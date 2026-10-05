@@ -69,7 +69,8 @@ with the privilege is copied as upstream copies it, peers and all.
 
 `may_mount()` in `fs/namespace.c` is the gate for `mount`, `umount2`,
 `pivot_root`, `open_tree(OPEN_TREE_CLONE)`, `fsmount`, `move_mount` and
-`mount_setattr`, and `mount_capable()` in `fs/super.c` is the second
+`mount_setattr`, and for `fsopen` and `fspick` in `fs/fsopen.c`.
+`mount_capable()` in `fs/super.c` is the second
 gate a new filesystem passes, when its superblock is brought into being.
 Under KACS both take the operation as an argument, with the filesystem
 type where one is being created, and ask `pkm_kacs_may_mount_op()` in
@@ -103,7 +104,7 @@ kernel filesystem parser of an untrusted image in reach of the caller: [*mntns.a
 | any other filesystem type | new filesystem | no |
 | `MS_REMOUNT`, including `MS_REMOUNT\|MS_BIND` | other | no |
 | `MS_MOVE`; `MS_SHARED`, `MS_PRIVATE`, `MS_SLAVE`, `MS_UNBINDABLE` | other | no |
-| `open_tree(OPEN_TREE_CLONE)`, `fsmount`, `move_mount`, `mount_setattr` | other | no |
+| `open_tree(OPEN_TREE_CLONE)`, `fsopen`, `fspick`, `fsmount`, `move_mount`, `mount_setattr` | other | no |
 
 The filesystem types a descriptor can admit are an allowlist KACS keeps,
 and it holds exactly `tmpfs`, `proc` and `stratafs`: all three read
