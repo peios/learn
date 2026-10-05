@@ -3,9 +3,9 @@ title: Three Doors, One Function
 description: The native socket, the stub listener and the NSS shim — what each carries, who uses it, and the rule that every one of them runs the same resolution.
 ---
 
-A resolver MUST offer three doors and MUST answer every question
+A resolver MUST offer three doors [*nri-doors.offers-three-doors] and MUST answer every question
 through the same resolution function (§6.7) whichever door it arrived
-by.
+by. [*nri-doors.one-resolution-function-behind-every-door]
 
 | Door | Callers | Carries |
 |---|---|---|
@@ -18,18 +18,18 @@ at the stub door is expanded with the same search domains, routed to
 the same scope and answered from the same cache as `printer` arriving on
 the native socket. A static name from the registry is answered at every
 door, so a program that never touches libc sees the same `printer` as
-one that does. There is no configuration a door reads that another does
+one that does. [*nri-doors.static-names-answered-at-every-door] There is no configuration a door reads that another does
 not, and no file behind any of them.
 
 This is why there is no `/etc/hosts`: the stub answers static names
 synthetically, so a direct-DNS resolver gets them without a file. And it
 is why `/etc/resolv.conf` is a constant — `nameserver 127.0.0.53`,
 `options edns0` — shipped by the resolver's package and never
-regenerated: it is a pointer to the answerer, not a copy of the answer.
+regenerated: it is a pointer to the answerer, not a copy of the answer. [*nri-doors.resolv-conf-is-constant]
 A search list in it would be a second expansion policy the resolver
 could not see; there is none.
 
 A resolver MUST NOT offer a fourth policy path — an in-process fallback
-in the shim, a `files` source, a direct-DNS retry — behind any door.
+in the shim, a `files` source, a direct-DNS retry — behind any door. [*nri-doors.no-fourth-policy-path]
 Before the resolver is running, the shim answers `localhost` itself and
 nothing else (§6.10).
