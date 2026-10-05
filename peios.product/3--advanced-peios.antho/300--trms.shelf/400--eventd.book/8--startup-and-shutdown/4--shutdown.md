@@ -15,10 +15,18 @@ can without blocking indefinitely.
    streaming queries are terminated with an error.
    [*shutdown.existing-streaming-queries-are-terminated-with-an-error]
    The log and metric
-   socket descriptors stay **open**.
+   socket descriptors stay **open**, and eventd goes on reading them
+   until every query connection still being served has ended: a sender
+   that reached either socket before its path was unlinked can still
+   deliver to it.
    [*shutdown.the-log-and-metric-socket-descriptors-stay-open-after-unlinking]
-2. **Drain ingestion.** Read and process the datagrams still in the log
-   and metric receive queues, then close those descriptors.
+2. **Drain ingestion.** Shut the log and metric sockets for reading, so
+   that a later send fails with `EPIPE` and its sender keeps the
+   datagram (peinit buffers it and replays it to the next eventd),
+   rather than having it queued where nothing will read it.
+   [*shutdown.a-send-after-the-log-and-metric-sockets-are-shut-for-reading-fails-with-epipe]
+   Then read and process the datagrams still in the receive queues, and
+   close those descriptors.
    [*shutdown.queued-log-and-metric-datagrams-are-processed-before-their-sockets-close]
    This is
    bounded by the receive queue, at most `net.unix.max_dgram_qlen`
@@ -52,6 +60,9 @@ senders finding the socket while the descriptors stay open, so whatever
 is already queued is still readable — closing them at step 1 would
 discard the queue, which is the data most recently produced and
 therefore most likely to explain why the system is being stopped.
+Shutting the sockets for reading before the drain is what makes the
+drain final: nothing can join the queue behind it to be discarded when
+the descriptors close.
 
 The final checkpoint in step 7 matters most for the log and metric
 stores, which run `synchronous=NORMAL` and whose durability boundary is

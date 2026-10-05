@@ -130,6 +130,12 @@ unlinking a regular file at a configured path would be destroying
 something that is not eventd's, and a path pointing at the wrong thing
 is a configuration error worth failing on.
 
+Recognising a leftover socket needs no right on it. If an operator has
+narrowed its descriptor so that eventd may no longer delete it, eventd,
+which still owns it, first puts its own descriptor back, so a narrowed
+socket never stops the next start.
+[*bootstrap.a-stale-socket-eventd-may-no-longer-delete-is-reclaimed-first]
+
 ## Phase 6 — Threads
 
 21. One writer thread per active shard.
