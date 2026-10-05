@@ -79,6 +79,18 @@ field of the record. An indented paragraph after a `field:` line is a
 **gloss**: what the field means in this event. A gloss MAY narrow the
 field's definition and MUST NOT contradict it.
 
+Where a field's definition leaves its values to the event, as
+`outcome.reason` does (§6.6), the event declares them with indented
+`values:` and `closed:` lines directly after the `field:` line, in the
+form a field record uses:
+
+```text
+field: outcome.reason           when outcome.success == false
+  values: disk-full | source-unreadable | cancelled
+  closed: false
+  Why the snapshot was not written.
+```
+
 ## Rules
 
 Every fragment MUST pass these rules, checked across the whole catalogue:

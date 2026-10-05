@@ -8,7 +8,7 @@ int peios_event_emit(const char *event_type, uint16_t event_type_len,
                      const void *payload, uint32_t payload_len);
 ```
 
-Emits a single event. `event_type` is a **length-counted UTF-8** event kind such as `"my.app.login"` — *not* NUL-terminated, and its length must be non-zero. `payload` is `payload_len` bytes of MessagePack (one well-formed value). The kernel validates the payload (one well-formed MessagePack value within the configured size and nesting limits) and stamps `origin_class = userspace`. Returns `0`, or `-1` with `errno`:
+Emits a single event. `event_type` is a **length-counted UTF-8** event type such as `"org.example.backup.snapshot.created"`, named as PGSS §6.3 requires — *not* NUL-terminated, and its length must be non-zero. `payload` is `payload_len` bytes of MessagePack (one well-formed value). The kernel validates the payload (one well-formed MessagePack value within the configured size and nesting limits) and stamps `origin_class = userspace`. Returns `0`, or `-1` with `errno`:
 
 | errno | Cause |
 |---|---|
@@ -23,12 +23,15 @@ Since the kernel's payload check matches [`peios_mp_validate`](~peios/sdk-msgpac
 ```c
 /* Build a payload, then emit. */
 peios_mp_writer *w = peios_mp_writer_new();
+peios_mp_write_map(w, 1);                      /* {outcome: {success: true}} */
+peios_mp_write_str(w, "outcome", 7);
 peios_mp_write_map(w, 1);
-peios_mp_write_str(w, "user", 4); peios_mp_write_str(w, "alice", 5);
+peios_mp_write_str(w, "success", 7); peios_mp_write_bool(w, true);
 
+static const char type[] = "org.example.backup.snapshot.created";
 const void *buf; ssize_t n = peios_mp_writer_bytes(w, &buf);
 if (n >= 0)
-    peios_event_emit("my.app.login", 12, buf, (uint32_t)n);
+    peios_event_emit(type, sizeof type - 1, buf, (uint32_t)n);
 peios_mp_writer_free(w);
 ```
 

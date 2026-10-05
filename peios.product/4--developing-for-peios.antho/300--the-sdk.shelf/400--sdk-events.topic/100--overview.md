@@ -17,7 +17,7 @@ An event has two parts:
 1. **Kernel-stamped metadata** you cannot forge — a `CLOCK_REALTIME` timestamp, a per-CPU monotonic sequence number, the CPU id, an origin class, and identity GUIDs (the effective token, the true token, and the process). This is the trustworthy skeleton: when you consume an event, you *know* who emitted it and when, because the kernel wrote that, not the emitter.
 2. **A payload** — a single [MessagePack](~peios/sdk-msgpack/msgpack-h-messagepack-codec) value that you define. This is your event's actual content.
 
-The `event_type` is a short UTF-8 string you choose, like `"my.app.login"`, that names the kind of event.
+The event type names the kind of event. It's a dotted name made of your package name, what the event is about, and what happened, such as `org.example.backup.snapshot.created`. Its fields follow one vocabulary shared by every emitter on the system. [Naming and shaping your events](~peios/sdk-events/naming-and-shaping-events) shows how to choose both.
 
 ## Payloads are MessagePack, and you own them
 
@@ -43,6 +43,7 @@ The SDK offers a **high-level reader** that hides the entire lock-free drain —
 
 ## Where to go in this section
 
+- **[Naming and shaping your events](~peios/sdk-events/naming-and-shaping-events)** — design an event before you emit it: its type, its fields, its tier and its catalogue entry.
 - **[Emitting events](~peios/sdk-events/emitting-events)** — build a payload and emit, singly or in batches.
 - **[Consuming events](~peios/sdk-events/consuming-events)** — drain the rings with the high-level reader (and, briefly, the low-level ring).
 - **[`event.h`](~peios/sdk-events-api/event-h-events-kmes)** and **[`msgpack.h`](~peios/sdk-msgpack/msgpack-h-messagepack-codec)** — the exhaustive reference.

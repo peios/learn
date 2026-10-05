@@ -46,8 +46,10 @@ void handle_event(const struct peios_event *ev)
        ev->process_guid, ev->effective_token_guid, ... */
 
     /* event_type and payload are NOT NUL-terminated — use the lengths. */
-    if (ev->event_type_len == 12 &&
-        memcmp(ev->event_type, "my.app.login", 12) == 0) {
+    static const char type[] = "org.example.backup.snapshot.created";
+
+    if (ev->event_type_len == sizeof type - 1 &&
+        memcmp(ev->event_type, type, sizeof type - 1) == 0) {
 
         struct peios_mp_reader mp;
         peios_mp_reader_init(&mp, ev->payload, ev->payload_len);
