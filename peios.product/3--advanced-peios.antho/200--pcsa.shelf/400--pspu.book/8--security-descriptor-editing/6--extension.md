@@ -38,9 +38,9 @@ object's `parts` were applied.
 `object.part_rights` and `object.naming` were added as optional members
 of the request. An editor that does not know `naming` offers only the
 parts listed. An editor that does not know `part_rights` offers a
-directory's rights for a part. A rule made there gives rights the
-object's parts don't take, and so gives nothing. It doesn't give more
-than the person chose.
+directory's rights for a part, which may not be rights the object's
+parts take. For eventd's fields they aren't, so such a rule gives
+nothing.
 
 ## What may never be added
 
