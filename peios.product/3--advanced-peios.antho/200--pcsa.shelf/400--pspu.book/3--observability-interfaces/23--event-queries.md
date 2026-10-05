@@ -25,13 +25,14 @@ character, dots included. `?`, `[` and `{` have no special meaning and a
 collector MUST NOT treat them as any. Matching folds case, like every
 string comparison (§3.20).
 
-A pattern with no `*` is exactly `WHERE event_type == "…"`. A pattern
+A pattern with no `*` is exactly `WHERE event.type == "…"`. A pattern
 whose only `*` is trailing is exactly
-`WHERE event_type STARTS_WITH "…"`. Anything else is a glob.
+`WHERE event.type STARTS_WITH "…"`. Anything else is a glob.
 
 ## Origin class aliases
 
-`origin_class` accepts named aliases as well as its integer values:
+`emitter.class`, the origin class, accepts named aliases as well as its
+integer values:
 
 | Alias | Value |
 |---|---|
@@ -41,7 +42,7 @@ whose only `*` is trailing is exactly
 | `lcs` | 3 |
 
 ```text
-EVENTS WHERE origin_class == kacs SINCE 1h ago
+EVENTS WHERE emitter.class == kacs SINCE 1h ago
 ```
 
 These are the only aliased values in the language. A collector MUST
@@ -58,7 +59,7 @@ and rejects `SELECT` (§3.22).
 Counts records grouped by one field, ordered by count descending.
 
 ```text
-EVENTS SINCE 24h ago COUNT BY event_type
+EVENTS SINCE 24h ago COUNT BY event.type
 ```
 
 Output: `{<field>: representative, count: <unsigned integer>}`.
@@ -68,7 +69,7 @@ Output: `{<field>: representative, count: <unsigned integer>}`.
 `COUNT BY` with a limit — the `N` most frequent values.
 
 ```text
-EVENTS SINCE 1h ago TOP 10 BY process_guid
+EVENTS SINCE 1h ago TOP 10 BY emitter.process.guid
 ```
 
 Output: the `COUNT BY` schema.
@@ -78,7 +79,7 @@ Output: the `COUNT BY` schema.
 The distinct values of one field.
 
 ```text
-EVENTS SINCE 24h ago DISTINCT event_type
+EVENTS SINCE 24h ago DISTINCT event.type
 ```
 
 Output: `{<field>: representative}`.
@@ -89,9 +90,9 @@ Groups by one or more fields, followed by an aggregation function:
 `COUNT`, or `SUM`, `AVG`, `MIN`, `MAX` with a field argument.
 
 ```text
-EVENTS SINCE 1h ago GROUP origin_class COUNT
-EVENTS SINCE 1h ago GROUP origin_class, event_type COUNT
-EVENTS SINCE 1h ago GROUP event_type AVG queue_depth
+EVENTS SINCE 1h ago GROUP emitter.class COUNT
+EVENTS SINCE 1h ago GROUP emitter.class, event.type COUNT
+EVENTS SINCE 1h ago GROUP event.type AVG operation.duration
 ```
 
 Output, for `GROUP a, b`:
@@ -128,8 +129,8 @@ is still present, because `COUNT` of it is still meaningful.
 
 ## Ordering
 
-Without `SORT`, results are ordered by timestamp descending, ties broken
-as §3.21 requires.
+Without `SORT`, results are ordered by `event.time` descending, ties
+broken as §3.21 requires.
 
 ## INDEX
 

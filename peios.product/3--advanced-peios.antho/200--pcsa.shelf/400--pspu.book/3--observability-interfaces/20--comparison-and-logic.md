@@ -24,7 +24,7 @@ of literals. An empty list is a parse error.
 
 ```text
 WHERE origin IN ("loregd", "peinit")
-WHERE origin_class NOT_IN (kacs, lcs)
+WHERE emitter.class NOT_IN (kacs, lcs)
 ```
 
 `=` is not a comparison operator and MUST produce a parse error, with

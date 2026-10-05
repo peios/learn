@@ -38,10 +38,10 @@ This chapter does not cover:
   producer's internals are described in the Peios Kernel TRM
 - the emission interfaces, by which a process or kernel subsystem
   produces an event rather than consuming one
-- event type vocabulary, payload schemas, persistence, indexing, or
-  querying — these are the concern of the event storage service
-- the encoding of payload bytes beyond their being a single MessagePack
-  value
+- event type vocabulary, payload schemas and the encoding of payload
+  values — these are PGSS §6
+- persistence, indexing and querying — the query language is PSPU §3,
+  and storage is the concern of the event storage service
 
 ## Producing versus consuming
 

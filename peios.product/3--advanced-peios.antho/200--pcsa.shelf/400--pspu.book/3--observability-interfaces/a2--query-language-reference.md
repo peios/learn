@@ -109,20 +109,21 @@ There is no `NOT` and no `=`.
 
 | Mode | Fixed fields | Everything else |
 |---|---|---|
-| EVENTS | `timestamp` `cpu_id` `sequence` `origin_class` `event_type` `effective_token_guid` `true_token_guid` `process_guid` `boot_id` | a flattened payload path, or null |
+| EVENTS | `event.time` `event.sequence` `event.cpu` `event.type` `event.boot.guid` `emitter.class` `emitter.token.guid` `emitter.true-token.guid` `emitter.process.guid` | a flattened payload path, or null |
 | LOGS | `timestamp` `origin` `is_error` `message` `boot_id` `job_id` | a parse error |
 | METRIC | `timestamp` `boot_id` `name` `type` `value` `overflow` | a label, or null |
 
 ## Aliases
 
-`origin_class` accepts `userspace` (0), `kmes` (1), `kacs` (2), `lcs`
+`emitter.class` accepts `userspace` (0), `kmes` (1), `kacs` (2), `lcs`
 (3). These are the only aliased values in the language (§3.23).
 
 ## Default ordering
 
 | Mode | Without `SORT` |
 |---|---|
-| EVENTS, LOGS | timestamp descending |
+| EVENTS | `event.time` descending |
+| LOGS | `timestamp` descending |
 | METRIC | timestamp ascending |
 | `COUNT BY`, `TOP N BY`, `GROUP … COUNT` | count descending |
 | `DISTINCT` | by the distinct value |

@@ -57,7 +57,7 @@ have not arrived, and applying `TAKE` to a stream would silently end it.
 ## DISTINCT streaming
 
 ```text
-EVENTS kacs.* DISTINCT process_guid STREAM
+EVENTS kacs.* DISTINCT emitter.process.guid STREAM
 LOGS DISTINCT origin STREAM
 ```
 

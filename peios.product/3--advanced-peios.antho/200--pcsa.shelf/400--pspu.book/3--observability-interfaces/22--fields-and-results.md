@@ -14,34 +14,36 @@ identically by every SD author and every client.
 
 ## Event fields
 
-These names resolve to header fields:
+These names resolve to header fields, by the mapping of PGSS §6.4:
 
-`timestamp`, `cpu_id`, `sequence`, `origin_class`, `event_type`,
-`effective_token_guid`, `true_token_guid`, `process_guid`, `boot_id`
+`event.time`, `event.sequence`, `event.cpu`, `event.type`,
+`event.boot.guid`, `emitter.class`, `emitter.token.guid`,
+`emitter.true-token.guid`, `emitter.process.guid`
 
 Every other name resolves to a payload field.
 
 ### Header names are reserved
 
 Header field names are reserved in the query language and in result
-maps. If a payload carries a top-level key with a header field's name,
-**the header wins**.
+maps. If a payload carries a value whose flattened path is a header
+field's name, **the header wins**.
 
 The colliding payload value is stored unchanged, and is retrievable as
 part of the raw payload by whatever holds it, but it is not exposed
 through field resolution, `SELECT`, `WHERE`, aggregation, access control
-or result maps. Suppression is applied *before* descendants are
-flattened, so a payload key named `timestamp` removes its entire subtree
-from the query surface, not just itself.
+or result maps. If the payload carries a map at a header field's path,
+the map's entire subtree is suppressed in the same way.
 
-An emitter SHOULD avoid payload keys that collide with header names.
+Only the paths themselves are reserved. A payload field beside them,
+such as `emitter.process.pid`, resolves normally. An emitter MUST NOT
+write a value at a header path (PGSS §6.4).
 
 > [!NOTE]
 > The header must win because header fields are the ones the kernel
-> stamped and an emitter could not influence (PSPK §2). If a payload key
-> could shadow `process_guid`, an emitter could choose what its own
-> events appeared to come from, and every query filtering on identity
-> would be answerable by the party being investigated.
+> stamped and an emitter could not influence (PSPK §2). If a payload
+> value could shadow `emitter.process.guid`, an emitter could choose what
+> its own events appeared to come from, and every query filtering on
+> identity would be answerable by the party being investigated.
 
 ### Flattening
 

@@ -7,7 +7,7 @@ A query is one string. It names a mode, narrows to some data, and says
 what to do with it.
 
 ```text
-EVENTS kacs.* SINCE 1h ago WHERE process_guid == "550e8400-e29b-41d4-a716-446655440000" TAKE 100
+EVENTS kacs.* SINCE 1h ago WHERE emitter.process.guid == "550e8400-e29b-41d4-a716-446655440000" TAKE 100
 LOGS FROM loregd ERROR ONLY CONTAINING "connection refused" SINCE 1d ago
 METRIC cpu.usage[core="0"] SINCE 1h ago AVG_OVER 5m
 ```
@@ -102,7 +102,7 @@ as a parse error, with two exceptions:
   `AND`, each treated as a parenthesised group: `WHERE a == 1 OR b == 2`
   followed by `WHERE c == 3` means `(a == 1 OR b == 2) AND c == 3`.
 - **`SELECT` is repeatable** where it is valid at all, and is additive:
-  `SELECT timestamp SELECT event_type` names both fields.
+  `SELECT event.time SELECT event.type` names both fields.
 
 Both exist so that a query can be built up in pieces — by a tool
 appending a filter, or by a person adding one to a query they already

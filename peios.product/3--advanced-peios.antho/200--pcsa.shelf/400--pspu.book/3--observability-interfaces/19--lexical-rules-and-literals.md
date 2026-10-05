@@ -73,8 +73,8 @@ and `"ab"` are different values and never compare equal (§3.20).
 An integer literal is decimal or hexadecimal.
 
 ```text
-WHERE origin_class == 2
-WHERE granted_access == 0x1F01FF
+WHERE emitter.class == 2
+WHERE access.granted == 0x1F01FF
 ```
 
 A decimal integer MAY carry a leading `-`, in which case it MUST fit in
