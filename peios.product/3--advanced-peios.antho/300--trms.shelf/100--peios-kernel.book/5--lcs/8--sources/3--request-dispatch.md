@@ -53,6 +53,12 @@ success. [*source.dispatch.record-contents]
 When the deadline expires after dispatch, LCS detaches the waiting
 caller from the record and returns `ETIMEDOUT`. [*source.dispatch.timeout-detaches-caller-from-record]
 
+A signal that interrupts the wait after dispatch detaches the caller
+the same way, and the call fails with `EINTR` or is restarted. As after
+a timeout, the source may still apply the request when it answers. A
+response that completed before the caller could be detached wins: the
+caller gets that response's result, with the signal still pending. [*source.dispatch.completion-beats-a-signal]
+
 **The record stays in the in-flight table and keeps counting against
 `MaxConcurrentRSIRequests`.** A timeout does not free a slot; only a
 response or a teardown does. [*source.dispatch.timeout-does-not-free-a-slot]

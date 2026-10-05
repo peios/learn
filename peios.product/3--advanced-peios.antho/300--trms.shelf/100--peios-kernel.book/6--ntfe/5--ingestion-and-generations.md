@@ -214,7 +214,10 @@ write committed. [*ntfe-ingest.in-force-when-walked-reaches-noted] A change that
 again and re-arms the work, so the pair stays unequal until a later walk
 covers it. [*ntfe-ingest.mid-walk-change-rearms-work] A refused walk still advances `changes_walked`; [*ntfe-ingest.refused-walk-advances-changes-walked] the writer
 then reads `last_ingest_error` to learn that what it wrote is not what
-is enforced. The bootstrap walk is not a noted change and moves neither
+is enforced. The walk records its error before it stores
+`changes_walked`, and the status reads them in the other order, so a
+status that shows a change walked shows that walk's error or a later
+one's, never an older one. The bootstrap walk is not a noted change and moves neither
 counter. [*ntfe-ingest.bootstrap-walk-moves-neither-counter] `net policy wait` is this loop.
 
 ## Generation 0

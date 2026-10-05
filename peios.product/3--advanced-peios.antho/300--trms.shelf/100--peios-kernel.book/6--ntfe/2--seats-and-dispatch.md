@@ -101,7 +101,10 @@ files it as the reply it claims to be), marks it, and delivers it: [*ntfe-seat.r
 - from **every other seat**, to ourselves — `skb_dst_set_noref()` from
   the offending packet's route, `ip_route_me_harder()` (or the v6
   helper), then `ip_local_out()`. [*ntfe-seat.non-ingress-refusal-routed-through-local-out] Inbound, that routes the answer out to
-  the peer with our address as its source; [*ntfe-seat.inbound-refusal-routed-to-peer] outbound, the answer is the
+  the peer with our address as its source; [*ntfe-seat.inbound-refusal-routed-to-peer] to a link-local address it is
+  routed on the device the offending packet arrived on, without the
+  helper, which would scope the lookup to the loopback device the local
+  delivery route names; [*ntfe-seat.inbound-link-local-answer-routed-on-ingress] outbound, the answer is the
   peer's, addressed to us, so the route lands on the loopback device and
   the stack's own RST and ICMP-error handlers fail the local socket at
   once, with the error the kernel maps the answer to: `ECONNREFUSED`
