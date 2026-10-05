@@ -8,7 +8,8 @@ related:
 ---
 
 System Settings, My Settings, Desktop Settings, SSH Settings, Security
-Policy and Package Manager are built from one kit, `libgxwi::settings`, so they share a layout
+Policy, Package Manager and Feature Manager are built from one kit,
+`libgxwi::settings`, so they share a layout
 and behave alike. An app of your own can use it too. The kit is functions
 that return HTML for a GXWI live surface (`libgxwi::Live`) and a stylesheet
 that draws it; what a setting is and what changing it does stay your app's.
