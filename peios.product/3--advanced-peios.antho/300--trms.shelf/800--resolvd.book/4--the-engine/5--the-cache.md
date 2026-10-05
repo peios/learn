@@ -6,13 +6,13 @@ description: What resolvd caches and for how long, the key, the capacity and how
 The cache's key and lifetimes are set by PSPU §6.7. This article is how
 resolvd computes them and what it does at the edges.
 
-## The key
+## The cache key
 
-An entry is keyed by the candidate in lower case, the record type, and
-the scope key (§1.3). [*engine-cache.key-is-lowercase-candidate-type-scope] The class is not part of the key; every question
-resolvd asks is class `IN`. The same name asked through two scopes is
-two entries, and a single label's expansions are each cached under the
-expanded name. [*engine-cache.expansions-cached-under-expanded-name]
+- An entry is keyed by the candidate in lower case, the record type, and
+  the scope key (§1.3). The class is not part of the key; every question
+  resolvd asks is class `IN`. [*engine-cache.key-is-lowercase-candidate-type-scope]
+- The same name asked through two scopes is two entries, and a single
+  label's expansions are each cached under the expanded name. [*engine-cache.expansions-cached-under-expanded-name]
 
 ## What is stored
 
@@ -22,57 +22,80 @@ to:
 
 | Reply | Stored as | Lifetime |
 |---|---|---|
-| `NOERROR` with answer records | `found` with those records | The least TTL among the records, capped at 86 400 s [*engine-cache.positive-lifetime] |
-| `NOERROR` with no answer records | `found` with none | Negative lifetime [*engine-cache.nodata-uses-negative-lifetime] |
+| `NOERROR` with answer records of class `IN` | `found` with those records | The least TTL among those records, capped at 86 400 s [*engine-cache.positive-lifetime] |
+| `NOERROR` with no answer records of class `IN` | `found` with none | Negative lifetime [*engine-cache.nodata-uses-negative-lifetime] |
 | `NXDOMAIN` | `notfound` | Negative lifetime [*engine-cache.nxdomain-uses-negative-lifetime] |
 
-The **negative lifetime** comes from the first `SOA` record in the
-reply's authority section: the lesser of its `MINIMUM` field and its own
-TTL, capped at 300 s. [*engine-cache.negative-lifetime-from-soa] A reply with no `SOA` in its authority section has
-a negative lifetime of zero. [*engine-cache.no-soa-negative-lifetime-zero]
+### The negative lifetime
+
+- The negative lifetime comes from the first `SOA` record in the reply's
+  authority section: the lesser of its `MINIMUM` field and its own TTL,
+  capped at 300 s. [*engine-cache.negative-lifetime-from-soa]
+- A reply with no `SOA` in its authority section has a negative
+  lifetime of zero. [*engine-cache.no-soa-negative-lifetime-zero]
+
+### A zero lifetime is not stored [*engine-cache.zero-lifetime-not-stored]
 
 An entry whose lifetime is zero is not stored. A positive answer with a
 zero TTL, and a negative answer without an `SOA`, are therefore never
-cached. [*engine-cache.zero-lifetime-not-stored]
+cached.
 
-Never stored: synthetic answers, `unavailable`, transport failures, and
-replies with any other response code. [*engine-cache.never-stored]
+### What is never stored [*engine-cache.never-stored]
+
+Never stored: synthetic answers, `unavailable`, transport failures, a
+UDP reply with `TC` set (the reply to its TCP retry is the one
+considered), and
+replies with any other response code.
+
+### The TTLs inside an entry [*engine-cache.record-ttls-kept-entry-lifetime-capped]
 
 The records in an entry are kept with the TTLs the server sent. Only the
-entry's lifetime is capped. [*engine-cache.record-ttls-kept-entry-lifetime-capped]
+entry's lifetime is capped.
 
 ## Hits
 
-An entry is live while its expiry is in the future. A live entry is
-returned with each record's TTL lowered to the whole number of seconds
-the entry has left, when that is less than the record's own. [*engine-cache.hit-ttl-lowered-to-remaining-seconds] A
-`notfound` hit with further candidates waiting moves to the next
-candidate, as a `notfound` from a server would (§4.3).
+- An entry is live while its expiry is in the future. A live entry is
+  returned with each record's TTL lowered to the whole number of seconds
+  the entry has left, rounded down, when that is less than the record's
+  own. [*engine-cache.hit-ttl-lowered-to-remaining-seconds]
+- A `notfound` hit with further candidates waiting moves to the next
+  candidate, as a `notfound` from a server would (§4.1).
 
-A `resolve` request with `no_cache` set skips the lookup for each of its
-candidates. The reply it gets is still stored. [*engine-cache.no-cache-skips-lookup-still-stores] Stub queries, `lookup`
-and `reverse` always consult the cache. [*engine-cache.other-doors-always-consult-cache]
+## Bypassing the cache
+
+- A `resolve` request with `no_cache` set skips the lookup for each of
+  its candidates. The reply it gets is still stored. [*engine-cache.no-cache-skips-lookup-still-stores]
+- Stub queries, `lookup` and `reverse` always consult the cache. [*engine-cache.other-doors-always-consult-cache]
 
 ## Capacity and eviction
 
-The cache holds at most 8 192 entries. [*engine-cache.capacity] Expired entries are not removed
-when they expire; they stay until they are overwritten by a fresh answer
-for the same key, flushed, or evicted. The `cache_entries` count in
-`status` includes them. [*engine-cache.expired-entries-linger-and-are-counted]
+- The cache holds at most 8 192 entries. [*engine-cache.capacity]
+- Expired entries are not removed when they expire; they stay until
+  they are overwritten by a fresh answer for the same key, flushed, or
+  evicted. The `cache_entries` count in `status` includes them. [*engine-cache.expired-entries-linger-and-are-counted]
+
+### Eviction
 
 Storing an entry under a key the cache does not already hold, when it
 already holds 8 192 entries, first evicts:
 
 1. every entry whose expiry is one second or more earlier than the new
-   entry's expiry;
-2. then, if the cache is still full, the one entry with the earliest
-   expiry. [*engine-cache.eviction-rule]
+   entry's expiry, live or not; [*engine-cache.eviction-sweeps-against-new-expiry]
+2. then, if the cache still holds 8 192 entries, the one entry with the
+   earliest expiry — any one of them, when several share it. [*engine-cache.eviction-then-earliest-expiry]
+
+### A long-lived entry can empty a full cache [*engine-cache.long-lived-entry-empties-full-cache]
 
 The first step compares against the new entry's expiry, not the current
 time. A long-lived entry arriving at a full cache therefore evicts every
-entry due to expire before it, live or not: a positive answer with a
-day-long TTL arriving at a full cache of shorter-lived answers empties
-it. [*engine-cache.long-lived-entry-empties-full-cache] Overwriting a key the cache already holds evicts nothing. [*engine-cache.overwrite-evicts-nothing]
+entry due to expire at least a second before it: a positive answer with
+a day-long TTL arriving at a full cache of shorter-lived answers empties
+it.
+
+### Overwriting a held key [*engine-cache.overwrite-evicts-nothing]
+
+Storing under a key the cache already holds replaces that entry, live
+or expired, and evicts nothing else.
 
 ## Flushes
 
@@ -87,5 +110,7 @@ Nothing else discards entries. Changes to static names, search domains,
 the hostname, `ControlSecurity`, scope flags and metrics leave the cache
 as it is.
 
+### A reply after its scope was flushed [*engine-cache.late-reply-stored-after-flush]
+
 A reply that arrives after its scope was flushed is still stored, under
-the same scope key. [*engine-cache.late-reply-stored-after-flush]
+the same scope key.

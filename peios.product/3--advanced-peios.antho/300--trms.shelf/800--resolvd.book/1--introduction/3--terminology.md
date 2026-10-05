@@ -1,6 +1,6 @@
 ---
 title: Terminology
-description: The terms specific to resolvd's engine — task, candidate, transaction, attempt, up scope — and where the contract's own terms are defined.
+description: The terms specific to resolvd's engine — task, candidate, transaction, attempt, routable scope — and where the contract's own terms are defined.
 ---
 
 The protocol's terms — name, question, record, scope, route, outcome,
@@ -23,16 +23,18 @@ its own deadline.
 Every UDP transaction is an attempt; the TCP transaction that follows a
 truncated reply is not (§4.6).
 
-**Up scope.** A scope at level `link` or better that has at least one
-server. Only up scopes take part in routing and contribute search
-domains (§4.3, §4.4).
+**Routable scope.** A scope that is up — at level `link` or better, in
+the sense of PSPU §6.2 — and has at least one server. Only routable
+scopes take part in routing and contribute search domains (§4.3, §4.4);
+an up scope with no servers takes part in neither.
 
 **Scope key.** The string that identifies a scope in the cache and in
 routing: the interface's `ifid` from netd, or `fallback` for the
 registry's fallback servers.
 
-**Demoted server.** A server address that has failed within the last
-30 seconds and is tried after its healthy peers (§4.6).
+**Demoted server.** A server address whose last failure was less than
+30 seconds ago, and which has not given a usable reply since; it is
+tried after its healthy peers (§4.6).
 
 **In-flight ceiling.** The bound on outstanding upstream transactions,
 beyond which a question that needs the network is answered `unavailable`

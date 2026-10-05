@@ -16,21 +16,28 @@ At startup resolvd:
    `0755`; [*sockets.runtime-directory-mode-0755]
 2. replaces the directory's DACL (below);
 3. removes any existing `/run/resolvd/resolv.sock`, logging
-   `removed a stale /run/resolvd/resolv.sock` when there was one; [*sockets.stale-socket-removed-and-logged]
+   `removed a stale /run/resolvd/resolv.sock` at warn level when there
+   was one; [*sockets.stale-socket-removed-and-logged]
 4. binds the socket, sets its mode to `0666`, and replaces its DACL in
    the same way; [*sockets.socket-mode-0666]
 5. makes the listener nonblocking.
 
-The DACL written to both the directory and the socket is: [*sockets.directory-and-socket-dacl]
+### The DACL on the directory and socket [*sockets.directory-and-socket-dacl]
+
+The DACL written to both the directory and the socket is:
 
 | Trustee | Access |
 |---|---|
 | SYSTEM | `GENERIC_ALL` |
 | Everyone | `GENERIC_READ`, `GENERIC_WRITE`, `GENERIC_EXECUTE` |
 
+### The owner of the directory and socket [*sockets.owner-left-as-resolvd]
+
 Only the DACL is written; the owner stays resolvd's account, which
-created both objects. [*sockets.owner-left-as-resolvd] Reaching the socket grants nothing: every request
+created both objects. Reaching the socket grants nothing: every request
 is checked against the control object (§5.2).
+
+### A descriptor that cannot be written [*sockets.descriptor-failure-logged-not-fatal]
 
 If the descriptor cannot be written, resolvd logs at error level
 
@@ -38,17 +45,17 @@ If the descriptor cannot be written, resolvd logs at error level
 could not set a descriptor on <path> (<error>); programs other than SYSTEM and administrators will not be able to reach the socket
 ```
 
-and carries on. [*sockets.descriptor-failure-logged-not-fatal] The socket then keeps whatever descriptor it was
-created with, and for ordinary processes the native door — and with it
-the NSS shim — is unreachable while the stub listener still works
-(§9.3).
+and carries on. The socket then keeps whatever descriptor it was created
+with, and for ordinary processes the native door — and with it the NSS
+shim — is unreachable while the stub listener still works (§9.3).
 
 ## The stub listener
 
-Two sockets, a UDP socket and a TCP listener, both bound to
-`127.0.0.53` port 53 and both nonblocking (PSPU §6.8). [*sockets.stub-udp-and-tcp-on-127-0-0-53] Nothing is bound
-on `::1` or on any other address. [*sockets.nothing-bound-on-other-addresses] Binding port 53 depends on the port
-reservation (§2.1).
+- Two sockets, a UDP socket and a TCP listener, are both bound to
+  `127.0.0.53` port 53 and both nonblocking (PSPU §6.8). [*sockets.stub-udp-and-tcp-on-127-0-0-53]
+- Nothing is bound on `::1` or on any other address. [*sockets.nothing-bound-on-other-addresses]
+
+Binding port 53 depends on the port reservation (§2.1).
 
 ## Other descriptors
 
@@ -61,6 +68,8 @@ reservation (§2.1).
 | Native and stub TCP connections awaiting an answer | not bounded separately | Until the engine answers |
 | Upstream sockets | one per transaction, up to the in-flight ceiling and its retries | One transaction (§4.7) |
 
+### Connections whose request has been read [*sockets.answered-connections-not-counted]
+
 A connection whose request has been read is no longer counted against
 the 256. It is held until its question is answered, which is bounded by
-the engine's own timeouts (§4.6), not by a count. [*sockets.answered-connections-not-counted]
+the engine's own timeouts (§4.6), not by a count.

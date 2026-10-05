@@ -11,12 +11,15 @@ values in one place.
 | Bound | Value | Described in |
 |---|---|---|
 | Native request size ceiling (payload) | 65 536 bytes | §5.1 |
+| Native bytes buffered before `request too large` | 65 540 bytes | §5.1 |
+| Native connection read chunk | 4 096 bytes | §5.1 |
 | Native request delivery bound | 5 s | §5.1 |
 | Native connections still sending a request | 256 | §5.1 |
 | Native reply write timeout | 1 s | §5.1 |
 | Stub TCP connections still sending a query | 256 | §6.1 |
 | Stub TCP query delivery bound | 10 s | §6.1 |
 | Stub TCP message buffer | 65 537 bytes | §6.1 |
+| Stub TCP read chunk | 4 096 bytes | §6.1 |
 | Stub UDP read buffer | 4 096 bytes | §6.1 |
 | Stub TCP reply write timeout | 1 s | §6.2 |
 | Classic UDP reply limit, no `OPT` | 512 bytes | §6.2 |
@@ -33,6 +36,9 @@ values in one place.
 | netd reconnect backoff | 0.5 s doubling to 10 s | §3.2 |
 | netd channel write timeout | 2 s | §3.1 |
 | netd frame ceiling | 65 536 bytes | §3.1 |
+| netd channel read chunk | 8 192 bytes | §3.1 |
+| Registry watch event buffer | 16 384 bytes | §2.3 |
+| Kernel hostname read buffer | 256 bytes | §3.3 |
 | Unknown-value nesting depth, native requests | 32 | §5.1 |
 | NSS shim read and write timeout | 10 s | §7.1 |
 | DNS label | 63 bytes | §4.1 |

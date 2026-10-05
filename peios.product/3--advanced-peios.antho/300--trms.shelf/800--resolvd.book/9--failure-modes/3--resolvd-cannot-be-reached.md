@@ -23,7 +23,8 @@ The startup failures are fatal and logged before the exit (§2.2):
   inert until the image applies it (§2.1) — or something else already
   holds `127.0.0.53:53`. The error text says which.
 - **`native socket: <error>`:** `/run/resolvd` could not be created or
-  given its mode, or the socket could not be bound.
+  given its mode, a stale socket file could not be removed, or the
+  socket could not be bound or set up.
 
 Because the restart policy is Always, a failure that persists is a
 restart loop: the same line in the log each time.

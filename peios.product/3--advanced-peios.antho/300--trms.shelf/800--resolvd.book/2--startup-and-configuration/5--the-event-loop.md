@@ -3,9 +3,11 @@ title: The Event Loop
 description: resolvd's single thread — what it polls, how long it sleeps, the order it services ready descriptors in, and what that order means for a client.
 ---
 
+## One thread and one poll [*loop.single-thread-single-poll]
+
 resolvd runs on one thread. Every input is a descriptor in one `poll`
 call, and the engine sees time only when the loop hands it the current
-instant. [*loop.single-thread-single-poll]
+instant.
 
 ## What is polled
 
@@ -22,15 +24,21 @@ Each iteration builds the poll set afresh:
    connection is still being established or its query is still being
    sent.
 
+### The poll timeout [*loop.poll-timeout-is-earliest-deadline]
+
 The poll timeout is the earliest of: the next upstream transaction
 deadline, the next netd reconnection time while disconnected, the
 moment the oldest stub TCP connection reaches its 10-second bound, and
 the moment the oldest native connection reaches its 5-second bound. With
-none of these pending, the loop sleeps until a descriptor is ready. [*loop.poll-timeout-is-earliest-deadline]
+none of these pending, the loop sleeps until a descriptor is ready.
 
-## Service order
+The timeout is the time to that moment in whole milliseconds, rounded
+down. A moment less than a millisecond away gives a timeout of zero, so
+the loop polls again without sleeping until the moment has passed.
 
-After `poll` returns, ready descriptors are serviced in this order: [*loop.service-order]
+## Service order [*loop.service-order]
+
+After `poll` returns, ready descriptors are serviced in this order:
 
 1. upstream sockets — replies that have arrived are answers already
    owed;
@@ -42,24 +50,31 @@ After `poll` returns, ready descriptors are serviced in this order: [*loop.servi
 7. the netd channel;
 8. the registry watch.
 
-Then the timers run: transactions past their deadline fail over to their
-next attempt (§4.6), a due netd reconnection is attempted (§3.2), stub
-TCP connections past 10 seconds are closed, and native connections past
-5 seconds are closed. [*loop.timers-run-after-descriptors]
+## Timers after descriptors [*loop.timers-run-after-descriptors]
+
+Once the ready descriptors have been serviced, the timers run, in this
+order: transactions at or past their deadline fail over to their next
+attempt (§4.6), a due netd reconnection is attempted (§3.2), stub TCP
+connections 10 seconds old or older are closed, and native connections
+5 seconds old or older are closed.
+
+## Answers within an iteration [*loop.local-answers-within-the-iteration]
 
 A question that can be answered without the network — synthetic, from
-the cache, or refused — is answered within the iteration that read it. [*loop.local-answers-within-the-iteration]
+the cache, or refused — is answered within the iteration that read it.
+
 A question that needs the network sends its first transaction within
 that iteration too, and is answered in the iteration that sees its
 deciding reply or its last deadline.
 
-## Writes are synchronous
+## Writes are synchronous [*loop.replies-written-blocking-one-second]
 
 Replies to native clients and to stub TCP clients are written from
 inside the loop, in blocking mode with a one-second write timeout. While
-a write is blocked, nothing else is serviced. [*loop.replies-written-blocking-one-second] A reply that fits in the
-socket's buffer is written at once; a large reply to a client that does
-not read can hold the whole daemon for up to a second (§9.4). Stub UDP
-replies and upstream queries are not written this way. The netd
-subscription request is written with a two-second timeout when the
-channel is opened (§3.1).
+a write is blocked, nothing else is serviced.
+
+A reply that fits in the socket's buffer is written at once; a large
+reply to a client that does not read can hold the whole daemon for up
+to a second (§9.4). Stub UDP replies and upstream queries are not
+written this way. The netd subscription request is written with a
+two-second timeout when the channel is opened (§3.1).

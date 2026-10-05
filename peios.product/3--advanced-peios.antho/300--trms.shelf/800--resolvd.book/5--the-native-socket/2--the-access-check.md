@@ -22,7 +22,9 @@ done with it.
 | `resolve`, `lookup`, `reverse`, `status` | `RESOLVER_QUERY` (`0x0001`) [*native-access.query-right-requests] |
 | `flush` | `RESOLVER_CONTROL` (`0x0002`) [*native-access.control-right-requests] |
 
-The check uses this generic mapping: [*native-access.generic-mapping]
+### The generic mapping [*native-access.generic-mapping]
+
+The check uses this generic mapping:
 
 | Generic right | Maps to |
 |---|---|
@@ -31,17 +33,21 @@ The check uses this generic mapping: [*native-access.generic-mapping]
 | `GENERIC_EXECUTE` | `RESOLVER_QUERY` |
 | `GENERIC_ALL` | `RESOLVER_ALL_ACCESS` (`0x000F0003`) |
 
+### Decoding comes before the check [*native-access.decode-before-check]
+
 A request is decoded before it is checked, so a malformed request gets
 its decoding error whoever sent it, and an unknown `query` gets
-`unknown query` rather than `access denied`. [*native-access.decode-before-check]
+`unknown query` rather than `access denied`.
+
+### The answer does not depend on the caller [*native-access.answer-independent-of-caller]
 
 The peer's identity is used for this check and for nothing else. Every
-caller allowed to ask gets the same answer to the same question. [*native-access.identity-used-only-for-check]
+caller allowed to ask gets the same answer to the same question.
 
-## The descriptor
+## The compiled default descriptor [*native-access.compiled-default-descriptor]
 
 The descriptor is `ControlSecurity` when it holds a valid self-relative
-descriptor, else the compiled default (§2.3): [*native-access.compiled-default-descriptor]
+descriptor, else the compiled default (§2.3):
 
 | Component | Value |
 |---|---|
@@ -49,15 +55,17 @@ descriptor, else the compiled default (§2.3): [*native-access.compiled-default-
 | Group | SYSTEM |
 | DACL | SYSTEM: `RESOLVER_ALL_ACCESS`; Administrators: `RESOLVER_ALL_ACCESS`; Everyone: `RESOLVER_QUERY` and `READ_CONTROL` |
 
+## A new descriptor applies to later requests [*native-access.new-descriptor-applies-to-later-requests]
+
 The descriptor is rebuilt whenever the registry configuration changes
 (§2.3). A request decoded after the change is checked against the new
-one; a request already being answered is not checked again. [*native-access.new-descriptor-applies-to-later-requests]
+one; a request already being answered is not checked again.
 
-## What the control object does not govern
+## What the control object does not govern [*native-access.stub-not-governed]
 
 The stub listener is not checked against the control object (PSPU §6.8):
 anything on the machine that can reach `127.0.0.53` can ask. A program
 denied `RESOLVER_QUERY` on the native socket still resolves names
-through the stub listener. [*native-access.stub-not-governed] The NSS shim uses the native socket, so for
+through the stub listener. The NSS shim uses the native socket, so for
 such a program `getaddrinfo` fails (§7.1) while a resolver that speaks
 DNS directly succeeds.

@@ -8,10 +8,14 @@ resolvd's source tree builds.
 
 ## The object
 
-`libnss_peios_net.so.2` is installed by `dev.peios.resolvd-nss` at
-`/usr/lib/x86_64-linux-peios/libnss_peios_net.so.2`. [*nss-module.installed-path] It is built from
-the `nss` crate and links the native channel codec and libc; it does not
-link libpeios. [*nss-module.links-codec-and-libc-only] It exports six entry points: [*nss-module.entry-points]
+- `libnss_peios_net.so.2` is installed by `dev.peios.resolvd-nss` at
+  `/usr/lib/x86_64-linux-peios/libnss_peios_net.so.2`. [*nss-module.installed-path]
+- It is built from the `nss` crate and links the native channel codec
+  and libc; it does not link libpeios. [*nss-module.links-codec-and-libc-only]
+
+### The entry points [*nss-module.entry-points]
+
+The module exports six entry points:
 
 | Entry point | Asks |
 |---|---|
@@ -24,19 +28,21 @@ link libpeios. [*nss-module.links-codec-and-libc-only] It exports six entry poin
 
 ## One connection per call
 
-Every call that needs resolvd opens a new connection to
-`/run/resolvd/resolv.sock`, sets ten-second read and write timeouts,
-sends one request, reads one reply, and closes the connection. [*nss-module.one-connection-per-call] Nothing
-is kept between calls: no connection, no cache, no configuration. The
-module reads no file. [*nss-module.no-state-no-files]
+- Every call that needs resolvd opens a new connection to
+  `/run/resolvd/resolv.sock`, sends one request, reads one reply, and
+  closes the connection. [*nss-module.one-connection-per-call]
+- Nothing is kept between calls: no connection, no cache, no
+  configuration. The module reads no file. [*nss-module.no-state-no-files]
 
-The ten-second timeout applies to each read and write on the socket.
-It is longer than the six seconds three timed-out attempts take in
-resolvd (§4.6), so a slow upstream normally reaches the caller as
-`unavailable` from resolvd rather than as a timeout here. A question
-that takes longer — several expansions in turn, or truncated replies
-retried over TCP — reaches the timeout, and the timeout is reported the
-same way as `unavailable`. [*nss-module.ten-second-timeout-reported-as-unavailable]
+### The ten-second socket timeouts [*nss-module.ten-second-socket-timeouts]
+
+Each connection is given ten-second read and write timeouts, which
+apply to each read and write on the socket. Ten seconds is longer than
+the six seconds three timed-out attempts take in resolvd (§4.6), so a
+slow upstream normally reaches the caller as `unavailable` from resolvd
+rather than as a timeout here. A question that takes longer — several
+expansions in turn, or truncated replies retried over TCP — reaches the
+timeout, which is reported as the table below shows.
 
 ## Results
 
@@ -58,12 +64,14 @@ same way as `unavailable`. [*nss-module.ten-second-timeout-reported-as-unavailab
 A found name with no address of the family asked is reported exactly as
 a name that does not exist.
 
-`AF_UNSPEC` is accepted only by `gethostbyname4_r`, which always asks
-for both families. [*nss-module.af-unspec-only-via-gethostbyname4]
+### `AF_UNSPEC` [*nss-module.af-unspec-only-via-gethostbyname4]
 
-## The buffer
+`AF_UNSPEC` is accepted only by `gethostbyname4_r`, which always asks
+for both families.
+
+## The caller's buffer [*nss-module.results-placed-in-caller-buffer]
 
 Every string, pointer array and address the module returns is placed in
 the buffer glibc passes in; the module allocates nothing that outlives
-the call. [*nss-module.results-placed-in-caller-buffer] When the buffer cannot hold the result, the call returns as in
+the call. When the buffer cannot hold the result, the call returns as in
 the table, and nothing written to the buffer is valid.

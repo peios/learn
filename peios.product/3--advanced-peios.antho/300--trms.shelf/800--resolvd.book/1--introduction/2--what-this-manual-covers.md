@@ -11,12 +11,17 @@ This manual covers the resolvd source tree as of release 0.1.5:
 | The operator command | `dev.peios.resolv` | `/usr/bin/resolv` [*coverage.resolv-installed-path] |
 | The NSS shim | `dev.peios.resolvd-nss` | `/usr/lib/x86_64-linux-peios/libnss_peios_net.so.2` [*coverage.shim-installed-path] |
 
+## Other packaged files [*coverage.packaged-files]
+
 `dev.peios.resolvd` also ships the constant `/usr/etc/resolv.conf`, the
 service definition and port reservation seeds under `/usr/share/regim/`,
 the registry reference `/usr/share/regman/resolvd.regman`, and the
-`resolvd(8)` page; `dev.peios.resolv` ships `resolv(1)`. [*coverage.packaged-files] Each package
-has a matching `-debuginfo` package, and `dev.peios.resolvd-debugsource`
-carries the sources for all three.
+`resolvd(8)` page; `dev.peios.resolv` ships `resolv(1)`.
+
+Each package has a matching `-debuginfo` package, and
+`dev.peios.resolvd-debugsource` carries the sources for all three.
+
+## The source tree
 
 The source is one workspace of five crates, and the split is visible in
 what each part of the system can do:

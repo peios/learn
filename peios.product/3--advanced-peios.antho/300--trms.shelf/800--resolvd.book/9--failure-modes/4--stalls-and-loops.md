@@ -17,10 +17,12 @@ native one logs `control: reply failed`.
 When netd accepts the connection and answers `subscribe` with an error
 — resolvd's account lacks `NETWORK_QUERY`, for instance — resolvd drops
 the channel and reconnects half a second later, and the backoff never
-grows (§3.2). The log shows `netd refused the subscription` followed by
-`lost the netd channel; reconnecting`, twice a second, for as long as
-the refusal lasts. `status` shows `netd not connected`, and the scopes
-are whatever the last accepted snapshot held, or none.
+grows (§3.2). The log shows `subscribed to netd`, then `netd refused the
+subscription`, then `lost the netd channel; reconnecting`, about twice a
+second, for as long as the refusal lasts. `resolv status` shows `netd`
+as `not connected` except in the moment between each reconnection and
+its refusal, and the scopes are whatever the last accepted snapshot
+held, or none.
 
 ## The registry watch is lost
 
@@ -33,7 +35,7 @@ reads the key again and re-arms the watch.
 ## The cache empties itself
 
 When the cache is full, storing an answer with a long lifetime evicts
-every entry due to expire before it (§4.5). On a busy machine this shows
+every entry due to expire at least a second before it (§4.5). On a busy machine this shows
 as `cache_entries` falling sharply after reaching 8 192, followed by a
 burst of `upstream_sent` as the evicted names are asked again. Expired
 entries are counted in `cache_entries` until they are evicted, so the

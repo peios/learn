@@ -8,47 +8,52 @@ builds and asks the list of candidates.
 
 ## What counts as a single label
 
-A name is single-label when it parses to exactly one label. The trailing
-dot plays no part: `printer.` is single-label and is expanded exactly as
-`printer` is. [*engine-expansion.trailing-dot-does-not-suppress-expansion] A top-level domain such as `com` is a single label too,
-and cannot be asked for directly. [*engine-expansion.top-level-domain-cannot-be-asked]
-
-A multi-label name has one candidate, itself. [*engine-expansion.multi-label-single-candidate]
+- A name is single-label when it parses to exactly one label. The
+  trailing dot plays no part: `printer.` is single-label and is expanded
+  exactly as `printer` is. [*engine-expansion.trailing-dot-does-not-suppress-expansion]
+- A top-level domain such as `com` is a single label too, and cannot be
+  asked for directly: it is asked only as its expansions. [*engine-expansion.top-level-domain-cannot-be-asked]
+- Any other name — a multi-label name, or the root — has one candidate,
+  itself. [*engine-expansion.multi-label-single-candidate]
 
 ## The applicable domains
 
 | When | Domains, in order |
 |---|---|
-| An exclusive scope is up | That scope's search domains, and nothing else [*engine-expansion.exclusive-scope-domains-only] |
-| Otherwise | The search domains of every up scope, scopes ordered by metric, then `ExtraSearchDomains` [*engine-expansion.up-scope-domains-then-extra] |
+| Routing's step 1 applies: a routable exclusive scope is at `addressed` or better (§4.4) | That scope's search domains, and nothing else [*engine-expansion.exclusive-scope-domains-only] |
+| Otherwise | The search domains of every routable scope (§1.3), scopes ordered by metric, then `ExtraSearchDomains` [*engine-expansion.routable-scope-domains-then-extra] |
 
-The exclusive scope is the one routing would choose (§4.4). Up scopes
-are those at `link` or better with at least one server; a scope that
-has search domains and no servers contributes none of them. [*engine-expansion.scope-without-servers-contributes-no-domains] Scopes with
-equal metrics keep their snapshot order, and each scope's domains keep
-their own order. `ExtraSearchDomains` is not applied while an exclusive
-scope is up. [*engine-expansion.extra-domains-ignored-under-exclusive]
+The exclusive scope is the one routing would choose (§4.4).
+
+- An up scope that has search domains and no servers is not routable,
+  and contributes none of them. [*engine-expansion.scope-without-servers-contributes-no-domains]
+- Scopes with equal metrics keep their snapshot order, and each scope's
+  domains keep their own order.
+- `ExtraSearchDomains` is not applied while routing's step 1 applies. [*engine-expansion.extra-domains-ignored-under-exclusive]
 
 ## Building the candidates
 
-Each domain in turn is appended to the label. A candidate already in the
-list is not added again, [*engine-expansion.duplicate-candidates-removed] and a candidate longer than 255 bytes on the
-wire is left out. [*engine-expansion.overlong-candidates-left-out] With no candidates left the name is `notfound` without
-a query (§4.1).
+Each domain in turn is appended to the label.
+
+- A candidate already in the list, compared case-insensitively, is not
+  added again. [*engine-expansion.duplicate-candidates-removed]
+- A candidate longer than 255 bytes on the wire is left out. [*engine-expansion.overlong-candidates-left-out]
+
+With no candidates left the name is `notfound` without a query (§4.1).
+
+## The case of a candidate [*engine-expansion.candidate-case-preserved]
 
 A candidate keeps the case of the label as asked and of the domain as
-configured; that is the case its records are reported at (§4.8). [*engine-expansion.candidate-case-preserved]
+configured; that is the case its records are reported at (§4.8).
 
-## Asking them
+## Asking the candidates
 
-Candidates are asked one at a time, in order. [*engine-expansion.candidates-asked-one-at-a-time] Each is routed on its own
-(§4.4) and has its own attempt budget (§4.6). A `notfound` — from a
-server or from the cache — moves to the next candidate. The first
-candidate that is anything else ends the question:
-
+- Candidates are asked one at a time, in order. Each is routed on its
+  own (§4.4) and has its own attempt budget (§4.6). [*engine-expansion.candidates-asked-one-at-a-time]
+- A `notfound` — from a server or from the cache — moves to the next
+  candidate (§4.1).
 - `found`, with records or without, is the answer, and later candidates
-  are not asked; [*engine-expansion.found-or-nodata-ends-expansion]
+  are not asked. [*engine-expansion.found-or-nodata-ends-expansion]
 - `unavailable` is the answer, and later candidates are not asked. [*engine-expansion.unavailable-ends-expansion]
-
-When the last candidate is `notfound`, the question is `notfound`
-(§4.1).
+- When the last candidate is `notfound`, the question is `notfound`
+  (§4.1).

@@ -10,10 +10,10 @@ one place.
 
 | Key | Value | Type | Default | Described in |
 |---|---|---|---|---|
-| `Machine\System\Network\Dns` | `FallbackServers` | `REG_MULTI_SZ` (or one `REG_SZ`) | none | §2.3 |
-| `Machine\System\Network\Dns` | `ExtraSearchDomains` | `REG_MULTI_SZ` (or one `REG_SZ`) | none | §2.3 |
+| `Machine\System\Network\Dns` | `FallbackServers` | `REG_MULTI_SZ` (or one `REG_SZ` or `REG_EXPAND_SZ`) | none | §2.3 |
+| `Machine\System\Network\Dns` | `ExtraSearchDomains` | `REG_MULTI_SZ` (or one `REG_SZ` or `REG_EXPAND_SZ`) | none | §2.3 |
 | `Machine\System\Network\Dns` | `ControlSecurity` | `REG_BINARY` | the compiled default of §5.2 | §2.3, §5.2 |
-| `Machine\System\Network\Dns\Hosts` | any name: a static name | `REG_SZ` or `REG_MULTI_SZ` | none | §2.3, §4.2 |
+| `Machine\System\Network\Dns\Hosts` | any name: a static name | `REG_SZ`, `REG_EXPAND_SZ` or `REG_MULTI_SZ` | none | §2.3, §4.2 |
 
 resolvd watches `Machine\System\Network` and everything under it, and
 re-reads `Machine\System\Network\Dns` whole on any change (§2.3). It

@@ -17,12 +17,17 @@ hostname and static names still answer.
   (§3.2) and the first snapshot brings the scopes.
 - **Scopes listed, but none has a server.** Interfaces with no servers
   take no part in routing (§4.4). Either the profiles and leases supply
-  no servers, or there are only link-local addresses. Configure
-  `FallbackServers` (§2.3), or give the profile servers.
-- **Servers listed and marked `(demoted)`.** Every server has failed in
-  the last 30 seconds (§4.6). `upstream_failed` rising shows it.
-  Questions are still sent to demoted servers, so service returns as
+  no servers, or the only servers offered carry a zone, such as
+  `fe80::1%eth0`, and were dropped (§4.7). Configure `FallbackServers`
+  (§2.3), or give the profile servers.
+- **Servers listed and marked `(demoted)`.** Every server's last failure
+  was less than 30 seconds ago (§4.6). `upstream_failed` rising shows
+  it. Questions are still sent to demoted servers, so service returns as
   soon as one answers.
+- **The servers listed are link-local (`fe80::…`).** resolvd sends to
+  them with no interface, so every attempt fails at once and the log
+  fills with `upstream fe80::…: <error>` lines (§4.7). Give the scope a
+  server address that is not link-local.
 
 ## A single label is `notfound` at once
 
@@ -30,8 +35,9 @@ hostname and static names still answer.
 source `local`.
 
 No search domain applies (§4.3). Check the `domain` lines in `status`.
-A scope's domains count only while it has a server; with an exclusive
-scope up, only its domains apply and `ExtraSearchDomains` is ignored.
+A scope's domains count only while it has a server; while an exclusive
+scope takes every question (§4.4), only its domains apply and
+`ExtraSearchDomains` is ignored.
 A single label is never sent bare, so with no domain it is answered
 locally.
 
@@ -51,8 +57,9 @@ when its server list changes, and for everything by
 `resolv flush` (§5.3), which needs `RESOLVER_CONTROL`. A static name in
 `Hosts\` overrides DNS at once, with no flush (§4.2).
 
-To see what the network says now without disturbing the cache, use
-`resolv query <name> --no-cache`; the answer it gets is still stored.
+To see what the network says now, use
+`resolv query <name> --no-cache`. It skips the cache lookup, but the
+answer it gets is still stored, replacing the cached one (§4.5).
 
 ## Answers are slow
 
@@ -69,7 +76,7 @@ and `upstream_failed` rises while `upstream_answered` does not.
 
 ## `refused` is rising
 
-4 096 transactions are outstanding (§4.6), and new questions that need
+At least 4 096 transactions are outstanding (§4.6), and new questions that need
 the network are answered `unavailable` at once. Cached and synthetic
 answers are unaffected. The ceiling clears as transactions complete,
 within two seconds of each being sent.

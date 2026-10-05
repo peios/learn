@@ -14,9 +14,12 @@ description: The signals available when names stop resolving — what resolv sta
 | The door's own error | `NXDOMAIN` or `SERVFAIL` at the stub; `HOST_NOT_FOUND`, `TRY_AGAIN` or `NO_RECOVERY` from `getaddrinfo` (§6.2, §7.1) |
 
 Two readings of the counters are worth knowing. `upstream_failed` rising
-with `upstream_answered` flat means servers are not answering at all;
-both rising together means servers answer with failure codes. `refused`
-above zero means the in-flight ceiling has been reached (§4.6).
+with `upstream_answered` flat means no matching reply is arriving: the
+servers are not answering, their replies do not match (§4.8), or the
+transactions cannot be sent at all (§4.7), which the log shows as
+`upstream <server>: <error>` lines. Both rising together means servers
+answer with failure codes. `refused` above zero means the in-flight
+ceiling has been reached (§4.6).
 
 ## Log lines
 
@@ -51,6 +54,14 @@ Every line resolvd writes, with the level it is written at:
 | `netd: <summary>` | info | A snapshot was applied (§3.3) |
 | `configuration changed` | info | A registry change was applied (§2.3) |
 | `cache flushed` | info | A `flush` request was carried out (§5.3) |
+| `/dev/kmsg mirror unavailable (<error>): log lines go to stderr only` | warn | The kernel log mirror could not be opened, which for resolvd is always; written once, directly after the first line logged (§2.1) |
 
-Nothing is logged for an individual question, answer, timeout or
-demotion. [*failure-signals.no-per-question-logging]
+## What a question logs [*failure-signals.no-per-question-logging]
+
+Answering a question writes no log line, however it is answered —
+synthetic, from the cache, by a server, or `unavailable` after timeouts —
+and a timeout or a demotion writes none either. The only lines a single
+question or request can cause are `upstream <server>: <error>`, for a
+transaction that could not be sent (§4.7), and, for a native request,
+`control: no peer token: <error>` (§5.2) and
+`control: reply failed: <error>` (§5.1).
