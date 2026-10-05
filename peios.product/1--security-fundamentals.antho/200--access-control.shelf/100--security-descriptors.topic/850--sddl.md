@@ -108,12 +108,25 @@ SYSTEM (`SY`). That is the descriptor Peios seeds `/run` with at boot.
 | `ZA` | Access allowed, callback object |
 | `ZD` | Access denied, callback object |
 | `ZU` | System audit, callback object |
+| `AL` | System alarm — continuous auditing |
+| `OL` | System alarm, object |
+| `XL` | System alarm, callback — carries a condition |
+| `ZL` | System alarm, callback object |
 | `ML` | Mandatory label — the integrity level |
+| `TL` | Process trust label |
 | `RA` | Resource attribute — carries a claim |
 | `SP` | Scoped policy identifier |
+| `FL` | Access filter — carries a condition |
 
 The callback types are how a [conditional ACE](~peios/security-descriptors/conditional-aces)
 is spelled: `XA` is an allow ACE with an expression in its seventh field.
+
+`XL` and `ZL` are Peios' own. Windows names no callback alarm, so a string
+holding one does not read on Windows.
+
+The formatter fails on any other ACE type, such as a compound ACE (`0x04`) or an
+unallocated value. It does not leave the entry out, because a string without it
+would describe a descriptor other than the one held.
 
 ## ACE flags
 
@@ -313,9 +326,11 @@ you started with, and this is deliberate rather than a defect.
 
 The directory-object rights (`CC` through `CR`) and the mandatory-label bits
 (`NW`, `NR`, `NX`) occupy the same low bit positions as one another. Which of
-them a bit means depends on the object class and the ACE type, so the formatter
-would have to guess. Instead it accepts all of them when parsing and emits none
-of them, falling back to a hexadecimal mask. `KX` is dropped for a related
+them a bit means depends on the object class and the ACE type. The ACE type
+settles it for a mandatory label, so an `ML` entry's mask comes back as `NW`,
+`NR` and `NX`. Elsewhere the formatter would have to guess, so it accepts the
+directory-object codes when parsing and emits none of them, falling back to a
+hexadecimal mask. `KX` is dropped for a related
 reason: it shares a mask with `KR`, so only one of the two can ever come back.
 
 The formatter also prefers composites to their components, emitting `FA` rather
