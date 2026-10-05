@@ -120,3 +120,8 @@ When they arrive they will most likely be profile values, since whether
 to encrypt is a question about the network an interface stands on.
 Per-program resolution policy is not there either — the native socket
 knows who is asking, so it can be added without changing the wire.
+
+## Going deeper
+
+- The [name resolution interface](~peios/advanced-peios/pspu/name-resolution-interface/scope-and-roles), PSPU book 6 — the contract every resolver on Peios keeps: the doors, the requests and the routing order.
+- The [resolvd technical reference manual](~peios/advanced-peios/resolvd/introduction/overview) — resolvd exactly as built: its cache, server demotion, retries and every limit.
