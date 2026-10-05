@@ -23,6 +23,17 @@ A producer MUST NOT send a log datagram larger than the ceiling. One
 that does is discarded whole, taking every record in it, and the
 producer is not told (§3.4).
 
+A sending socket's own buffer can be smaller than the ceiling. On Linux
+a Unix datagram longer than the sending socket's `SO_SNDBUF` less 32
+bytes is refused with `EMSGSIZE`, and the default send buffer
+(`net.core.wmem_default`, 212992 bytes) is below the portable ceiling.
+A producer that may send a datagram longer than its socket's default
+capacity SHOULD first raise `SO_SNDBUF` to at least the datagram's
+length plus 32 bytes. An unprivileged process may raise it to
+`net.core.wmem_max`, which the kernel doubles, so a stock kernel carries
+datagrams of up to 425952 bytes without privilege; a collector ceiling
+above that is reachable only where `wmem_max` has been raised.
+
 > [!NOTE]
 > §3.A gives the mainline value and upward-adjustable range
 > for this bound and every other in this chapter.

@@ -26,7 +26,9 @@ there: the 262144-byte portable datagram ceiling, truncated datagrams
 discarded whole, a receive queue of at most four times the collector's
 declared ceiling, no backpressure and no notification (§3.6). A
 collector MUST accept at least the portable ceiling and a portable
-producer MUST bound its encoded datagrams to it.
+producer MUST bound its encoded datagrams to it. A producer that may
+send a datagram longer than its socket's default send capacity SHOULD
+first raise `SO_SNDBUF`, as on the log channel (§3.6).
 
 > [!NOTE]
 > §3.A gives the mainline value and upward-adjustable range
