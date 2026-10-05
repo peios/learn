@@ -12,7 +12,7 @@ or OK — the editor sends:
 |---|---|---|
 | `type` | `"apply"` | |
 | `sd` | string | The whole descriptor as the person now has it, self-relative and in base64 as in the request (§8.4). |
-| `parts` | array of strings | The components of `sd` that changed since the request, or since the last `apply` the requester answered `applied`: some of `owner`, `group`, `dacl`, `sacl`. |
+| `parts` | array of strings | The components of `sd` that changed since the request, or since the last `apply` the requester answered `applied`: some of `owner`, `group`, `dacl`, `sacl`, `label`. |
 
 The editor MUST NOT send an `apply` as the person changes things, only
 when they ask for it. A descriptor applied part way through a change
@@ -20,10 +20,23 @@ can take away the access the person needs to finish it: denying
 Everyone before granting oneself, say.
 
 The editor MUST NOT name `dacl` in `parts` unless the request's
-`can.dacl` was true or left out, nor `owner` unless `can.owner` was
-true, nor `sacl` unless `can.audit` was. It MUST NOT
+`can.dacl` was true or left out, nor `owner` or `group` unless
+`can.owner` was true, nor `sacl` unless `can.audit` was and the request
+held the whole SACL, nor `label` unless `can.label` was. It MUST NOT
 send an `apply` while one is unanswered, and SHOULD NOT send one whose
 `parts` is empty.
+
+## The label
+
+The label is in the SACL, and `sacl` carries it: a changed label goes
+with a changed SACL. `parts` MUST NOT name both `sacl` and `label`,
+which KACS refuses to apply together (KACS set-security). `label` names
+the label alone, where the rest of the SACL has not changed or cannot
+be applied: the SACL of `sd` then holds the label that is to be the
+object's, or none to remove it, and the requester applies it as a label
+(LABEL_SECURITY_INFORMATION), which keeps the rest of the object's SACL
+as it is. A requester that keeps a descriptor whole, as a registry value,
+puts the label into the SACL it has, in place of the label there.
 
 ## The answer
 

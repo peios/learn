@@ -13,7 +13,18 @@ only one that has no `type`. It is one JSON object:
 | `object.kind` | string | Yes | What kind of thing it is, in words for the person: `File`, `Folder`, `Service`. |
 | `object.container` | boolean | No, `false` | Whether other objects inherit from it (PCDS §5.6). |
 | `object.children` | string | No, `"all"` | What a container holds, which is what the entries made for it are passed on to: `all` or `containers` (see [Containers](#containers)). Ignored unless `container` is true. |
+| `object.parent` | object | No | What the object is in, which its inherited entries come from (see [The parent](#the-parent)). |
+| `object.parent.name` | string | Yes, in `parent` | What the parent is called where the person knows it: `/srv`. |
+| `object.parent.sd` | string | No | The parent's descriptor, self-relative and in base64 as `sd` is. |
+| `object.parts` | array | No, empty | The object's parts that rules can be made for one at a time: object types (see [Parts and kinds](#parts-and-kinds)). |
+| `object.parts[].guid` | string | Yes | The object type, as a GUID in its usual text form: `bf967aba-0de6-11d0-a285-00aa003049e2`. |
+| `object.parts[].name` | string | Yes | What the part is called, for the person. |
+| `object.parts[].kind` | string | Yes | `set`, a set of properties; `property`; or `right`, an action. |
+| `object.parts[].set` | string | No | For a property, the GUID of the set it is in. |
+| `object.kinds` | array | No, empty | On a container of typed things, the kinds of thing it holds: inherited object types. |
+| `object.kinds[].guid`, `.name` | string | Yes | The inherited object type, and what that kind of thing is called. |
 | `sd` | string | Yes | The descriptor as it is now: a self-relative Security Descriptor (PCDS §5.1), in base64 with padding (RFC 4648 §4). |
+| `read` | array of strings | No | The components `sd` holds as they are on the object: some of `owner`, `group`, `dacl`, `sacl` and `label` (see [The descriptor](#the-descriptor)). Left out, every component `sd` has. |
 | `rights` | array | Yes | The object's rights by name, in the order a person should see them. |
 | `rights[].name` | string | Yes | What the right is called. |
 | `rights[].mask` | number | Yes | The access mask the right stands for, as an unsigned 32-bit integer. |
@@ -24,17 +35,45 @@ only one that has no `type`. It is one JSON object:
 | `can.dacl` | boolean | No, `true` | Whether it can change the DACL. It is true when left out because, before this member, a requester always could. |
 | `can.owner` | boolean | No, `false` | Whether it can change the owner. |
 | `can.audit` | boolean | No, `false` | Whether it can change the SACL. |
+| `can.label` | boolean | No, `false` | Whether it can apply the label by itself (§8.5). |
 | `can.why` | string | No | Why the requester cannot change what `can` says it cannot, as text for the person. |
 
 ## The descriptor
 
 The requester SHOULD include the owner, the group and the DACL. It MAY
-leave out the SACL, and SHOULD unless `can.audit` is true: reading a
-SACL takes a privilege a requester need not have.
+leave out the SACL: reading a SACL takes ACCESS_SYSTEM_SECURITY, which
+a requester need not have. It SHOULD include the label where it can
+read it, which takes only READ_CONTROL. A requester that could read the
+label and not the rest of the SACL sends a SACL holding the label
+alone, and MUST then say so in `read`, naming `label` and not `sacl`.
+
+The editor MUST NOT take a SACL for the whole SACL unless `read` names
+`sacl` or is left out. Where it is only the label, the editor MUST NOT
+show it as an object with no auditing, claims or policies, since those
+are not known.
 
 A descriptor with no DACL component means one with no access list,
 which PCDS §5.1 treats as granting everyone everything. The editor MUST
 show it as such and not as an empty list, which grants nobody anything.
+
+## The parent
+
+`object.parent` names what the object's inherited entries come from,
+for the person: "Inherited from /srv". An editor that offers to stop
+inheriting MAY offer to inherit again, but KACS does not pass a
+parent's entries down again by itself when protection is turned off
+(PCDS §5.6): the editor works out what is passed down from
+`object.parent.sd`, and SHOULD NOT offer to inherit again without it.
+A requester SHOULD send the parent's descriptor where it can read it.
+
+## Parts and kinds
+
+`object.parts` lists the object types (PCDS §5.4) a rule can be made
+for, as an account's sign-in details or the action of resetting its
+password. `object.kinds` lists, for a container of typed things, the
+kinds of thing it holds, which an entry can be passed on to alone. An
+editor MAY offer rules for parts and kinds only where they are listed,
+and MUST keep as it found it an entry naming a GUID it is not told of.
 
 ## The rights
 
@@ -71,7 +110,9 @@ in its general rights (above), and is shown as a whole and kept.
 ## What the requester can change
 
 `can` says what the requester is able to change. It MUST NOT say it
-can change a component it cannot. It SHOULD find out by asking the
+can change a component it cannot. `can.label` is true only where it can
+apply the label by itself, which takes WRITE_OWNER and, for a level
+above the caller's own, SeRelabelPrivilege (KACS set-security). It SHOULD find out by asking the
 system, for example by an AccessCheck of the person's token against the
 descriptor, or by opening the object for the rights that changing it
 takes. It SHOULD NOT infer it from the person's group memberships.

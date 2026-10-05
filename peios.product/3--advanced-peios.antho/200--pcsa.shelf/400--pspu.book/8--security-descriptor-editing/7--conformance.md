@@ -13,12 +13,14 @@ first line (§8.3).
 descriptor in padded base64, the general rights from the most to the
 least, and the generic mapping its kind of object actually uses. On a
 container, says in `object.children` what it holds. Says in `can` only
-what it can in fact change, having asked the system (§8.4).
+what it can in fact change, having asked the system. Says in `read`
+which components it sent where that is not everything `sd` has, as a
+SACL holding only the label (§8.4).
 
 **Applying.** Answers every `apply` with exactly one line, in order.
-Applies the components `parts` names and no others. Answers `applied`
-only when all of them were, and otherwise `failed`, with a reason for
-the person (§8.5).
+Applies the components `parts` names and no others, and the label as a
+label, keeping the rest of the SACL. Answers `applied` only when all of
+them were, and otherwise `failed`, with a reason for the person (§8.5).
 
 **Lines.** Ignores a line type and a member it does not recognise
 (§8.3). Infers nothing from the editor's exit status or standard error
@@ -34,12 +36,13 @@ everything, never as an empty list. Shows what it cannot express in the
 general rights as a whole, and keeps such entries as it found them.
 Gives the entries it makes on a container the inheritance flags of what
 the container holds. Shows a DACL the requester cannot change without
-offering to change it (§8.4).
+offering to change it. Takes a SACL for the whole SACL only where
+`read` says it is (§8.4).
 
 **Applying.** Sends an `apply` only when the person asks, with the
 whole descriptor and the components that changed, never `dacl`,
-`owner` or `sacl` it was not told it could, and never while one is
-unanswered.
+`owner`, `group`, `sacl` or `label` it was not told it could, never
+`sacl` and `label` together, and never while one is unanswered.
 Shows a `failed` answer's reason and stays (§8.5).
 
 **Changing nothing.** Holds no handle to the object and changes nothing

@@ -18,9 +18,12 @@ object, encoded as UTF-8, followed by a line feed (U+000A). §8.3
 **Request.** The first line the requester sends: everything the editor
 is told about the object. §8.4
 
-**Component.** One of the four separately applicable parts of a
-Security Descriptor: the owner, the group, the DACL and the SACL. On
-the channel they are named `owner`, `group`, `dacl` and `sacl`.
+**Component.** One of the five separately applicable parts of a
+Security Descriptor: the owner, the group, the DACL, the SACL and the
+label. The label is the SACL's mandatory integrity label alone, which
+KACS applies apart from the rest of the SACL and with a different right
+(KACS set-security). On the channel they are named `owner`, `group`,
+`dacl`, `sacl` and `label`.
 
 **General right.** A right the requester names for a person to grant
 or deny in one step, such as "Read" or "Full control", standing for an

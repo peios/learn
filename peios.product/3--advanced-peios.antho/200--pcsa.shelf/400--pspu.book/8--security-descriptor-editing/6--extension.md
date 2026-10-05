@@ -21,8 +21,13 @@ question would wait for ever.
 ## What may not be added without a version
 
 A change to the meaning of an existing member or line. A component name
-beyond the four of §8.2. An answer to `apply` other than the two of
+beyond the five of §8.2. An answer to `apply` other than the two of
 §8.5.
+
+The fifth, `label`, was added without a version because nothing can
+send it to a requester that does not know it: an editor names it only
+for a requester that said `can.label`, which an older requester never
+says.
 
 ## What may never be added
 

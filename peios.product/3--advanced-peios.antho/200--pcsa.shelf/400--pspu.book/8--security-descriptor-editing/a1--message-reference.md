@@ -19,15 +19,22 @@ reading. On the channel each is one line, and the descriptors are
 shortened.
 
 ```
-→ {"object":{"name":"notes.txt","kind":"File","container":false},
+→ {"object":{"name":"notes.txt","kind":"File","container":false,
+             "parent":{"name":"/home/dana","sd":"AQAEgBQAAAAkAAAA…"}},
    "sd":"AQAEgBQAAAAkAAAAAAAAADQAAAAB…",
+   "read":["owner","group","dacl","label"],
    "rights":[{"name":"Full control","mask":2032127,"general":true},
              {"name":"Read","mask":1179785,"general":true}],
    "generic":{"read":1179785,"write":1179926,"execute":1179808,"all":2032127},
-   "can":{"owner":true,"audit":false}}
+   "can":{"owner":true,"audit":false,"label":true}}
 ← {"type":"apply","sd":"AQAEgBQAAAAkAAAAAAAAADQAAAAC…","parts":["dacl"]}
 → {"type":"failed","why":"you are not allowed to"}
 ```
 
 The editor shows why and stays open. The person closes it, and the
 requester reads end-of-file on the editor's output.
+
+The requester could read the label but not the rest of the SACL, so
+`read` names `label` and not `sacl`, and the SACL in `sd` holds the
+label alone. Had the person raised the label, the editor would have
+sent `"parts":["label"]`.
