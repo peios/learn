@@ -100,9 +100,10 @@ once and merge (eventd TRMP §6.4).
 
 ## Ordering of aggregates
 
-`COUNT BY` results are ordered by `count` descending. Ties are broken by
-the group key under the value ordering above, then by the
-representative's encoded bytes.
+`COUNT BY` and `GROUP … COUNT` results are ordered by `count`
+descending. Ties are broken by the group key under the value ordering
+above — for a `GROUP` of several fields, each key in turn in the order
+the fields are named — then by the representative's encoded bytes.
 
 `TOP N BY` is exactly `COUNT BY` with `TAKE N` applied after that
 ordering.

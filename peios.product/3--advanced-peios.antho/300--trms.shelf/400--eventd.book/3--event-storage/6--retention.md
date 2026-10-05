@@ -69,11 +69,18 @@ when whole boots are exhausted does eventd start on the current one.
 A background retention coordinator processes the event store first,
 then the log store (§4.4), then the metric store (§5.5).
 [*eventretain.the-coordinator-processes-events-then-logs-then-metrics]
+Each store is processed whether or not the one before it failed, and the
+pass reports every store that did.
+[*eventretain.a-store-whose-retention-fails-does-not-stop-the-others]
 The interval is
 `RetentionCheckIntervalMinutes` (§A); an applied configuration change
 (§8.3) and a write refused for want of space (§9.2) each request a pass
 at once.
 [*eventretain.the-coordinator-runs-every-retentioncheckintervalminutes]
+After a failed pass, requests are held for one second, doubling to a
+minute while passes keep failing, so a full disk does not drive
+retention into a tight retry loop.
+[*eventretain.after-a-failed-pass-requested-passes-back-off]
 It uses read-only connections to
 measure and plan. The only read-write connections it owns are to
 historical shards, which have no ingestion writer: it opens each one

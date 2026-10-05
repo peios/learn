@@ -124,7 +124,7 @@ There is no `NOT` and no `=`.
 |---|---|
 | EVENTS, LOGS | timestamp descending |
 | METRIC | timestamp ascending |
-| `COUNT BY`, `TOP N BY` | count descending |
+| `COUNT BY`, `TOP N BY`, `GROUP … COUNT` | count descending |
 | `DISTINCT` | by the distinct value |
 
 All ties are broken to a total order (§3.21).

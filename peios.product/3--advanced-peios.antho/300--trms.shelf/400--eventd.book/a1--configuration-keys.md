@@ -35,7 +35,7 @@ No compiled-in defaults. A missing or invalid value fails startup
 
 | Key | Type | Default | Range | Description |
 |---|---|---|---|---|
-| `StorageShards` | REG_DWORD | 0 | 0–256 | Number of event shards. 0 means the successfully attached KMES-buffer count. [*config.storage-shards-defaults-to-0-meaning-the-attached-kmes-buffer-count] |
+| `StorageShards` | REG_DWORD | 0 | 0–256 | Number of event shards. 0 means the successfully attached KMES-buffer count. [*config.storage-shards-defaults-to-0-meaning-the-attached-kmes-buffer-count] Each shard costs at least three file descriptors, plus about two for every running query that reads every shard; a high count needs eventd's `LimitNOFILE` raised (§2.3). |
 | `MaxBatchSize` | REG_DWORD | 10000 | 100–100000 | Maximum events per writer transaction. [*config.max-batch-size-defaults-to-10000-events-per-transaction] |
 | `MaxBatchLatencyMs` | REG_DWORD | 100 | 10–5000 | Maximum ms before an event batch commits. [*config.max-batch-latency-defaults-to-100-ms] |
 

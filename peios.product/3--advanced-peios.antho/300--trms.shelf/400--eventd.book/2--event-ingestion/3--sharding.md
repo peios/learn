@@ -11,6 +11,19 @@ comes from `StorageShards` (§A); zero means "as many shards as there
 are successfully attached KMES buffers", and is the default.
 [*shard.storage-shards-zero-is-the-default-and-means-one-shard-per-attached-buffer]
 
+Every shard costs file descriptors. An active shard's writer connection
+holds three for eventd's life — the database, its write-ahead log and
+its shared-memory index — as does the retention coordinator's connection
+to each historical shard (§3.6), and every event query that reads every
+shard holds about two more per shard while it runs (§6.4). eventd
+neither raises its own descriptor limit nor caps the shard count to fit
+it. [*shard.eventd-neither-raises-its-descriptor-limit-nor-caps-the-shard-count]
+Under a 1024-descriptor soft limit, 256 shards do not start, and counts
+well below that leave little room for queries; a machine configured
+with a high `StorageShards` raises eventd's limit to match, with
+`LimitNOFILE` in its service definition (peinit TRM §3.2).
+[*shard.a-high-storage-shards-needs-a-raised-descriptor-limit]
+
 Two properties make a count perform well, and neither is enforced.
 [*shard.neither-a-power-of-two-nor-a-multiple-of-the-buffer-count-is-enforced]
 A power of two lets routing use a bitwise AND rather than a modulo. A

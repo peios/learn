@@ -21,8 +21,8 @@ can without blocking indefinitely.
    and metric receive queues, then close those descriptors.
    [*shutdown.queued-log-and-metric-datagrams-are-processed-before-their-sockets-close]
    This is
-   bounded by the queue size — four times the datagram ceiling — so it
-   completes quickly.
+   bounded by the receive queue, at most `net.unix.max_dgram_qlen`
+   datagrams plus one (§4.1), so it completes quickly.
 3. **Final event drain.** Each drain thread performs one last drain
    cycle from its ring buffer.
    [*shutdown.each-drain-thread-performs-one-final-drain-cycle]

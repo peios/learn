@@ -52,11 +52,15 @@ how far they have got.
 
 ## Convergence
 
-A shard converges when it is quiet. When a writer thread has no pending
-events and its material indexes do not match the desired set, it takes
-**one** convergence action — creating the highest-priority missing
-index, or dropping the lowest-priority material index no longer wanted —
-then rechecks write pressure before considering another.
+A shard converges when it is quiet: its writer thread has no pending
+events, and no batch within the last `SheddingWindowSeconds` exceeded
+75% of `MaxBatchSize`, the same measure that sheds indexes (below).
+[*index.a-shard-is-quiet-with-no-pending-events-and-no-large-batch-in-the-shedding-window]
+When it is quiet and its material indexes do not match the desired set,
+it takes **one** convergence action — creating the highest-priority
+missing index, or dropping the lowest-priority material index no longer
+wanted — then rechecks write pressure before considering another. It
+does so without waiting for the next policy run.
 [*index.an-idle-writer-takes-one-convergence-action-then-rechecks-pressure]
 
 Creation uses `CREATE INDEX IF NOT EXISTS`; removal uses
