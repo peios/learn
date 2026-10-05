@@ -304,8 +304,8 @@ joining.
 
 **The executor's own traffic.** Joining needs netd to send and receive
 DHCP and router discovery, and PNP grants that nothing implicitly: the
-permission is the `dhcp-client` and `icmpv6-housekeeping` rules of the
-baseline below, ordinary and deletable. netd cannot yet read the verdict
+permission is the `dhcp-client`, `icmpv6-housekeeping` and
+`dhcpv6-client` rules of the baseline below, ordinary and deletable. netd cannot yet read the verdict
 stream to name a rule that refused it (the stream has one reader, the
 viewer); `net status` reports an unanswered request as a warning.
 
@@ -474,6 +474,7 @@ untracked housekeeping a host needs:
 |---|---|---|
 | `outbound-ok` | `Direction.Equal` = `out` | `PASS` |
 | `loopback` | `Interface.Equal` = `lo` | `PASS` |
+| `dhcpv6-client` | `Direction.Equal` = `in`, `Protocol.Equal` = `udp`, `SrcAddr.Equal` = `fe80::/10`, `SrcPort.Equal` = `547`, `DstPort.Equal` = `546` | `PASS` |
 | `dev-viewer-ports` | `Direction.Equal` = `in`, `Protocol.Equal` = `tcp`, `DstPort.Equal` = `8080`, `8081` | `PASS` |
 
 Every other inbound flow meets the `Flow` backstop, once, on its first
