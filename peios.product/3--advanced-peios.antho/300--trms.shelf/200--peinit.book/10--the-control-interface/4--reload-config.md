@@ -59,7 +59,7 @@ name`. Repairing the key restores the service on the next reload.
   [*control.reload-config.calendar-timers-are-re-armed-without-catch-up]
 
 A reload also refreshes things that are not service definitions: the
-control descriptor, the three control socket limits, the log
+control descriptor, the four control socket limits, the log
 configuration, the shutdown settings, the global environment layer, and
 the eventd log socket path.
 [*control.reload-config.refreshes-more-than-definitions] It also prunes

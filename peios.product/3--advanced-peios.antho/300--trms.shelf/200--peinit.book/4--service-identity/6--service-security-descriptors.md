@@ -72,7 +72,7 @@ narrower grant; a service that wants one carries its own
 
 Every authenticated principal gets `SERVICE_QUERY_STATUS`: what a service
 is doing is not, by default, a secret from the people using the machine,
-and a service whose state is carries a `ServiceSecurity` that says so.
+and a service whose state is a secret carries a `ServiceSecurity` that says so.
 [*svcsd.the-built-in-default-lets-everyone-query]
 
 ## The check
