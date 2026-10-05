@@ -27,7 +27,7 @@ When the registry's `Duid` is absent, empty or not hex, the result of 2
 or 3 is written to it, as colon-separated lower-case hex, replacing a
 value that was not hex. [*dhcp4-memory.duid-written-back]
 
-Hex in `Duid` (and `ClientId`) may be written with `:`, `-` or spaces
+Hex in `Duid` (and `ClientId`) can be written with `:`, `-` or spaces
 between digits, or none. A value with any other character, an odd number
 of digits, or no digits is not hex.
 
