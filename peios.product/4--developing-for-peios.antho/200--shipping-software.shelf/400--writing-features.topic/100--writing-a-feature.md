@@ -104,5 +104,5 @@ and depend on `dev.peios.peiosutils`, which ships `feat`, and on whatever
 the scripts run. Installing the package runs none of them: the feature
 waits, not installed, until someone turns it on.
 
-Peios ships its own features the same way, one package each, named
-`feat-<name>`: `dev.peios.feat-dynamic-boot` is a whole example.
+A feature's package is named for it, `feat-<name>`, as Peios's own
+`dev.peios.feat-dynamic-boot` is: a whole example.
