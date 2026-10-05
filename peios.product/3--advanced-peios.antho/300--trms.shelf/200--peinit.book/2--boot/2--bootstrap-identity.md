@@ -5,9 +5,8 @@ description: The steady-state identity flow cannot start the system, so platform
 
 The steady-state identity flow is: peinit asks authd for a token, authd
 mints it, peinit installs it on the child. That flow cannot start the
-system, because authd depends on lpsd, lpsd depends on registryd, and
-registryd has to be running before any of them. The bootstrap model
-breaks the circle.
+system, because authd needs a token of its own, and registryd has to be
+running before it. The bootstrap model breaks the circle.
 
 ## Platform services run as SYSTEM
 
@@ -18,14 +17,16 @@ is involved — which is the point, since authd does not exist when the
 first of these services starts.
 [*bootstrap.a-system-identity-does-not-consult-authd]
 
-Four services use it:
+Two services use it:
 
 | Service | Why |
 |---|---|
 | registryd | Starts before authd exists at all. |
-| lpsd | Must be running before authd can resolve a local identity. |
 | authd | Needs `SeTcbPrivilege` and `SeCreateTokenPrivilege`; it is the minter for everything else. |
-| eventd | Is a trusted platform daemon and keeps the bootstrap identity even though its standard service definition orders it after authd. |
+
+lpsd and eventd used it too, until each moved to an account of its own
+(`Identity=Service`). Both now require authd, start after it, and take
+the authd path like any other service.
 
 Nothing restricts which services may declare `Identity=SYSTEM`.
 [*bootstrap.no-allowlist-governs-who-may-be-system] There is
@@ -49,7 +50,7 @@ all of them running as `S-1-5-18`.
 
 ## After authd
 
-Once authd and lpsd are running, every subsequent service gets its token
+Once authd is running, every subsequent service gets its token
 through the ordinary authd flow (§4.3).
 [*bootstrap.after-authd-every-token-comes-from-authd] A definition with
 no `Identity` field defaults to `LocalService` — a well-known principal

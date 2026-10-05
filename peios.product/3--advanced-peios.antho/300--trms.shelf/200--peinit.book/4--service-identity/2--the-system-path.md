@@ -1,11 +1,13 @@
 ---
 title: The SYSTEM Path
-description: peinit mints SYSTEM tokens itself, which is what breaks the bootstrap circle for registryd, lpsd, authd and eventd.
+description: peinit mints SYSTEM tokens itself, which is what breaks the bootstrap circle for registryd and authd.
 ---
 
 For `Identity=SYSTEM`, peinit mints a token itself. This is what breaks
-the bootstrap circle: registryd, lpsd, authd and eventd all need tokens,
-and authd — the thing that mints tokens — is one of them.
+the bootstrap circle: registryd and authd need tokens, and authd — the
+thing that mints tokens — is one of them. eventd and lpsd took this
+path too until they moved to accounts of their own (`Identity=Service`);
+they now take the authd path (§4.3) and start after authd.
 
 ## Minting [*token.minting-copies-peinits-own-token]
 
