@@ -180,3 +180,4 @@ A rule with an unknown fact, a `JOIN` naming a profile that does not exist, a pr
 - [The net command](~peios/networking/the-net-command) — read back what netd did.
 - [Networking](~peios/networking/overview) — the model behind these keys.
 - [Network policy reference](~peios/networking/network-policy-reference) — every fact, verdict and profile value.
+- [The interface layer as netd runs it](~peios/advanced-peios/netd/the-interface-layer/profiles), in the netd technical reference manual — how netd reads these keys, builds a generation from them and judges each interface.

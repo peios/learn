@@ -75,3 +75,4 @@ The address a network last leased is remembered on its record as `RequestedAddre
 - [Network policy](~peios/networking/network-policy) — the model behind rules, and the [reference](~peios/networking/network-policy-reference) with every fact, verdict and profile value.
 - [The net command](~peios/networking/the-net-command) — status, readiness, renewals.
 - `regman Machine\System\Network` on a Peios machine documents every key netd reads and writes.
+- The [netd technical reference manual](~peios/advanced-peios/netd/introduction/overview) — netd exactly as built: every timer, retry, state and message, for when you need to know precisely what it will do.
