@@ -26,7 +26,7 @@ When `ok` is `true` it carries `kind` — `answer`, `addresses`, `status`
 
 A receiver MUST ignore keys it does not know [*nri-native.unknown-keys-ignored] and MUST reject a message
 that repeats a key. [*nri-native.duplicate-keys-rejected] A resolver MUST refuse a request whose `length`
-exceeds the message ceiling (§6.A2) without reading the payload, [*nri-native.oversized-request-refused-unread] and
+exceeds the message ceiling (§6.B) without reading the payload, [*nri-native.oversized-request-refused-unread] and
 MUST reply with an error rather than closing silently. [*nri-native.oversized-request-answered-with-error]
 
 ## One request per connection

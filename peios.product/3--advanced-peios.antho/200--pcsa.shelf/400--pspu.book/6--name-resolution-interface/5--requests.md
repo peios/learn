@@ -25,10 +25,10 @@ Reply `kind: answer`:
 | `outcome` | string | `found`, `notfound`, `unavailable` (§6.6) |
 | `records` | array of map | Each: `name` (string), `type` (uint), `ttl` (uint), `data` (bin, uncompressed wire rdata), `text` (string, presentation form) [*nri-requests.answer-records-shape] |
 | `source` | string | `synthetic`, `hosts`, `cache`, `dns`, `local` [*nri-requests.answer-source-values] |
-| `server` | string or nil | The upstream that answered, for `dns` [*nri-requests.answer-server-for-dns] |
+| `server` | string or nil | The upstream that answered, for `dns`; for `cache`, the upstream whose answer was cached; nil otherwise [*nri-requests.answer-server-for-dns] |
 | `interface` | string or nil | The interface whose scope answered [*nri-requests.answer-interface] |
 | `validation` | string | §6.6 |
-| `rcode` | uint | The DNS response code, for `dns`; `0` otherwise [*nri-requests.answer-rcode-for-dns] |
+| `rcode` | uint | The DNS response code, for `dns`; for `cache`, the code of the response that was cached; `0` otherwise [*nri-requests.answer-rcode-for-dns] |
 
 `records` is the answer section only. [*nri-requests.records-are-answer-section-only] When the name was expanded
 (§6.7) the records are at the expanded name, and `name` on each record
@@ -72,7 +72,7 @@ No fields. Reply `kind: status`:
 |---|---|---|
 | `hostname` | string | The machine's name as the resolver knows it [*nri-requests.status-hostname] |
 | `netd` | bool | Whether the network manager channel is connected [*nri-requests.status-netd-connected] |
-| `scopes` | array of map | Each: `interface`, `servers` (array of string), `domains` (array of string), `default_route` (bool), `exclusive` (bool), `metric` (uint), `subnets` (array of string), `demoted` (array of string) [*nri-requests.status-scopes] |
+| `scopes` | array of map | Each: `interface`, `servers` (array of string), `domains` (array of string), `default_route` (bool), `exclusive` (bool), `metric` (uint), `subnets` (array of string: the interface's addresses, each as `address/prefix`, which name the subnets routing step 3 matches against), `demoted` (array of string) [*nri-requests.status-scopes] |
 | `fallback_servers` | array of string | The registry's server list [*nri-requests.status-fallback-servers] |
 | `cache_entries` | uint | [*nri-requests.status-cache-entries] |
 | `counters` | map | `queries`, `synthetic`, `cache_hits`, `upstream_sent`, `upstream_answered`, `upstream_failed`, `refused`, each uint [*nri-requests.status-counters] |

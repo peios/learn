@@ -23,6 +23,12 @@ whether it is exclusive. Scopes come from the network manager (§6.9).
 The **fallback scope** is the registry's server list, used only when no
 interface contributes servers.
 
+**Up.** A scope is up while its interface's level is `link` or better
+(§6.9). Whether it has servers is a separate matter and does not decide
+it: a scope that is up with no servers still takes every routing step
+it qualifies for, and a question routed to it is `unavailable` without a
+query (§6.7).
+
 **Route.** The scope a question goes to. Every question goes to exactly
 one scope (§6.7).
 

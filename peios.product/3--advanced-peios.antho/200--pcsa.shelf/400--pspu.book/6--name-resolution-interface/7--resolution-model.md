@@ -85,7 +85,7 @@ when an interface's servers change or the interface goes away, every
 answer learned through it MUST be discarded: what a VPN's servers said
 dies with the VPN. [*nri-resolution.cache-discarded-with-scope]
 
-Positive answers live for their least TTL, capped (§6.A2). [*nri-resolution.positive-ttl-least-capped] Negative
+Positive answers live for their least TTL, capped (§6.B). [*nri-resolution.positive-ttl-least-capped] Negative
 answers — `notfound`, and `found` with no records — live for the SOA
 minimum in the authority section (RFC 2308), capped lower. [*nri-resolution.negative-ttl-soa-minimum-capped] `unavailable`
 is never cached. A hit reports TTLs reduced by the time spent in cache. [*nri-resolution.cache-hit-ttl-reduced]
@@ -98,7 +98,7 @@ name and require the reply to echo it exactly (0x20 encoding). [*nri-resolution.
 whose identifier, question or case pattern does not match MUST be
 ignored, not treated as a failure. [*nri-resolution.mismatched-reply-ignored]
 
-Queries are UDP with EDNS0 advertising the buffer size in §6.A2; [*nri-resolution.udp-with-edns0] a
+Queries are UDP with EDNS0 advertising the buffer size in §6.B; [*nri-resolution.udp-with-edns0] a
 truncated reply is retried over TCP to the same server. [*nri-resolution.truncated-retried-over-tcp-same-server] A server that
 does not answer within the per-server timeout, or answers `SERVFAIL`,
 `REFUSED` or a format error, is **demoted** — tried after its peers —

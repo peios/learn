@@ -35,7 +35,7 @@ description: Every NRI request and reply by name, the rights and values, and the
 | `validation` | `unvalidated`, `secure`, `insecure`, `bogus` | §6.6 |
 | `source` | `local`, `synthetic`, `hosts`, `cache`, `dns` | §6.2 |
 | `family` | `any`, `inet`, `inet6` | §6.5 |
-| `level` | `absent`, `link`, `addressed`, `routed` | §6.9 |
+| `level` | `link`, `addressed`, `routed`; never `absent` in a snapshot, since an absent interface contributes no scope | §6.9 |
 
 ## Paths and addresses (Peios)
 

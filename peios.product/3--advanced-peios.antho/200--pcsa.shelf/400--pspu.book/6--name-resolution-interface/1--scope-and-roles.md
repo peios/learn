@@ -44,7 +44,7 @@ This chapter covers:
 - the network manager channel (§6.9)
 - what the hosts shim must and must not do (§6.10)
 - conformance, by role (§6.11)
-- a message reference and the limits (§6.A1, §6.A2)
+- a message reference and the limits (§6.A, §6.B)
 
 What this chapter does not specify: DNSSEC validation and encrypted
 transports (reserved; a resolver reports `unvalidated` until it does

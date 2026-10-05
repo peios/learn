@@ -45,10 +45,10 @@ chapter. This section collects them by role.
 13. Answer the synthetic names of §6.7 before any network; never
     forward `.local`; never speak LLMNR.
 14. Key the cache by scope; flush a scope whose servers change or that
-    goes away; cap TTLs as §6.A2 (§6.7).
+    goes away; cap TTLs as §6.B (§6.7).
 15. Fresh source port, random identifier, 0x20 case with exact echo;
     ignore mismatched replies (§6.7).
-16. EDNS0 with the §6.A2 buffer; TCP on truncation; demote failing
+16. EDNS0 with the §6.B buffer; TCP on truncation; demote failing
     servers; bounded attempts (§6.7).
 
 ### Stub door

@@ -24,7 +24,8 @@ not, and no file behind any of them.
 This is why there is no `/etc/hosts`: the stub answers static names
 synthetically, so a direct-DNS resolver gets them without a file. And it
 is why `/etc/resolv.conf` is a constant — `nameserver 127.0.0.53`,
-`options edns0` — shipped by the resolver's package and never
+`options edns0` — shipped by the resolver's package as
+`/usr/etc/resolv.conf`, the bottom layer of the `/etc` merge, and never
 regenerated: it is a pointer to the answerer, not a copy of the answer. [*nri-doors.resolv-conf-is-constant]
 A search list in it would be a second expansion policy the resolver
 could not see; there is none.
