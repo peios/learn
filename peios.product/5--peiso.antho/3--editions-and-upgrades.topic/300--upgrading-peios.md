@@ -15,11 +15,10 @@ That is the whole procedure. It is safe to run again at any time: an interrupted
 
 ## What happens
 
-1. **Find the edition.** `upgrade-peios` reads `ID` and `VARIANT_ID` from `/usr/lib/os-release` — the file the edition package itself wrote — and derives both the historical name (`peios-experimental`) and the canonical name (`dev.peios.peios-experimental`). A system whose `ID` is not `peios`, or that has no variant, is refused (exit 2).
-2. **Inspect the installed package identity.** `peipkg list --json` is the authority because both package names intentionally write the same `os-release`. If both identities, or neither identity, are installed, the system is inconsistent and the upgrade is refused (exit 2).
-3. **Move the concrete edition package.** A pre-qualification installation runs `peipkg install dev.peios.peios-experimental --bypass-alternate-upgrade`; the qualified package's bounded `replaces` edge removes `peios-experimental` in the same transaction. A qualified installation instead runs `peipkg upgrade dev.peios.peios-experimental --bypass-alternate-upgrade`. `--yes` is passed through when requested. Peipkg deliberately does not follow `provides` for a named upgrade, which is why the one-time transition is an install rather than `upgrade peios-experimental`. Either operation pulls the release closure with it. A peipkg failure is exit 3, and nothing further runs.
-4. **Stage the release's seeds.** The new [`release.toml`](~peios/peiso/editions-and-upgrades/release-toml) is read; each seed it names is copied from `/usr/share/regim/` into `/lcl/policy/autoapply.d/`, and the drain script is placed in `/lcl/policy/autorun.d/` if it is missing. A seed the release names that nothing ships is exit 4.
-5. **Apply them.** `reg apply --dir /lcl/policy/autoapply.d --once-delete --yes` applies each seed and removes it from the queue. Services the seeds define start now. Failure is exit 5.
+1. **Find the edition.** `upgrade-peios` reads `ID` and `VARIANT_ID` from `/usr/lib/os-release` — the file the edition package itself wrote — and derives the edition package's name from them: `VARIANT_ID=experimental` is `dev.peios.peios-experimental`. A system whose `ID` is not `peios`, or that has no variant, is refused (exit 2).
+2. **Move the edition package.** It runs `peipkg upgrade dev.peios.peios-experimental --bypass-alternate-upgrade`, passing `--yes` and `--allow-stale` through when given. The upgrade pulls the release closure with it. A peipkg failure is exit 3, and nothing further runs.
+3. **Stage the release's seeds.** The new [`release.toml`](~peios/peiso/editions-and-upgrades/release-toml) is read; each seed it names is copied from `/usr/share/regim/` into `/lcl/policy/autoapply.d/`, and the drain script is placed in `/lcl/policy/autorun.d/` if it is missing. A seed the release names that nothing ships is exit 4.
+4. **Apply them.** `reg apply --dir /lcl/policy/autoapply.d --once-delete --yes` applies each seed and removes it from the queue. Services the seeds define start now. Failure is exit 5.
 
 `upgrade-peios` never elevates. peipkg and `reg` run with the caller's token, exactly as they would if you typed the two commands yourself; KACS decides what each may do.
 
@@ -39,11 +38,46 @@ rather than leaving two edition identities behind.
 | `--on-reboot` | Stop after staging. The seeds apply on the next boot, when peinit runs the drain script before planning its services. Use this when a seed changes something you would rather not change under a running session — the console login, say. |
 | `--seeds-only` | Skip the package upgrade and only reconcile the installed release's seeds. This is the re-run: after an interrupted upgrade, or to re-apply a release's policy. |
 | `--yes`, `-y` | Pass `--yes` to peipkg. |
+| `--allow-stale` | Pass `--allow-stale` to peipkg: carry on with a repository's out-of-date information when refreshing it brought nothing newer. |
+| `--check` | Show what upgrading would change — peipkg's `--dry-run` — and change nothing. |
+| `--status` | Show the installed release, the edition package's version, the seeds waiting for the next boot, and whether you may upgrade. |
 | `--root DIR` | Operate on the Peios rooted at `DIR` rather than `/`. Implies `--on-reboot`, since `reg` acts on the live registry only; peipkg is run with `--root DIR`. |
+
+To do it on the desktop, use [Upgrade Peios](~peios/peiso/editions-and-upgrades/upgrade-peios).
+
+## For a program
+
+`upgrade-peios --status --json` answers with one object:
+
+| Member | Is |
+|---|---|
+| `edition` | The edition package's name. |
+| `name`, `version_id`, `variant` | `PRETTY_NAME`, `VERSION_ID` and `VARIANT` from os-release. |
+| `version` | The edition package's installed version, or `null` where peipkg's records can't be read. |
+| `queued_seeds` | The seeds waiting in `/lcl/policy/autoapply.d/` for the next boot, by name, or `null` where the queue can't be read. |
+| `may_upgrade` | Whether you may upgrade: asked by opening peipkg's lock and database for writing and checking the seed queue is writable. Nothing is written. |
+
+`upgrade-peios --driven` upgrades, or with `--check` looks, and reports it
+as JSON Lines events on standard output. Its first part is
+[peipkg's driven mode](~peios/peipkg/the-tools/the-driven-mode): peipkg is
+run with upgrade-peios's standard input, so the program answers peipkg's
+questions as it would answer peipkg's own, and every event peipkg writes is
+passed on except its terminal one. Then upgrade-peios adds:
+
+| Event | Members | Means |
+|---|---|---|
+| `progress` | `phase`, `step`, `steps` | `phase` is `release-stage` (the seeds are copied into the queue) or `release-apply` (they are applied). |
+| `message` | `text` | What upgrade-peios is doing, or a line `reg` wrote. |
+| `done` | `summary`, `edition`, `seeds_queued` | Finished; `seeds_queued` is true when the seeds were left for the next boot. |
+| `cancelled` | `reason` | peipkg's plan wasn't approved; nothing was changed. |
+| `error` | `code`, `message` | Failed. The code is peipkg's own for its part (`stale`, `busy`, `denied`, `unresolvable`, `untrusted`, `failed`…), or `usage`, `no-release`, `seeds` or `apply`. |
+
+Exactly one `done`, `cancelled` or `error` ends the run. `--yes` is refused
+with `--driven`. A program that goes away mid-upgrade doesn't stop it.
 
 ## From the medium
 
-A machine with no reachable repository is upgraded from an image instead: boot it from the new medium with its disk attached and choose **Upgrade an installation** in the [installer](~peios/disks-and-filesystems/installing-to-disk). That runs the same procedure against the mounted disk — the edition with the bypass, `--seeds-only` for the seeds, then everything else the medium carries — and rewrites the boot files. It is the same procedure with one difference: the medium's repository index is fixed at manufacture, so the installer passes peipkg `--allow-stale` where this command cannot.
+A machine with no reachable repository is upgraded from an image instead: boot it from the new medium with its disk attached and choose **Upgrade an installation** in the [installer](~peios/disks-and-filesystems/installing-to-disk). That runs the same procedure against the mounted disk — the edition with the bypass, `--seeds-only` for the seeds, then everything else the medium carries — and rewrites the boot files. The medium's repository index is fixed at manufacture, so the installer always passes peipkg `--allow-stale`, which this command does only when asked.
 
 ## Why not `peipkg upgrade`
 

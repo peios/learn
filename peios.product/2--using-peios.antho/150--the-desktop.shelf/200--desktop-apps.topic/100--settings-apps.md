@@ -8,7 +8,7 @@ related:
 ---
 
 System Settings, My Settings, Desktop Settings, SSH Settings, Security
-Policy, Package Manager and Feature Manager are built from one kit,
+Policy, Package Manager, Feature Manager and Upgrade Peios are built from one kit,
 `libgxwi::settings`, so they share a layout
 and behave alike. An app of your own can use it too. The kit is functions
 that return HTML for a GXWI live surface (`libgxwi::Live`) and a stylesheet
