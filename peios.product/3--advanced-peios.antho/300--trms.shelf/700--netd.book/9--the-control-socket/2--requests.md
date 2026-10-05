@@ -68,6 +68,6 @@ Each interface:
 | `addresses` | every address the kernel holds, `address/prefix`, link-local ones included |
 | `gateway`, `gateway6` | the gateway of the interface's first IPv4 and IPv6 default route, any owner's |
 | `dns`, `search` | the merged DNS facts (§8.3); empty for an interface not joined |
-| `lease` | while the client holds a lease: `server`, `expires_in` (whole seconds), `state` (§5.1); nil otherwise |
+| `lease` | while the client holds a lease: `server`, `expires_in` (whole seconds), `state` (§5.1), `duration` (the lease's length), and `renew_at` and `rebind_at` (T1 and T2), the last three in whole seconds after the lease was bound; nil otherwise. A client reading a netd that predates the last three finds them absent. |
 
 [*control-req.status-interface-fields]
