@@ -6,7 +6,9 @@ related:
   - peios/networking/overview
   - peios/networking/configuring-profiles
   - peios/networking/network-policy
+  - peios/networking/network-policy-reference
   - peios/networking/name-resolution
+  - peios/networking/the-pnp-viewer
   - peios/network-objects/port-reservations
   - peios/logs-and-events/event-viewer
 ---
@@ -33,7 +35,9 @@ real.
 > machine (its own addresses, and the desktop connections really open now)
 > and judges it by your real rules. Every section that shows it says
 > **Example data**, and the status line says **Example**. The rules
-> themselves, and everything outside the firewall, are real.
+> themselves, and everything outside the firewall, are real. On an
+> Experimental image, [the PNP viewer](~peios/the-pnp-viewer) shows the
+> engine's own verdicts and live flows.
 
 ## Overview
 
@@ -220,8 +224,8 @@ allow rule…**.
 connections a minute over the last fifteen minutes, allowed, rejected and
 blocked. Under it, **Connections** lists the connections open now, in or
 out, with the network, the result and the rule that decided it; a connection
-to this desktop is marked **Your session**. Select one to see why it was
-allowed. **Counters** shows each count a rule with a Count action keeps,
+to this desktop is marked **Your session**. Select one to see how it was
+decided. **Counters** shows each count a rule with a Count action keeps,
 which rules write and read it, and, by source, whether it is over a rule's
 limit.
 
