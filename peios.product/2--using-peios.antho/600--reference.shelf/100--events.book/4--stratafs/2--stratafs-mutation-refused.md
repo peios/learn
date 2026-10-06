@@ -43,10 +43,10 @@ significance.
 
 | Field | Type | Presence | Meaning |
 |---|---|---|---|
-| [`object.file.path-relative`](~peios/events/field-index/fields-object#object.file.path-relative) | `str.path` | required | The path of the object within its mount, `/`-prefixed. |
+| [`object.file.path-relative`](~peios/events/field-index/fields-object#object.file.path-relative) | `str.path` | optional | Absent only from a reduced record: when the memory for the full record could not be had, the kernel writes the record without its paths rather than lose it. |
 | [`operation.name`](~peios/events/field-index/fields-operation#operation.name) | `str.enum` | required | StrataFS names its own operations, and the set is disjoint from the `file.` names an already-open handle uses.<br><br>Values here (open set): `copy-file-range` · `copy-up-publication-rollback` · `create` · `create-rollback` · `fallocate` · `link` · `link-rollback` · `mmap` · `remap-file-range` · `removexattr` · `rename` · `rmdir` · `setattr` · `setxattr` · `splice-write` · `supersede` · `supersede-publication` · `tmpfile` · `truncate` · `unlink` · `write`. |
 | [`source.stratum.index`](~peios/events/field-index/fields-source#source.stratum.index) | `uint` | optional | Absent when the refusal was raised before any provider was determined. |
-| [`source.stratum.path`](~peios/events/field-index/fields-source#source.stratum.path) | `str.path` | optional | Present exactly when `source.stratum.index` is. |
+| [`source.stratum.path`](~peios/events/field-index/fields-source#source.stratum.path) | `str.path` | optional | Present exactly when `source.stratum.index` is, except in a reduced record, which carries no paths. |
 | [`outcome.errno`](~peios/events/field-index/fields-outcome#outcome.errno) | `int.errno` | required | The error the operation failed with, as a negative errno. |
 | [`outcome.deferred`](~peios/events/field-index/fields-outcome#outcome.deferred) | `bool` | required | Whether the refusal was deferred — set on rollbacks and on deferred deletions, which are the records where no caller remained to be told. |
 

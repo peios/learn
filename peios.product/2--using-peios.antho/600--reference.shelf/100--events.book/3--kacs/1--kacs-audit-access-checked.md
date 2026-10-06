@@ -6,11 +6,20 @@ description: "The record that an access check completed, and what it decided."
 - **Event type:** `kacs.audit.access.checked`
 - **Defined in:** `kacs.evman`
 - **Tier:** essential
-- **Gating:** a matching SACL audit ACE, or the token's audit policy
+- **Gating:** a matching SACL audit ACE, or the token's audit policy; on the AccessCheck syscall a SACL record also needs the caller to hold SeAuditPrivilege, enabled
 - **Cardinality:** once per matching audit ACE, not once per access
 
 The record that an access check completed, and what it decided. The most
 common event on the system, and the one most investigations start from.
+
+**A daemon's own checks need SeAuditPrivilege.** A userspace component that
+guards its objects with the AccessCheck syscall supplies the descriptor
+itself, SACL included. Its records are written only if the calling process
+holds SeAuditPrivilege, enabled, on its effective token, as Windows asks of
+`AccessCheckAndAuditAlarm`; without it the check is answered and its SACL
+records are silently withheld. The privilege is the caller's, not the
+checked client's. Records the checked token's own audit policy forces are
+written either way.
 
 It fires against every kind of object KACS protects — files, processes,
 tokens, sockets and SysV IPC objects — which is why `object.kind` is
@@ -52,10 +61,12 @@ in `trigger.ace`.
 | [`object.token.guid`](~peios/events/field-index/fields-object#object.token.guid) | `bin.guid` | when `object.kind == token` | The durable GUID of the token the operation acted on. |
 | [`access.requested`](~peios/events/field-index/fields-access#access.requested) | `uint.mask` | required | The access mask the caller asked for, after generic bits have been mapped to type-specific ones. |
 | [`access.granted`](~peios/events/field-index/fields-access#access.granted) | `uint.mask` | required | The mask this check granted. |
+| [`access.denied-integrity`](~peios/events/field-index/fields-access#access.denied-integrity) | `uint.mask` | optional | The requested bits the object's mandatory label withheld — every bit it withheld, for `MAXIMUM_ALLOWED`. Absent when it withheld none. With `access.denied-trust`, often the whole explanation of a denial the DACL alone would have allowed. |
+| [`access.denied-trust`](~peios/events/field-index/fields-access#access.denied-trust) | `uint.mask` | optional | The requested bits the object's process-trust label withheld, read the same way. |
 | [`outcome.success`](~peios/events/field-index/fields-outcome#outcome.success) | `bool` | required | True when every requested bit is in `access.granted`. A `MAXIMUM_ALLOWED` request always reports true, because such a request returns whatever is available and cannot fail — so a success rate computed over these records is skewed by them. |
 | [`trigger.kind`](~peios/events/field-index/fields-trigger#trigger.kind) | `str.enum` | required | Why an audit record exists at all. |
 | [`trigger.ace`](~peios/events/field-index/fields-trigger#trigger.ace) | `bin.ace` | when `trigger.kind == sacl` | The exact ACE that caused this record, so a consumer can identify which rule fired. |
-| [`fields.attestation.userspace`](~peios/events/field-index/fields-fields#fields.attestation.userspace) | `bool` | optional | Set when the check came through the access-check ioctl and its caller supplied the PIP state. |
+| [`fields.attestation.userspace`](~peios/events/field-index/fields-fields#fields.attestation.userspace) | `bool` | optional | Set on every record of the AccessCheck syscall, and on no other. There the descriptor, and with it `trigger.ace`, is always the caller's, as are any audit context and PIP state it passes. |
 
 Every record also carries the header fields of [the envelope](~peios/events/introduction/the-envelope), which no payload repeats.
 

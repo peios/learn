@@ -23,19 +23,16 @@ generated from it:
 
 - **§2** describes the **groups**, the sets of fields that travel
   together, such as `subject`.
-- **§3 to §7** have a page per event type, one chapter per root:
-  `kacs`, `stratafs`, `lcs`, `kmes` and `ntfe`.
+- **§3 to §15** have a page per event type, one chapter per root: the
+  kernel's `kacs`, `stratafs`, `lcs`, `kmes` and `ntfe` (§3 to §7), then
+  `peinit`, `peipkg`, `eventd`, `authd`, `lpsd`, `timed`, `netd` and
+  `trustd` (§8 to §15).
 - **Appendix A** lists every event type in one table, and **Appendix B**
   is the field index: every field, its type and values, and every event
   that carries it.
 
 On a running system, `evman <event-type>` prints the same definition
 from the installed fragments ([evman](~peios/event-tools/evman)).
-
-Three emitters are not yet converted to the catalogue's names. peinit,
-peipkg and eventd define their fields in the catalogue, but what they
-write today still uses their older names, and §8 to §10 describe it as
-it is.
 
 ## Two transports, not one
 
@@ -44,15 +41,16 @@ per-CPU ring buffer that the kernel writes into and userspace reads
 from. Every KMES event is a binary header followed by a MessagePack
 payload (§1.2).
 
-Two things in this book are not KMES events, and are included because an
-operator looking for "what does Peios tell me" would otherwise miss
-them:
+Two things in this book never travel through KMES:
 
-- **eventd's synthetic events** (§10) are written straight into a shard
-  database and never touch KMES. They carry no header stamps.
-- **LCS watch records** (§11) are binary records read from a key file
-  descriptor. They are a notification mechanism, not an audit trail, and
-  their format has nothing in common with a KMES event.
+- **eventd's records about itself** (§10) are catalogue events, but
+  eventd writes them straight into its event store and they never touch
+  KMES. They carry no sequence number and no `emitter.*` stamps.
+- **LCS watch records** (§16) are not events at all, and are included
+  because an operator looking for "what does Peios tell me" would
+  otherwise miss them. They are binary records read from a key file
+  descriptor: a notification mechanism, not an audit trail, with a
+  format that has nothing in common with a KMES event.
 
 ## What is not here
 

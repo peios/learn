@@ -51,9 +51,15 @@ correlation, not reconstruction.
 ## Carried by
 
 - [`kacs.audit.access.checked`](~peios/events/kacs/kacs-audit-access-checked)
+- [`kacs.audit.descriptor.changed`](~peios/events/kacs/kacs-audit-descriptor-changed)
 - [`kacs.audit.handle.used`](~peios/events/kacs/kacs-audit-handle-used)
 - [`kacs.audit.privilege.used`](~peios/events/kacs/kacs-audit-privilege-used)
+- [`kacs.caap.policy.changed`](~peios/events/kacs/kacs-caap-policy-changed)
 - [`kacs.caap.sacl.skipped`](~peios/events/kacs/kacs-caap-sacl-skipped)
 - [`kacs.caap.staging.diverged`](~peios/events/kacs/kacs-caap-staging-diverged)
+- [`kacs.descriptor.rejected`](~peios/events/kacs/kacs-descriptor-rejected)
+- [`kacs.impersonation.reverted`](~peios/events/kacs/kacs-impersonation-reverted)
+- [`kacs.impersonation.started`](~peios/events/kacs/kacs-impersonation-started)
+- [`kacs.mount.policy.changed`](~peios/events/kacs/kacs-mount-policy-changed)
 
 *Generated from `kernel.evman` by `pkm/tools/gen-events-book.py`. Edit the fragment, not this page.*

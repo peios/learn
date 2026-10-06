@@ -43,6 +43,7 @@ has the form of a SID.
 
 **Carried by:**
 
+- [`kacs.caap.policy.changed`](~peios/events/kacs/kacs-caap-policy-changed)
 - [`kacs.caap.sacl.skipped`](~peios/events/kacs/kacs-caap-sacl-skipped)
 
 ## <a id="caap.rule.index"></a>`caap.rule.index`

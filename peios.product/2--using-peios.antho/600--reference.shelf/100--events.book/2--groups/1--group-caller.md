@@ -31,8 +31,16 @@ serialise independently and landed in different places.
 
 - [`lcs.audit.backup.ended`](~peios/events/lcs/lcs-audit-backup-ended)
 - [`lcs.audit.backup.started`](~peios/events/lcs/lcs-audit-backup-started)
+- [`lcs.audit.key.created`](~peios/events/lcs/lcs-audit-key-created)
+- [`lcs.audit.key.deleted`](~peios/events/lcs/lcs-audit-key-deleted)
+- [`lcs.audit.key.descriptor.changed`](~peios/events/lcs/lcs-audit-key-descriptor-changed)
+- [`lcs.audit.key.hidden`](~peios/events/lcs/lcs-audit-key-hidden)
 - [`lcs.audit.key.opened`](~peios/events/lcs/lcs-audit-key-opened)
+- [`lcs.audit.key.tombstoned`](~peios/events/lcs/lcs-audit-key-tombstoned)
 - [`lcs.audit.restore.ended`](~peios/events/lcs/lcs-audit-restore-ended)
 - [`lcs.audit.restore.started`](~peios/events/lcs/lcs-audit-restore-started)
+- [`lcs.audit.transaction.committed`](~peios/events/lcs/lcs-audit-transaction-committed)
+- [`lcs.audit.value.deleted`](~peios/events/lcs/lcs-audit-value-deleted)
+- [`lcs.audit.value.set`](~peios/events/lcs/lcs-audit-value-set)
 
 *Generated from `lcs.evman` by `pkm/tools/gen-events-book.py`. Edit the fragment, not this page.*

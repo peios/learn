@@ -1,0 +1,28 @@
+---
+title: "peinit.recovery.entered"
+description: "peinit dropped the machine to a recovery shell, for the reason in outcome.reason."
+---
+
+- **Event type:** `peinit.recovery.entered`
+- **Defined in:** `peinit.evman`
+- **Tier:** essential
+- **Gating:** none
+- **Cardinality:** once, when peinit gives up on the boot and starts the recovery shell
+
+peinit dropped the machine to a recovery shell, for the reason in
+`outcome.reason`. Written before the registry or eventd may exist, into the
+ring, which is where the record of a boot that failed this early survives.
+Essential because it is rare and means the machine did not boot.
+
+Formerly `recovery.entered`.
+
+## Fields
+
+| Field | Type | Presence | Meaning |
+|---|---|---|---|
+| [`outcome.reason`](~peios/events/field-index/fields-outcome#outcome.reason) | `str.enum` | required | Why the operation resolved the way it did.<br><br>Values here (open set): `kernel-command-line` · `privileges` · `boot-attempt-counter` · `forced-by-kernel-command-line` · `boot-attempt-threshold-reached` · `root-writable` · `virtual-filesystems` · `machine-id` · `rtc-clock` · `registryd` · `provisioning` · `infrastructure` · `phase2` · `runtime`. |
+| [`outcome.detail`](~peios/events/field-index/fields-outcome#outcome.detail) | `str` | optional | What went wrong, in the error's own words, such as `peinit is missing required privilege(s): SeAuditPrivilege`. Absent for `forced-by-kernel-command-line`, which has nothing to add, and for `phase2`, whose findings are their own `peinit.graph.validation.failed` records. |
+
+Every record also carries the header fields of [the envelope](~peios/events/introduction/the-envelope), which no payload repeats.
+
+*Generated from `peinit.evman` by `pkm/tools/gen-events-book.py`. Edit the fragment, not this page.*

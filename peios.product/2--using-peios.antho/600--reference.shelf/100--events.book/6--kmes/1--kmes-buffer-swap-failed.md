@@ -6,7 +6,7 @@ description: "The record that KMES could not resize its per-CPU ring buffers and
 - **Event type:** `kmes.buffer.swap.failed`
 - **Defined in:** `kmes.evman`
 - **Tier:** standard
-- **Gating:** only when the swap failed with ENOMEM
+- **Gating:** none — every failed swap is recorded, whatever the error
 - **Cardinality:** once per failed swap
 
 The record that KMES could not resize its per-CPU ring buffers and kept the
@@ -19,11 +19,13 @@ a way worth recognising: an administrator typically raises capacity because
 the system is dropping events, and the allocation most likely to fail is
 the one made while the system is already short of memory.
 
-The swap is system-wide rather than per-ring, so no CPU or ring is named.
+The other failures are rarer and more serious. `EIO` means the migration
+found a ring whose framing was corrupt and abandoned the swap rather than
+copy it; any other error is the kernel refusing to quiesce the CPUs for
+the switch-over. In every case the old rings stay live and nothing was
+lost by the attempt.
 
-**Only `ENOMEM` produces a record.** A swap that fails for any other reason
-retains the old capacity and emits nothing, so absence of this event is not
-evidence that a capacity change took effect.
+The swap is system-wide rather than per-ring, so no CPU or ring is named.
 
 ## Fields
 
@@ -31,7 +33,7 @@ evidence that a capacity change took effect.
 |---|---|---|---|
 | [`buffer.capacity-requested`](~peios/events/field-index/fields-buffer#buffer.capacity-requested) | `uint.bytes` | required | The per-CPU ring buffer capacity that was asked for. |
 | [`buffer.capacity`](~peios/events/field-index/fields-buffer#buffer.capacity) | `uint.bytes` | required | The capacity kept. |
-| [`outcome.errno`](~peios/events/field-index/fields-outcome#outcome.errno) | `int.errno` | required | The error the operation failed with, as a negative errno. |
+| [`outcome.errno`](~peios/events/field-index/fields-outcome#outcome.errno) | `int.errno` | required | `-ENOMEM` when the new rings could not be allocated, `-EIO` when the migration met a corrupt ring. |
 
 Every record also carries the header fields of [the envelope](~peios/events/introduction/the-envelope), which no payload repeats.
 

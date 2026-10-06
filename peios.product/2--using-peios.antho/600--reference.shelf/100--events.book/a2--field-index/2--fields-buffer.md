@@ -18,6 +18,7 @@ capacity that was kept.
 **Carried by:**
 
 - [`kmes.buffer.swap.failed`](~peios/events/kmes/kmes-buffer-swap-failed)
+- [`kmes.config.applied`](~peios/events/kmes/kmes-config-applied)
 
 ## <a id="buffer.capacity-expected"></a>`buffer.capacity-expected`
 
@@ -81,7 +82,7 @@ does.
 
 **Carried by:**
 
-No event carries this field yet.
+- [`eventd.events.lost`](~peios/events/eventd/eventd-events-lost)
 
 ## <a id="buffer.cpu-claimed"></a>`buffer.cpu-claimed`
 

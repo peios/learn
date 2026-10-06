@@ -26,7 +26,8 @@ KMES is a ring buffer. The kernel writes; keeping up is the subscriber's
 problem.
 
 - A subscriber that falls behind **loses events**. eventd notices and
-  records a `synthetic.gap` (§10.1), which is how a gap becomes visible
+  records an [`eventd.events.lost`](~peios/events/eventd/eventd-events-lost),
+  which is how a gap becomes visible
   rather than silent.
 - **There is no replay.** An event missed is gone. Nothing can ask for
   it back.

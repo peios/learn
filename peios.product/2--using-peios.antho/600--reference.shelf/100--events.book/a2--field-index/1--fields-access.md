@@ -19,7 +19,14 @@ the intersection alone.
 
 **Carried by:**
 
+- [`kacs.audit.descriptor.changed`](~peios/events/kacs/kacs-audit-descriptor-changed)
 - [`kacs.audit.handle.used`](~peios/events/kacs/kacs-audit-handle-used)
+- [`lcs.audit.key.deleted`](~peios/events/lcs/lcs-audit-key-deleted)
+- [`lcs.audit.key.descriptor.changed`](~peios/events/lcs/lcs-audit-key-descriptor-changed)
+- [`lcs.audit.key.hidden`](~peios/events/lcs/lcs-audit-key-hidden)
+- [`lcs.audit.key.tombstoned`](~peios/events/lcs/lcs-audit-key-tombstoned)
+- [`lcs.audit.value.deleted`](~peios/events/lcs/lcs-audit-value-deleted)
+- [`lcs.audit.value.set`](~peios/events/lcs/lcs-audit-value-set)
 
 ## <a id="access.bypass"></a>`access.bypass`
 
@@ -80,14 +87,15 @@ No event carries this field yet.
 - **Carried in:** the payload
 - **Defined in:** `kernel.evman`
 
-The bits mandatory integrity control denied.
-
-**Not emitted today.** The evaluator computes this mask and discards it
-before it leaves the access check.
+The bits mandatory integrity control denied: the rights the object's
+mandatory label withholds from a caller of lower integrity, whatever its
+DACL says. On an access-check record these are the requested bits, or every
+bit for a `MAXIMUM_ALLOWED` request, and the field is absent when there were
+none.
 
 **Carried by:**
 
-No event carries this field yet.
+- [`kacs.audit.access.checked`](~peios/events/kacs/kacs-audit-access-checked)
 
 ## <a id="access.denied-trust"></a>`access.denied-trust`
 
@@ -96,15 +104,13 @@ No event carries this field yet.
 - **Carried in:** the payload
 - **Defined in:** `kernel.evman`
 
-The bits the process-trust label denied. Can be non-zero in the same
-evaluation as `access.denied-integrity`.
-
-**Not emitted today.** The evaluator computes this mask and, except for
-the process object class, discards it before it leaves the access check.
+The bits the process-trust label denied: the rights the object's trust
+label withholds from a caller whose PIP does not dominate it. Read as
+`access.denied-integrity` is, and can be non-zero in the same evaluation.
 
 **Carried by:**
 
-No event carries this field yet.
+- [`kacs.audit.access.checked`](~peios/events/kacs/kacs-audit-access-checked)
 
 ## <a id="access.disallowed"></a>`access.disallowed`
 
@@ -135,11 +141,19 @@ event's own note.
 **Carried by:**
 
 - [`kacs.audit.access.checked`](~peios/events/kacs/kacs-audit-access-checked)
+- [`kacs.audit.descriptor.changed`](~peios/events/kacs/kacs-audit-descriptor-changed)
 - [`kacs.audit.handle.used`](~peios/events/kacs/kacs-audit-handle-used)
 - [`kacs.audit.privilege.used`](~peios/events/kacs/kacs-audit-privilege-used)
 - [`kacs.caap.sacl.skipped`](~peios/events/kacs/kacs-caap-sacl-skipped)
 - [`kacs.caap.staging.diverged`](~peios/events/kacs/kacs-caap-staging-diverged)
+- [`lcs.audit.key.created`](~peios/events/lcs/lcs-audit-key-created)
+- [`lcs.audit.key.deleted`](~peios/events/lcs/lcs-audit-key-deleted)
+- [`lcs.audit.key.descriptor.changed`](~peios/events/lcs/lcs-audit-key-descriptor-changed)
+- [`lcs.audit.key.hidden`](~peios/events/lcs/lcs-audit-key-hidden)
 - [`lcs.audit.key.opened`](~peios/events/lcs/lcs-audit-key-opened)
+- [`lcs.audit.key.tombstoned`](~peios/events/lcs/lcs-audit-key-tombstoned)
+- [`lcs.audit.value.deleted`](~peios/events/lcs/lcs-audit-value-deleted)
+- [`lcs.audit.value.set`](~peios/events/lcs/lcs-audit-value-set)
 
 ## <a id="access.granted-staged"></a>`access.granted-staged`
 
@@ -171,7 +185,14 @@ not the bits that were used.
 
 **Carried by:**
 
+- [`kacs.audit.descriptor.changed`](~peios/events/kacs/kacs-audit-descriptor-changed)
 - [`kacs.audit.handle.used`](~peios/events/kacs/kacs-audit-handle-used)
+- [`lcs.audit.key.deleted`](~peios/events/lcs/lcs-audit-key-deleted)
+- [`lcs.audit.key.descriptor.changed`](~peios/events/lcs/lcs-audit-key-descriptor-changed)
+- [`lcs.audit.key.hidden`](~peios/events/lcs/lcs-audit-key-hidden)
+- [`lcs.audit.key.tombstoned`](~peios/events/lcs/lcs-audit-key-tombstoned)
+- [`lcs.audit.value.deleted`](~peios/events/lcs/lcs-audit-value-deleted)
+- [`lcs.audit.value.set`](~peios/events/lcs/lcs-audit-value-set)
 
 ## <a id="access.maximum-allowed"></a>`access.maximum-allowed`
 
@@ -251,11 +272,19 @@ type-specific ones. Generic bits never survive into an event.
 **Carried by:**
 
 - [`kacs.audit.access.checked`](~peios/events/kacs/kacs-audit-access-checked)
+- [`kacs.audit.descriptor.changed`](~peios/events/kacs/kacs-audit-descriptor-changed)
 - [`kacs.audit.handle.used`](~peios/events/kacs/kacs-audit-handle-used)
 - [`kacs.audit.privilege.used`](~peios/events/kacs/kacs-audit-privilege-used)
 - [`kacs.caap.sacl.skipped`](~peios/events/kacs/kacs-caap-sacl-skipped)
 - [`kacs.caap.staging.diverged`](~peios/events/kacs/kacs-caap-staging-diverged)
+- [`lcs.audit.key.created`](~peios/events/lcs/lcs-audit-key-created)
+- [`lcs.audit.key.deleted`](~peios/events/lcs/lcs-audit-key-deleted)
+- [`lcs.audit.key.descriptor.changed`](~peios/events/lcs/lcs-audit-key-descriptor-changed)
+- [`lcs.audit.key.hidden`](~peios/events/lcs/lcs-audit-key-hidden)
 - [`lcs.audit.key.opened`](~peios/events/lcs/lcs-audit-key-opened)
+- [`lcs.audit.key.tombstoned`](~peios/events/lcs/lcs-audit-key-tombstoned)
+- [`lcs.audit.value.deleted`](~peios/events/lcs/lcs-audit-value-deleted)
+- [`lcs.audit.value.set`](~peios/events/lcs/lcs-audit-value-set)
 
 ## <a id="access.requested-minimum"></a>`access.requested-minimum`
 

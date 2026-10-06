@@ -36,11 +36,11 @@ this type with every field present.
 
 | Field | Type | Presence | Meaning |
 |---|---|---|---|
-| [`object.file.path-relative`](~peios/events/field-index/fields-object#object.file.path-relative) | `str.path` | required | The path of the object within its mount, `/`-prefixed. |
+| [`object.file.path-relative`](~peios/events/field-index/fields-object#object.file.path-relative) | `str.path` | optional | Absent only from a reduced record: when the memory for the full record could not be had, the kernel writes the record without its paths rather than lose it. |
 | [`source.stratum.index`](~peios/events/field-index/fields-source#source.stratum.index) | `uint` | required | Which stratum an object was read from, by index within the mount's stack. |
-| [`source.stratum.path`](~peios/events/field-index/fields-source#source.stratum.path) | `str.path` | required | The filesystem path of the stratum an object was read from. |
+| [`source.stratum.path`](~peios/events/field-index/fields-source#source.stratum.path) | `str.path` | optional | Absent only from a reduced record, with the other paths. |
 | [`destination.stratum.index`](~peios/events/field-index/fields-destination#destination.stratum.index) | `uint` | required | Which stratum an object was written into, by index within the mount's stack. |
-| [`destination.stratum.path`](~peios/events/field-index/fields-destination#destination.stratum.path) | `str.path` | required | The filesystem path of the stratum an object was written into. |
+| [`destination.stratum.path`](~peios/events/field-index/fields-destination#destination.stratum.path) | `str.path` | optional | Absent only from a reduced record, with the other paths. |
 | [`outcome.success`](~peios/events/field-index/fields-outcome#outcome.success) | `bool` | required | Whether the operation succeeded. |
 | [`outcome.errno`](~peios/events/field-index/fields-outcome#outcome.errno) | `int.errno` | when `outcome.success == false` | The error the operation failed with, as a negative errno. |
 
