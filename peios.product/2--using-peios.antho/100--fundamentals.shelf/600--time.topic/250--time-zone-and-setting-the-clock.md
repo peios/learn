@@ -86,3 +86,9 @@ problem. Asking timed is what keeps the two in agreement.
 
 A clock set by hand is written to the hardware clock within eleven
 minutes, so it survives a reboot.
+
+Asking timed also leaves a record. Each set is a `timed.clock.stepped`
+event with `operation.name` `manual`, the clock's reading just before and
+just after, and the SID of whoever asked in `subject.token.sid`. `date -s`
+leaves none: the clock moves underneath every record without anything
+saying so.

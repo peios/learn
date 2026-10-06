@@ -66,7 +66,9 @@ For each request, netd opens the connecting peer's token through KACS and
 runs a real access check of the request's right (§9.2) against the
 control object. It never looks at `SO_PEERCRED`, so a deny-only group or
 a filtered token is judged as the kernel would judge it anywhere else. A
-peer whose token cannot be opened is denied.
+peer whose token cannot be opened is denied, and so is one whose token's
+user cannot be read, since a change made for it is recorded under that
+user (§8.4).
 
 A denied request is answered `{ok: false, error: "access denied"}`, and
 nothing else happens.

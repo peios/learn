@@ -133,6 +133,18 @@ An offset larger than a thousand seconds appearing *after* the machine was
 synchronised is refused outright and logged loudly. A machine that far out
 has a problem a time client should not paper over.
 
+Every step is recorded in the event log as a `timed.clock.stepped` event,
+with the clock's reading just before and just after it, so a jump in the
+times of other records can be explained. Its `operation.name` says which
+step it was: `automatic` for timed's own, `manual` for a [clock set by
+hand](~peios/time/time-zone-and-setting-the-clock), and `boot-floor` for
+the clock raised to the build's timestamp at startup (see [Two circles, and
+how they are broken](#two-circles-and-how-they-are-broken)). Its
+`subject.token.sid` is whoever acted: the person who asked, for a manual
+set, and timed's own service SID for the other two. Slewing is
+not recorded. The event is `essential`, so the emission policy cannot
+switch it off.
+
 ## Learning the crystal
 
 The clock is a crystal running at the wrong rate — consistently wrong, by

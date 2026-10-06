@@ -37,7 +37,7 @@ The prompts come from the principal source that holds your account, not from `pa
 
 ## How it works
 
-`passwd` opens a credential-change conversation with the authority on `/run/logon.sock` ([PGSS §2.20](~peios/logon/credential-change)). `authd` finds the source that holds your account from your token's SID and relays the conversation to it. `lpsd` checks your current password, sets the new one, and writes its store to disk before it reports success, so `password changed` means the next sign-in checks the new password.
+`passwd` opens a credential-change conversation with the authority on `/run/logon.sock` ([PGSS §2.20](~peios/logon/credential-change)). `authd` finds the source that holds your account from your token's SID and relays the conversation to it. `lpsd` checks your current password, sets the new one, and writes its store to disk before it reports success, so `password changed` means the next sign-in checks the new password. It records the change as an `lpsd.credential.changed` event, naming your account by SID, and records a refused change the same way with the reason, such as `wrong-credential` for a current password that did not verify.
 
 Nothing is minted. Your current session carries on as it was, and so does every other session you hold.
 

@@ -33,6 +33,27 @@ one — netd does nothing: the kernel keeps whatever hostname it had.
 The status reply and the resolver snapshot report the name netd last
 set, empty if it has set none.
 
+## What is recorded
+
+Each `sethostname(2)` that changes the kernel's name writes a
+`netd.hostname.changed` event, which is `essential`: the emission policy
+cannot switch it off. It carries `config.name` (always `Hostname`, whether
+the name came from the registry or from a lease), `config.text` (the name
+now in force) and `config.text-previous` (the kernel's name, read just
+before the call; the kernel's own `(none)` on the first change after boot).
+A call that leaves the kernel's name as it was — netd setting a name the
+kernel already holds, as after a restart of netd or a change made behind
+its back — records nothing, and neither does a name the kernel refuses.
+[*hostname.change-recorded]
+
+The record's `subject.token.sid` is the principal that acted (PGSS §6.4).
+When the change is made during the pass a `reconcile` request (§9.2) asked
+for, that is the requester's user SID; netd refuses a request whose user
+it cannot read. A change netd makes on its own authority — after a
+registry change, a lease, or at startup — names netd's own user, SYSTEM;
+who wrote the registry value is LCS's to record.
+[*hostname.requester-recorded]
+
 ## Telling the network
 
 With `Hostname.Announce` in an interface's profile, its DHCPv4 client sends

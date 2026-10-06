@@ -55,6 +55,24 @@ A change is applied in memory, **written to disk, and only then reported as done
 
 So a command that reports success has persisted. A command that reports failure changed nothing — not "possibly changed something", but nothing: `lpsd` keeps a snapshot and restores it.
 
+## What is recorded
+
+Every request that changes the store is recorded as an event, after the change is durable, or as the failure `lps` was told:
+
+| Request | Event |
+|---|---|
+| `add` | `lpsd.account.created` |
+| `remove` | `lpsd.account.deleted` |
+| Any other change to an account: `enable`, `disable`, `password`, `set`, `claim set`, `claim remove`, `rename`, `logon-types`, `key add`, `key remove`, `policy` | `lpsd.account.modified`, with `operation.name` saying which |
+| `group create` / `group delete` | `lpsd.group.created` / `lpsd.group.deleted` |
+| `group add` / `group remove` (membership) | `lpsd.group.member.added` / `lpsd.group.member.removed` |
+
+Each record names the administrator who asked as `subject.token.sid`, and the account and group as `object.account.sid` and `object.group.sid`, never by name. A deleted account or group is named by the SID it had, read before it went. A failure carries `outcome.reason`: `not-found`, `exists`, `invalid`, `internal`, or `not-saved` for a change that could not be written and so was rolled back. A request that changes nothing, such as enabling an account that is already enabled, is not recorded. All of these events are essential, so the emission policy cannot switch them off.
+
+Two changes have no event yet: renaming a group and changing its description.
+
+A caller refused because it is not an administrator is **not** recorded. The admin socket decides that from the peer's token, as above, not by a KACS access check, so no `kacs.audit.access.checked` record is written either. The socket's own descriptor is a KACS check, at `connect`, and is audited only if it has a SACL.
+
 ## The protocol itself
 
 The wire protocol is `PLPS`, sharing its codec and header layout with PGSS Logon ([PGSS §2](~peios/logon/scope-and-roles)) and PSI ([PSPU §2](~peios/principal-source-interface/scope-and-roles)). It is specified in [PSPU §10](~peios/local-principal-administration/scope-and-roles): every request, its reply, and how a request is refused.
@@ -75,7 +93,7 @@ Its descriptor admits `LocalSystem` and `BUILTIN\Administrators` fully, and **Au
 
 Because everyone can reach it, `lpsd` never waits on a connection there. Each one gets five seconds from connecting to the end of its answer, a request may be at most 4 KiB, and `lpsd` holds at most 32 such connections at once and 4 from any one user. A program that connects and says nothing holds up nobody else's sign-in.
 
-A changed display name is saved before the answer, and `lpsd` tells `authd` at once, so name lookups show the new name straight away.
+A changed display name is saved before the answer, and `lpsd` tells `authd` at once, so name lookups show the new name straight away. The change is recorded as `lpsd.account.modified`, with `operation.name` `set-display-name`, naming the principal as both who asked and the account changed.
 
 Changing a password or an SSH key is not done here, because it asks for the current password: see [Changing your own keys](~peios/managing-local-principals/lps-command#changing-your-own-keys). In Rust, `libauthd-client`'s `own` module speaks the self socket and its `credential` module holds the password and key conversations. The protocol is [PSPU §10.11](~peios/local-principal-administration/the-self-socket).
 

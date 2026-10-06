@@ -106,9 +106,18 @@ Forced sign-out — an administrator deciding that a person should not be signed
 2. Finds every process whose **primary** token belongs to the session: it walks `/proc`, opens each process by pidfd, and reads `auth_id` from that process's primary token. A thread that is only impersonating a token of the session — a service answering the person's request — is not in the session, and is left alone.
 3. Sends each `SIGTERM` through its pidfd, so the signal reaches the process whose token was read even if its pid has since been reused. It waits up to five seconds for them to exit, then sends `SIGKILL` to what is left.
 4. Walks again, because a process may have forked during the grace period, and repeats — at most three rounds.
-5. Answers with how many processes it ended and how many still hold the session, and records the request, who made it and the result in its log.
+5. Answers with how many processes it ended and how many still hold the session, and records the request, who made it and the result as an `authd.session.ended` event.
 
 Once the last process exits, the session reaches refcount zero, the event fires, and the person is signed out.
+
+### What the audit trail shows
+
+A forced sign-out leaves two records, from two components:
+
+- **`authd.session.ended`**, written by authd when it has finished the rounds. It names who asked (`subject.token.sid`), the session (`object.session.id`), whose session it was (`object.session.user.sid`) and its logon type. `outcome.success` is false, with `outcome.reason` `processes-remaining`, when something still held the session after the last round. It is an essential event, so the emission policy cannot switch it off.
+- **`kacs.session.destroyed`**, written by the kernel when the last reference drops. It cannot say who asked: only authd knows that.
+
+A **refused** request is not an authd event. Whether a caller may end another principal's session is an access check against the `SessionEndSecurity` descriptor, and KACS records that decision as `kacs.audit.access.checked`, with `object.kind` `authd-session-end`, when the descriptor's SACL asks it to. To audit refused sign-outs, give the descriptor a failure-audit ACE, such as `S:(AU;FA;0x1;;;WD)`. Ending one's own session needs no grant, so it runs no check. Neither does a request for SYSTEM's, Anonymous's or a service's session, which is always refused.
 
 A program that ends the session it is itself running in is ended with it. authd therefore answers such a request **first**, saying how many processes it found, and does the work afterwards.
 

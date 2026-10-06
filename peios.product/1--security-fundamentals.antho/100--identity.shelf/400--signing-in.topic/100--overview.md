@@ -75,6 +75,17 @@ An authority never distinguishes an unknown principal from a bad credential — 
 
 Account **existence** is not a secret, and Peios does not pretend otherwise — it is answered plainly on a different socket, `/run/ident.sock`, which is how `ls -l` turns an owner into a name. What the logon socket refuses to do is let you learn it by guessing credentials. See [resolving names](~peios/managing-local-principals/resolving-names).
 
+## What the audit trail records
+
+The caller is told only that authentication failed, but the audit trail may know more. Every sign-in leaves two events, one from each side of the conversation:
+
+- **`authd.logon.attempted`**, from the authority, once per `LogonStart`, however the logon ends. It names the originator: the principal of the program that asked, as `source.token.sid`. It also records the logon type asked for, the principal source asked, and the remote address when the originator gave an IP address. A success adds the principal signed in (`subject.token.sid`), the new session and the token. A failure adds `outcome.reason`: the denial the originator was sent, such as `authentication-failed`, `logon-type-not-permitted` or `account-restricted`.
+- **`lpsd.credential.verified`**, from the local principal source, when it checks a credential. It says what the wire must not. `outcome.reason` is `no-such-account`, `wrong-credential`, `disabled` or `not-permitted`, and `object.account.sid` names the account when one exists.
+
+**The name typed is never recorded**, in either event. A name the authority could not match to an account is the caller's input, not an identity, and a record of it would turn the audit trail into a list of mistyped passwords and probed usernames. An account appears only by its SID.
+
+`authd.logon.attempted` is essential, so the emission policy cannot switch it off. `lpsd.credential.verified` is standard and can be: a machine exposed to a network may be asked to check credentials far more often than it signs anybody in.
+
 ## Where to start
 
 - [The `login` command](~peios/signing-in/the-login-command) — the terminal client, and how a live image signs in without being asked anything.

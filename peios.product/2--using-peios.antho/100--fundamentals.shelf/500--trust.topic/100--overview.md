@@ -109,6 +109,30 @@ to keep in step with the first.
 Reading is open to everyone, because the root set is public — in the
 default configuration it is sitting in a world-readable file.
 
+## What is recorded
+
+Each time the set of roots in force changes, trustd writes one event per
+root that entered or left it:
+
+| Event | When |
+|---|---|
+| `trustd.root.added` | A root entered the set: an addition, a distrust lifted, or a root a bundle upgrade brought in |
+| `trustd.root.distrusted` | A distrust took a root out of the set |
+| `trustd.root.removed` | A root left the set for any other reason: its addition was withdrawn, or a bundle upgrade dropped it |
+
+Each carries the certificate's SHA-256 fingerprint in
+`object.certificate.digest`, its subject name in `object.certificate.name`,
+and what it is trusted for in `object.certificate.purposes`, written in
+kebab-case (`ServerAuth` becomes `server-auth`). Search by the digest: it
+is the only one of the three that identifies a certificate.
+
+The records say what changed, not who changed it. An addition or a
+distrust is a registry write, recorded by the registry itself where the key
+is audited, and a bundle upgrade is a package operation, recorded by peipkg.
+The set trustd composes when it starts is not recorded, so a change made
+while trustd was not running is seen only as part of that starting set.
+The events are `standard`, so the emission policy can switch them off.
+
 ## What trustd is not
 
 **It holds no private key.** Not the machine's, not anybody's. A service
