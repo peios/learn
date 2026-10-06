@@ -42,6 +42,9 @@ directory's rights for a part, which may not be rights the object's
 parts take. For eventd's fields they aren't, so such a rule gives
 nothing.
 
+`raise` (§8.3) was added as a line that needs no answer. An older
+editor ignores it, and its dialog stays where it is.
+
 ## What may never be added
 
 **A way for the editor to apply.** Nothing on the channel may let the

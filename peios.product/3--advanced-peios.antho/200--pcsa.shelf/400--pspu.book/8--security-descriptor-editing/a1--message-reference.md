@@ -11,6 +11,7 @@ description: Every line on the editing channel, in order, with an example conver
 | Editor → requester | `{"type":"stop"}` (while pushing into what is inside; no answer) | §8.5 |
 | Requester → editor | `{"type":"applied","done":…,"failed":[…],"stopped":…}` (the last three only after pushing) | §8.5 |
 | Requester → editor | `{"type":"failed","why":…}` | §8.5 |
+| Requester → editor | `{"type":"raise"}` (the object asked for again; no answer) | §8.3 |
 
 ## An example
 

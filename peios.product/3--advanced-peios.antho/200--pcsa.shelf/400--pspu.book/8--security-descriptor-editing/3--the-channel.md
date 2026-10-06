@@ -22,7 +22,8 @@ end; compact JSON never needs one.
 
 - Requester to editor, on the editor's standard input: the request
   (§8.4), first and exactly once, then one answer for each `apply`
-  (§8.5).
+  (§8.5), and `raise` (below) whenever the person asks for the object
+  again.
 - Editor to requester, on the editor's standard output: `apply`
   messages (§8.5), and nothing else in this revision.
 
@@ -33,6 +34,23 @@ A party MUST ignore a line whose `type` it does not recognise, and a
 member of an object it does not recognise (§8.7). A party MAY refuse a
 line longer than 1 MiB; a request carrying a descriptor of the largest
 size PCDS §5.1 permits is well inside it.
+
+## Asked for again
+
+A requester that the person asks to edit an object it already has an
+editor open on SHOULD NOT start a second editor for it: two dialogs on
+one object would each apply over the other. It SHOULD instead send
+
+```
+{"type":"raise"}
+```
+
+which needs no answer. An editor that receives it SHOULD bring its
+dialog to the front and give it the keyboard, as far as the desktop
+lets it. An editor that does not recognise it ignores it, as any line,
+so a requester MUST NOT depend on the dialog coming forward. A requester
+whose write of `raise` fails has learned the editor has gone, and MAY
+start a new one.
 
 ## Ending
 
