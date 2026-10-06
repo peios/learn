@@ -49,6 +49,14 @@ A job that finishes goes on to one more page, which says what it came to (for an
 
 First-boot setup is the same renderer with a different daemon, so all of this holds there too.
 
+### In a browser
+
+A medium can also be installed from a browser on another device, by opening the machine's address. This needs `installer-gxwi`, the graphical surface, from the `dev.peios.installer-gxwi` package, and a medium that makes it GXWI's overlay: everyone who opens the address is then sent to the installer instead of the sign-in page, with no logon. It draws the same conversation as the console form, so an installation can be started on one and watched on the other, and two people looking see the same disk chosen.
+
+What makes it the overlay is a seed the package ships, `installer-gxwi-overlay`, which sets `OverlayUsername` to `peios` (the medium's account, which has no credential) and `OverlaySession` to `/usr/bin/installer-gxwi` in `Machine\Software\GXWI`. An edition lists it under [`live_autoapply`](~peios/peiso/editions-and-upgrades/release-toml), never `autoapply`: the medium applies it, and `installerd` deletes the live queue from the disk it installs, so the installed machine carries the program and opens on its sign-in page. Listed under `autoapply` instead, every installed machine's address would stay the installer, since GXWI never falls back to the sign-in page from an overlay it was asked for.
+
+The button that begins an installation is held down rather than pressed. When the machine restarts, the page waits for it and goes where it lands: [first-boot setup](~peios/disks-and-filesystems/first-boot-setup), which is the same page with `oobe-gxwi` behind it, Peios, or the installer again if the machine started from the medium.
+
 ## Two ways to invoke it
 
 ```
