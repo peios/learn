@@ -53,8 +53,10 @@ time zone    Europe/London
 
 timed puts the zone in `/etc/localtime` within a second. A name that isn't
 a zone on this machine is refused and logged, and the zone in force stays
-as it was; `clock status` shows which one that is. Deleting the value is
-UTC.
+as it was; `clock status` shows which one that is, even after timed
+restarts. timed tries the name again every ten minutes and whenever the
+time settings change, so a zone that a tzdata update adds is taken up
+without setting the value again. Deleting the value is UTC.
 
 The names are the files under `/usr/share/zoneinfo`, from the tzdata
 package. `zone1970.tab` there lists the ones worth choosing between, one
