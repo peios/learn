@@ -86,7 +86,11 @@ for. [*check.cap.sacl-additive-only]
 The kernel keeps a map from policy SID to policy object, empty at
 boot. Policies are pushed in through `kacs_set_caap`, which requires
 `SeTcbPrivilege` — and marks it used. [*check.cap.set-requires-tcb] A non-null spec for an existing
-SID replaces the policy; a null spec or zero length removes it. [*check.cap.set-replaces-or-removes] The
+SID replaces the policy; a null spec or zero length removes it. [*check.cap.set-replaces-or-removes]
+Every call that passes the privilege gate writes a
+`kacs.caap.policy.changed` record (§3.C) naming the caller, the policy
+SID as `caap.policy.sid`, and `operation.name` `set` or `remove`, with
+`outcome.success` and, when the change did not apply, `outcome.errno`. [*check.cap.set-recorded] The
 policy SID's length is bounded to 8–68 bytes before parsing begins,
 and until the cache has been initialised both setting and evaluating
 fail with `EACCES`. [*check.cap.uninitialised-eacces]

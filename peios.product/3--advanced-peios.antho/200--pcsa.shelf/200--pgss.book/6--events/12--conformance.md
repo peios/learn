@@ -26,9 +26,11 @@ description: The obligations of the emitter, the consumer and the system, gather
   those trusted with audit policy (§6.7).
 - Writes events, not log text, and declares each type's tier, choosing
   essential only for one of the two reasons of §6.8.
-- Writes no event whose type the emission policy finds off, writes
-  essential events without consulting it, notices a change to it, and
-  falls back to tier defaults when it cannot read it (§6.9).
+- Writes no event whose type the emission policy finds off, and an
+  event of a gated type only where its gating also asks for it; writes
+  essential events without consulting the policy; applies a change to
+  it within one second; and falls back to tier defaults, without
+  holding events back, when it cannot read it (§6.9).
 - Installs a fragment describing every event type it writes and every
   field it defines, which passes the rules of §6.10.
 

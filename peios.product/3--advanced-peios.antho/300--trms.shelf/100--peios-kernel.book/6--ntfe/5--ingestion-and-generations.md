@@ -195,6 +195,61 @@ status. [*ntfe-ingest.walk-outcome-in-status] A refusal leaves the previous gene
 the kernel log. [*ntfe-ingest.refusal-logged-and-previous-stays-active] `contexts` in the status is the number of interfaces in
 the active context table. [*ntfe-ingest.status-contexts-counts-interfaces]
 
+### In the event stream
+
+NTFE writes its own lifecycle to KMES, origin class `KMES_ORIGIN_NTFE`
+(4), beside the reports of §6.6. Every publication writes one
+`ntfe.policy.published`, after the swap; a refusal writes none. [*ntfe-ingest.publish-emits-policy-published]
+Its payload is one `policy` map: `generation`, the generation now in
+force; `generation-previous`, the generation of the policy it replaced,
+0 for the first since boot; `layers`, the layers that have a forest, in
+the order `raw-packet`, `packet`, `flow`, and an empty list for a policy
+of no forests; and `report-threshold` and `report-threshold-previous`,
+the new and the replaced `CurrentReportingLevel`, the latter 1 when
+nothing was replaced. [*ntfe-ingest.published-event-payload] A walk
+whose digest is unchanged publishes nothing, and so writes nothing. [*ntfe-ingest.unchanged-walk-writes-no-published-event]
+A context-table change advances the generation without a policy and
+writes no `ntfe.policy.published` either, so the generations between
+two of these events are the earlier policy under a changed context.
+
+A refused rules walk writes one `ntfe.policy.rejected`. [*ntfe-ingest.refusal-emits-policy-rejected]
+Its `policy` map holds the `generation` still in force and
+`previous-retained`, always true. Its `outcome` map holds `errno`, the
+walk's negative errno, and `reason`. When the refusal is in, or names,
+one rule, a `rule` map follows. It holds `layer` when the refusal arose
+building one layer's forest, and `action-error` for a `bad-action`. It
+holds `name`, the rule's path relative to its layer key; a path longer
+than 255 bytes is cut at a character boundary, with `name-truncated`. [*ntfe-ingest.rejected-event-payload]
+
+The errno is the walk's, unchanged. The reason is new: the bridge's
+`ntfe_rust_builder_build_why()` and `ntfe_rust_forests_check_why()`
+fill a `struct peios_ntfe_build_why` from pnp-core's `BuildError`. A
+builder refusal keeps its own name and its rule's path, such as
+`unknown-fact`, `bad-action` with its action error, `bad-priority`, or
+`tag-downward-read` from the cross-forest checks, which name the rule
+but no layer. [*ntfe-ingest.build-refusal-reason-crosses-bridge] The walk names the refusals it makes itself:
+
+- `rule-too-deep` and `too-many-rules`, with `-E2BIG`;
+- `bad-value-type`, `bad-value-length` and `not-utf8`, in the rule that
+  holds the value;
+- `bad-reporting-level`, `counter-store-refused` and `out-of-memory`;
+- `registry-read-failed` for a source round trip that failed. [*ntfe-ingest.walk-refusal-reasons]
+
+A walk that finds no `Rules` key writes the event too, with reason
+`no-rules-key`, no `errno` and no rule. [*ntfe-ingest.absent-rules-key-emits-rejected]
+
+Every walk re-reads the policy, including the walks netd's inventory
+writes cause, so a broken policy is refused again and again until it
+is fixed. The event is written once per distinct refusal: a walk whose
+digest, errno and reason equal those of the last refusal written writes
+none. A walk the rules stage accepts, published or unchanged, clears
+that memory, so the next refusal is written whatever it is. A missing
+`Rules` key is therefore written once each time the key goes missing. [*ntfe-ingest.repeated-refusal-written-once]
+The kernel log line is written for every refusal, as before, and now
+names the reason. Both events are built on the stack in process context,
+under the publication mutex or the walk mutex; neither is ever written
+from the packet path.
+
 ### In force
 
 A registry write that has returned is delivered, not enforced: the walk

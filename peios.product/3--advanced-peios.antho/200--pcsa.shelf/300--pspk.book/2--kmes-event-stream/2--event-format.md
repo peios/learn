@@ -71,8 +71,9 @@ byte sequences.
 | 1 | KMES |
 | 2 | KACS |
 | 3 | LCS |
+| 4 | NTFE |
 
-Values 4–255 are unassigned. A consumer MUST tolerate an unrecognised
+Values 5–255 are unassigned. A consumer MUST tolerate an unrecognised
 origin class rather than rejecting the event, so that a kernel
 subsystem added later does not break it.
 

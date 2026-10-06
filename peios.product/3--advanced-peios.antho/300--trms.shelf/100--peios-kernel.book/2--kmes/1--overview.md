@@ -25,8 +25,9 @@ sleep, and survive buffer swaps — is specified in PSPK's KMES event
 stream chapter. This chapter describes the kernel side: how events are
 constructed and stamped (§2.2), the in-kernel emission API (§2.3), the
 syscall surface (§2.4), how the ring buffers are organised and written
-(§2.5), self-configuration through the registry (§2.6), and behaviour
-under failure (§2.7).
+(§2.5), self-configuration through the registry (§2.6), behaviour
+under failure (§2.7), and the emission policy that decides which of
+the kernel's own event types are written (§2.8).
 
 ## Terminology
 

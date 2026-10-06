@@ -56,7 +56,9 @@ An event type is essential for one of two reasons:
   ending, or a configuration value rejected.
 - **Its emission is already governed by its own configuration.** The
   kernel's access audit is the example: a SACL, or a token's audit
-  policy, decides which occurrences are recorded.
+  policy, decides which occurrences are recorded. So is any event
+  whose own configuration, such as a REPORT directive, decides whether
+  it is written.
 
 The second reason follows a principle that holds across Peios: **one
 switch per thing.** Something already governed by its own configuration

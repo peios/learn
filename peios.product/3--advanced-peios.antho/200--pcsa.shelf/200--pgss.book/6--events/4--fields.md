@@ -53,6 +53,12 @@ about another: an access check a daemon requests for a client has the
 daemon as emitter and the client as subject. A consumer searching for
 what a principal did MUST search `subject.*`, not `emitter.*`.
 
+An event about an action MUST carry `subject.token.sid`, the SID of the
+principal that acted, whether that principal is the caller whose token
+the action ran under or the emitter acting on its own authority. The
+header carries only token GUIDs (below), never a SID, so the SID is
+a payload field in every case.
+
 ## Domains
 
 A path that does not describe a participant leads with a domain, then

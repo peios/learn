@@ -222,3 +222,45 @@ For all of these, the universal fallback is explicit token fd
 impersonation through `KACS_IOC_IMPERSONATE`, which works regardless
 of how the token fd was obtained — the peer-token option, an
 `SCM_RIGHTS` transfer, or any other path. [*imp.impersonate.any-token-fd]
+
+## Audit records
+
+Every `KACS_IOC_IMPERSONATE` writes a `kacs.impersonation.started`
+record through KMES (§3.C). Its subject is the server's token, the one
+that acted, and its object is the client token: `object.token.sid`,
+`.type`, `.integrity`, `.auth-id` and `.restricted`, with the level the
+client token offered as `object.token.impersonation` and the level the
+gate allowed as `object.token.impersonation-permitted`. The thread that
+took the identity on is `emitter.thread.tid`, since impersonation is per
+thread. Where the gate needed `SeImpersonatePrivilege` and used it, the
+record carries `privilege.name` and `privilege.held`. [*imp.audit.started-record]
+
+A level the gate lowered is not a failure: the record says
+`outcome.success` with `impersonation-permitted` below
+`impersonation`. A lowered level installs a new token, and the record's
+`object.token.guid` and `object.token.id` are always the installed
+token's — the client's own when the level was not lowered, the new one
+when it was — so they match the header of the records the thread writes
+next. [*imp.audit.started-permitted-level]
+
+A refused impersonation is recorded too, with `outcome.errno` and, where
+the kernel knows why, `outcome.reason`: `primary-token` for a primary
+token (`EINVAL`), `restriction-escape` for a restricted server reaching
+for an unrestricted token of its own user (`EPERM`),
+`no-impersonate-access` for a handle without `TOKEN_IMPERSONATE`
+(`EACCES`), and `projection-failed` when the identity could not be
+projected onto the thread's credentials. A refusal before the gate
+answered carries no `impersonation-permitted`. [*imp.audit.started-records-refusals]
+
+Ending an impersonation writes `kacs.impersonation.reverted`, a
+`verbose` type, so only where the emission policy (§2.8) switches it on.
+The record names the
+token given up in `object.token.guid` and `object.token.sid`, with the
+thread's token after the revert as subject. `operation.name` says why:
+`revert` for `kacs_revert`, `exec` for the revert every exec performs,
+and `replaced` when a second impersonation ends the first. A revert with
+no impersonation in force writes nothing, nor does the revert and
+re-apply around a primary-token install, which leaves the impersonation
+in place, nor does a thread that exits while impersonating. [*imp.audit.reverted-record]
+Both records are best effort: a record that cannot be built does not
+change the outcome of the impersonation or the revert.

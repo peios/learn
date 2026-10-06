@@ -116,6 +116,11 @@ System; token type Primary; impersonation level Delegation, the top of
 the ratchet; elevation type Default; token source `PeiosKrn`;
 projected UID 0; and `auth_id` set to `SYSTEM_LUID`. It is assigned to
 the kernel's init task and inherited by PID 1 at exec. [*token.bootstrap.system-token]
+Its `audit_policy` is `PRIVILEGE_USE_SUCCESS`, so every privilege SYSTEM
+spends — at a capability gate and in an access check — is recorded as
+`kacs.audit.privilege.used` (§3.4), and tokens derived from it carry the
+same policy. [*token.bootstrap.system-token-audits-privilege-use] The Anonymous
+token and the query-only SYSTEM token have an audit policy of 0.
 
 The **Anonymous token** is a global singleton with user SID `S-1-5-7`;
 Everyone (`S-1-1-0`) as its only group; no privileges; integrity level

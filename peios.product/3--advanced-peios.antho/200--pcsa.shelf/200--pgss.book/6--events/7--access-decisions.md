@@ -35,7 +35,12 @@ The audit context is one MessagePack map:
 ```
 
 The map MUST contain `kind`, MAY contain the map named by it, and MUST
-contain nothing else. Each field in that map MUST be a field the
+contain nothing else. The kernel rejects a context that is not exactly
+this shape: `kind` must be a string matching the segment grammar of
+§6.3, the map under the kind's key must not be empty, and every key in
+that map must match the same grammar, because each becomes a segment of
+`object.<kind>.<key>`. A context with no body map is accepted; an empty
+body map is not. Each field in that map MUST be a field the
 component's fragment defines beneath `object.<kind>`, and MUST be marked
 asserted there (§6.10).
 

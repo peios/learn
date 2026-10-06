@@ -86,6 +86,21 @@ If your object has properties or property-sets with their own object ACEs, evalu
 
 Pass a non-`NULL` [`peios_access_audit`](~peios/sdk-access/audit-outputs) to learn what a `SYSTEM_AUDIT` ACE match would log, and whether a *staged* central access policy would decide differently — the signal you watch when rolling out a policy change.
 
+If your daemon guards objects of its own, name the object in the request's [audit context](~peios/sdk-access/the-audit-context), so the kernel's audit record of the decision says what was checked:
+
+```c
+struct peios_audit_field name = {
+    .key = "name", .value_type = PEIOS_AUDIT_STR,
+    .bytes = "jellyfin", .len = strlen("jellyfin"),
+};
+uint8_t ctx[128];
+ssize_t n = peios_audit_context_encode("service", &name, 1, ctx, sizeof ctx);
+req.audit_context = ctx;
+req.audit_context_len = (size_t)n;   /* check n >= 0 first */
+```
+
+Do not write an event of your own recording the grant or the refusal. The kernel's record is the audit record, and a SACL on the object decides whether it is written ([PGSS §6.7](~peios/pgss/events/access-decisions)).
+
 ## Next
 
 - **[`access.h` reference](~peios/sdk-access/access-h-access-checks)** — every field of the request and the audit outputs.

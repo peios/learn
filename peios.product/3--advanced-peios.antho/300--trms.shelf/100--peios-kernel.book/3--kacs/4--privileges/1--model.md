@@ -131,9 +131,14 @@ Every exercise sets the token's monotonic used state for that
 privilege, and every standalone gate emits an ftrace event. [*priv.audit.ftrace-per-standalone-gate]
 
 KMES audit events, of type `kacs.audit.privilege.used`, are emitted
-only for the five AccessCheck-influencing
-privileges, and only when the token's `audit_policy` opts in through
-`PRIVILEGE_USE_SUCCESS` or `PRIVILEGE_USE_FAILURE`. The event fires
+only when the token's `audit_policy` opts in through
+`PRIVILEGE_USE_SUCCESS` or `PRIVILEGE_USE_FAILURE`, and they come from
+two places, told apart by `operation.name`.
+
+### In an access check
+
+An access check records the five AccessCheck-influencing privileges,
+with `operation.name` `access-check`. The event fires
 when the privilege's provenance bits intersect both the mapped desired
 mask and the final granted mask. For `SeSecurityPrivilege` and
 `SeTakeOwnershipPrivilege` that intersection is genuinely
@@ -147,3 +152,37 @@ also fire for accesses the DACL alone would have permitted. [*priv.audit.backup-
 A `MAXIMUM_ALLOWED` request short-circuits this accounting entirely,
 recording no used bits and emitting no `kacs.audit.privilege.used`
 events for any privilege.
+
+### At a capability gate
+
+A privilege that satisfies a Linux capability check is recorded too,
+with `operation.name` `linux-cap`, the capability in `linux.cap` and the
+privilege it mapped to in `privilege.name`, under the token's
+`PRIVILEGE_USE_SUCCESS` policy. The volume-management gate the mount
+paths consult in place of `CAP_SYS_ADMIN` records the same way with
+`operation.name` `volume-mount` and no `linux.cap`. Such a record carries
+no object, masks or contribution. [*priv.audit.gate-record]
+
+Each gate is recorded once per process and effective token: the first
+use of a capability by a process under a token is recorded, and later
+uses are not, until the process acts under a token with another GUID,
+when every gate counts as unused again. The set belongs to the process,
+not to the token, whose used flags derived tokens copy and every process
+sharing it shares. [*priv.audit.gate-once-per-process-and-token]
+
+Only successful uses are recorded, and only those of a user process's
+own capability checks: a check made with `CAP_OPT_NOAUDIT` is a probe
+and records nothing, nor does a kernel thread's check, a check from
+interrupt context, or a check against another process's credentials. A
+check that consumes no privilege — the capabilities every process holds
+and the ones none may hold — records nothing either. [*priv.audit.gate-only-own-audited-checks]
+
+A capability check can run with spinlocks held, where a record cannot
+be built, so the gate notes the use and the record is written as the
+process returns to user space, or as it exits. The record therefore
+follows the system call that spent the privilege rather than appearing
+within it. [*priv.audit.gate-record-deferred]
+
+The boot SYSTEM token carries `PRIVILEGE_USE_SUCCESS` (§3.2.3), so on a
+stock system these records come from SYSTEM and the services running on
+its token: they answer who used `SeTcbPrivilege`, and for what.

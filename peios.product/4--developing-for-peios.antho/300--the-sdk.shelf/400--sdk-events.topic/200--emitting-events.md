@@ -11,6 +11,21 @@ Emitting an event is two steps: build a MessagePack payload, then hand it and an
 
 Choose the event type and fields first: [Naming and shaping your events](~peios/sdk-events/naming-and-shaping-events) covers that, and the examples below use its backup-tool event.
 
+## Ask whether the type is on
+
+An administrator can switch event types on and off in the registry, and an emitter must not write a type that is switched off ([PGSS §6.9](~peios/pgss/events/emission-policy)). Open a policy handle once, and ask it before building each payload. The tier is the one your fragment declares for the type:
+
+```c
+peios_event_policy *policy = peios_event_policy_open();     /* once, at startup */
+
+static const char type[] = "org.example.backup.snapshot.created";
+if (peios_event_policy_enabled(policy, type, sizeof type - 1,
+                               PEIOS_EVENT_TIER_STANDARD) != 1)
+    return;                                                  /* off: build nothing */
+```
+
+The handle caches its answers and watches the registry, so asking costs little. A change the administrator commits applies to your next decision. Essential types are always on. See [the emission policy](~peios/sdk-events-api/emitting-events#the-emission-policy) for the details.
+
 ## Build the payload
 
 Use the [MessagePack writer](~peios/sdk-msgpack/writer) to encode a single top-level value: a map whose nested maps spell the field paths. This payload carries `outcome.success`:

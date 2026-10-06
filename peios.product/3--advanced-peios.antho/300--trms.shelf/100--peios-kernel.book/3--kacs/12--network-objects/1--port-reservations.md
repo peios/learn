@@ -76,7 +76,13 @@ The kernel reads the key whole and **rejects it whole**. Every name must
 parse, every descriptor must parse, exactly one `@` must exist, and no
 two selectors of equal width may overlap — the most specific match
 would be ambiguous, and the kernel refuses to guess. [*net.port.table-all-or-nothing] On any failure the
-load is audited and the previous table stays in force. [*net.port.rejected-load-keeps-previous] Nested overlap,
+load is audited and the previous table stays in force. [*net.port.rejected-load-keeps-previous]
+The rejection is recorded as `kacs.config.value.rejected` (§3.C):
+`config.key.path` names the key, `config.name` the value at fault where
+one is, and `outcome.reason` why — `empty`, `too-large`, `bad-selector`,
+`bad-descriptor`, `duplicate-default`, `missing-default` or `overlap` —
+with `policy.previous-retained` true and `policy.fallback` saying whether
+what stayed in force is the compiled-in table. [*net.port.rejected-load-recorded] Nested overlap,
 and overlap between selectors of different widths, is how specificity
 works and is accepted. [*net.port.nested-overlap-accepted]
 

@@ -35,6 +35,32 @@ if (n >= 0)
 peios_mp_writer_free(w);
 ```
 
+### The emission policy
+
+```c
+#define PEIOS_EVENT_TIER_ESSENTIAL 0u
+#define PEIOS_EVENT_TIER_STANDARD  1u
+#define PEIOS_EVENT_TIER_VERBOSE   2u
+#define PEIOS_EVENT_TIER_DEBUG     3u
+
+typedef struct peios_event_policy peios_event_policy;
+
+peios_event_policy *peios_event_policy_open(void);
+void peios_event_policy_close(peios_event_policy *policy);
+int  peios_event_policy_enabled(peios_event_policy *policy, const char *event_type,
+                                uint16_t event_type_len, uint32_t tier);
+```
+
+An emitter must not write an event whose type the emission policy has switched off ([PGSS §6.9](~peios/pgss/events/emission-policy)), and should find that out before it builds the payload. `peios_event_policy_enabled` answers it: `1` means build and emit, `0` means build nothing. `tier` is the tier the type declares in its fragment. An essential type is always `1`, without reading anything.
+
+`peios_event_emit` does not check the policy itself. By the time it is called the payload is built, and skipping that work is the point of asking.
+
+The handle caches each type's answer and watches `Machine\Generic\Events`, so a change an administrator commits applies to your next decision. If that key does not exist yet, it watches for its creation; if nothing can be watched, it reads the policy again at least once a second. If the registry cannot be read at all, the answer is the tier's default: on for `standard`, off for `verbose` and `debug`.
+
+`peios_event_policy_open` fails only with `ENOMEM`; it does not need the registry to be there. `peios_event_policy_enabled` returns `-1` with `EINVAL` only for caller error: a `NULL` handle or type, a malformed type (empty, not UTF-8, an empty segment, or a `\`, `/` or NUL in a segment), or an unknown tier. Registry failures never make it fail.
+
+Use a handle from one thread at a time, and don't use it across `fork()`: the child shares the parent's watch descriptor and would take the parent's notifications. A child opens its own. The Rust binding's `peios::event::EventPolicy` adds a lock so it can be shared between threads. libp-go has its own implementation, `event.Policy`.
+
 ### Batch emit
 
 ```c

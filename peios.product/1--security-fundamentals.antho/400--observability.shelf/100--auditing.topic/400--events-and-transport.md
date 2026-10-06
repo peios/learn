@@ -80,7 +80,7 @@ These fields let a consumer correlate the event with a running (or recently-runn
 
 `object.kind` says what sort of thing was checked: `file`, `process`, `token`, `socket`, `ipc`, or a kind a userspace component named. Identity fields sit beneath it — a token check carries `object.token.id` and `object.token.guid`. Not every check can name its object yet: a kernel file check does not carry the file's path, and a process check does not carry the process's pid or GUID. Those fields are absent rather than guessed.
 
-A daemon that checks access to its own objects through `kacs_access_check` names the object with an **audit context**, a msgpack map such as `{kind: "service", service: {name: "jellyfin"}}`. The kernel validates the map — the call fails with `EINVAL` if it is anything else — and copies it into the record as `object.kind` and `object.service.name`. A check made with no audit context has no `object` at all. Because those values are the daemon's word rather than something the kernel observed, the record also carries `fields.attestation.userspace = true`, as it does when the caller supplied its own PIP values. eventd still passes a free-form string today and is being moved to the map.
+A daemon that checks access to its own objects through `kacs_access_check` names the object with an **audit context**, a msgpack map such as `{kind: "service", service: {name: "jellyfin"}}`. The kernel validates the map — the call fails with `EINVAL` if it is anything else — and copies it into the record as `object.kind` and `object.service.name`. A check made with no audit context has no `object` at all. Those values are the daemon's word rather than something the kernel observed, and so is everything else a `kacs_access_check` caller hands in: the security descriptor, and with it any matched `trigger.ace`, and any PIP type or trust it passes. So every record of a `kacs_access_check` or `kacs_access_check_list` call carries `fields.attestation.userspace = true`, with or without an audit context, and a record of a check the kernel makes itself never does.
 
 ## `kacs.audit.access.checked`
 
@@ -93,7 +93,7 @@ The most common event type. Fired by step 14 (SACL audit walk) and step 14b (tok
 | `outcome.success` | bool | Whether the access succeeded (granted contains all of requested). |
 | `trigger.kind` | string | Either `sacl` (a SACL audit ACE matched) or `policy` (token audit_policy forced it). |
 | `trigger.ace` | bin | The matched ACE bytes. Present only when `trigger.kind` is `sacl`. |
-| `fields.attestation.userspace` | bool | `true` when the caller supplied an audit context or its own PIP values; absent otherwise. |
+| `fields.attestation.userspace` | bool | `true` on every record of a `kacs_access_check` or `kacs_access_check_list` call, whose descriptor, audit context and PIP values are the caller's; absent on a check the kernel makes itself. |
 
 A consumer can use `trigger.kind` to filter: events from SACL ACEs versus events forced by token policy. The `trigger.ace` field includes the bytes of the matched ACE so a consumer can reconstruct what specific rule produced the event.
 
@@ -187,7 +187,7 @@ For someone writing or operating an audit consumer:
 - **Filter by event type.** Most consumers care about specific types (just `kacs.audit.access.checked` for compliance, just `kacs.audit.privilege.used` for privilege monitoring, etc.). The dotted names nest, so `kacs.audit` selects the whole audit trail. Filtering early reduces processing volume.
 - **Correlate by subject + object.** A consumer that wants to track "everything user X did to object Y" should index events by `subject.token.sid` and the `object.*` fields; `subject.token.auth-id` gathers everything from one sign-on.
 - **Use the trigger field to distinguish event sources.** A `kacs.audit.access.checked` with `trigger.kind` `policy` was forced by token audit policy; one with `sacl` came from a specific ACE. The distinction matters for some compliance scenarios.
-- **Do not read asserted values as observed.** A record with `fields.attestation.userspace` carries a userspace component's claim about its object, which the kernel copied but did not verify.
+- **Do not read asserted values as observed.** A record with `fields.attestation.userspace` carries a userspace component's claim, about its object and the descriptor it checked against, which the kernel copied but did not verify.
 - **Be tolerant of new fields.** Future kernel versions may add fields to event records. Ignoring unknown keys is the rule; rejecting events with unfamiliar fields is a bug.
 - **Plan for event loss.** A KMES subscriber that falls behind loses events. Consumers that need lossless audit must implement their own persistence layer above KMES and handle backpressure appropriately.
 

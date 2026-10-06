@@ -12,6 +12,11 @@ not a syscall. Userspace emission goes through the syscall interface
 is fire-and-forget, and the emitting subsystem is never notified of a
 drop. [*kernel-emit.fire-and-forget]
 
+Neither entry point consults the emission policy. Whether a type is
+switched on is decided by the emitter before it builds the event, with
+the check described in §2.8; an event that reaches the emission API is
+written.
+
 ## Single emission
 
 A kernel emitter passes an origin class, an event type (pointer and
@@ -19,13 +24,39 @@ length), and a payload (pointer and length). It does not choose a CPU
 or buffer: KMES writes the event to the ring buffer of the CPU the
 calling code is executing on. [*kernel-emit.executing-cpu]
 
-The entire emission path runs with preemption disabled — from before
-the current CPU is determined until after the ring buffer write —
-which guarantees the emitting thread cannot migrate mid-write and
-preserves the single-writer-per-buffer invariant. For kernel emitters
-this covers the full path, timestamp capture through ring write; the
-payloads are small and trusted, and the non-preemptible window is a
-few hundred nanoseconds.
+The entire emission path runs with preemption and bottom halves
+disabled — from before the current CPU is determined until after the
+ring buffer write — which guarantees the emitting thread cannot
+migrate mid-write and preserves the single-writer-per-buffer
+invariant. For kernel emitters this covers the full path, timestamp
+capture through ring write; the payloads are small and trusted, and
+the window is a few hundred nanoseconds.
+
+Bottom halves matter because rings are written from softirq context as
+well as from tasks: the packet engine reports from the network receive
+path, and RCU callbacks run in softirq. With only preemption disabled,
+a softirq taken on interrupt exit could write the same CPU's ring
+between a task writer's sequence increment and its `write_pos`
+publication, interleaving two events in one reservation. Every ring
+writer — single, kernel batch and the emit syscalls — therefore holds
+bottom halves off across its reservation and write. A writer that runs
+with interrupts already disabled needs no more: neither a softirq nor
+a hard interrupt can reach its CPU. [*kernel-emit.bottom-halves-held]
+
+Emission from hard interrupt or NMI context is refused. Bottom halves
+cannot be held off there, and such a writer could interrupt one
+holding the ring, so the event is dropped before any ring is touched:
+no sequence number is consumed, no ring drop is counted, and KMES
+tallies it in a private counter and logs the first such drop once. No
+kernel emitter runs in hard interrupt context. [*kernel-emit.hardirq-refused]
+
+The consumer wake that follows a write takes the futex hash bucket
+lock, which the futex core takes with bottom halves enabled; a softirq
+taking it while a task on the same CPU held it would spin forever. A
+writer outside task context therefore does not wake consumers itself:
+the write still advances the futex counter, and the wake is handed to
+a work item on the ring, which holds a reference to the ring until it
+has run in process context. [*kernel-emit.softirq-wake-deferred]
 
 Construction proceeds in order: capture the wall clock timestamp;
 increment the CPU's sequence counter and take the new value; capture
@@ -84,7 +115,8 @@ There is no upper bound on the kernel batch count — unlike the syscall
 batch, which caps at 256 entries — so the non-preemptible window is
 bounded only by the caller's restraint.
 
-The batch executes as one preemption-disabled section:
+The batch executes as one section with preemption and bottom halves
+disabled:
 
 1. One wall clock timestamp is captured; every event in the batch
    shares it.
@@ -106,8 +138,9 @@ The batch executes as one preemption-disabled section:
    the consumer wake flag is checked once, incrementing the futex
    counter if a consumer is asleep. A batch in which every event
    failed publishes nothing and performs no wake check. [*kernel-emit.batch-publishes-once]
-5. Preemption is re-enabled, and only then is the futex wake syscall
-   work performed, outside the non-preemptible window.
+5. Preemption and bottom halves are re-enabled, and only then is the
+   futex wake performed, outside the window — or, outside task
+   context, handed to the ring's work item.
 
 Deferring publication gives batch atomicity: consumers observe either
 none of the batch or all of it, since the data is fully written before

@@ -81,14 +81,19 @@ than a substitute for it.
 The same arming covers every key the kernel reads for itself, not only
 LCS's own: KMES configuration, the port reservation table
 (`Machine\System\Network\TcpIp\PortReservations\`, see the KACS
-chapter on network objects) and the network policy key
+chapter on network objects), the network policy key
 (`Machine\System\Network\`, whose rules and inventory the packet
-engine reads — see the network policy chapter) are discovered in the
-same refresh and get the same targeted-or-fallback treatment. [*self-watch.arming.covers-every-kernel-read-key]
+engine reads — see the network policy chapter) and the event emission
+policy (`Machine\Generic\Events\`, see the KMES chapter) are
+discovered in the same refresh and get the same targeted-or-fallback
+treatment. [*self-watch.arming.covers-every-kernel-read-key]
 
-The policy watch is the one depth-unbounded, every-mutation watch:
-rules are keys and exceptions are subkeys, so anything written anywhere
-beneath the key may be policy. [*self-watch.arming.policy-watch-is-depth-unbounded]
+The two policy watches are the depth-unbounded, every-mutation ones.
+For the network policy, rules are keys and exceptions are subkeys, so
+anything written anywhere beneath the key may be policy. [*self-watch.arming.policy-watch-is-depth-unbounded]
+The emission policy has a key per event-type segment at any depth, and
+its watch passes on only changes on `Events` itself, beneath the
+kernel's own roots, and to `Enabled` values (KMES §2.8).
 
 **A refresh that fails still arms the fallback.** A stage can fail
 transiently — a source answering a lookup while a concurrent write has

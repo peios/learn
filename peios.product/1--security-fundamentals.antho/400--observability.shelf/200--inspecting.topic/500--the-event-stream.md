@@ -72,20 +72,34 @@ TIME  cpuN  #SEQUENCE  ORIGIN  event.type  payload
 | `TIME` | UTC time-of-day with microsecond precision, `HH:MM:SS.uuuuuu`. The calendar date is dropped — a live tail cares about wall-clock time of day, not the day. |
 | `cpuN` | The per-CPU ring the event was drained from. Events are sharded per CPU all the way down; `revstrm` prints the CPU rather than merging into a single ordered stream. |
 | `#SEQUENCE` | The event's per-ring sequence number. Gaps in the sequence on a given CPU indicate lost events. |
-| `ORIGIN` | The origin class: one of `USR`, `KMES`, `KACS`, `LCS` (or `cN` for an unrecognised class). |
+| `ORIGIN` | The origin class: one of `USR`, `KMES`, `KACS`, `LCS` (or the catalogue's name for the class, e.g. `NTFE`, else `cN`). |
 | `event.type` | The event-type string (e.g. `kacs.audit.access.checked`, `kacs.session.destroyed`). |
 | `payload` | The msgpack payload, rendered as described below. |
 
 ### Payload rendering
 
-By default the payload is rendered **compactly** on the header line, truncated if long. `revstrm` decodes the msgpack and applies a couple of field-name conventions to make raw events readable:
+By default the payload is rendered **compactly** on the header line, truncated if long. `revstrm` decodes the msgpack and formats each value **by the type the event catalogue declares for it**.
 
-- Keys ending in `sid` are rendered as canonical string SIDs (`S-1-5-18`); keys ending in `sids` render as an array of them.
-- Keys ending in `access` are decoded into `|`-joined access-right names (e.g. `FILE_READ_DATA|FILE_READ_ATTRIBUTES`), with any unrecognised bits shown as a hex remainder so nothing is hidden.
+Payloads are nested maps, so `revstrm` follows the nesting and looks up each value by its flattened dotted path: the `sid` inside `subject` → `token` is `subject.token.sid`. It reads the catalogue from `/usr/share/evman` (or the directory named by `EVMAN_DIR`), the same one [`evman`](~peios/event-tools/evman) shows. The nesting itself is kept in the output — compact form shows nested braces, `--pretty` shows indented blocks. The declared type picks the rendering:
+
+| Declared type | Rendered as |
+|---|---|
+| `bin.sid`, `bin.sid[]` | Canonical string SIDs (`S-1-5-18`), one or an array of them. |
+| `bin.guid` | The canonical GUID string. |
+| `uint.time` | A UTC time with nanosecond precision (`2026-10-06T12:34:56.123456789Z`). |
+| `uint.duration`, `uint.bytes` | The number with a scaled reading (`1500000ns (1.5ms)`, `8192 (8KiB)`). |
+| `uint.mask` | `\|`-joined access-right names, with any unrecognised bits shown as a hex remainder so nothing is hidden. The names come from the table for the record's `object.kind`; for a kind `revstrm` has no table for, only the standard and generic rights are named and the object-specific bits are left as hex. |
+| `uint.enum`, `uint.flags` | The name or names from the field's `values:` line (`UDP (17)`, `PROT_READ\|PROT_WRITE`). A value the catalogue does not list is shown as a number. |
+| `uint.luid`, `uint.integrity` | Hexadecimal; the integrity level by name (`high (0x3000)`). |
+| `int.errno` | The negative error number with its message (`-13 (Permission denied)`). |
+
+A value of the wrong shape for its declared type is shown as it is on the wire rather than guessed at. The header's origin class is named from the catalogue's `emitter.class` enumeration when it lists a class `revstrm` does not know.
+
+If no catalogue is installed, or a path is not in it (a third-party or older event), `revstrm` falls back to field-name conventions: keys ending in `sid` or `sids` render as string SIDs, and keys ending in `access` decode as file access rights.
 
 A payload that will not decode as msgpack falls back to a hex preview rather than being dropped. With `--pretty`, the same payload is expanded into an aligned, indented block — one key per line, nested maps and arrays expanded beneath their key. Use `--pretty` when you are reading individual events closely; leave it off when tailing a busy stream.
 
-The event schemas themselves — `kacs.audit.access.checked`, `kacs.audit.handle.used`, `kacs.audit.privilege.used`, `kacs.session.destroyed` and the rest — are documented in [Events and transport](~peios/auditing/events-and-transport), and `evman <event-type>` describes any of them. `revstrm` does not interpret them beyond the field-name conventions above; it is a stream printer, not an event analyser.
+The event schemas themselves — `kacs.audit.access.checked`, `kacs.audit.handle.used`, `kacs.audit.privilege.used`, `kacs.session.destroyed` and the rest — are documented in [Events and transport](~peios/auditing/events-and-transport), and `evman <event-type>` describes any of them. `revstrm` does not interpret them beyond formatting values by their declared types; it is a stream printer, not an event analyser.
 
 ### Example
 

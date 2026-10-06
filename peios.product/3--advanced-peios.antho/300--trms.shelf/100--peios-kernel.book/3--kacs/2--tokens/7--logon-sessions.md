@@ -18,7 +18,13 @@ session — linked pairs, and tokens derived by duplication. [*token.session.sha
 
 When the last token referencing a session is freed, the kernel
 destroys the session object and emits a `kacs.session.destroyed`
-event through KMES. [*token.session.destroyed-with-last-token] The event is for whatever keeps per-session state
+event through KMES. [*token.session.destroyed-with-last-token] The last
+token usually goes when a credential is freed, which happens in an RCU
+callback where no record can be built, so the session is queued, still
+referenced, and a kernel work item writes the event moments later and
+then releases it. The session is gone at once — it no longer resolves —
+but its event follows the teardown rather than coming from it, and its
+header names the kernel worker that wrote it. [*token.session.destroyed-record-deferred] The event is for whatever keeps per-session state
 outside the kernel — an audit pipeline, an accounting tool, an authority
 that caches credentials per session. authd keeps none and does not
 subscribe.

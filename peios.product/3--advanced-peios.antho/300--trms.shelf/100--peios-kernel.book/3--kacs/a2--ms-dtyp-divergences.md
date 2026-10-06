@@ -32,6 +32,7 @@ the following places.
 | Impersonation level on primaries | Meaningful and queryable: a ratchet every token carries, bounding everything derived from it (§3.5.1). Windows rejects `TokenImpersonationLevel` on a primary. | Delegation here is a flag authd enforces rather than a property of the credential cache, so the flag itself has to be unforgeable across duplication. [*dtyp.impersonation-level-on-primaries] |
 | PIP determination | Kernel-only, from the binary signature, with no parent input (§3.3.2) | One input, one answer, no ambiguity. [*dtyp.pip-kernel-only-determination] |
 | Object type list validation | Duplicate GUIDs and level gaps rejected (§3.8.5) | Prevents node lookup returning the wrong node and propagation becoming undefined. [*dtyp.object-type-list-validation] |
+| Object type list depth | No limit on levels; the tree is bounded only by the node count the access-check interface accepts. MS-DTYP limits a list to four levels. | A depth limit would reject lists the validation rules already make well-defined, and nothing in propagation depends on depth. [*dtyp.object-type-list-no-level-limit] |
 
 ## Features handled elsewhere
 

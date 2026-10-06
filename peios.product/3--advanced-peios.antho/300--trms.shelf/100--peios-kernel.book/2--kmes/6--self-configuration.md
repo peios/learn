@@ -93,14 +93,45 @@ are missing, so the read emits four `kmes.config.value.rejected`
 events and retains all four defaults. [*config.empty-key-emits-four]
 
 `kmes.buffer.swap.failed` reports a valid `BufferCapacity` change that
-could not be applied because replacement rings could not be
-allocated. Its payload is two maps: `buffer`, holding
+could not be applied. Its payload is two maps: `buffer`, holding
 `buffer.capacity-requested` (the capacity asked for) and
 `buffer.capacity` (the capacity kept), and `outcome`, holding
-`outcome.errno` — `-ENOMEM` as a negative signed integer. The swap is
-system-wide, so no CPU or ring is named. It is emitted only for
-allocation failure; a swap abandoned because migration hit a corrupt
-size field produces no event. [*config.swap-failed-event]
+`outcome.errno` as a negative signed integer — `-ENOMEM` when the
+replacement rings could not be allocated, which is the usual case.
+The swap is system-wide, so no CPU or ring is named. [*config.swap-failed-event]
+Every failure is reported, not only allocation: a swap abandoned
+because migration met a corrupt size field reports `-EIO`, and one the
+kernel could not quiesce the CPUs for reports what `stop_machine`
+returned. [*config.swap-failed-every-errno]
+
+`kmes.config.applied` records a read of `Machine\System\KMES` that
+reached the commit, after the rejection reports and the commit
+itself. Its payload is three maps: `config`, holding `config.key.path`
+and `config.counts` with the four counts `applied`, `retained-missing`,
+`retained-invalid` and `ignored-unknown`; `buffer`, holding
+`buffer.capacity`; and `emission`, holding `emission.rate-limit`. The
+capacity and rate are read back after the commit, so they are what is
+in force rather than what the plan asked for. [*config.applied-event]
+A read whose capacity swap failed still reaches the commit — the other
+three settings commit without it — so it is recorded as applied too,
+with the capacity kept, beside the `kmes.buffer.swap.failed` that says
+why. [*config.applied-after-failed-swap] `MaxEventSize` and
+`MaxNestingDepth` in force are not in the record: the catalogue has no
+field for either yet.
+
+`kmes.config.refresh.failed` records a re-read, after the watch saw a
+change, that failed: the source did not answer, answered with
+something malformed, or the plan was refused (more than four rejection
+reports, or a configuration the second gate rejects). Its payload is
+`config`, holding `config.key.path`, and `outcome`, holding
+`outcome.errno`. The configuration in force stays as it was. The
+record is `essential`: the registry and the running kernel disagree
+until the next change, and it is the only sign. A failed capacity swap
+is not a failed read and does not produce one. [*config.refresh-failed-event]
+A read that fails during the bootstrap refresh is not recorded this
+way: it fails that refresh, which is traced and leaves the machine-root
+fallback armed to try again (LCS §5.10.4). The emission policy reports
+a failed walk of `Machine\Generic\Events` with the same record (§2.8).
 
 ## Bootstrap and watching [*config.bootstrap-sequence]
 

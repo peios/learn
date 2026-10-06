@@ -1,19 +1,30 @@
 ---
 title: Audit
-description: The seven audit events LCS emits, which are unconditional, and what happens when emission itself fails.
+description: The fifteen audit events LCS emits, which are unconditional, how registry writes are audited through a key handle's alarm mask, and what happens when emission itself fails.
 ---
 
-LCS emits audit events through KMES. Seven events exist. [*lcs-audit.seven-events-through-kmes]
+LCS emits audit events through KMES. Fifteen events exist. [*lcs-audit.events-through-kmes]
 
 | Event | Emitted when |
 |---|---|
 | `lcs.audit.key.opened` | A key open matched a SACL audit ACE. [*lcs-audit.key-open.on-sacl-match] |
+| `lcs.audit.value.set` | A value write through a handle whose audit mask covers `KEY_SET_VALUE`. |
+| `lcs.audit.value.deleted` | A value delete through a handle whose audit mask covers `KEY_SET_VALUE`. |
+| `lcs.audit.key.tombstoned` | A blanket tombstone set or cleared through a handle whose audit mask covers `KEY_SET_VALUE`. |
+| `lcs.audit.key.deleted` | A key deleted through a handle whose audit mask covers `DELETE`. |
+| `lcs.audit.key.hidden` | A key hidden through a handle whose audit mask covers `DELETE`. |
+| `lcs.audit.key.created` | A key create that made a key matched a SACL audit ACE on the parent. |
+| `lcs.audit.key.descriptor.changed` | A descriptor change included the SACL, or its right is covered by the handle's audit mask. |
+| `lcs.audit.transaction.committed` | A transaction that staged an audited write ended. |
 | `lcs.audit.backup.started` | Before `REG_IOC_BACKUP` reads any subtree data. [*lcs-audit.backup-start.before-any-read] |
 | `lcs.audit.backup.ended` | After a backup completes or fails after starting. [*lcs-audit.backup-complete.after-finish-or-failure] |
 | `lcs.audit.restore.started` | Before `REG_IOC_RESTORE` modifies any source state. [*lcs-audit.restore-start.before-any-mutation] |
 | `lcs.audit.restore.ended` | After a restore completes or fails after starting. [*lcs-audit.restore-complete.after-finish-or-failure] |
 | `lcs.source.response.rejected` | LCS rejected malformed source data. [*lcs-audit.validation-failure.on-malformed-source-data] |
 | `lcs.config.value.rejected` | LCS rejected an invalid self-configuration value. [*lcs-audit.self-config-invalid.on-invalid-value] |
+
+A registry open that a privilege contributed to is also recorded, as KACS's
+`kacs.audit.privilege.used`; see [Privilege use on opens](#privilege-use-on-opens).
 
 Backup and restore are audited **unconditionally**, whatever the SACL
 on the target key says. [*lcs-audit.backup-and-restore-unconditional] They are privilege-gated bulk operations that
@@ -33,8 +44,9 @@ the payload never repeats them. [*lcs-audit.payload-guid-and-sid-encoding]
 
 ## The caller summary
 
-Five of the seven describe the effective token used for the operation
-under `subject.token`. It has six fields and no more: `sid`,
+Every event except `lcs.source.response.rejected` and
+`lcs.config.value.rejected` describes the effective token used for the
+operation under `subject.token`. It has six fields and no more: `sid`,
 `integrity`, `id` (the token's LUID), `auth-id` (its logon session's
 LUID), `type` (`primary` or `impersonation`) and `impersonation`, the
 impersonation level. [*lcs-audit.caller-summary-nine-fields]
@@ -87,6 +99,159 @@ record. [*lcs-audit.key-open.maximum-allowed-always-audits-success]
 
 An ACE naming a right the caller did not receive still does not
 match. [*lcs-audit.key-open.ace-for-ungranted-right-does-not-match]
+
+## Registry writes
+
+Writes are audited through the key handle, as file operations are
+through a file handle. When a key is opened, the access check evaluates
+the key's `SYSTEM_ALARM*` ACEs against the caller, and the union of the
+masks of the ones that match becomes the handle's **continuous-audit
+mask**. [*lcs-audit.write.alarm-mask-cached-at-open] Success and failure
+`SYSTEM_AUDIT` ACEs do not contribute; they govern the open itself. This
+is the continuous auditing of §3.8.9 with LCS as the enforcement point,
+except in two respects: LCS writes records named for the operation
+rather than `kacs.audit.handle.used`, and a record it cannot write does
+not fail the operation (see below).
+
+The mask is fixed for the life of the handle. A later change to the
+key's SACL neither adds to it nor takes from it, so a handle that removes
+the alarm ACE is still audited for the change it makes, and handles
+opened before an alarm ACE was added are not. [*lcs-audit.write.mask-fixed-for-handle-life]
+
+A write through the handle is recorded when the right it needs overlaps
+the mask, and not otherwise. [*lcs-audit.write.recorded-when-right-overlaps-mask]
+The right is the one the handle's own gate checks:
+
+| Event | Operation | Right |
+|---|---|---|
+| `lcs.audit.value.set` | `REG_IOC_SET_VALUE` | `KEY_SET_VALUE` |
+| `lcs.audit.value.deleted` | `REG_IOC_DELETE_VALUE` | `KEY_SET_VALUE` |
+| `lcs.audit.key.tombstoned` | `REG_IOC_BLANKET_TOMBSTONE` | `KEY_SET_VALUE` |
+| `lcs.audit.key.deleted` | `REG_IOC_DELETE_KEY` | `DELETE` |
+| `lcs.audit.key.hidden` | `REG_IOC_HIDE_KEY` | `DELETE` |
+
+[*lcs-audit.write.rights-per-event]
+
+A write that fails is recorded too, with `outcome.success` false and
+`outcome.errno` the negative errno the caller received. That includes a
+write the handle's own gate refuses because the handle lacks the right:
+the mask comes from the SACL, not the grant, so it can cover rights the
+handle was not given. [*lcs-audit.write.failures-recorded]
+
+Every write record carries the caller summary; `object.kind` (`key`),
+`object.key.guid` and `object.key.path`, the handle's key and its
+resolved path; `object.key.layer.name`, the layer written; the masks
+`access.requested` (the right above), `access.granted` (the handle's
+grant), `access.matched` and `access.audit-mask`; `transaction.id` when
+the write was staged in a transaction; and `outcome.success`, with
+`outcome.errno` on a failure. A failure also carries `request.timed-out`.
+Value records add `object.key.value.name`; a value write adds the value's
+type and length and a digest of its data, and `mutation.sequence`, with
+`mutation.sequence-expected` on a compare-and-swap; a tombstone change
+adds `operation.name` (`set` or `clear`); a hide adds `mutation.sequence`.
+A field the operation had not reached when it failed is left out. [*lcs-audit.write.payload-fields]
+
+A value's data is never recorded. In its place a record carries the data's
+type, its length and its SHA-256 digest, so two records can be compared
+without either holding the data. Every digest LCS records, of a value or
+of a security descriptor, is SHA-256. [*lcs-audit.write.data-recorded-as-sha256-digest]
+
+A value write outside a transaction also records the value it replaced, as
+`object.key.value.type-previous`, `.length-previous` and
+`.digest-previous`: the effective value before the write, across every
+layer. A value delete records the value it removed the same way. [*lcs-audit.write.previous-value-recorded]
+
+A write whose source does not answer before the request timeout fails
+with `ETIMEDOUT`, and its record carries `request.timed-out` true. The
+source is not told to cancel, so the change may still land; for a value
+write or descriptor change outside a transaction, LCS also applies the
+write's kernel-side effects when the late reply arrives, and nothing
+records who made the write then. Read a timed-out record as "may have
+been applied later". [*lcs-audit.write.timed-out-may-apply-later]
+
+A write made in a transaction is recorded when it is staged, with
+`transaction.id`. Its `outcome.success` then says the source accepted it
+into the transaction, not that it took effect. [*lcs-audit.write.transacted-recorded-when-staged]
+
+### Transaction ends
+
+A transaction that staged at least one recorded write — a write or a key
+creation whose record was emitted — writes one
+`lcs.audit.transaction.committed` when it ends, and only one: at a
+`REG_IOC_COMMIT` that leaves it committed or otherwise finished, at its
+timeout, or when its fd is closed without a commit. A commit that fails
+and leaves the transaction open writes nothing yet. [*lcs-audit.txn-committed.once-per-recorded-transaction]
+
+It carries the caller summary, `transaction.id` and `transaction.state`,
+the state it ended in, and `outcome.success`, true only for `committed`.
+A failure adds `transaction.commit-outstanding` and `outcome.reason`:
+`aborted` (closed without a commit, or a layer it wrote was deleted),
+`timed-out` or `source-error`; and `outcome.errno` when a
+`REG_IOC_COMMIT` call failed. [*lcs-audit.txn-committed.payload-fields]
+
+On `REG_IOC_COMMIT` the subject is the caller who committed, not the one
+who staged the writes. A transaction that ended by timeout or by its fd
+closing has nobody acting, and names the subject that staged its first
+recorded write. The timer that ends a transaction runs in softirq context,
+which cannot build a record; the record is written from the work item
+that aborts the transaction at the source. [*lcs-audit.txn-committed.subject]
+
+A commit whose reply does not arrive in time reports `timed-out` with
+`transaction.commit-outstanding` true: the source may have committed it
+before the reply was lost.
+
+## Key creation
+
+`lcs.audit.key.created` records a key a create made. Creating a key
+checks only `KEY_CREATE_SUB_KEY` on its parent, so the parent's SACL
+decides, by the rule that decides `lcs.audit.key.opened`: a success audit
+ACE on the parent that matches the caller. [*lcs-audit.key-created.on-parent-sacl-match]
+
+Only a key that was made is recorded. A create that found the key already
+present and opened it instead writes nothing here. The record is written
+once the key exists, or is staged in a transaction, so a create whose
+handle then fails to reach the caller is still recorded. [*lcs-audit.key-created.only-made-keys]
+
+It carries the caller summary; `object.kind`; the new key's
+`object.key.guid`, `object.key.path` and `object.key.layer.name`;
+`object.key.created` (true), `object.key.volatile`,
+`object.key.volatile-requested` and `object.key.symlink`; the new key's
+descriptor as `object.sd.length` and `object.sd.owner`; `access.requested`
+(`KEY_CREATE_SUB_KEY`) and `access.granted`, from the parent check;
+`transaction.id` when staged; and `outcome.success`. [*lcs-audit.key-created.payload-fields]
+
+## Descriptor changes
+
+`lcs.audit.key.descriptor.changed` records `REG_IOC_SET_SECURITY` through
+a key handle.
+
+A change that includes the SACL is recorded whatever the handle's mask
+says. It is recorded once the handle's own gate has admitted it, which
+takes `ACCESS_SYSTEM_SECURITY`: a handle without that right is refused
+first, and asking for a SACL change writes no record. [*lcs-audit.descriptor-changed.sacl-change-always-recorded]
+
+Any other change is recorded when the right it needs — `WRITE_OWNER` for
+the owner or group, `WRITE_DAC` for the DACL — overlaps the handle's
+mask, and then failures are recorded as writes' are. [*lcs-audit.descriptor-changed.other-changes-follow-mask]
+
+The record carries what a write record does, without a layer, and the
+descriptors: `object.sd.components`, the `security_info` bits asked for;
+and for the descriptor written and the one it replaced, `object.sd.length`
+and `object.sd.length-previous`, their SHA-256 digests `object.sd.digest`
+and `object.sd.digest-previous`, and their owners `object.sd.owner` and
+`object.sd.owner-previous`. `access.requested` is every right the change
+needs, and `access.matched` is zero when only the SACL made the record
+exist. [*lcs-audit.descriptor-changed.payload-fields]
+
+## Privilege use on opens
+
+A registry open whose access check used a privilege — `SeSecurityPrivilege`
+for `ACCESS_SYSTEM_SECURITY`, `SeTakeOwnershipPrivilege` for
+`WRITE_OWNER` — writes KACS's `kacs.audit.privilege.used` when the
+caller's token audit policy asks for privilege use, in the shape KACS
+uses for its own access checks, with `object.kind` `key`. The key's
+identity is not carried. The checks LCS makes for layer writes and on a
+create's parent record none. [*lcs-audit.open.privilege-use-recorded]
 
 ## Backup and restore
 
@@ -166,8 +331,15 @@ The policy differs per event, and the differences are the point.
 - **`lcs.config.value.rejected`.** The invalid value has already been
   ignored and the previous known-good value retained. Emission is
   attempted; failure leaves the retained configuration in force. [*lcs-audit.emit-failure.self-config-is-best-effort]
+- **The write, creation, descriptor-change and transaction records.**
+  Each is written after the source has applied or refused the operation,
+  or after the transaction's state is final. Emission is attempted; a
+  record that cannot be built or retained leaves the caller's result as
+  it was. [*lcs-audit.emit-failure.write-records-preserve-result]
+  These records fire no `lcs:lcs_audit_emit` or `lcs:lcs_audit_emit_failed`
+  tracepoint; the tracepoints' event-type codes cover the other seven.
 
-The rule underneath all five: an audit failure blocks an operation only
+The rule underneath them all: an audit failure blocks an operation only
 where the audit record is the *point* of the operation being permitted.
 A privileged bulk export whose start could not be recorded does not
 happen. A key open whose decision could not be recorded does not

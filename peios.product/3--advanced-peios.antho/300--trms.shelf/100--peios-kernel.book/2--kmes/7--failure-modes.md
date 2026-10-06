@@ -65,13 +65,22 @@ gap.
 
 ## Buffer swap failure
 
-If replacement rings cannot be allocated, the existing rings stay live
-at their current size, the capacity change is not applied, no
-generation changes, and consumers are unaffected. A
-`kmes.buffer.swap.failed` event records the requested and retained
-capacities as `buffer.capacity-requested` and `buffer.capacity`
-(§2.6). KMES does not retry; the next configuration write
-or a reboot triggers another attempt.
+If replacement rings cannot be allocated, or the migration meets a
+corrupt ring, the existing rings stay live at their current size, the
+capacity change is not applied, no generation changes, and consumers
+are unaffected. A `kmes.buffer.swap.failed` event records the
+requested and retained capacities as `buffer.capacity-requested` and
+`buffer.capacity`, and the error as `outcome.errno` (§2.6). KMES does
+not retry; the next configuration write or a reboot triggers another
+attempt.
+
+## Configuration that cannot be read
+
+A re-read of `Machine\System\KMES` that fails keeps the configuration
+in force, and a walk of the emission policy that fails keeps the mask
+in force; each is recorded as `kmes.config.refresh.failed` (§2.6,
+§2.8). Nothing retries on its own: the next change under the key reads
+it again.
 
 ## LCS unavailable [*failure.lcs-never-required]
 

@@ -29,6 +29,24 @@ carries a SID, an access mask, and success and failure flags —
 An event is emitted when the ACE's SID matches the caller, its mask
 overlaps the requested access, and its flags match the outcome. [*check.auditing.audit-ace-conditions]
 
+### On the AccessCheck syscall
+
+Through `kacs_access_check` and `kacs_access_check_list` the descriptor
+is the caller's own, SACL included. So that no process can write
+kernel-origin audit records at will by supplying a SACL that matches
+itself, the records a SACL generates there are written only when the
+calling process's effective token holds `SeAuditPrivilege`, enabled.
+Without it the check runs and answers exactly as it would otherwise,
+and its SACL records are withheld; the privilege is marked used when it
+admits them. [*check.auditing.syscall-sacl-needs-audit-privilege] The
+privilege is the caller's, not the subject's: a daemon checking a
+client through `token_fd` needs it on its own token. This is Windows'
+rule for `AccessCheckAndAuditAlarm`.
+
+The records the checked token's own audit policy forces, and
+privilege-use and CAAP records, are not gated: the policy belongs to
+the token, not to the caller. [*check.auditing.syscall-policy-records-ungated]
+
 Two details matter. The SID is matched with **deny polarity** — the
 broadest identity view, in which deny-only groups are visible —
 because auditing should capture the widest possible picture rather
@@ -135,6 +153,13 @@ the matched ACE as `trigger.ace`, or for a privilege record the
 `privilege.*` fields; and the **process**, as
 `emitter.process.pid`, `.name` and `.executable`. [*check.auditing.event-contents]
 
+An access record also says what the mandatory checks withheld, since
+that is often the whole reason a check the DACL would allow was denied:
+`access.denied-integrity` is the requested bits the object's mandatory
+label denied, and `access.denied-trust` the requested bits its
+process-trust label denied — every bit each denied, for a
+`MAXIMUM_ALLOWED` request — and each is absent when it denied none. [*check.auditing.mandatory-denials-recorded]
+
 The pipeline itself produces only the object-and-access half — the
 matched ACE bytes, the requested and granted masks, the outcome,
 whether the event was policy-forced, the privilege, and the audit
@@ -150,8 +175,9 @@ covers port-reservation binds) or `ipc`. A token check also writes the
 target's `object.token.id` and `object.token.guid`. Some identity is
 not yet reachable where the record is built, and is absent rather than
 invented: `object.file.path` on file checks, `object.process.pid` and
-`object.process.guid` on process checks. A mount-namespace check has
-no `object.kind` value and writes no `object` at all.
+`object.process.guid` on process checks. A mount-namespace check writes
+`object.kind` `mount-namespace` and nothing beneath it: a namespace has
+no name or identifier to carry. [*check.auditing.mount-namespace-object-kind]
 
 A check made through `kacs_access_check` names its object through the
 **audit context** (`audit_context_ptr`, `audit_context_len`), the
@@ -173,9 +199,11 @@ call without an audit context writes no `object`: the kernel does not
 know what was checked.
 
 These values are the caller's claim, which the kernel copied but did
-not observe. A record carrying an audit context, or one whose caller
-supplied a non-zero PIP type or trust in the arguments, carries
-`fields.attestation.userspace` set to `true`; a record with neither
-omits the field. Components that still pass a free-form string as the
-context, as eventd does today, now fail with `EINVAL` and are being
-migrated to the map.
+not observe. So is everything else on the syscall path: the descriptor,
+and with it `trigger.ace`, is the caller's, as is any PIP type or trust
+it passes. Every record of `kacs_access_check` and
+`kacs_access_check_list` therefore carries `fields.attestation.userspace`
+set to `true`, with or without an audit context, and a record of a check
+the kernel makes itself never does. [*check.auditing.syscall-records-asserted]
+A context that is anything other than this map, such as the free-form
+strings earlier components passed, fails with `EINVAL`.

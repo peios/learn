@@ -140,7 +140,8 @@ If allocating the new rings fails, the old rings stay live at their
 size, no generation changes, and the failure is reported through a
 `kmes.buffer.swap.failed` event (§2.6). [*ring.swap.alloc-failure-keeps-old] A migration abort — a corrupt
 size field encountered inside the quiesced section — abandons the
-swap the same way but emits no event. [*ring.swap.abort-emits-no-event] There is no automatic retry;
+swap the same way and is reported the same way, with `-EIO` as the
+error. [*ring.swap.abort-emits-event] There is no automatic retry;
 the next configuration write or reboot tries again. A superseded
 generation's pages stay valid for as long as any consumer keeps them
 mapped, so during and after a swap old and new rings coexist until

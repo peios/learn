@@ -17,17 +17,18 @@ under §6.11, and is never reassigned.
 | `peinit` | The service manager | `dev.peios.peinit` |
 | `peipkg` | The package manager | `dev.peios.peipkg` |
 | `eventd` | The event store | `dev.peios.eventd` |
+| `authd` | The authentication daemon | `dev.peios.authd` |
+| `lpsd` | The local principal source | `dev.peios.authd-lpsd` |
+| `timed` | The time daemon | `dev.peios.timed` |
+| `netd` | The network daemon | `dev.peios.netd` |
+| `trustd` | The trust daemon | `dev.peios.trustd` |
 
 These roots are reserved for components that write no events yet, and
 MUST NOT be used by anything else:
 
 | Root | Component |
 |---|---|
-| `authd` | The authentication daemon |
-| `netd` | The network daemon |
 | `resolvd` | The name-resolution daemon |
-| `timed` | The time daemon |
-| `trustd` | The trust daemon |
 | `ud` | The user daemon |
 | `loregd` | The log store |
 

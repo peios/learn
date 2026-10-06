@@ -197,7 +197,14 @@ applies to the superblock, not the pathname used to reach it.
 Setting a policy is volume management: the call requires
 `SeManageVolumePrivilege` or `SeTcbPrivilege`, enabled, and marks the
 one it found used; `kacs_get_mount_policy` is gated the same
-way. [*facs.storage.set-mount-policy-privilege] The
+way. [*facs.storage.set-mount-policy-privilege] Every change writes a
+`kacs.mount.policy.changed` record (§3.C), whose subject is the caller
+and which names the filesystem's type, the policy set
+(`object.mount.policy`), the one it replaced
+(`object.mount.policy-previous`) and the new generation
+(`object.mount.policy-generation`). Every refusal is decided before the
+change, so a record is always of a change made; the template is not
+carried. [*facs.storage.set-mount-policy-recorded] The
 public ABI accepts only the three managed classes; `unmanaged`,
 unknown values, nonzero reserved flags and malformed arguments all
 fail closed. [*facs.storage.set-mount-policy-input-validation] The one
