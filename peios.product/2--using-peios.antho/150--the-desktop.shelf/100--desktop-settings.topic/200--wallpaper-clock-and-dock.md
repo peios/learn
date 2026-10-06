@@ -17,8 +17,11 @@ choice, and failing that the built-in one.
 
 - **System Default**, the machine's wallpaper, or the built-in one when the
   machine has none;
-- the wallpapers Peios ships, **Diamond Beach Dark** (the built-in one) and
-  **Diamond Beach Light**, kept in `/usr/share/wallpapers/peios`;
+- the wallpapers Peios ships, kept in `/usr/share/wallpapers/peios`, in
+  four series: Contours (**Strata**, the built-in one, **Fold**, **Chalk**
+  and **Relief**), Afterglow (**Cast Glass**, **Veil** and **Amber**),
+  Elsewhere (**Escarpment**, **Canopy**, **Mare** and **Saltpan**) and
+  Impressions (**Upland** and **Winter Ridge**);
 - your own picture, once you have chosen one.
 
 Click one to use it. **Choose Picture…** opens the file dialog for a
