@@ -53,8 +53,8 @@ above, nothing a client or an upstream server sends makes it exit.
 
 resolvd installs no signal handlers, so it ends when peinit signals it,
 with the default disposition, and leaves `/run/resolvd/resolv.sock`
-behind. The next start tries to remove the stale socket file before
-binding, which under the service's account fails and is fatal (§2.4).
+behind. The next start removes the stale socket file before binding
+(§2.4).
 
 ### A poll failure exits [*startup.poll-failure-exits]
 

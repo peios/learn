@@ -85,6 +85,5 @@ within two seconds of each being sent.
 
 A new resolvd discards the cache, the demotions and the counters,
 re-reads the registry, and takes a fresh snapshot from netd; nothing is
-persisted. But a resolvd started by peinit cannot remove the socket its
-predecessor left, and exits until the file is gone (§2.4): stop the
-service, remove `/run/resolvd/resolv.sock` as SYSTEM, and start it.
+persisted. `svctl restart resolvd` is enough: the new process replaces
+the socket its predecessor left (§2.4).

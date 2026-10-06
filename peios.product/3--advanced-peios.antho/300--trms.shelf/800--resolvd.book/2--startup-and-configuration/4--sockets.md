@@ -17,39 +17,20 @@ At startup resolvd:
 2. replaces the directory's DACL (below);
 3. removes any existing `/run/resolvd/resolv.sock`, logging
    `removed a stale /run/resolvd/resolv.sock` at warn level when there
-   was one, and a removal that fails is fatal (§2.2); see below for what
-   this means for a restart of the service;
+   was one, and a removal that fails is fatal (§2.2);
 4. binds the socket, sets its mode to `0666`, and replaces its DACL in
    the same way; [*sockets.socket-mode-0666]
 5. makes the listener nonblocking.
 
-### A socket left by a previous run [*sockets.stale-socket-is-fatal-to-the-service]
+### A socket left by a previous run [*sockets.stale-socket-removed-on-restart]
 
 resolvd leaves its socket behind when it ends (§2.2), so a start that
 follows an earlier run finds one unless something else has removed it.
-Under its service account, resolvd cannot remove the socket a previous
-run left: step 3 fails with `EACCES`, and resolvd logs
-
-```text
-native socket: Permission denied (os error 13)
-```
-
-at error level and exits with status 1. peinit's restart policy (§2.1)
-starts it again, the new process fails the same way, and the service
-stays in a restart loop for as long as the file is there. This happens
-after every restart of the service: `svctl restart`, a stop and a start,
-and a restart by the policy after resolvd exits or is killed.
-
-Once the file is gone, the next start succeeds. Removing it as SYSTEM
-is enough:
-
-```sh
-rm -f /run/resolvd/resolv.sock
-```
-
-The directory can stay. resolvd run with rights over the file — by hand,
-as SYSTEM — removes it itself, logs the `removed a stale …` line, and
-starts normally.
+The previous run gave its own account full access to the directory and
+the socket (below), so the new process removes the file in step 3, logs
+the `removed a stale …` line, and binds a fresh socket. This holds for
+every restart of the service: `svctl restart`, a stop and a start, and
+a restart by the policy after resolvd exits or is killed.
 
 ### The DACL on the directory and socket [*sockets.directory-and-socket-dacl]
 
@@ -58,7 +39,21 @@ The DACL written to both the directory and the socket is:
 | Trustee | Access |
 |---|---|
 | SYSTEM | `GENERIC_ALL` |
+| resolvd's own account (its token's user) | `GENERIC_ALL` |
 | Everyone | `GENERIC_READ`, `GENERIC_WRITE`, `GENERIC_EXECUTE` |
+
+resolvd's own entry is what lets the next run start. Everyone's read,
+write and execute include neither `DELETE` nor deleting a child, so
+without it the next start could not remove the stale socket: it would
+exit with `native socket: Permission denied (os error 13)`, and the
+restart policy would loop on that until the file was removed by hand.
+If resolvd cannot read its own identity it logs at warn level
+
+```text
+could not read resolvd's own identity (<error>); a restart may not be able to replace <path>
+```
+
+and writes the DACL without that entry.
 
 ### The owner of the directory and socket [*sockets.owner-left-as-resolvd]
 
