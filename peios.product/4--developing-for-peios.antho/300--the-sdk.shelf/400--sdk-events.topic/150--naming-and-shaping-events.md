@@ -78,9 +78,10 @@ property:
 **Look a field up before you invent one.** The standard fields cover
 almost everything an event carries: who acted (`subject.*`), what was
 acted on (`object.*`), where something came from or went to (`source.*`
-and `destination.*`), and how it turned out (`outcome.*`). The catalogue
-of every defined field is installed in `/usr/share/evman/` and listed in
-the Events reference book.
+and `destination.*`), and how it turned out (`outcome.*`). Every defined
+field is described in `/usr/share/evman/`, and
+[`evman`](~peios/event-tools/evman) looks them up: `evman object.file`
+lists what is defined under `object.file`, and `evman -k size` searches.
 
 A few things never go in your payload:
 
@@ -225,7 +226,9 @@ field: outcome.errno                          optional
 You define only your own field. The standard ones are referenced, never
 redefined: two fragments defining the same field is an error, because one
 value with two names can be denied under one and read under the other.
-The format and its rules are in
+[Writing evman pages](~peios/documenting-events/writing-evman-pages)
+covers the format, checking a fragment with `evman lint`, and installing
+it; the normative rules are in
 [The catalogue](~peios/pgss/events/the-catalogue).
 
 ## If your program guards access to something

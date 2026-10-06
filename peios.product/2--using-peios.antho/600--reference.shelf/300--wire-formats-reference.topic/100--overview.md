@@ -49,7 +49,7 @@ See also [Security descriptors](~peios/wire-formats-reference/security-descripto
 |---|---|
 | KMES event header, field by field | PSPK §2 |
 | Event envelope, in summary | [Events Index](~peios/all-event-types) §1.2 |
-| Per-event payload schemas | [Events Index](~peios/all-event-types), chapters 3 to 8 |
+| Per-event payload schemas | [Events Index](~peios/all-event-types), chapters 3 to 10 |
 
 ## Packages and repositories
 

@@ -115,8 +115,12 @@ Every fragment MUST pass these rules, checked across the whole catalogue:
    (§6.5).
 
 A tool that reads the catalogue SHOULD report every rule a fragment
-breaks, and MUST NOT treat a fragment that breaks rule 1, 2 or 3 as
-defining anything.
+breaks. A consumer that acts on the catalogue — one that decides access,
+builds a field tree for a descriptor, or validates payloads against it —
+MUST NOT treat a fragment that breaks rule 1, 2 or 3 as defining
+anything. A tool that only displays the catalogue MAY show such a
+fragment's records, provided it warns that the fragment breaks those
+rules.
 
 > [!NOTE]
 > Rule 2 is what stops one value acquiring three spellings again. Before

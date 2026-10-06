@@ -1,92 +1,59 @@
 ---
-title: All Event Types
-description: Every event type in this book in one table — thirty-four types across six emitters, plus the registry's watch records and the known holes.
+title: "All Event Types"
+description: "Every event type the evman catalogue defines, in one table: its tier, its defining fragment and its one-line summary, generated from the fragments."
 ---
 
-Every event type in this book, in one table. Thirty-four types across
-six emitters, plus the registry's watch records, which are a separate
-mechanism.
+Every event type in the evman catalogue, generated from the fragments by `pkm/tools/gen-events-book.py`: 20 event types and 581 fields, from `kacs.evman`, `kernel.evman`, `kmes.evman`, `lcs.evman`, `ntfe.evman`, `stratafs.evman`, `peinit.evman`, `peipkg.evman`, `eventd.evman`.
 
-## KMES events
+The tier sets whether an event type is recorded by default (PGSS §6.8). Each type links to its page; each page's fields link to the field index.
 
-| Type | Emitter | Where |
-|---|---|---|
-| `access-audit` | KACS | §3.1 |
-| `continuous-audit` | KACS | §3.2 |
-| `privilege-use` | KACS | §3.3 |
-| `caap-policy-diagnostic` | KACS | §3.4 |
-| `logon-session-destroyed` | KACS | §3.5 |
-| `corrupt-sd` | KACS | §3.6 |
-| `STRATAFS_COPY_UP` | StrataFS | §4.1 |
-| `STRATAFS_MUTATION_REFUSED` | StrataFS | §4.2 |
-| `LCS_KEY_OPEN_AUDIT` | LCS | §5.2 |
-| `LCS_BACKUP_START` | LCS | §5.1 |
-| `LCS_BACKUP_COMPLETE` | LCS | §5.1 |
-| `LCS_RESTORE_START` | LCS | §5.1 |
-| `LCS_RESTORE_COMPLETE` | LCS | §5.1 |
-| `LCS_SOURCE_VALIDATION_FAILURE` | LCS | §5.3 |
-| `LCS_SELF_CONFIG_INVALID` | LCS | §5.3 |
-| `job.created` | peinit | §6.1 |
-| `job.started` | peinit | §6.1 |
-| `job.ended` | peinit | §6.1 |
-| `operation.requested` | peinit | §6.2 |
-| `operation.started` | peinit | §6.2 |
-| `operation.completed` | peinit | §6.2 |
-| `operation.failed` | peinit | §6.2 |
-| `operation.cancelled` | peinit | §6.2 |
-| `operation.merged` | peinit | §6.2 |
-| `operation.aborted` | peinit | §6.2 |
-| `peipkg.install` | peipkg | §7.1 |
-| `peipkg.upgrade` | peipkg | §7.1 |
-| `peipkg.uninstall` | peipkg | §7.1 |
-| `peipkg.refresh` | peipkg | §7.1 |
-| `peipkg.transaction-failed` | peipkg | §7.1 |
-| `peipkg.recovery` | peipkg | §7.1 |
-| `peipkg.authorisation` | peipkg | §7.1 |
-| `peipkg.repo-add` | peipkg | §7.1 |
-| `peipkg.repo-remove` | peipkg | §7.1 |
-| `peipkg.claim` | peipkg | §7.1 |
-| `peipkg.config-change` | peipkg | §7.1 — **specified, not emitted** |
+## Access and Identity Events
 
-## Not KMES
-
-| Type | Emitter | Transport | Where |
+| Event type | Tier | Fragment | Summary |
 |---|---|---|---|
-| `synthetic.gap` | eventd | Written direct to a shard | §8.1 |
-| `synthetic.startup` | eventd | Written direct to a shard | §8.1 |
-| `synthetic.shutdown` | eventd | Written direct to a shard | §8.1 |
-| `synthetic.storage_error` | eventd | Written direct to a shard | §8.1 |
-| `synthetic.config_change` | eventd | Written direct to a shard | §8.1 |
-| Watch records | LCS | `read()` on a key fd | §5.4 |
+| [`kacs.audit.access.checked`](~peios/events/kacs/kacs-audit-access-checked) | essential | `kacs.evman` | The record that an access check completed, and what it decided. |
+| [`kacs.audit.handle.used`](~peios/events/kacs/kacs-audit-handle-used) | standard | `kacs.evman` | The record of what was done with a handle after it was opened. |
+| [`kacs.audit.privilege.used`](~peios/events/kacs/kacs-audit-privilege-used) | essential | `kacs.evman` | The record that a privilege contributed access to a check, and whether that contribution survived. |
+| [`kacs.caap.sacl.skipped`](~peios/events/kacs/kacs-caap-sacl-skipped) | standard | `kacs.evman` | The record that a central access policy rule's SACL could not be parsed or evaluated, so the audit it asked for was skipped. |
+| [`kacs.caap.staging.diverged`](~peios/events/kacs/kacs-caap-staging-diverged) | standard | `kacs.evman` | The record that a staged central access policy would have decided an access differently from the policy in force. |
+| [`kacs.descriptor.rejected`](~peios/events/kacs/kacs-descriptor-rejected) | standard | `kacs.evman` | The record that KACS read an object's stored security descriptor, found it corrupt, and refused to use it. |
+| [`kacs.session.destroyed`](~peios/events/kacs/kacs-session-destroyed) | standard | `kacs.evman` | The record that a logon session ended because its last token went away. |
+| [`kacs.signature.crypto.failed`](~peios/events/kacs/kacs-signature-crypto-failed) | essential | `kacs.evman` | The record that the machinery for verifying signed executables cannot run. |
 
-## Which carry an identity, and how
+## Filesystem Events
 
-| Events | Identity from |
-|---|---|
-| KACS, all but `logon-session-destroyed` | `subject` record in the payload (§2.1) |
-| `logon-session-destroyed` | `user_sid` and `session_id` directly; the session was the subject |
-| LCS, six of seven | `caller` summary in the payload (§2.3) |
-| StrataFS, peinit, peipkg | The **envelope** only. No identity in the payload (§1.2) |
-| eventd synthetic | None. eventd is describing itself |
+| Event type | Tier | Fragment | Summary |
+|---|---|---|---|
+| [`stratafs.file.copied-up`](~peios/events/stratafs/stratafs-file-copied-up) | standard | `stratafs.evman` | The record that StrataFS materialised an object into a writable stratum, successful or not. |
+| [`stratafs.mutation.refused`](~peios/events/stratafs/stratafs-mutation-refused) | standard | `stratafs.evman` | The record that a mutation was refused because of how the mount is arranged, rather than because of an access check. |
 
-## Known holes
+## Registry Events
 
-Collected from the chapters, because a reader planning coverage needs
-them in one place:
+| Event type | Tier | Fragment | Summary |
+|---|---|---|---|
+| [`lcs.audit.backup.ended`](~peios/events/lcs/lcs-audit-backup-ended) | essential | `lcs.evman` | The record that a registry subtree backup finished, successfully or otherwise. |
+| [`lcs.audit.backup.started`](~peios/events/lcs/lcs-audit-backup-started) | essential | `lcs.evman` | The record that a registry subtree backup began, emitted **before any data is read**. |
+| [`lcs.audit.key.opened`](~peios/events/lcs/lcs-audit-key-opened) | essential | `lcs.evman` | The record that a registry key was opened and what access the open received. |
+| [`lcs.audit.restore.ended`](~peios/events/lcs/lcs-audit-restore-ended) | essential | `lcs.evman` | The record that a registry subtree restore finished, successfully or otherwise. |
+| [`lcs.audit.restore.started`](~peios/events/lcs/lcs-audit-restore-started) | essential | `lcs.evman` | The record that a registry subtree restore began, emitted **before any state is modified**. |
+| [`lcs.config.value.rejected`](~peios/events/lcs/lcs-config-value-rejected) | standard | `lcs.evman` | The record that LCS read one of its own configuration values, rejected it, and carried on with what it had. |
+| [`lcs.source.response.rejected`](~peios/events/lcs/lcs-source-response-rejected) | essential | `lcs.evman` | The record that LCS rejected data a registry source sent it. |
 
-- `peipkg.config-change` is never emitted (§7.1).
-- peipkg omits the source repository on install and upgrade, the
-  transaction id on committed cross-root success, and emits nothing for
-  automatic recovery, recovery failures, declined prompts, insecure
-  transport, unsigned installs under an `optional` policy, or
-  `peipkg-compose` (§7.2).
-- A registry key open requesting `MAXIMUM_ALLOWED` alone emits no
-  `LCS_KEY_OPEN_AUDIT`, because the mapped desired mask is zero and no
-  ACE matches zero (§5.2).
-- `caap-policy-diagnostic` with `kind = staging-mismatch` does not
-  identify which rule differed, and its two masks can be equal while
-  `object_results_differ` is true (§3.4).
-- There is no `logon-session-created`, no `token-created`, and no
-  heartbeat (§3.6).
-- peipkg emits nothing when the caller's token lacks the audit privilege
-  (§7.1).
+## Event Stream Events
+
+| Event type | Tier | Fragment | Summary |
+|---|---|---|---|
+| [`kmes.buffer.swap.failed`](~peios/events/kmes/kmes-buffer-swap-failed) | standard | `kmes.evman` | The record that KMES could not resize its per-CPU ring buffers and kept the capacity it had. |
+| [`kmes.config.value.rejected`](~peios/events/kmes/kmes-config-value-rejected) | standard | `kmes.evman` | The record that KMES read a configuration value, rejected it, and carried on with what it had. |
+
+## Network Policy Events
+
+| Event type | Tier | Fragment | Summary |
+|---|---|---|---|
+| [`ntfe.verdict.reported`](~peios/events/ntfe/ntfe-verdict-reported) | standard | `ntfe.evman` | The record of a traffic policy decision that a rule explicitly asked to be reported. |
+
+## Not yet in the catalogue
+
+peinit, peipkg and eventd define their fields in the catalogue but do not yet write catalogue events. What they emit today is in [Service Events](~peios/events/service-events/job-events), [Package Events](~peios/events/package-events/the-event-set) and [Event Daemon Events](~peios/events/event-daemon-events/synthetic-events). The registry's [watch records](~peios/events/registry-watch-records/watch-records) are not events at all.
+
+*Generated from the evman catalogue by `pkm/tools/gen-events-book.py`. Edit the fragment, not this page.*
