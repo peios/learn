@@ -34,10 +34,11 @@ SHA-256 fingerprint, and the machine shows you its own.
   B8:39:98:AB:E7:F6:64:25:BC:0D:DE:56:F4:78:2E:21:3D:D8:AB:FF:EF:78:8A:81:6E:94:99:17:94:83:73:C3
   ```
 
-In the browser, open the warning's details and view the certificate: its
-SHA-256 fingerprint is written the same way, colon-separated hex. If the two
-match, the connection is to this machine and nobody can read it on the way.
-If they do not, do not sign in.
+In the browser, open the warning's details and view the certificate. Its
+SHA-256 fingerprint is the same 32 pairs of hex digits, though some browsers
+separate them with spaces rather than colons. If the two match, the connection
+is to this machine and nobody can read it on the way. If they do not, do not
+sign in.
 
 ## Stop the warning
 
