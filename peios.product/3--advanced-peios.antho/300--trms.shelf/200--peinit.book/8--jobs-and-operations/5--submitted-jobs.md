@@ -180,14 +180,16 @@ is a service.
 Unless the submission supplied one, the descriptor is built by
 `PeiosSystemAccessChecker` from the submitter SID: owner and group the
 submitter; a DACL granting `JOB_ALL_ACCESS` to the submitter, to SYSTEM
-and to Administrators; nothing else.
+and to Administrators; nothing else; and a SACL auditing every refusal,
+for everyone, so a denied command on the job is recorded (§8.4).
 [*submit.the-default-descriptor-grants-the-submitter-system-and-administrators]
 The job identity is granted
 nothing. A process cannot, by virtue of running as U, see or stop a job
 that runs as U — a submitter that wants the principal to see its own
 session says so in the descriptor it supplies.
 
-A supplied descriptor is used as given, with no default entries added.
+A supplied descriptor is used as given, with no default entries added —
+its SACL included, so one with none has its denials recorded by no one.
 A submitter that omits itself has locked itself out of its own job, and
 peinit does not prevent that.
 [*submit.a-supplied-descriptor-is-used-as-given] The descriptor is fixed
@@ -202,9 +204,10 @@ at submission.
 
 The generic mapping is read → `JOB_QUERY`, write and execute →
 `JOB_STOP | JOB_SIGNAL`, all → `JOB_ALL_ACCESS`. Every command on either
-door checks against this descriptor, the submitter included; a denial
-is answered `ACCESS_DENIED` and recorded as a `job.access_denied` event
-(§8.4). [*submit.a-denial-is-answered-access-denied]
+door checks against this descriptor, the submitter included, naming the
+job to KACS in the check's audit context; a denial is answered
+`ACCESS_DENIED`, and the descriptor's SACL decides whether KACS records
+it (§8.4). [*submit.a-denial-is-answered-access-denied]
 
 ## Launch
 
@@ -271,7 +274,9 @@ What the fields do to a submitted job:
 | Everything else | Ignored: a job has no reload, no watchdog, no fd store. |
 
 A datagram that changed `status_text`, `progress` or the unit is due a
-`job.status` event carrying the retained values — but at most one per
+`peinit.job.status.reported` event carrying the retained values (a
+`verbose` type, written only when the emission policy turns it on) —
+but at most one per
 job per second, measured from the last event emitted for that job, so
 a sender updating a thousand times a second produces one event a
 second while the view is current on every query.
@@ -307,7 +312,8 @@ At the kill deadline the cgroup is killed.
 [*submit.at-the-kill-deadline-the-cgroup-is-killed] At the post-kill
 deadline, a cgroup still populated means the process survived SIGKILL:
 the record is abandoned, the cause becomes `process_unkillable`, the
-cgroup is leaked and reported as `cgroup.leaked`, and supervision stops.
+cgroup is leaked and reported as `peinit.cgroup.leaked`, naming the job
+rather than a service, and supervision stops.
 [*submit.a-process-that-survives-sigkill-is-abandoned-as-process-unkillable]
 
 `signal` is the raw mechanism, deliberately: one signal, by number, to
@@ -342,7 +348,7 @@ and the same cause.
 [*submit.a-stopped-job-killed-by-the-signal-fails-with-the-same-cause]
 
 The record is dropped at once, as every terminal job's is (§8.1), and
-`job.ended` carries it. The entry is retained for 60 seconds so a
+`peinit.job.ended` carries it. The entry is retained for 60 seconds so a
 submitter polling for the outcome finds it, and then purged by
 operation maintenance; `status` on a purged or never-existent
 identifier is `UNKNOWN_JOB` either way.

@@ -57,11 +57,11 @@ Every control command runs the same gate:
 1. peinit captures the caller's [token](~peios/services-and-jobs/identity-and-privileges) from the kernel (the `KACS_SO_PEER_TOKEN` socket option) — the caller's *effective* identity at connection time, so if the caller is [impersonating](~peios/impersonation/overview), the impersonated identity is what is checked.
 2. peinit resolves the target service and its ServiceSecurity descriptor.
 3. peinit runs [AccessCheck](~peios/access-decisions/overview): the caller's token against the descriptor, for the right the command needs.
-4. **Denied** → return `ACCESS_DENIED` and **log the attempt** (caller SID, target service, requested right).
+4. **Denied** → return `ACCESS_DENIED`. The kernel records the attempt — caller, target service, rights requested and granted — as a `kacs.audit.access.checked` event, because the descriptor's SACL asks it to.
 5. **Granted** → execute the command.
 
 > [!NOTE]
-> Access denials are always logged — caller, target, and the right requested. Silent denial is a specification violation. If you are debugging a denial, the audit record has everything you need; see [Debugging a denial](~peios/access-decisions/debugging-a-denial).
+> Every denial is recorded by default: the built-in descriptor's SACL audits every refusal, for everyone, and peinit names the service in each check so the record says which one it was. Look for it in the event viewer as `kacs.audit.access.checked` with **object kind** `service` and the service's name. A `ServiceSecurity` you write yourself is used as it is, so keep a SACL on it (for example `S:(AU;FA;0xf;;;WD)`) if you still want its denials recorded. If you are debugging a denial, the audit record has everything you need; see [Debugging a denial](~peios/access-decisions/debugging-a-denial).
 
 ## The default descriptor
 
@@ -70,8 +70,12 @@ If a service has no `ServiceSecurity` value, it **inherits** the one on `Machine
 - **SYSTEM** (`S-1-5-18`) — full access.
 - **Administrators** (`S-1-5-32-544`) — full access.
 - **Authenticated Users** (`S-1-5-11`) — query only.
+- **Everyone** (`S-1-1-0`) — every refusal audited, in its SACL.
 
-So out of the box, administrators can do anything with a service, and everyone who is signed in can see what it is doing. To let someone else start or stop a particular service, give that service a `ServiceSecurity` that grants it; anyone signed in can reach the control socket, so a grant to them takes effect.
+So out of the box, administrators can do anything with a service, everyone who is signed in can see what it is doing, and every refused command is recorded. To let someone else start or stop a particular service, give that service a `ServiceSecurity` that grants it; anyone signed in can reach the control socket, so a grant to them takes effect.
+
+> [!WARNING]
+> A `ServiceSecurity` value carries the service's audit policy as well as its permissions, and it is written whole. Anyone who may write it — that is, anyone who may write the service's registry key, or `Machine\System\Services` — can remove its SACL and so stop its denials being recorded. Keep those keys writable only by administrators, as they are by default. To let someone manage a service, grant them rights in its `ServiceSecurity`; do not give them write access to its key.
 
 ServiceSecurity is **hot-reloaded**: a change to the value in the registry takes effect on the **next control request**, with no service restart. peinit picks the change up through a [registry notification](~peios/registry-concepts/watches). This is why ServiceSecurity is in its own [mutability class](~peios/services-and-jobs/defining-a-service) — access policy should be able to change without disturbing a running service.
 

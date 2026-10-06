@@ -146,7 +146,7 @@ the start is classified.
    - **Would block:** leave the source registered, the job stays in
      pending setup.
    - **EOF:** exec succeeded. Record the pidfd on the job, emit
-     `job.started`, and only then apply readiness side effects such as
+     `peinit.job.started`, and only then apply readiness side effects such as
      Simple/Alive activation.
    - **Data:** setup failed. Parse the step and errno, log the specific
      failure, fail the service with `PreExecFailure`.

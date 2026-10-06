@@ -68,7 +68,7 @@ streams interleave; the sink gets what the job wrote and nothing else.
 
 The copy is best-effort and the record is not. A write that would
 block drops the line for the sink only, counts it, and on the first
-drop for that job emits one `output.dropped` event — one per job,
+drop for that job emits one `peinit.job.output.dropped` event — one per job,
 however many lines follow — so a submitter that sees a gap can learn
 it caused one. [*output.a-blocked-sink-write-drops-one-line-and-reports-once]
 Any other write failure closes the sink at once. The

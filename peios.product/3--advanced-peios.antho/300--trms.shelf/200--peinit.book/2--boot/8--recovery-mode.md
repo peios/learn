@@ -18,13 +18,17 @@ the administrator an unrestricted SYSTEM shell on the console.
 - A required provisioned path that cannot be created or secured.
 - The runtime loop failing on an error about supervision itself: the
   event wait, event source registration, a listener, the event ring
-  refusing even the small `event.oversized`, shutdown finalisation. An
+  refusing even the small `peinit.event.dropped`, shutdown finalisation. An
   error peinit can attribute to one service is contained to that
   service instead and does not enter recovery (§8.2).
 
 ## What peinit does
 
-peinit records the reason as a KMES audit event
+peinit records the reason as a `peinit.recovery.entered` KMES event —
+`essential`, so no emission policy switches it off — with the reason in
+`outcome.reason` and what went wrong, in the error's own words, in
+`outcome.detail`; a Phase 2 plan that would not build adds its finding
+as a `peinit.graph.validation.failed` under phase `phase2-boot`
 [*recovery.the-reason-is-audited], then:
 
 1. Completes Phase 1 steps 1–5 if they have not been reached yet.

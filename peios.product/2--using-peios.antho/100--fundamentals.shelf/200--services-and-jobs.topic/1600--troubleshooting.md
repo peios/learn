@@ -79,7 +79,7 @@ A control command returns `ACCESS_DENIED`. peinit ran [AccessCheck](~peios/acces
 - `shutdown` and `reload-config` need `SYSTEM_SHUTDOWN` / `SYSTEM_RELOAD_CONFIG` in peinit's control descriptor.
 - The check uses your **effective** identity at connect time — if you are [impersonating](~peios/impersonation/overview), that is what is checked.
 
-Every denial is logged with the caller SID, target, and requested right. Walk it through [Debugging a denial](~peios/access-decisions/debugging-a-denial).
+Under the default descriptors every denial is recorded by the kernel as a `kacs.audit.access.checked` event naming the caller, the target (its **object kind** is `service`, `job` or `peinit-system`) and the rights requested and granted. Walk it through [Debugging a denial](~peios/access-decisions/debugging-a-denial).
 
 > [!NOTE]
 > If `list` shows fewer services than you expect, that is not a bug — `list` **omits** services you lack `SERVICE_QUERY_STATUS` on rather than denying them. You are seeing exactly what your token can see. `job list` does the same with `JOB_QUERY`.
@@ -100,7 +100,7 @@ A job that was *accepted* but never ran is not an error response: it is an `ok` 
 
 ## A job's output has gaps
 
-If a submitter attached an output sink and sees gaps, look for an `output.dropped` event for the job in [eventd](~peios/auditing/overview): the sink was not being drained fast enough, and peinit dropped lines *for the sink only* rather than let it slow the job. The full output is still in eventd under the job's GUID — the sink is a convenience copy, the record is not.
+If a submitter attached an output sink and sees gaps, look for a `peinit.job.output.dropped` event for the job in [eventd](~peios/auditing/overview): the sink was not being drained fast enough, and peinit dropped lines *for the sink only* rather than let it slow the job. The full output is still in eventd under the job's GUID — the sink is a convenience copy, the record is not.
 
 ## UNKNOWN_JOB
 

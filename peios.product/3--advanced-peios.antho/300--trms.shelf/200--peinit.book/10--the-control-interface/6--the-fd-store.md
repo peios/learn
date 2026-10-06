@@ -30,9 +30,10 @@ attached:
    [*fdstore.an-unnamed-descriptor-is-named-stored]
 4. `FDPOLL=0` marks the descriptor exempt from poll monitoring.
 
-Either rejection emits an `fd_store.rejected` event carrying the outcome
-and the reason, so a service whose descriptors are being silently
-dropped can find out why. [*fdstore.a-rejection-emits-an-event]
+Either rejection emits a `peinit.fd-store.rejected` event carrying the
+service, the descriptor's name and the reason (`disabled` or `full`), so
+a service whose descriptors are being silently dropped can find out why.
+[*fdstore.a-rejection-emits-an-event]
 
 Several descriptors may share a name. One `FDSTORE=1` carrying N
 descriptors creates N entries under the one name, each independently

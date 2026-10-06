@@ -45,6 +45,8 @@ For any other identity, peinit asks [authd](~peios/boot-and-trust-establishment/
 
 — resolves the principal's SIDs, mints a token, creates a logon session, and hands the token back to peinit to install. peinit neither knows nor cares whether the identity is local or domain; routing is authd's job.
 
+authd records each request as an `authd.service.attested` event: the service (`object.service.name`), the identity it got (`object.token.sid`), its session and the privileges policy granted it. A refused request is recorded too, with the reason, such as `account-restricted` for an identity that may not be used for a service logon. The event is standard, so the emission policy can switch it off on a machine that restarts services often.
+
 > [!IMPORTANT]
 > Every non-SYSTEM service start depends on authd. peinit interacts with it over a non-blocking, timed channel — if authd is unreachable or unresponsive, the service start *fails* rather than hanging PID 1. This is why a broken authd takes down all non-platform service starts but leaves the SYSTEM-minted platform services unaffected. The authd wire interface is owned by authd, not by peinit, and is still being specified.
 

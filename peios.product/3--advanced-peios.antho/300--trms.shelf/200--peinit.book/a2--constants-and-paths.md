@@ -39,7 +39,7 @@ Values compiled into peinit, which no registry key changes.
 | Timeout extension cap | ×4 | The multiple of a phase's base timeout an extension may reach. |
 | Operation retention | 60 s | How long a terminal operation is kept before being dropped. |
 | Submitted job retention | 60 s | How long a terminal submitted job's entry answers `status` before being dropped. |
-| `job.status` event interval | 1 s | The least spacing between two `job.status` events for one job. |
+| `peinit.job.status.reported` interval | 1 s | The least spacing between two `peinit.job.status.reported` events for one job. |
 | Submitted job `stop_timeout` | 10 s | The default, per submission. |
 | Submitted job `readiness_timeout` | 30 s | The default, per submission. |
 | Submitted job argv and environment | 2 MiB | The bound on a definition's `arguments` and `environment` together. |

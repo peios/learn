@@ -24,15 +24,21 @@ A parsed command runs a fixed sequence before it does anything.
    [*dispatch.an-unresolvable-target-is-unknown] peinit does not
    synthesise a descriptor for something that does not exist.
 3. **AccessCheck.** The caller's token, the target's descriptor, the
-   generic mapping, and the right the command requires (§4.6, §4.7).
-   For a job the descriptor is the job's own and the mapping is the
-   job mapping (§8.5). [*dispatch.the-access-check-inputs]
-4. **On denial**, return `ACCESS_DENIED` and record an `access.denied`
-   event — `job.access_denied` for a job — carrying the caller's SID,
-   the target, the requested right by name, and the access bits
-   requested and granted. [*dispatch.a-denial-is-answered-and-audited]
-   Silent denial is not acceptable; a denial an
-   administrator cannot see is indistinguishable from a bug.
+   generic mapping, the right the command requires (§4.6, §4.7), and an
+   audit context naming the target: the service, the job, or the
+   control door itself (§8.4). For a job the descriptor is the job's own
+   and the mapping is the job mapping (§8.5).
+   [*dispatch.the-access-check-inputs]
+4. **On denial**, return `ACCESS_DENIED`. The decision is recorded by
+   KACS, as `kacs.audit.access.checked` naming the caller, the target
+   and the access requested and granted, whenever the target's
+   descriptor has a SACL that asks for it; every descriptor peinit
+   builds itself audits every refusal. peinit writes no event of its
+   own. [*dispatch.a-denial-is-answered-and-audited] Silent denial is
+   not acceptable; a denial an administrator cannot see is
+   indistinguishable from a bug, which is why the defaults audit, and
+   why a descriptor written to the registry should keep a SACL that
+   does (§4.6).
 5. **On grant**, classify the command against the service's state
    (§10.3) and act.
 
@@ -98,15 +104,15 @@ same as at the answer. The jobs socket's view has no `granted`.
 [*dispatch.job-views-on-the-control-socket-report-the-callers-rights]
 
 The `MAXIMUM_ALLOWED` check is a question, not a command. A right it
-does not grant is left out of `granted`; nothing is denied, and no
-`access.denied` or `job.access_denied` event is recorded for it.
+does not grant is left out of `granted`; nothing is refused, and peinit
+answers the command as it would have without it.
 [*dispatch.a-maximum-allowed-check-is-not-a-denial]
 
 ## Filtering
 
 `list` checks every service and partitions the result. Services the
 caller can query are returned; services it cannot are omitted, and the
-denials become audit events rather than anything the caller sees. A
+denials are left to each service's SACL rather than shown to the caller. A
 caller with no query rights anywhere gets an empty list and a successful
 response, not a denial [*dispatch.list-filters-rather-than-denies]. The
 filtering keeps a service's state from whoever may not query it; it does
@@ -120,8 +126,8 @@ so. A `status` query on one does.
 `job-list` is filtered the same way. The four request filters —
 `submitter`, `identity`, `logon_session`, `state` — narrow the
 candidates first; each survivor is then checked for `JOB_QUERY` against
-its own descriptor, the denials become `job.access_denied` events, and
-the response does not say whether a filter or a right removed an entry.
+its own descriptor, each denial is the job's SACL's to record, and the
+response does not say whether a filter or a right removed an entry.
 [*dispatch.job-list-filters-before-it-checks]
 Terminal jobs still within their retention are listed; a caller that
 wants only live ones filters by `state`.

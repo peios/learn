@@ -64,7 +64,7 @@ rather than only returned:
 peinit: service <service> signalled RELOADING=1 but never completed reload
 ```
 
-and audited as a `service.reload_unconfirmed` event. The outcome is
+and audited as a `peinit.service.reload.timed-out` event. The outcome is
 still carried in the operation's result for a `wait=true` caller,
 [*reload.the-outcome-is-carried-in-the-operations-result] but a
 reload issued without waiting — the default — no longer resolves

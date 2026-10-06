@@ -100,7 +100,7 @@ would hold its wave open for good.
 A service that sent `STOPPING=1` does not receive a SIGTERM at all: it
 has already said it is shutting down, and peinit goes straight to the
 stop deadline. [*graceful.a-service-that-sent-stopping-gets-no-sigterm]
-The notification is acknowledged as a `notify.stopping`
+The notification is acknowledged as a `peinit.notify.stopping.reported`
 event (§10.5), which is what makes the suppressed SIGTERM legible
 afterwards rather than looking like one peinit failed to send.
 

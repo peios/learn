@@ -40,7 +40,7 @@ A job record carries the things you would want for forensics: the resolved ident
 
 ### Retention and log correlation
 
-peinit keeps only *active* jobs in memory. When a job reaches a terminal state it **emits a structured event** (through KMES) carrying the full record, then drops the job. peinit keeps **no** job history — [eventd](~peios/auditing/overview) is the historian, consuming those events from the kernel ring buffer. The lifecycle events are `job.created`, `job.started`, and `job.ended`; a submitted job also emits `job.status` as its progress changes.
+peinit keeps only *active* jobs in memory. When a job reaches a terminal state it **emits a structured event** (through KMES) carrying the full record, then drops the job. peinit keeps **no** job history — [eventd](~peios/auditing/overview) is the historian, consuming those events from the kernel ring buffer. The lifecycle events are `peinit.job.created`, `peinit.job.started`, and `peinit.job.ended`; a submitted job also emits `peinit.job.status.reported` as its progress changes. `peinit.job.created` and `peinit.job.status.reported` are *verbose* events, off unless the event emission policy (`Machine\Generic\Events`, PGSS §6.9) turns them on.
 
 Separately, all of a job's `stdout`/`stderr` is [forwarded to eventd](~peios/services-and-jobs/output-and-logging) tagged with the job's GUID. That is what lets a query like "show me the logs for job X" return exactly that execution's output — not interleaved with the run before or after it.
 
@@ -102,7 +102,7 @@ Whether you ask on the jobs socket or with `job status`, you get the same view: 
 | `PROGRESS=N/` | Counting towards an end that exists but is not yet known. | A rising count, awaiting a bound. |
 | `PROGRESS=N/T` | `N` of `T`. | A bar. |
 
-`PROGRESS_UNIT=bytes|items|percent` says what the numbers are. peinit keeps the latest accepted values and emits a `job.status` event when they change, rate-limited to at most one per job per second so a chatty job cannot flood the event stream — the *view* always has the latest value regardless.
+`PROGRESS_UNIT=bytes|items|percent` says what the numbers are. peinit keeps the latest accepted values and emits a `peinit.job.status.reported` event when they change, rate-limited to at most one per job per second so a chatty job cannot flood the event stream — the *view* always has the latest value regardless.
 
 ### Stopping, timeouts, and the end of a job
 
@@ -130,7 +130,7 @@ At [shutdown](~peios/services-and-jobs/shutdown), every live submitted job is st
 
 ### Output
 
-A job's `stdout` and `stderr` are captured and forwarded to [eventd](~peios/services-and-jobs/output-and-logging) tagged with the job's GUID, unconditionally — a submitter cannot turn that off. A submitter that wants a live copy attaches one extra descriptor and sets `output: true`: peinit then writes each line it reads to that **output sink** as well. The copy is best-effort — a sink that is not being drained never slows the job or peinit; lines that would block are dropped *for the sink only*, still recorded in eventd, and the drop is reported once per job as an `output.dropped` event.
+A job's `stdout` and `stderr` are captured and forwarded to [eventd](~peios/services-and-jobs/output-and-logging) tagged with the job's GUID, unconditionally — a submitter cannot turn that off. A submitter that wants a live copy attaches one extra descriptor and sets `output: true`: peinit then writes each line it reads to that **output sink** as well. The copy is best-effort — a sink that is not being drained never slows the job or peinit; lines that would block are dropped *for the sink only*, still recorded in eventd, and the drop is reported once per job as a `peinit.job.output.dropped` event.
 
 Submitted jobs **bypass the operation model entirely** — there is no service to "start," so the submission creates a job directly. The job *is* the whole lifecycle.
 
@@ -192,7 +192,7 @@ When a command arrives for a service that already has an operation in flight, pe
 
 An operation inherits its target's timeout as its maximum lifetime — `StartTimeout` for start/reload/reset, `StopTimeout` for stop, and the sum of both legs for restart. Crucially, **the clock starts at operation creation, including queue time** — from the caller's perspective they have been waiting since they sent the command, so a long queue can time an operation out before it even runs.
 
-Terminal operations are emitted as events (`operation.requested`, `.started`, `.completed`, `.failed`, `.cancelled`, `.merged`, `.aborted`) and dropped from memory after a short grace (default 60 s — long enough for a polling client to read the result). As with jobs, peinit keeps no operation history; eventd does.
+Operations are emitted as events (`peinit.operation.requested`, `.started`, `.ended` and `.merged`; one `.ended` covers completed, failed, cancelled and aborted, and says which) and terminal ones are dropped from memory after a short grace (default 60 s — long enough for a polling client to read the result). As with jobs, peinit keeps no operation history; eventd does.
 
 ## How they surface
 

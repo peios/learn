@@ -28,6 +28,14 @@ because it has to produce a running system; reload rejects the whole
 thing, because it has a running system already and a half-applied
 configuration would be worse than the one in place.
 
+An explicit `reload-config` writes one `peinit.config.reload.applied`
+event either way: `outcome.success`, and on success the counts of what
+it added, updated, restored, marked removed, discarded and found
+undecodable; on failure why, in words, and one
+`peinit.graph.validation.failed` per finding under phase
+`reload-config` (§8.4). A reload a registry watch starts writes its
+findings and warnings but no `peinit.config.reload.applied`.
+
 Decoding does not split: reload decodes per key exactly as boot does. A
 key that will not decode fails that one service with `ValidationError` —
 a placeholder entry, marked definition-removed, that `status` reports
@@ -37,8 +45,9 @@ is next started. A service that is running when its key stops decoding
 keeps running with its definition marked removed, as if the key had been
 deleted. The reload succeeds, lists the keys in `summary.undecodable`,
 and names each key, the offending field and the problem in
-`undecodable`; each is also a `graph.validation_error` event under phase
-`reload_config`. A key whose name is not a service name (§3.1) is
+`undecodable`; each is also a `peinit.graph.validation.failed` event
+with `outcome.reason` `validation-error` under phase `reload-config`. A
+key whose name is not a service name (§3.1) is
 undecodable in the same way, reported under its raw name with `field:
 name`. Repairing the key restores the service on the next reload.
 [*control.reload-config.an-undecodable-definition-fails-only-that-service]

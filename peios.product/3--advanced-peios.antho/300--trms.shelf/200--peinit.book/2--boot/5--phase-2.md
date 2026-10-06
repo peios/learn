@@ -65,8 +65,9 @@ anything. The rules are in §7.2; the outcomes that matter here are:
 - **A missing `Requires` target** fails the dependent.
 - **Warnings** — a `Readiness=Alive` service with dependents that
   require it — are logged and do not prevent boot: a `[ WARN ]`
-  `peinit warning:` line on the console and a `graph.validation_warning`
-  event under phase `boot`, whether or not the same graph also has
+  `peinit warning:` line on the console and a
+  `peinit.graph.validation.warned` event under phase `boot`, whether or
+  not the same graph also has
   findings. [*phase2.a-validation-warning-does-not-prevent-boot]
 
 ## Starting

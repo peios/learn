@@ -32,7 +32,7 @@ answers `recovery`. [*control.boot.recovery-is-never-answered]
 | `safe_mode_downgrade` | A Full boot that Phase 2 downgraded to Safe: a Critical service in a dependency cycle, or in an unresolvable conflict, at boot (§2.6). |
 
 For a downgrade, `downgrade` carries every finding that forced it, in
-the words the console line and the `boot.safe_mode_downgrade` event use
+the words the console line and the `peinit.boot.downgraded` event use
 — all of them, not the first. [*control.boot.downgrade-lists-every-finding]
 peinit keeps them from the boot plan, the one place they survive the
 Safe-mode rebuild.

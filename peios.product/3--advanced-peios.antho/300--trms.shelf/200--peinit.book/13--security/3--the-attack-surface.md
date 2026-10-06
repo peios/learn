@@ -19,8 +19,11 @@ description: What the socket descriptors mean in practice, and what the autorun 
 
 The control socket admits every authenticated principal (§10.1), and
 what each may then do is decided per command by the control descriptor
-and each service's own. The `ACCESS_DENIED` path and its audit event are
-therefore reachable by anyone who can log on, and so is peinit's request
+and each service's own. The `ACCESS_DENIED` path and the KACS audit
+record it produces are therefore reachable by anyone who can log on: a
+caller can make as many `kacs.audit.access.checked` records as it has
+refused commands to send, because the default SACLs ask for one per
+refusal; a descriptor whose SACL audits less makes fewer. So is peinit's request
 parser, which bounds every request by `MaxRequestSize` before parsing
 it. What one caller can hold open is bounded by
 `MaxControlConnectionsPerUser`, so no one caller can fill the
@@ -45,7 +48,9 @@ it is that descriptor, and what bounds what any one submitter can do
 is the quota and the rule that a job runs only as an identity the
 kernel verified the submitter held. The `ACCESS_DENIED` path *is*
 reachable here — it is how a submitter learns it may not touch another
-submitter's job — and every such denial is a `job.access_denied` event.
+submitter's job — and every such denial is the job's SACL's to record:
+under a job's default descriptor, KACS records each as
+`kacs.audit.access.checked` naming the job (§8.4).
 
 These moved together with §4.3, and had to. A service resolved to a
 non-SYSTEM identity could not have reached the notification socket to

@@ -101,14 +101,15 @@ later demotes the previous primary rather than deleting it — breaking
 the cycle should not be what it takes to discover the second fault.
 [*validate.a-later-higher-precedence-finding-demotes-rather-than-deletes]
 
-Every finding is also emitted as its own `graph.validation_error` KMES
-event, carrying `phase: "boot"`.
-[*validate.each-finding-is-its-own-graph-validation-error-event-at-boot]
+Every finding is also emitted as its own `peinit.graph.validation.failed`
+KMES event, carrying `graph.phase` `boot` and the finding as
+`outcome.reason`.
+[*validate.each-finding-is-its-own-validation-failed-event-at-boot]
 The console lines are for whoever is watching the boot; the events are
 the account that survives it.
 
 `HardDependencyBlocked` — blocked *because a dependency is blocked* —
-gets its own `finding` value rather than being reported as a missing
+gets its own reason, `hard-dependency-blocked`, rather than being reported as a missing
 dependency, which would claim the target does not exist when it does.
 [*validate.a-blocked-dependency-is-reported-as-hard-dependency-blocked]
 It has no reload-path equivalent, because reload rejects wholesale
@@ -116,7 +117,7 @@ instead of propagating a block.
 
 The reload path behaves differently, because its consequence is
 different. Validation there accumulates every finding, encodes each as
-its own event under `phase: "reload_config"`, and then rejects the
+its own event under `graph.phase` `reload-config`, and then rejects the
 **entire reload** — the previous generation stays live and the findings
 return to the caller (§10.4).
 [*validate.reload-validation-rejects-the-whole-reload-under-phase-reload-config]

@@ -58,9 +58,10 @@ The push happens once, on first detection — recording is idempotent, so
 a leak that is re-examined on a later cleanup pass is not announced
 again: [*cgroup.a-leak-is-announced-once]
 
-- A **`cgroup.leaked` event** on the event stream, carrying the service,
-  the sub-cgroup path, its kind, and the detection time in monotonic
-  nanoseconds. [*cgroup.the-leak-event]
+- A **`peinit.cgroup.leaked` event** on the event stream, carrying the
+  service, the sub-cgroup path (`object.cgroup.path`) and its kind
+  (`object.cgroup.type`: `service-tree`, `health`, `hooks` or `helper`).
+  When it was found is the event's own time. [*cgroup.the-leak-event]
 
 - A **console line** naming the same service, kind and path.
   [*cgroup.the-leak-console-line]

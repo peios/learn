@@ -110,9 +110,12 @@ one leaves:
    replacement ready. A submitted job has no generation and no
    replacement, so for it the check stops at step 4.
 
-Anything that fails is dropped and recorded as a `notify.rejected` event
-carrying the sender's PID and the reason.
-[*notify.a-rejected-datagram-is-dropped-and-recorded]
+Anything that fails is dropped and recorded as a `peinit.notify.rejected`
+event carrying the sender's PID (`subject.process.pid`), the sender's
+service, job and activation when peinit could attribute it, and the
+reason as one of a closed set of words in `outcome.reason` —
+`unauthenticated-sender`, `generation-mismatch`, `malformed-line` and so
+on (§8.4). [*notify.a-rejected-datagram-is-dropped-and-recorded]
 
 The UID and GID in the credentials are parsed and never used.
 [*notify.the-credential-uid-and-gid-are-not-policy-inputs] They are
@@ -143,25 +146,32 @@ to a submitted job — and which are ignored for one, since a job has no
 reload, watchdog or store — is in §8.5.
 
 Six are event-emitting. `STATUS=`, `ERRNO=` and `EXIT_STATUS=` are
-authenticated and then emitted as KMES events — `notify.status`,
-`notify.errno`, `notify.exit_status` — whose payloads carry the service
-name, the job identifier, the operation identifier and the activation
-generation, alongside the value.
+authenticated and then emitted as KMES events —
+`peinit.notify.status.reported`, `peinit.notify.errno.reported`,
+`peinit.notify.exit-status.reported` — whose payloads carry the sender
+as `subject.service.name`, `subject.job.guid`,
+`subject.job.activation-generation` and `subject.operation.guid`,
+alongside the value: `notify.status`; `notify.errno`, the number the
+service sent, negated as every errno field is; `notify.exit-status`. A
+value that is not a number is left out and the event still written.
 [*notify.status-errno-and-exit-status-emit-events] They take the same
 path as job and operation events, not a forward to eventd.
+`peinit.notify.status.reported` is a `verbose` type, written only when
+the emission policy turns it on (§8.4).
 
-`STOPPING=1` emits `notify.stopping`, carrying the same attribution and
-no value. [*notify.stopping-emits-an-event] It is there because the
+`STOPPING=1` emits `peinit.notify.stopping.reported`, carrying the same
+attribution and no value. [*notify.stopping-emits-an-event] It is there because the
 field's only effect is the *absence*
 of an action — peinit suppresses the SIGTERM (§12.2) — and an absence
 cannot be inferred from what happened afterwards. Without the event, a
 service that was stopping and correctly received no SIGTERM looks
 identical to one that should have received it and did not.
 
-`PROGRESS=` and `PROGRESS_UNIT=` emit `notify.progress`, carrying the
-same attribution and the progress as retained after the datagram —
-`progress_current`, `progress_total`, `progress_bounded` and
-`progress_unit`, the fields of a submitted job's `job.status`. A
+`PROGRESS=` and `PROGRESS_UNIT=` emit `peinit.notify.progress.reported`
+(a `verbose` type), carrying the same attribution and the progress as
+retained after the datagram — `notify.progress.current`, `.total`,
+`.bounded` and `.unit`, the fields of a submitted job's
+`peinit.job.status.reported`. A
 datagram carrying either yields one event, not one per line, and at
 most one a second for each activation: a datagram inside the second
 updates what a status query reports and emits nothing, so a service

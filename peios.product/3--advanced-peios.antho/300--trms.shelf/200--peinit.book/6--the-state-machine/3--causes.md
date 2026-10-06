@@ -155,8 +155,8 @@ will not start one already in the set,
 [*cause.a-handler-already-in-the-chain-is-not-started-again] and it will
 not follow the chain past a fixed depth of 16.
 [*cause.the-chain-is-not-followed-past-a-depth-of-sixteen] When either
-trips, peinit records an `on_failure.loop_suppressed` event naming
-which, and stops. [*cause.a-suppressed-loop-records-an-audit-event]
+trips, peinit records a `peinit.on-failure.suppressed` event naming
+which (`outcome.reason` `cycle` or `max-depth`), and stops. [*cause.a-suppressed-loop-records-an-audit-event]
 
 A chain entry is retired two ways.
 
@@ -186,8 +186,9 @@ treated as having arrived.
 A transition into Failed, Skipped or Abandoned is written to the
 console, naming the service and its cause: what failed, and why.
 [*cause.a-transition-into-a-bad-state-is-written-to-the-console] There
-is no per-transition event — a transition is visible through the `job.*`
-and `operation.*` events that carried it, not as a record of its own.
+is no per-transition event — a transition is visible through the
+`peinit.job.*` and `peinit.operation.*` events that carried it, not as a
+record of its own.
 [*cause.there-is-no-per-transition-event]
 
 Cryptic failure messages are a defect. A reboot loop caused by a

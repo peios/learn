@@ -53,10 +53,10 @@ datagram, an event the ring refuses. An internal error there fails that
 service under `InternalError` (§6.3): its job is retired, its operation
 fails with `internal_error: <step>: <cause>`, a `[FAILED]` line
 `peinit: service <service>: internal error at <step>: <cause>` and a
-`service.internal_error` event (§8.4) announce it, and the runtime loop
+`peinit.internal-error.contained` event (§8.4) announce it, and the runtime loop
 carries on. Only an error about supervision itself — the wait, event
 source registration, the listeners, the event ring refusing even the
-small `event.oversized`, shutdown finalisation — ends the loop and
+small `peinit.event.dropped`, shutdown finalisation — ends the loop and
 enters recovery (§2.8). A bug peinit can attribute to one service costs
 that service; it does not cost the machine its control socket.
 

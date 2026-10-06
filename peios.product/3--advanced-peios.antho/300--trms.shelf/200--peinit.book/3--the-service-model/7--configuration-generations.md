@@ -50,11 +50,12 @@ launch has not yet been attempted keeps the definition the plan was
 built from, and the new one is recorded as pending, exactly as for a
 running service — the boot executes against its snapshot (§2.5). Such
 services are listed under `deferred` in the reload's summary, said on
-the console, and recorded as `config.reload_deferred`. Once every
+the console, and recorded as `peinit.config.reload.deferred`. Once every
 planned launch has been attempted or decided against — each service
 terminal, or in Backoff with its dependents held for it (§6.1) — peinit
 runs one more reload that applies what was deferred, recorded as
-`config.reload_coalesced`; nothing is emitted when nothing was deferred.
+`peinit.config.reload.applied` naming the deferred services in
+`graph.services`; nothing is emitted when nothing was deferred.
 A service already running keeps its pinned definition as always.
 [*confgen.a-write-during-the-boot-window-is-deferred-for-an-unlaunched-service]
 

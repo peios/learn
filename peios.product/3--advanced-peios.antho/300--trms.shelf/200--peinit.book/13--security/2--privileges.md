@@ -10,13 +10,14 @@ system. What it actually exercises is narrower.
 |---|---|
 | `SeCreateTokenPrivilege` | Minting SYSTEM tokens for platform services during bootstrap, before authd exists (§4.2). |
 | `SeTcbPrivilege` | Requesting tokens from authd on a service's behalf, and installing a primary token on a child whose identity differs from peinit's own — a service's, or a submitted job's. |
+| `SeAuditPrivilege` | Writing events: KMES refuses an emit from a token without it enabled. And recording access decisions: an AccessCheck peinit runs writes the `kacs.audit.access.checked` record its descriptor's SACL asks for only while the caller holds it enabled (§8.4). |
 | Token duplication | Turning a job identity into the primary token a submitted job runs as (§8.5): opening the submitter's own primary through its pidfd, or taking the token the kernel attached, and duplicating either to a primary. SYSTEM holds full access on every token's default descriptor, which is what makes the duplicate permitted. |
 | Process creation | Fork and exec, inherent to PID 1. |
 | cgroup management | Creating and destroying trees under `/sys/fs/cgroup/peinit/`. |
 | Signal delivery | SIGTERM and SIGKILL to managed processes. |
 | Mount operations | The Phase 1 virtual filesystems. |
 
-peinit verifies the two privileges at startup, before Phase 1 does
+peinit verifies the three privileges at startup, before Phase 1 does
 anything that needs them, and fails to recovery naming which is missing
 [*privilege.the-required-privileges-are-verified-at-startup]:
 
@@ -27,6 +28,11 @@ required privilege(s): SeCreateTokenPrivilege")
 
 Present *and* enabled — a privilege the token carries but has not
 enabled is not usable, and would fail identically to being absent.
+`SeAuditPrivilege` is the exception: held but disabled, peinit enables
+it before checking, rather than run with no events and no record of who
+was refused what. The boot SYSTEM token PID 1 runs as holds every
+privilege enabled, so on a token the kernel made the check passes and
+changes nothing.
 
 The check earns its place by what it replaces. A missing
 `SeCreateTokenPrivilege` used to surface as an `EPERM` from the first

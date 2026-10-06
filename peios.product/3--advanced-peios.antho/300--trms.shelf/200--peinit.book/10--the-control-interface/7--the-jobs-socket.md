@@ -71,7 +71,7 @@ limit [*jobs.the-peer-token-and-pidfd-are-captured-on-accept]:
 | Key | Default | Meaning |
 |---|---|---|
 | `Machine\System\Init\MaxJobsConnections` | 64 | Concurrent connections. [*jobs.max-jobs-connections] |
-| `Machine\System\Init\MaxJobMessageSize` | 32768 | Maximum message content, in bytes. Half of KMES `MaxEventSize`'s default, so a job whose record fills a message still has its `job.ended` fit the ring (§8.4). [*jobs.max-job-message-size] |
+| `Machine\System\Init\MaxJobMessageSize` | 32768 | Maximum message content, in bytes. Half of KMES `MaxEventSize`'s default, so a job whose record fills a message still has its `peinit.job.ended` fit the ring (§8.4). [*jobs.max-job-message-size] |
 | `Machine\System\Init\JobsConnectionTimeout` | 30 | Seconds before an idle connection is closed. [*jobs.jobs-connection-timeout] |
 | `Machine\System\Init\MaxJobsPerSubmitter` | 64 | Live jobs one submitter SID may hold; SYSTEM exempt. See §8.5. |
 
@@ -156,8 +156,9 @@ given.
 `submit`, `status`, `wait`, `stop` and `signal`, exactly as PSPU §7.8
 defines them and §8.5 implements them. Every one but `submit` names a
 job and is checked against that job's descriptor with the connection's
-token; a denial is answered `ACCESS_DENIED` and recorded as
-`job.access_denied`.
+token; a denial is answered `ACCESS_DENIED`, and recorded by KACS as
+`kacs.audit.access.checked` naming the job when the job's descriptor
+audits it, as a default descriptor does (§8.4).
 [*jobs.every-command-but-submit-is-checked-against-the-jobs-descriptor]
 
 ## Idle and shutdown

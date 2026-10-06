@@ -61,10 +61,11 @@ If that key has no `ServiceSecurity` either, peinit applies a built-in
 default: [*svcsd.the-built-in-default-grants-system-and-administrators-everything]
 
 ```
-O:SY G:BA D:(A;;0x000F;;;SY)(A;;0x000F;;;BA)(A;;0x0001;;;AU)
+O:SY G:BA D:(A;;0x000F;;;SY)(A;;0x000F;;;BA)(A;;0x0001;;;AU) S:(AU;FA;0x000F;;;WD)
 ```
 
-SYSTEM and Administrators both get `SERVICE_ALL_ACCESS`. An
+SYSTEM and Administrators both get `SERVICE_ALL_ACCESS`. The SACL audits
+every refusal, for everyone, which is what records a denial (below). An
 administrator who may stop any service and shut the machine down gains
 nothing by being unable to start one, so the default does not attempt a
 narrower grant; a service that wants one carries its own
@@ -85,12 +86,35 @@ When a control command arrives, peinit:
    entry returns `UNKNOWN_SERVICE`; peinit does not invent a descriptor
    to check against. [*svcsd.an-unknown-service-is-not-access-checked]
 3. Calls AccessCheck with the caller's token, that descriptor, the
-   generic mapping above, and the right the command needs.
-4. On denial, returns `ACCESS_DENIED` and records the attempt as an
-   `access.denied` event carrying the caller's SID, the target, the
-   requested right by name, the requested access bits and the granted
-   bits. [*svcsd.a-denial-is-recorded-as-an-access-denied-event]
+   generic mapping above, the right the command needs, and an audit
+   context naming the service, `{kind: "service", service: {name}}`.
+4. On denial, returns `ACCESS_DENIED`. The attempt is recorded by KACS,
+   not by peinit: when the descriptor's SACL asks for it — and the
+   built-in default's does — the check writes a
+   `kacs.audit.access.checked` record with `object.kind` `service`,
+   `object.service.name`, the caller's token, and the access requested
+   and granted (§8.4).
+   [*svcsd.a-denial-is-recorded-by-kacs-under-the-descriptors-sacl]
 5. On grant, proceeds.
+
+## The SACL is the audit policy, and who may drop it
+
+A service's SACL decides which of its decisions are recorded. A
+descriptor written to the registry is used as it is: one with no SACL
+records nothing, and one that narrows the default's audits less.
+
+`ServiceSecurity` is a whole registry value. Whoever may write it — on
+the service's key, or on `Machine\System\Services`, whose value every
+service without its own takes — may replace the descriptor, SACL
+included, without holding `SeSecurityPrivilege`, which is what changing
+an object's SACL otherwise needs. So those keys must be writable only by
+principals trusted to change audit policy. By default they are: both
+inherit the Machine hive root, which grants write to SYSTEM and
+Administrators alone, and Administrators hold `SeSecurityPrivilege`.
+Delegate a service through its `ServiceSecurity` DACL, never by
+loosening the key's own descriptor; and a tool that changes only the
+DACL must write the SACL back unchanged. The same holds for the control
+descriptor in `Machine\System\Init` (§10.2).
 
 ## Hot reload [*svcsd.a-descriptor-change-needs-no-restart]
 
@@ -105,8 +129,8 @@ every time.
 `list` returns only the services the caller has `SERVICE_QUERY_STATUS`
 on. Services the caller cannot query are **omitted**, not denied: a
 caller with no query rights anywhere receives an empty list and a
-successful response. The denials are recorded as audit events rather
-than surfaced to the caller.
+successful response. The denials are not surfaced to the caller; each
+service's SACL decides whether KACS records them.
 
 What the filtering protects is a service's *state*, which is what
 `SERVICE_QUERY_STATUS` grants. That a service exists is not protected:

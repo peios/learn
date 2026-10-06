@@ -22,12 +22,16 @@ access control.** `list` returns only what the caller may query, and
 `status` is checked per service; `job-list` and `job-status` are
 checked per job (§10.2).
 
-**4. peinit records every access denial.** A failed AccessCheck produces
-an `access.denied` event — `job.access_denied` for a job — carrying
-the caller's SID, the target, the requested right by name, and the
-access bits requested and granted. Silent denial is not acceptable.
-The `MAXIMUM_ALLOWED` check that fills a response's `granted` denies
-nothing, and so records nothing (§10.2).
+**4. No access denial is silent by default.** Every check names its
+object to KACS in an audit context, and every descriptor peinit builds
+itself — the default service descriptor, the control descriptor, a
+submitted job's default — carries a SACL auditing every refusal, so a
+failed AccessCheck is recorded by KACS as `kacs.audit.access.checked`
+with the caller, the object and the access requested and granted
+(§8.4). A descriptor written to the registry or supplied with a job is
+honoured as it is, SACL included; whoever may write one is trusted
+with that object's audit policy (§4.6). The `MAXIMUM_ALLOWED` check
+that fills a response's `granted` refuses nothing (§10.2).
 
 **5. The control descriptor, the ServiceSecurity descriptors and the
 per-job descriptors are the only policy inputs for runtime access

@@ -70,7 +70,8 @@ have started either.
 The reason is therefore recorded at **boot level** rather than per
 service. Every finding that forced the downgrade — each critical cycle,
 each critical boot conflict — is written to the console and emitted as a
-`boot.safe_mode_downgrade` KMES event naming the services involved.
+`peinit.boot.downgraded` KMES event naming the services involved, an
+`essential` type the emission policy cannot switch off.
 [*mode.the-downgrade-reason-is-recorded-at-boot-level]
 
 All of them are reported, not just the first. A machine can be downgraded
