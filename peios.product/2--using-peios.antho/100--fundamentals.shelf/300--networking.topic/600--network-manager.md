@@ -23,7 +23,7 @@ are three groups:
 
 What it shows comes from netd, resolvd, the kernel and the registry under
 `Machine\System\Network`. What it changes it writes to the registry, as
-you, the same as you could with `regman`. Nothing else holds the network's
+you, the same as you could with `reg`. Nothing else holds the network's
 settings: see [Networking](~peios/networking/overview) for how they become
 real.
 
