@@ -87,3 +87,13 @@ A new resolvd discards the cache, the demotions and the counters,
 re-reads the registry, and takes a fresh snapshot from netd; nothing is
 persisted. `svctl restart resolvd` is enough: the new process replaces
 the socket its predecessor left (§2.4).
+
+The exception is the first start after an upgrade from a resolvd whose
+DACL did not name its own account (§2.4). That older resolvd's directory
+and socket shut the new one out, and it exits with `native socket:
+Permission denied (os error 13)` until they are gone. Remove them once
+as SYSTEM, or reboot:
+
+```sh
+svctl stop resolvd; rm -rf /run/resolvd; svctl start resolvd
+```
