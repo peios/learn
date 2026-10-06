@@ -210,7 +210,7 @@ verdict results (the strictest listed).
 | `TAG(Name, Clear)` | effect | Remove the tag; it reads as absent afterwards. |
 | `COUNT(Name[, n])` | effect | Emit `n` (default 1) into stream `Name`. |
 | `COUNT(Name, Length)` | effect | Emit the packet's byte length — the bandwidth primitive. |
-| `REPORT(level)` | effect | Emit a `network-report` audit event, level 1..5, if the level clears `CurrentReportingLevel`. One report per rule per evaluation, at the highest level listed. |
+| `REPORT(level)` | effect | Emit an `ntfe.verdict.reported` audit event, level 1..5, if the level clears `CurrentReportingLevel`. One report per rule per evaluation, at the highest level listed. |
 | `JOIN(profile)` | verdict, `Interface` layer | Bring the interface up and stand in the named profile: a path under `Profiles\`, `/`- or `\`-separated. |
 | `IGNORE` | verdict, `Interface` layer | Never touch the interface; something else owns it. |
 | `DOWN` | verdict, `Interface` layer | Keep the interface administratively down. |
