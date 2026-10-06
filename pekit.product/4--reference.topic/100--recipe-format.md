@@ -83,11 +83,11 @@ The recipe file accepts exactly these top-level keys. Anything else is an
 | `delegate` | bool or table | no | Borrow build/env/wrap/package definitions from the source tree. See [`[delegate]`](#delegate). |
 | `source_package` | table | no | Corresponding-source package emission control. See [`[source_package]`](#source-package). |
 | `tags` | array of strings | no | Labels for selecting this recipe as a workspace member with `--tag` and `--exclude-tag`. Each tag is a selector-style name; duplicates are rejected. Only the member recipe's own tags count: a delegated source's `tags` are ignored. See [Workspaces](~pekit/running/workspaces#selecting-members-by-tag). |
-| `build` | table | no | Build target(s). See [`[build]` / `[test]` / `[install]` / `[clean]`](#build-test-install-clean-targets). |
+| `build` | table | no | Build target(s). See [`[build]` / `[test]` / `[install]` / `[clean]`](#build-test-install-clean). |
 | `test` | table | no | Test target(s). |
 | `install` | table | no | Install target(s). |
 | `clean` | table | no | Clean target(s). |
-| `gen` | table | no | Source-generating target(s). See [`[gen]`](#gen-gen). |
+| `gen` | table | no | Source-generating target(s). See [`[gen]`](#gen). |
 
 ### `[env]`
 
@@ -261,7 +261,7 @@ signatures are verified before Pekit writes the version's lock entry.
 | --- | --- | --- | --- |
 | `path` | string | **yes** | Path to the source directory, resolved relative to the recipe root. |
 
-### `[input.<name>]` {#input-name}
+### `[input.<name>]`
 
 An additional authenticated upstream, for a build that genuinely consumes more
 than one. A recipe may declare any number, each under its own name. Names are
@@ -363,7 +363,7 @@ Every `peipkg`-format member the recipe emits carries the source package's
 name in its manifest's `build.source_package` field, linking each binary to
 its corresponding source.
 
-### `[build]` / `[test]` / `[install]` / `[clean]` {#targets}
+### `[build]` / `[test]` / `[install]` / `[clean]`
 
 These four sections define **targets** — the commands pekit runs. Each section
 takes one of two shapes, distinguished by whether a `command` key is present
@@ -390,7 +390,7 @@ Fields of a single target:
 | `keyring_inputs` | string array | no | Dotted keyring entries requested by this target. Default none. The operator keyring must grant `public` access, or `acquisition` for `build.vendor`. Signing entries cannot be exported. |
 | `dependencies` | table | no | **Build and test targets.** Dependencies the target needs provisioned in its root. Under a `peipkg` provider the composed root holds *only* what is declared — a test stage that shells out needs `dash` (pekit runs `command` through `/usr/bin/sh`) and whatever else its script calls. See below. |
 | `gate` | bool | no | **Test targets only.** When `true`, `package` and `publish` run this test after staging its `needs` and before writing any artifact. Default `false`; `--no-gates` explicitly bypasses gated tests and the lint gate. |
-| `sign` | table | no | **Build targets only.** Files in the target's output to sign after the command succeeds, by signature kind. See [`sign`](#build-name-sign-target-sign) below. |
+| `sign` | table | no | **Build targets only.** Files in the target's output to sign after the command succeeds, by signature kind. See [`sign`](#build-name-sign) below. |
 
 Any other key in a target table is an `unknown target key` error. `sign` is
 accepted only in `[build]` targets, `gate` only in `[test]`, and `dependencies`
@@ -414,7 +414,7 @@ Dependency names may be real package names or virtual capabilities (sonames,
 `pkgconfig(...)`, etc.) and are validated against peipkg's capability grammar.
 See [Commands and targets](~pekit/running/commands-and-targets).
 
-#### `[build.<name>.sign]` {#target-sign}
+#### `[build.<name>.sign]`
 
 The `sign` table is keyed by **signature kind**. Each kind is a table mapping
 a path or glob, relative to the target's `$PEKIT_OUT`, to the dotted path of
@@ -445,7 +445,7 @@ and two patterns naming different keys for one file (`sign_conflict`) are all
 errors; pekit never leaves a listed file unsigned. The mechanism is described
 in [Signing and provenance](~pekit/running/signing-and-provenance#signing-binaries-for-pip).
 
-### `[gen]` {#gen}
+### `[gen]`
 
 A `[gen]` section defines **source-generating** targets: they run at the recipe
 root and write generated source *into the tree* rather than producing an
