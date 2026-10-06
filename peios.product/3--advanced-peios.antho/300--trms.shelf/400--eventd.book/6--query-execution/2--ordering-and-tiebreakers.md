@@ -16,7 +16,7 @@ the order is total:
 
 | Mode | Appended, in order |
 |---|---|
-| Events | `timestamp` descending, shard index ascending, `events.id` descending [*order.event-tiebreakers-are-timestamp-desc-then-shard-index-asc-then-id-desc] |
+| Events | `timestamp`, the column of `event.time`, descending, shard index ascending, `events.id` descending [*order.event-tiebreakers-are-timestamp-desc-then-shard-index-asc-then-id-desc] |
 | Logs | `timestamp` descending, `logs.id` descending [*order.log-tiebreakers-are-timestamp-desc-then-id-desc] |
 | Metrics | `timestamp` ascending, metric name ascending, canonical labels ascending, and `samples.id` ascending where the row corresponds to a raw sample or a derived sample pair [*order.metric-tiebreakers-are-timestamp-name-labels-then-sample-id-all-ascending] |
 

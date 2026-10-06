@@ -60,9 +60,11 @@ Field GUIDs are **computed from the algorithm, never hardcoded**.
 [*constant.field-guids-are-computed-never-hardcoded] The names they are
 computed from are these.
 
-**Event header fields.** `timestamp`, `cpu_id`, `sequence`,
-`origin_class`, `event_type`, `effective_token_guid`,
-`true_token_guid`, `process_guid`, `boot_id`.
+**Event header fields.** `event.time`, `event.cpu`, `event.sequence`,
+`emitter.class`, `event.type`, `emitter.token.guid`,
+`emitter.true-token.guid`, `emitter.process.guid`, `event.boot.guid`,
+the paths of PSPU §3.22. The events table's column names are not field
+names (§3.1).
 [*constant.the-nine-event-header-field-names]
 
 **Log fields.** `timestamp`, `origin`, `is_error`, `message`, `job_id`,
@@ -73,8 +75,8 @@ computed from are these.
 
 **Event payload fields** use the flattened dot path (PSPU §3.22).
 [*constant.a-payload-field-name-is-its-flattened-dot-path]
-Suppressed paths and paths colliding with a header name are not
-query-language fields and have no GUID.
+Suppressed paths, and payload paths at or beneath a header field's
+path, are not query-language fields and have no GUID.
 [*constant.suppressed-and-header-colliding-payload-paths-have-no-field-guid]
 
 **Metric label keys** use the key itself: `core` produces
@@ -93,7 +95,9 @@ rejects records whose labels collide with them.
 | 2 | KACS [*constant.origin-class-2-is-kacs] |
 | 3 | LCS [*constant.origin-class-3-is-lcs] |
 
-The query language accepts these names as aliases (PSPU §3.23).
+The origin class is the header field `emitter.class`, held in the
+`origin_class` column, and the query language accepts these names as
+aliases for its values (PSPU §3.23).
 [*constant.the-query-language-accepts-origin-class-names-as-aliases]
 
 ## Synthetic event types

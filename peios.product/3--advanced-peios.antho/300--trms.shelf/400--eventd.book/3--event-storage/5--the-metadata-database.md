@@ -32,7 +32,7 @@ as the shards (§3.3).
 
 | Column | Type | Contents |
 |---|---|---|
-| `field_path` | TEXT PRIMARY KEY | Field name or payload path: `event_type`, `granted_access`, `source.name`. [*meta.index-counters-field-path-is-a-text-primary-key-naming-a-field-or-payload-path] |
+| `field_path` | TEXT PRIMARY KEY | Header field or payload path: `event.type`, `access.granted`, `source.name`. A header field's column name written by an earlier eventd is read back as its path (§3.4). [*meta.index-counters-field-path-is-a-text-primary-key-naming-a-field-or-payload-path] |
 | `query_count` | INTEGER NOT NULL | Queries filtering on it within the current window. [*meta.index-counters-query-count-is-queries-filtering-on-the-field-in-the-current-window] |
 | `window_start` | INTEGER NOT NULL | When the window started, nanoseconds since the epoch. [*meta.index-counters-window-start-is-nanoseconds-since-the-epoch] |
 
@@ -40,7 +40,7 @@ as the shards (§3.3).
 
 | Column | Type | Contents |
 |---|---|---|
-| `field_path` | TEXT PRIMARY KEY | Field name or payload path. [*meta.desired-indexes-field-path-is-a-text-primary-key] |
+| `field_path` | TEXT PRIMARY KEY | Header field or payload path, read back like a counter's. [*meta.desired-indexes-field-path-is-a-text-primary-key] |
 | `priority` | INTEGER NOT NULL | Rank; lower is higher priority. [*meta.desired-indexes-priority-ranks-lower-values-as-higher-priority] |
 | `is_expression` | INTEGER NOT NULL | 1 for a payload expression index, 0 for a column index. [*meta.desired-indexes-is-expression-is-1-for-a-payload-expression-index-and-0-for-a-column-index] |
 

@@ -69,7 +69,7 @@ A gap record populates `cpu_id` and leaves the other KMES header columns
 `cpu_id` is populated deliberately, and it is the one place a synthetic
 event carries a header field.
 [*gap.gap-records-are-the-only-synthetic-events-with-a-header-field]
-Without it, `EVENTS WHERE cpu_id == 3`
+Without it, `EVENTS WHERE event.cpu == 3`
 would return every event from CPU 3 *except* the record saying that
 events from CPU 3 went missing — which is the one record such a query
 most needs to return.

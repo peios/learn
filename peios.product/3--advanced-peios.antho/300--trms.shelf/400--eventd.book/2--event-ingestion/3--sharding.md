@@ -86,7 +86,7 @@ a single shard file may hold events from a different set of CPUs in
 different regions of its history.
 
 The query path therefore assumes nothing: it reads every database in the
-directory, and a query filtering on `cpu_id` scans all of them (§6.4).
+directory, and a query filtering on `event.cpu` scans all of them (§6.4).
 Sharding is a write-path optimisation that the read path pays a fan-out
 for.
 

@@ -9,7 +9,10 @@ Every event query is recorded by the adaptive indexing system (§3.4).
 [*account.every-event-query-is-recorded-by-the-adaptive-indexer]
 For each `WHERE` predicate:
 
-- a header column reference increments that column's frequency counter
+- a header field reference increments the frequency counter of that
+  field's column, kept under the field's path (`event.type`,
+  `emitter.process.guid`); `event.time`, whose column is always
+  indexed, is not counted
   [*account.a-header-column-predicate-increments-that-columns-counter]
 - a payload field reference increments that path's counter
   [*account.a-payload-field-predicate-increments-that-paths-counter]

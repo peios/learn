@@ -11,7 +11,7 @@ Log and metric queries touch one database each and need none of this.
 Shards carry no meaning for the query path (§2.3). A shard holds
 whatever CPUs routed to it during whatever lifetimes wrote it, so there
 is no shard a query can skip on the basis of its contents, and a
-predicate on `cpu_id` scans all of them.
+predicate on `event.cpu` scans all of them.
 [*fanout.no-shard-is-skipped-even-for-a-cpu-id-predicate]
 
 ## Merging

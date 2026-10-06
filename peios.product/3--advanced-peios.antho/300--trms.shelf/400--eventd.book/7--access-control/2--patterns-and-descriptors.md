@@ -52,11 +52,13 @@ would otherwise be a separator in.
 For a concrete identifier, eventd resolves the applicable descriptor by
 walking up the hierarchy:
 
-1. Look for an exact match on the full identifier, `kacs.access_denied`.
+1. Look for an exact match on the full identifier,
+   `kacs.audit.access.checked`.
    [*pattern.resolution-tries-the-full-identifier-first]
-2. Remove the last dot-separated component and look again, `kacs`.
+2. Remove the last dot-separated component and look again,
+   `kacs.audit.access`.
    [*pattern.resolution-then-drops-the-last-dot-separated-component]
-3. Repeat.
+3. Repeat: `kacs.audit`, then `kacs`.
 4. Fall back to the wildcard, `*`.
    [*pattern.resolution-falls-back-to-the-wildcard-last]
 
@@ -70,7 +72,7 @@ Descriptors are registry values under the eventd security subtree:
 ```text
 Machine\System\eventd\Security\Events\*
 Machine\System\eventd\Security\Events\kacs
-Machine\System\eventd\Security\Events\kacs.access_denied
+Machine\System\eventd\Security\Events\kacs.audit.access.checked
 Machine\System\eventd\Security\Logs\*
 Machine\System\eventd\Security\Logs\loregd
 Machine\System\eventd\Security\Metrics\*

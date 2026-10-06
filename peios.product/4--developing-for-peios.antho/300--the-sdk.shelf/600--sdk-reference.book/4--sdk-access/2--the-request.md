@@ -23,7 +23,7 @@ struct peios_access_request {
     size_t   local_claims_len;
     uint32_t pip_type;           /* 0 = use the subject's PSB */
     uint32_t pip_trust;
-    const void *audit_context;   /* opaque object id for audit events */
+    const void *audit_context;   /* the guarded object, a PGSS §6.7 map */
     size_t   audit_context_len;
 };
 ```
@@ -48,4 +48,4 @@ Leave these zero/`NULL` unless you need them:
 | `object_tree` / `object_tree_count` | An object-type tree for a per-property check (object ACEs with type GUIDs). Mandatory for [`peios_access_check_list`](~peios/sdk-access/the-object-type-list-variant). |
 | `local_claims` / `local_claims_len` | An `@Local` claim array to evaluate conditional ACEs against, beyond the claims already on the token. |
 | `pip_type` / `pip_trust` | Process-integrity-protection trust label to evaluate against; `pip_type == 0` uses the subject's own PSB. |
-| `audit_context` / `audit_context_len` | An opaque object identifier stamped into any audit events the check generates. |
+| `audit_context` / `audit_context_len` | The identity of the object a daemon is guarding, for the audit record of the check: one MessagePack map holding `kind` and, under a key equal to the kind, the object's identifying fields — `{kind: "service", service: {name: "jellyfin"}}` — as [PGSS §6.7](~peios/pgss/events/access-decisions) defines. The kernel accepts only that shape and fails the check with `EINVAL` otherwise. It copies the map into the `kacs.audit.access.checked` record as `object.kind` and `object.<kind>.*`, and marks the record `fields.attestation.userspace`, because the values are the caller's claim. |

@@ -25,9 +25,27 @@ Every shard database holds one `events` table.
 Every KMES header field is extracted into its own column rather than
 left inside the payload blob.
 [*events.every-kmes-header-field-is-extracted-into-its-own-column] That is what lets a predicate on
-`process_guid` or `event_type` become a SQL comparison rather than a
-decode of every candidate row, and it is what makes those fields
+`emitter.process.guid` or `event.type` become a SQL comparison rather
+than a decode of every candidate row, and it is what makes those fields
 indexable by ordinary column indexes (§3.4).
+
+The column names are internal to the store. A query names a header
+field by its path from PSPU §3.22, and eventd reads it from its column:
+
+| Field | Column |
+|---|---|
+| `event.time` | `timestamp` |
+| `event.sequence` | `sequence` |
+| `event.cpu` | `cpu_id` |
+| `event.type` | `event_type` |
+| `event.boot.guid` | `boot_id` |
+| `emitter.class` | `origin_class` |
+| `emitter.token.guid` | `effective_token_guid` |
+| `emitter.true-token.guid` | `true_token_guid` |
+| `emitter.process.guid` | `process_guid` |
+
+A column's name is not a field: `cpu_id` in a query names a payload
+field, as any other name outside these nine does.
 
 `event_type` is the sole discriminator between real and synthetic
 records. [*events.event-type-alone-distinguishes-real-from-synthetic-records]
@@ -56,9 +74,10 @@ the *read* path when a query needs a payload field (§6.1), which is also
 the only point at which the flattening rules of PSPU §3.22 apply.
 [*events.payloads-are-decoded-and-flattened-only-on-the-read-path]
 
-Storing the bytes verbatim is also what keeps a payload field that
-collides with a header name recoverable: the value is suppressed from
-the query surface but remains in the blob.
+Storing the bytes verbatim is also what keeps a payload value at a
+header field's path recoverable: the value, or the map and everything
+beneath it, is suppressed from the query surface but remains in the
+blob.
 [*events.a-payload-field-colliding-with-a-header-name-is-suppressed-but-kept-in-the-blob]
 
 ## The event-type catalogue
@@ -153,7 +172,8 @@ merge correctness never depends on physical compaction.
 
 ## Identity may be absent two ways
 
-`effective_token_guid` distinguishes two cases that would otherwise
+`effective_token_guid`, which a query reads as `emitter.token.guid`,
+distinguishes two cases that would otherwise
 look alike. **Null** means the record is synthetic and never had an
 identity. [*events.a-null-effective-token-guid-means-a-synthetic-record]
 The **null GUID** — sixteen zero bytes — means the record is a

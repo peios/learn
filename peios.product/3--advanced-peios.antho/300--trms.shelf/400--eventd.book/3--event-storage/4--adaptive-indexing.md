@@ -138,20 +138,32 @@ cancellability, highest priority first.
 Any field that can appear in a `WHERE` predicate is a candidate.
 [*index.any-field-usable-in-a-where-predicate-is-a-candidate]
 
-**Header columns.** `event_type`, `origin_class`, `cpu_id`,
-`effective_token_guid`, `true_token_guid`, `process_guid`, `boot_id`.
+**Header columns.** The columns of `event.type`, `emitter.class`,
+`event.cpu`, `emitter.token.guid`, `emitter.true-token.guid`,
+`emitter.process.guid` and `event.boot.guid` (§3.1). The counters and
+the desired set name each by its field path.
 [*index.the-candidate-header-columns]
-`timestamp` is always indexed and is not adaptively managed.
+`timestamp`, the column of `event.time`, is always indexed and is not
+adaptively managed; a predicate on `event.time` is not counted.
 [*index.the-timestamp-column-is-not-adaptively-managed]
 
 **Payload fields.** Any queryable flattened path that appears in a
 predicate is a candidate for an expression index.
 [*index.a-queryable-flattened-payload-path-is-an-expression-index-candidate]
 A path suppressed by
-the flattening rules of PSPU §3.22 — a top-level key colliding with a
-header field, a key that is not a valid segment, a duplicate path —
+the flattening rules of PSPU §3.22 — a header field's path or one
+beneath it, a key that is not a valid segment, a duplicate path —
 never receives one, because it is not a query-language field at all.
 [*index.a-suppressed-payload-path-never-receives-an-index]
+A path beside a header field's, such as `emitter.process.pid` beside
+`emitter.process.guid`, is an ordinary candidate.
+
+Counters and a desired set written by an earlier eventd, which named
+header fields by their columns (`event_type`, `process_guid`), are read
+back at startup under the fields' paths. Such a name could only have
+meant the header field then, because a payload key spelled like a
+column was reserved, so the renaming loses no index and builds no
+spurious one.
 
 The raw `payload` column never receives a plain column index.
 [*index.the-raw-payload-column-never-receives-a-column-index] Indexing
@@ -192,8 +204,9 @@ the same priority ordering, shedding and convergence.
 
 ## Naming
 
-Header column indexes are `idx_events_<column>` —
-`idx_events_event_type`, `idx_events_process_guid`.
+Header column indexes are `idx_events_<column>`, named for the column
+rather than the field — `idx_events_event_type` for `event.type`,
+`idx_events_process_guid` for `emitter.process.guid`.
 [*index.header-column-indexes-are-named-idx-events-column]
 
 Payload expression indexes are named from the field GUID (§7.3), to

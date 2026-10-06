@@ -17,7 +17,8 @@ The identity stamps on an event are the kernel's, captured from kernel
 state at the write. An emitting process cannot set, influence or
 suppress them.
 [*writepath.event-identity-stamps-are-the-kernels-and-the-emitter-cannot-alter-them]
-That is what makes an event's `process_guid` evidence.
+That is what makes an event's `emitter.process.guid` evidence, and why
+a payload value at that path never shadows it (PSPU §3.22).
 
 ## Logs use peinit as a broker
 

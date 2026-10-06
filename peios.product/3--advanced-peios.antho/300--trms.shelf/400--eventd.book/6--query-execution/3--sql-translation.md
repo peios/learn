@@ -12,18 +12,21 @@ translation is entirely internal and carries no guarantees.
 
 **Event header fields** are columns, so a predicate on one can become a
 SQL `WHERE` comparison over an indexable column (§3.1). Today one
-predicate does per shard: the first of `event_type ==` a string, or a
-comparison of `cpu_id` or `origin_class` with an integer, falling back to
-an indexed payload field (below). Other header predicates, `process_guid`
-among them, are applied after loading.
+predicate does per shard: the first of `event.type ==` a string, which
+becomes a comparison of the `event_type` column, or a comparison of
+`event.cpu` or `emitter.class` with an integer, which compares
+`cpu_id` or `origin_class`, falling back to an indexed payload field
+(below). Other header predicates, `emitter.process.guid` among them,
+are applied after loading. A column's own name in a predicate is a
+payload field, not the column.
 [*sql.an-event-header-predicate-becomes-a-sql-where-comparison]
 
 **Timestamps** bound every read already, through `SINCE` and `UNTIL`. A
-top-level comparison of `timestamp` with an integer narrows that range
-further, for events and logs alike, so a page of older records —
-`WHERE timestamp <= T` — starts reading at `T` rather than at the
-newest record. One inside an `OR` does not narrow, since it need not
-hold.
+top-level comparison of the record's time with an integer — `event.time`
+for events, `timestamp` for logs — narrows that range further, so a page
+of older records — `WHERE event.time <= T` — starts reading at `T`
+rather than at the newest record. One inside an `OR` does not narrow,
+since it need not hold.
 [*sql.a-top-level-timestamp-comparison-narrows-the-range-read]
 
 **Log fields** are all columns; log mode has no payload and its field

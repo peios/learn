@@ -21,15 +21,15 @@ level 1.
 
 ```text
 Level 0: root GUID for the data type
-  Level 1: timestamp
-  Level 1: event_type
-  Level 1: cpu_id
-  Level 1: origin_class
-  Level 1: effective_token_guid
-  Level 1: true_token_guid
-  Level 1: process_guid
-  Level 1: granted_access
-  Level 1: target_sid
+  Level 1: event.time
+  Level 1: event.type
+  Level 1: event.cpu
+  Level 1: emitter.class
+  Level 1: emitter.token.guid
+  Level 1: emitter.true-token.guid
+  Level 1: emitter.process.guid
+  Level 1: access.granted
+  Level 1: subject.token.sid
   Level 1: source.name
 ```
 
@@ -70,29 +70,43 @@ Which names are used:
 
 | Data | `field_name` |
 |---|---|
-| Event header field | the column name — `timestamp`, `event_type`, `cpu_id` [*fieldaccess.an-event-header-field-is-named-by-its-column-name] |
-| Event payload field | the flattened dot path — `granted_access`, `target_sid`, `source.name` [*fieldaccess.an-event-payload-field-is-named-by-its-flattened-dot-path] |
+| Event header field | its field path (PSPU §3.22) — `event.time`, `event.type`, `event.cpu` — never its column's name [*fieldaccess.an-event-header-field-is-named-by-its-field-path] |
+| Event payload field | the flattened dot path — `access.granted`, `subject.token.sid`, `source.name` [*fieldaccess.an-event-payload-field-is-named-by-its-flattened-dot-path] |
 | Log field | the column name — `origin`, `message`, `is_error` [*fieldaccess.a-log-field-is-named-by-its-column-name] |
 | Fixed metric field | `timestamp`, `boot_id`, `name`, `type`, `value` [*fieldaccess.the-fixed-metric-field-names] |
 | Metric label | the label key — `core`, `device` [*fieldaccess.a-metric-label-is-named-by-its-label-key] |
 
-Payload fields suppressed by flattening or by a header collision are not
-query-language fields, so they get no GUID (PSPU §3.22).
-[*fieldaccess.suppressed-payload-fields-get-no-guid] Metric label
+Payload fields suppressed by flattening or by a header collision — a
+value or map at a header field's path — are not query-language fields,
+so they get no GUID (PSPU §3.22).
+[*fieldaccess.suppressed-payload-fields-get-no-guid] A GUID naming a
+header field's path is the header field's, whatever the payload holds
+there.
+
+A descriptor written before header fields were named by path, granting
+`timestamp` or `cpu_id` by GUID, now grants the payload field of that
+name rather than the header field, because the GUID is the name's. Such
+a grant must be rewritten with the path to keep its meaning. Metric label
 keys cannot collide with the fixed metric fields, because ingestion
 rejects records whose labels do.
 
 ## The GUID does not encode scope
 
-A field GUID names a field and nothing else. `granted_access` produces
+A field GUID names a field and nothing else. `access.granted` produces
 the same GUID whatever event type carries it.
 [*fieldaccess.a-field-guid-does-not-depend-on-the-event-type-carrying-it]
 
 Scoping comes from the descriptor hierarchy: an object ACE naming the
-`granted_access` GUID inside the descriptor for pattern `kacs` means
-"the `granted_access` field of KACS events". The same ACE in a different
+`access.granted` GUID inside the descriptor for pattern `kacs` means
+"the `access.granted` field of KACS events". The same ACE in a different
 pattern's descriptor means the same field of that pattern's records.
 [*fieldaccess.a-field-ace-is-scoped-by-the-pattern-descriptor-holding-it]
+
+The GUID is of the whole flattened path, and the list has one level-1
+node per field, so a GUID names exactly one field. `access.granted` and
+`access.requested` are granted separately. An ACE naming the GUID of
+`access` names the path `access` alone, not the fields beneath it, and
+grants neither.
 
 ## Writing one
 
@@ -103,12 +117,12 @@ therefore to every field.
 [*fieldaccess.an-object-ace-with-a-field-guid-applies-to-that-field]
 
 To grant a security team full read access to KACS events, and a
-monitoring team only the timestamp, type and CPU:
+monitoring team only the time, type and CPU:
 
 - Allow SecurityAdmins, `EVENTD_READ`, no object GUID
-- Allow MonitoringTeam, `EVENTD_READ`, object GUID = `timestamp`
-- Allow MonitoringTeam, `EVENTD_READ`, object GUID = `event_type`
-- Allow MonitoringTeam, `EVENTD_READ`, object GUID = `cpu_id`
+- Allow MonitoringTeam, `EVENTD_READ`, object GUID = `event.time`
+- Allow MonitoringTeam, `EVENTD_READ`, object GUID = `event.type`
+- Allow MonitoringTeam, `EVENTD_READ`, object GUID = `event.cpu`
 
 MonitoringTeam querying KACS events receives records containing exactly
 those three keys. Payload fields, identity GUIDs and the remaining

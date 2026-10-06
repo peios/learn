@@ -163,10 +163,28 @@ Every access check produces a KACS audit event through the SACL audit
 walk in the AccessCheck pipeline.
 [*enforce.every-access-check-produces-a-kacs-audit-event]
 
-eventd passes an `audit_context` blob naming the security pattern being
-accessed — `"events:kacs.access_denied"`, `"logs:loregd"` — so the audit
-trail records exactly which observability data was read, by whom, rather
-than merely that eventd performed a check.
+eventd passes each check an audit context naming the object it guards,
+in the form PGSS §6.7 defines: a MessagePack map of the object's kind
+and, under the kind's own name, the pattern whose descriptor was
+checked.
+
+| Check | Audit context |
+|---|---|
+| Reading events | `{kind: "event-namespace", event-namespace: {pattern: "kacs"}}` |
+| Reading logs | `{kind: "log-namespace", log-namespace: {pattern: "loregd"}}` |
+| Reading or publishing metrics | `{kind: "metric-namespace", metric-namespace: {pattern: "cpu"}}` |
+| `INDEX` (§7.2) | `{kind: "eventd-admin"}` |
+
+The pattern is the one the descriptor was found under (§7.2), not the
+identifier asked about, and for a log origin it never holds the producer
+after a `/`. KACS copies the map into its `kacs.audit.access.checked`
+record as `object.kind` and `object.<kind>.pattern`, and marks the
+record with `fields.attestation.userspace`, since those values are
+eventd's claim. The audit trail therefore records exactly which
+observability data was read, by whom — the client, as `subject.*` —
+rather than merely that eventd performed a check. Reading and
+publishing a metric name the same object; the record's
+`access.requested` says which was checked.
 [*enforce.the-audit-context-names-the-data-type-and-pattern-accessed]
 
 Those audit events are themselves KMES events, which eventd consumes and
