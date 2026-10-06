@@ -109,6 +109,8 @@ The first two are *configuration* errors — rebooting would just hit them again
 > [!NOTE]
 > `SafeMode=1` and `ErrorControl=Critical` are *filters within the boot-triggered set*. They do not make a demand-only service auto-start in Safe mode — a service with no `boot` trigger stays demand-only regardless.
 
+On a machine with the dynamic-boot feature, **System Settings › Startup & Shutdown › Always Start in Safe Mode** puts `peios.safemode=1` on the command line the next boot image is made from. It holds for every boot until it is turned off again, and while the machine is in Safe mode because of it, System Settings says so.
+
 ### Recovery mode
 
 Recovery mode is the last resort, and it offers **no TCB guarantee** — the administrator gets an unrestricted SYSTEM shell on the console and must treat it with corresponding care. It is a maintenance *environment*, not a degraded boot.
