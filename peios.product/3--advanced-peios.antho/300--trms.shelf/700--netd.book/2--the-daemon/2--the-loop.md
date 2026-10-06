@@ -23,7 +23,11 @@ up: no DHCP timer fires and no kernel event is read until it returns.
 | Time | the earliest deadline of any client | every client's timers, each acted on as above |
 
 The poll timeout is the earliest deadline any DHCPv4, router-discovery
-or DHCPv6 client holds; with none, netd waits indefinitely.
+or DHCPv6 client holds; with none, netd waits indefinitely. A deadline
+already acted on is not held again: once an address is deprecated, its
+preferred lifetime is behind it, and its next deadline is the end of its
+valid lifetime. So netd sleeps while addresses sit deprecated, which on
+an IPv6 network with temporary addresses is most of the time.
 
 After a kernel event netd does not fold the event into its model. It
 dumps the whole state again and always runs a full pass, because a dump
