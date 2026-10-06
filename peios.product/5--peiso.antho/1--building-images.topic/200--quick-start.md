@@ -83,16 +83,24 @@ Gexora file explorer and the Hello demonstration app. Their packages supply
 binaries, application declarations, icons and registry seeds; no development
 share or checkout is needed in the guest.
 
-After `make boot` reaches the console, open **http://127.0.0.1:7780/** on the
+After `make boot` reaches the console, open **https://127.0.0.1:7780/** on the
 host. The live image has the `peios` development account with no password.
 Fenestra and its apps run as the logged-on principal using a `RemoteInteractive`
 session. Installed systems use their provisioned account instead.
 
-GXWI currently uses **plain HTTP**. The Experimental edition enables TCP 7780
-on all guest interfaces and admits it through the guest packet policy. Use this
-image only on a trusted development network. The Makefile's host port forwards
-bind to localhost; that protects the QEMU host listener, not a machine booted
-directly from the ISO or a VM configured with bridged networking.
+GXWI serves **HTTPS** with a certificate the machine makes for itself, so the
+browser warns before the first sign-in. The installer's first page on the
+console shows the certificate's SHA-256 fingerprint; check it against the one
+the browser shows before going past the warning. A live medium makes a new key
+every boot, so the warning comes back each time; installing carries the
+medium's key into the installed system, which keeps it from then on. Plain
+`http://` is answered with a redirect to `https://` and nothing else. See
+[the machine's certificate](~peios/signing-in-from-a-browser/the-certificate).
+
+The Experimental edition enables TCP 7780 on all guest interfaces and admits it
+through the guest packet policy. The Makefile's host port forwards bind to
+localhost; that protects the QEMU host listener, not a machine booted directly
+from the ISO or a VM configured with bridged networking.
 
 The edition opts into `gxwid-service`, `gxwi-config`, `gxwi-network`,
 `fenestra-config` and `fenesh-config`. `Machine\Software\GXWI` selects the

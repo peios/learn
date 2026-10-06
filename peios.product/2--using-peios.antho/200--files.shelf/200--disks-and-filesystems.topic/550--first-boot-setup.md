@@ -31,7 +31,7 @@ An overlay runs as an account that needs no credential, and before setup the mac
 > [!WARNING]
 > While setup is pending, whoever opens the machine's address first answers its questions, including the administrator's name and password. The same is true of the console. Keep a machine that has not been set up off networks you do not trust.
 >
-> The page is served over plain HTTP, so the password you choose crosses the network unencrypted when you press Next, readable by anything that can see the traffic. The account page says so when it is opened over a network. On a network you do not trust, set the password at the machine's own screen.
+> The page is served over HTTPS with a certificate the machine made for itself, which no browser trusts until told to. Before going past the browser's warning, check that the certificate's SHA-256 fingerprint matches the one at the foot of the console's first page: that is what tells you the password you choose goes to this machine and nobody between. A machine installed from a browser carries the medium's certificate, so the browser that installed it has already been told, and setup follows the installation in the same tab without a second warning. See [the machine's certificate](~peios/signing-in-from-a-browser/the-certificate).
 >
 > `peios-oobe-setup` has no password, so anything that signs in without a credential can sign in as it while it exists. It has no groups; what it can reach is setup itself, which the address offers anyone.
 
