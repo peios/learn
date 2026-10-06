@@ -34,7 +34,7 @@ read a decrease as a restart (PSPU §3.10, §3.25).
 | Name | Type | Labels | What it is |
 |---|---|---|---|
 | `eventd.events.stored` | counter | `shard` | Events committed to each active shard. [*health.events-stored-counts-committed-events-per-shard] |
-| `eventd.events.lost` | counter | `cpu` | Sequences recorded as lost on each CPU, whether KMES overwrote them or a full store refused their batch (§2.5, §9.1). The sum of the ranges in the `synthetic.gap` records eventd committed. [*health.events-lost-counts-the-sequences-committed-gap-records-name] |
+| `eventd.events.lost` | counter | `cpu` | Sequences recorded as lost on each CPU, whether KMES overwrote them or a full store refused their batch (§2.5, §9.1). The sum of the ranges in the `eventd.events.lost` records eventd committed; the metric and the event type share the name. [*health.events-lost-counts-the-sequences-committed-gap-records-name] |
 | `eventd.kmes.ring.fill.percent` | gauge | `cpu` | How full each CPU's KMES ring buffer is, as its drain last saw it. [*health.ring-fill-is-each-drains-last-observed-ring-occupancy] |
 | `eventd.events.index.sheds` | counter | `reason` | Event indexes dropped under write pressure: `pressure` one at a time, `emergency` all at once (§3.4). [*health.index-sheds-count-indexes-dropped-by-reason] |
 | `eventd.logs.stored` | counter | | Log records committed. |

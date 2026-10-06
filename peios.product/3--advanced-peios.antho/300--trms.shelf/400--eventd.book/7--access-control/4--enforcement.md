@@ -23,10 +23,12 @@ follows is the sequence within that phase.
    by identifier.
    [*enforce.a-broad-selector-is-authorized-identifier-by-identifier]
 4. **Resolve and check** each discovered identifier: find its descriptor
-   by hierarchical matching (§7.2), build the object type list for the
-   fields the query references (§7.3), and add a node for every field
-   the descriptor's allowing object ACEs name, since those may make its
-   records visible though the query names none of them. Call
+   by hierarchical matching (§7.2), and build the object type list for
+   the fields the query references (§7.3). A query that references none
+   asks instead about every field the descriptor's allowing object ACEs
+   name, since those may make its records visible though the query names
+   none of them; a GUID does not say its path, so each is a level-1 node
+   of that list. Call
    `kacs_access_check_list`, and cache the verdict for this
    `(token, identifier, field set)` (§7.5).
    [*enforce.each-discovered-identifier-is-resolved-checked-and-cached]
@@ -159,9 +161,18 @@ only what the caller may see.
 
 ## The audit trail
 
-Every access check produces a KACS audit event through the SACL audit
-walk in the AccessCheck pipeline.
-[*enforce.every-access-check-produces-a-kacs-audit-event]
+Whether an access check produces a KACS audit event is decided by the
+SACL audit walk in the AccessCheck pipeline, against the descriptor's
+SACL. Every default descriptor eventd creates carries a failure-audit
+ACE for Everyone at every eventd right (§7.2), so out of the box every
+**denied** check produces a `kacs.audit.access.checked` record, and a
+granted one produces none unless an administrator adds a success ACE.
+[*enforce.every-denied-check-under-a-default-descriptor-produces-a-kacs-audit-event]
+KACS writes such a record from the AccessCheck syscall only when the
+caller holds `SeAuditPrivilege` enabled. eventd's service definition
+requires that privilege, and its token holds it enabled; without it the
+check would be made and nothing recorded.
+[*enforce.eventds-checks-are-audited-because-its-token-holds-seauditprivilege]
 
 eventd passes each check an audit context naming the object it guards,
 in the form PGSS §6.7 defines: a MessagePack map of the object's kind
@@ -188,7 +199,7 @@ publishing a metric name the same object; the record's
 [*enforce.the-audit-context-names-the-data-type-and-pattern-accessed]
 
 Those audit events are themselves KMES events, which eventd consumes and
-stores, and which are governed by the `synthetic`-independent event
-patterns like any other.
+stores, and which are governed by the event patterns like any other,
+under `kacs` (§7.2).
 [*enforce.access-audit-events-are-stored-and-governed-like-any-other-event]
 Reading the audit store is auditable.

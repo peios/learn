@@ -21,8 +21,8 @@ kernel applied and an emitter could not influence. They arrive through
 KMES, in per-CPU shared-memory ring buffers, and eventd is their primary
 consumer. They are the audit and security telemetry, and losing one is a
 real failure — so the event path is the one with sequence numbers, gap
-detection, per-transaction durability, and a synthetic record written
-whenever anything is lost.
+detection, per-transaction durability, and an `eventd.events.lost`
+record written whenever anything is lost.
 
 **Logs** are text: a line a program wrote, with light metadata attached.
 They arrive on a datagram socket, mostly from the service manager

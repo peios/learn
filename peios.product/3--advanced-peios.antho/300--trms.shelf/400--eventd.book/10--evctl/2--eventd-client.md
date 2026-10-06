@@ -89,11 +89,15 @@ the same descriptors eventd checks (§7). The `access` module does that.
   against: the identifier, each shorter dotted prefix, then `*`, with an
   origin's producer left off (§7.2).
 - `access` checks a descriptor the way eventd does: the calling
-  process's own token, eventd's mapping, and an object type list of the
-  data type's root, any fields asked about, and every field the
-  descriptor grants by name. Records are visible with `EVENTD_READ` on
-  the root or on any field, as eventd shows them (§7.4).
+  process's own token, eventd's mapping, and the object type list of the
+  data type's root and the paths of any fields asked about (§7.3), then
+  every field the descriptor grants by name. Records are visible with
+  `EVENTD_READ` on the root or on any field, as eventd shows them
+  (§7.4).
   [*client.records-are-visible-with-read-on-the-root-or-any-field]
+- `field_tree` builds that list for a set of field names, and
+  `field_reads` makes the check over it, answering per field; eventd
+  uses both, so the tree a client asks about is the one eventd builds.
 - `field_grants` lists the fields a descriptor grants by name: the
   object GUIDs of its allowing object ACEs. eventd uses it too, to find
   which identifiers a field-only grant makes visible.

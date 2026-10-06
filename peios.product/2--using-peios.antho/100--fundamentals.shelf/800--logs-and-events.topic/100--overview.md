@@ -43,8 +43,8 @@ design, so that logging never slows the machine down. See
 ### Events
 
 An event is a record with named fields. Every event has a **type**, such
-as `job.started` or `access.denied`, and a **source**, which says what
-recorded it:
+as `peinit.job.started` or `kacs.audit.access.checked`, and a
+**source**, which says what recorded it:
 
 | Source | What records it |
 |---|---|
@@ -54,8 +54,9 @@ recorded it:
 | Registry | LCS, the kernel's registry |
 
 Every event also carries the process and token that caused it, and the
-boot it happened in. Its other fields depend on its type. An
-`access.denied` event, for example, says who asked, for what, and on what.
+boot it happened in. Its other fields depend on its type. A
+`kacs.audit.access.checked` event, for example, says who asked, for
+what, on what, and whether it was allowed.
 
 Events are kept far more carefully than logs. The kernel holds them until
 eventd has stored them, and if any are ever lost, eventd records that they

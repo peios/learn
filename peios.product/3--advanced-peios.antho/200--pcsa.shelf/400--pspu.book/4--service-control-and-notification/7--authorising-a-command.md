@@ -97,10 +97,15 @@ tail of stopping something rather than the head of starting it.
    MUST be answered `UNKNOWN_SERVICE`. The manager MUST NOT synthesise a
    descriptor for a service that does not exist.
 3. Evaluate the access check with the peer's token, the target's
-   descriptor, the appropriate generic mapping, and the required right.
-4. On denial, answer `ACCESS_DENIED`, and record the attempt with at
-   least the caller's SID, the target, and the right requested. The
-   manager MUST NOT deny silently.
+   descriptor, the appropriate generic mapping, and the required right,
+   naming the target in the check's audit context (PGSS §6.7).
+4. On denial, answer `ACCESS_DENIED`. The attempt is recorded by the
+   access check itself, under the target descriptor's SACL, with the
+   caller, the target and the rights requested and granted; the manager
+   MUST NOT write an access-denied event of its own (PGSS §6.7). A
+   descriptor the manager supplies by default MUST carry a SACL that
+   audits every refusal, so that a denial is not silent unless a
+   descriptor someone wrote says so.
 5. On grant, proceed.
 
 A `status`, and each job view on this channel, also tells the caller

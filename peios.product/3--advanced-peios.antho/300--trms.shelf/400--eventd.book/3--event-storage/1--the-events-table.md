@@ -10,11 +10,11 @@ Every shard database holds one `events` table.
 |---|---|---|
 | `id` | INTEGER PRIMARY KEY | SQLite rowid, monotonic within the shard. [*events.id-is-a-rowid-monotonic-within-the-shard] |
 | `boot_id` | BLOB NOT NULL | 16-byte boot ID GUID in PCDS binary layout. [*events.boot-id-is-a-16-byte-guid-in-pcds-binary-layout] |
-| `timestamp` | INTEGER NOT NULL | Nanoseconds since the Unix epoch. From the KMES header for a real event; eventd's clock at generation for a synthetic one. [*events.timestamp-is-epoch-nanoseconds-from-the-header-or-eventds-clock] |
+| `timestamp` | INTEGER NOT NULL | Nanoseconds since the Unix epoch. From the KMES header for a real event; eventd's clock at generation for a daemon-wide synthetic one; the revealing event's timestamp for a gap record (§2.5). [*events.timestamp-is-epoch-nanoseconds-from-the-header-or-eventds-clock] |
 | `cpu_id` | INTEGER | From the KMES header. Null for daemon-wide synthetic events; populated for gap records (§2.5). [*events.cpu-id-is-null-for-daemon-wide-synthetic-events-but-set-for-gap-records] |
 | `sequence` | INTEGER | Per-CPU, per-boot sequence from the KMES header. Null for every synthetic event. [*events.sequence-is-the-per-cpu-per-boot-header-sequence-and-null-for-synthetics] |
-| `origin_class` | INTEGER | 0 userspace, 1 KMES, 2 KACS, 3 LCS. From the header. Null for synthetic events. [*events.origin-class-is-0-userspace-1-kmes-2-kacs-3-lcs-and-null-for-synthetics] |
-| `event_type` | TEXT NOT NULL | From the header; or a `synthetic.`-prefixed string. [*events.event-type-is-the-header-type-or-a-synthetic-prefixed-string] |
+| `origin_class` | INTEGER | 0 userspace, 1 KMES, 2 KACS, 3 LCS, 4 NTFE. From the header, as written. Null for synthetic events. [*events.origin-class-is-0-userspace-1-kmes-2-kacs-3-lcs-and-null-for-synthetics] |
+| `event_type` | TEXT NOT NULL | From the header; or one of the five types eventd writes itself (§2.6). [*events.event-type-is-the-header-type-or-one-of-the-five-eventd-types] |
 | `effective_token_guid` | BLOB | 16-byte GUID for the effective token at emission. Null for synthetic events; the null GUID when identity was unavailable at emission. [*events.effective-token-guid-is-the-effective-token-at-emission] |
 | `true_token_guid` | BLOB | 16-byte GUID for the process's primary token. Null for synthetic events. [*events.true-token-guid-is-the-primary-token-and-null-for-synthetics] |
 | `process_guid` | BLOB | 16-byte GUID for the emitting process. Null for synthetic events. [*events.process-guid-is-the-emitting-process-and-null-for-synthetics] |
@@ -49,15 +49,17 @@ field, as any other name outside these nine does.
 
 `event_type` is the sole discriminator between real and synthetic
 records. [*events.event-type-alone-distinguishes-real-from-synthetic-records]
-No record-type column exists, because the `synthetic.` prefix
-already partitions the type namespace and a second column would be a
-second thing to keep consistent.
+No record-type column exists, because the five types eventd writes
+itself already partition the type namespace and a second column would
+be a second thing to keep consistent.
 
-The partition holds because eventd reserves the prefix. A KMES event
-whose type begins `synthetic.` is not stored: eventd counts it and
-receipts its sequence, so it is neither a row nor a gap.
-[*events.a-kmes-event-typed-in-the-synthetic-namespace-is-counted-and-not-stored]
-The count appears in the diagnostic dump (§8.5).
+The partition holds because eventd reserves those five names, and only
+those (§2.6). A KMES event whose type is one of them is not stored:
+eventd counts it and receipts its sequence, so it is neither a row nor a
+gap.
+[*events.a-kmes-event-typed-as-one-of-the-five-eventd-types-is-counted-and-not-stored]
+Any other type, including any other under `eventd.`, is stored as
+usual. The count appears in the diagnostic dump (§8.5).
 
 ## The payload is not touched
 
@@ -143,8 +145,8 @@ and every row satisfies `first_sequence > 0` and
 [*events.receipt-ranges-are-keyed-on-all-four-columns-and-must-be-positive-and-ordered]
 
 A receipt says that every sequence in its range was accounted for by
-the same transaction: either the real event row was stored or a
-`synthetic.gap` row durably records why it was absent. The receipt is in
+the same transaction: either the real event row was stored or an
+`eventd.events.lost` row durably records why it was absent. The receipt is in
 that transaction, so its presence proves commit without a global
 checkpoint or another fsync.
 [*events.a-receipt-commits-in-the-transaction-that-stores-its-rows-or-gap-record]

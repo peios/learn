@@ -9,6 +9,11 @@ without the version negotiation in §4.21, and a client MUST treat one it
 does not recognise as an error for that request rather than mapping it
 onto a value it knows.
 
+These sets are the control channel's. The same words appear in the
+manager's structured events in kebab-case, as every event value is
+(PGSS §6.5): `explicit_start` on the channel is `explicit-start` in an
+event.
+
 ## Response status
 
 `ok`, `error`

@@ -98,7 +98,9 @@ ignored. There is no deadline to extend.
 | `EXIT_STATUS` | free text | An exit status, informationally. |
 
 All five MUST be authenticated like any other field and MUST be
-recorded by the manager as structured events. They MUST NOT be forwarded
+recorded by the manager as structured events (PGSS §6), which, like
+every event, are not written while the emission policy has their type
+switched off (PGSS §6.9). They MUST NOT be forwarded
 to a log sink as though they were the service's output — they are the
 service speaking to the manager.
 

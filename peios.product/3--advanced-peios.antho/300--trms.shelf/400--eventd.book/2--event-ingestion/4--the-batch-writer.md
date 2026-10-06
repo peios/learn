@@ -12,7 +12,7 @@ The commit is the durability boundary.
 [*batch.the-commit-is-the-durability-boundary]
 
 For every maximal contiguous sequence run represented by the event rows
-and `synthetic.gap` rows in that transaction, the writer also inserts a
+and `eventd.events.lost` rows in that transaction, the writer also inserts a
 `receipt_ranges` row for `(boot_id, cpu_id, first_sequence,
 last_sequence)` (§3.1).
 [*batch.each-maximal-contiguous-sequence-run-in-a-transaction-gets-a-receipt-row]

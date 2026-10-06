@@ -36,6 +36,9 @@ exists. Unless the `submit` supplied one, the manager MUST construct:
 - owner and group: the submitter's user SID;
 - a DACL granting `JOB_ALL_ACCESS` to the submitter, to SYSTEM
   (`S-1-5-18`) and to Administrators (`S-1-5-32-544`);
+- a SACL with one failure-audit ACE for Everyone (`S-1-1-0`) over
+  `JOB_ALL_ACCESS`, so that a refused command on the job is recorded by
+  the access check (§4.7);
 - nothing else. In particular **the job identity is granted nothing**:
   a process cannot, by virtue of running as U, see or stop a job that
   runs as U. A submitter that wants the principal to see its own

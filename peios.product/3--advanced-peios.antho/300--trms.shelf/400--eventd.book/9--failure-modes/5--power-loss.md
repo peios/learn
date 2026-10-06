@@ -19,10 +19,10 @@ small as throughput allows (§2.4).
 [*powerloss.the-event-store-loses-only-the-in-flight-batch] Unlike a process crash, a power cycle
 destroys the old KMES rings and changes the boot ID. eventd can neither
 recover that batch nor determine its final sequence range, so it cannot
-honestly manufacture a `synthetic.gap` for it.
+honestly manufacture an `eventd.events.lost` record for it.
 [*powerloss.no-gap-record-is-written-for-a-batch-lost-to-power-loss]
 The last receipt coverage
-and the following boot's `synthetic.startup` bound the unknown loss.
+and the following boot's `eventd.daemon.started` bound the unknown loss.
 
 **The log and metric stores** may lose everything committed since their
 last write-ahead log checkpoint, which under `synchronous=NORMAL` is the

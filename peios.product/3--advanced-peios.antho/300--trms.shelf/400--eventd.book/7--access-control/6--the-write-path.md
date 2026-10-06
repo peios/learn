@@ -152,7 +152,12 @@ in-memory diagnostic counters.
 Policy errors may produce rate-limited
 standard-error text.
 [*writepath.policy-errors-may-produce-rate-limited-standard-error-text]
-None produces a durable event or log record: doing
+None produces a durable event or log record of eventd's own: doing
 work proportional to hostile input would create an amplification path
 (PSPU §3.4).
 [*writepath.rejected-input-produces-no-durable-event-or-log-record]
+The one record a denial can cause is KACS's: under a descriptor whose
+SACL audits failure, as every default does (§7.2), the publication check
+that denies a name writes a `kacs.audit.access.checked` record. Denials
+are cached like grants, so that is one record per token and name until
+the cache is cleared, not one per datagram.

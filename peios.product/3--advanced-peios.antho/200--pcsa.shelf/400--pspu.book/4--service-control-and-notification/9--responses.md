@@ -65,6 +65,7 @@ A field that does not apply to the current state MUST be present and
 A client MUST accept `null` for any field this chapter marks nullable,
 and MUST NOT treat a `null` as an error.
 
-The two exceptions are `mode`, which appears only on a reload response,
-and `job_id` in the notification event payloads, which is omitted when
-there is no job.
+The one exception is `mode`, which appears only on a reload response.
+The manager's structured events are not responses and do not follow
+this rule: their payloads follow PGSS §6.5, under which a value that
+does not apply is absent, never null.

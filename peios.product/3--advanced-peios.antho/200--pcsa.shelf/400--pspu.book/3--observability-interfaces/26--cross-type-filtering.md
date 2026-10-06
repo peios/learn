@@ -8,8 +8,8 @@ is the only correlation mechanism in the language; there is no join.
 
 ```text
 EVENTS kacs.* SINCE 1h ago WHERE METRIC cpu.usage[core="0"] > 80
-LOGS FROM loregd SINCE 1h ago WHERE EVENT kacs.access_denied EXISTS
-METRIC cpu.usage[] SINCE 1h ago WHERE EVENT synthetic.storage_error EXISTS
+LOGS FROM loregd SINCE 1h ago WHERE EVENT kacs.audit.access.checked EXISTS
+METRIC cpu.usage[] SINCE 1h ago WHERE EVENT eventd.store.quarantined EXISTS
 EVENTS kacs.* SINCE 1h ago WHERE LOG loregd CONTAINING "error" EXISTS
 ```
 

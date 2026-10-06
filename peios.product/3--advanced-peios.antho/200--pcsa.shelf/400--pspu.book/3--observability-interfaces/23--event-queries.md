@@ -13,11 +13,11 @@ The primary selector is an optional event type pattern, placed
 immediately after `EVENTS`.
 
 ```text
-EVENTS kacs.access_denied      -- exactly that type
-EVENTS kacs.*                  -- every type beginning "kacs."
-EVENTS *.denied                -- every type ending ".denied"
-EVENTS kacs.*.denied           -- kacs.access.denied, kacs.token.denied, …
-EVENTS                         -- every type
+EVENTS kacs.audit.access.checked   -- exactly that type
+EVENTS kacs.*                      -- every type beginning "kacs."
+EVENTS *.rejected                  -- every type ending ".rejected"
+EVENTS kacs.*.changed              -- kacs.audit.descriptor.changed, kacs.caap.policy.changed, …
+EVENTS                             -- every type
 ```
 
 `*` is the **only** metacharacter, and matches zero or more of any

@@ -154,10 +154,10 @@ socket never stops the next start.
 
 ## Phase 7 — Ready
 
-27. Write and **commit** a `synthetic.startup` event recording the boot
-    ID, the shard count and the per-CPU recovered coverage points
-    (§3.2).
-    [*bootstrap.a-synthetic-startup-event-records-boot-id-shard-count-and-per-cpu-coverage]
+27. Write and **commit** an `eventd.daemon.started` event in the boot
+    recording whether this start is a restart, the shard count and the
+    per-CPU recovered coverage points (§3.2).
+    [*bootstrap.an-eventd-daemon-started-event-records-restart-shard-count-and-per-cpu-coverage]
     The commit
     happens before readiness is signalled.
     [*bootstrap.the-startup-event-is-committed-before-readiness-is-signalled]

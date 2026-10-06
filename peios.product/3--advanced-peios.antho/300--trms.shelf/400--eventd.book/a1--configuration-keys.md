@@ -7,7 +7,7 @@ Every key lives under `Machine\System\eventd\`.
 [*config.every-key-lives-under-machine-system-eventd] eventd ignores unknown
 keys in the subtree. [*config.unknown-keys-in-the-subtree-are-ignored] An
 invalid value is ignored and the value already in use is retained, and eventd
-emits a `synthetic.config_change` event for every change actually applied
+emits an `eventd.config.changed` event for every change actually applied
 (§8.3).
 [*config.an-invalid-value-is-ignored-and-the-value-in-use-is-retained]
 

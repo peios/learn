@@ -17,8 +17,8 @@ Retention is the only lever eventd has that frees space,
 and waiting up to an hour for the next scheduled pass would waste the
 window in which recovery is still cheap.
 
-A write refused for want of space emits no `synthetic.storage_error`;
-that event reports a store found corrupt (§2.6).
+A write refused for want of space emits no `eventd.store.quarantined`;
+that event reports only a store found corrupt and quarantined (§2.6).
 [*storagefail.a-write-refused-for-want-of-space-emits-no-storage-error]
 
 ### The event store
@@ -31,8 +31,9 @@ consumed from the ring buffer, so KMES no longer has them.
 [*storagefail.a-failed-event-batch-is-lost] The writer
 records the per-CPU sequence ranges of the failed batch in an in-memory
 **lost-batch list**, and on its next successful commit emits
-`synthetic.gap` records for every accumulated range before writing new
-events.
+`eventd.events.lost` records for every accumulated range before writing
+new events. Each record's timestamp is that of the last lost event in
+its range, since no later event revealed it (§2.5).
 [*storagefail.failed-batch-ranges-are-held-in-an-in-memory-lost-batch-list]
 [*storagefail.lost-batch-gap-records-are-written-before-new-events-on-the-next-successful-commit]
 
@@ -87,11 +88,11 @@ store, eventd quarantines the files, creates a fresh empty database at
 the original path, and continues (§3.3).
 [*storagefail.a-corrupt-required-store-at-startup-is-quarantined-and-replaced-with-an-empty-database]
 It logs the corruption and
-emits `synthetic.storage_error` once a shard is available to hold it.
+emits `eventd.store.quarantined` once a shard is available to hold it.
 [*storagefail.startup-corruption-is-logged-and-reported-by-a-storage-error-event]
 
 **At write time**, eventd stops writing to the affected database, emits
-`synthetic.storage_error` if it can, quarantines and replaces the
+`eventd.store.quarantined` if it can, quarantines and replaces the
 database, and resumes writes to the replacement.
 [*storagefail.write-time-corruption-quarantines-and-replaces-the-database-and-writes-resume]
 

@@ -128,7 +128,7 @@ only copy of whatever it held, recovering data from it is an
 administrative operation, and eventd attempts no automatic repair.
 [*eventdb.a-corrupt-store-is-never-deleted-or-automatically-repaired]
 
-The corruption is logged and a `synthetic.storage_error` event is
+The corruption is logged and an `eventd.store.quarantined` event is
 emitted once a shard is available to write it to (§9.2).
 [*eventdb.quarantine-is-logged-and-emits-a-storage-error-event-once-a-shard-is-writable]
 

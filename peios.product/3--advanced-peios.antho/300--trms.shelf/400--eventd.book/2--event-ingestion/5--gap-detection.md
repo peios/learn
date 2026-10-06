@@ -29,7 +29,8 @@ says what was lost rather than why.
 
 ## Gap records
 
-On detecting a jump, the drain thread generates a gap record carrying:
+On detecting a jump, the drain thread generates a gap record, an
+`eventd.events.lost` event, carrying:
 
 - the CPU identifier [*gap.a-gap-record-carries-the-cpu-identifier]
 - the first missing sequence number, the last seen plus one
@@ -41,8 +42,18 @@ On detecting a jump, the drain thread generates a gap record carrying:
 - the timestamp of the last event successfully processed on this CPU,
   where one is known
   [*gap.a-gap-record-carries-the-last-processed-timestamp-where-known]
-- the timestamp of the event that revealed the gap
-  [*gap.a-gap-record-carries-the-revealing-events-timestamp]
+
+"Known" means the drain thread saw that event in this run. A gap found
+during restart reconciliation whose preceding events are accounted only
+by a committed receipt range carries no preceding timestamp, even though
+those events are stored: a receipt proves the sequence was accounted
+for, and eventd does not read the stored event back to recover its time.
+
+Its own timestamp, `event.time`, is the timestamp of the event that
+revealed the gap, not the moment eventd noticed. The lost events were
+therefore written between the last processed timestamp and the record's
+own, and the record sorts beside the event that revealed it.
+[*gap.a-gap-records-time-is-the-revealing-events-timestamp]
 
 The record is written into the shard database through the normal write
 path — handed to the same writer thread, batched with ordinary events,
@@ -57,7 +68,8 @@ for recording that the event transport lost something cannot depend on
 that transport. [*gap.a-gap-record-is-never-emitted-through-kmes]
 
 The gap details are stored as a MessagePack map in the `payload` column
-(§3.2), and gap records are queryable exactly like any other event.
+(§3.2), under the catalogue's `buffer.cpu` and `loss.*` fields, and gap
+records are queryable exactly like any other event.
 [*gap.gap-details-are-a-messagepack-payload-and-gaps-are-queryable-like-any-event]
 
 ## The CPU column

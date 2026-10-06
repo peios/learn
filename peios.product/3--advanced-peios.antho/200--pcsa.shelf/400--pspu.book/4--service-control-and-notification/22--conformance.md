@@ -21,11 +21,13 @@ frame-level failure and holding it open after a command-level one
 accept, and uses no UID, GID or asserted identity (§4.6).
 
 **Authorisation.** Checks every command against the appropriate Security
-Descriptor with the mappings in §4.7, records every denial, filters
+Descriptor with the mappings in §4.7, naming the target in each
+check's audit context and giving every default descriptor a SACL that
+audits every refusal, writes no access-denied event of its own, filters
 `list` rather than denying it, and does not let `operation-status`
 distinguish an operation the caller may not see from one that does not
 exist. Reports a status's and a job view's `granted` from that same
-check asking for `MAXIMUM_ALLOWED`, and does not record it as a denial
+check asking for `MAXIMUM_ALLOWED`, and does not treat it as a denial
 (§4.14).
 
 **Commands.** Implements all fourteen, with the outcomes in §4.12 for

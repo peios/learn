@@ -94,22 +94,26 @@ rejects records whose labels collide with them.
 | 1 | KMES [*constant.origin-class-1-is-kmes] |
 | 2 | KACS [*constant.origin-class-2-is-kacs] |
 | 3 | LCS [*constant.origin-class-3-is-lcs] |
+| 4 | NTFE [*constant.origin-class-4-is-ntfe] |
 
 The origin class is the header field `emitter.class`, held in the
-`origin_class` column, and the query language accepts these names as
-aliases for its values (PSPU §3.23).
+`origin_class` column, and the query language accepts the names of
+classes 0 to 3 as aliases for their values (PSPU §3.23 names no alias
+for NTFE).
 [*constant.the-query-language-accepts-origin-class-names-as-aliases]
 
 ## Synthetic event types
 
 | Type | Emitted when |
 |---|---|
-| `synthetic.startup` | eventd starts and attaches to KMES. [*constant.synthetic-startup-is-emitted-when-eventd-starts-and-attaches-to-kmes] |
-| `synthetic.shutdown` | Graceful shutdown begins. [*constant.synthetic-shutdown-is-emitted-when-graceful-shutdown-begins] |
-| `synthetic.gap` | A sequence gap is detected on a CPU. [*constant.synthetic-gap-is-emitted-when-a-cpu-sequence-gap-is-detected] |
-| `synthetic.config_change` | A configuration value is applied at runtime. [*constant.synthetic-config-change-is-emitted-when-a-value-is-applied-at-runtime] |
-| `synthetic.storage_error` | A store is found corrupt and quarantined. [*constant.synthetic-storage-error-is-emitted-when-a-store-is-found-corrupt-and-quarantined] |
+| `eventd.daemon.started` | eventd starts and attaches to KMES. [*constant.eventd-daemon-started-is-emitted-when-eventd-starts-and-attaches-to-kmes] |
+| `eventd.daemon.stopped` | Graceful shutdown has committed everything read. [*constant.eventd-daemon-stopped-is-emitted-on-graceful-shutdown] |
+| `eventd.events.lost` | A sequence gap is detected on a CPU. [*constant.eventd-events-lost-is-emitted-when-a-cpu-sequence-gap-is-detected] |
+| `eventd.config.changed` | A configuration value is applied at runtime. [*constant.eventd-config-changed-is-emitted-when-a-value-is-applied-at-runtime] |
+| `eventd.store.quarantined` | A store is found corrupt and quarantined. [*constant.eventd-store-quarantined-is-emitted-when-a-store-is-found-corrupt-and-quarantined] |
 
+All five are tier `essential`. These five names, and no others, are
+reserved: a KMES event of one of these types is not stored (§3.1).
 Payload schemas are in §3.2.
 
 ## Metric types

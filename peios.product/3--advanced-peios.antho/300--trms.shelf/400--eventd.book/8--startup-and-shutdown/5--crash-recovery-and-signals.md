@@ -69,8 +69,8 @@ least:
   [*crash.the-dump-includes-the-non-streaming-and-streaming-query-counts]
 - the metric series cache occupancy
   [*crash.the-dump-includes-the-series-cache-occupancy]
-- KMES events discarded for a type in the reserved `synthetic.`
-  namespace (§3.1)
+- KMES events discarded for claiming one of the five types eventd
+  writes itself (§3.1)
   [*crash.the-dump-includes-kmes-events-discarded-for-a-reserved-type]
 - log records discarded for an origin outside the origin grammar, and
   the most recent such origin where one exists (§4.1)

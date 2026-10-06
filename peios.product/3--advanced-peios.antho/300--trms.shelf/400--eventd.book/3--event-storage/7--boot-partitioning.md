@@ -65,7 +65,7 @@ first successful eventd start.
 [*bootpart.no-committed-rows-or-receipts-for-the-boot-means-a-first-start]
 Coverage for every CPU begins before
 sequence 1, the new boot ID is used for subsequent writes to all three
-stores, and `synthetic.startup` carries `restart` false.
+stores, and `eventd.daemon.started` carries `store.restarted` false.
 [*bootpart.a-first-start-covers-from-before-sequence-1-writes-the-new-boot-id-and-emits-restart-false]
 
 **Committed rows or receipts exist.** eventd was previously ready in the
@@ -73,7 +73,8 @@ same boot.
 [*bootpart.committed-rows-or-receipts-for-the-boot-mean-a-restart]
 It merges receipt coverage per `(boot_id, cpu_id)`, reconciles
 that coverage with surviving ring records (§2.2), continues under the
-same boot ID, and emits `synthetic.startup` with `restart` true.
+same boot ID, and emits `eventd.daemon.started` with `store.restarted`
+true.
 [*bootpart.a-restart-merges-and-reconciles-coverage-keeps-the-boot-id-and-emits-restart-true]
 
 The two cases are distinguished by the data itself rather than by any
@@ -90,7 +91,7 @@ rows still establish that eventd previously ran when no receipt was yet
 needed.
 [*bootpart.committed-event-rows-alone-establish-a-previous-run]
 The metadata database's sequence checkpoints and the previous
-`synthetic.shutdown` payload are diagnostic — neither is consulted for
+`eventd.daemon.stopped` payload are diagnostic — neither is consulted for
 recovery (§2.2, §3.5).
 [*bootpart.sequence-checkpoints-and-the-previous-shutdown-payload-are-not-consulted-for-recovery]
 

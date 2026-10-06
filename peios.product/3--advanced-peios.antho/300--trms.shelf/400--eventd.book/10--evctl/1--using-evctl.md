@@ -34,7 +34,7 @@ The query can instead be read from a UTF-8 file or standard input:
 
 ```sh
 evctl --file denied-events.evq
-printf '%s\n' 'EVENTS synthetic.* SINCE 1d ago' | evctl -
+printf '%s\n' 'EVENTS eventd.* SINCE 1d ago' | evctl -
 ```
 
 The default socket is `/run/eventd/query.sock`.

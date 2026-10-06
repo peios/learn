@@ -1,6 +1,6 @@
 ---
 title: Per-Field Control
-description: Granting some fields of a record and not others through object ACEs — how field GUIDs are derived rather than registered.
+description: Granting some fields of a record and not others through object ACEs — the tree of field paths, granting a subtree by its prefix, and how field GUIDs are derived rather than registered.
 ---
 
 A descriptor can grant read access to some fields of a record and not
@@ -14,28 +14,61 @@ it (PSPU §3.28).
 
 ## Object type lists
 
-For each access check eventd builds an object type list: a two-level
-tree with the data type's root at level 0 and one field per node at
-level 1.
-[*fieldaccess.the-object-type-list-is-the-type-root-at-level-0-and-one-field-per-level-1-node]
+For each access check eventd builds an object type list: a tree with
+the data type's root at level 0 and, beneath it, the fields' dotted
+paths, one node per segment. `subject` is at level 1, `subject.token`
+at level 2, `subject.token.sid` at level 3.
+[*fieldaccess.the-object-type-list-is-the-root-and-the-tree-of-field-paths-one-node-per-segment]
+A field's node is the one at the end of its path, and every node above
+it is a prefix of the path, ending before a `.`, named as a field would
+be (below): the node for `subject.token` has the GUID of the name
+`subject.token`.
+[*fieldaccess.a-prefix-node-has-the-guid-of-the-prefix-as-a-field-name]
+A prefix that several fields share is one node, so the list names no
+GUID twice, and the list is in preorder, each node's subtree directly
+after it, as KACS requires.
+[*fieldaccess.a-shared-prefix-is-one-node-and-the-list-is-in-preorder]
 
 ```text
 Level 0: root GUID for the data type
-  Level 1: event.time
-  Level 1: event.type
-  Level 1: event.cpu
-  Level 1: emitter.class
-  Level 1: emitter.token.guid
-  Level 1: emitter.true-token.guid
-  Level 1: emitter.process.guid
-  Level 1: access.granted
-  Level 1: subject.token.sid
-  Level 1: source.name
+  Level 1: event
+    Level 2: event.time
+    Level 2: event.type
+    Level 2: event.cpu
+  Level 1: emitter
+    Level 2: emitter.class
+    Level 2: emitter.token
+      Level 3: emitter.token.guid
+    Level 2: emitter.true-token
+      Level 3: emitter.true-token.guid
+    Level 2: emitter.process
+      Level 3: emitter.process.guid
+  Level 1: access
+    Level 2: access.granted
+  Level 1: subject
+    Level 2: subject.token
+      Level 3: subject.token.sid
+  Level 1: source
+    Level 2: source.name
 ```
 
+The list is as deep as the deepest path, with no level limit.
+[*fieldaccess.the-list-is-as-deep-as-the-deepest-path-with-no-level-limit]
+MS-DTYP's object type lists stop at level 4; KACS sets no depth limit,
+only one on the number of nodes, 1024 to a list
+(`KACS_ACCESS_CHECK_MAX_OBJECT_TYPE_COUNT`). Every prefix counts toward
+it. A record whose list would be longer cannot be checked, and a query
+reaching one fails rather than showing it.
+
+A name with no `.` — a log field, a fixed metric field, most metric
+labels — is a node at level 1. A metric label key may contain `.`, and
+is then a path like any other: a label `disk.read` is beneath the node
+`disk`.
+
 `kacs_access_check_list` returns a verdict per node, and eventd uses
-them to include or exclude each field.
+the verdict on each field's node to include or exclude that field.
 [*fieldaccess.each-field-is-included-or-excluded-by-its-node-verdict]
+The verdicts on the prefix nodes are not used.
 
 The three root GUIDs — one for events, one for logs, one for metrics —
 are in §B.
@@ -102,11 +135,57 @@ Scoping comes from the descriptor hierarchy: an object ACE naming the
 pattern's descriptor means the same field of that pattern's records.
 [*fieldaccess.a-field-ace-is-scoped-by-the-pattern-descriptor-holding-it]
 
-The GUID is of the whole flattened path, and the list has one level-1
-node per field, so a GUID names exactly one field. `access.granted` and
-`access.requested` are granted separately. An ACE naming the GUID of
-`access` names the path `access` alone, not the fields beneath it, and
-grants neither.
+## Granting a subtree
+
+An object ACE applies to its node and to every node beneath it, so an
+ACE naming a prefix applies to every field whose path it begins:
+`subject` covers `subject.token.sid`, `subject.process.pid` and any
+`subject` field an emitter adds later.
+[*fieldaccess.an-ace-naming-a-prefix-applies-to-every-field-beneath-it]
+The header fields are paths like the rest: `event` covers every
+`event.*` header field, and `emitter` every `emitter.*` header field
+together with the payload fields beside them, such as
+`emitter.process.pid`.
+[*fieldaccess.a-grant-on-event-or-emitter-covers-the-header-fields-beneath-it]
+
+KACS decides each node once, first ACE first. A field may therefore be
+read when, of the ACEs that match the caller and name its GUID, the
+GUID of any prefix of its path, the data type's root, or no object type
+at all, the first in DACL order to decide `EVENTD_READ` allows it.
+[*fieldaccess.a-field-is-decided-by-the-first-ace-naming-it-a-prefix-of-it-or-the-root]
+Neither the more specific nor the more general ACE wins as such:
+
+| DACL, in order | `subject.token.sid` | `subject.process.pid` |
+|---|---|---|
+| deny `subject`, allow `subject.token.sid` | denied | denied |
+| deny `subject.token.sid`, allow `subject` | denied | read |
+| allow `subject.token.sid`, deny `subject` | read | denied |
+
+A canonically ordered DACL (PCDS §5.5) puts every deny before every
+allow, so there a deny anywhere on a field's path hides it.
+
+A deny on a field does not reach its siblings: denying
+`subject.token.sid` leaves `subject.token.auth-id` and
+`subject.process.pid` as the rest of the DACL decides them, and denying
+`subject.token` hides every token field and leaves `subject.process`.
+[*fieldaccess.a-deny-on-a-field-leaves-its-siblings-untouched]
+KACS does carry a deny up to the node's ancestors, and a grant up to a
+node all of whose children are granted, but only onto the prefix nodes
+and the root, never onto another field.
+
+A field can also be a prefix of another in the same record, since a
+payload is opaque: a payload value at `emitter` sits beside the header's
+`emitter.class`. Its node in the record's list then has nodes beneath
+it, whose grants and denies KACS carries up to it. eventd therefore
+checks such a field again in a list of its own, holding only its
+prefixes and itself, and uses that verdict, so that the same first-ACE
+rule decides it as decides any other field.
+[*fieldaccess.a-field-that-is-also-a-prefix-is-checked-with-only-its-prefixes]
+
+A descriptor written before the list was a tree keeps its meaning for
+every field it names by full path: that field's GUID, and so its node,
+is unchanged. What is new is that an ACE naming a prefix, which named a
+node in no list before, now covers the fields beneath it.
 
 ## Writing one
 
@@ -129,10 +208,19 @@ those three keys. Payload fields, identity GUIDs and the remaining
 header fields are absent.
 [*fieldaccess.a-grant-of-three-field-guids-yields-records-with-exactly-those-three-keys]
 
+To let an auditing team see who acted but not the token's groups:
+
+- Deny AuditTeam, `EVENTD_READ`, object GUID = `subject.token.groups`
+- Allow AuditTeam, `EVENTD_READ`, object GUID = `event`
+- Allow AuditTeam, `EVENTD_READ`, object GUID = `subject`
+
+AuditTeam receives every `event.*` header field and every `subject`
+field except `subject.token.groups`.
+
 ## Building the list per record
 
 The list is constructed from the fields actually present in the record
-being checked: the root node, then a level-1 node per field.
+being checked: the root node, then the tree of their paths.
 [*fieldaccess.the-list-is-built-from-the-fields-present-in-the-record]
 
 **Event records** contribute every header field plus every non-suppressed

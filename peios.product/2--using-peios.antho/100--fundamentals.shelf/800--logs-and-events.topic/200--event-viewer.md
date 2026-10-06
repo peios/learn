@@ -39,9 +39,10 @@ its type and its source. Select one to see its fields.
 
 To narrow them:
 
-- **Type** takes an event type, such as `access.denied`. A `*` stands
-  for any part of a type, so `job.*` is every job event and `*.denied`
-  every refusal. It suggests the types that have been recorded.
+- **Type** takes an event type, such as `kacs.audit.access.checked`. A
+  `*` stands for any part of a type, so `peinit.job.*` is every job event
+  and `*.rejected` every refusal of that kind. It suggests the types that
+  have been recorded.
 - **Source** shows only events from programs, the kernel, security
   (KACS) or the registry (LCS).
 
@@ -207,8 +208,8 @@ starts. These descriptions are eventd's own, from its regman page, which
   changed.
 - **Use the default** takes a setting back to its default.
 
-eventd notices a change by itself and records it as a
-`synthetic.config_change` event, which the Events tab shows. The paths
+eventd notices a change by itself and records it as an
+`eventd.config.changed` event, which the Events tab shows. The paths
 of its stores and sockets are shown but not changed here: eventd needs
 them to point at places made ready for it.
 
@@ -220,7 +221,7 @@ for it:
 
 - `*` covers everything of its kind that no other pattern covers.
 - A name, such as `sshd` for logs or `kacs` for events, covers that name
-  and every name under it, such as `kacs.access_denied`.
+  and every name under it, such as `kacs.audit.access.checked`.
 
 The most specific pattern that matches decides. Each pattern says, in
 words, who may read it, who may only read some of its fields, and who may

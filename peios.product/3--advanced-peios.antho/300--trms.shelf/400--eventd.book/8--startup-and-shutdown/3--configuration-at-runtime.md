@@ -62,9 +62,9 @@ immediately without anything being "applied".
 
 ## Recording it
 
-eventd emits a `synthetic.config_change` event for every change applied
-at runtime, carrying the key name and the old and new values rendered
-deterministically (§3.2).
+eventd emits an `eventd.config.changed` event for every change applied
+at runtime, carrying the value's name and its old and new values as
+integers, each left out when no value was stored (§3.2).
 [*runtime.every-applied-change-emits-a-config-change-event-with-key-and-old-and-new-values]
 
 Invalid values are ignored and the previous value is retained — an

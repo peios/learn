@@ -47,12 +47,15 @@ by slots and bytes independently of transaction batch size (§2.3).
 
 **Synthetic event**: a record eventd generates itself and writes
 directly to a shard, bypassing KMES. Synthetic events carry no identity
-stamps and no sequence numbers, and are distinguished by a
-`synthetic.`-prefixed type (§2.6).
+stamps and no sequence numbers, and are distinguished by their type,
+one of exactly five eventd reserves: `eventd.daemon.started`,
+`eventd.daemon.stopped`, `eventd.events.lost`, `eventd.store.quarantined`
+and `eventd.config.changed` (§2.6).
 [*term.synthetic-events-bypass-kmes-and-carry-no-stamps-or-sequence-numbers]
 
-**Gap record**: the synthetic event recording that events were lost on
-one CPU, and which sequence numbers went missing (§2.5).
+**Gap record**: the `eventd.events.lost` synthetic event recording that
+events were lost on one CPU, and which sequence numbers went missing
+(§2.5).
 [*term.a-gap-record-names-the-cpu-and-the-missing-sequence-numbers]
 
 **Event store directory**: the directory holding every shard database

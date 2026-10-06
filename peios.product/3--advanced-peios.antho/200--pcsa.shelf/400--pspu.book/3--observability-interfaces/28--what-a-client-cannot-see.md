@@ -25,8 +25,10 @@ permitted to read one matching identifier and not another sees only the
 first.
 
 Identifiers are matched to rules by dot-delimited prefix, most specific
-first, falling back to a wildcard default: for `kacs.access_denied`, a
-rule for `kacs.access_denied`, then one for `kacs`, then the default.
+first, falling back to a wildcard default: for
+`kacs.audit.access.checked`, a rule for `kacs.audit.access.checked`,
+then one for `kacs.audit.access`, then `kacs.audit`, then `kacs`, then
+the default.
 
 A collector MUST fail closed. If no rule resolves — including because
 the default is missing — access is denied.

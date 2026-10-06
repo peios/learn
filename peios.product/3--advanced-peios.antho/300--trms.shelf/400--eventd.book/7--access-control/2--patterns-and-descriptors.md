@@ -90,6 +90,28 @@ Storing them in the registry rather than in eventd's own databases means
 the registry's access control protects them, and an administrator edits
 them with the ordinary registry tools rather than through eventd.
 
+### Who may change them
+
+A descriptor is stored whole, as one value, SACL included. Whoever may
+write that value may therefore replace the SACL as well as the DACL, and
+removing a SACL this way needs no `SeSecurityPrivilege`: the registry
+checks the right to set the value, not the right to change audit
+policy.
+[*pattern.whoever-may-write-a-descriptor-value-may-also-drop-its-sacl]
+Write access to the `Security` subtree is therefore audit-policy
+authority, and only those trusted to change audit policy should hold it.
+A tool that edits a descriptor's DACL must write the SACL back
+unchanged.
+
+eventd gives `Machine\System\eventd\Security` a protected DACL:
+SYSTEM and Administrators full control, Authenticated Users read, which
+is what eventd and its clients need to resolve descriptors. Protection
+stops a broader grant on `Machine\System\eventd`, such as one made to
+let someone tune eventd, from reaching the audit policy. eventd sets it
+only while the key's DACL is still wholly inherited, so an
+administrator's own choice there is never overwritten.
+[*pattern.the-security-root-gets-a-protected-dacl-while-its-dacl-is-wholly-inherited]
+
 ## Defaults on first boot [*pattern.missing-default-descriptors-are-created]
 
 eventd creates the three wildcard keys, the descriptor for its own
@@ -103,6 +125,13 @@ health metrics and the administrative descriptor if they do not exist:
 | `…\Security\Metrics\eventd` | SYSTEM, Administrators and Authenticated Users: `EVENTD_READ`; nobody `EVENTD_PUBLISH`, because eventd writes its own health without the socket (§5.7). [*pattern.the-default-eventd-metrics-descriptor-grants-publish-to-nobody] |
 | `…\Security\Admin` | SYSTEM and Administrators: `EVENTD_ADMINISTER`. [*pattern.the-default-admin-descriptor-grants-administer-to-system-and-administrators] |
 
+Every one of the five also carries a SACL with one failure-audit ACE
+for Everyone, covering `EVENTD_READ`, `EVENTD_ADMINISTER` and
+`EVENTD_PUBLISH`, and nothing else: a check under a default descriptor
+that is denied any of them is audited, whoever made it, and a granted
+one is not (§7.4).
+[*pattern.every-default-descriptor-audits-every-failed-access-by-everyone]
+
 The asymmetry reflects sensitivity. Events include security audit data
 and are restricted to administrators; logs and metrics are operational
 data and are readable by any authenticated user. Publication is
@@ -112,9 +141,12 @@ their service SID `EVENTD_PUBLISH` (§7.6).
 An administrator can tighten
 either side independently.
 
-On upgrade, eventd replaces the old Metrics read-only wildcard only when
-its binary descriptor exactly matches the former compiled default.
-[*pattern.the-old-metrics-wildcard-is-replaced-only-on-an-exact-binary-match] A
+On upgrade, eventd replaces a stored descriptor only when its binary
+form exactly matches a default an earlier eventd shipped at that key:
+the Metrics wildcard's former read-only default, and each key's former
+default without a SACL. Those are replaced by the current default, SACL
+and all.
+[*pattern.a-former-default-is-replaced-only-on-an-exact-binary-match] A
 value an administrator changed is never treated as a default and never
 rewritten. [*pattern.an-administrator-changed-descriptor-is-never-rewritten]
 

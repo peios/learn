@@ -14,8 +14,8 @@ buffers fill and KMES overwrites its oldest entries.
 
 - eventd sees it as a sequence gap on the affected CPU (§2.5).
   [*lostevents.an-overrun-is-detected-as-a-sequence-gap-on-the-affected-cpu]
-- A `synthetic.gap` record is written, naming the missing range.
-  [*lostevents.an-overrun-writes-a-synthetic-gap-naming-the-missing-range]
+- An `eventd.events.lost` record is written, naming the missing range.
+  [*lostevents.an-overrun-writes-an-eventd-events-lost-record-naming-the-missing-range]
 - The range is added to that CPU's `eventd.events.lost` (§5.7).
 - Draining resumes from the oldest survivor at `tail_pos`.
   [*lostevents.after-an-overrun-draining-resumes-from-the-oldest-survivor-at-tail-pos]

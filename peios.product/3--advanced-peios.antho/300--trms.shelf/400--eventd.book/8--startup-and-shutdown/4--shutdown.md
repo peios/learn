@@ -41,10 +41,11 @@ can without blocking indefinitely.
    contiguously covered sequence from committed receipt ranges and write
    it to `sequence_checkpoints` for diagnostics (§3.5).
    [*shutdown.each-cpus-highest-contiguously-covered-sequence-is-written-to-sequence-checkpoints]
-6. **Emit the shutdown event.** Write `synthetic.shutdown` with the
+6. **Emit the shutdown event.** Write `eventd.daemon.stopped` with the
    per-CPU sequences, using the daemon-wide shard assignment rule
-   (§2.6).
-   [*shutdown.a-synthetic-shutdown-event-carries-the-per-cpu-sequences]
+   (§2.6). If the receipt ranges could not be read in step 5, the
+   record carries no sequences rather than zeroes (§3.2).
+   [*shutdown.an-eventd-daemon-stopped-event-carries-the-per-cpu-sequences]
    If no shard is writable, the event is skipped and the failure
    logged to standard error.
    [*shutdown.with-no-writable-shard-the-shutdown-event-is-skipped-and-the-failure-logged]
