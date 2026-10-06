@@ -46,9 +46,26 @@ subject name, and a subject name can be forged.
 
 **Carried by:**
 
+- [`gxwid.certificate.renewed`](~peios/events/gxwid/gxwid-certificate-renewed)
 - [`trustd.root.added`](~peios/events/trustd/trustd-root-added)
 - [`trustd.root.distrusted`](~peios/events/trustd/trustd-root-distrusted)
 - [`trustd.root.removed`](~peios/events/trustd/trustd-root-removed)
+
+## <a id="object.certificate.digest-previous"></a>`object.certificate.digest-previous`
+
+- **Type:** `bin`
+- **Asserted:** no
+- **Carried in:** the payload
+- **Defined in:** `gxwid.evman`
+
+The SHA-256 digest of the DER encoding of the certificate this one
+replaced: its fingerprint, as 32 bytes, in the form of
+`object.certificate.digest`. With it, the record answers "what was this
+machine's certificate before?" without going back to an older record.
+
+**Carried by:**
+
+- [`gxwid.certificate.renewed`](~peios/events/gxwid/gxwid-certificate-renewed)
 
 ## <a id="object.certificate.name"></a>`object.certificate.name`
 
@@ -64,6 +81,7 @@ Search by `object.certificate.digest`.
 
 **Carried by:**
 
+- [`gxwid.certificate.renewed`](~peios/events/gxwid/gxwid-certificate-renewed)
 - [`trustd.root.added`](~peios/events/trustd/trustd-root-added)
 - [`trustd.root.distrusted`](~peios/events/trustd/trustd-root-distrusted)
 - [`trustd.root.removed`](~peios/events/trustd/trustd-root-removed)
@@ -3786,4 +3804,4 @@ caller's access.
 
 No event carries this field yet.
 
-*Generated from `eventd.evman`, `kernel.evman`, `lcs.evman`, `lpsd.evman`, `peinit.evman`, `peipkg.evman`, `stratafs.evman`, `trustd.evman` by `pkm/tools/gen-events-book.py`. Edit the fragment, not this page.*
+*Generated from `eventd.evman`, `gxwid.evman`, `kernel.evman`, `lcs.evman`, `lpsd.evman`, `peinit.evman`, `peipkg.evman`, `stratafs.evman`, `trustd.evman` by `pkm/tools/gen-events-book.py`. Edit the fragment, not this page.*

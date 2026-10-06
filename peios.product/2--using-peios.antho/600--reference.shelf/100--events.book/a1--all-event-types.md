@@ -3,7 +3,7 @@ title: "All Event Types"
 description: "Every event type the evman catalogue defines, in one table: its tier, its defining fragment and its one-line summary, generated from the fragments."
 ---
 
-Every event type in the evman catalogue, generated from the fragments by `pkm/tools/gen-events-book.py`: 100 event types and 593 fields, from `kacs.evman`, `kernel.evman`, `kmes.evman`, `lcs.evman`, `ntfe.evman`, `stratafs.evman`, `peinit.evman`, `peipkg.evman`, `eventd.evman`, `authd.evman`, `lpsd.evman`, `timed.evman`, `netd.evman`, `trustd.evman`.
+Every event type in the evman catalogue, generated from the fragments by `pkm/tools/gen-events-book.py`: 101 event types and 594 fields, from `kacs.evman`, `kernel.evman`, `kmes.evman`, `lcs.evman`, `ntfe.evman`, `stratafs.evman`, `peinit.evman`, `peipkg.evman`, `eventd.evman`, `authd.evman`, `lpsd.evman`, `timed.evman`, `netd.evman`, `trustd.evman`, `gxwid.evman`.
 
 The tier sets whether an event type is recorded by default (PGSS <span>§</span>6.8). Each type links to its page; each page's fields link to the field index.
 
@@ -171,6 +171,12 @@ The tier sets whether an event type is recorded by default (PGSS <span>§</span>
 | [`trustd.root.added`](~peios/events/trustd/trustd-root-added) | standard | `trustd.evman` | A root certificate authority entered the set this machine trusts. |
 | [`trustd.root.distrusted`](~peios/events/trustd/trustd-root-distrusted) | standard | `trustd.evman` | A distrust took a root certificate authority out of the set this machine trusts. |
 | [`trustd.root.removed`](~peios/events/trustd/trustd-root-removed) | standard | `trustd.evman` | A root certificate authority left the set this machine trusts, and no distrust names it: its addition was withdrawn, or a bundle upgrade dropped it. |
+
+## Desktop Server Events
+
+| Event type | Tier | Fragment | Summary |
+|---|---|---|---|
+| [`gxwid.certificate.renewed`](~peios/events/gxwid/gxwid-certificate-renewed) | essential | `gxwid.evman` | gxwid made the machine a new certificate for its GXWI key and serves it from now on, in place of the one before. |
 
 ## Not in the catalogue
 

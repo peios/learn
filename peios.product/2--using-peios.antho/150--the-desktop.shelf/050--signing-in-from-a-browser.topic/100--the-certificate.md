@@ -1,7 +1,7 @@
 ---
 title: The machine's certificate
 type: how-to
-description: GXWI serves the desktop over HTTPS with a certificate each machine makes for itself — why the browser warns, how to check the fingerprint before going past the warning, how to stop the warning by importing the certificate, and where the key is kept.
+description: GXWI serves the desktop over HTTPS with a certificate each machine makes for itself and renews every year — why the browser warns, how to check the fingerprint before going past the warning, how to stop the warning by importing the certificate, and where the key is kept.
 related:
   - peios/desktop-settings/for-all-users
   - peios/disks-and-filesystems/installing-to-disk
@@ -24,15 +24,18 @@ The warning is the browser saying it cannot tell this certificate from one
 someone between you and the machine made up. You can: every certificate has a
 SHA-256 fingerprint, and the machine shows you its own.
 
-- **At the machine's console**, the installer's and first-boot setup's first
-  page ends with it, beside the addresses the machine has.
-- **Once signed in**, on the console or in a terminal on the desktop, it is in
-  `/var/state/gxwi/certificate.sha256`, which anyone can read:
+Sign in at the machine's own console — on a live medium, as `peios`, which
+needs no password — and print the fingerprint, which any account may read:
 
-  ```
-  $ cat /var/state/gxwi/certificate.sha256
-  B8:39:98:AB:E7:F6:64:25:BC:0D:DE:56:F4:78:2E:21:3D:D8:AB:FF:EF:78:8A:81:6E:94:99:17:94:83:73:C3
-  ```
+```
+$ cat /var/state/gxwi/certificate.sha256
+B8:39:98:AB:E7:F6:64:25:BC:0D:DE:56:F4:78:2E:21:3D:D8:AB:FF:EF:78:8A:81:6E:94:99:17:94:83:73:C3
+```
+
+Read it there, and not from a page in the browser: a page that came over the
+connection you are checking would show whatever someone in the middle of it
+wanted. Once you trust the connection, a terminal on the desktop reads the same
+file.
 
 In the browser, open the warning's details and view the certificate. Its
 SHA-256 fingerprint is the same 32 pairs of hex digits, though some browsers
@@ -52,6 +55,9 @@ made, and `localhost`. It does not name the machine's addresses, which are not
 known when the certificate is made and can change. A browser that trusts the
 certificate still warns when the machine is opened by an address or a name the
 certificate does not carry.
+
+An imported certificate lasts until the machine renews it, once a year (see
+[Renewal](#renewal)): import the new one then.
 
 A certificate only gone past at the warning, not imported, also costs the
 **waiting page**: GXWI keeps a page in the browser that it shows while the
@@ -74,10 +80,30 @@ first warning, including after the machine's key changes.
 | `/var/state/gxwi/certificate.pem` | The certificate | Everyone |
 | `/var/state/gxwi/certificate.sha256` | Its SHA-256 fingerprint | Everyone |
 
-GXWI makes the key once and keeps it, and the certificate once for that key, so
-the fingerprint stays the same for as long as the key does. It never replaces a
-key it cannot read: it stops, and says so. Move the files aside to have a new
-key made; every browser that trusted the old certificate then warns again.
+GXWI makes the key once and keeps it. It never replaces a key it cannot read:
+it stops, and says so. Move the files aside to have a new key made; every
+browser that trusted the old certificate then warns again.
+
+## Renewal
+
+A certificate lasts a year, from the day before it was made. GXWI renews it
+once fewer than 30 days of it remain, for the same key: the machine is the same
+machine, but the certificate, and so its fingerprint, is new. Each renewal
+means one more warning in every browser that went past the old one, and
+importing the new `certificate.pem` again for anyone who imported the old.
+Check the new fingerprint as you did the first.
+
+GXWI looks when it starts, once a day while it runs, and when it is reloaded:
+
+```
+$ svctl reload gxwid
+```
+
+Nothing restarts, and nobody signed in is signed out. Connections already open
+carry on; the next one the browser makes is shown the new certificate. A
+renewal is recorded as the event
+[`gxwid.certificate.renewed`](~peios/events/gxwid/gxwid-certificate-renewed),
+which carries the old and new fingerprints.
 
 On a live medium `/var/state` is in memory, so every boot makes a new key and
 the warning comes back each time. Installing carries the medium's key into the

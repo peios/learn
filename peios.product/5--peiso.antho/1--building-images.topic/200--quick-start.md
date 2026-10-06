@@ -89,9 +89,10 @@ Fenestra and its apps run as the logged-on principal using a `RemoteInteractive`
 session. Installed systems use their provisioned account instead.
 
 GXWI serves **HTTPS** with a certificate the machine makes for itself, so the
-browser warns before the first sign-in. The installer's first page on the
-console shows the certificate's SHA-256 fingerprint; check it against the one
-the browser shows before going past the warning. A live medium makes a new key
+browser warns before the first sign-in. Before going past the warning, check
+the certificate's SHA-256 fingerprint against the machine's own: sign in at the
+VM's console (the live image's `peios` account has no password) and run
+`cat /var/state/gxwi/certificate.sha256`. A live medium makes a new key
 every boot, so the warning comes back each time; installing carries the
 medium's key into the installed system, which keeps it from then on. Plain
 `http://` is answered with a redirect to `https://` and nothing else. See
