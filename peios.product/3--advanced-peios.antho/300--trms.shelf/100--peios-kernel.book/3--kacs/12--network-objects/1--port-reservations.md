@@ -94,7 +94,8 @@ UDP or UDP-Lite:
    for `PORT_BIND`, through the ordinary AccessCheck pipeline (§3.8)
    with PIP context, privilege-use marking and audit events — a port
    descriptor may carry a SACL, and its decisions surface through the
-   same KMES stream as any other object's. [*net.port.access-check]
+   same KMES stream as any other object's, with `object.kind`
+   `socket`. [*net.port.access-check]
 4. Deny → `-EACCES`. Grant → the bind proceeds, and the caller's token is
    recorded on the socket as its **binder**. [*net.port.deny-eacces]
 

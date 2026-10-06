@@ -108,5 +108,5 @@ rejects the response rather than making an arbitrary choice. [*layer.resolution.
 
 Duplicates that never get compared are not an error. [*layer.resolution.uncompared-duplicate-sequences-are-not-an-error]
 
-Both produce `EIO` and an `LCS_SOURCE_VALIDATION_FAILURE` audit event
+Both produce `EIO` and an `lcs.source.response.rejected` audit event
 (§5.4.4). [*layer.resolution.sequence-validation-failure-is-eio]

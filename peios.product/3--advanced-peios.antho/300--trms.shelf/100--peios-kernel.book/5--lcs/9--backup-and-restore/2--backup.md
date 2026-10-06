@@ -35,10 +35,10 @@ subtree root (§5.2.9). [*backup.orphaned-key-is-enoent]
 
 ## Audit
 
-`LCS_BACKUP_START` is emitted **before any subtree data is read**, and
+`lcs.audit.backup.started` is emitted **before any subtree data is read**, and
 if it cannot be emitted the backup returns `EIO` and does not start. [*backup.start-event-precedes-any-data-or-eio]
 
-`LCS_BACKUP_COMPLETE` is emitted afterwards, carrying the result, and a
+`lcs.audit.backup.ended` is emitted afterwards, carrying the result, and a
 failure to emit it cannot change a result that has already happened. [*backup.complete-event-cannot-change-the-result]
 
 ## What is written

@@ -130,7 +130,8 @@ privileges for its whole lifetime.
 Every exercise sets the token's monotonic used state for that
 privilege, and every standalone gate emits an ftrace event. [*priv.audit.ftrace-per-standalone-gate]
 
-KMES audit events are emitted only for the five AccessCheck-influencing
+KMES audit events, of type `kacs.audit.privilege.used`, are emitted
+only for the five AccessCheck-influencing
 privileges, and only when the token's `audit_policy` opts in through
 `PRIVILEGE_USE_SUCCESS` or `PRIVILEGE_USE_FAILURE`. The event fires
 when the privilege's provenance bits intersect both the mapped desired
@@ -144,5 +145,5 @@ whether the DACL would have granted the same access, so their events
 also fire for accesses the DACL alone would have permitted. [*priv.audit.backup-restore-not-counterfactual]
 
 A `MAXIMUM_ALLOWED` request short-circuits this accounting entirely,
-recording no used bits and emitting no privilege-use events for any
-privilege.
+recording no used bits and emitting no `kacs.audit.privilege.used`
+events for any privilege.

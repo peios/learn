@@ -73,7 +73,7 @@ TIME  cpuN  #SEQUENCE  ORIGIN  event.type  payload
 | `cpuN` | The per-CPU ring the event was drained from. Events are sharded per CPU all the way down; `revstrm` prints the CPU rather than merging into a single ordered stream. |
 | `#SEQUENCE` | The event's per-ring sequence number. Gaps in the sequence on a given CPU indicate lost events. |
 | `ORIGIN` | The origin class: one of `USR`, `KMES`, `KACS`, `LCS` (or `cN` for an unrecognised class). |
-| `event.type` | The event-type string (e.g. `access-audit`, `logon-session-destroyed`). |
+| `event.type` | The event-type string (e.g. `kacs.audit.access.checked`, `kacs.session.destroyed`). |
 | `payload` | The msgpack payload, rendered as described below. |
 
 ### Payload rendering
@@ -85,16 +85,16 @@ By default the payload is rendered **compactly** on the header line, truncated i
 
 A payload that will not decode as msgpack falls back to a hex preview rather than being dropped. With `--pretty`, the same payload is expanded into an aligned, indented block — one key per line, nested maps and arrays expanded beneath their key. Use `--pretty` when you are reading individual events closely; leave it off when tailing a busy stream.
 
-The event schemas themselves — `access-audit`, `continuous-audit`, `privilege-use`, `logon-session-destroyed` — are documented in [Events and transport](~peios/auditing/events-and-transport). `revstrm` does not interpret them beyond the field-name conventions above; it is a stream printer, not an event analyser.
+The event schemas themselves — `kacs.audit.access.checked`, `kacs.audit.handle.used`, `kacs.audit.privilege.used`, `kacs.session.destroyed` and the rest — are documented in [Events and transport](~peios/auditing/events-and-transport), and `evman <event-type>` describes any of them. `revstrm` does not interpret them beyond the field-name conventions above; it is a stream printer, not an event analyser.
 
 ### Example
 
 A short follow session might look like:
 
 ```
-14:22:07.481923  cpu0  #10432    KACS  access-audit  {subject: {user_sid: S-1-5-21-…, integrity_level: 12288, …}, requested_access: FILE_READ_DATA|FILE_READ_ATTRIBUTES, granted_access: FILE_READ_DATA|FILE_READ_ATTRIBUTES, success: true, …}
-14:22:07.492010  cpu3  #8871     KACS  privilege-use  {privilege: "SeBackupPrivilege", surviving_access: FILE_READ_DATA, success: true, …}
-14:22:08.003114  cpu0  #10433    KACS  logon-session-destroyed  {session_id: 4051, user_sid: S-1-5-21-…, logon_type: 2, …}
+14:22:07.481923  cpu0  #10432    KACS  kacs.audit.access.checked  {subject: {token: {sid: S-1-5-21-…, integrity: 12288, …}, …}, access: {requested: 129, granted: 129}, outcome: {success: true}, …}
+14:22:07.492010  cpu3  #8871     KACS  kacs.audit.privilege.used  {privilege: {name: "SeBackupPrivilege", contributed: 1, surviving: 1}, outcome: {success: true}, …}
+14:22:08.003114  cpu0  #10433    KACS  kacs.session.destroyed  {object: {session: {id: 4051, user: {sid: S-1-5-21-…}, logon-type: "interactive", …}}}
 ```
 
 ## Lapping and gaps

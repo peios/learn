@@ -75,11 +75,11 @@ The events are sent through KMES — Peios's kernel-to-userspace event transport
 
 Every audit event includes:
 
-- **The subject** — who was making the access. The token's user SID, group SIDs, integrity level, PIP type and trust, projected UID.
-- **The object context** — a caller-supplied opaque blob identifying the object being accessed. Audit consumers use this to correlate events with the objects they cover.
+- **The subject** — who was making the access. The token's user SID, group SIDs and their attributes, integrity level, token and logon-session LUIDs, token type and impersonation level, projected UID, and the PIP type and trust in force.
+- **The object** — what kind of thing was accessed (`object.kind`) and, where the kernel can name it, which one. A daemon checking access to its own objects names them through the check's audit context, and those records are marked as carrying the daemon's claim.
 - **The access** — what was requested, what was granted, whether the access succeeded.
-- **The trigger** — which ACE matched (for SACL-driven events), which privilege fired (for privilege-use events), or which audit-policy bit (for token-forced events).
-- **The process context** — pid, name, executable path. Useful for correlating events with running processes.
+- **The trigger** — which ACE matched (for SACL-driven events), which privilege fired (for privilege-use events), or that the token's audit policy forced it.
+- **The emitting process** — pid, name, executable path. Useful for correlating events with running processes.
 
 The exact field set varies by event type and is covered in [Events and transport](~peios/auditing/events-and-transport).
 
@@ -87,7 +87,7 @@ The exact field set varies by event type and is covered in [Events and transport
 
 A few clarifications:
 
-- **Audit is not the access decision.** An audit event firing does not mean access was granted; an event for a denied access is just as legitimate. Read the success flag in the event to know what happened.
+- **Audit is not the access decision.** An audit event firing does not mean access was granted; an event for a denied access is just as legitimate. Read the event's `outcome.success` to know what happened.
 - **Audit is not retroactive.** An audit ACE added to an SACL after some accesses have happened does not generate events for those past accesses. Auditing observes the present; the past is the past.
 - **Audit does not survive crash.** An event in flight when the kernel crashes is lost. KMES is designed for the typical case where the kernel keeps running; for crash-resilient audit, a userspace consumer that persists events to disk is what provides durability.
 - **Audit does not authenticate.** The recorded subject is whatever the calling token says they are. If the token has been issued correctly, the audit record reflects reality. The audit layer does not independently verify the principal's identity beyond what the token provides.

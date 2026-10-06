@@ -27,7 +27,7 @@ When `open` succeeds, the kernel attaches several things to the resulting fd. Th
 
 The granted access mask is the central object. It is whatever AccessCheck decided the caller's effective token was entitled to on this file at this moment. The bits set are the rights the fd holder has; the bits not set are rights they do not have.
 
-The continuous audit mask is the union of all alarm ACEs that matched at open time. Every subsequent operation through the fd will check against this mask and emit a continuous-audit event if the operation's required mask overlaps it. See [The SACL](~peios/security-descriptors/the-sacl) and [Audit ACEs](~peios/auditing/audit-aces).
+The continuous audit mask is the union of all alarm ACEs that matched at open time. Every subsequent operation through the fd will check against this mask and emit a `kacs.audit.handle.used` event if the operation's required mask overlaps it. See [The SACL](~peios/security-descriptors/the-sacl) and [Audit ACEs](~peios/auditing/audit-aces).
 
 The FACS-managed flag distinguishes fds that go through the handle model from those that don't. O_PATH fds, for example, are not FACS-managed (covered in [Special cases](~peios/file-access/special-cases)).
 

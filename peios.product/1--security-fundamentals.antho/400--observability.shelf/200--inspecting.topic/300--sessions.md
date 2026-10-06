@@ -90,11 +90,11 @@ For most monitoring purposes, the audit stream from authd is the right source. T
 
 ### Session destruction
 
-The kernel **does** emit a `logon-session-destroyed` event when a session loses its last token reference. The event includes the session ID, the user SID, the logon type, the auth-package name, and the creation timestamp — enough to reconstruct what the session was.
+The kernel **does** emit a `kacs.session.destroyed` event when a session loses its last token reference. The event includes the session ID, the user SID, the logon type, the auth-package name, and the creation time — enough to reconstruct what the session was. The session ID is the same value every audit record made under the session carries as `subject.token.auth-id`, so the two join.
 
 The event is documented in [Events and transport](~peios/auditing/events-and-transport). Tools that want to track session lifecycle subscribe to this event via KMES and write a record on each occurrence.
 
-The pattern: at session creation (detected via authd or via polling), record the start; at the `logon-session-destroyed` event, record the end. The two together give you a complete session log.
+The pattern: at session creation (detected via authd or via polling), record the start; at the `kacs.session.destroyed` event, record the end. The two together give you a complete session log.
 
 ## Inspecting an individual session
 

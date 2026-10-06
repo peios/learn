@@ -62,7 +62,7 @@ mask must be a subset of the concrete registry rights plus
 
 A descriptor that breaks either rule is malformed source data: the
 operation fails closed with `EIO` and an
-`LCS_SOURCE_VALIDATION_FAILURE` audit event is emitted (§5.4.4). [*right.malformed-descriptor-is-eio]
+`lcs.source.response.rejected` audit event is emitted (§5.4.4). [*right.malformed-descriptor-is-eio]
 
 Two further constants, `REG_VALID_MAPPED_ACCESS_MASK` and
 `REG_VALID_ACE_ACCESS_MASK`, express those two bounds.

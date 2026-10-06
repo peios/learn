@@ -11,17 +11,18 @@ it. [*audit.events-stamped-with-effective-token]
 
 ## Copy-up [*audit.copy-up-always-emitted]
 
-Every copy-up emits a record, successful or not. The payload is a map
-of six keys:
+Every copy-up emits a `stratafs.file.copied-up` record, successful or
+not. Its payload carries these fields, each a path of nested maps:
 
-| Key | |
+| Field | |
 |---|---|
-| `path` | The relative path within the mount, `/`-prefixed |
-| `provider_index` | The stratum the object was copied from |
-| `provider_stratum` | That stratum's path |
-| `create_index` | The stratum it was copied into |
-| `create_stratum` | That stratum's path |
-| `result_errno` | Zero on success, the failure otherwise |
+| `object.file.path-relative` | The relative path within the mount, `/`-prefixed |
+| `source.stratum.index` | The stratum the object was copied from |
+| `source.stratum.path` | That stratum's path |
+| `destination.stratum.index` | The stratum it was copied into |
+| `destination.stratum.path` | That stratum's path |
+| `outcome.success` | Whether the copy-up succeeded |
+| `outcome.errno` | The failure, as a negative errno; absent on success |
 
 The caller's identity is not in this payload. It does not need to be:
 KMES stamps the effective, true and process token GUIDs onto every event
@@ -33,19 +34,21 @@ would give a reader a second copy that could disagree with the first.
 Recording it matters because §4.6.3 preserves the source's descriptor,
 so nothing about the resulting object records who caused it to exist.
 A reader of these records must take the identity from the event header,
-not look for it among the keys.
+not look for it among the fields.
 
 The `ENOTDIR` of parent materialisation is reported through this event
-with its `result_errno` rather than through the refusal event below;
-the required fields are all present, under a different name.
+in its `outcome.errno` rather than through the refusal event below;
+the required fields are all present, under a different event type.
 
 ## Refused mutation [*audit.arrangement-refusal-emitted]
 
-A mutation refused because of how the mount is arranged emits a record
-with six keys: the path, the operation name, the provider index, the
-provider stratum path, the errno, and whether the refusal was deferred.
-The provider stratum is a string where a provider is known and msgpack
-nil where none is; see below.
+A mutation refused because of how the mount is arranged emits a
+`stratafs.mutation.refused` record carrying the relative path
+(`object.file.path-relative`), the operation (`operation.name`), the
+providing stratum (`source.stratum.index` and `source.stratum.path`),
+the error (`outcome.errno`, negative) and whether the refusal was
+deferred (`outcome.deferred`). The `source.stratum` fields are present
+only where a provider is known; see below.
 
 What counts as an arrangement refusal is one explicit list — `EROFS`,
 `EXDEV`, `ENOTDIR`, `EISDIR`, `ENOTEMPTY`, `EEXIST`, `EINVAL`. Call
@@ -72,10 +75,10 @@ could not be removed again, and a failed publication rollback after a
 copy-up.
 
 A refusal raised before a provider is known — creation, tmpfile, the
-heads of link and rename — has no stratum to name. It reports a provider
-index of `-1` and a `provider_stratum` of msgpack **nil**, so a reader
-can tell "no provider was involved" from "the provider's path is empty".
-The two fields agree: an index of `-1` always accompanies a nil stratum.
+heads of link and rename — has no stratum to name. Its record has no
+`source` map at all: `source.stratum.index` and `source.stratum.path`
+are both absent, never `-1`, nil or an empty string, so a reader can
+tell "no provider was involved" from "the provider's path is empty".
 
 ### One exception [*audit.deferred-deletion-audited-on-any-error]
 
@@ -90,7 +93,7 @@ The record is stratafs's whether or not stratafs was entered. The
 delete-child check on the merged parent runs before `->unlink`, so a
 directory whose descriptor tightened between the arm and the close
 refuses the deletion before the filesystem sees it; KACS then raises
-the stratafs record itself, with a provider index of `-1`, since no
+the stratafs record itself, with no `source.stratum` fields, since no
 stratum was consulted.
 
 ## What is not audited [*audit.lookup-not-audited]

@@ -60,17 +60,17 @@ A session is destroyed when its token reference count, having been positive, dro
 
 1. Removes the session from the session table.
 2. Tears down any linked-pair association it was holding (see [Elevation and linked tokens](~peios/security-fundamentals/tokens/elevation)).
-3. Emits a `logon-session-destroyed` event through KMES.
+3. Emits a `kacs.session.destroyed` event through KMES.
 
 The event carries enough information for consumers to clean up downstream state:
 
 | Field | What it is |
 |---|---|
-| `session_id` | The destroyed session's ID. |
-| `user_sid` | The principal. |
-| `logon_type` | The type. |
-| `auth_package` | The auth package string. |
-| `created_at` | The session's creation timestamp. |
+| `object.session.id` | The destroyed session's ID. |
+| `object.session.user.sid` | The principal. |
+| `object.session.logon-type` | The type, by name: `interactive`, `network`, `batch`, `service`, `network-cleartext`, `new-credentials` or `remote-interactive`. |
+| `object.session.auth-package` | The auth package string. |
+| `object.session.logon-time` | The session's creation time, in nanoseconds. |
 
 The consumers are audit pipelines, accounting tools and session-aware services. **authd is not one of them**: it keeps no per-session state — no tickets, no cached credentials, no handle on the tokens it mints — so there is nothing of its own for it to release when a session goes. An authority that did hold session-scoped state would subscribe here to learn when to drop it.
 

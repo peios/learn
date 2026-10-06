@@ -14,7 +14,7 @@ The conceptual treatment is [Privileges](~peios/privileges/overview), and the fo
 
 ## Five privileges influence an access check
 
-Only five can contribute bits to a granted mask, and therefore only five can appear in a `privilege-use` event:
+Only five can contribute bits to a granted mask, and therefore only five can appear as the `privilege.name` of a `kacs.audit.privilege.used` event:
 
 - `SeSecurityPrivilege`
 - `SeTakeOwnershipPrivilege`
@@ -22,7 +22,7 @@ Only five can contribute bits to a granted mask, and therefore only five can app
 - `SeRestorePrivilege`
 - `SeRelabelPrivilege`
 
-Any other bit fails the audit encoder closed rather than emitting an unnamed privilege. See the [Events Index §3.3](~peios/kernel-access-events/privilege-use).
+Any other bit fails the audit encoder closed rather than emitting an unnamed privilege. See [`kacs.audit.privilege.used`](~peios/events/kacs/kacs-audit-privilege-used) in the Events Index.
 
 ## Two are enforced but not nameable
 

@@ -24,7 +24,7 @@ the following places.
 | ACE mask mapping | ACE masks are mapped through GenericMapping at evaluation time | Required for `GENERIC_ALL` in central access policy recovery ACEs (§3.8.8). [*dtyp.ace-mask-generic-mapping] |
 | `MAXIMUM_ALLOWED` | First-writer-wins for targeted *and* maximum-allowed requests | Eliminates disagreement between "what can I do?" and "can I do this?" on a non-canonically ordered DACL. [*dtyp.maximum-allowed-first-writer-wins] |
 | Zero desired mask | Succeeds rather than returning access denied | "Asked for nothing, got nothing" is a valid answer. [*dtyp.zero-desired-mask-succeeds] |
-| Alarm ACEs | Repurposed for continuous per-operation auditing (§3.8.9) | Reserved but never implemented in the reference model. [*dtyp.alarm-ace-continuous-audit] |
+| Alarm ACEs | Repurposed for continuous per-operation auditing, recorded as `kacs.audit.handle.used` (§3.8.9) | Reserved but never implemented in the reference model. [*dtyp.alarm-ace-continuous-audit] |
 | Multiple scoped policy ACEs | Several permitted per SACL | AND semantics make composition safe. [*dtyp.multiple-scoped-policy-aces] |
 | Mandatory policy mutability | `mandatory_policy` is immutable on the token (§3.2.2) | A mutable policy reduces MIC to advisory. [*dtyp.mandatory-policy-immutable] |
 | Impersonation integrity ceiling | Enforced unconditionally; `SeImpersonatePrivilege` does not bypass it (§3.5.2) | MIC is a real boundary precisely because the mandatory policy is immutable. [*dtyp.impersonation-ceiling-unconditional] |

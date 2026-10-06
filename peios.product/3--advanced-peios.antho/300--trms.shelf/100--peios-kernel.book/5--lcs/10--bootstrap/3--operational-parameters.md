@@ -58,7 +58,7 @@ A value is checked against its range when it is read.
 - **Invalid** — out of range, the wrong type, or missing — the value is
   **ignored** and the previously active one is kept: the compiled-in
   default or the last known-good. [*param.validation.invalid-is-ignored-previous-kept]
-  An `LCS_SELF_CONFIG_INVALID` audit event is emitted naming the
+  An `lcs.config.value.rejected` audit event is emitted naming the
   parameter, what was wrong, and the value being retained (§5.4.4).
 
 **Values are never clamped or silently corrected.** [*param.validation.never-clamped] There is no

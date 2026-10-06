@@ -144,7 +144,7 @@ If the steps above did not produce a clear answer, check the audit log. The acce
 - The matched ACE (for SACL-driven audits).
 - The subject and process.
 
-A `privilege-use` event with `success=false` tells you a privilege fired and was stripped — that points at confinement/CAAP/PIP. An `access-audit` event with `success=false` and a DACL-walk trigger tells you the DACL did not grant. The audit trail is often the fastest way to localise a denial.
+A `kacs.audit.privilege.used` event with `outcome.success` false tells you a privilege fired and was stripped — that points at confinement/CAAP/PIP. A `kacs.audit.access.checked` event with `outcome.success` false tells you the check as a whole did not grant what was asked; compare `access.requested` with `access.granted` to see which bits were missing. The audit trail is often the fastest way to localise a denial.
 
 ## A compact checklist
 
@@ -160,7 +160,7 @@ Most denials are diagnosed at step 4 with one of the six categories listed at th
 
 ## When to use the access-check syscall directly
 
-For complex investigations, calling `kacs_access_check` directly is the precise tool. The syscall takes the token, the SD, the desired mask, and all the optional parameters (privilege_intent, self_sid, local_claims, object_audit_context, pip_type/pip_trust). It returns the granted mask, the continuous-audit mask, and the staging-mismatch flag.
+For complex investigations, calling `kacs_access_check` directly is the precise tool. The syscall takes the token, the SD, the desired mask, and all the optional parameters (privilege_intent, self_sid, local_claims, the audit context, pip_type/pip_trust). It returns the granted mask, the continuous-audit mask, and the staging-mismatch flag.
 
 You can call it from a debugging tool with the exact inputs the failing code used and see what comes back. The granted mask tells you which bits ended up granted; the audit emissions tell you which layers fired. A denial that is inscrutable from logs becomes visible from a manual access-check invocation with a known set of inputs.
 

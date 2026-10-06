@@ -202,6 +202,14 @@ B and B's token has a category enabled, operations during
 impersonation are audited under B's identity. [*token.audit-policy-follows-impersonation] The creation default is
 0. [*token.audit-policy-default-zero]
 
+The audit records these categories produce describe the effective token
+in their `subject.token` fields: the user SID as `sid`, the groups as
+`groups` with their attribute words as the parallel `group-attributes`,
+the integrity level as `integrity`, `token_id` as `id`, `auth_id` as
+`auth-id`, the token type as `type` (`primary` or `impersonation`), the
+impersonation level as `impersonation` (0 for a primary token), and the
+projected Linux UID as `uid` (§3.C).
+
 ## Credential projection (fixed)
 
 | Field | Description |

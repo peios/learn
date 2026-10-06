@@ -331,7 +331,7 @@ ran; the [viewer](~peios/networking/the-pnp-viewer) paints those onto the wire,
 lists every live flow with its sentence, and shows the counter store
 live. A packet answered by a cached sentence emits no event — there was
 no evaluation — and is counted instead. `REPORT` effects become KMES
-`network-report` events for the audit pipeline. Everything the stores
+`ntfe.verdict.reported` events for the audit pipeline. Everything the stores
 refuse — a flow past its tag tripwire, a counter table at its key cap, a
 packet lacking a view's key, a refusal that could not be sent — is
 counted and shown; nothing is silent.

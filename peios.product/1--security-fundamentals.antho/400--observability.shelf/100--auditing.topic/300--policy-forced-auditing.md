@@ -20,7 +20,7 @@ This page covers both mechanisms, when each fires, and how they compose with SAC
 
 When AccessCheck completes, the pipeline knows which privileges contributed bits to the granted mask. A backup tool that used `SeBackup` to bypass the DACL has the privilege recorded against the bits it contributed; an administrator who used `SeTakeOwnership` to gain `WRITE_OWNER` has that privilege recorded.
 
-If the calling token's `audit_policy` requests it, the kernel fires a **privilege-use event** for each privilege that contributed. The events fall into two flavours:
+If the calling token's `audit_policy` requests it, the kernel fires a **privilege-use event** (`kacs.audit.privilege.used`) for each privilege that contributed. The events fall into two flavours:
 
 | Flavour | Triggered by | Fires when |
 |---|---|---|
@@ -40,7 +40,7 @@ If `audit_policy & PRIVILEGE_USE_SUCCESS` is set, no event fires (no bits surviv
 
 Either configuration is useful. Tracking only success tells you when privileges actually grant access; tracking only failure tells you when privileges *try* to grant access but cannot. Tracking both gives you a complete picture of privilege exercise.
 
-The event itself includes the privilege name (e.g. `SeBackupPrivilege`), the bits the privilege contributed pre-narrowing, the bits that survived to the final result, and a success boolean. The exact schema is in [Events and transport](~peios/auditing/events-and-transport).
+The event itself includes the privilege name as `privilege.name` (e.g. `SeBackupPrivilege`), the bits the privilege contributed pre-narrowing as `privilege.contributed`, the bits that survived to the final result as `privilege.surviving`, and `outcome.success`, which is true when any bits survived. The exact schema is in [Events and transport](~peios/auditing/events-and-transport).
 
 ## Token audit_policy
 
@@ -81,8 +81,8 @@ The SACL audit walk (step 14) and the token audit policy (step 14b) run independ
 
 A worked composition example. A SACL has one audit ACE on `Everyone` for `FILE_READ_DATA` with `SUCCESSFUL_ACCESS_ACE_FLAG`. The calling token has `audit_policy = OBJECT_ACCESS_SUCCESS`. An access for read succeeds.
 
-- Step 14 (SACL walk): the audit ACE matches Everyone, the access succeeded, the success flag is set, fire one event with trigger = "sacl" and the matched ACE.
-- Step 14b (token-forced): `OBJECT_ACCESS_SUCCESS` is set, the access succeeded, fire one event with trigger = "policy".
+- Step 14 (SACL walk): the audit ACE matches Everyone, the access succeeded, the success flag is set, fire one `kacs.audit.access.checked` event with `trigger.kind` `sacl` and the matched ACE as `trigger.ace`.
+- Step 14b (token-forced): `OBJECT_ACCESS_SUCCESS` is set, the access succeeded, fire one with `trigger.kind` `policy` and no `trigger.ace`.
 
 Two events for one access. They are not duplicates — they have different triggers, and an audit consumer can distinguish them. The SACL-driven event records that this specific audit ACE matched; the policy-driven event records that the token's audit policy required logging.
 

@@ -71,7 +71,7 @@ During step 14 of access check, when a `SYSTEM_ALARM` ACE matches, the kernel:
 2. Returns the mask to the caller as part of the access check's output.
 3. The caller (typically FACS for files) stores the mask on the open handle. For registry keys the enforcement point is LCS, the kernel registry subsystem — never the registryd source, which stores data but makes no security decisions (and LCS v0.21 defines only open-time SACL audit for keys, not continuous audit).
 
-Then, on each subsequent operation through the handle, the enforcement point compares the operation's required-access mask against the handle's continuous audit mask. If they overlap (any bit shared), the kernel emits a `continuous-audit` event for the operation.
+Then, on each subsequent operation through the handle, the enforcement point compares the operation's required-access mask against the handle's continuous audit mask. If they overlap (any bit shared), the kernel emits a `kacs.audit.handle.used` event for the operation.
 
 ### Audit vs alarm: granularity
 

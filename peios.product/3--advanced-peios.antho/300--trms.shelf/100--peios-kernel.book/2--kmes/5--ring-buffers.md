@@ -138,7 +138,7 @@ protocol.
 
 If allocating the new rings fails, the old rings stay live at their
 size, no generation changes, and the failure is reported through a
-`KMES_BUFFER_SWAP_FAILED` event (§2.6). [*ring.swap.alloc-failure-keeps-old] A migration abort — a corrupt
+`kmes.buffer.swap.failed` event (§2.6). [*ring.swap.alloc-failure-keeps-old] A migration abort — a corrupt
 size field encountered inside the quiesced section — abandons the
 swap the same way but emits no event. [*ring.swap.abort-emits-no-event] There is no automatic retry;
 the next configuration write or reboot tries again. A superseded

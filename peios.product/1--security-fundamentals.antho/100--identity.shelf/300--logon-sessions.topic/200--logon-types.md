@@ -8,7 +8,7 @@ related:
   - peios/identity/well-known-principals
 ---
 
-Every logon session carries a `logon_type` — a single number, set by authd at session creation, that classifies the nature of the sign-in. The type is informational from KACS's point of view: AccessCheck does not branch on it. But it is recorded in every audit event that references the session, and it is what audit consumers and SIEM tools use to distinguish "the user logged in at the console" from "the user logged in over the network" from "a service started under this account".
+Every logon session carries a `logon_type` — a single number, set by authd at session creation, that classifies the nature of the sign-in. The type is informational from KACS's point of view: AccessCheck does not branch on it. But it is recorded — by name, such as `interactive` or `network` — in the `kacs.session.destroyed` event that closes the session, and it is what audit consumers and SIEM tools use to distinguish "the user logged in at the console" from "the user logged in over the network" from "a service started under this account".
 
 There are seven types in v0.20.
 

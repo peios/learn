@@ -40,7 +40,7 @@ Inputs:
 | `local_claims` | The caller. | Per-call attributes in the `@Local.*` namespace, available to conditional ACE expressions. |
 | Object type list | The caller (optional). | A tree of property GUIDs for per-property evaluation. See "Object type list" below. |
 | PIP type and trust | The PSB of the calling process. | Used by the PIP step to compare against any trust label on the object. |
-| Object audit context | The caller. | An opaque blob included in any audit events emitted for this call, identifying the object to audit consumers. |
+| Audit context | The caller (optional). | A msgpack map naming the object, such as `{kind: "service", service: {name: "jellyfin"}}`. The kernel rejects anything else with `EINVAL`, and copies it into the call's audit events as `object.kind` and `object.<kind>.*`, marked as the caller's claim. |
 
 Outputs:
 

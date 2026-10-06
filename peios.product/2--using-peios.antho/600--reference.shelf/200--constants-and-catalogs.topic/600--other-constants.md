@@ -70,6 +70,12 @@ A session's `logon_type` field. The model is [Logon types](~peios/logon-sessions
 
 Values 1, 6, 7 and 11 upward are reserved.
 
+Audit events name the type rather than numbering it: the
+`object.session.logon-type` of a `kacs.session.destroyed` event is the
+constant's suffix in kebab case — `interactive`, `network`, `batch`,
+`service`, `network-cleartext`, `new-credentials` or
+`remote-interactive`.
+
 ## Elevation types
 
 A token's `elevation_type` field.
@@ -96,14 +102,14 @@ A program reasoning about tiers compares the numbers. The Peios Kernel TRM §3.7
 
 ## Token audit policy flags
 
-A token's `audit_policy` field. These are what force the audit events in the [Events Index](~peios/kernel-access-events/access-audit).
+A token's `audit_policy` field. These are what force the audit events in the [Events Index](~peios/events/kacs/kacs-audit-access-checked).
 
 | Flag | Value | Meaning |
 |---|---|---|
-| `OBJECT_ACCESS_SUCCESS` | 0x01 | Force an audit event on every successful access. |
-| `OBJECT_ACCESS_FAILURE` | 0x02 | Force an audit event on every failed access. |
-| `PRIVILEGE_USE_SUCCESS` | 0x04 | Emit a `privilege-use` event when a privilege's bits survive. |
-| `PRIVILEGE_USE_FAILURE` | 0x08 | Emit a `privilege-use` event when its bits are stripped. |
+| `OBJECT_ACCESS_SUCCESS` | 0x01 | Force a `kacs.audit.access.checked` event, with `trigger.kind` `policy`, on every successful access. |
+| `OBJECT_ACCESS_FAILURE` | 0x02 | Force a `kacs.audit.access.checked` event, with `trigger.kind` `policy`, on every failed access. |
+| `PRIVILEGE_USE_SUCCESS` | 0x04 | Emit a `kacs.audit.privilege.used` event when a privilege's bits survive. |
+| `PRIVILEGE_USE_FAILURE` | 0x08 | Emit a `kacs.audit.privilege.used` event when its bits are stripped. |
 
 ## Create dispositions
 

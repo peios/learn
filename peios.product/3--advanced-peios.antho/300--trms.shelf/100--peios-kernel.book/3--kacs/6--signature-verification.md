@@ -148,8 +148,9 @@ fails closed. [*sig.unverifiable.lsv-denies]
 ### The boot-time probe [*sig.boot-probe]
 
 A `late_initcall` allocates the transform once and, if it cannot,
-emits `pr_err` and a `KACS_SIGNING_CRYPTO_UNAVAILABLE` KMES event
-carrying the errno. The condition is then visible at boot rather than
+emits `pr_err` and a `kacs.signature.crypto.failed` KMES event
+carrying `signature.crypto-stage` `boot-probe` and the error as
+`outcome.errno`, negative. The condition is then visible at boot rather than
 inferred from every process running without an integrity label.
 
 It cannot refuse to start, and two things rule that out rather than one:

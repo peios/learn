@@ -67,7 +67,7 @@ flowchart LR
     A --> G["Limited token (linked pair)"]
 ```
 
-The kernel keeps a reference count of how many tokens belong to a session. When the count drops to zero — every token of the session has been released — the session itself is destroyed and a `logon-session-destroyed` event is emitted.
+The kernel keeps a reference count of how many tokens belong to a session. When the count drops to zero — every token of the session has been released — the session itself is destroyed and a `kacs.session.destroyed` event is emitted.
 
 The implication is that destroying a session is not a primitive operation. There is no `kacs_destroy_session` syscall. You destroy a session by ensuring every token belonging to it is released, which usually means ending every process running on those tokens. **Forced sign-out** is implemented this way, in user space: asked by a person signing themselves out, or by an administrator signing somebody else out, authd ends every process whose primary token belongs to the session, and the kernel does the rest.
 
@@ -97,7 +97,7 @@ This matters in two practical ways:
 
 If you want the catalog of logon types — what Interactive, Network, Service, Batch, NewCredentials, and the rest each mean — read [Logon types](~peios/logon-sessions/logon-types).
 
-If you want the creation, destruction, and forced sign-out mechanics — including the `logon-session-destroyed` event and what authd does to sign somebody out — read [Session lifecycle](~peios/logon-sessions/lifecycle).
+If you want the creation, destruction, and forced sign-out mechanics — including the `kacs.session.destroyed` event and what authd does to sign somebody out — read [Session lifecycle](~peios/logon-sessions/lifecycle).
 
 If you want to see which sessions are currently active on a running system, read [Inspecting tokens, sessions, and processes](~peios/inspecting/overview).
 

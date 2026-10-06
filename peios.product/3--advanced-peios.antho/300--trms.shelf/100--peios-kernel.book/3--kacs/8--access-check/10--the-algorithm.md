@@ -235,6 +235,12 @@ failure event under `PRIVILEGE_USE_FAILURE`. Both zero means no event.
 In result-list mode the comparison folds across nodes — success if the
 bits survive on any node, failure only if they survive on none. [*check.algorithm.privilege-use-folds-across-nodes]
 
+The event is `kacs.audit.privilege.used`. Its `privilege.contributed`
+is `provenance & mapped_desired`, its `privilege.surviving` is
+`success_bits` (empty on a failure event), and its `access.requested`
+and `access.granted` are the whole check's `mapped_desired` and final
+`granted`, not this privilege's share of them.
+
 The whole step is skipped in `MAXIMUM_ALLOWED` mode, so such a request
 marks nothing used and emits nothing.
 

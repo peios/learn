@@ -17,11 +17,20 @@ is derived from the LogonSession ID. Several tokens may share one
 session — linked pairs, and tokens derived by duplication. [*token.session.shared-by-many-tokens]
 
 When the last token referencing a session is freed, the kernel
-destroys the session object and emits a `logon-session-destroyed`
+destroys the session object and emits a `kacs.session.destroyed`
 event through KMES. [*token.session.destroyed-with-last-token] The event is for whatever keeps per-session state
 outside the kernel — an audit pipeline, an accounting tool, an authority
 that caches credentials per session. authd keeps none and does not
 subscribe.
+
+The record describes the session under `object.session`: its LUID as
+`id` (the `subject.token.auth-id` of every record made under it), the
+user SID as `user.sid`, the logon type as `logon-type`, the
+authentication package as `auth-package`, and the creation time as
+`logon-time`. The logon type is written by name — `interactive`,
+`network`, `batch`, `service`, `network-cleartext`, `new-credentials`
+or `remote-interactive` — and the time in realtime nanoseconds, though
+the kernel holds it to whole seconds.
 
 There is one rollback path for the case where authd creates a session
 but no token ever becomes live for it:
@@ -29,7 +38,7 @@ but no token ever becomes live for it:
 and succeeds only when the session exists, has zero live tokens, has
 no linked-token state, and has no other in-flight kernel references. [*token.session.destroy-empty.gates]
 On success it destroys the object and emits the same
-`logon-session-destroyed` event as normal cleanup. [*token.session.destroy-empty.emits-event] A nonexistent
+`kacs.session.destroyed` event as normal cleanup. [*token.session.destroy-empty.emits-event] A nonexistent
 session fails with `-ENOENT`; one with any live token, linked-token
 state, or in-flight reference fails with `-EBUSY`. [*token.session.destroy-empty.errors]
 

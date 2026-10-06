@@ -127,12 +127,13 @@ For most code paths, this introspection is unnecessary — the granted mask is w
 
 ## What goes in audit
 
-The privilege-use audit event for each fire records:
+The privilege-use audit event (`kacs.audit.privilege.used`) for each fire records:
 
-- The name of the privilege (e.g. `SeBackupPrivilege`).
-- The bits the privilege contributed pre-narrowing.
-- The bits that survived to the final granted mask.
-- Whether the use was successful (bits survived) or failed (bits were stripped).
+- The name of the privilege (e.g. `SeBackupPrivilege`), as `privilege.name`.
+- The bits the privilege contributed pre-narrowing, as `privilege.contributed`.
+- The bits that survived to the final granted mask, as `privilege.surviving`.
+- The whole check's requested and granted masks, as `access.requested` and `access.granted`.
+- Whether the use was successful (bits survived) or failed (bits were stripped), as `outcome.success`.
 
 This is enough for an audit consumer to reconstruct what happened. A success event with non-empty surviving bits shows what the privilege ended up granting; a failure event with empty surviving bits shows what the privilege tried to grant and lost. Together they tell the story of where the access landed.
 

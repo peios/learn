@@ -14,7 +14,7 @@ sequence number that cannot be real, a metadata block that does not
 cover the GUIDs it should.
 
 - The request returns `EIO` to its caller. [*source.validate.malformed-data-returns-eio]
-- An `LCS_SOURCE_VALIDATION_FAILURE` audit event is emitted, naming the
+- An `lcs.source.response.rejected` audit event is emitted, naming the
   source slot and — where known — the hive, the request id, the
   operation code, the key GUID, and which of the twelve validation
   classes applies (§5.4.4). [*source.validate.malformed-data-emits-an-audit-event]

@@ -61,18 +61,27 @@ an invalid value. Each event's payload is built by a small in-kernel
 msgpack writer into a 768-byte buffer; a payload that would exceed it
 is silently skipped. [*config.self-events-best-effort]
 
-`KMES_SELF_CONFIG_INVALID` reports one missing or invalid value. Its
-payload is a msgpack map of exactly nine keys, in order:
-`configuration_parent_path` (always `Machine\System\KMES`),
-`configuration_name` (the canonical name), `expected_type`,
-`expected_min` and `expected_max` (from the key's definition),
-`received_kind` (one of `missing`, `wrong_type`, `u32_out_of_range`,
-`u64_out_of_range` — a malformed payload length reports
-`wrong_type`), `received_type` (the actual registry type code for a
-wrong-type value, nil otherwise), `received_value` (the numeric value
-for an out-of-range value, nil otherwise), and `retained_value` (the
-value KMES continues to use, read before any part of the plan was
-applied). [*config.invalid-event-nine-keys]
+`kmes.config.value.rejected` reports one missing or invalid value. Its
+payload follows the event-field rules of PGSS §6: each dotted field
+path is a nested msgpack map, one per segment, and a field that does
+not apply is absent rather than nil. Every field lives under a single
+top-level `config` map of five keys, in order:
+
+- `config.key.path` — always `Machine\System\KMES`.
+- `config.name` — the canonical value name.
+- `config.expected.type`, `config.expected.min` and
+  `config.expected.max` — the registry type code and range from the
+  key's definition.
+- `config.received.kind` — one of `missing`, `wrong-type` or
+  `out-of-range`. A malformed payload length reports `wrong-type`. A
+  `REG_DWORD` and a `REG_QWORD` value out of range both report
+  `out-of-range`, since `config.expected.type` already gives the
+  width. `config.received.type` (the actual registry type code) is
+  present exactly when the kind is `wrong-type`, and
+  `config.received.value` (the number received) exactly when it is
+  `out-of-range`. A missing value carries the kind alone.
+- `config.value` — the value KMES continues to use, read before any
+  part of the plan was applied. [*config.invalid-event-nine-keys]
 
 One read reports at most four of these events, which is exactly the
 number of configuration keys. A plan that would need more is rejected
@@ -80,14 +89,16 @@ before anything is applied, and the entire configuration read is
 abandoned. [*config.at-most-four-reports]
 
 On a first boot where the KMES key exists but is empty, all four keys
-are missing, so the read emits four `KMES_SELF_CONFIG_INVALID` events
-and retains all four defaults. [*config.empty-key-emits-four]
+are missing, so the read emits four `kmes.config.value.rejected`
+events and retains all four defaults. [*config.empty-key-emits-four]
 
-`KMES_BUFFER_SWAP_FAILED` reports a valid `BufferCapacity` change that
+`kmes.buffer.swap.failed` reports a valid `BufferCapacity` change that
 could not be applied because replacement rings could not be
-allocated. Its payload is a three-key map: `requested_capacity`,
-`retained_capacity`, and `errno` — the last carrying the positive
-value of `ENOMEM` as an unsigned integer. It is emitted only for
+allocated. Its payload is two maps: `buffer`, holding
+`buffer.capacity-requested` (the capacity asked for) and
+`buffer.capacity` (the capacity kept), and `outcome`, holding
+`outcome.errno` — `-ENOMEM` as a negative signed integer. The swap is
+system-wide, so no CPU or ring is named. It is emitted only for
 allocation failure; a swap abandoned because migration hit a corrupt
 size field produces no event. [*config.swap-failed-event]
 

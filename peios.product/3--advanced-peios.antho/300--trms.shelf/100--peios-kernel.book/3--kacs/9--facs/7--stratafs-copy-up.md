@@ -298,7 +298,8 @@ internal files carry a continuous-audit mask of zero, so they generate
 no per-operation events either. [*facs.stratafs-copy-up.no-second-audit] The `CAP_SETFCAP` satisfaction path
 returns before the capability check that would record privilege use.
 
-StrataFS decides when its own copy-up lifecycle and failure events
+StrataFS decides when its own copy-up lifecycle and failure events —
+`stratafs.file.copied-up` and `stratafs.mutation.refused` (§4.6.5) —
 occur; KACS supplies the kernel-only emitter, so KMES stamps each
 event with the effective token of the task whose operation caused it
 (§2.2). Two of those emissions are best-effort: an allocation failure,

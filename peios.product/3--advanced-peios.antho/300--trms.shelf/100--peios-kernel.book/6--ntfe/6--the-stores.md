@@ -114,27 +114,37 @@ cell created or retired between passes may be missed or seen twice. [*ntfe-store
 ## Reports
 
 `REPORT(level)` at or above `CurrentReportingLevel` becomes one KMES event:
-origin class `KMES_ORIGIN_NTFE` (4), event type `network-report`, [*ntfe-store.report-becomes-one-kmes-event] and a
-msgpack payload — a string-keyed map of the attribution (`rule`, and
-`rule_hash`, the FNV-1a-64 of the whole path), the
-`level`, where the judgment stood (`layer`, `seat`), what it said
-(`verdict`, and `reject_kind` when it was a reject), the packet
-(`direction`, `interface`, `ifindex`, `ether_type`, `family`,
-`protocol`, `src`, `dst`, `src_port`, `dst_port`, `flow_state`,
-`length`), the `generation`, and `t_ns`. [*ntfe-store.report-payload-keys] A packet key whose fact can be
-absent is present only when the packet has it: `protocol`, `src` and
-`dst` when it has an address family, the ports when it has ports,
-`flow_state` when the fact is present. `direction`, `interface`,
-`ifindex`, `ether_type`, `family` and `length` are always emitted — an
-absent one as the empty string or 0. [*ntfe-store.report-omits-absent-packet-keys]
+origin class `KMES_ORIGIN_NTFE` (4), event type `ntfe.verdict.reported`, [*ntfe-store.report-becomes-one-kmes-event] and a
+msgpack payload laid out as the event catalogue's `ntfe` fragment
+says: nested string-keyed maps, one per path segment. `rule` carries
+the attribution (`name`, the path, and `hash`, the FNV-1a-64 of the
+whole path), the `report-level`, and where the judgment stood
+(`layer`: `raw-packet`, `packet` or `flow`; `seat`). `outcome` carries
+what it said (`verdict`: `pass`, `reject` or `drop`; and `reason`,
+`prohibited` or `refused`, when it was a reject). The packet is
+`network` (`direction`, `interface` with its `name` and `index`,
+`ether-type`, `family` as the `AF_*` number, `protocol`, `length`),
+`source` and `destination` (each an `address` as text and a `port`),
+and `flow` (`state`). `policy` carries the `generation`. The time is
+the KMES header's; the payload does not repeat it. [*ntfe-store.report-payload-keys] A packet key whose fact can be
+absent is present only when the packet has it: `network.protocol`,
+`source` and `destination` when it has an address family, their ports
+when it has ports, `flow` when the flow-state fact is present.
+`network.direction`, `network.interface.index`, `network.ether-type`,
+`network.family` and `network.length` are always emitted — an
+interface index of 0 and a family of `AF_UNSPEC` (0) are the catalogue's
+own values for none. `network.interface.name` is left out when no
+device was there to name; no key is ever written as an empty string. [*ntfe-store.report-omits-absent-packet-keys]
 
-The payload is built on the stack (512 bytes, map16 header patched with
-the final count) [*ntfe-store.report-payload-built-on-stack] because the packet path runs in softirq and
+The payload is built on the stack (512 bytes) [*ntfe-store.report-payload-built-on-stack] because the packet path runs in softirq and
 `pkm_kmes_emit_kernel()` is a preempt-disabled per-CPU ring write with
-no allocation of its own. Every key but `rule` is bounded, and `rule`
-goes in last: a path too long for the room left is cut at a character
-boundary to fit, and `rule_truncated = 1` says so. The event is always
-emitted, and `rule_hash` still names the whole path, so a reader
+no allocation of its own. Every map's size is known before it is
+written, save `rule`'s, whose one-byte header is settled once the
+name's fate is. Every value but `rule.name` is bounded, so `rule` goes
+in last and `name` last within it: a path too long for the room left
+is cut at a character boundary to fit, and `rule.name-truncated`
+(`true`, absent when the name is whole) says so. The event is always
+emitted, and `rule.hash` still names the whole path, so a reader
 resolves the rule against the policy. [*ntfe-store.report-long-rule-cut-and-said] Flood control is the author's by design — the
 level gate — with KMES's own ring accounting as the backstop.
 `reports_emitted` counts what reached the ring. [*ntfe-store.reports-emitted-counts-ring-arrivals]

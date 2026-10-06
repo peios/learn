@@ -1641,7 +1641,7 @@ codes name the distinct deny causes. Emitted by kacs:kacs_file_snapshot.
 | `KACS_FSR_GRANT_DENY` | `2` | granted access lacked required right |
 | `KACS_FSR_APPEND_DENY` | `3` | append/write intent lacked write grant |
 | `KACS_FSR_UNMANAGED_SYSFS` | `4` | unmanaged fd: sysfs write gate applied |
-| `KACS_FSR_AUDIT_EMIT_FAIL` | `5` | continuous-audit emit failed |
+| `KACS_FSR_AUDIT_EMIT_FAIL` | `5` | kacs.audit.handle.used emit failed |
 
 *kacs_metadata reason — the file-metadata (getattr/setattr/xattr/getsecurity) decision path.* [*kacs-abi.trace.metadata-reasons]
 
