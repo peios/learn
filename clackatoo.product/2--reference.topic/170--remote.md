@@ -10,7 +10,7 @@ related:
 The window and the `clackatoo` command can use the daemon on another machine instead of this one: your desktop from your laptop, or a server. The terminals run there, and keep running when you disconnect.
 
 ```sh
-clackatoo --remote desktop                  # a window on desktop's newest terminal
+clackatoo --remote desktop                  # a window on desktop's workspaces
 clackatoo list --remote desktop             # its terminals
 clackatoo new --remote jack@server -- htop  # start one there
 ```

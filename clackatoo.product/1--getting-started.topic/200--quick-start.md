@@ -27,7 +27,7 @@ clackatoo --font "JetBrains Mono"
 
 That opens a window on your shell, starting the daemon in the background if it isn't running. Leave out `--font` for your system's monospace font, or choose one for good with `clackatoo config font "JetBrains Mono"`. Close the window and the shell keeps running; open another and you're back.
 
-Shift+Esc switches to normal mode, where you scroll, select and search history with Vim's keys, and `i` switches back. [The window](~clackatoo/reference/window) has all its keys.
+Shift+Esc switches to normal mode, where you scroll, select and search history with Vim's keys, and `i` switches back. From normal mode, `:|` Enter splits the pane with a new terminal on its right, `:-` below it, and `:Terminal` opens one in a new tab. Ctrl+W then `h` `j` `k` `l` moves between panes, and `gt` between tabs. [The window](~clackatoo/reference/window) has all its keys.
 
 ## Start the daemon yourself
 
@@ -82,4 +82,4 @@ With clackatoo built on both machines, and ssh able to log in to the other one w
 clackatoo --remote desktop
 ```
 
-That opens a window on `desktop`'s newest terminal, starting the daemon there if it isn't running. Every command takes `--remote` too, as in `clackatoo list --remote desktop`. If ssh's commands on the other machine can't find clackatoo, [another machine](~clackatoo/reference/remote) explains how to point at it.
+That opens a window on `desktop`'s workspaces, starting the daemon there if it isn't running. Every command takes `--remote` too, as in `clackatoo list --remote desktop`. If ssh's commands on the other machine can't find clackatoo, [another machine](~clackatoo/reference/remote) explains how to point at it.

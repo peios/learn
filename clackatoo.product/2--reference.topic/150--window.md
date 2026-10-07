@@ -1,7 +1,7 @@
 ---
 title: The window
 type: reference
-description: clackatoo's window shows a terminal and sends it your keys. Insert mode types into the program; normal mode moves a cursor of clackatoo's own through history, to scroll, select, copy and search.
+description: clackatoo's window shows your workspaces, their tabs and their panes of terminals, and sends your keys to the focused one. Insert mode types into the program; normal mode moves a cursor of clackatoo's own through history, and runs the window's commands.
 related:
   - clackatoo/getting-started/quick-start
   - clackatoo/reference/cli
@@ -9,7 +9,7 @@ related:
   - clackatoo/reference/terminal-emulation
 ---
 
-The window is a client of the daemon, like the `clackatoo` command. It shows one terminal, keeps up with it as its program prints, and sends it your keys. Closing the window closes nothing: the terminal keeps running in the daemon, and the next window shows it again.
+The window is a client of the daemon, like the `clackatoo` command. It shows a workspace's terminals, keeps up with them as their programs print, and sends your keys to the one with the focus. Closing the window closes nothing: the terminals keep running in the daemon, and the next window shows them again, laid out as they were.
 
 ## Opening it
 
@@ -17,11 +17,11 @@ The window is a client of the daemon, like the `clackatoo` command. It shows one
 clackatoo
 ```
 
-With no command, `clackatoo` opens a window on your newest running terminal, or starts a terminal running your `$SHELL` if there is none. If no daemon is running, it starts one in the background first. Until the terminal arrives, the window says it's connecting, and Esc quits. That daemon logs to `daemon.log` in the [runtime directory](~clackatoo/reference/cli), and keeps running after the window closes.
+With no command, `clackatoo` opens a window on your [workspaces](#workspaces-tabs-and-panes): the one last used, at the tab and pane last used. If there are none, it makes one, showing your newest running terminal, such as one started with `clackatoo new`, or else a new terminal running your `$SHELL`. If no daemon is running, it starts one in the background first. Until the daemon answers, the window says it's connecting, and Esc quits. That daemon logs to `daemon.log` in the [runtime directory](~clackatoo/reference/cli), and keeps running after the window closes.
 
-The window sizes itself for a 100×30 terminal. Resizing the window resizes the terminal, and its program is told the new size. When several windows show one terminal, the terminal takes the size of whichever was last opened on it, resized or focused.
+The window sizes itself for 100×30 cells of panes, below the bar. Resizing the window resizes each pane's terminal to fit, and its program is told the new size. When several windows show one terminal, the terminal takes the size of whichever was last opened on it, resized or focused.
 
-With `--remote <HOST>`, the window shows a terminal on another machine, through ssh. See [another machine](~clackatoo/reference/remote).
+With `--remote <HOST>`, the window shows the workspaces on another machine, through ssh. See [another machine](~clackatoo/reference/remote).
 
 | Option | Environment variable | [Setting](#settings) | |
 |---|---|---|---|
@@ -71,7 +71,7 @@ Each build of clackatoo speaks one version of the protocol between windows and t
 
 If the connection to the daemon is lost, because the daemon stopped or, [on another machine](~clackatoo/reference/remote), the network went, the window says so and why, in place of the terminal:
 
-- Enter reconnects, starting a daemon if none is running. If the terminal shown is still running, the window returns to it as it was, in the same mode and scrolled to the same place.
+- Enter reconnects, starting a daemon if none is running. If the workspace shown is still there, the window returns to it, with each pane as it was, in the same mode and scrolled to the same place.
 - Esc quits.
 
 ## Modes
@@ -79,7 +79,9 @@ If the connection to the daemon is lost, because the daemon stopped or, [on anot
 The window is in one of two modes, like Vim:
 
 - **Insert mode**, where it starts. Keys go to the program.
-- **Normal mode**. Keys drive clackatoo. A yellow frame round the window, and a label in its top right corner, show that you're in it.
+- **Normal mode**. Keys drive clackatoo. A yellow frame round the pane, and a label in its top right corner, show that you're in it.
+
+Each pane has its own mode.
 
 | Key | In | Does |
 |---|---|---|
@@ -89,6 +91,50 @@ The window is in one of two modes, like Vim:
 | Ctrl+C | either | Interrupts the program. |
 
 Plain Esc always goes to the program, since programs such as Vim and less use it.
+
+## Workspaces, tabs and panes
+
+The window shows your work at three levels:
+
+- **Workspaces**, one for each piece of distinct work, such as a project. Their names run along the left of the bar at the top of the window, with the one shown picked out in yellow. Often there's just one.
+- **Tabs**, inside a workspace. They run along the right of the bar, numbered, and named after the title of their focused pane's program.
+- **Panes**, which a tab is split into, side by side or stacked. Each shows a terminal. Panes in a split share its space equally.
+
+The daemon keeps all of them, as it keeps terminals. Closing the window closes nothing, and the next window opens on the workspace, tab and pane last used. Each window shows one workspace, so two windows can show two workspaces, or two tabs of one.
+
+A pane closes when its program exits, as in other terminals. A tab closes with its last pane, and a workspace with its last tab. When the last workspace closes, so does the window.
+
+### The command line
+
+In normal mode, `:` opens a command line, shown in the focused pane's label. Enter runs the command. Esc, or Backspace past the colon, closes it.
+
+| Command | Does |
+|---|---|
+| `:Terminal` | Opens a terminal in a new tab. |
+| `:\|Terminal` | Splits the focused pane, with a new terminal to its right. |
+| `:\|<Terminal` | The same, to its left. |
+| `:-Terminal` | The same, below it. |
+| `:-^Terminal` | The same, above it. |
+| `:workspace NAME`, `:ws NAME` | Switches to the workspace called NAME, making it if there's none. Without a name, makes a new workspace, named with the lowest number no workspace has. |
+| `:rename NAME` | Renames the workspace shown. |
+| `:close`, `:q` | Closes the focused pane, hanging up its program. |
+
+The first character of a split says which way the divider runs, `|` upright or `-` flat, and `<` or `^` after it puts the new pane first. A mark alone opens a terminal, so `:|` is `:|Terminal`. Capitalised words name kinds of pane, of which terminals are the only one so far. Lowercase words are the window's own commands.
+
+A new terminal starts in the directory that the pane it splits is in. A new tab's terminal starts in the directory of the workspace's focused pane.
+
+Workspace names are unique, and can't contain `@`, which will name workspaces on other machines. If a command fails, such as renaming a workspace to a name another has, the label says why until the next key.
+
+### Moving around
+
+| Keys | In normal mode |
+|---|---|
+| Ctrl+W, then `h` `j` `k` `l` or an arrow | Moves to the pane to the left, below, above or right. |
+| Ctrl+W, then `c` or `q` | Closes the focused pane. |
+| `gt` `gT` | Moves to the next or the previous tab. |
+| `gw` `gW` | Moves to the next or the previous workspace. |
+
+Every window command, both these keys and the command line's commands, ends in insert mode, so you can type straight away. The pane you left goes back to insert mode too, at its live screen.
 
 ## Typing
 
@@ -154,7 +200,7 @@ Copying and searching both happen in the daemon, which holds all of history, so 
 
 ## The cursor
 
-In insert mode, the cursor has the shape the program asks for: a block, an underline or a bar, which Vim and shells in vi mode switch between. If the program hasn't asked, it's a bar. In normal mode it's always clackatoo's yellow block. While the window isn't focused, either cursor is drawn as an outline.
+In insert mode, the cursor has the shape the program asks for: a block, an underline or a bar, which Vim and shells in vi mode switch between. If the program hasn't asked, it's a bar. In normal mode it's always clackatoo's yellow block. In panes without the focus, and while the window isn't focused, either cursor is drawn as an outline.
 
 ## Drawing
 
@@ -174,6 +220,8 @@ Box-drawing characters (`─` `│` `┌` `╭` `═`…) and block elements (`�
 
 ## Not supported yet
 
+- Resizing or moving panes. Every split shares its space equally.
+- Panes from other machines, as `:Terminal@host` will open. Today the window says this isn't built yet.
 - Typing through an input method, for languages such as Chinese and Japanese.
 - Selecting with the mouse, and mouse input for programs.
 - Emoji joined with a zero-width joiner, such as 👩‍💻, show only their first emoji.

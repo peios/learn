@@ -25,6 +25,6 @@ The daemon is one thread waiting on every PTY and connection at once. A program'
 
 ## What exists today
 
-The daemon; [a window](~clackatoo/reference/window) that shows one terminal, with Vim-like modes for scrolling, selecting, copying and searching; and a command-line client that can start terminals, type into them, show their screens and close them. Both clients work with a daemon on [another machine](~clackatoo/reference/remote). The [quick start](~clackatoo/getting-started/quick-start) walks through both.
+The daemon; [a window](~clackatoo/reference/window) that shows workspaces of tabs and split panes, with Vim-like modes for scrolling, selecting, copying and searching, and a command line for opening panes; and a command-line client that can start terminals, type into them, show their screens and close them. Both clients work with a daemon on [another machine](~clackatoo/reference/remote). The [quick start](~clackatoo/getting-started/quick-start) walks through both.
 
 clackatoo runs on Linux.
