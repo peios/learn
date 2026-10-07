@@ -26,7 +26,7 @@ The header is UTF-8 text ending in a newline. It starts with `clackatoo-recordin
 
 Readers ignore fields they don't know, so later versions can add fields without breaking v1 readers. Everything after the header's newline is output, including any further newlines.
 
-The output is written as it arrives, so a recording can be read while the program is still running. Input typed into the terminal is not recorded.
+The output is written as it arrives, so a recording can be read while the program is still running. Input typed into the terminal is not recorded. A recording has one size, so resizing the terminal stops it.
 
 ## Privacy
 

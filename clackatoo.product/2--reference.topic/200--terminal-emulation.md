@@ -26,7 +26,8 @@ The program runs in its own session, with the terminal as its controlling termin
 
 ## Screen behaviour
 
-- **Scrollback**: the primary screen keeps the last 10,000 lines that scroll off its top. Lines only enter scrollback when the whole screen scrolls. Scrolling inside a region an app has narrowed (as vim does) discards them.
+- **Scrollback**: the primary screen keeps the last 10,000 lines that scroll off its top. Lines only enter scrollback when the whole screen scrolls. Scrolling inside a region an app has narrowed (as vim does) discards them. Scrollback is stored as compact text, typically under 100 bytes a line, and remembers which lines were wrapped, so they can be rewrapped to another width.
+- **Resizing**: lines on the primary screen are rewrapped to the new width, and the cursor stays on the same character. When the screen gets shorter, blank lines below the cursor go first, then lines above it move into scrollback. The alternate screen is cut off or extended instead, because the full-screen programs that use it redraw after a resize.
 - **Alternate screen**: full-screen programs switch to a second screen with no scrollback. Leaving it restores the primary screen and cursor exactly.
 - **Wrapping**: printing in the last column leaves the cursor there, and the line wraps only when the next character arrives.
 - **Background colour erase**: clearing part of the screen fills it with the current background colour.
@@ -58,7 +59,7 @@ The program runs in its own session, with the terminal as its controlling termin
 
 ## Not supported yet
 
-The terminal can't be resized after it starts. These are ignored:
+These are ignored:
 
 - Modes that only change how keys and the mouse are reported: cursor-key mode, keypad mode, mouse tracking, bracketed paste and focus events. A window client will need them, so they come with it.
 - OSC 7 (working directory), OSC 8 (hyperlinks), OSC 52 (clipboard) and OSC 133 (shell integration).
