@@ -34,11 +34,11 @@ Once connected, the window or command tries reaching the daemon straight over UD
 - **It survives your network changing,** such as moving from home Wi-Fi to a phone's hotspot, or a short sleep. ssh's connection dies when that happens; the QUIC connection carries on from the new network, and the window doesn't notice.
 - **Keys come back a little faster,** with ssh out of the way.
 
-If UDP doesn't get through, as when a firewall blocks it, the connection stays inside ssh, and nothing waits on the attempt. If UDP stops getting through later, the connection goes back into ssh after about ten seconds, if ssh's connection is still up, and tries UDP again a minute after.
+It finds out with a few probes, small datagrams the daemon sends straight back, while the connection carries on inside ssh, so nothing waits on the attempt. If none comes back within two seconds, as when a firewall blocks UDP, the connection stays inside ssh. If UDP stops getting through later, the connection goes back into ssh after about ten seconds, if ssh's connection is still up, and tries UDP again a minute after.
 
 [`clackatoo ping --remote host`](~clackatoo/reference/cli#ping) says which way each round went: `(over UDP)` or `(through ssh)`.
 
-The daemon takes UDP on the first free port from 60000 to 61000, the same range as mosh, when the first connection through ssh arrives. It never takes a new connection over UDP, only packets for connections already set up through ssh, and it doesn't answer anything else, so the port gives nothing away to a scan.
+The daemon takes UDP on the first free port from 60000 to 61000, the same range as mosh, when the first connection through ssh arrives. It never takes a new connection over UDP, only packets for connections already set up through ssh. Probes carry a key the daemon only gives out through ssh, and it answers nothing else, so the port gives nothing away to a scan.
 
 ### Firewalls
 
@@ -94,6 +94,12 @@ clackatoo passes ssh a few options of its own:
 - `-T`: no terminal on the other end; the bridge doesn't want one.
 - `ConnectTimeout=10`: an unreachable host fails after 10 seconds.
 - `ServerAliveInterval=5` and `ServerAliveCountMax=3`: a connection that has died, such as when the laptop sleeps or changes network, is noticed within 15 seconds. A connection that has moved onto UDP carries on without it.
+
+## When the other machine stops answering
+
+If what the window sends goes unanswered for about three seconds, the bar says so, in red, in the middle: `no contact with desktop for 12 s`, counting up. The window stays as it was, and anything you type waits to be sent. The notice goes as soon as the other machine answers again, as when your laptop finds a network.
+
+An idle window notices within about half a minute, at its next keep-alive.
 
 ## When the connection drops
 
