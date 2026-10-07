@@ -162,15 +162,31 @@ In insert mode, keys reach the program the way xterm sends them, which nearly ev
 - Arrows, Home, End, Insert, Delete, Page Up, Page Down and F1 to F12 send escape sequences, with any modifiers held.
 - When a program asks for them, arrows and the number pad send application codes, which Vim and less expect.
 
-Ctrl+Shift+V pastes. If the program has asked for bracketed paste, the text is marked as pasted, so editors don't treat it as typing and shells don't run it line by line. Otherwise newlines are sent as Enter.
+Ctrl+Shift+V pastes, and Ctrl+Shift+C copies text [selected with the mouse](#the-mouse); neither reaches the program. If the program has asked for bracketed paste, the text is marked as pasted, so editors don't treat it as typing and shells don't run it line by line. Otherwise newlines are sent as Enter.
 
 Typing while scrolled up returns the view to the live screen.
 
 ## Scrolling
 
-The mouse wheel scrolls history in either mode. On the alternate screen, which full-screen programs use and which has no history, the wheel sends arrow keys instead, so less, Vim and htop scroll themselves.
+The mouse wheel scrolls history in either mode, in the pane under the pointer. On the alternate screen, which full-screen programs use and which has no history, the wheel sends arrow keys instead, so less, Vim and htop scroll themselves. A program that takes [the mouse](#the-mouse) gets the wheel itself.
 
 While the view is scrolled up, the bottom bar's note shows how far, as `↑42`, and new output doesn't move what you're reading.
+
+## The mouse
+
+Clicking a pane focuses it. What else the mouse does depends on the program in the pane.
+
+**Selecting.** Usually the mouse selects text:
+
+- Dragging selects characters. Dragging past the top or bottom of the pane scrolls it.
+- A double click selects a word. Paths and URLs count as one word, so `~/src/main.rs` comes whole.
+- A triple click selects whole lines.
+
+Letting go copies the selection to the primary selection, and a middle click pastes it, as elsewhere on Linux. Ctrl+Shift+C, or `y` in normal mode, copies it to the clipboard. The selection stays highlighted until the next key or click. In normal mode, a click also moves the cursor there.
+
+**Programs that take the mouse.** Programs such as Neovim, htop and less can ask for clicks, drags and the wheel, and get them while their pane is in insert mode on the live screen. The pointer is then an arrow rather than a text cursor. Hold Shift to select text anyway. A drag stays with the pane it started in, even when the pointer leaves it.
+
+Programs that ask are also told when their pane gains or loses the focus, which Neovim uses to reload files changed meanwhile.
 
 ## Normal mode
 
@@ -240,6 +256,5 @@ Box-drawing characters (`─` `│` `┌` `╭` `═`…) and block elements (`�
 - Resizing or moving panes. Every split shares its space equally.
 - Panes from other machines, as `:Terminal@host` will open. Today the window says this isn't built yet.
 - Typing through an input method, for languages such as Chinese and Japanese.
-- Selecting with the mouse, and mouse input for programs.
 - Emoji joined with a zero-width joiner, such as 👩‍💻, show only their first emoji.
 - History lines are shown at the width they were printed at. A line that wrapped in a narrower window doesn't rewrap when the window gets wider.
