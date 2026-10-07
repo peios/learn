@@ -19,7 +19,7 @@ clackatoo
 
 With no command, `clackatoo` opens a window on your [workspaces](#workspaces-tabs-and-panes): the one last used, at the tab and pane last used. If there are none, it makes one, showing your newest running terminal, such as one started with `clackatoo new`, or else a new terminal running your `$SHELL`. If no daemon is running, it starts one in the background first. Until the daemon answers, the window says it's connecting, and Esc quits. That daemon logs to `daemon.log` in the [runtime directory](~clackatoo/reference/cli), and keeps running after the window closes.
 
-The window sizes itself for 100×30 cells of panes, below the bar. Resizing the window resizes each pane's terminal to fit, and its program is told the new size. When several windows show one terminal, the terminal takes the size of whichever was last opened on it, resized or focused.
+The window sizes itself so that its one pane holds 100×30 cells. Resizing the window resizes each pane's terminal to fit, and its program is told the new size. When several windows show one terminal, the terminal takes the size of whichever was last opened on it, resized or focused.
 
 With `--remote <HOST>`, the window shows the workspaces on another machine, through ssh. See [another machine](~clackatoo/reference/remote).
 
@@ -32,6 +32,23 @@ With `--remote <HOST>`, the window shows the workspaces on another machine, thro
 | `--remote-command <COMMAND>` | `CLACKATOO_REMOTE_COMMAND` | | The command that runs clackatoo there. Default: `clackatoo`. |
 
 An option on the command line wins over its environment variable, which wins over the setting.
+
+## The frame
+
+The window draws its own frame, in place of the desktop's:
+
+- **The top bar** holds your [workspaces](#workspaces-tabs-and-panes), with the one shown picked out, and a `+` after them that makes a new one. The window's buttons sit at whichever end your desktop puts them, in the same order. Drag the bar to move the window, double-click it to maximise or restore it, and right-click it for the desktop's window menu.
+- **The bottom bar** holds the tabs of the workspace shown, with a `+` after them that opens a new one. On its right is a note: the [mode](#modes), how far the view is [scrolled](#scrolling), or a message, such as why a command failed.
+- **The panes** sit on cards between the bars, each a little in from its edges. The focused pane's card has a blue edge, or a yellow one in normal mode.
+- **The palette** opens in the middle of the window for anything typed to clackatoo itself: [commands](#the-command-line), [searches](#searching) and new names.
+
+Drag the window's edges or corners to resize it. Interface text, such as the names in the bars, is in your desktop's interface font. On GNOME, both the font and where the buttons go come from its settings.
+
+With the mouse:
+
+- Click a workspace or tab to show it, and a pane to focus it.
+- Click a `+` to make a workspace, or open a tab.
+- Right-click a workspace or tab for **Rename** or **Close**. Rename opens the palette with the name to change. Clearing a tab's name names it after its focused pane's program again. Close closes every pane in it, hanging up their programs.
 
 ## Settings
 
@@ -79,7 +96,7 @@ If the connection to the daemon is lost, because the daemon stopped or, [on anot
 The window is in one of two modes, like Vim:
 
 - **Insert mode**, where it starts. Keys go to the program.
-- **Normal mode**. Keys drive clackatoo. A yellow frame round the pane, and a label in its top right corner, show that you're in it.
+- **Normal mode**. Keys drive clackatoo. The pane's card has a yellow edge, and the bottom bar's note says `NORMAL`.
 
 Each pane has its own mode.
 
@@ -97,8 +114,8 @@ Plain Esc always goes to the program, since programs such as Vim and less use it
 
 The window shows your work at three levels:
 
-- **Workspaces**, one for each piece of distinct work, such as a project. Their names run along the left of the bar at the top of the window, with the one shown picked out in yellow. Often there's just one.
-- **Tabs**, inside a workspace. They run along the right of the bar, numbered, and named after the title of their focused pane's program.
+- **Workspaces**, one for each piece of distinct work, such as a project. Their names run along the [top bar](#the-frame). Often there's just one.
+- **Tabs**, inside a workspace. They run along the bottom bar, numbered, and named after the title of their focused pane's program, unless you've named them.
 - **Panes**, which a tab is split into, side by side or stacked. Each shows a terminal. Panes in a split share its space equally.
 
 The daemon keeps all of them, as it keeps terminals. Closing the window closes nothing, and the next window opens on the workspace, tab and pane last used. Each window shows one workspace, so two windows can show two workspaces, or two tabs of one.
@@ -107,7 +124,7 @@ A pane closes when its program exits, as in other terminals. A tab closes with i
 
 ### The command line
 
-In normal mode, `:` opens a command line, shown in the focused pane's label. Enter runs the command. Esc, or Backspace past the colon, closes it.
+In normal mode, `:` opens a command line, in the palette in the middle of the window. Enter runs the command. Esc, or Backspace past the colon, closes it.
 
 | Command | Does |
 |---|---|
@@ -125,7 +142,7 @@ The first character of a split says which way the divider runs, `|` upright or `
 
 A new terminal starts in the directory that the pane it splits is in. A new tab's terminal starts in the directory of the workspace's focused pane.
 
-Workspace names are unique, and can't contain `@`, which will name workspaces on other machines. If a command fails, such as renaming a workspace to a name another has, the label says why until the next key.
+Workspace names are unique, and can't contain `@`, which will name workspaces on other machines. If a command fails, such as renaming a workspace to a name another has, the bottom bar says why until the next key.
 
 ### Moving around
 
@@ -150,7 +167,7 @@ Typing while scrolled up returns the view to the live screen.
 
 The mouse wheel scrolls history in either mode. On the alternate screen, which full-screen programs use and which has no history, the wheel sends arrow keys instead, so less, Vim and htop scroll themselves.
 
-While the view is scrolled up, the label shows how far, as `↑42`, and new output doesn't move what you're reading.
+While the view is scrolled up, the bottom bar's note shows how far, as `↑42`, and new output doesn't move what you're reading.
 
 ## Normal mode
 
@@ -186,12 +203,12 @@ Any motion extends a selection, including `gg`, `G` and searches. Copied text is
 
 | Keys | Does |
 |---|---|
-| `/` | Searches forward from the cursor. Type the text, shown in the label, then Enter. Esc cancels. |
+| `/` | Searches forward from the cursor. Type the text, shown in the palette, then Enter. Esc cancels. |
 | `?` | Searches backward. |
 | `n` `N` | Searches again, the same way or the other way. |
 | Esc | Clears the highlight on the last match. |
 
-A search ignores case unless the text has a capital letter in it. It covers all of history and wraps around at either end. The cursor moves to the match, which is highlighted. If there's none, the label says `not found`.
+A search ignores case unless the text has a capital letter in it. It covers all of history and wraps around at either end. The cursor moves to the match, which is highlighted. If there's none, the bottom bar says `not found`.
 
 Copying and searching both happen in the daemon, which holds all of history, so neither waits for the window to fetch the lines involved.
 

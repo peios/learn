@@ -97,7 +97,7 @@ clackatoo passes ssh a few options of its own:
 
 ## When the other machine stops answering
 
-If what the window sends goes unanswered for about three seconds, the bar says so, in red, in the middle: `no contact with desktop for 12 s`, counting up. The window stays as it was, and anything you type waits to be sent. The notice goes as soon as the other machine answers again, as when your laptop finds a network.
+If what the window sends goes unanswered for about three seconds, a red notice at the right of the top bar says so: `No contact with desktop for 12 s`, counting up. The window stays as it was, and anything you type waits to be sent. The notice goes as soon as the other machine answers again, as when your laptop finds a network.
 
 An idle window notices within about half a minute, at its next keep-alive.
 
