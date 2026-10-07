@@ -124,3 +124,13 @@ cargo bench -- --baseline before
 A change counts when it is bigger than 5% and outside both runs' spreads. Otherwise it's marked `(noise)`. Measurements that don't vary, like the binary's size, report any change.
 
 Criterion keeps its baselines in `target/criterion/`. The end-to-end harness keeps its own in `target/clackatoo-bench/` as tab-separated files, along with the commit they were measured on.
+
+## Profile a workload
+
+To see where the time goes, replay one workload through the emulator in a loop and point a profiler at it:
+
+```sh
+cargo run --release -p clackatoo-bench --example replay -- dense 20
+```
+
+That plays `dense` for 20 seconds and prints its throughput. Release builds use link-time optimisation, so build with `CARGO_PROFILE_RELEASE_DEBUG=true` to get the function names back in a profiler.
