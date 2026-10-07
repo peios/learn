@@ -136,6 +136,8 @@ The window draws with the GPU, and only when something changed: a quiet terminal
 
 On a machine with two GPUs, the window uses the one the system lists first, which is the one driving the screen: on a desktop, usually the graphics card the monitors are plugged into, and on a laptop, the integrated GPU. Frames drawn on the other GPU may never reach the screen. To choose differently, set `WGPU_POWER_PREF` to `high` for the faster GPU, or `low` for the one that uses less power.
 
+The window draws with Vulkan where it can, and with OpenGL where it can't. `WGPU_BACKEND=gl` makes it use OpenGL, or `WGPU_BACKEND=vulkan` Vulkan. OpenGL is worth trying on a laptop with two GPUs: to choose between them, Vulkan has to ask both, which wakes the sleeping one, and that can add more than a second to opening a window. OpenGL can use the screen's GPU without asking the other.
+
 Box-drawing characters (`─` `│` `┌` `╭` `═`…) and block elements (`█` `▄` `░`…) are drawn by clackatoo rather than taken from the font, so that borders in htop, tmux or Vim join up across lines at any size. The diagonal lines come from the font.
 
 ## Not supported yet
