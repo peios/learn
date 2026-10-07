@@ -25,10 +25,10 @@ Through it, the window or command first checks that the daemon speaks its versio
 
 ssh does the logging in, and it's how each end knows the other is genuine. The daemon only takes QUIC connections that come through ssh, and the window only trusts the certificate the daemon sent it through ssh. So clackatoo opens no network port of its own, and anyone who can use the daemon could already log in to that machine as you.
 
-Inside ssh, QUIC doesn't change anything you'd notice yet. It's the groundwork for two things to come:
+Each terminal's screen updates come on a QUIC stream of their own, apart from everything else. Inside ssh, that makes little difference you'd notice, since ssh delivers everything in order anyway. It's the groundwork for moving the connection out of ssh onto UDP when the network allows:
 
-- Giving each terminal a stream of its own, so a flood of output in one never holds up typing in another.
-- Moving the connection out of ssh onto UDP when the network allows, so that it survives your laptop changing networks.
+- The connection would survive your laptop changing networks.
+- A lost packet would hold up only the terminal it belonged to.
 
 ## What the other machine needs
 
