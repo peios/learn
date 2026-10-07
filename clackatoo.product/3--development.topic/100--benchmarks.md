@@ -92,7 +92,8 @@ What each group measures:
 | | Screen capture round trip | One screen capture request and response. |
 | | Keypress to view update | The same, following the terminal's view as the window does: timed until the update showing the echo arrives. This is the part of keypress-to-screen latency the daemon owns. |
 | | Keypress to view update, while another floods | The same while a second terminal prints without end, which must not hold up the one being typed in. |
-| | Keypress to view update, through the bridge | The same through `clackatoo bridge`, as [`--remote`](~clackatoo/reference/remote) connects, but with no ssh or network in between: what the bridge itself adds. |
+| | Keypress to view update, through the bridge | The same through `clackatoo bridge`, as [`--remote`](~clackatoo/reference/remote) connects, over QUIC, but with no ssh or network in between: what the bridge and QUIC add. |
+| | Keypress to view update, through the bridge, while a followed terminal floods | The same while a second terminal the client follows prints without end, so its updates share the connection with the echoes. |
 | `throughput` | Each workload | A script prints 16 MiB of the workload into a terminal. Timed from starting it until the daemon has processed everything. |
 | | Bare PTY | The same script, read straight from a PTY and thrown away. This is the most any terminal could manage on this machine. |
 | `cpu` | Daemon CPU per MiB | For each throughput workload, the CPU time the daemon spent per MiB of output, read to the nanosecond from `/proc`. Throughput stops at the PTY's limit, so this is where the daemon's own speed shows. |

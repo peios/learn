@@ -19,9 +19,16 @@ The host is anything `ssh` accepts: a hostname, `user@host`, or a name from your
 
 ## How it connects
 
-`--remote host` runs `ssh host clackatoo bridge`. On the other machine, the bridge starts the daemon if it isn't running, then passes everything between ssh and the daemon. ssh does the logging in and the encryption, so clackatoo opens no network port of its own, and anyone who can use the daemon could already log in to that machine as you.
+`--remote host` runs `ssh host clackatoo bridge`. On the other machine, the bridge starts the daemon if it isn't running, then passes everything between ssh and the daemon.
 
-The bridge only passes bytes along. The window or command checks that the daemon on the other machine speaks its version of the protocol, as it does on this one.
+Through it, the window or command first checks that the daemon speaks its version of the protocol, as it does on this one. Then the two talk over QUIC, a network protocol that runs several independent streams over one connection, carried inside the ssh connection.
+
+ssh does the logging in, and it's how each end knows the other is genuine. The daemon only takes QUIC connections that come through ssh, and the window only trusts the certificate the daemon sent it through ssh. So clackatoo opens no network port of its own, and anyone who can use the daemon could already log in to that machine as you.
+
+Inside ssh, QUIC doesn't change anything you'd notice yet. It's the groundwork for two things to come:
+
+- Giving each terminal a stream of its own, so a flood of output in one never holds up typing in another.
+- Moving the connection out of ssh onto UDP when the network allows, so that it survives your laptop changing networks.
 
 ## What the other machine needs
 
@@ -81,4 +88,4 @@ A terminal has one size, so when windows of different sizes show the same termin
 
 Every key goes to the other machine and back before it shows, so a connection with 100 ms round trips shows each key 100 ms late. On a local network this is a millisecond or two.
 
-[`clackatoo ping --remote host`](~clackatoo/reference/cli#ping) measures it: how long the daemon takes to answer, and how long a key takes to come back from a program. clackatoo's own share is small. Through ssh to the same machine, where the network costs next to nothing, a key comes back in about a quarter of a millisecond, so nearly all of anything above that is the network.
+[`clackatoo ping --remote host`](~clackatoo/reference/cli#ping) measures it: how long the daemon takes to answer, and how long a key takes to come back from a program. clackatoo's own share is small. Through ssh to the same machine, where the network costs next to nothing, a key comes back in about a third of a millisecond, so nearly all of anything above that is the network.
