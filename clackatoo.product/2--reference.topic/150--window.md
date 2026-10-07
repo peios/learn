@@ -23,12 +23,38 @@ The window sizes itself for a 100×30 terminal. Resizing the window resizes the 
 
 With `--remote <HOST>`, the window shows a terminal on another machine, through ssh. See [another machine](~clackatoo/reference/remote).
 
-| Option | Environment variable | |
-|---|---|---|
-| `--font <FAMILY>` | `CLACKATOO_FONT` | The font family. Default: your system's monospace font. |
-| `--font-size <POINTS>` | `CLACKATOO_FONT_SIZE` | The text size. Default: 12. |
-| `--remote <HOST>` | | Use the daemon on another machine. |
-| `--remote-command <COMMAND>` | `CLACKATOO_REMOTE_COMMAND` | The command that runs clackatoo there. Default: `clackatoo`. |
+| Option | Environment variable | [Setting](#settings) | |
+|---|---|---|---|
+| `--font <FAMILY>` | `CLACKATOO_FONT` | `font` | The font family. Default: your system's monospace font. |
+| `--font-size <POINTS>` | `CLACKATOO_FONT_SIZE` | `font-size` | The text size. Default: 12. |
+| `--renderer <API>` | `CLACKATOO_RENDERER` | `renderer` | The graphics API to draw with: `vulkan` (the default) or `opengl`. See [drawing](#drawing). |
+| `--remote <HOST>` | | | Use the daemon on another machine. |
+| `--remote-command <COMMAND>` | `CLACKATOO_REMOTE_COMMAND` | | The command that runs clackatoo there. Default: `clackatoo`. |
+
+An option on the command line wins over its environment variable, which wins over the setting.
+
+## Settings
+
+Settings you rarely change, or change to tune how the window starts, live in `client.toml`: `$XDG_CONFIG_HOME/clackatoo/client.toml`, or `~/.config/clackatoo/client.toml`. The window reads it before anything else starts, which takes a few microseconds.
+
+```toml
+font = "JetBrains Mono"
+font-size = 12
+renderer = "opengl"
+```
+
+`clackatoo config` shows and changes them, keeping the rest of the file, comments included, as it was:
+
+```sh
+clackatoo config renderer opengl   # set one
+clackatoo config renderer          # show one
+clackatoo config --unset renderer  # back to its default
+clackatoo config                   # all of them, and where the file is
+```
+
+A mistake in the file never stops the window opening. Each setting with a mistake, such as an unknown name or a value of the wrong kind, is reported on stderr and left at its default, and the rest still apply.
+
+The settings are on this machine. With [`--remote`](~clackatoo/reference/remote), the window's settings come from the machine the window opens on.
 
 A font family is named as fontconfig knows it, as `fc-list : family` prints. Characters the font doesn't have, such as CJK text or emoji, come from fallback fonts, found the same way.
 
@@ -136,7 +162,13 @@ The window draws with the GPU, and only when something changed: a quiet terminal
 
 On a machine with two GPUs, the window uses the one the system lists first, which is the one driving the screen: on a desktop, usually the graphics card the monitors are plugged into, and on a laptop, the integrated GPU. Frames drawn on the other GPU may never reach the screen. To choose differently, set `WGPU_POWER_PREF` to `high` for the faster GPU, or `low` for the one that uses less power.
 
-The window draws with Vulkan where it can, and with OpenGL where it can't. `WGPU_BACKEND=gl` makes it use OpenGL, or `WGPU_BACKEND=vulkan` Vulkan. OpenGL is worth trying on a laptop with two GPUs: to choose between them, Vulkan has to ask both, which wakes the sleeping one, and that can add more than a second to opening a window. OpenGL can use the screen's GPU without asking the other.
+The window draws with Vulkan, or with OpenGL where Vulkan can't draw. On some laptops with two GPUs, OpenGL opens a window much sooner: to choose between them, Vulkan asks both about themselves, and that can take more than a second, while OpenGL can use the screen's GPU without asking the other. When setting up the GPU takes over half a second, the window says so on stderr, and suggests trying OpenGL:
+
+```sh
+clackatoo config renderer opengl
+```
+
+If the API chosen can't draw, the window uses the other.
 
 Box-drawing characters (`─` `│` `┌` `╭` `═`…) and block elements (`█` `▄` `░`…) are drawn by clackatoo rather than taken from the font, so that borders in htop, tmux or Vim join up across lines at any size. The diagonal lines come from the font.
 

@@ -25,7 +25,7 @@ The binary is `target/release/clackatoo`.
 clackatoo --font "JetBrains Mono"
 ```
 
-That opens a window on your shell, starting the daemon in the background if it isn't running. Leave out `--font` for your system's monospace font, or set `CLACKATOO_FONT` to choose one for good. Close the window and the shell keeps running; open another and you're back.
+That opens a window on your shell, starting the daemon in the background if it isn't running. Leave out `--font` for your system's monospace font, or choose one for good with `clackatoo config font "JetBrains Mono"`. Close the window and the shell keeps running; open another and you're back.
 
 Shift+Esc switches to normal mode, where you scroll, select and search history with Vim's keys, and `i` switches back. [The window](~clackatoo/reference/window) has all its keys.
 
