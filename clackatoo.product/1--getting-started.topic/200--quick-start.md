@@ -5,6 +5,7 @@ description: Build clackatoo, open a window on your shell, and drive terminals f
 related:
   - clackatoo/getting-started/what-is-clackatoo
   - clackatoo/reference/window
+  - clackatoo/reference/remote
   - clackatoo/reference/cli
 ---
 
@@ -72,3 +73,13 @@ clackatoo close 1
 ```
 
 Closing a terminal hangs up its program, as closing a terminal window would. A terminal whose program exits stays listed, with its exit status and last screen, until you close it.
+
+## From another machine
+
+With clackatoo built on both machines, and ssh able to log in to the other one without asking for anything:
+
+```sh
+clackatoo --remote desktop
+```
+
+That opens a window on `desktop`'s newest terminal, starting the daemon there if it isn't running. Every command takes `--remote` too, as in `clackatoo list --remote desktop`. If ssh's commands on the other machine can't find clackatoo, [another machine](~clackatoo/reference/remote) explains how to point at it.

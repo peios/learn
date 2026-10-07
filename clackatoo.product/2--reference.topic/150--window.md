@@ -5,6 +5,7 @@ description: clackatoo's window shows a terminal and sends it your keys. Insert 
 related:
   - clackatoo/getting-started/quick-start
   - clackatoo/reference/cli
+  - clackatoo/reference/remote
   - clackatoo/reference/terminal-emulation
 ---
 
@@ -18,23 +19,34 @@ clackatoo
 
 With no command, `clackatoo` opens a window on your newest running terminal, or starts a terminal running your `$SHELL` if there is none. If no daemon is running, it starts one in the background first. That daemon logs to `daemon.log` in the [runtime directory](~clackatoo/reference/cli), and keeps running after the window closes.
 
-The window sizes itself for a 100×30 terminal. Resizing the window resizes the terminal, and its program is told the new size.
+The window sizes itself for a 100×30 terminal. Resizing the window resizes the terminal, and its program is told the new size. When several windows show one terminal, the terminal takes the size of whichever was last opened on it, resized or focused.
+
+With `--remote <HOST>`, the window shows a terminal on another machine, through ssh. See [another machine](~clackatoo/reference/remote).
 
 | Option | Environment variable | |
 |---|---|---|
 | `--font <FAMILY>` | `CLACKATOO_FONT` | The font family. Default: your system's monospace font. |
 | `--font-size <POINTS>` | `CLACKATOO_FONT_SIZE` | The text size. Default: 12. |
+| `--remote <HOST>` | | Use the daemon on another machine. |
+| `--remote-command <COMMAND>` | `CLACKATOO_REMOTE_COMMAND` | The command that runs clackatoo there. Default: `clackatoo`. |
 
 A font family is named as fontconfig knows it, as `fc-list : family` prints. Characters the font doesn't have, such as CJK text or emoji, come from fallback fonts, found the same way.
 
 ### A daemon from another build
 
-Each build of clackatoo speaks one version of the protocol between windows and the daemon, and refuses a daemon speaking another. When the window finds a daemon from an older build, it says so and offers to replace it:
+Each build of clackatoo speaks one version of the protocol between windows and the daemon, and refuses a daemon speaking another. When the window finds a daemon from another build, it says so and offers to replace it:
 
 - Enter stops the old daemon and starts a new one. This closes every terminal in the old daemon, and hangs up their programs.
 - Esc quits, leaving the old daemon running.
 
 `clackatoo stop` does the same from the command line.
+
+### Losing the daemon
+
+If the connection to the daemon is lost, because the daemon stopped or, [on another machine](~clackatoo/reference/remote), the network went, the window says so and why, in place of the terminal:
+
+- Enter reconnects, starting a daemon if none is running. If the terminal shown is still running, the window returns to it as it was, in the same mode and scrolled to the same place.
+- Esc quits.
 
 ## Modes
 
