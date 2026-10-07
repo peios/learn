@@ -92,9 +92,12 @@ What each group measures:
 | | Screen capture round trip | One screen capture request and response. |
 | `throughput` | Each workload | A script prints 16 MiB of the workload into a terminal. Timed from starting it until the daemon has processed everything. |
 | | Bare PTY | The same script, read straight from a PTY and thrown away. This is the most any terminal could manage on this machine. |
+| `cpu` | Daemon CPU per MiB | For each throughput workload, the CPU time the daemon spent per MiB of output, read to the nanosecond from `/proc`. Throughput stops at the PTY's limit, so this is where the daemon's own speed shows. |
+| | Bare PTY reader per MiB | The CPU time the bare PTY reader spends per MiB: the floor, nearly all of it in the kernel's TTY layer. |
 | `memory` | Daemon at rest | The daemon's resident memory with no terminals. |
 | | Per terminal | The growth from opening 20 empty terminals, divided by 20. The programs running in them aren't counted. |
-| | Per scrollback line | The growth from filling an 80-column terminal's scrollback with full lines, divided by the number of lines. |
+| | Per scrollback line | The growth from filling an 80-column terminal's scrollback with full lines, the worst case, divided by the number of lines. |
+| | Per scrollback line, typical | The same with lines of varying length, averaging half the width. |
 | `idle` | Wakeups | How often the daemon wakes up per second, with a client connected and three quiet terminals. This should be zero. It is counted from the context switches in `/proc`. |
 
 The protocol can't push changes to clients yet, so the harness learns that a terminal has caught up by polling it. Throughput runs watch the terminal's title, which the script sets when it finishes, every 200 µs. The keypress test captures the screen back to back, so its result includes up to one capture round trip on top of the true latency.
@@ -103,6 +106,12 @@ To run some groups only, name them:
 
 ```sh
 cargo bench -p clackatoo --bench e2e -- startup memory
+```
+
+To measure a different build, such as another branch's, point the harness at its binary:
+
+```sh
+cargo bench -p clackatoo --bench e2e -- --binary ../other/target/release/clackatoo
 ```
 
 ## Compare changes
