@@ -1,0 +1,126 @@
+---
+title: Benchmarks
+type: how-to
+description: Run clackatoo's benchmarks, read the results, and compare them across changes. Emulator throughput is measured next to alacritty_terminal, and an end-to-end harness measures the real binary's startup, latency, throughput, memory and idle wakeups.
+related:
+  - clackatoo/reference/terminal-emulation
+  - clackatoo/reference/recordings
+---
+
+clackatoo's goal is to be very fast and very light, so speed is measured, not assumed. There are two suites:
+
+- **Emulator throughput** feeds terminal output straight into `clackatoo-term`, the crate that turns output into a grid of cells, and into `alacritty_terminal`, the emulator inside Alacritty, so the two can be compared on the same machine.
+- **End to end** starts the real release binary and drives it the way a user would: it starts daemons, opens terminals, types into them and floods them with output.
+
+Both compare each run with the previous one, so a regression shows up as a number.
+
+## Run everything
+
+```sh
+cargo bench
+```
+
+That builds in release mode and runs both suites, which takes a few minutes. To run one suite on its own:
+
+```sh
+cargo bench -p clackatoo-bench          # emulator throughput
+cargo bench -p clackatoo --bench e2e    # end to end
+```
+
+Close anything busy first, such as builds, browsers playing video, or other benchmarks. A desktop's timings wander by a few percent anyway, with CPU frequency scaling and background load, and both suites treat changes under 5% as noise.
+
+## Workloads
+
+Both suites use the same workloads. They are generated in code from a fixed seed, so every run sees identical bytes and nothing large is committed. Each one leans on a different part of the emulator:
+
+| Workload | Stands for |
+|---|---|
+| `ascii` | Plain text scrolling, like `cat` of a log. Lines vary in length, and some wrap. |
+| `highlight` | Words in 24-bit colours, some bold, like syntax-highlighted code. |
+| `dense` | A different style in every cell, redrawing the whole screen. The worst case for style handling. |
+| `region` | Scrolling inside a scroll region, the way pagers and editors scroll part of the screen. |
+| `unicode` | Wide CJK characters and emoji, combining accents, and emoji joined with ZWJ (zero width joiner). |
+| `cursor` | Short writes at random places, sometimes recoloured, like a full-screen program redrawing. |
+| `vim` | A recorded vim session (open, edit, quit), repeated. Emulator suite only. |
+
+Generated workloads play in a 120x40 terminal, a typical window. The vim recording plays at the size it was recorded at.
+
+## Emulator throughput
+
+Each benchmark feeds a workload to one emulator in 64 KiB pieces, the size the daemon reads from a PTY at a time. The emulator is reused from one iteration to the next, so its 10,000-line scrollback is full and every new line pushes an old one out. That's the steady state of a terminal that has been open a while. Neither emulator does any I/O or drawing.
+
+The results come in pairs, `clackatoo` and `alacritty` for each workload:
+
+```text
+ascii/clackatoo         time:   [23.467 ms 23.522 ms 23.601 ms]
+                        thrpt:  [84.745 MiB/s 85.029 MiB/s 85.228 MiB/s]
+ascii/alacritty         time:   [15.675 ms 15.724 ms 15.780 ms]
+                        thrpt:  [126.74 MiB/s 127.20 MiB/s 127.60 MiB/s]
+```
+
+`thrpt` is throughput: how much output the emulator gets through per second. The middle number is the best estimate, and the outer two bound it. The benchmarks use [criterion](https://github.com/criterion-rs/criterion.rs), which also prints how each result changed since the last run.
+
+Before benchmarking a workload, the suite plays it through both emulators and checks they end up showing the same screen. Otherwise the two wouldn't be doing the same work. One difference is expected: alacritty draws a ZWJ emoji sequence such as 👩‍💻 as two separate emoji, while clackatoo joins it into one, as kitty, WezTerm and Ghostty do. So on `unicode`, alacritty's lines wrap sooner, and the suite prints a note saying so. Any other difference prints a warning with both screens.
+
+alacritty also records which lines changed as it goes, for its renderer. clackatoo doesn't do that yet, so expect the gap to narrow a little once it does.
+
+## End to end
+
+The harness runs as a bench target of the `clackatoo` package. That way, cargo always builds a fresh release binary before measuring it. Every daemon it starts gets a temporary runtime directory of its own, so it never touches a daemon you are using. It prints one table:
+
+```text
+clackatoo end-to-end benchmarks
+binary: /home/you/clackatoo/target/release/clackatoo
+compared with baseline "base": commit d8c3b98, saved 2 hours ago
+
+startup
+  daemon start to accepting clients            677.2 µs  ±10.1%  -2.0% (noise)
+```
+
+Each line shows the median of several runs, then the spread: half the distance between the 10th and 90th percentiles, as a percentage of the median. The last column compares the result with the baseline.
+
+What each group measures:
+
+| Group | Measurement | How |
+|---|---|---|
+| `size` | Release binary | The size of `target/release/clackatoo`. |
+| `startup` | Daemon start to accepting clients | From launching `clackatoo daemon` until a client can connect and say hello. |
+| | CLI command | `clackatoo list`, from launch to exit, against a running daemon. |
+| | New terminal | From asking for a terminal until it's running. |
+| | New terminal to first text | Until your `$SHELL` shows any text, usually its prompt. Mostly the shell's own startup time. |
+| `latency` | Keypress to echo in the grid | A program that echoes keys runs in a terminal. One key is sent, and the time is measured until the echoed key shows up on the screen. This is the part of keypress-to-screen latency the daemon owns. |
+| | Screen capture round trip | One screen capture request and response. |
+| `throughput` | Each workload | A script prints 16 MiB of the workload into a terminal. Timed from starting it until the daemon has processed everything. |
+| | Bare PTY | The same script, read straight from a PTY and thrown away. This is the most any terminal could manage on this machine. |
+| `memory` | Daemon at rest | The daemon's resident memory with no terminals. |
+| | Per terminal | The growth from opening 20 empty terminals, divided by 20. The programs running in them aren't counted. |
+| | Per scrollback line | The growth from filling an 80-column terminal's scrollback with full lines, divided by the number of lines. |
+| `idle` | Wakeups | How often the daemon wakes up per second, with a client connected and three quiet terminals. This should be zero. It is counted from the context switches in `/proc`. |
+
+The protocol can't push changes to clients yet, so the harness learns that a terminal has caught up by polling it. Throughput runs watch the terminal's title, which the script sets when it finishes, every 200 µs. The keypress test captures the screen back to back, so its result includes up to one capture round trip on top of the true latency.
+
+To run some groups only, name them:
+
+```sh
+cargo bench -p clackatoo --bench e2e -- startup memory
+```
+
+## Compare changes
+
+Both suites work like criterion's baselines:
+
+- By default, each run is compared with the previous run and replaces it.
+- `--save-baseline NAME` compares with the baseline called `NAME` and replaces it.
+- `--baseline NAME` compares with `NAME` without saving anything.
+
+To measure a change, save a baseline before making it, then compare against it afterwards:
+
+```sh
+cargo bench -- --save-baseline before
+# … make the change …
+cargo bench -- --baseline before
+```
+
+A change counts when it is bigger than 5% and outside both runs' spreads. Otherwise it's marked `(noise)`. Measurements that don't vary, like the binary's size, report any change.
+
+Criterion keeps its baselines in `target/criterion/`. The end-to-end harness keeps its own in `target/clackatoo-bench/` as tab-separated files, along with the commit they were measured on.

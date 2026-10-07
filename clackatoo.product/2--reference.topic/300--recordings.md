@@ -6,7 +6,7 @@ related:
   - clackatoo/reference/cli
 ---
 
-`clackatoo new --record <FILE>` saves everything the terminal's program prints. Replaying a recording through clackatoo's emulator, at the recorded size, rebuilds the same screen every time, however the bytes are split up. clackatoo's tests are built on recordings of real programs, and its throughput benchmarks will be too.
+`clackatoo new --record <FILE>` saves everything the terminal's program prints. Replaying a recording through clackatoo's emulator, at the recorded size, rebuilds the same screen every time, however the bytes are split up. clackatoo's tests are built on recordings of real programs, and its throughput benchmarks replay one too.
 
 ## Format
 
