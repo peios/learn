@@ -85,12 +85,13 @@ Each pane has its own mode.
 
 | Key | In | Does |
 |---|---|---|
-| Shift+Esc or Ctrl+\\ | insert mode | Switches to normal mode. |
+| Ctrl+; | insert mode | Switches to normal mode. |
+| Shift+Esc or Ctrl+\\ | insert mode | Also switch to normal mode. |
 | `i` | normal mode | Switches to insert mode, back at the live screen. |
 | Ctrl+\\, twice | insert mode | Sends a real Ctrl+\\ to the program. |
 | Ctrl+C | either | Interrupts the program. |
 
-Plain Esc always goes to the program, since programs such as Vim and less use it.
+Plain Esc always goes to the program, since programs such as Vim and less use it. Ctrl+; costs programs nothing: a terminal has no code to send them for it, so none can be listening for it. It's found by where the key is, so on layouts where `;` takes Shift, such as German, it's Ctrl and the key to the right of L.
 
 ## Workspaces, tabs and panes
 
