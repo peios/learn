@@ -1,7 +1,7 @@
 ---
 title: Another machine
 type: reference
-description: With --remote, the window and the clackatoo command use the daemon on another machine, reached with ssh. How it connects, what the other machine needs, and what happens when the connection drops.
+description: With --remote, the window and the clackatoo command use the daemon on another machine, reached with ssh. How it connects, how it moves onto UDP to survive network changes, what the other machine needs, and what happens when the connection drops.
 related:
   - clackatoo/reference/window
   - clackatoo/reference/cli
@@ -23,12 +23,44 @@ The host is anything `ssh` accepts: a hostname, `user@host`, or a name from your
 
 Through it, the window or command first checks that the daemon speaks its version of the protocol, as it does on this one. Then the two talk over QUIC, a network protocol that runs several independent streams over one connection, carried inside the ssh connection.
 
-ssh does the logging in, and it's how each end knows the other is genuine. The daemon only takes QUIC connections that come through ssh, and the window only trusts the certificate the daemon sent it through ssh. So clackatoo opens no network port of its own, and anyone who can use the daemon could already log in to that machine as you.
+ssh does the logging in, and it's how each end knows the other is genuine. The daemon only takes QUIC connections that come through ssh, and the window only trusts the certificate the daemon sent it through ssh. Anyone who can use the daemon could already log in to that machine as you.
 
-Each terminal's screen updates come on a QUIC stream of their own, apart from everything else. Inside ssh, that makes little difference you'd notice, since ssh delivers everything in order anyway. It's the groundwork for moving the connection out of ssh onto UDP when the network allows:
+Each terminal's screen updates come on a QUIC stream of their own, apart from everything else, so a lost packet holds up only the terminal it belonged to.
 
-- The connection would survive your laptop changing networks.
-- A lost packet would hold up only the terminal it belonged to.
+## Moving onto UDP
+
+Once connected, the window or command tries reaching the daemon straight over UDP, at the address ssh reached that machine at. If that works, the connection moves there, out of ssh:
+
+- **It survives your network changing,** such as moving from home Wi-Fi to a phone's hotspot, or a short sleep. ssh's connection dies when that happens; the QUIC connection carries on from the new network, and the window doesn't notice.
+- **Keys come back a little faster,** with ssh out of the way.
+
+If UDP doesn't get through, as when a firewall blocks it, the connection stays inside ssh, and nothing waits on the attempt. If UDP stops getting through later, the connection goes back into ssh after about ten seconds, if ssh's connection is still up, and tries UDP again a minute after.
+
+[`clackatoo ping --remote host`](~clackatoo/reference/cli#ping) says which way each round went: `(over UDP)` or `(through ssh)`.
+
+The daemon takes UDP on the first free port from 60000 to 61000, the same range as mosh, when the first connection through ssh arrives. It never takes a new connection over UDP, only packets for connections already set up through ssh, and it doesn't answer anything else, so the port gives nothing away to a scan.
+
+### Firewalls
+
+A firewall on the other machine has to let UDP in on those ports. If it already does for mosh, there's nothing to do. Otherwise, with `ufw`:
+
+```sh
+sudo ufw allow 60000:61000/udp
+```
+
+or with `firewalld`:
+
+```sh
+sudo firewall-cmd --permanent --add-port=60000-61000/udp && sudo firewall-cmd --reload
+```
+
+To use other ports, or none, set `CLACKATOO_UDP_PORTS` for the daemon on the other machine: a port, a range such as `60100-60200`, or `off` to keep every connection inside ssh. The daemon reads it when it starts, and one started by `--remote` gets it from the remote command:
+
+```sh
+clackatoo --remote server --remote-command 'env CLACKATOO_UDP_PORTS=60100-60200 clackatoo'
+```
+
+Through a jump host (`ProxyJump`), ssh reached the other machine at an address on its own network, which you usually can't reach directly, so the connection stays inside ssh.
 
 ## What the other machine needs
 
@@ -61,18 +93,18 @@ clackatoo passes ssh a few options of its own:
 
 - `-T`: no terminal on the other end; the bridge doesn't want one.
 - `ConnectTimeout=10`: an unreachable host fails after 10 seconds.
-- `ServerAliveInterval=5` and `ServerAliveCountMax=3`: a connection that has died, such as when the laptop sleeps or changes network, is noticed within 15 seconds.
+- `ServerAliveInterval=5` and `ServerAliveCountMax=3`: a connection that has died, such as when the laptop sleeps or changes network, is noticed within 15 seconds. A connection that has moved onto UDP carries on without it.
 
 ## When the connection drops
 
-The window says it lost the connection, and why:
+A connection inside ssh drops when ssh's does. One on UDP drops after ten minutes without hearing from the other end, such as a laptop asleep for longer than that. An idle window stays connected: it sends the daemon a few bytes every 25 seconds, which also keeps your router from forgetting the connection.
+
+When the connection drops, the window says so, and why:
 
 - Enter reconnects, to the same terminal if it's still running. The window keeps its mode, its scroll position and the history it fetched.
 - Esc quits.
 
 Nothing on the other machine stops when the connection drops: the terminals carry on, and output that arrives meanwhile is there when you reconnect.
-
-A connection doesn't yet survive a change of network, such as moving from home Wi-Fi to a phone's hotspot. ssh's connection dies, and the window says so.
 
 ## A daemon from another build
 
@@ -88,4 +120,4 @@ A terminal has one size, so when windows of different sizes show the same termin
 
 Every key goes to the other machine and back before it shows, so a connection with 100 ms round trips shows each key 100 ms late. On a local network this is a millisecond or two.
 
-[`clackatoo ping --remote host`](~clackatoo/reference/cli#ping) measures it: how long the daemon takes to answer, and how long a key takes to come back from a program. clackatoo's own share is small. Through ssh to the same machine, where the network costs next to nothing, a key comes back in about a third of a millisecond, so nearly all of anything above that is the network.
+[`clackatoo ping --remote host`](~clackatoo/reference/cli#ping) measures it: how long the daemon takes to answer, and how long a key takes to come back from a program. clackatoo's own share is small. To the same machine, where the network costs next to nothing, a key comes back in about a fifth of a millisecond over UDP, and a third through ssh, so nearly all of anything above that is the network.
