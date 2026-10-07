@@ -80,3 +80,5 @@ A terminal has one size, so when windows of different sizes show the same termin
 ## Typing over a slow connection
 
 Every key goes to the other machine and back before it shows, so a connection with 100 ms round trips shows each key 100 ms late. On a local network this is a millisecond or two.
+
+[`clackatoo ping --remote host`](~clackatoo/reference/cli#ping) measures it: how long the daemon takes to answer, and how long a key takes to come back from a program. clackatoo's own share is small. Through ssh to the same machine, where the network costs next to nothing, a key comes back in about a quarter of a millisecond, so nearly all of anything above that is the network.
