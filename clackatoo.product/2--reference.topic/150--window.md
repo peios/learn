@@ -119,7 +119,7 @@ The window shows your work at three levels:
 
 - **Workspaces**, one for each piece of distinct work, such as a project. Their names run along the [top bar](#the-frame). Often there's just one.
 - **Tabs**, inside a workspace. They run along the bottom bar, numbered, and named after the title of their focused pane's program, unless you've named them.
-- **Panes**, which a tab is split into, side by side or stacked. Each shows a terminal. Panes in a split share its space equally.
+- **Panes**, which a tab is split into, side by side or stacked. Each shows a terminal. A split shares its space equally until you [resize it](#resizing-panes).
 
 The daemon keeps all of them, as it keeps terminals. Closing the window closes nothing, and the next window opens on the workspace, tab and pane last used. Each window shows one workspace, so two windows can show two workspaces, or two tabs of one.
 
@@ -146,6 +146,14 @@ The first character of a split says which way the divider runs, `|` upright or `
 A new terminal starts in the directory that the pane it splits is in. A new tab's terminal starts in the directory of the workspace's focused pane.
 
 Workspace names are unique, and can't contain `@`, which will name workspaces on other machines. If a command fails, such as renaming a workspace to a name another has, the bottom bar says why until the next key.
+
+### Resizing panes
+
+Drag the gap between two panes to move it. It moves a whole column or row at a time, and the programs on either side are told their new size as it goes. A double click on the gap shares that split's space equally again.
+
+In normal mode, Alt+H, Alt+J, Alt+K and Alt+L move the focused pane's edge on that side by a column or row, so Alt+L widens a pane with a pane to its right. A pane with no edge on that side moves its other edge instead, so Alt+L narrows the rightmost pane. No pane gets smaller than one cell.
+
+A new pane in a split gets the split's average share, so a split you never resized stays equal. Sizes are kept by the daemon, like the rest of the layout, and other windows show the change.
 
 ### Moving around
 
@@ -253,7 +261,7 @@ Box-drawing characters (`─` `│` `┌` `╭` `═`…) and block elements (`�
 
 ## Not supported yet
 
-- Resizing or moving panes. Every split shares its space equally.
+- Moving panes to another place in the layout.
 - Panes from other machines, as `:Terminal@host` will open. Today the window says this isn't built yet.
 - Typing through an input method, for languages such as Chinese and Japanese.
 - Emoji joined with a zero-width joiner, such as 👩‍💻, show only their first emoji.
