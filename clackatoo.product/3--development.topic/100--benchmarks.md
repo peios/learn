@@ -1,7 +1,7 @@
 ---
 title: Benchmarks
 type: how-to
-description: Run clackatoo's benchmarks, read the results, and compare them across changes. Emulator throughput is measured next to alacritty_terminal, and an end-to-end harness measures the real binary's startup, latency, throughput, memory and idle wakeups.
+description: Run clackatoo's benchmarks, read the results, and compare them across changes. Emulator throughput is measured next to alacritty_terminal, and an end-to-end harness measures the real binary's startup, latency, throughput, memory and idle wakeups, and its window.
 related:
   - clackatoo/reference/terminal-emulation
   - clackatoo/reference/recordings
@@ -10,7 +10,7 @@ related:
 clackatoo's goal is to be very fast and very light, so speed is measured, not assumed. There are two suites:
 
 - **Emulator throughput** feeds terminal output straight into `clackatoo-term`, the crate that turns output into a grid of cells, and into `alacritty_terminal`, the emulator inside Alacritty, so the two can be compared on the same machine.
-- **End to end** starts the real release binary and drives it the way a user would: it starts daemons, opens terminals, types into them and floods them with output.
+- **End to end** starts the real release binary and drives it the way a user would: it starts daemons, opens terminals and windows, types into them and floods them with output.
 
 Both compare each run with the previous one, so a regression shows up as a number.
 
@@ -88,8 +88,10 @@ What each group measures:
 | | CLI command | `clackatoo list`, from launch to exit, against a running daemon. |
 | | New terminal | From asking for a terminal until it's running. |
 | | New terminal to first text | Until your `$SHELL` shows any text, usually its prompt. Mostly the shell's own startup time. |
-| `latency` | Keypress to echo in the grid | A program that echoes keys runs in a terminal. One key is sent, and the time is measured until the echoed key shows up on the screen. This is the part of keypress-to-screen latency the daemon owns. |
+| `latency` | Keypress to echo in the grid | A program that echoes keys runs in a terminal. One key is sent, and the time is measured until a screen capture shows the echoed key. |
 | | Screen capture round trip | One screen capture request and response. |
+| | Keypress to view update | The same, following the terminal's view as the window does: timed until the update showing the echo arrives. This is the part of keypress-to-screen latency the daemon owns. |
+| | Keypress to view update, while another floods | The same while a second terminal prints without end, which must not hold up the one being typed in. |
 | `throughput` | Each workload | A script prints 16 MiB of the workload into a terminal. Timed from starting it until the daemon has processed everything. |
 | | Bare PTY | The same script, read straight from a PTY and thrown away. This is the most any terminal could manage on this machine. |
 | `cpu` | Daemon CPU per MiB | For each throughput workload, the CPU time the daemon spent per MiB of output, read to the nanosecond from `/proc`. Throughput stops at the PTY's limit, so this is where the daemon's own speed shows. |
@@ -100,8 +102,14 @@ What each group measures:
 | | Per scrollback line, before compaction | The same, measured as soon as the output ends. |
 | | Per scrollback line, typical | The same as the first, with lines of varying length, averaging half the width. |
 | `idle` | Wakeups | How often the daemon wakes up per second, with a client connected and three quiet terminals, one of which printed some history before going quiet. This should be zero. It is counted from the context switches in `/proc`. |
+| `window` | Start to first frame | From starting `clackatoo` to the window's first frame, with the daemon already running. Most of it is the GPU driver starting up. |
+| | Frame drawn, during a flood | How long the window takes over each frame, from starting on it to handing it to the compositor, while its terminal prints for two seconds without stopping. |
+| | Wakeups of the window's own threads | How often the window wakes up per second with nothing to draw. This should be zero. |
+| | Wakeups, the GPU driver's threads too | The same, counting threads the GPU driver started inside the window. Some drivers wake up on their own: NVIDIA's Vulkan driver about 110 times a second, even with no window at all. |
 
-The protocol can't push changes to clients yet, so the harness learns that a terminal has caught up by polling it. Throughput runs watch the terminal's title, which the script sets when it finishes, every 200 µs. The keypress test captures the screen back to back, so its result includes up to one capture round trip on top of the true latency.
+Most groups learn that a terminal has caught up by polling it. Throughput runs watch the terminal's title, which the script sets when it finishes, every 200 µs. The first keypress test captures the screen back to back, so its result includes up to one capture round trip on top of the true latency; the view-update tests don't poll.
+
+The `window` group opens real windows, so it needs a display. Without one (no `WAYLAND_DISPLAY` or `DISPLAY`), it says so and is skipped. The windows open on the harness's own daemons, never on yours. The window logs its first frame, and how long each frame took when started with `RUST_LOG=clackatoo_gui::frame=trace`; the harness reads those from its output.
 
 To run some groups only, name them:
 

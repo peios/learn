@@ -4,6 +4,7 @@ type: concept
 description: clackatoo is a terminal workspace aiming to be very fast and very light. Its daemon owns every terminal, and windows, scripts and agents are all clients of it.
 related:
   - clackatoo/getting-started/quick-start
+  - clackatoo/reference/window
   - clackatoo/reference/cli
   - clackatoo/reference/terminal-emulation
 ---
@@ -14,7 +15,7 @@ related:
 
 Most terminal emulators are one program: close the window and your shells die with it. In clackatoo, a background **daemon** owns every terminal. That means the pseudo-terminal each program runs on (its PTY), the program itself, and the grid of characters its output builds.
 
-Everything else is a **client** of the daemon and talks to it over one protocol: the `clackatoo` command, and later windows, remote viewers and agents. Because the daemon owns the terminals:
+Everything else is a **client** of the daemon and talks to it over one protocol: the window, the `clackatoo` command, and later remote viewers and agents. Because the daemon owns the terminals:
 
 - closing a window closes nothing, and reopening it brings everything back;
 - a script can do anything a window can, because it uses the same requests;

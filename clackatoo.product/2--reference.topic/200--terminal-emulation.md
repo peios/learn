@@ -42,9 +42,10 @@ The program runs in its own session, with the terminal as its controlling termin
 | `ESC` | `7` `8` (save/restore cursor), `D` (index), `E` (next line), `H` (set tab stop), `M` (reverse index), `c` (full reset), `#8` (screen alignment test), `(` and `)` with `B` (ASCII) or `0` (DEC line drawing) |
 | `CSI` cursor | `A` `B` `C` `D` `E` `F` `G` `H` `I` `Z` `` ` `` `a` `d` `e` `f`, and `s` `u` without parameters |
 | `CSI` editing | `@` `J` (including `3J` to clear scrollback) `K` `L` `M` `P` `S` `T` `X` `b` (repeat) |
-| `CSI` other | `g` (clear tab stops), `r` (scroll region), `m` (SGR), `!p` (soft reset) |
+| `CSI` other | `g` (clear tab stops), `r` (scroll region), `m` (SGR), `!p` (soft reset), ` q` (cursor shape: 0 the user's default, 1 and 2 block, 3 and 4 underline, 5 and 6 bar; blinking isn't drawn) |
+| `ESC` keypad | `=` and `>` (application and numeric keypad) |
 | ANSI modes (`CSI h`/`l`) | 4 (insert), 20 (line feed is newline) |
-| DEC modes (`CSI ? h`/`l`) | 6 (origin), 7 (autowrap), 25 (show cursor), 47, 1047 and 1049 (alternate screen), 1048 (save cursor) |
+| DEC modes (`CSI ? h`/`l`) | 1 (application cursor keys), 6 (origin), 7 (autowrap), 25 (show cursor), 47, 1047 and 1049 (alternate screen), 66 (application keypad), 1048 (save cursor), 2004 (bracketed paste) |
 | SGR | Bold, dim, italic, blink, inverse, hidden, strikethrough and their resets. Underlines: single, double (`21` or `4:2`), curly (`4:3`), dotted (`4:4`), dashed (`4:5`). 8, 16, 256 and 24-bit colours for text, background and underline (`58`), in both the `;` and `:` spellings. |
 | `OSC` | 0 and 2 (window title) |
 
@@ -61,7 +62,7 @@ The program runs in its own session, with the terminal as its controlling termin
 
 These are ignored:
 
-- Modes that only change how keys and the mouse are reported: cursor-key mode, keypad mode, mouse tracking, bracketed paste and focus events. A window client will need them, so they come with it.
+- Mouse tracking and focus events.
 - OSC 7 (working directory), OSC 8 (hyperlinks), OSC 52 (clipboard) and OSC 133 (shell integration).
 - Secondary device attributes (`CSI > c`) and the kitty keyboard protocol.
 - Left and right margins (`CSI s` with parameters).

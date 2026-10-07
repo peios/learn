@@ -1,9 +1,10 @@
 ---
 title: Quick start
 type: how-to
-description: Build clackatoo, start the daemon, and drive a shell from the command line by starting a terminal, typing into it, reading its screen and closing it.
+description: Build clackatoo, open a window on your shell, and drive terminals from the command line by starting one, typing into it, reading its screen and closing it.
 related:
   - clackatoo/getting-started/what-is-clackatoo
+  - clackatoo/reference/window
   - clackatoo/reference/cli
 ---
 
@@ -17,13 +18,23 @@ cargo build --release -p clackatoo
 
 The binary is `target/release/clackatoo`.
 
-## Start the daemon
+## Open a window
+
+```sh
+clackatoo --font "JetBrains Mono"
+```
+
+That opens a window on your shell, starting the daemon in the background if it isn't running. Leave out `--font` for your system's monospace font, or set `CLACKATOO_FONT` to choose one for good. Close the window and the shell keeps running; open another and you're back.
+
+Shift+Esc switches to normal mode, where you scroll, select and search history with Vim's keys, and `i` switches back. [The window](~clackatoo/reference/window) has all its keys.
+
+## Start the daemon yourself
 
 ```sh
 clackatoo daemon
 ```
 
-The daemon runs in the foreground and logs to stderr. Set `RUST_LOG=debug` for more detail. Only one daemon runs per user: a second one refuses to start. Stopping the daemon (Ctrl-C) hangs up every terminal it owns.
+To watch the daemon's log, run it in the foreground instead. It logs to stderr; set `RUST_LOG=debug` for more detail. Only one daemon runs per user: a second one refuses to start. Stopping the daemon (Ctrl-C, or `clackatoo stop`) hangs up every terminal it owns.
 
 ## Drive a terminal
 
