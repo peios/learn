@@ -114,9 +114,9 @@ Nothing on the other machine stops when the connection drops: the terminals carr
 
 ## A daemon from another build
 
-If the daemon on the other machine speaks another version of the protocol, the window says so, as it does [on this machine](~clackatoo/reference/window#a-daemon-from-another-build). Enter replaces that daemon using the clackatoo installed there, closing its terminals. If that clackatoo is itself from another build, the window says to update it.
+If the daemon on the other machine speaks another version of the protocol, the window says so, as it does [on this machine](~clackatoo/reference/window#a-daemon-from-another-build). Enter replaces that daemon using the clackatoo installed there: it upgrades it if it can, keeping its terminals, or else stops it, closing them. If that clackatoo is itself from another build, the window says to update it.
 
-The `clackatoo` command doesn't replace anything. Running `clackatoo stop` on the other machine stops its daemon.
+The `clackatoo` command doesn't replace anything. On the other machine, `clackatoo upgrade` upgrades its daemon, and `clackatoo stop` stops it.
 
 ## Two windows on one terminal
 

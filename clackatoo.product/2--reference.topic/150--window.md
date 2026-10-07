@@ -77,12 +77,13 @@ A font family is named as fontconfig knows it, as `fc-list : family` prints. Cha
 
 ### A daemon from another build
 
-Each build of clackatoo speaks one version of the protocol between windows and the daemon, and refuses a daemon speaking another. When the window finds a daemon from another build, it says so and offers to replace it:
+Each build of clackatoo speaks one version of the protocol between windows and the daemon, and refuses a daemon speaking another. When the window finds a daemon from another build, it says so, and what Enter does depends on which is older:
 
-- Enter stops the old daemon and starts a new one. This closes every terminal in the old daemon, and hangs up their programs.
-- Esc quits, leaving the old daemon running.
+- **An older daemon, from protocol 11 on:** Enter upgrades it. The daemon becomes this build without stopping, so its terminals and the programs in them carry on, and the window opens on them.
+- **An older daemon, from before protocol 11:** it's too old to upgrade, so Enter stops it and starts a new one. This closes every terminal in the old daemon, and hangs up their programs.
+- **A daemon newer than the window:** the window says to open a window from the newer build instead. It never offers to replace a newer daemon.
 
-`clackatoo stop` does the same from the command line.
+Esc quits, leaving the daemon running. [`clackatoo upgrade`](~clackatoo/reference/cli#upgrade) and `clackatoo stop` do the same from the command line.
 
 ### Losing the daemon
 
@@ -90,6 +91,8 @@ If the connection to the daemon is lost, because the daemon stopped or, [on anot
 
 - Enter reconnects, starting a daemon if none is running. If the workspace shown is still there, the window returns to it, with each pane as it was, in the same mode and scrolled to the same place.
 - Esc quits.
+
+When the daemon [upgrades](~clackatoo/reference/cli#upgrade), every connection to it drops for a moment. A window whose daemon on this machine is still there afterwards reconnects by itself, without asking.
 
 ## Modes
 
