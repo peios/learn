@@ -17,7 +17,7 @@ The window is a client of the daemon, like the `clackatoo` command. It shows one
 clackatoo
 ```
 
-With no command, `clackatoo` opens a window on your newest running terminal, or starts a terminal running your `$SHELL` if there is none. If no daemon is running, it starts one in the background first. That daemon logs to `daemon.log` in the [runtime directory](~clackatoo/reference/cli), and keeps running after the window closes.
+With no command, `clackatoo` opens a window on your newest running terminal, or starts a terminal running your `$SHELL` if there is none. If no daemon is running, it starts one in the background first. Until the terminal arrives, the window says it's connecting, and Esc quits. That daemon logs to `daemon.log` in the [runtime directory](~clackatoo/reference/cli), and keeps running after the window closes.
 
 The window sizes itself for a 100×30 terminal. Resizing the window resizes the terminal, and its program is told the new size. When several windows show one terminal, the terminal takes the size of whichever was last opened on it, resized or focused.
 
@@ -133,6 +133,8 @@ In insert mode, the cursor has the shape the program asks for: a block, an under
 ## Drawing
 
 The window draws with the GPU, and only when something changed: a quiet terminal costs no CPU. It redraws at most once per frame, so a flood of output costs one frame's drawing per frame.
+
+On a machine with two GPUs, the window uses the one the system lists first, which is the one driving the screen: on a desktop, usually the graphics card the monitors are plugged into, and on a laptop, the integrated GPU. Frames drawn on the other GPU may never reach the screen. To choose differently, set `WGPU_POWER_PREF` to `high` for the faster GPU, or `low` for the one that uses less power.
 
 Box-drawing characters (`─` `│` `┌` `╭` `═`…) and block elements (`█` `▄` `░`…) are drawn by clackatoo rather than taken from the font, so that borders in htop, tmux or Vim join up across lines at any size. The diagonal lines come from the font.
 
