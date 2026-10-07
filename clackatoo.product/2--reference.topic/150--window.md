@@ -116,11 +116,12 @@ In normal mode, `:` opens a command line, shown in the focused pane's label. Ent
 | `:\|<Terminal` | The same, to its left. |
 | `:-Terminal` | The same, below it. |
 | `:-^Terminal` | The same, above it. |
+| `:1`, `:2`… | Moves to that tab of the workspace shown. |
 | `:workspace NAME`, `:ws NAME` | Switches to the workspace called NAME, making it if there's none. Without a name, makes a new workspace, named with the lowest number no workspace has. |
 | `:rename NAME` | Renames the workspace shown. |
 | `:close`, `:q` | Closes the focused pane, hanging up its program. |
 
-The first character of a split says which way the divider runs, `|` upright or `-` flat, and `<` or `^` after it puts the new pane first. A mark alone opens a terminal, so `:|` is `:|Terminal`. Capitalised words name kinds of pane, of which terminals are the only one so far. Lowercase words are the window's own commands.
+The first character of a split says which way the divider runs, `|` upright or `-` flat, and `<` or `^` after it puts the new pane first. A mark alone opens a terminal, so `:|` is `:|Terminal`. Capitalised words name kinds of pane, of which terminals are the only one so far. Lowercase words are the window's own commands, and numbers are tabs.
 
 A new terminal starts in the directory that the pane it splits is in. A new tab's terminal starts in the directory of the workspace's focused pane.
 
@@ -128,14 +129,9 @@ Workspace names are unique, and can't contain `@`, which will name workspaces on
 
 ### Moving around
 
-| Keys | In normal mode |
-|---|---|
-| Ctrl+W, then `h` `j` `k` `l` or an arrow | Moves to the pane to the left, below, above or right. |
-| Ctrl+W, then `c` or `q` | Closes the focused pane. |
-| `gt` `gT` | Moves to the next or the previous tab. |
-| `gw` `gW` | Moves to the next or the previous workspace. |
+In normal mode, Ctrl+H, Ctrl+J, Ctrl+K and Ctrl+L move to the pane to the left, below, above or right. Tabs are `:1`, `:2` and so on, and workspaces `:ws NAME`.
 
-Every window command, both these keys and the command line's commands, ends in insert mode, so you can type straight away. The pane you left goes back to insert mode too, at its live screen.
+You stay in normal mode as you move: the pane you arrive at, including a pane a command just opened, is in normal mode too, and `i` starts typing into it. The pane you left keeps its mode and its place in history.
 
 ## Typing
 

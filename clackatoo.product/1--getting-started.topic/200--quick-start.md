@@ -27,7 +27,7 @@ clackatoo --font "JetBrains Mono"
 
 That opens a window on your shell, starting the daemon in the background if it isn't running. Leave out `--font` for your system's monospace font, or choose one for good with `clackatoo config font "JetBrains Mono"`. Close the window and the shell keeps running; open another and you're back.
 
-Ctrl+; switches to normal mode, where you scroll, select and search history with Vim's keys, and `i` switches back. From normal mode, `:|` Enter splits the pane with a new terminal on its right, `:-` below it, and `:Terminal` opens one in a new tab. Ctrl+W then `h` `j` `k` `l` moves between panes, and `gt` between tabs. [The window](~clackatoo/reference/window) has all its keys.
+Ctrl+; switches to normal mode, where you scroll, select and search history with Vim's keys, and `i` switches back. From normal mode, `:|` Enter splits the pane with a new terminal on its right, `:-` below it, and `:Terminal` opens one in a new tab. Ctrl+H, Ctrl+J, Ctrl+K and Ctrl+L move between panes, and `:1`, `:2` and so on between tabs. [The window](~clackatoo/reference/window) has all its keys.
 
 ## Start the daemon yourself
 
