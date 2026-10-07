@@ -49,7 +49,7 @@ Generated workloads play in a 120x40 terminal, a typical window. The vim recordi
 
 Each benchmark feeds a workload to one emulator in 64 KiB pieces, the size the daemon reads from a PTY at a time. The emulator is reused from one iteration to the next, so its 10,000-line scrollback is full and every new line pushes an old one out. That's the steady state of a terminal that has been open a while. Neither emulator does any I/O or drawing.
 
-The results come in pairs, `clackatoo` and `alacritty` for each workload:
+For each workload there are three results: `clackatoo`, `clackatoo-eager` and `alacritty`. A flood never pauses, so by default clackatoo never compacts its scrollback during the benchmark, much as alacritty never does. `clackatoo-eager` compacts every line as it scrolls off, so the cost of compacting stays measured.
 
 ```text
 ascii/clackatoo         time:   [23.467 ms 23.522 ms 23.601 ms]
@@ -96,9 +96,10 @@ What each group measures:
 | | Bare PTY reader per MiB | The CPU time the bare PTY reader spends per MiB: the floor, nearly all of it in the kernel's TTY layer. |
 | `memory` | Daemon at rest | The daemon's resident memory with no terminals. |
 | | Per terminal | The growth from opening 20 empty terminals, divided by 20. The programs running in them aren't counted. |
-| | Per scrollback line | The growth from filling an 80-column terminal's scrollback with full lines, the worst case, divided by the number of lines. |
-| | Per scrollback line, typical | The same with lines of varying length, averaging half the width. |
-| `idle` | Wakeups | How often the daemon wakes up per second, with a client connected and three quiet terminals. This should be zero. It is counted from the context switches in `/proc`. |
+| | Per scrollback line | The growth from filling an 80-column terminal's scrollback with full lines, the worst case, divided by the number of lines. Measured once the daemon has compacted the scrollback, 300 ms after the output ends. |
+| | Per scrollback line, before compaction | The same, measured as soon as the output ends. |
+| | Per scrollback line, typical | The same as the first, with lines of varying length, averaging half the width. |
+| `idle` | Wakeups | How often the daemon wakes up per second, with a client connected and three quiet terminals, one of which printed some history before going quiet. This should be zero. It is counted from the context switches in `/proc`. |
 
 The protocol can't push changes to clients yet, so the harness learns that a terminal has caught up by polling it. Throughput runs watch the terminal's title, which the script sets when it finishes, every 200 µs. The keypress test captures the screen back to back, so its result includes up to one capture round trip on top of the true latency.
 
