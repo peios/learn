@@ -119,7 +119,7 @@ The window shows your work at three levels:
 
 - **Workspaces**, one for each piece of distinct work, such as a project. Their names run along the [top bar](#the-frame). Often there's just one.
 - **Tabs**, inside a workspace. They run along the bottom bar, numbered, and named after the title of their focused pane's program, unless you've named them.
-- **Panes**, which a tab is split into, side by side or stacked. Each shows a terminal. A split shares its space equally until you [resize it](#resizing-panes).
+- **Panes**, which a tab is split into, side by side or stacked. Each shows a terminal, or a [chat with an agent](~clackatoo/reference/agents). A split shares its space equally until you [resize it](#resizing-panes).
 
 The daemon keeps all of them, as it keeps terminals. Closing the window closes nothing, and the next window opens on the workspace, tab and pane last used. Each window shows one workspace, so two windows can show two workspaces, or two tabs of one.
 
@@ -136,12 +136,13 @@ In normal mode, `:` opens a command line, in the palette in the middle of the wi
 | `:\|<Terminal` | The same, to its left. |
 | `:-Terminal` | The same, below it. |
 | `:-^Terminal` | The same, above it. |
+| `:Agent`, `:\|Agent`… | Opens a [chat with an agent](~clackatoo/reference/agents), in a new tab or beside the focused pane. |
 | `:1`, `:2`… | Moves to that tab of the workspace shown. |
 | `:workspace NAME`, `:ws NAME` | Switches to the workspace called NAME, making it if there's none. Without a name, makes a new workspace, named with the lowest number no workspace has. |
 | `:rename NAME` | Renames the workspace shown. |
 | `:close`, `:q` | Closes the focused pane, hanging up its program. |
 
-The first character of a split says which way the divider runs, `|` upright or `-` flat, and `<` or `^` after it puts the new pane first. A mark alone opens a terminal, so `:|` is `:|Terminal`. Capitalised words name kinds of pane, of which terminals are the only one so far. Lowercase words are the window's own commands, and numbers are tabs.
+The first character of a split says which way the divider runs, `|` upright or `-` flat, and `<` or `^` after it puts the new pane first. A mark alone opens a terminal, so `:|` is `:|Terminal`. Capitalised words name kinds of pane: `Terminal` and `Agent`. Lowercase words are the window's own commands, and numbers are tabs.
 
 A new terminal starts in the directory that the pane it splits is in. A new tab's terminal starts in the directory of the workspace's focused pane. That's the directory of whatever is in front in that pane, such as a nested shell or an editor that changed directory, or else the shell's own.
 
@@ -183,6 +184,7 @@ Ctrl+B and one more key work in either mode, as tmux's prefix does. While Ctrl+B
 | `p`, then `1`–`9` | Moves to that pane. Each pane shows its number meanwhile, counting left to right and top to bottom. |
 | `h` `j` `k` `l` | Moves to the pane to the left, below, above or right. |
 | `\|` `-` | Splits the pane, with the new one to the right or below. |
+| `a` | Opens a [chat with an agent](~clackatoo/reference/agents) to the right. |
 | `x` | Closes the pane. |
 | `w` | Opens the workspace picker. |
 | `o` `i` | Back and forward through the tab's panes, as Ctrl+O and Ctrl+I do in normal mode. |
