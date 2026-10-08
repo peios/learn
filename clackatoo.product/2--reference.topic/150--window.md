@@ -222,9 +222,46 @@ Moving past the top of the view scrolls into history. In normal mode the view ho
 | `o` | Moves the other end of the selection. |
 | `y`, Ctrl+Shift+C | Copies the selection to the clipboard, and returns to normal mode. |
 | `yy`, `Y` | Copies the cursor's line. |
+| `y` and a motion | Copies what the motion moves over: `yw` to the next word, `y$` to the line's end, `yj` this line and the next, `ygg` up to the top. |
+| `y` and a [text object](#text-objects) | Copies the object around the cursor: `yiw` the word, `yi"` what's in the quotes, `yib` a command's output. |
 | Esc | Drops the selection. |
 
 Any motion extends a selection, including `gg`, `G` and searches. Copied text is what the program printed: a line that wrapped only because it reached the window's edge comes out as one line, blanks at the ends of lines are left out, and there is no newline after the last line, so pasting it into a shell never runs it.
+
+### Text objects
+
+After `y`, or in visual mode, `i` or `a` and one more key pick out a piece of text around the cursor, as in Vim. `i` takes what's inside, `a` takes it all. In visual mode, the object becomes the selection.
+
+| Keys | Picks out |
+|---|---|
+| `iw` `aw` | A word, and with `a` the blanks after it (or before it, at the end of a line). |
+| `iW` `aW` | The same, for anything between blanks. |
+| `i"` `a"`, `i'` `a'`, `` i` `` `` a` `` | What's between the quotes around the cursor, or the next pair on its line; with `a`, the quotes too. |
+| `i(` `a(`, `i[` `a[`, `i{` `a{`, `i<` `a<` | What's between the brackets around the cursor, across lines; with `a`, the brackets too. The closing bracket works as well. |
+| `ib` `ab` | A [command's](#commands) output; with `a`, its prompt and command line too. |
+
+In Vim, `b` is another name for `(`. Here it's the command, the more useful thing in a terminal, and `(` still means parentheses.
+
+### Commands
+
+When the shell marks its prompts and commands, clackatoo knows where each command's prompt and output are, and how it exited.
+
+| Keys | Does |
+|---|---|
+| `[[` `]]` | Moves to the previous or next command's prompt. |
+| `yib` | Copies the output of the command the cursor is in. |
+| `yab` | Copies the command with its prompt and output, ready to paste into a bug report. |
+| `vib` `vab` | Selects them. |
+
+A command's output runs from its first line to the line before the next prompt, leaving out blank lines at the end. If the command printed nothing, `yib` says `no output`. If the cursor isn't in a command, the bottom bar says `no block here`.
+
+Which shells mark their commands:
+
+- **fish** 4 and later, by itself.
+- **bash**, when it's your shell (`$SHELL`) and clackatoo starts it. clackatoo starts it with a startup script of its own, which reads your `~/.bashrc` first, then adds the marks to `PS1`, `PS0` and `PROMPT_COMMAND`. bash started any other way, such as `clackatoo new -- bash`, is left as it is.
+- **zsh**, and fish before 4, don't yet.
+
+Commands are kept through an [upgrade](~clackatoo/reference/cli#upgrade).
 
 ### Searching
 

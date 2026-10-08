@@ -45,9 +45,9 @@ The program runs in its own session, with the terminal as its controlling termin
 | `CSI` other | `g` (clear tab stops), `r` (scroll region), `m` (SGR), `!p` (soft reset), ` q` (cursor shape: 0 the user's default, 1 and 2 block, 3 and 4 underline, 5 and 6 bar; blinking isn't drawn) |
 | `ESC` keypad | `=` and `>` (application and numeric keypad) |
 | ANSI modes (`CSI h`/`l`) | 4 (insert), 20 (line feed is newline) |
-| DEC modes (`CSI ? h`/`l`) | 1 (application cursor keys), 6 (origin), 7 (autowrap), 25 (show cursor), 47, 1047 and 1049 (alternate screen), 66 (application keypad), 1048 (save cursor), 2004 (bracketed paste) |
+| DEC modes (`CSI ? h`/`l`) | 1 (application cursor keys), 6 (origin), 7 (autowrap), 25 (show cursor), 47, 1047 and 1049 (alternate screen), 66 (application keypad), 1048 (save cursor), 2004 (bracketed paste), 9, 1000, 1002 and 1003 (mouse tracking), 1005, 1006 and 1015 (mouse encodings), 1004 (focus events) |
 | SGR | Bold, dim, italic, blink, inverse, hidden, strikethrough and their resets. Underlines: single, double (`21` or `4:2`), curly (`4:3`), dotted (`4:4`), dashed (`4:5`). 8, 16, 256 and 24-bit colours for text, background and underline (`58`), in both the `;` and `:` spellings. |
-| `OSC` | 0 and 2 (window title) |
+| `OSC` | 0 and 2 (window title), 7 (working directory, as a `file://` URL), 133 (shell integration: `A` prompt, `C` output, with an optional `cmdline_url=`, and `D` exit status; see [commands](~clackatoo/reference/window#commands)) |
 
 ## Queries answered
 
@@ -62,8 +62,7 @@ The program runs in its own session, with the terminal as its controlling termin
 
 These are ignored:
 
-- Mouse tracking and focus events.
-- OSC 7 (working directory), OSC 8 (hyperlinks), OSC 52 (clipboard) and OSC 133 (shell integration).
+- OSC 8 (hyperlinks) and OSC 52 (clipboard).
 - Secondary device attributes (`CSI > c`) and the kitty keyboard protocol.
 - Left and right margins (`CSI s` with parameters).
 - Variation selector 16 does not widen the character before it.
