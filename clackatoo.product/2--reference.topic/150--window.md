@@ -226,7 +226,7 @@ Moving past the top of the view scrolls into history. In normal mode the view ho
 | `y` and a [text object](#text-objects) | Copies the object around the cursor: `yiw` the word, `yi"` what's in the quotes, `yib` a command's output. |
 | Esc | Drops the selection. |
 
-Any motion extends a selection, including `gg`, `G` and searches. Copied text is what the program printed: a line that wrapped only because it reached the window's edge comes out as one line, blanks at the ends of lines are left out, and there is no newline after the last line, so pasting it into a shell never runs it.
+Any motion extends a selection, including `gg`, `G` and searches. What you copy to the clipboard lights up for a moment, so you can see what went. Copied text is what the program printed: a line that wrapped only because it reached the window's edge comes out as one line, blanks at the ends of lines are left out, and there is no newline after the last line, so pasting it into a shell never runs it.
 
 ### Text objects
 
