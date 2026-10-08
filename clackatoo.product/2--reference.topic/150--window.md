@@ -71,6 +71,8 @@ clackatoo config                   # all of them, and where the file is
 
 A mistake in the file never stops the window opening. Each setting with a mistake, such as an unknown name or a value of the wrong kind, is reported on stderr and left at its default, and the rest still apply.
 
+Keys, and what the window does, are configured in Lua instead, in `client/init.lua` beside `client.toml`. See [configuration](~clackatoo/reference/config).
+
 The settings are on this machine. With [`--remote`](~clackatoo/reference/remote), the window's settings come from the machine the window opens on.
 
 A font family is named as fontconfig knows it, as `fc-list : family` prints. Characters the font doesn't have, such as CJK text or emoji, come from fallback fonts, found the same way.
@@ -141,6 +143,7 @@ In normal mode, `:` opens a command line, in the palette in the middle of the wi
 | `:workspace NAME`, `:ws NAME` | Switches to the workspace called NAME, making it if there's none. Without a name, makes a new workspace, named with the lowest number no workspace has. |
 | `:rename NAME` | Renames the workspace shown. |
 | `:close`, `:q` | Closes the focused pane, hanging up its program. |
+| `:reload` | Runs the [config](~clackatoo/reference/config) again, from the start. |
 
 The first character of a split says which way the divider runs, `|` upright or `-` flat, and `<` or `^` after it puts the new pane first. A mark alone opens a terminal, so `:|` is `:|Terminal`. Capitalised words name kinds of pane: `Terminal` and `Agent`. Lowercase words are the window's own commands, and numbers are tabs.
 
@@ -173,7 +176,7 @@ Going back and then moving somewhere new forgets the way forward, and panes that
 
 ### Ctrl+B
 
-Ctrl+B and one more key work in either mode, as tmux's prefix does. While Ctrl+B waits, the bottom bar lists what it takes. Esc, or any other key, cancels.
+Ctrl+B and one more key work in either mode, as tmux's prefix does. While Ctrl+B waits, the bottom bar lists what it takes. Esc, or any other key, cancels. These keys, and the others on this page that the window takes rather than the program, are bindings like any you make, so [the config](~clackatoo/reference/config) can change them or take them away.
 
 | Ctrl+B, then | Does |
 |---|---|
