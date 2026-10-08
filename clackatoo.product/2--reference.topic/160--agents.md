@@ -38,7 +38,7 @@ In insert mode, what you type goes in the box at the bottom.
 | Ctrl+A | Selects the whole message. |
 | Esc | Normal mode. There's no program in a chat to need Esc. |
 
-Clicking in the box puts the cursor there, dragging selects, and a double or triple click selects a word or a line. A paste goes into the message whole, lines and all, without sending it. Text can be typed through an input method, as in a terminal.
+Clicking in the box puts the cursor there, dragging selects, and a double or triple click selects a word or a line. A paste goes into the message whole, lines and all, without sending it. Text typed through an input method arrives when it's committed, but what's being composed isn't shown in the box yet.
 
 A message beginning with `/` goes to the agent as typed, which is how agents take their own commands, such as Claude Code's `/compact`.
 
