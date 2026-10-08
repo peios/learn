@@ -7,9 +7,9 @@ related:
   - clackatoo/reference/cli
 ---
 
-A pane can hold a chat with an agent, such as Claude Code, instead of a shell. You type a message, the agent answers in the pane, and it works on the files in the pane's directory as it would in its own program.
+A pane can hold a chat with an agent, such as Claude Code, instead of a shell. You type a message in the box along the bottom, the agent answers above it, and it works on the files in the pane's directory as it would in its own program.
 
-A chat is a terminal whose program is the daemon: the daemon writes the conversation into it. So it scrolls, searches, selects and copies exactly as a terminal does, in normal mode, and the window treats it as one.
+Your messages are bubbles on the right. The agent's answers run the width of a column down the middle of the pane, with Markdown laid out as it's meant to look: headings, lists, quotes, links, and code in the terminal's font on a background of its own.
 
 ## Opening a chat
 
@@ -21,49 +21,59 @@ A chat is a terminal whose program is the daemon: the daemon writes the conversa
 
 A chat works in the directory a new terminal would start in: the one the pane it splits is in, or for a new tab, the one the workspace's focused pane is in. That's where the agent reads and changes files, and runs its commands.
 
-Like any new pane, a chat opens in normal mode: `i` starts typing into it. The first chat starts the agent, which takes a second or two. Until then the chat says it's starting, and a message typed meanwhile waits and goes when it can.
+Like any new pane, a chat opens in normal mode: `i` starts typing into it. The first chat starts the agent, which takes a second or two. Until then the chat says it's starting, and a message sent meanwhile waits and goes when it can.
 
 ## Typing
 
-In insert mode, what you type is the next message, at the `›` along the bottom.
+In insert mode, what you type goes in the box at the bottom.
 
 | Key | Does |
 |---|---|
 | Enter | Sends the message. |
-| Alt+Enter, Ctrl+J | Starts a new line in the message. |
-| Ctrl+C | While the agent answers, asks it to stop. Otherwise clears the message up to the cursor. |
-| Backspace, Delete | Deletes a character. |
-| Ctrl+W, Ctrl+Backspace | Deletes the word before the cursor. |
-| Ctrl+U | Deletes everything before the cursor. |
-| Left, Right, Home, End | Move the cursor. Ctrl+A and Ctrl+E are Home and End. |
+| Shift+Enter | Starts a new line in the message. |
+| Ctrl+C | Copies what's selected in the message, or else, while the agent answers, asks it to stop. |
+| Backspace, Delete | Delete a character, or with Ctrl, a word. |
+| Left, Right | Move by a character, or with Ctrl, a word. With Shift, they select. |
+| Up, Down, Home, End | Move by a line, or to its start or end. With Shift, they select. |
+| Ctrl+A | Selects the whole message. |
+| Esc | Normal mode. There's no program in a chat to need Esc. |
 
-A paste goes into the message whole, lines and all, without sending it. A message beginning with `/` goes to the agent as typed, which is how agents take their own commands, such as Claude Code's `/compact`.
+Clicking in the box puts the cursor there, dragging selects, and a double or triple click selects a word or a line. A paste goes into the message whole, lines and all, without sending it. Text can be typed through an input method, as in a terminal.
 
-One message is answered at a time: Enter while the agent is still answering keeps what you typed, and says so.
+A message beginning with `/` goes to the agent as typed, which is how agents take their own commands, such as Claude Code's `/compact`.
+
+One message is answered at a time. While the agent answers, the button in the box's corner is a stop button, and Enter keeps what you typed until it's done. Clicking the button with nothing being answered sends the message, as Enter does.
+
+What you've typed but not sent belongs to the window: another window, or this one after it closes, starts with an empty box.
+
+## Normal mode
+
+In normal mode, keys move the view instead:
+
+| Key | Does |
+|---|---|
+| `j` `k`, Down Up | A line down or up. |
+| Ctrl+D Ctrl+U, Page Down Page Up | Half a view down or up. |
+| `gg` `G` | The start or end of the chat. |
+| `i`, `a`, Enter | Back to insert mode. |
+
+The mouse wheel scrolls in either mode. While you're at the end, the view follows the answer as it grows. Scrolled up, it stays put, and the bottom bar says so.
 
 ## What the chat shows
 
-Each message you send is written above the answer, after a `›`. The answer streams in below it:
+Below each message you send, what the agent did with it, in order:
 
-- the agent's words, with Markdown's code blocks in colour and headings in bold
-- its thinking, if it shows any, dimmed
-- each tool it uses: `○` while it runs, then `✓` once it has finished, or `✗` if it failed
-- its plan, while it's working through one
+- its words
+- its thinking, if it shows any, quieter and slanted
+- each tool it uses, on a line of its own: `○` while it runs, then `✓` once it has finished, or `✗` if it failed
 
-The bottom lines say what's happening, such as `answering · Ctrl+C stops it`, and the tab is named after the title the agent gives the conversation.
-
-Each message and its answer are marked as a shell marks its [commands](~clackatoo/reference/window#commands): the message is the command, and the answer its output. So in normal mode `[[` and `]]` move from message to message, `yib` copies an answer, and `yab` copies the message with it.
+While the agent works, the turn ends with `Working…`. A turn the agent didn't finish says why: `Stopped.`, or what went wrong. The tab is named after the title the agent gives the conversation.
 
 ### When the agent asks
 
-Before it does anything that changes something, such as writing a file or running a command that isn't only reading, the agent asks first:
+Before it does anything that changes something, such as writing a file or running a command that isn't only reading, the agent asks. Its question takes the box's place, with an answer on each button: the first way to say yes in the accent colour, and the ways to say no quieter.
 
-```
-  ? May the agent touch notes.txt?
-    1 Allow  ·  2 Always allow  ·  3 Reject  ·  Esc no
-```
-
-Press an option's number to answer. Esc, or Ctrl+C, says no. The answer is written into the chat, and the agent carries on.
+Click an answer, or press its number. Esc says no. Ctrl+C says no and stops the answer.
 
 What it asks about follows the agent's own settings. Claude Code reads its usual settings files, so commands you've allowed in Claude Code are allowed here too.
 
@@ -81,16 +91,20 @@ One agent process serves every chat. Claude Code's adapter starts a Claude Code 
 
 The daemon keeps chats, as it keeps terminals. Closing the window closes nothing: a chat keeps answering, and the next window shows it.
 
-[Upgrading](~clackatoo/reference/cli#upgrade) the daemon keeps each chat's conversation and what you'd typed, but stops the agent. An answer that was under way is cut off, and the chat says so. The next message starts the agent again and carries on the same conversation.
+[Upgrading](~clackatoo/reference/cli#upgrade) the daemon keeps each chat's conversation, but stops the agent. An answer that was under way is cut off, and the turn says so. The next message starts the agent again and carries on the same conversation. A chat from a build before chats were kept as turns comes through as one block of its text.
 
 If the agent stops on its own, the chat says so, and the next message starts it again, carrying on the same conversation.
 
 When the daemon itself stops, its chats go with its terminals.
 
+`clackatoo capture` prints a chat as text: each message after a `>`, and what the agent said.
+
 ## Not yet
 
+- Text in the conversation can't be selected or copied yet: only the message being typed.
+- The thinking and tool calls of a turn don't fold away under a "Worked for…" line yet.
 - Commands the agent runs show only as a line with their title. They'll run in terminals beside the chat, which you can watch and take over.
-- The agent's usage and limits, its modes (such as Claude Code's plan and auto modes) and its model can't be seen or changed from the chat yet.
+- The agent's modes (such as Claude Code's plan and auto modes), its model, and its usage and limits can't be seen or changed from the chat yet. The box will hold them.
 - Diffs of the files the agent changes aren't shown.
 - Images can't be pasted into a message.
 - `/` commands aren't listed or completed as you type them.
