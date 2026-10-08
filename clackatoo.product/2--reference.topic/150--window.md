@@ -37,7 +37,7 @@ An option on the command line wins over its environment variable, which wins ove
 
 The window draws its own frame, in place of the desktop's:
 
-- **The top bar** holds your [workspaces](#workspaces-tabs-and-panes), each with a coloured dot and how many tabs it has, the one shown picked out, and a `+` after them that makes a new one. The window's buttons sit at whichever end your desktop puts them, in the same order. Drag the bar to move the window, double-click it to maximise or restore it, and right-click it for the desktop's window menu.
+- **The top bar** holds your [workspaces](#workspaces-tabs-and-panes), each with a coloured dot and how many tabs it has (unless its name is just a number, as unnamed workspaces' are), the one shown picked out, and a `+` after them that makes a new one. The window's buttons sit at whichever end your desktop puts them, in the same order. Drag the bar to move the window, double-click it to maximise or restore it, and right-click it for the desktop's window menu.
 - **The bottom bar** starts with the focused pane's [mode](#modes), then the tabs of the workspace shown, with a `+` after them that opens a new one. On its right are how far the view is [scrolled](#scrolling) or a message (such as why a command failed), how many panes the tab has, and a reminder of the key to press next. When the tabs need the room, the reminder goes first, then the count of panes.
 - **The panes** fill the space between the bars, side by side with a thin line between them. When a tab has more than one, a gold line runs round the focused pane.
 - **The palette** opens in the middle of the window for anything typed to clackatoo itself: [commands](#the-command-line), [searches](#searching) and new names.
