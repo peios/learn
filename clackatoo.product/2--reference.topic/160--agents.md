@@ -87,6 +87,15 @@ Below each message you send, what the agent did with it, in order:
 - its words
 - its thinking, if it shows any, quieter and slanted
 - each tool it uses, on a line of its own: `○` while it runs, then `✓` once it has finished, or `✗` if it failed
+- each command it runs and each change it makes to a file, on a card of its own
+
+A command's card has the command at its head, after `$`. While the command runs, the card says what it's for. Once it's done, it shows the last 8 lines of its output, which is where what went wrong usually is.
+
+A change's card has what the agent did at its head, such as `Edit Cargo.toml`, and how many lines it adds and removes, such as `+3 −1`. Under that come the lines, with those added on green after `+` and those removed on red after `−`. A new file is all added. For an edit, the agent says only the part of the file it changes, so that's what the card shows, not the whole file.
+
+Folded, a card shows its first 8 lines (for a command's output, its last 8), each cut off at the card's edge. Click a card with more to show to open it: its lines wrap, to be read whole. Click again to fold it. Whether a card is open belongs to the window.
+
+The daemon keeps the last 32 KB of a command's output, and the first 256 KB of each side of a change.
 
 While the agent works, the turn ends with `Working…`. A turn the agent didn't finish says why: `Stopped.`, or what went wrong. The tab is named after the title the agent gives the conversation.
 
@@ -112,7 +121,7 @@ One agent process serves every chat. Claude Code's adapter starts a Claude Code 
 
 The daemon keeps chats, as it keeps terminals. Closing the window closes nothing: a chat keeps answering, and the next window shows it.
 
-[Upgrading](~clackatoo/reference/cli#upgrade) the daemon keeps each chat's conversation, but stops the agent. An answer that was under way is cut off, and the turn says so. The next message starts the agent again and carries on the same conversation. A chat from a build before chats were kept as turns comes through as one block of its text.
+[Upgrading](~clackatoo/reference/cli#upgrade) the daemon keeps each chat's conversation, but stops the agent. An answer that was under way is cut off, and the turn says so. The next message starts the agent again and carries on the same conversation. A chat from a build before chats were kept as turns comes through as one block of its text. Tools from a build before cards come through as lines, without their output or changes.
 
 If the agent stops on its own, the chat says so, and the next message starts it again, carrying on the same conversation.
 
@@ -124,8 +133,7 @@ When the daemon itself stops, its chats go with its terminals.
 
 - Text in the conversation can't be selected or copied yet: only the message being typed.
 - The thinking and tool calls of a turn don't fold away under a "Worked for…" line yet.
-- Commands the agent runs show only as a line with their title. They'll run in terminals beside the chat, which you can watch and take over.
+- Commands the agent runs show their output once they're done, not as they run. They'll run in terminals beside the chat, which you can watch and take over.
 - Claude's 5-hour and weekly usage limits aren't shown.
-- Diffs of the files the agent changes aren't shown.
 - Images can't be pasted into a message.
 - `/` commands aren't listed or completed as you type them.
