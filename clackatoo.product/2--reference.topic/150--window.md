@@ -325,10 +325,12 @@ If the API chosen can't draw, the window uses the other.
 
 Box-drawing characters (`─` `│` `┌` `╭` `═`…) and block elements (`█` `▄` `░`…) are drawn by clackatoo rather than taken from the font, so that borders in htop, tmux or Vim join up across lines at any size. The diagonal lines come from the font.
 
+A character with others joined to it, such as a letter with accents, an emoji sequence joined with zero-width joiners (👩‍💻), or a keycap (#️⃣), is shaped: the font's own rules decide which glyphs draw it and where they go. An emoji presentation selector (U+FE0F, as in ❤️) draws the character from an emoji font.
+
 ## Not supported yet
 
 - Moving panes to another place in the layout.
 - Panes from other machines, as `:Terminal@host` will open. Today the window says this isn't built yet.
 - Typing through an input method, for languages such as Chinese and Japanese.
-- Emoji joined with a zero-width joiner, such as 👩‍💻, show only their first emoji.
+- Flags (🇬🇧) and emoji with a skin tone (👍🏽) show as their parts: two letters for a flag, and the emoji then the tone. Terminals and programs disagree about how many columns these take, so they're printed as programs count them.
 - History lines are shown at the width they were printed at. A line that wrapped in a narrower window doesn't rewrap when the window gets wider.
