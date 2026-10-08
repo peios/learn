@@ -1,7 +1,7 @@
 ---
 title: Editing files
 type: reference
-description: An editor pane edits a file with Vim's keys. The daemon keeps the file's text and its undo history, so every window edits the same text, agents' edits and yours meet, and nothing is lost when the window closes or the daemon upgrades. How to open and write files, the keys, and what doesn't work yet.
+description: An editor pane edits a file with Vim's keys. The daemon keeps the file's text and its undo history, so every window edits the same text, agents' edits and yours meet, and nothing is lost when the window closes or the daemon upgrades. How to open and write files, the languages files are coloured in, the keys, and what doesn't work yet.
 related:
   - clackatoo/reference/window
   - clackatoo/reference/cli
@@ -41,6 +41,42 @@ The daemon keeps each buffer, as it keeps terminals:
 Each command in normal mode is one undo step, as is each go of insert mode, with the command that started it, such as `cw`.
 
 A buffer closes with its last pane, unless it has changes that aren't written. `:q` won't close that pane, and `:q!` throws the changes away. A pane closed another way, such as with Ctrl+B `x` or by closing its tab, keeps the buffer's changes, unseen: opening the file again shows them.
+
+## Languages
+
+A file in a language that's installed is coloured as the language's grammar reads it: keywords, strings, comments, functions, types and so on. Install languages with [`clackatoo language`](~clackatoo/reference/cli#language):
+
+```
+clackatoo language list            what can be installed, and what is
+clackatoo language install rust    install one, or several
+clackatoo language install --all   install every one
+```
+
+clackatoo knows where to get Bash, C, CSS, Go, HTML, JavaScript, JSON, Lua, Python, Rust, TOML, TypeScript (and TSX) and YAML. A file's language is found from its name: its extension, such as `.rs`, or the whole name, such as `.bashrc`.
+
+How it works:
+
+- **Grammars are [tree-sitter](https://tree-sitter.github.io)'s**, compiled to WebAssembly by their authors, and run in the daemon by [wasmtime](https://wasmtime.dev). A grammar can't reach anything outside itself, so one that goes wrong can't take the daemon, and every terminal it keeps, with it. Nor does a new language need a new clackatoo.
+- **The daemon parses each file once, whichever windows show it**, on a thread of its own, so typing never waits for a parse. After an edit, only what it changed is read again: about a tenth of a millisecond in a big source file. The colours of text you've just typed follow within a frame or so; until then, the colours already there move with the text.
+- **Opening a file reads it all**, which takes about 50 ms for an 80 KB file in a language not used since the daemon started, most of it getting the grammar ready, and less after.
+
+### Language packs
+
+Each language is a directory in `~/.local/share/clackatoo/languages` (or `$XDG_DATA_HOME/clackatoo/languages`), which `clackatoo language install` writes, and you can write yourself for a language clackatoo doesn't know:
+
+| File | |
+|---|---|
+| `language.toml` | `grammar`: the grammar's name, which the WebAssembly is built with (`tree_sitter_NAME`). `extensions`: the endings of the names of files it's for, without the dot. `filenames`: whole names of files it's for. |
+| `grammar.wasm` | The grammar, as `tree-sitter build --wasm` makes it. Many grammars' releases have one. |
+| `highlights.scm` | The [query](https://tree-sitter.github.io/tree-sitter/using-parsers/queries/index.html) naming what each piece of text is, as tree-sitter's own highlighter reads it: where two patterns name the same text, the first wins. |
+
+```toml
+grammar = "rust"
+extensions = ["rs"]
+filenames = []
+```
+
+A query's names are coloured by the first part: `@function.method.call` as a function, `@string.escape` as an escape. A pack the daemon can't load is passed over, and its log says why.
 
 ## Writing
 
@@ -119,7 +155,10 @@ A click puts the cursor where it's clicked, and the wheel scrolls.
 
 ## Not yet
 
-- Syntax colours, and everything a language server gives (errors, completion, going to definitions). They're next: grammars for [tree-sitter](https://tree-sitter.github.io) will load as WebAssembly, and language servers will run in the daemon.
+- Everything a language server gives: errors, completion, going to definitions. Language servers will run in the daemon.
+- Text objects and indenting by the grammar, such as `af` for a function.
+- Languages inside others, such as code in a Markdown file, or CSS in HTML: they're coloured as the outer language only. So there's no Markdown yet.
+- Choosing the colours. They're the palette's named colours where there's one to suit, so they follow the terminal's.
 - Line numbers. Long lines don't wrap: the view scrolls sideways to follow the cursor. A tab is always 4 columns wide.
 - `$` and `l` stop at a line's last character that isn't blank, as on a terminal's screen, so blanks at a line's end can be reached only with `A` and `D`.
 - Files with Windows line endings show `^M` at each line's end.
