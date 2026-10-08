@@ -121,7 +121,7 @@ The window shows your work at three levels:
 
 - **Workspaces**, one for each piece of distinct work, such as a project. Their names run along the [top bar](#the-frame). Often there's just one.
 - **Tabs**, inside a workspace. They run along the bottom bar, numbered, and named after the title of their focused pane's program, unless you've named them.
-- **Panes**, which a tab is split into, side by side or stacked. Each shows a terminal, or a [chat with an agent](~clackatoo/reference/agents). A split shares its space equally until you [resize it](#resizing-panes).
+- **Panes**, which a tab is split into, side by side or stacked. Each shows a terminal, a [chat with an agent](~clackatoo/reference/agents), or a [file being edited](~clackatoo/reference/editor). A split shares its space equally until you [resize it](#resizing-panes).
 
 The daemon keeps all of them, as it keeps terminals. Closing the window closes nothing, and the next window opens on the workspace, tab and pane last used. Each window shows one workspace, so two windows can show two workspaces, or two tabs of one.
 
@@ -139,13 +139,16 @@ In normal mode, `:` opens a command line, in the palette in the middle of the wi
 | `:-Terminal` | The same, below it. |
 | `:-^Terminal` | The same, above it. |
 | `:Agent`, `:\|Agent`… | Opens a [chat with an agent](~clackatoo/reference/agents), in a new tab or beside the focused pane. |
+| `:Editor PATH`, `:\|Editor PATH`…, `:e PATH` | [Edits the file](~clackatoo/reference/editor), in a new tab or beside the focused pane. |
 | `:1`, `:2`… | Moves to that tab of the workspace shown. |
 | `:workspace NAME`, `:ws NAME` | Switches to the workspace called NAME, making it if there's none. Without a name, makes a new workspace, named with the lowest number no workspace has. |
 | `:rename NAME` | Renames the workspace shown. |
-| `:close`, `:q` | Closes the focused pane, hanging up its program. |
+| `:close` | Closes the focused pane, hanging up its program. |
+| `:q` | The same, unless the pane is the last showing a file with changes that aren't written. `:q!` closes it anyway, throwing them away. |
+| `:w`, `:wq`, `:e!`… | Write the focused pane's file, and the rest of Vim's commands for files: see [Editing files](~clackatoo/reference/editor#writing). |
 | `:reload` | Runs the [config](~clackatoo/reference/config) again, from the start. |
 
-The first character of a split says which way the divider runs, `|` upright or `-` flat, and `<` or `^` after it puts the new pane first. A mark alone opens a terminal, so `:|` is `:|Terminal`. Capitalised words name kinds of pane: `Terminal` and `Agent`. Lowercase words are the window's own commands, and numbers are tabs.
+The first character of a split says which way the divider runs, `|` upright or `-` flat, and `<` or `^` after it puts the new pane first. A mark alone opens a terminal, so `:|` is `:|Terminal`. Capitalised words name kinds of pane: `Terminal`, `Agent` and `Editor`, which takes the file's path after it. Lowercase words are the window's own commands, and numbers are tabs.
 
 A new terminal starts in the directory that the pane it splits is in. A new tab's terminal starts in the directory of the workspace's focused pane. That's the directory of whatever is in front in that pane, such as a nested shell or an editor that changed directory, or else the shell's own.
 

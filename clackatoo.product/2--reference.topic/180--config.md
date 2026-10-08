@@ -95,9 +95,9 @@ Windows, workspaces, tabs and panes are handles: values that stand for one of th
 | A window | `workspace`, `tab`, `pane` | `on` |
 | A workspace | `name`, `tabs` | `on` |
 | A tab | `name`, `panes`, `focused`, `workspace` | `on` |
-| A pane | `kind` (`"terminal"` or `"chat"`), `title`, `tab` | `on`, `split`, `close`, `focus` |
+| A pane | `kind` (`"terminal"`, `"chat"` or `"editor"`), `title`, `tab` | `on`, `split`, `close`, `focus` |
 
-`pane:split(side)` puts a new pane on that side, `"right"`, `"left"`, `"below"` or `"above"`, of the same kind, or another with `{ kind = "chat" }`. It waits for the daemon to make it, then focuses it, as Ctrl+B `|` does, and returns it:
+`pane:split(side)` puts a new pane on that side, `"right"`, `"left"`, `"below"` or `"above"`, of the same kind, or another with `{ kind = "chat" }`. An [editor](~clackatoo/reference/editor) can't be made from the config yet, so splitting one needs a kind. It waits for the daemon to make it, then focuses it, as Ctrl+B `|` does, and returns it:
 
 ```lua
 client.keys.map("n", "<C-b>t", function(ev)
