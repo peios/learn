@@ -7,7 +7,7 @@ related:
   - clackatoo/reference/cli
 ---
 
-The window's behaviour is configured in code: an `init.lua`, as Neovim's is, written in [Luau](https://luau.org), a fast dialect of Lua with optional types and a sandbox. Without one, the window works as it always does. Settings needed before the window starts, such as the font, stay in [`client.toml`](~clackatoo/reference/window#settings).
+The window's behaviour is configured in code: an `init.lua`, as Neovim's is, written in [Luau](https://luau.org), a fast dialect of Lua with optional types and a sandbox. Without one, the window works as it always does. Settings needed before the window starts, such as the font, stay in [`startup.toml`](~clackatoo/reference/window#settings), beside it.
 
 ```lua
 -- ~/.config/clackatoo/client/init.lua
@@ -32,8 +32,8 @@ end)
 ~/.config/clackatoo/        or $XDG_CONFIG_HOME/clackatoo/
   client/init.lua           the window's config
   client/lua/               modules for it to require
+  client/startup.toml       the window's settings, needed before it starts
   lua/                      modules shared with the daemon's config, once it has one
-  client.toml               the window's settings
 ```
 
 `require("theme")` loads `theme.lua` from `client/lua/`, or else `lua/`, or `theme/init.lua` from either. A dot in a name is a directory: `require("keys.tmux")` is `keys/tmux.lua`. Each module runs once, and later requires get what it returned.

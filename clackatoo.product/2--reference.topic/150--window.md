@@ -52,7 +52,7 @@ With the mouse:
 
 ## Settings
 
-Settings you rarely change, or change to tune how the window starts, live in `client.toml`: `$XDG_CONFIG_HOME/clackatoo/client.toml`, or `~/.config/clackatoo/client.toml`. The window reads it before anything else starts, which takes a few microseconds.
+Settings you rarely change, or change to tune how the window starts, live in `startup.toml`: `$XDG_CONFIG_HOME/clackatoo/client/startup.toml`, or `~/.config/clackatoo/client/startup.toml`. The window reads it before anything else starts, which takes a few microseconds.
 
 ```toml
 font = "JetBrains Mono"
@@ -71,7 +71,7 @@ clackatoo config                   # all of them, and where the file is
 
 A mistake in the file never stops the window opening. Each setting with a mistake, such as an unknown name or a value of the wrong kind, is reported on stderr and left at its default, and the rest still apply.
 
-Keys, and what the window does, are configured in Lua instead, in `client/init.lua` beside `client.toml`. See [configuration](~clackatoo/reference/config).
+Keys, and what the window does, are configured in Lua instead, in `init.lua` beside `startup.toml`. See [configuration](~clackatoo/reference/config).
 
 The settings are on this machine. With [`--remote`](~clackatoo/reference/remote), the window's settings come from the machine the window opens on.
 
