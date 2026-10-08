@@ -57,6 +57,14 @@ Along the bottom of the box are the agent's settings for the chat, as the agent 
 
 Click a setting to open its menu, above the box. Up and Down move through it, Enter or a click picks, and Esc or a click elsewhere closes it. Shift+Tab steps through the modes without opening the menu.
 
+The model and effort share a menu:
+
+- **Models by family:** Opus, Fable, Sonnet and Haiku, each with the version it picks and what it's for, and the one Claude Code recommends marked. Picking a family picks its newest version, and keeps up as new ones come out.
+- **A family's versions:** the `▸` button at the end of its row, or Right, shows its other versions, to pin the chat to one. Left hides them. A chat on a pinned version opens the menu with that version shown and ticked.
+- **Effort on a slider**, from Low to Max: click or drag along it, or with the slider picked out, press Left and Right. It stays open as you slide, so you can try a few. Default, beside it, leaves effort to Claude Code, which picks it for each model.
+
+Models from another agent are grouped only when one choice in a family always means its newest version, as Claude Code's `opus` does. Otherwise they're listed one per row.
+
 A chat keeps the settings you pick. If the agent stops, or the daemon is [upgraded](~clackatoo/reference/cli#upgrade), the chat asks for them again as its session reopens.
 
 ## Normal mode
