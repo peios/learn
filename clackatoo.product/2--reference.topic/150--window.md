@@ -143,7 +143,7 @@ In normal mode, `:` opens a command line, in the palette in the middle of the wi
 
 The first character of a split says which way the divider runs, `|` upright or `-` flat, and `<` or `^` after it puts the new pane first. A mark alone opens a terminal, so `:|` is `:|Terminal`. Capitalised words name kinds of pane, of which terminals are the only one so far. Lowercase words are the window's own commands, and numbers are tabs.
 
-A new terminal starts in the directory that the pane it splits is in. A new tab's terminal starts in the directory of the workspace's focused pane.
+A new terminal starts in the directory that the pane it splits is in. A new tab's terminal starts in the directory of the workspace's focused pane. That's the directory of whatever is in front in that pane, such as a nested shell or an editor that changed directory, or else the shell's own.
 
 Workspace names are unique, and can't contain `@`, which will name workspaces on other machines. If a command fails, such as renaming a workspace to a name another has, the bottom bar says why until the next key.
 
