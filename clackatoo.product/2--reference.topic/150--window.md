@@ -37,9 +37,9 @@ An option on the command line wins over its environment variable, which wins ove
 
 The window draws its own frame, in place of the desktop's:
 
-- **The top bar** holds your [workspaces](#workspaces-tabs-and-panes), with the one shown picked out, and a `+` after them that makes a new one. The window's buttons sit at whichever end your desktop puts them, in the same order. Drag the bar to move the window, double-click it to maximise or restore it, and right-click it for the desktop's window menu.
-- **The bottom bar** holds the tabs of the workspace shown, with a `+` after them that opens a new one. On its right is a note: the [mode](#modes), how far the view is [scrolled](#scrolling), or a message, such as why a command failed.
-- **The panes** sit on cards between the bars, each a little in from its edges. The focused pane's card has a blue edge, or a yellow one in normal mode.
+- **The top bar** holds your [workspaces](#workspaces-tabs-and-panes), each with a coloured dot and how many tabs it has, the one shown picked out, and a `+` after them that makes a new one. The window's buttons sit at whichever end your desktop puts them, in the same order. Drag the bar to move the window, double-click it to maximise or restore it, and right-click it for the desktop's window menu.
+- **The bottom bar** starts with the focused pane's [mode](#modes), then the tabs of the workspace shown, with a `+` after them that opens a new one. On its right are how far the view is [scrolled](#scrolling) or a message (such as why a command failed), how many panes the tab has, and a reminder of the key to press next. When the tabs need the room, the reminder goes first, then the count of panes.
+- **The panes** fill the space between the bars, side by side with a thin line between them. When a tab has more than one, a gold line runs round the focused pane.
 - **The palette** opens in the middle of the window for anything typed to clackatoo itself: [commands](#the-command-line), [searches](#searching) and new names.
 
 Drag the window's edges or corners to resize it. Interface text, such as the names in the bars, is in your desktop's interface font. On GNOME, both the font and where the buttons go come from its settings.
@@ -99,7 +99,7 @@ When the daemon [upgrades](~clackatoo/reference/cli#upgrade), every connection t
 The window is in one of two modes, like Vim:
 
 - **Insert mode**, where it starts. Keys go to the program.
-- **Normal mode**. Keys drive clackatoo. The pane's card has a yellow edge, and the bottom bar's note says `NORMAL`.
+- **Normal mode**. Keys drive clackatoo. The bottom bar starts `NORMAL`, on gold, in place of `INSERT`, on lilac. A visual selection shows `VISUAL` or `V-LINE`, on blue.
 
 Each pane has its own mode.
 
