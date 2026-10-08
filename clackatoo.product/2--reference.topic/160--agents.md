@@ -36,15 +36,28 @@ In insert mode, what you type goes in the box at the bottom.
 | Left, Right | Move by a character, or with Ctrl, a word. With Shift, they select. |
 | Up, Down, Home, End | Move by a line, or to its start or end. With Shift, they select. |
 | Ctrl+A | Selects the whole message. |
+| Shift+Tab | Moves the agent on to its next mode. |
 | Esc | Normal mode. There's no program in a chat to need Esc. |
 
-Clicking in the box puts the cursor there, dragging selects, and a double or triple click selects a word or a line. A paste goes into the message whole, lines and all, without sending it. Text typed through an input method arrives when it's committed, but what's being composed isn't shown in the box yet.
+Clicking in the box puts the cursor there, dragging selects, and a double or triple click selects a word or a line. A paste goes into the message whole, lines and all, without sending it. Text can be typed through an input method: what's being composed shows in the box, at the cursor, until it's committed.
 
 A message beginning with `/` goes to the agent as typed, which is how agents take their own commands, such as Claude Code's `/compact`.
 
 One message is answered at a time. While the agent answers, the button in the box's corner is a stop button, and Enter keeps what you typed until it's done. Clicking the button with nothing being answered sends the message, as Enter does.
 
 What you've typed but not sent belongs to the window: another window, or this one after it closes, starts with an empty box.
+
+## The agent's settings
+
+Along the bottom of the box are the agent's settings for the chat, as the agent offers them. For Claude Code:
+
+- **On the left, its mode:** how much it does without asking. Manual asks before every change, Accept edits makes edits without asking, Plan plans before it acts, and Auto lets Claude decide what needs asking about. A new chat starts in Auto.
+- **On the right, its model and effort**, such as `Sonnet 5.5 · High`.
+- **Beside them, how much of the model's context the chat fills**, such as `38k / 200k`.
+
+Click a setting to open its menu, above the box. Up and Down move through it, Enter or a click picks, and Esc or a click elsewhere closes it. Shift+Tab steps through the modes without opening the menu.
+
+A chat keeps the settings you pick. If the agent stops, or the daemon is [upgraded](~clackatoo/reference/cli#upgrade), the chat asks for them again as its session reopens.
 
 ## Normal mode
 
@@ -71,7 +84,7 @@ While the agent works, the turn ends with `Working…`. A turn the agent didn't 
 
 ### When the agent asks
 
-Before it does anything that changes something, such as writing a file or running a command that isn't only reading, the agent asks. Its question takes the box's place, with an answer on each button: the first way to say yes in the accent colour, and the ways to say no quieter.
+In Manual mode, before it does anything that changes something, such as writing a file or running a command that isn't only reading, the agent asks. Other modes ask about less, and Auto leaves it to Claude. Its question takes the box's place, with an answer on each button: the first way to say yes in the accent colour, and the ways to say no quieter.
 
 Click an answer, or press its number. Esc says no. Ctrl+C says no and stops the answer.
 
@@ -104,7 +117,7 @@ When the daemon itself stops, its chats go with its terminals.
 - Text in the conversation can't be selected or copied yet: only the message being typed.
 - The thinking and tool calls of a turn don't fold away under a "Worked for…" line yet.
 - Commands the agent runs show only as a line with their title. They'll run in terminals beside the chat, which you can watch and take over.
-- The agent's modes (such as Claude Code's plan and auto modes), its model, and its usage and limits can't be seen or changed from the chat yet. The box will hold them.
+- Claude's 5-hour and weekly usage limits aren't shown.
 - Diffs of the files the agent changes aren't shown.
 - Images can't be pasted into a message.
 - `/` commands aren't listed or completed as you type them.
