@@ -203,6 +203,8 @@ Ctrl+Shift+V pastes, and Ctrl+Shift+C copies text [selected with the mouse](#the
 
 Typing while scrolled up returns the view to the live screen.
 
+Text can be typed through an input method, as Chinese, Japanese and Korean are, such as IBus on GNOME. What's being composed shows underlined at the cursor, with the input method's choices beside it, and the text chosen is typed as if keyed. The input method is used in insert mode, the command line and searches; in normal mode, keys are clackatoo's commands, so it's left out.
+
 ## Scrolling
 
 The mouse wheel scrolls history in either mode, in the pane under the pointer. On the alternate screen, which full-screen programs use and which has no history, the wheel sends arrow keys instead, so less, Vim and htop scroll themselves. A program that takes [the mouse](#the-mouse) gets the wheel itself.
@@ -331,6 +333,5 @@ A character with others joined to it, such as a letter with accents, an emoji se
 
 - Moving panes to another place in the layout.
 - Panes from other machines, as `:Terminal@host` will open. Today the window says this isn't built yet.
-- Typing through an input method, for languages such as Chinese and Japanese.
 - Flags (🇬🇧) and emoji with a skin tone (👍🏽) show as their parts: two letters for a flag, and the emoji then the tone. Terminals and programs disagree about how many columns these take, so they're printed as programs count them.
 - History lines are shown at the width they were printed at. A line that wrapped in a narrower window doesn't rewrap when the window gets wider.
