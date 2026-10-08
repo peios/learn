@@ -157,9 +157,38 @@ A new pane in a split gets the split's average share, so a split you never resiz
 
 ### Moving around
 
-In normal mode, Ctrl+H, Ctrl+J, Ctrl+K and Ctrl+L move to the pane to the left, below, above or right. Tabs are `:1`, `:2` and so on, and workspaces `:ws NAME`.
+In normal mode, Ctrl+H, Ctrl+J, Ctrl+K and Ctrl+L move to the pane to the left, below, above or right. Tabs are `:1`, `:2` and so on, and workspaces `:ws NAME`. [Ctrl+B](#ctrl-b) does all of this in either mode.
 
 You stay in normal mode as you move: the pane you arrive at, including a pane a command just opened, is in normal mode too, and `i` starts typing into it. The pane you left keeps its mode and its place in history.
+
+The window remembers where the focus has been, as Vim's jump list or a browser's history does:
+
+| Keys | In | Does |
+|---|---|---|
+| Ctrl+O Ctrl+I | normal mode | Back and forward through the panes of the tab shown. |
+| Ctrl+Shift+O Ctrl+Shift+I | either mode | Back and forward through everywhere: panes, tabs and workspaces. |
+
+Going back and then moving somewhere new forgets the way forward, and panes that have closed are skipped. Each window has its own history.
+
+### Ctrl+B
+
+Ctrl+B and one more key work in either mode, as tmux's prefix does. While Ctrl+B waits, the bottom bar lists what it takes. Esc, or any other key, cancels.
+
+| Ctrl+B, then | Does |
+|---|---|
+| `1`–`9` | Moves to that tab. |
+| `c` | Opens a new tab. |
+| `]` `[` | Moves to the next tab, or the one before, round from the last to the first. |
+| `,` | Renames the tab. |
+| `p`, then `1`–`9` | Moves to that pane. Each pane shows its number meanwhile, counting left to right and top to bottom. |
+| `h` `j` `k` `l` | Moves to the pane to the left, below, above or right. |
+| `\|` `-` | Splits the pane, with the new one to the right or below. |
+| `x` | Closes the pane. |
+| `w` | Opens the workspace picker. |
+| `o` `i` | Back and forward through the tab's panes, as Ctrl+O and Ctrl+I do in normal mode. |
+| Ctrl+B | Sends Ctrl+B to the program. |
+
+The workspace picker lists the workspaces whose names hold what you type, those starting with it first. Up and Down, or Tab and Shift+Tab, pick one, and Enter moves to it. If nothing matches, Enter makes a workspace by the name typed.
 
 ## Typing
 
@@ -208,7 +237,7 @@ Normal mode has a cursor of its own, a yellow block, which moves through the ter
 | `gg` `G` | The oldest line of history, the screen's last line. |
 | `H` `M` `L` | The top, middle and bottom lines in view. |
 | Ctrl+D Ctrl+U | Half a screen down or up, view and cursor together. |
-| Ctrl+F Ctrl+B, Page Down Page Up | A screen down or up. |
+| Ctrl+F, Page Down Page Up | A screen down or up. Ctrl+B is [the window's](#ctrl-b). |
 | Ctrl+E Ctrl+Y | The view a line down or up, with the cursor kept in it. |
 
 Moving past the top of the view scrolls into history. In normal mode the view holds still while output arrives, so the cursor stays on its text. On the alternate screen the cursor moves over the screen only.
