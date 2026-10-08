@@ -105,8 +105,8 @@ Each pane has its own mode.
 
 | Key | In | Does |
 |---|---|---|
-| Ctrl+; | insert mode | Switches to normal mode. |
-| Shift+Esc or Ctrl+\\ | insert mode | Also switch to normal mode. |
+| Ctrl+; | any | Switches to normal mode: from insert mode, and out of a visual selection, a search or the command line. |
+| Shift+Esc or Ctrl+\\ | any | The same. |
 | `i` | normal mode | Switches to insert mode, back at the live screen. |
 | Ctrl+\\, twice | insert mode | Sends a real Ctrl+\\ to the program. |
 | Ctrl+C | either | Interrupts the program. |
