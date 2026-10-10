@@ -4,7 +4,6 @@ type: concept
 description: FACS applies KACS access control to files. AccessCheck runs once at open; the granted mask is cached on the fd and gates every later operation.
 related:
   - peios/file-access/the-handle-model
-  - peios/file-access/opening-files
   - peios/file-access/managing-file-security
   - peios/file-access/special-cases
   - peios/mount-policies/overview
@@ -15,7 +14,7 @@ related:
 
 The model FACS uses is the **handle model**: AccessCheck runs once at `open` time, the granted mask is cached on the file descriptor that comes back, and every subsequent operation through that fd reads from the cache rather than re-running the access check. The implications of this single design choice ripple through every page in this topic.
 
-This page covers the model at a conceptual level. Later pages cover the handle model in detail, the syscalls for opening files (native and legacy), the SD management operations, and the special cases that the model has to accommodate.
+This page covers the model at a conceptual level. The rest of this topic explains the handle model, how to inspect and make bounded changes to file security, and the special cases that affect diagnosis. The syscall and SDK details live in the technical references linked below.
 
 ## The handle model in one sentence
 
@@ -69,11 +68,13 @@ The kernel exposes two ways to open a file:
 | `kacs_open` | KACS-native — caller specifies an explicit desired access mask | New code; programmatic file access by services |
 | `openat` / `open` | Legacy — caller specifies POSIX flags (O_RDONLY, O_WRONLY, etc.) that map to access masks | Existing Linux applications |
 
-`kacs_open` is the native interface. The caller specifies exactly which rights it wants and either gets all of them or fails. `openat` and friends are the POSIX-compatibility interface — they use the same FACS machinery internally but with a different mapping from input flags to access mask and with split "core" and "compat" semantics for handling partial grants.
+`kacs_open` is the native interface. In ordinary strict mode, the caller specifies which rights it wants and either gets all of them or fails. `openat` and friends are the POSIX-compatibility interface — they use the same FACS machinery internally but with a different mapping from input flags to access mask and with split "core" and "compat" semantics for handling partial grants.
 
 Both paths converge in FACS. The cached mask on the resulting fd is the same shape regardless of which syscall produced the open.
 
-The two interfaces are covered in detail in [Opening files](~peios/file-access/opening-files).
+For an operator, the important distinction is between a successful open and a successful later operation: that operation may need a right the handle did not receive. Diagnose the actual caller and operation with [Debugging a denial](~peios/access-decisions/debugging-a-denial), and use [Managing file security](~peios/file-access/managing-file-security) for a deliberate policy change.
+
+The programmer-facing kernel references are [KACS-Native Open](~peios/advanced-peios/peios-kernel/kacs/facs/native-open) and [Legacy Open Compatibility](~peios/advanced-peios/peios-kernel/kacs/facs/legacy-open). Their exact masks and edge cases have [documented discrepancies](~peios/advanced-peios/peios-kernel/kacs/kacs-abi-notes#open-interface-documentation-discrepancies); this overview does not resolve them. Native creation can also accept a caller-supplied SD; see [creation rules](~peios/advanced-peios/peios-kernel/kacs/facs/native-open#caller-supplied-descriptors) and [Inheritance](~peios/security-descriptors/inheritance) for the distinction from inherited policy.
 
 ## What FACS reads from where
 
@@ -102,8 +103,8 @@ A few clarifications:
 
 If you want the handle model in detail — what is cached, what operations check the cache, when the cache can be stale, how fd transfer works — read [The handle model](~peios/file-access/the-handle-model).
 
-If you want the open syscalls — `kacs_open` for KACS-native, `openat` for legacy compatibility, the differences in semantics and the rules for each — read [Opening files](~peios/file-access/opening-files).
+For programming, use the [SDK opening reference](~peios/sdk-files/opening-a-file), the [native](~peios/advanced-peios/peios-kernel/kacs/facs/native-open) and [legacy](~peios/advanced-peios/peios-kernel/kacs/facs/legacy-open) kernel references, and the generated [KACS ABI](~peios/advanced-peios/peios-kernel/kacs/kacs-abi). Read the [open-interface discrepancy note](~peios/advanced-peios/peios-kernel/kacs/kacs-abi-notes#open-interface-documentation-discrepancies) alongside them.
 
-If you want to read or modify a file's SD — `kacs_get_sd`, `kacs_set_sd`, the security_information bitmask, the rules for setting owner/DACL/SACL/label — read [Managing file security](~peios/file-access/managing-file-security).
+To inspect a file's policy, make a bounded change with `sd`, and verify the original operation, read [Managing file security](~peios/file-access/managing-file-security).
 
 If you want the edge cases — O_PATH, the exec dual gate, append-only files, sticky bit, POSIX ACLs that no longer work, NFS dual authority — read [Special cases](~peios/file-access/special-cases).

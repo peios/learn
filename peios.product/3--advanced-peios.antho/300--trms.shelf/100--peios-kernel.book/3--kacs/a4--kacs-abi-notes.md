@@ -174,6 +174,93 @@ KACS_SO_IMPERSONATION_LEVEL)`, and the second was a fusion of the
 first with `KACS_IOC_IMPERSONATE` that now lives in libpeios as
 `peios_token_impersonate_peer`.
 
+## Open-interface documentation discrepancies
+
+The sources below disagree or leave details uncorroborated. This records
+**documentation differences, not a reconciled contract**. No runtime behavior
+or version boundary was determined. The generated ABI supplies layouts and
+constants; it does not settle these behavioral questions.
+
+Source labels and line numbers refer to the `learn` snapshot
+`4b119864d7f51c569ae1ac1932e4430f06731cf2`:
+
+- **O:** the former Security Fundamentals [Opening files source](https://github.com/peios/learn/blob/4b119864d7f51c569ae1ac1932e4430f06731cf2/peios.product/1--security-fundamentals.antho/200--access-control.shelf/500--file-access.topic/300--opening-files.md), retained in that revision's history.
+- **N:** [KACS-Native Open](~peios/advanced-peios/peios-kernel/kacs/facs/native-open), TRM §3.9.2.
+- **L:** [Legacy Open Compatibility](~peios/advanced-peios/peios-kernel/kacs/facs/legacy-open), TRM §3.9.3.
+- **D:** [Opening a file](~peios/sdk-files/opening-a-file), SDK reference.
+- **G:** [Securing files](~peios/sdk-access-control/securing-files), SDK guide.
+
+The links reach the current references; the line numbers identify the
+comparison snapshot above.
+
+1. **Maximum allowed.** O:116–127 says `MAXIMUM_ALLOWED` returns the
+   maximum mask without checking the other requested bits, which it calls
+   hints; N:14–19 says the concrete data/execute bits must be granted.
+   Both require a concrete bit and reject `MAXIMUM_ALLOWED` alone. The
+   general [DACL walk](~peios/advanced-peios/peios-kernel/kacs/access-check/dacl-walk#maximum-allowed)
+   describes a separate AccessCheck layer and cannot settle open validity
+   by analogy.
+
+2. **Legacy masks.** O:135–145 maps `O_RDONLY` to
+   `FILE_READ_DATA | FILE_READ_ATTRIBUTES | FILE_READ_EA | READ_CONTROL | SYNCHRONIZE`,
+   `O_WRONLY` to
+   `FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES | FILE_WRITE_EA | READ_CONTROL | SYNCHRONIZE`,
+   and `O_RDWR` to their union. O:154–158 makes only `FILE_READ_DATA` core
+   for read-only opens and allows `FILE_READ_ATTRIBUTES` to be dropped.
+   L:16–37 instead makes `FILE_READ_ATTRIBUTES` core with read data, write
+   data, or both according to the flag; L:39–49 lists broader compat rights.
+   O:138 says `O_APPEND` adds `FILE_APPEND_DATA`; L:30–33 replaces core
+   `FILE_WRITE_DATA` with it, then re-adds write data for `O_TRUNC`.
+   L:44–45 also requests write data as optional compat access on append
+   opens. These are different mappings, not interchangeable summaries.
+
+3. **Creator descriptors.** O:96–97 groups open-existing branches under
+   `EINVAL` and lists `SUPERSEDE` only for an absent target. N:133–144
+   distinguishes `FILE_OPEN` (`EOPNOTSUPP`) from existing
+   `FILE_OPEN_IF`, `FILE_OVERWRITE` and `FILE_OVERWRITE_IF` (`EINVAL`);
+   N:82–89 also permits a caller-supplied SD on replacement by
+   `FILE_SUPERSEDE`. D:36–46 and G:19–36 show `OPEN_IF` with a non-null
+   creator SD and imply that the existing-file branch succeeds, despite
+   O and N rejecting it. Those examples do not resolve the disagreement.
+
+4. **Replacement and status.** O:71 says `SUPERSEDE` removes the inode
+   and recommends it for atomic-replace patterns. N:82–89 replaces the
+   pathname while preserving old hardlinks and already-open references.
+   O:112 claims nonconditional dispositions predict the status; N:176–179
+   says an absent-target `FILE_SUPERSEDE` reports `CREATED`, with
+   `SUPERSEDED` only for actual replacement. No atomicity guarantee follows
+   from this comparison.
+
+5. **Delete-on-close.** O:80 describes deletion on the last fd referencing
+   the file. N:112–129 instead specifies final close of one file-description
+   lineage, preserved by `dup`, `fork` and `SCM_RIGHTS`; later opens fail
+   closed, and only regular files are supported. Generic inode
+   last-reference semantics and this no-share lineage boundary differ.
+
+6. **Unverified raw details.** O:88 claims native `AT_EMPTY_PATH` opens
+   an empty path against the directory referenced by `dirfd`; N:66–69
+   discusses that flag for get/set-security, not native open. O:140–143
+   maps `O_CREAT` to `OPEN_IF` with parent `FILE_ADD_FILE`,
+   `O_CREAT | O_EXCL` to `CREATE`, and `O_NOFOLLOW` to
+   `AT_SYMLINK_NOFOLLOW`. Their exact legacy translation and parent-right
+   timing are not established by N/L/D. O:170 attributes legacy creation
+   to umask-based defaults plus parent inheritable ACEs; [Inheritance](~peios/security-descriptors/inheritance#the-merge-algorithm)
+   describes parent, creator and token SD sources without establishing
+   that umask contribution. O:183,185 also lists path-component
+   `ENOTDIR` and invalid-disposition `EINVAL`. These remain earlier,
+   unverified claims; omission from another reference does not prove
+   rejection or support. O:180 distinguishes a failed open access check
+   from an unreachable path component; [directory traversal](~peios/advanced-peios/peios-kernel/kacs/facs/use-time#directory-traversal)
+   is a separate authorization check.
+
+7. **SDK destination caveats.** D:3 mentions share mode; D:28 describes
+   no-follow, write-through and the rest of the `NtCreateFile` option set.
+   N:111–120 instead lists two supported create-option bits, reserves all
+   others, and says the ABI has no share-mode field. D:26 calls the native
+   result a “granted subset,” while N:6–19 distinguishes strict requests
+   from maximum-allowed requests. The SDK reference is a programming
+   entry point, not evidence that these differences have been reconciled.
+
 ## What is not here
 
 Required rights, error codes and validation rules are properties of

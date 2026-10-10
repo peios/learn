@@ -5,7 +5,6 @@ description: The edges of FACS — O_PATH, the exec dual gate, append-only handl
 related:
   - peios/file-access/overview
   - peios/file-access/the-handle-model
-  - peios/file-access/opening-files
   - peios/file-access/managing-file-security
   - peios/mount-policies/overview
 ---

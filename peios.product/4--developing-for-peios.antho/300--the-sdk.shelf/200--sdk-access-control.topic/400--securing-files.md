@@ -16,6 +16,9 @@ To keep the fragments readable, most error checks are elided here — every call
 
 [`peios_file_open`](~peios/sdk-files/opening-a-file) is shaped like `NtCreateFile`: you state the access you want, what to do about existence (the *disposition*), any create options, and — when creating — the security descriptor to stamp on the new file. It returns an ordinary Linux fd whose **granted access is fixed for the fd's lifetime**, which means you can safely hand it to another process by `SCM_RIGHTS`, `dup`, or across `exec`: the fd carries exactly the access it was opened with.
 
+> [!IMPORTANT]
+> This creator-SD example conflicts with the kernel reference on the existing-file branch. See [Open-interface documentation discrepancies](~peios/advanced-peios/peios-kernel/kacs/kacs-abi-notes#open-interface-documentation-discrepancies); the example does not establish that this branch succeeds.
+
 Open-or-create a file, readable and writable, stamping a creator SD if it's new:
 
 ```c

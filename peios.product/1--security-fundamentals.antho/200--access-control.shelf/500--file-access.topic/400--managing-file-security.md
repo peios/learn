@@ -5,7 +5,7 @@ description: Inspect a file's security descriptor, choose a narrow sd change, an
 related:
   - peios/file-access/overview
   - peios/file-access/the-handle-model
-  - peios/file-access/opening-files
+  - peios/sdk-access-control/securing-files
   - peios/security-descriptors/overview
   - peios/security-descriptors/ownership
   - peios/files-and-directories/sd
@@ -122,4 +122,4 @@ The [SDK error reference](~peios/sdk-access-control/securing-files#file-security
 - [The sd command](~peios/files-and-directories/sd) — exact command syntax and flags.
 - [Ownership](~peios/security-descriptors/ownership) — owner-transfer rules and recovery limits.
 - [Securing files](~peios/sdk-access-control/securing-files) — SDK examples and the moved raw-interface detail.
-- [Opening files](~peios/file-access/opening-files) — supplying an SD at file creation instead.
+- [Caller-supplied descriptors](~peios/advanced-peios/peios-kernel/kacs/facs/native-open#caller-supplied-descriptors) — the kernel reference for supplying an SD at creation; see its [documentation discrepancies](~peios/advanced-peios/peios-kernel/kacs/kacs-abi-notes#open-interface-documentation-discrepancies) before using the developer examples.

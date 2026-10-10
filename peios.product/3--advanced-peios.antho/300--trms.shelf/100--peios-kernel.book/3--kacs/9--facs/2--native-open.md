@@ -3,6 +3,9 @@ title: KACS-Native Open
 description: Opening a file by naming every right up front — the required data right, directories, special nodes, create dispositions and the DELETE fallback.
 ---
 
+> [!IMPORTANT]
+> The open-interface references contain [unresolved documentation differences](~peios/advanced-peios/peios-kernel/kacs/kacs-abi-notes#open-interface-documentation-discrepancies). Read that note alongside this page; no runtime behavior or release boundary has been established for those differences.
+
 `kacs_open` takes an explicit desired access mask. The caller names
 every right it will need — `FILE_READ_DATA`, `FILE_WRITE_DATA`,
 `WRITE_DAC`, `READ_CONTROL`, any combination — and AccessCheck
@@ -129,6 +132,8 @@ close path treats it as a no-op rather than a new error. [*facs.open.delete-on-c
 only: directory delete-on-close fails closed. [*facs.open.delete-on-close-regular-only]
 
 ## Caller-supplied descriptors
+
+The descriptor format and size bound are defined in [SD Structure](~peios/advanced-peios/pcds/security-descriptor/structure#binary-format).
 
 When a disposition results in a new file the caller may supply a
 descriptor. A null pointer with zero length means the new file's

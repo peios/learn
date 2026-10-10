@@ -3,6 +3,9 @@ title: Opening a file
 description: The open params struct — desired access, disposition, share mode and the rest — and what the call returns.
 ---
 
+> [!IMPORTANT]
+> The open-interface references contain [unresolved documentation differences](~peios/advanced-peios/peios-kernel/kacs/kacs-abi-notes#open-interface-documentation-discrepancies). Read that note alongside this page; no runtime behavior or release boundary has been established for those differences.
+
 ```c
 struct peios_open_params {
     uint32_t    desired_access; /* KACS_FILE_* | standard | generic (strict-mode) */
