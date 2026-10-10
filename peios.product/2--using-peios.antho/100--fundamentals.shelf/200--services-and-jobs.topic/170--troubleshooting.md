@@ -1,7 +1,7 @@
 ---
-title: Troubleshooting peinit
+title: Troubleshoot a service
 type: how-to
-description: A symptom-first guide — a service that won't start or keeps restarting, a change that didn't land, an access denial, and a machine stuck rebooting.
+description: Start with status and logs, then diagnose start failures, retries, missing changes, access errors and boot recovery.
 related:
   - peios/services-and-jobs/the-service-lifecycle
   - peios/services-and-jobs/supervision
@@ -10,14 +10,17 @@ related:
   - peios/access-decisions/debugging-a-denial
 ---
 
-Almost every peinit problem is diagnosed the same way: **read the state and the cause.** A `status` query gives you both, and the [cause taxonomy](~peios/services-and-jobs/the-service-lifecycle) tells you what the cause means. This page works backward from common symptoms to the cause and the fix.
+Collect the current state and cause before changing anything:
 
 ```
-$ svctl status <service>      # state + cause + health + warnings
-$ svctl list                  # everything you can see, at a glance
+$ svctl status <service>
+$ svctl list
+$ svctl boot
 ```
 
-For history beyond what peinit holds in memory — past jobs, prior failures, the exact log line a service died on — query [eventd](~peios/auditing/overview); peinit emits every [job and operation](~peios/services-and-jobs/jobs-and-operations) transition there.
+Keep the job or operation ID and any warnings. Open **Logs…** for the service in Services Manager to inspect its main process, hooks, and health checks. For older attempts, query [logs and events](~peios/services-and-jobs/output-and-logging); live status is not a permanent history.
+
+Use the symptom below to choose the next check. Avoid repeating a restart or changing permissions until you know which layer failed.
 
 ## A service won't start
 
@@ -30,27 +33,27 @@ For history beyond what peinit holds in memory — past jobs, prior failures, th
 | `ConditionSkipped` (→ Skipped) | A start-time [condition](~peios/services-and-jobs/execution-environment) was not met. **Not a failure** — the service decided it does not apply here. | If it *should* run, the condition's premise is false (a missing path/file/key). This is often correct behaviour. |
 | `TtyUnavailable` (→ Skipped) | Another service is holding the terminal this one names in `TTYPath`. **Not a failure** — it is waiting its turn. | Check who has it: the holder is the other service with that `TTYPath` in a running state. Give this one a higher `TTYPrecedence` to win next boot, or a [`tty:released`](~peios/services-and-jobs/triggers-and-timers) trigger so it starts when the terminal frees. |
 | `AssertionError` | A start-time [assert](~peios/services-and-jobs/execution-environment) failed — a required precondition is missing. | Create the missing precondition (path, file, directory, registry key), then start again. |
-| `PreHookFailure` | An `ExecStartPre` hook exited non-zero. | Run the hook command by hand as the [hook identity](~peios/services-and-jobs/identity-and-privileges) to see why. |
+| `PreHookFailure` | An `ExecStartPre` hook exited non-zero. | Inspect the hook’s captured output and its [identity](~peios/services-and-jobs/identity-and-privileges). Before rerunning it manually, check for side effects: setup and migration hooks may change data. |
 | `ParentSetupFailure` | peinit could not even fork — fd/PID exhaustion, a cgroup error. No process was created. | A system-resource problem, not the service's fault. Check for fd/PID limits and cgroup health. |
 | `PreExecFailure` | Setup after fork failed — token install, rlimits, environment. | Usually identity: check `Identity`, that authd is up, and that `RequiredPrivileges` names real privileges. |
 | `ReadinessTimeout` | The process started but never became [ready](~peios/services-and-jobs/service-types) within `StartTimeout`. | Either the service is genuinely slow (raise `StartTimeout`, or have it send `EXTEND_TIMEOUT_USEC`) or it never sends `READY=1` (wrong `Readiness`, or a bug). |
 
 > [!TIP]
-> A startup failure (`ReadinessTimeout`, `PreHookFailure`, `PreExecFailure`, `ParentSetupFailure`) is **restart-eligible** — peinit will have retried it through [Backoff](~peios/services-and-jobs/supervision) before landing in Failed. So by the time you see `Failed`, it has already failed repeatedly. The logs show each attempt.
+> A startup failure (`ReadinessTimeout`, `PreHookFailure`, `PreExecFailure`, `ParentSetupFailure`) is **restart-eligible**. Whether it was retried depends on the configured policy and budget; `Failed` alone does not prove multiple attempts occurred. Read the [restart policy](~peios/services-and-jobs/supervision) and the logs for the actual attempts.
 
 ## A service keeps restarting
 
 The service flaps — up, down, up, down. This is [restart policy](~peios/services-and-jobs/supervision) doing its job, but it points at an unstable service.
 
 - **It eventually settles in `Failed` with `RestartBudgetExhausted`.** It crashed `RestartMaxRetries` times faster than it could stay healthy for `RestartWindow`. The fix is the *service*, not the policy — read its logs for the crash. Raising the budget only delays the inevitable.
-- **It flaps forever and never exhausts the budget.** It is briefly reaching Active each cycle and resetting the counter. Either genuinely stabilise it, or — if a [health check](~peios/services-and-jobs/supervision) is failing it after it starts — check the health command; a flaky check restarts a perfectly good service.
+- **It flaps forever and never exhausts the budget.** Check whether it stays Active for the full `RestartWindow` between failures. Reaching Active briefly does not reset the budget. Inspect the [health-check](~peios/services-and-jobs/supervision) output too; a faulty check can restart a working service.
 - **It restarts on a clean exit you did not expect.** `RestartPolicy=Always` restarts even successful exits (cause `CleanExitRestart`). If the service is *meant* to exit, use `OnFailure` instead.
 
 ## The machine keeps rebooting
 
 A reboot loop almost always means a **Critical service is failing**. A [`ErrorControl=Critical`](~peios/services-and-jobs/supervision) service that exhausts its budget makes peinit sync and reboot; if it fails the same way every boot, you loop.
 
-The [boot-attempt counter](~peios/services-and-jobs/boot-and-boot-modes) is designed to break this: after N attempts (default 3) peinit stops and drops you into [Recovery mode](#booted-into-recovery-mode). From the Recovery shell, find the failing Critical service (its logs are in [eventd](~peios/auditing/overview), which persists across reboots), fix or disable it, and reboot. If you need to intervene before the counter trips, boot with `peios.recovery=1` on the kernel command line.
+The [boot-attempt counter](~peios/services-and-jobs/boot-and-boot-modes) breaks a sequence of boots that never become confirmed: after N attempts (default 3), peinit enters [Recovery mode](#booted-into-recovery-mode). If each boot reaches the success grace before the Critical failure, its counter is reset and the reboot loop can continue without automatic Recovery. Check `svctl boot` where possible; do not assume every reboot loop will stop after three attempts. From the Recovery shell, find the failing Critical service (look for records already stored by [eventd](~peios/auditing/overview), and preserve the console error if no record was stored), repair its failure or restore known-good configuration before rebooting. Disabling a required platform service can leave its dependents unable to start. If you need to intervene before the counter trips, boot with `peios.recovery=1` on the kernel command line.
 
 ## A service is Abandoned
 
@@ -66,7 +69,7 @@ peinit works from an [in-memory snapshot](~peios/services-and-jobs/defining-a-se
 
 - **Immutable at runtime** (`ImagePath`, `Type`, `Identity`, `RequiredPrivileges`, `ErrorControl`) → takes effect only on `restart`.
 - **Apply on next start** (dependencies, conditions, `OnFailure`) → next start or graph reload.
-- **Reloadable at runtime** (timeouts, restart policy, health checks, environment, hooks…) → next time peinit acts on the service.
+- **Reloadable at runtime** → next relevant operation. Timeouts and health-check policy can affect later checks; environment, arguments, working directory and process limits apply to a new process, not one already running.
 - **Hot-reloaded** (`ServiceSecurity`) → next control request.
 
 If a change is not landing, check its class first. For a wholesale re-read of every definition, run `svctl reload-config` — it rebuilds and validates the whole graph atomically and swaps it in only if validation passes (running services are untouched). And remember peinit *pulls* changes from [registry notifications](~peios/registry-concepts/watches) rather than having them pushed, so there can be a brief lag.
@@ -100,37 +103,39 @@ A job that was *accepted* but never ran is not an error response: it is an `ok` 
 
 ## A job's output has gaps
 
-If a submitter attached an output sink and sees gaps, look for a `peinit.job.output.dropped` event for the job in [eventd](~peios/auditing/overview): the sink was not being drained fast enough, and peinit dropped lines *for the sink only* rather than let it slow the job. The full output is still in eventd under the job's GUID — the sink is a convenience copy, the record is not.
+If a submitter attached an output sink and sees gaps, look for a `peinit.job.output.dropped` event for the job in [eventd](~peios/auditing/overview): the sink was not being drained fast enough, and peinit dropped lines *for the sink only* rather than let it slow the job. Query eventd under the job’s GUID for the independently forwarded record. Sink loss does not itself drop that record, but eventd’s log path is also best-effort, so completeness is not guaranteed.
 
 ## UNKNOWN_JOB
 
-The GUID was real once. A job is retained for 60 seconds after it ends and then dropped, so a client that asks later gets `UNKNOWN_JOB`; the durable record is in eventd. You also get `UNKNOWN_JOB` for a job you lack `JOB_QUERY` on — a job you cannot see is indistinguishable from one that does not exist.
+The GUID is unknown or its retention has elapsed. A submitted job is retained for 60 seconds after it ends, then dropped; check eventd for any stored record. A known job that you lack permission to query returns `ACCESS_DENIED`. `job list` instead omits jobs you cannot query.
 
 ## A dependent never started
 
 You started (or booted) a service, but something that depends on it never came up:
 
-- A **`Requires`/`BindsTo` dependent stays blocked** until its target reaches a [satisfying state](~peios/services-and-jobs/the-service-lifecycle) (Active, Completed, or Skipped). If the target is stuck in Starting or Failed, so is the dependent — fix the target.
+- A **`Requires`/`BindsTo` dependent stays blocked** until its target reaches a [satisfying state](~peios/services-and-jobs/the-service-lifecycle) (Active, Reloading, Completed, or Skipped). If the target is stuck in Starting or Failed, so is the dependent — fix the target.
 - A dependent that connected to its target on boot and got *connection refused* usually means the target uses **`Readiness=Alive`** — peinit only waited for the process to exist, not to be serving. Switch the target to `Readiness=Notify` so it signals `READY=1` when actually ready. (peinit logs this as a validation warning at boot.)
-- A **`Wants` dependent starts regardless** of its target — if you needed it to wait, `Wants` was the wrong relationship; use `Requires`.
+- A **`Wants` dependent waits for the optional target’s startup attempt to resolve**, but starts even if the target failed. Use `Requires` when successful readiness is necessary.
 
 ## Booted into Safe mode
 
-[Safe mode](~peios/services-and-jobs/boot-and-boot-modes) starts only Critical and `SafeMode=1` services. You land here when graph validation finds a **cycle or unresolvable conflict involving a Critical service**, or when `peios.safemode=1` is on the kernel command line. The TCB is healthy; the *configuration* is broken.
+[Safe mode](~peios/services-and-jobs/boot-and-boot-modes) selects Critical and `SafeMode=1` services within the boot-triggered set. Those flags do not give a demand-only service a boot trigger. You land here when graph validation finds a **cycle or unresolvable conflict involving a Critical service**, or when `peios.safemode=1` is on the kernel command line. The TCB is healthy; the *configuration* is broken.
 
 Fix the graph: the logs name the cycle path (`A → B → C → A`) or the conflicting pair. Once the cycle is broken or the conflict resolved, a normal boot returns. You can start any service by hand from Safe mode in the meantime — it is only auto-start that is restricted.
 
 ## Booted into Recovery mode
 
-[Recovery mode](~peios/services-and-jobs/boot-and-boot-modes) gives you a SYSTEM shell on the console and starts nothing else. You reach it when the boot counter hits N, when `peios.recovery=1` is set, or when **registryd failed in Phase 1** (entered immediately, no counter).
+[Recovery mode](~peios/services-and-jobs/boot-and-boot-modes) gives you a SYSTEM shell on the console and skips Phase 2 services. It starts registryd only if the boot has not already attempted that start. You reach it when the boot counter hits N, when `peios.recovery=1` is set, or when **registryd failed in Phase 1** (Recovery is immediate; this boot attempt has already incremented the counter).
 
 If the registry itself is the problem, use the offline tools that bypass it — they talk to the [loregd implementation](~peios/services-and-jobs/boot-and-boot-modes) directly:
 
 ```
 $ loregd --inspector               # read the storage directly to diagnose
 $ loregd --recover-from-backup     # restore the backup taken each registryd start
-$ loregd --dangerously-clear-database   # last resort — wipe; roles re-supply config
 ```
+
+> [!WARNING]
+> `loregd --dangerously-clear-database` is a destructive last resort, not the next diagnostic command. It wipes the registry. Roles can re-supply service configuration but do not restore every registry value. Inspect first and use a verified backup where possible.
 
 Recovery has **no TCB protections** — it is a SYSTEM shell, full stop. Treat it accordingly, and remember it needs console access (physical, IPMI, or serial); there is no remote recovery yet.
 

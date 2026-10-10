@@ -1,7 +1,7 @@
 ---
 title: Shutdown
-type: concept
-description: Shutdown is boot in reverse — SIGTERM to SIGKILL in reverse dependency order, bounded by a global timeout, then seed, unmount, sync, and power off.
+type: how-to
+description: Power off or reboot through peinit, understand graceful timeouts, and reserve forced shutdown for a stuck system.
 related:
   - peios/services-and-jobs/dependencies
   - peios/services-and-jobs/supervision
@@ -9,7 +9,17 @@ related:
   - peios/services-and-jobs/boot-and-boot-modes
 ---
 
-Shutdown is [boot](~peios/services-and-jobs/boot-and-boot-modes) run in reverse. peinit stops services in **reverse [dependency](~peios/services-and-jobs/dependencies) order** — dependents before the things they depend on — escalating from a polite SIGTERM to a forced SIGKILL, all bounded by a global timeout, and then unmounts, syncs, and performs the final power action. This page covers how it is triggered and how it runs.
+Use `svctl shutdown` when you intend to stop the machine. Choose one action:
+
+```
+$ svctl shutdown poweroff
+$ svctl shutdown reboot
+$ svctl shutdown halt
+```
+
+These are alternatives, not a sequence. Each interrupts running services and jobs and requires `SYSTEM_SHUTDOWN`. Save work and account for other users before issuing one. `halt` stops the CPU but leaves power on.
+
+A normal shutdown stops dependents before their dependencies, gives running services time to exit, then unmounts, syncs, and performs the selected action. Forced shutdown skips that opportunity to finish work.
 
 ## How shutdown is triggered
 
@@ -39,7 +49,7 @@ There are four paths into shutdown, and they are not equal — three are gracefu
 
 For a `poweroff`, `reboot`, or `halt`, peinit runs an ordered sequence:
 
-1. **Enter the shutdown state.** A flag is set, and while it holds: **no new services may start**, timer triggers are disarmed, and new control commands are rejected with `INVALID_STATE` — *except* `status` queries, which keep working so you can watch progress.
+1. **Enter the shutdown state.** A flag is set, and while it holds: **no new services may start**, timer triggers are disarmed, and new lifecycle commands are rejected with `INVALID_STATE`. Status, list, operation-status, boot, and job query/stop commands remain available so you can watch progress or stop a job sooner.
 2. **Suspend Critical-failure semantics.** If a Critical service fails *during* shutdown, it is logged but does **not** trigger a reboot — the system is already going down, and rebooting would loop.
 3. **Clear Completed services.** Oneshot services sitting in [Completed](~peios/services-and-jobs/the-service-lifecycle) (with `RemainAfterExit`) have no process; peinit moves them to Inactive so their dependents can be stopped cleanly.
 4. **Stop every live [submitted job](~peios/services-and-jobs/jobs-and-operations) at once** — SIGTERM, then SIGKILL of the job's cgroup after its own `stop_timeout` — and cancel any job still queued to launch, both with cause `shutdown`. Jobs have no dependencies, so there is no order among them and nothing waits for them to finish before the service waves begin; but shutdown does not complete while a live job remains, within the same global timeout.
@@ -49,7 +59,7 @@ For a `poweroff`, `reboot`, or `halt`, peinit runs an ordered sequence:
 8. **Unmount filesystems.** peinit snapshots the mount table and tries to unmount **every** remaining non-root mount in its namespace — not just the ones it mounted itself — working from the deepest mount points outward. That includes the Phase 1 set (`/proc`, `/sys`, `/dev`, `/dev/pts`, `/dev/shm`, `/run`, `/sys/fs/cgroup`) wherever those are still mounted. A mount that is already gone counts as done. If one won't unmount because it is busy, peinit falls back to remounting it read-only; anything it still can't clean up is logged and left for the final `sync()` and the kernel, never blocking shutdown. The root filesystem (`/`) is never unmounted — once the rest are handled, peinit remounts root read-only.
 9. **Sync and finish.** `sync()` to flush pending writes, then the final action — power off, reboot, or halt.
 
-The reverse ordering falls straight out of the [dependency graph](~peios/services-and-jobs/dependencies); there is no separate stop-order configuration. The last services to stop are the TCB daemons everything rests on — `eventd`, then `authd`, then `lpsd`, then `registryd` dead last, mirroring its position as the first ever started.
+The reverse ordering falls straight out of the [dependency graph](~peios/services-and-jobs/dependencies); there is no separate stop-order configuration. Shared platform services stop after their dependents, with `registryd` last. The exact order is derived from the installed graph.
 
 ## STOPPING=1 and timeout extension
 
@@ -59,7 +69,10 @@ A service that begins shutting down on its own — say, in response to an intern
 
 ## Forced shutdown
 
-When something is wedged and you need the machine down *now*, **repeated SIGINT** forces it: three Ctrl-Alt-Del presses within five seconds skip the graceful sequence entirely — SIGKILL everything, sync, reboot. It is the escape hatch for a graceful shutdown that is itself stuck behind an unresponsive service.
+> [!WARNING]
+> Forced shutdown kills processes without waiting for graceful completion. Unfinished application work can be lost. Use it only when the normal shutdown cannot finish.
+
+When the machine must be stopped despite a stuck graceful shutdown, **repeated SIGINT** forces it: three Ctrl-Alt-Del presses within five seconds skip the graceful sequence entirely — SIGKILL everything, sync, reboot. It is the escape hatch for a graceful shutdown that is itself stuck behind an unresponsive service.
 
 ## Shutdown during boot
 

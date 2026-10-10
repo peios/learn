@@ -58,10 +58,14 @@ boot it happened in. Its other fields depend on its type. A
 `kacs.audit.access.checked` event, for example, says who asked, for
 what, on what, and whether it was allowed.
 
-Events are kept far more carefully than logs. The kernel holds them until
-eventd has stored them, and if any are ever lost, eventd records that they
-were. They are the record to trust when something has to be accounted
-for. See [Auditing](~peios/auditing/overview).
+Use events when you need the structured record of an operation or access
+decision. eventd stores the events it receives and records detected loss,
+but this is not a guarantee that every event survives: the kernel's event
+buffers are finite and can overwrite events before a consumer reads them.
+The kernel buffers do not persist across reboots; eventd provides stored
+history. Check loss reports as well as the events themselves when accounting
+for what happened. See [Auditing](~peios/auditing/overview) and the kernel
+manual's [event failure modes](~peios/advanced-peios/peios-kernel/kmes/failure-modes).
 
 ### Metrics
 

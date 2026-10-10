@@ -1,7 +1,7 @@
 ---
 title: Who can manage a service
 type: concept
-description: Every control command runs AccessCheck against the service's ServiceSecurity descriptor. The rights, the defaults, and the system control descriptor.
+description: Check runtime permissions, grant service control without granting definition writes, and diagnose access denials.
 related:
   - peios/services-and-jobs/identity-and-privileges
   - peios/services-and-jobs/controlling-services
@@ -10,9 +10,9 @@ related:
   - peios/registry-security/access-control
 ---
 
-A service is a *securable object*. Just as a [file](~peios/file-access/overview) or a [registry key](~peios/registry-security/access-control) carries a [security descriptor](~peios/security-descriptors/overview) that decides who may touch it, a service carries one that decides who may **start, stop, query, or reload** it. peinit enforces it on *every* [control command](~peios/services-and-jobs/controlling-services) — there is no command that skips the check.
+To let someone start or stop a service, change its **ServiceSecurity** permissions. Do not give them write access to the service definition just to grant control: definition writes can change the program and the identity it runs as.
 
-This is the second, independent half of the security model. The first half, [Service identity and privileges](~peios/services-and-jobs/identity-and-privileges), is about what a service *can do* (its token). This page is about who can *manage the service* — a completely separate question, answered by a completely separate descriptor.
+In **Services Manager**, select the service and inspect the commands you may use. **Who may control it…** edits runtime control; **Who may change its definition…** edits the registry key’s permissions. If a command returns `ACCESS_DENIED`, check its required right and the caller’s identity before widening either descriptor.
 
 ## Two descriptors, two questions
 
@@ -26,58 +26,6 @@ A service is associated with **two** descriptors that are easy to conflate but a
 The registry key SD is ordinary [registry access control](~peios/registry-security/access-control) and not peinit's concern — peinit reads definitions as SYSTEM, which has full access. The **ServiceSecurity** SD is peinit's domain, and the rest of this page is about it.
 
 They are genuinely independent. An administrator might be able to *query a service's status* (ServiceSecurity grants `SERVICE_QUERY_STATUS`) but not *read its configuration* (the registry key SD denies read) — or the reverse. Runtime control and configuration access are separate concerns, and both combinations are valid.
-
-## Service access rights
-
-The ServiceSecurity descriptor grants these rights:
-
-| Right | Bit | Grants |
-|---|---|---|
-| `SERVICE_QUERY_STATUS` | 0x0001 | Query state, PID, cause, health, warnings. |
-| `SERVICE_START` | 0x0002 | Start the service. |
-| `SERVICE_STOP` | 0x0004 | Stop the service. |
-| `SERVICE_INTERROGATE` | 0x0008 | Reload the service. |
-| `SERVICE_ALL_ACCESS` | 0x000F | All of the above — the "full access" granted to SYSTEM by default. |
-
-`restart` requires **both** `SERVICE_STOP` and `SERVICE_START`, since it is a stop followed by a start. `reset` requires `SERVICE_STOP`.
-
-When peinit evaluates the descriptor it maps the generic rights as follows, so a descriptor written with generic rights behaves sensibly:
-
-| Generic | Maps to |
-|---|---|
-| `GENERIC_READ` | `SERVICE_QUERY_STATUS` |
-| `GENERIC_WRITE` | `SERVICE_START` \| `SERVICE_STOP` \| `SERVICE_INTERROGATE` |
-| `GENERIC_EXECUTE` | `SERVICE_START` \| `SERVICE_STOP` \| `SERVICE_INTERROGATE` |
-| `GENERIC_ALL` | `SERVICE_ALL_ACCESS` |
-
-## How a command is authorised
-
-Every control command runs the same gate:
-
-1. peinit captures the caller's [token](~peios/services-and-jobs/identity-and-privileges) from the kernel (the `KACS_SO_PEER_TOKEN` socket option) — the caller's *effective* identity at connection time, so if the caller is [impersonating](~peios/impersonation/overview), the impersonated identity is what is checked.
-2. peinit resolves the target service and its ServiceSecurity descriptor.
-3. peinit runs [AccessCheck](~peios/access-decisions/overview): the caller's token against the descriptor, for the right the command needs.
-4. **Denied** → return `ACCESS_DENIED`. The kernel records the attempt — caller, target service, rights requested and granted — as a `kacs.audit.access.checked` event, because the descriptor's SACL asks it to.
-5. **Granted** → execute the command.
-
-> [!NOTE]
-> Every denial is recorded by default: the built-in descriptor's SACL audits every refusal, for everyone, and peinit names the service in each check so the record says which one it was. Look for it in the event viewer as `kacs.audit.access.checked` with **object kind** `service` and the service's name. A `ServiceSecurity` you write yourself is used as it is, so keep a SACL on it (for example `S:(AU;FA;0xf;;;WD)`) if you still want its denials recorded. If you are debugging a denial, the audit record has everything you need; see [Debugging a denial](~peios/access-decisions/debugging-a-denial).
-
-## The default descriptor
-
-If a service has no `ServiceSecurity` value, it **inherits** the one on `Machine\System\Services` itself. If that key has none either, peinit applies a built-in default:
-
-- **SYSTEM** (`S-1-5-18`) — full access.
-- **Administrators** (`S-1-5-32-544`) — full access.
-- **Authenticated Users** (`S-1-5-11`) — query only.
-- **Everyone** (`S-1-1-0`) — every refusal audited, in its SACL.
-
-So out of the box, administrators can do anything with a service, everyone who is signed in can see what it is doing, and every refused command is recorded. To let someone else start or stop a particular service, give that service a `ServiceSecurity` that grants it; anyone signed in can reach the control socket, so a grant to them takes effect.
-
-> [!WARNING]
-> A `ServiceSecurity` value carries the service's audit policy as well as its permissions, and it is written whole. Anyone who may write it — that is, anyone who may write the service's registry key, or `Machine\System\Services` — can remove its SACL and so stop its denials being recorded. Keep those keys writable only by administrators, as they are by default. To let someone manage a service, grant them rights in its `ServiceSecurity`; do not give them write access to its key.
-
-ServiceSecurity is **hot-reloaded**: a change to the value in the registry takes effect on the **next control request**, with no service restart. peinit picks the change up through a [registry notification](~peios/registry-concepts/watches). This is why ServiceSecurity is in its own [mutability class](~peios/services-and-jobs/defining-a-service) — access policy should be able to change without disturbing a running service.
 
 ## Changing them from the desktop
 
@@ -104,6 +52,58 @@ The same can be done from a terminal with `reg`. For example, this makes sshd ta
 ```
 $ reg del 'Machine\System\Services\sshd' ServiceSecurity
 ```
+
+## Service access rights
+
+The ServiceSecurity descriptor grants these rights:
+
+| Right | Bit | Grants |
+|---|---|---|
+| `SERVICE_QUERY_STATUS` | 0x0001 | Query state, PID, cause, health, warnings. |
+| `SERVICE_START` | 0x0002 | Start the service. |
+| `SERVICE_STOP` | 0x0004 | Stop the service. |
+| `SERVICE_INTERROGATE` | 0x0008 | Reload the service. |
+| `SERVICE_ALL_ACCESS` | 0x000F | All of the above — the "full access" granted to SYSTEM by default. |
+
+`restart` requires **both** `SERVICE_STOP` and `SERVICE_START`, since it is a stop followed by a start. `reset` requires `SERVICE_STOP`.
+
+When peinit evaluates the descriptor it maps the generic rights as follows, so a descriptor written with generic rights behaves sensibly:
+
+| Generic | Maps to |
+|---|---|
+| `GENERIC_READ` | `SERVICE_QUERY_STATUS` |
+| `GENERIC_WRITE` | `SERVICE_START` \| `SERVICE_STOP` \| `SERVICE_INTERROGATE` |
+| `GENERIC_EXECUTE` | `SERVICE_START` \| `SERVICE_STOP` \| `SERVICE_INTERROGATE` |
+| `GENERIC_ALL` | `SERVICE_ALL_ACCESS` |
+
+## The default descriptor
+
+If a service has no `ServiceSecurity` value, it **inherits** the one on `Machine\System\Services` itself. If that key has none either, peinit applies a built-in default:
+
+- **SYSTEM** (`S-1-5-18`) — full access.
+- **Administrators** (`S-1-5-32-544`) — full access.
+- **Authenticated Users** (`S-1-5-11`) — query only.
+- **Everyone** (`S-1-1-0`) — every refusal audited, in its SACL.
+
+So out of the box, administrators can do anything with a service, everyone who is signed in can see what it is doing, and every refused command is recorded. To let someone else start or stop a particular service, give that service a `ServiceSecurity` that grants it; anyone signed in can reach the control socket, so a grant to them takes effect.
+
+> [!WARNING]
+> A `ServiceSecurity` value carries the service's audit policy as well as its permissions, and it is written whole. Anyone who may write it — that is, anyone who may write the service's registry key, or `Machine\System\Services` — can remove its SACL and so stop its denials being recorded. Keep those keys writable only by administrators, as they are by default. To let someone manage a service, grant them rights in its `ServiceSecurity`; do not give them write access to its key.
+
+ServiceSecurity is **hot-reloaded**: a change to the value in the registry takes effect on the **next control request**, with no service restart. peinit picks the change up through a [registry notification](~peios/registry-concepts/watches). This is why ServiceSecurity is in its own [mutability class](~peios/services-and-jobs/defining-a-service) — access policy should be able to change without disturbing a running service.
+
+## How a command is authorised
+
+Every control command runs the same gate:
+
+1. peinit captures the caller's [token](~peios/services-and-jobs/identity-and-privileges) from the kernel (the `KACS_SO_PEER_TOKEN` socket option) — the caller's *effective* identity at connection time, so if the caller is [impersonating](~peios/impersonation/overview), the impersonated identity is what is checked.
+2. peinit resolves the target service and its ServiceSecurity descriptor.
+3. peinit runs [AccessCheck](~peios/access-decisions/overview): the caller's token against the descriptor, for the right the command needs.
+4. **Denied** → return `ACCESS_DENIED`. The kernel records the attempt — caller, target service, rights requested and granted — as a `kacs.audit.access.checked` event, because the descriptor's SACL asks it to.
+5. **Granted** → execute the command.
+
+> [!NOTE]
+> Every denial is recorded by default: the built-in descriptor's SACL audits every refusal, for everyone, and peinit names the service in each check so the record says which one it was. Look for it in the event viewer as `kacs.audit.access.checked` with **object kind** `service` and the service's name. A `ServiceSecurity` you write yourself is used as it is, so keep a SACL on it (for example `S:(AU;FA;0xf;;;WD)`) if you still want its denials recorded. If you are debugging a denial, the audit record has everything you need; see [Debugging a denial](~peios/access-decisions/debugging-a-denial).
 
 ## The system control descriptor
 

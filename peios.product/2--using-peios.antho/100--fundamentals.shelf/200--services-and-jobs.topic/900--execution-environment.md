@@ -1,7 +1,7 @@
 ---
 title: The execution environment
 type: concept
-description: What a service process starts with — its cgroup tree, stdio, layered environment, limits, hooks, conditions and asserts, and the fd store.
+description: Configure a service’s environment, working directory, runtime paths, hooks and terminal without losing logs or widening access.
 related:
   - peios/services-and-jobs/defining-a-service
   - peios/services-and-jobs/identity-and-privileges
@@ -10,46 +10,9 @@ related:
   - peios/registry-concepts/configuration-and-meaning
 ---
 
-When peinit starts a service, the process it hands you is built deliberately — a clean context with a known identity, a known environment, and only the resources peinit chose to give it. This page covers everything about that context except the [token](~peios/services-and-jobs/identity-and-privileges) (its own page): the cgroup the process lives in, its standard streams, the environment it sees, the limits on it, and the hooks and checks that run *around* the start.
+If a program works in your shell but fails as a service, compare its **identity**, **environment**, **working directory**, and **standard streams**. peinit does not inherit your login session. It launches the program with the context in its definition.
 
-## A clean context
-
-A service inherits **only** what peinit explicitly hands it — its standard streams and any [stored file descriptors](#the-fd-store). Every other descriptor peinit holds — the control socket, the notify socket, the event-loop fd, the registry and authd and eventd connections — is opened close-on-exec, so it closes automatically at exec and can never leak into a service. peinit also resets the child's signal state to defaults (it runs with all signals blocked for its own [signalfd](~peios/services-and-jobs/shutdown); a service must not inherit that). The guarantee is that a service starts from a clean slate, not from peinit's privileged one.
-
-## The cgroup tree
-
-Every service runs in its own [cgroup](~peios/threads-and-processes/process-lifecycle) tree under `/sys/fs/cgroup/peinit/`, with separate sub-cgroups for the main process, hooks, and health checks:
-
-```
-/sys/fs/cgroup/peinit/<service>/
-                       ├── main/     the main process
-                       ├── hooks/    pre/post hooks
-                       └── health/   health checks
-```
-
-peinit uses cgroups for two things only: **tracking** every process a service spawns (so a child that forks its own children is still accounted to the service), and **clean kill** (terminating the entire tree at once, so nothing is orphaned). It does *not* use cgroups for resource accounting or limits.
-
-The split into sub-cgroups serves a real purpose: it satisfies cgroup v2's "no internal processes" rule, and it lets peinit kill a service's *hooks* or *health checks* without touching the main process.
-
-When an old tree cannot be removed — because a process survived SIGKILL in [D-state](~peios/services-and-jobs/the-service-lifecycle) and leaked it — peinit creates a fresh **generational** tree (`<service>.gen<N>`) for the next start, so a stuck old instance never blocks a new one. Leaks are surfaced in the service's `warnings`; they are a sign of an underlying I/O fault, covered in [Keeping services running](~peios/services-and-jobs/supervision).
-
-## Standard streams
-
-peinit wires a service's standard streams before exec:
-
-- **stdin** is redirected to `/dev/null`. peinit never gives a service an interactive input channel; a service that needs input must obtain it explicitly (a socket, a stored fd).
-- **stdout** and **stderr** are redirected to pipes peinit holds, so it can capture and forward every line. This is the subject of [Service output and logging](~peios/services-and-jobs/output-and-logging).
-
-### Attaching a terminal
-
-A service that sets **`TTYPath`** to an absolute terminal path — `/dev/console`, `/dev/tty1`, a serial line — gets that terminal on all three standard streams instead of the wiring above, and becomes a session leader owning it as its **controlling terminal**. That last part is what makes job control work: Ctrl-C interrupts, `fg`/`bg` behave, and a hangup reaches the process group. It is what a boot shell or a `login` prompt needs.
-
-It carries a path rather than a flag because which terminal is a per-service question: a maintenance shell on `tty1` while the kernel console is a serial line is an ordinary thing to want.
-
-> [!WARNING]
-> Attaching a terminal **suppresses log capture** — the pipes eventd would read are closed, so the service's output goes to the terminal and nowhere else. Don't set `TTYPath` on a service whose output you expect to find in the logs.
-
-Two services pointed at the same terminal do not fight over it. peinit gives the device to one of them and **skips** the rest — highest `TTYPrecedence` wins — and a skipped service can ask to be started when the terminal frees, with the `tty:released` trigger. See [Queueing for a terminal](~peios/services-and-jobs/triggers-and-timers).
+Start with `svctl definition show <service>`, then inspect `svctl status <service>` and the [service’s logs](~peios/services-and-jobs/output-and-logging). Check hook output as well as the main program. Environment and working-directory changes reach the next process start; they do not change a process already running.
 
 ## The environment
 
@@ -87,6 +50,24 @@ peinit also sets `oom_score_adj`: `-1000` (OOM-immune) for `ErrorControl=Critica
 peinit does **not** remove these directories when the service stops. `/run` is a boot-scoped tmpfs, so they simply disappear at the next boot rather than being torn down on each stop — a restarting service finds its runtime directory (though not necessarily its contents) already in place.
 
 For the exact naming rules on each entry and the field's type and default, see the [Registry key reference](~peios/services-and-jobs/registry-key-reference).
+
+## Standard streams
+
+peinit wires a service's standard streams before exec:
+
+- **stdin** is redirected to `/dev/null`. peinit never gives a service an interactive input channel; a service that needs input must obtain it explicitly (a socket, a stored fd).
+- **stdout** and **stderr** are redirected to pipes peinit holds, so it can capture and forward every line. This is the subject of [Service output and logging](~peios/services-and-jobs/output-and-logging).
+
+### Attaching a terminal
+
+A service that sets **`TTYPath`** to an absolute terminal path — `/dev/console`, `/dev/tty1`, a serial line — gets that terminal on all three standard streams instead of the wiring above, and becomes a session leader owning it as its **controlling terminal**. That last part is what makes job control work: Ctrl-C interrupts, `fg`/`bg` behave, and a hangup reaches the process group. It is what a boot shell or a `login` prompt needs.
+
+It carries a path rather than a flag because which terminal is a per-service question: a maintenance shell on `tty1` while the kernel console is a serial line is an ordinary thing to want.
+
+> [!WARNING]
+> Attaching a terminal **suppresses log capture** — the pipes eventd would read are closed, so the service's output goes to the terminal and nowhere else. Don't set `TTYPath` on a service whose output you expect to find in the logs.
+
+Two services pointed at the same terminal do not fight over it. peinit gives the device to one of them and **skips** the rest — highest `TTYPrecedence` wins — and a skipped service can ask to be started when the terminal frees, with the `tty:released` trigger. See [Queueing for a terminal](~peios/services-and-jobs/triggers-and-timers).
 
 ## Pre-exec and post-exec hooks
 
@@ -144,6 +125,16 @@ The mechanics ride on [sd_notify](~peios/services-and-jobs/service-types):
 - On the **next start**, peinit injects the stored fds starting at fd 3, sets `LISTEN_FDS` to the count and `LISTEN_FDNAMES` to the colon-separated names, then clears the store. (This is the same `LISTEN_FDS` convention systemd uses, so software with existing fd-passing support works unmodified.)
 
 The store **survives an automatic restart** (crash → restart policy → new start) — that is the whole point. It is **cleared** on an *explicit* stop or shutdown (the service is not coming back), and when a [removed definition](~peios/services-and-jobs/defining-a-service) is finally discarded.
+
+## A clean context
+
+A service receives its standard streams and explicitly supplied descriptors. It does not inherit peinit’s privileged connections or signal handling. The [launch-isolation reference](~peios/advanced-peios/peinit/introduction/service-manager-boundaries#a-clean-context) describes the descriptor and signal setup.
+
+## The cgroup tree
+
+peinit tracks a service’s main process, hooks, and health checks in separate cgroups beneath `/sys/fs/cgroup/peinit/`. It uses those groups for tracking and clean termination, not resource limits.
+
+A leaked cgroup warning means a process survived cleanup, often because I/O is stuck. A later start can use a fresh `<service>.gen<N>` tree; that does not repair or kill the stuck old process. Investigate the [Abandoned state](~peios/services-and-jobs/the-service-lifecycle#the-abandoned-state). The [cgroup reference](~peios/advanced-peios/peinit/introduction/service-manager-boundaries#the-cgroup-tree) retains the layout and rationale.
 
 ## Where to start
 

@@ -1,7 +1,7 @@
 ---
 title: Keeping services running
 type: concept
-description: Restart policy with backoff and a budget, active health checks, the watchdog, timeout extension, OnFailure, and the Critical reboot path.
+description: Diagnose repeated restarts, tune health and timeout checks, and understand when a Critical service failure reboots the machine.
 related:
   - peios/services-and-jobs/the-service-lifecycle
   - peios/services-and-jobs/service-types
@@ -10,7 +10,12 @@ related:
   - peios/services-and-jobs/troubleshooting
 ---
 
-Once a service is [Active](~peios/services-and-jobs/the-service-lifecycle), peinit's job becomes *keeping it that way* — or deciding, deliberately, when to stop trying. That decision is governed by a small set of policies: a restart policy with a throttling budget, optional active health checks, an optional watchdog, and an error-control level that decides how serious a final failure is. This page covers all of them.
+When a service keeps restarting, check its state, cause, and [logs](~peios/services-and-jobs/output-and-logging) before changing the restart policy. `Backoff` means peinit is waiting to retry; `Failed` with `RestartBudgetExhausted` means the retry budget ran out.
+
+Use the policy reference below to distinguish a program failure from a failing health check or watchdog. Preserve the underlying error while you investigate. Increasing a timeout or retry count can change when the failure appears without fixing it.
+
+> [!WARNING]
+> On an `ErrorControl=Critical` service, exhausting the restart budget causes an immediate sync and reboot. A bad health check can therefore reboot the machine repeatedly. Confirm console recovery access before changing supervision of a Critical service.
 
 ## Restart policy
 
@@ -48,7 +53,7 @@ flowchart LR
 ```
 
 > [!TIP]
-> If a service flaps — restarting endlessly without ever sticking — and never hits its budget, the usual cause is that it briefly reaches Active each time and resets the counter. Either it is recovering long enough to reset (raise `RestartWindow`) or you are looking at a [health-check flap](#health-checks), which has its own guardrail below.
+> If a service flaps — restarting endlessly without ever sticking — and never hits its budget, check whether it stays Active for the full `RestartWindow` between failures. Merely reaching Active does not reset the counter. Check the health-command output too; the [health-check timing constraint](#health-checks) prevents one common form of restart loop.
 
 ### Clean exits
 
@@ -56,6 +61,8 @@ For a **Simple** service, exiting with code 0 (or a `SuccessExitCodes` match) is
 
 - Under `Never` or `OnFailure`, the cause is `CleanExit` and the service goes straight to **Inactive**, with no restart-policy consultation at all.
 - Under `Always`, the cause is `CleanExitRestart` and the service is restarted — but through the *same* backoff and budget as a failure, so a daemon that exits cleanly in a tight loop cannot bypass throttling. Logs and status make clear it exited successfully and was restarted only because the policy is Always.
+
+A terminal-attached Simple service is an exception: a successful exit with `RestartPolicy=Always` is treated as a normal logout. It resets the failure counter and restarts at the base delay, capped at 60 seconds, without using the crash budget. Failures still use the ordinary budget.
 
 (A **Oneshot** clean exit is never restart-eligible regardless of policy — see [service types](~peios/services-and-jobs/service-types).)
 

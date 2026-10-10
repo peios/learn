@@ -1,7 +1,7 @@
 ---
 title: Controlling services
-type: reference
-description: svctl and the control socket — the verbs and their rights, wait semantics, the command-by-state matrix, status output, error codes, and the job commands on both sockets.
+type: how-to
+description: Inspect status, choose a safe service action, follow its result, and use Services Manager or svctl with the required permissions.
 related:
   - peios/services-and-jobs/the-service-lifecycle
   - peios/services-and-jobs/who-can-manage-a-service
@@ -10,21 +10,53 @@ related:
   - peios/services-and-jobs/troubleshooting
 ---
 
-`svctl` is the command-line tool for driving **peinit** at runtime — starting and stopping services, querying their state, reloading configuration, and shutting the system down.
+Use **svctl** to inspect and control services from a terminal, or **Services Manager** on the GXWI desktop. Start by checking the service before issuing a command that interrupts it.
 
 ```
-svctl <command> [service] [flags]
+$ svctl list
+$ svctl status jellyfin
 ```
 
+Use the name from the list in place of `jellyfin`. The command form is `svctl <command> [service] [flags]`. To investigate a failure, keep the state, cause, job ID, and warnings, then open the service’s [logs](~peios/services-and-jobs/output-and-logging).
+
+## Reading status
+
+Read **state** and **cause** together, then check health and warnings:
+
 ```
-$ svctl status jellyfin        # current state of one service
-$ svctl start jellyfin         # start it, wait until Active or Failed
-$ svctl list                   # every service you can query
-$ svctl boot                   # how this boot went
-$ svctl shutdown reboot        # graceful reboot
+$ svctl status jellyfin
+$ svctl list
 ```
 
-Underneath, `svctl` is a thin client over peinit's **control socket** at `/run/services/peinit/control.sock`. The wire protocol — not the CLI — is the normative interface, so everything here (commands, rights, semantics) holds regardless of which front-end you use.
+| Detail | How to use it |
+|---|---|
+| `state`, `cause` | Tell whether the service is running, waiting to retry, skipped, or failed, and why. See [service states](~peios/services-and-jobs/the-service-lifecycle). |
+| `status_text`, `progress` | The latest information the service reported. These clear on restart and may be absent. |
+| `current_job` | Identifies this execution. Use its GUID to separate its logs from previous runs. |
+| `current_operation` | Identifies an action in progress. Poll its ID with `svctl operation-status <id>`. |
+| `health` | `healthy`, `unhealthy`, `unknown` (no check result yet), or `null` (no check configured). |
+| `warnings` | Notices such as leaked cgroups. Read these before trying another start. |
+| `definition_removed` | A deleted definition still has a draining instance. `stop` still works; `start`, `restart`, and `reload` do not. |
+| `granted` | Your query, start, stop, and reload rights. A visible service does not imply permission to change it. |
+| `timers` | Next scheduled occurrence, actual firing after jitter, last firing, or a reason the timer could not be armed. |
+
+An `Active` service has met its configured readiness check. With `Readiness=Alive`, that only confirms the process exists; it does not prove the application is serving requests.
+
+For a scheduled service:
+
+```
+$ svctl status logrotate
+logrotate: inactive
+cause: clean_exit
+timers:
+  *-*-* 02:00:00
+    next: 2026-06-02T02:00:00Z, firing at 2026-06-02T02:07:12Z after jitter
+    last fired: 2026-06-01T02:03:40Z
+```
+
+`svctl` prints timer times in UTC, to the second. Services Manager shows them in local time. `svctl list` has a **NEXT TIMER** column for each service’s soonest firing. Jitter is already included in the actual firing time.
+
+`list` omits services you cannot query. `job list` does the same for jobs. An operation ID expires after its terminal retention grace; a submitted job is retained for 60 seconds after it ends. For older results, look in [eventd](~peios/logs-and-events/overview). The [TRM client examples](~peios/advanced-peios/peinit/the-control-interface/operator-client-examples#reading-status) retain the full JSON views and field formats.
 
 ## From the desktop: Services Manager
 
@@ -43,19 +75,15 @@ Services Manager is another client of the same control socket, so it has exactly
 
 peinit doesn't announce state changes, so Services Manager asks it for the services' state every two seconds. Press **F5**, or select **Refresh**, to ask straight away. What the registry holds is different. That covers which services are defined, who may control them, and what you may change. Services Manager watches the `Services` key for changes and reads it again only when something changes, so a change made elsewhere, from svctl or another window, shows at once.
 
-## How the control interface works
+## Before changing a service
 
-The socket speaks **newline-delimited JSON**: one request object per line, one response object per line. A request and its success response look like this:
+- **Start** begins the full start sequence and may start dependencies.
+- **Stop** interrupts the service. A `BindsTo` dependent stops with its target; a `Requires` dependent that is already running does not. See [Dependencies](~peios/services-and-jobs/dependencies).
+- **Restart** stops and starts as one operation, replacing the current process. Use it when a definition change needs a new process.
+- **Reload** asks the running program to re-read its own configuration. `reload-config` instead asks peinit to re-read service definitions. Neither promises to apply launch-only settings to an existing process.
+- **Reset** clears Failed, Abandoned, or Skipped to Inactive; it does not start the service or repair the cause.
 
-```json
-{"command": "start", "service": "jellyfin", "wait": true}
-{"status": "ok", "operation_id": "a1b2c3d4-...", "service": "jellyfin", "state": "active", "cause": "explicit_start", "warnings": []}
-```
-
-Two properties are worth knowing even if you only ever use `svctl`:
-
-- **Every command is access-controlled.** Anyone who is signed in may connect. When you connect, peinit captures your [token](~peios/services-and-jobs/identity-and-privileges) from the kernel and runs [AccessCheck](~peios/access-decisions/overview) against the target service's descriptor for *every* command. There is no "trust localhost," no override. Who may do what is the subject of [Who can manage a service](~peios/services-and-jobs/who-can-manage-a-service).
-- **Lifecycle commands create [operations](~peios/services-and-jobs/jobs-and-operations).** A `start`/`stop`/`restart`/`reload`/`reset` returns an `operation_id` — a GUID you can poll. Conflict resolution between concurrent commands happens at the operation layer, which is why two simultaneous `start`s merge instead of colliding.
+After the action finishes, run `svctl status <service>` again. If it failed or only returned an advisory reload result, follow the [troubleshooting guide](~peios/services-and-jobs/troubleshooting) before repeating it.
 
 ## Service commands
 
@@ -70,16 +98,43 @@ Two properties are worth knowing even if you only ever use `svctl`:
 | `list` | List services, their states and their next timer firing (filtered to what you can query). | (per-service `SERVICE_QUERY_STATUS`) |
 
 ```
+$ svctl start jellyfin
 $ svctl restart jellyfin
 $ svctl reload nginx
 $ svctl reset failed-migration     # clear a Failed state without starting
 ```
+
+## Wait semantics
+
+By default, a lifecycle command **blocks until its operation reaches a terminal state** — `start` waits for Active (or Failed), `stop` waits for Inactive, and so on. Pass `--no-wait` to get the `operation_id` back immediately and poll with `operation-status` instead.
+
+| Command | Default | Waits for |
+|---|---|---|
+| `start` | wait | Active (Simple) / Completed or Inactive (Oneshot), or Failed |
+| `stop` | wait | Inactive |
+| `restart` | wait | the successful start target, or Failed |
+| `reload` | **no-wait** | (with `--wait`) the Reloading state to resolve |
+| `reset` | immediate | — |
+
+`reload` is the exception — it returns immediately by default, because a reload may have no observable completion. With `--wait`, the response carries a `mode`:
+
+| `mode` | Meaning |
+|---|---|
+| `confirmed` | The service signalled `READY=1` (and, for a command reload, the command exited 0). |
+| `advisory` | The reload was issued and the detection window elapsed without explicit confirmation. |
+| `failed` | The `ExecReload` command exited non-zero or timed out. **The service stays Active** — a failed reload never takes down a running service. |
+
+The detection window is a **fixed 2 seconds** — it is built in and is *not* configurable via the registry. If the service says nothing within that window, the reload resolves as `advisory` and the service stays Active.
+
+> [!NOTE]
+> A connection blocked on a `--wait` operation is *not* counted as idle, so it is not closed by `ConnectionTimeout`. It stays open until the operation resolves, bounded by the operation's own timeout (e.g. `StartTimeout`).
 
 ## System commands
 
 | Command | Does | Required right |
 |---|---|---|
 | `shutdown <type>` | Graceful [shutdown](~peios/services-and-jobs/shutdown). `type` is `poweroff`, `reboot`, or `halt`. | `SYSTEM_SHUTDOWN` |
+| `boot` | Report this boot’s mode, reason, and confirmation status. | `SYSTEM_QUERY_STATUS` |
 | `reload-config` | Re-read *all* definitions and rebuild the graph (atomic). | `SYSTEM_RELOAD_CONFIG` |
 | `operation-status <id>` | Report the state of an operation by GUID. | `SERVICE_QUERY_STATUS` on its target |
 
@@ -118,31 +173,6 @@ $ svctl job signal 5f2a... SIGHUP
 
 The CLI has no way to attach a token, so a `svctl`-submitted job always runs as the caller. Running a job as *someone else* is a programmatic act — a service attaching the token of the client it is impersonating — and is described in [Jobs and operations](~peios/services-and-jobs/jobs-and-operations).
 
-## Wait semantics
-
-By default, a lifecycle command **blocks until its operation reaches a terminal state** — `start` waits for Active (or Failed), `stop` waits for Inactive, and so on. Pass `--no-wait` to get the `operation_id` back immediately and poll with `operation-status` instead.
-
-| Command | Default | Waits for |
-|---|---|---|
-| `start` | wait | Active (Simple) / Completed or Inactive (Oneshot), or Failed |
-| `stop` | wait | Inactive |
-| `restart` | wait | the successful start target, or Failed |
-| `reload` | **no-wait** | (with `--wait`) the Reloading state to resolve |
-| `reset` | immediate | — |
-
-`reload` is the exception — it returns immediately by default, because a reload may have no observable completion. With `--wait`, the response carries a `mode`:
-
-| `mode` | Meaning |
-|---|---|
-| `confirmed` | The service signalled `READY=1` (and, for a command reload, the command exited 0). |
-| `advisory` | The reload was issued and the detection window elapsed without explicit confirmation. |
-| `failed` | The `ExecReload` command exited non-zero or timed out. **The service stays Active** — a failed reload never takes down a running service. |
-
-The detection window is a **fixed 2 seconds** — it is built in and is *not* configurable via the registry. If the service says nothing within that window, the reload resolves as `advisory` and the service stays Active.
-
-> [!NOTE]
-> A connection blocked on a `--wait` operation is *not* counted as idle, so it is not closed by `ConnectionTimeout`. It stays open until the operation resolves, bounded by the operation's own timeout (e.g. `StartTimeout`).
-
 ## The command × state matrix
 
 A command sent to a service in an unexpected state returns an **error**, not a silent no-op. This matrix is the authority on what each command does in each [state](~peios/services-and-jobs/the-service-lifecycle):
@@ -168,97 +198,6 @@ Legend:
 
 The [Backoff](~peios/services-and-jobs/the-service-lifecycle) column is the subtle one: the service is down with an automatic restart pending, so `start` is *deferred* — it creates a Pending start that honours the remaining backoff delay and only runs once that deadline expires (a second `start` merges into the one already waiting), `stop` cancels the pending restart and any deferred start (the service goes Inactive), `restart` cancels the automatic one and does an admin restart, and `reload`/`reset` are invalid because no process exists.
 
-## Reading status
-
-`status` returns the full picture for one service:
-
-```json
-{
-    "status": "ok",
-    "service": "jellyfin",
-    "display_name": "Jellyfin",
-    "description": "Media server for the living room.",
-    "state": "active",
-    "cause": "explicit_start",
-    "status_text": "Listening on port 8096",
-    "progress": null,
-    "current_job": {"id": "a1b2...", "type": "service_main", "pid": 1234, "started_at": "...", "identity": "jellyfin-svc"},
-    "current_operation": {"id": "e5f6...", "type": "start", "source": "admin"},
-    "health": "healthy",
-    "uptime_seconds": 86400,
-    "definition_removed": false,
-    "warnings": [],
-    "timers": [],
-    "granted": ["query_status", "start", "stop", "interrogate"]
-}
-```
-
-- `display_name` and `description` are the definition's, or `null`.
-- `state` and `cause` are the [lifecycle](~peios/services-and-jobs/the-service-lifecycle) pair — read them together.
-- `status_text` is the latest `STATUS=` string the service sent via sd_notify (`null` if never sent; cleared on each restart).
-- `progress` is how far the service last said it had got, from `PROGRESS=` and `PROGRESS_UNIT=`: `{"current": 3, "total": 10, "bounded": true, "unit": "items"}`, with `total` and `unit` `null` when it didn't say them. `null` if it never sent one; cleared on each restart.
-- `current_job` and `current_operation` are the [job and operation](~peios/services-and-jobs/jobs-and-operations) GUIDs, or `null`.
-- `health` is `healthy`, `unhealthy`, `unknown`, or `null` (no health check).
-- `definition_removed` is `true` when the definition was deleted but an instance is still [draining](~peios/services-and-jobs/defining-a-service).
-- `warnings` lists leaked sub-cgroups and other operator-relevant notices.
-- `timers` has one entry for each [timer trigger](~peios/services-and-jobs/triggers-and-timers), described below.
-- `granted` is what **you** may do to this service, as peinit checks it: the rights the service's [permissions](~peios/services-and-jobs/who-can-manage-a-service) give you, out of `query_status`, `start`, `stop` and `interrogate` (reload). A program shows a control only where its right is listed, rather than offering one that will be refused.
-
-Each entry in `timers` describes one schedule as peinit has it armed:
-
-```json
-{"schedule": "*-*-* 02:00:00",
- "scheduled_at": "2026-06-02T02:00:00.000000000Z",
- "fires_at": "2026-06-02T02:07:12.000000000Z",
- "last_fired_at": "2026-06-01T02:03:40.000000000Z",
- "not_armed": null}
-```
-
-- `scheduled_at` is the schedule's next occurrence.
-- `fires_at` is when the timer will actually fire. It is later than `scheduled_at` by the random delay `TimerJitter` drew for this firing.
-- `last_fired_at` is when it last fired, or `null` if it has not fired since peinit started and has no recorded run.
-- `not_armed` is set only for a schedule peinit refused, such as one that never comes round. It gives the reason, and the times are then `null`.
-
-Times are in UTC. `svctl status` prints them to the second:
-
-```
-$ svctl status logrotate
-logrotate: inactive
-cause: clean_exit
-timers:
-  *-*-* 02:00:00
-    next: 2026-06-02T02:00:00Z, firing at 2026-06-02T02:07:12Z after jitter
-    last fired: 2026-06-01T02:03:40Z
-```
-
-`list` returns a compact summary of every service you can query — services you lack `SERVICE_QUERY_STATUS` on are simply **omitted**, not denied:
-
-```json
-{"status": "ok", "services": [
-    {"service": "jellyfin", "state": "active", "cause": "explicit_start", "health": "healthy", "next_timer_at": null},
-    {"service": "logrotate", "state": "inactive", "cause": "clean_exit", "health": null, "next_timer_at": "2026-06-02T02:07:12.000000000Z"}
-]}
-```
-
-`next_timer_at` is the soonest `fires_at` of the service's timers. `svctl list` shows it in a **NEXT TIMER** column.
-
-`operation-status` returns one operation by GUID; an unknown or expired GUID is the `UNKNOWN_OPERATION` error. (Operations are dropped after a short retention grace once terminal — long enough for a polling client to read the result, not forever.)
-
-`job status` returns one submitted job's view under `"job"`, and `job list` returns the views you can query under `"jobs"`:
-
-```json
-{"status": "ok", "job": {
-    "id": "5f2a...", "type": "submitted", "state": "running", "cause": null,
-    "submitter": "S-1-5-21-...-1001", "identity": "S-1-5-21-...-1001", "logon_session": 999,
-    "description": "nightly backup", "image_path": "/usr/bin/backup", "pid": 4521, "ready": null,
-    "exit_code": null, "exit_signal": null,
-    "status_text": "Backing up /data/media", "progress": {"current": 3, "total": 5, "bounded": true, "unit": "items"},
-    "created_at": "...", "started_at": "...", "ended_at": null
-}}
-```
-
-The fields are explained in [Jobs and operations](~peios/services-and-jobs/jobs-and-operations). A job is retained for 60 seconds after it ends; after that its GUID is the `UNKNOWN_JOB` error. Like `list`, `job list` **omits** the jobs you lack `JOB_QUERY` on rather than denying them.
-
 ## Error codes
 
 An error response is `{"status": "error", "code": "...", "message": "..."}`. The `code` is one of:
@@ -268,7 +207,7 @@ An error response is `{"status": "error", "code": "...", "message": "..."}`. The
 | `ACCESS_DENIED` | AccessCheck denied the command against the target descriptor. |
 | `UNKNOWN_SERVICE` | No such service definition (also returned for `start`/`restart`/`reload` on a [definition-removed](~peios/services-and-jobs/defining-a-service) service). |
 | `UNKNOWN_OPERATION` | No such operation GUID — never existed, or dropped after its retention grace. |
-| `UNKNOWN_JOB` | No such job GUID — never existed, dropped after its retention grace, or one you cannot query. |
+| `UNKNOWN_JOB` | No such job GUID — never existed, or dropped after its retention grace. A known job you cannot query returns `ACCESS_DENIED`. |
 | `MALFORMED_REQUEST` | The request line is not a single valid JSON object. |
 | `REQUEST_TOO_LARGE` | The request exceeds `MaxRequestSize`. |
 | `INVALID_COMMAND` | The `command` field is missing or unknown. |
@@ -285,6 +224,22 @@ The jobs socket uses the same envelope and codes, plus two of its own:
 | `BAD_TOKEN` | The token attached to a submission cannot be a job identity — more than one was attached, its impersonation level is below Impersonation, or it could not be duplicated. |
 
 The `message` is human-readable and non-normative — read it for context, key off the `code`.
+
+## Exit status
+
+| Code | Meaning |
+|---|---|
+| `0` | The command succeeded. For `job submit --wait`, the job also `completed`. |
+| `1` | peinit refused the command — an access denial, unknown service or job, invalid state, or timeout — or a `job submit --wait` job ended other than `completed`. |
+| `64` | A usage error. |
+| `69` | peinit could not be reached — the socket is missing or refused the connection. |
+| `70` | A protocol error — peinit answered with something the client could not read. |
+
+## How the control interface works
+
+Both tools use `/run/services/peinit/control.sock`. Connection admission and each service action are access-controlled. The default socket admits signed-in users; the target’s permissions decide which commands they may run.
+
+Lifecycle commands create an operation ID you can follow. Concurrent identical requests can merge into one operation. For JSON framing and complete response examples, see the [control-client reference](~peios/advanced-peios/peinit/the-control-interface/operator-client-examples#how-the-control-interface-works).
 
 ## Connection limits
 
@@ -305,16 +260,6 @@ The jobs socket has its own set, under the same key:
 | `MaxJobMessageSize` | 32768 | Bytes per message — which bounds a submission's whole definition. |
 | `JobsConnectionTimeout` | 30 | Seconds an *idle* jobs connection may sit before it is closed. A connection blocked on a `wait` or a pending `submit` is not idle. |
 | `MaxJobsPerSubmitter` | 64 | Live jobs one submitting SID may hold. SYSTEM is exempt. |
-
-## Exit status
-
-| Code | Meaning |
-|---|---|
-| `0` | The command succeeded. For `job submit --wait`, the job also `completed`. |
-| `1` | peinit refused the command — an access denial, unknown service or job, invalid state, or timeout — or a `job submit --wait` job ended other than `completed`. |
-| `64` | A usage error. |
-| `69` | peinit could not be reached — the socket is missing or refused the connection. |
-| `70` | A protocol error — peinit answered with something the client could not read. |
 
 ## Where to start
 

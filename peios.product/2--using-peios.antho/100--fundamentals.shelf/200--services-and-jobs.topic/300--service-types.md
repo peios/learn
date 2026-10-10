@@ -1,7 +1,7 @@
 ---
 title: Simple and Oneshot services
 type: concept
-description: peinit has exactly two service types — long-running Simple and run-to-completion Oneshot — plus the readiness models that decide when each counts as started.
+description: Choose a long-running or run-once service and the readiness check that tells its dependents when it is usable.
 related:
   - peios/services-and-jobs/defining-a-service
   - peios/services-and-jobs/the-service-lifecycle
@@ -10,7 +10,22 @@ related:
   - peios/services-and-jobs/supervision
 ---
 
-A service's **type** answers one question: does the process keep running, or does it run once and exit? peinit supports exactly two answers — **Simple** and **Oneshot** — set by the `Type` field (default Simple). The type is independent of *when* the service starts; a Oneshot can be boot-triggered, timer-triggered, or demand-only, exactly like a Simple service.
+Choose **Simple** for a program that stays running and **Oneshot** for a task that should finish. Then check how it reports success: a Simple service becomes ready through `Notify` or `Alive`; a Oneshot succeeds by exiting successfully.
+
+The default is `Type=Simple` with `Readiness=Notify`. Before starting a new definition, make sure the program can send `READY=1` from its main process. A program that never sends it will time out even if its process is alive. Keep daemons in the foreground; peinit does not follow a double-forked replacement process.
+
+## Simple vs Oneshot at a glance
+
+| | Simple | Oneshot |
+|---|---|---|
+| Process lifetime | Long-running; *is* the service | Runs once, exits |
+| Readiness | `Notify` (`READY=1`) or `Alive` | Successful exit — `Readiness` ignored |
+| Satisfies dependents when | Active | Completed (with or without `RemainAfterExit`) |
+| Successful end state | Active (until stopped) | Completed, then Inactive (unless `RemainAfterExit=1`) |
+| `ExecStartPost` fires | After readiness | After successful exit only |
+| `StartTimeout` covers | Startup until readiness | The whole execution |
+| Watchdog & health checks | Supervised while Active | None — `WatchdogTimeout`/`HealthCheck` are inert |
+| Restart on success | n/a | Never (use a timer to re-run) |
 
 ## Simple services
 
@@ -65,18 +80,11 @@ Two details distinguish a Oneshot's start sequence from a Simple one:
 
 A Oneshot is not restarted on *success*, regardless of `RestartPolicy` — even `Always`. A successful exit is the goal, not a failure to retry. `RestartPolicy` governs only the response to *failure* (a non-zero exit). To re-run a Oneshot on a schedule, give it a [timer trigger](~peios/services-and-jobs/triggers-and-timers); that is the intended mechanism.
 
-## Simple vs Oneshot at a glance
+## No forking daemons
 
-| | Simple | Oneshot |
-|---|---|---|
-| Process lifetime | Long-running; *is* the service | Runs once, exits |
-| Readiness | `Notify` (`READY=1`) or `Alive` | Successful exit — `Readiness` ignored |
-| Satisfies dependents when | Active | Completed (with or without `RemainAfterExit`) |
-| Successful end state | Active (until stopped) | Completed, then Inactive (unless `RemainAfterExit=1`) |
-| `ExecStartPost` fires | After readiness | After successful exit only |
-| `StartTimeout` covers | Startup until readiness | The whole execution |
-| Watchdog & health checks | Supervised while Active | None — `WatchdogTimeout`/`HealthCheck` are inert |
-| Restart on success | n/a | Never (use a timer to re-run) |
+peinit does **not** support services that double-fork to background themselves. The whole reason a traditional daemon double-forks — to detach from the launcher — is moot when the launcher tracks the process it spawned. peinit obtains a **pidfd** for every process at fork time, which is a kernel handle to that exact process, immune to PID-reuse races. There is no `MAINPID=` mechanism for a service to redirect supervision onto a different process; peinit supervises what it forked.
+
+If a legacy binary insists on daemonising, the fix lives at the [packaging](~pekit/recipes/packages) layer — wrap it so it stays in the foreground (commonly a `--no-daemon`/`--foreground` flag) — not at the init layer.
 
 ## The sd_notify contract
 
@@ -85,12 +93,6 @@ A Notify-readiness service signals readiness by sending `READY=1` over the [sd_n
 Readiness is always **per start generation**. A `READY=1` left over from a previous incarnation of the process is never valid for the current start — peinit ties every notify message to the specific process it is currently supervising, verified by [pidfd](#no-forking-daemons).
 
 Who is allowed to send these messages is governed by `NotifyAccess`, which currently has a single value: `Main` (`0`, the default). Under `Main`, only the tracked main PID — the process peinit forked and supervises — is authorised to send sd_notify readiness and status messages; a message arriving from any other PID (a child, a helper, an unrelated process) is ignored. So if a worker your service spawns sends `READY=1`, peinit will not act on it — the readiness signal must come from the main process itself.
-
-## No forking daemons
-
-peinit does **not** support services that double-fork to background themselves. The whole reason a traditional daemon double-forks — to detach from the launcher — is moot when the launcher tracks the process it spawned. peinit obtains a **pidfd** for every process at fork time, which is a kernel handle to that exact process, immune to PID-reuse races. There is no `MAINPID=` mechanism for a service to redirect supervision onto a different process; peinit supervises what it forked.
-
-If a legacy binary insists on daemonising, the fix lives at the [packaging](~pekit/recipes/packages) layer — wrap it so it stays in the foreground (commonly a `--no-daemon`/`--foreground` flag) — not at the init layer.
 
 ## Where to start
 

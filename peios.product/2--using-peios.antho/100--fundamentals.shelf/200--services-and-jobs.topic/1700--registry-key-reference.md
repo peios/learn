@@ -1,7 +1,7 @@
 ---
 title: Registry key reference
 type: reference
-description: The complete catalog — every service-definition field with its registry type and default, and every key peinit reads or writes.
+description: Look up service field types, defaults, registry paths and the timing or safety guidance for changing them.
 related:
   - peios/services-and-jobs/defining-a-service
   - peios/services-and-jobs/controlling-services
@@ -9,10 +9,12 @@ related:
   - peios/registry-administration/regman
 ---
 
-This page is the reference catalog for everything peinit reads from or writes to the [registry](~peios/registry-concepts/overview): the full service-definition schema with types and defaults, and every key peinit touches outside the service definitions. For the *meaning* of each item, follow the link in its row; this page is for looking up a type, a default, or a path.
+Use this catalog when you already know which setting you need. For a guided change, start with [Defining a service](~peios/services-and-jobs/defining-a-service), then use `svctl definition show` and `svctl definition validate` to inspect and check it.
+
+The tables retain the service-definition schema and every registry key peinit reads or writes. Follow each row’s link for validation rules, safety notes, and when a change takes effect. Saving a correctly typed value does not mean a running process has adopted it.
 
 > [!NOTE]
-> The registry stores a value's type but not its meaning — that is what [`regman`](~peios/registry-administration/regman) and these docs are for. A value peinit accepts at write time can still be rejected when peinit reads and validates it; this page lists the schema, not the validation rules (those live on each field's page).
+> The registry records a value’s type, not its application meaning. Use [`regman`](~peios/registry-administration/regman) and the field’s documentation before changing a default. peinit can reject a value when it reads and validates it, even if a raw registry write succeeded.
 
 ## Registry value types
 
@@ -62,7 +64,7 @@ Every service is a key under `Machine\System\Services\<name>`; these are the val
 |---|---|---|---|
 | `Triggers` | multi_string | — | Any of `boot`, `boot:settled`, `tty:released` (needs a `TTYPath`) and `timer:<schedule>`. Absent = demand-only. Bare `tty` and bare `timer` are errors, and an unrecognised sub-trigger is rejected rather than ignored. |
 | `Disabled` | dword | 0 | If 1, triggers must not activate the service. |
-| `SafeMode` | dword | 0 | If 1, attempt to start in Safe mode. Critical implies SafeMode. |
+| `SafeMode` | dword | 0 | Eligible within the boot-triggered set in Safe mode. Critical implies SafeMode; neither adds a boot trigger. |
 | `Conditions` | multi_string | — | Start-time checks; a failure *skips* the service. |
 | `Asserts` | multi_string | — | Start-time checks; a failure *fails* the service. |
 | `PreStartCheckTimeout` | dword | 5 | Seconds allowed for the helper that evaluates filesystem `Conditions`/`Asserts`; if it overruns, it is killed and the check counts as *not satisfied* (a Condition skips, an Assert fails). |
@@ -73,7 +75,7 @@ Every service is a key under `Machine\System\Services\<name>`; these are the val
 
 | Field | Type | Default | Meaning |
 |---|---|---|---|
-| `Identity` | string | `LocalService` | Principal name or SID for the service token. |
+| `Identity` | string | `LocalService` | Principal name, SID, or `Service` for the service’s distinct virtual account. |
 | `RequiredPrivileges` | multi_string | — | Privilege allow-list; all others are removed from the token. |
 | `HookIdentity` | string | (service's `Identity`) | Identity for `ExecStartPre`/`ExecStartPost`. |
 
@@ -175,10 +177,12 @@ Under `Machine\System\Init\`:
 
 ## Keys peinit reads from other subsystems
 
+`LogSocketPath` is read by peinit. `MaxLogDatagramBytes` is included for related eventd configuration; it is not a peinit input.
+
 | Key | Type | Purpose | See |
 |---|---|---|---|
 | `Machine\System\eventd\LogSocketPath` | string | Path of eventd's log datagram socket, where peinit forwards service output. | [Service output and logging](~peios/services-and-jobs/output-and-logging) |
-| `Machine\System\eventd\MaxLogDatagramBytes` | dword | Maximum log datagram size peinit sends and eventd accepts; default 262144, valid range 4096–1048576. | [Service output and logging](~peios/services-and-jobs/output-and-logging) |
+| `Machine\System\eventd\MaxLogDatagramBytes` | dword | eventd’s receive ceiling; default 262144, valid range 4096–1048576. peinit does not read this setting; it uses the portable 262144-byte ceiling or its socket limit, whichever is smaller. | [Service output and logging](~peios/services-and-jobs/output-and-logging) |
 
 ## Where to start
 

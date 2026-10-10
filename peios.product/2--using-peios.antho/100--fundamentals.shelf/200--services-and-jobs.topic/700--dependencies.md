@@ -1,7 +1,7 @@
 ---
 title: Dependencies and ordering
 type: concept
-description: Requires, Wants, BindsTo, and Conflicts — start order, stop order, failure propagation, graph validation, and parallel start.
+description: Choose startup dependencies and runtime coupling, check why a dependent is blocked, and predict the effect of stopping a target.
 related:
   - peios/services-and-jobs/the-service-lifecycle
   - peios/services-and-jobs/supervision
@@ -10,9 +10,18 @@ related:
   - peios/services-and-jobs/jobs-and-operations
 ---
 
-Services rarely stand alone. A web app needs its database; a network daemon needs the loopback interface up; two implementations of the same role must never run at once. peinit expresses all of this with four relationship fields — `Requires`, `Wants`, `BindsTo`, and `Conflicts` — that together decide the order services start in, what happens when one stops, and how a failure spreads to its neighbours.
+Check a service’s dependencies before stopping a shared component or diagnosing a blocked start. **Requires** waits for successful startup but leaves an already-running dependent alone if the target later stops. **BindsTo** also stops the dependent when its target goes away.
 
-The relationships are declared on the *dependent* (the service that needs something), naming the *target* (the service it needs) by name. `Conflicts` is the exception — it is symmetric, and one side declaring it is enough.
+Relationships are set on the service that needs something, naming the target it needs. **Wants** attempts an optional target first; **Conflicts** makes two services mutually exclusive and is symmetric, so one side declaring it is enough.
+
+## Before changing a dependency
+
+1. Read the dependent’s definition with `svctl definition show <service>` and inspect each target with `svctl status <target>`.
+2. Decide whether the requirement is successful startup (`Requires`), optional startup ordering (`Wants`), runtime coupling (`BindsTo`), or mutual exclusion (`Conflicts`).
+3. Use a [readiness level](#waiting-for-a-condition-not-just-a-service) when the target must have reached a specific condition, such as a routed network.
+4. After saving, validate the definition and check the next start. Dependency edits apply on a new start or graph reload; they do not rewrite a running process’s history.
+
+A `DependencyFailure` usually points to the target to investigate first. An on-demand start can pull in other services and evict conflicting ones, so its effects can extend beyond the service you named.
 
 ## The four relationships
 
@@ -69,6 +78,27 @@ A target may carry a **readiness level** after a colon. `Requires = ["network:ro
 
 `network` there is a **role**, not a service: the service that fills it declares `Provides = ["network"]`, and peinit rewrites the entry to that service before anything else looks at it. Write the role, not the daemon. The levels `link`, `addressed` and `routed` are defined by [network policy](~peios/networking/overview), so the definition keeps meaning the same thing whichever executor an image ships. `svctl status` shows the resolved dependency, `netd:routed` on a standard image.
 
+## On-demand starts
+
+When you start a service explicitly rather than at boot, peinit does the same graph work on a smaller scope — the requested service's transitive closure:
+
+1. Collect all transitive `Requires` and `BindsTo` dependencies (and best-effort `Wants`).
+2. Validate that sub-graph (cycles, missing targets).
+3. Resolve `Conflicts` — stop anything that conflicts.
+4. Start the sub-graph with the same parallel scheduler.
+
+Anything already in a satisfying state (Active, Reloading, Completed, Skipped) is left alone — its dependency is already met, so there is no needless restart. Dependencies pulled in this way start with cause `DependencyStart`. If two on-demand starts need the same dependency at once, their start operations [merge](~peios/services-and-jobs/jobs-and-operations) rather than racing.
+
+## Failure propagation
+
+When a service enters Failed during graph execution, the failure spreads along `Requires` and `BindsTo` edges — and only those:
+
+1. Every service that `Requires` the failed one transitions to Failed with `DependencyFailure`.
+2. Every service that merely `Wants` it is **unaffected** and starts normally.
+3. Propagation is **transitive**: if A requires B and B requires C, and C fails, then B fails, then A fails — each with `DependencyFailure`.
+
+This is the payoff of the Requires/Wants distinction. A hard dependency failing takes its dependents down with it; a soft one failing is shrugged off. Choosing the right relationship is choosing how far a failure is allowed to travel.
+
 ## Graph validation
 
 Before peinit starts *anything*, it builds the dependency graph and validates it. Validation runs once per graph build — at boot for the whole boot graph, and per request for an [on-demand start](#on-demand-starts)'s transitive closure. It is not incremental.
@@ -103,34 +133,13 @@ After validation, peinit starts services whose dependencies are all satisfied, a
 The scheduler is simple: every service with no unsatisfied dependencies is eligible; peinit starts up to `MaxParallelStarts` of them; as each one reaches a [satisfying state](~peios/services-and-jobs/the-service-lifecycle) its dependents become eligible and join the queue. The result is that independent subtrees of the graph come up at the same time, while ordering constraints are still honoured exactly.
 
 > [!NOTE]
-> Boot order is *emergent*, not hardcoded. The typical sequence — `eudev`, `lpsd`, `authd`, `eventd`, networking, then application and login services — is simply what the standard role definitions' dependencies produce. Change the dependencies and you get a different order. The platform daemons come up first because everything else, directly or transitively, requires them.
-
-## Failure propagation
-
-When a service enters Failed during graph execution, the failure spreads along `Requires` and `BindsTo` edges — and only those:
-
-1. Every service that `Requires` the failed one transitions to Failed with `DependencyFailure`.
-2. Every service that merely `Wants` it is **unaffected** and starts normally.
-3. Propagation is **transitive**: if A requires B and B requires C, and C fails, then B fails, then A fails — each with `DependencyFailure`.
-
-This is the payoff of the Requires/Wants distinction. A hard dependency failing takes its dependents down with it; a soft one failing is shrugged off. Choosing the right relationship is choosing how far a failure is allowed to travel.
-
-## On-demand starts
-
-When you start a service explicitly rather than at boot, peinit does the same graph work on a smaller scope — the requested service's transitive closure:
-
-1. Collect all transitive `Requires` and `BindsTo` dependencies (and best-effort `Wants`).
-2. Validate that sub-graph (cycles, missing targets).
-3. Resolve `Conflicts` — stop anything that conflicts.
-4. Start the sub-graph with the same parallel scheduler.
-
-Anything already in a satisfying state (Active, Completed, Skipped) is left alone — its dependency is already met, so there is no needless restart. Dependencies pulled in this way start with cause `DependencyStart`. If two on-demand starts need the same dependency at once, their start operations [merge](~peios/services-and-jobs/jobs-and-operations) rather than racing.
+> Boot order is *emergent*, not hardcoded. The installed definitions and their identity dependencies determine the sequence. Change the dependencies and you get a different order. The platform daemons come up first because everything else, directly or transitively, requires them.
 
 ## Shutdown reverses the graph
 
 peinit does not need a separate stop-ordering configuration. [Shutdown](~peios/services-and-jobs/shutdown) simply **reverses** the dependency graph: services with no dependents stop first, and services that others depend on stop last. A service is never stopped until everything that `Requires` or `BindsTo` it has already stopped.
 
-The very last services to stop are the TCB daemons everything rests on — `eventd`, then `authd`, then `lpsd`, then `registryd` — with `registryd` stopped dead last, mirroring its position as the first service ever started. The full shutdown sequence is in [Shutdown](~peios/services-and-jobs/shutdown).
+Shared platform services stop after their dependents, with `registryd` last. The exact order comes from the installed graph; do not rely on a fixed list of daemon names. The full shutdown sequence is in [Shutdown](~peios/services-and-jobs/shutdown).
 
 ## Where to start
 

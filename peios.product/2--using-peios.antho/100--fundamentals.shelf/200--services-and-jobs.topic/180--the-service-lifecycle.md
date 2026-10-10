@@ -1,7 +1,7 @@
 ---
-title: The service lifecycle
+title: Read service states
 type: concept
-description: The ten service states, the transitions that connect them, and the cause taxonomy that says why a service ended up where it is.
+description: Interpret state and cause together, distinguish retries from failures, and choose the next check before acting.
 related:
   - peios/services-and-jobs/service-types
   - peios/services-and-jobs/supervision
@@ -11,9 +11,9 @@ related:
   - peios/services-and-jobs/troubleshooting
 ---
 
-A service managed by peinit is, at every instant, in **exactly one state**. The state is what a `status` query reports, what gates dependents, and what decides which commands are valid. Alongside the state, peinit records the **cause** of the most recent transition — the *why* behind the *where*. Reading a status is reading these two things together: "Failed, because RestartBudgetExhausted" tells a very different story from "Failed, because ValidationError."
+Run `svctl status <service>` and read **state** and **cause** together. State tells you where the service is now; cause tells you why it got there. `Failed` with `ValidationError` calls for a definition fix, while `Failed` with `RestartBudgetExhausted` calls for the logs from repeated attempts.
 
-This page is the reference for both. It is worth internalising before [Controlling services](~peios/services-and-jobs/controlling-services) and [Troubleshooting](~peios/services-and-jobs/troubleshooting), because both lean on it.
+Use the state table below for a quick interpretation, then the [troubleshooting guide](~peios/services-and-jobs/troubleshooting) for the next action. You do not need the full state machine before running a status check.
 
 ## The states
 
@@ -28,40 +28,19 @@ This page is the reference for both. It is worth internalising before [Controlli
 | **Backoff** | No | No | A restart is pending; the service is waiting out its backoff delay before the next attempt. |
 | **Failed** | No | No | Exited abnormally and restart policy is exhausted or not configured. |
 | **Abandoned** | Yes (unkillable) | No | SIGKILL was sent but the process survived in uninterruptible sleep (D-state). peinit has given up supervising it; its cgroup is leaked. |
-| **Skipped** | No | **Yes** | A start-time [condition](~peios/services-and-jobs/execution-environment) was not met. The service does not apply here. |
+| **Skipped** | No | **Yes** | A start-time [condition](~peios/services-and-jobs/execution-environment) was not met, or its terminal was unavailable. Read the cause. |
 
-Three of these — **Active**, **Completed**, **Skipped** — satisfy dependents. Everything else blocks them. That single column is the rule the whole [dependency](~peios/services-and-jobs/dependencies) system turns on: a service waiting on a `Requires` target does not move until that target reaches one of those three.
+Four of these — **Active**, **Reloading**, **Completed**, **Skipped** — satisfy dependents. Everything else blocks them. That single column is the rule the whole [dependency](~peios/services-and-jobs/dependencies) system turns on: a service waiting on a `Requires` target does not move until that target reaches one of those four.
 
-## The common path
+## Choose the next check
 
-Most of a service's life is a small loop. The diagram below shows the states a healthy Simple service moves through, plus the two ways it leaves Active.
+- **Starting:** inspect the current operation, readiness configuration, and pre-hook output. The main process may not exist yet.
+- **Backoff:** an automatic retry is already pending. Another `start` honours the existing delay; `stop` cancels the pending restart.
+- **Failed:** read the cause and the failed run’s logs before starting again. Definition and dependency faults are not fixed by increasing retries.
+- **Skipped:** inspect the condition or terminal owner. Skipped satisfies dependents and is not itself a failure.
+- **Abandoned:** investigate the underlying I/O fault. `reset` clears the state but cannot kill a process stuck in D-state.
 
-```mermaid
-stateDiagram-v2
-    [*] --> Inactive
-    Inactive --> Starting: start / trigger / dependency
-    Starting --> Active: ready (READY=1 or alive)
-    Active --> Stopping: stop / shutdown / conflict
-    Stopping --> Inactive: exited (clean stop / shutdown)
-    Stopping --> Failed: exited (conflict / BindsTo eviction)
-    Active --> Backoff: crash + restart allowed
-    Backoff --> Starting: backoff delay elapsed
-    Active --> Failed: crash + no restart
-    Starting --> Failed: timeout / hook / setup failure
-    Failed --> Starting: explicit start
-```
-
-A few things this picture makes concrete:
-
-- An automatic restart always routes **through Backoff**, never through Failed. `Backoff → Starting` is the retry; `Failed` is reached only when restarts are exhausted or disabled. This is why [`OnFailure`](~peios/services-and-jobs/supervision) fires once at the end, not on every retry.
-- `Starting` can fail *before any process exists* — a parent-side setup error, a failed pre-hook, a condition or assert. The cause records which.
-- `Failed → Starting` is how a manual `start` (or a recovery path) revives a dead service; automatic restarts never originate from `Failed`.
-- `Stopping` has **two** exits. A clean stop or a shutdown lands in `Inactive`. But a service stopped because it lost a [`Conflicts`](~peios/services-and-jobs/dependencies) race (`ConflictEviction`) or because its [`BindsTo`](~peios/services-and-jobs/dependencies) target went away (`BindsToPropagation`) comes to rest in `Failed`, carrying that cause — so an evicted or bound-out service shows as Failed in `status` and needs a `reset` (or, for a bound service, its target returning) before it starts again. It was not shut down on purpose, so peinit does not treat it as cleanly Inactive.
-
-Oneshot services follow a parallel path through **Completed** instead of Active: `Starting → Completed`, and then either staying there (`RemainAfterExit=1`) or passing through to `Inactive`. See [Simple and Oneshot services](~peios/services-and-jobs/service-types).
-
-> [!NOTE]
-> **A crash while `Reloading` is still a crash.** If a service's main process *dies* while it is re-reading its configuration, peinit treats that as an ordinary `ProcessCrash` and routes it through the [restart policy](~peios/services-and-jobs/supervision) — `Reloading → Backoff` if a restart is warranted, or `Reloading → Failed` if it is not. This is why you can see a service jump straight from Reloading into Backoff or Failed. It is *distinct* from an `ExecReload` **command** failing: a failed reload command leaves the running process untouched and the service stays `Active`, reporting the failure without changing state.
+[Controlling services](~peios/services-and-jobs/controlling-services#the-command-state-matrix) lists which actions are valid in each state.
 
 ## Transition causes
 
@@ -118,6 +97,45 @@ The grouping matters for what peinit does next: the diagnostic causes are mostly
 > [!TIP]
 > When a service is `Failed`, the cause is the first thing to read. A `ProcessCrash` or `WatchdogTimeout` points at the service's own code or health; a `DependencyFailure` points at something it needs; a `ValidationError` points at its definition. [Troubleshooting peinit](~peios/services-and-jobs/troubleshooting) is organised around exactly this lookup.
 
+## The Abandoned state
+
+`Abandoned` is the one state that reflects a kernel-level problem rather than a service-level one. peinit reaches it when it has sent SIGKILL to a service's process group but the processes are still there after a grace period — the post-kill timeout, **5 seconds** by default. If the service's cgroup has not emptied within it, the processes are wedged in **uninterruptible kernel sleep** (D-state), typically behind a hung mount or a broken storage controller, and the service is marked Abandoned (its cgroup leaked).
+
+peinit cannot kill a D-state process; nothing in userspace can. So it stops trying: it marks the service Abandoned, leaks the cgroup (it cannot be removed while populated), and moves on rather than hanging. The leak is never silent — it shows up in the service's `warnings` and, on a later start, peinit creates a fresh "generational" cgroup so the new instance is unaffected by the stuck old one.
+
+An Abandoned service is cleared with `reset`, which re-checks the cgroup: if it finally emptied, peinit cleans up; if it is still populated, peinit leaves it leaked and warns you. An Abandoned service is a sign of an underlying I/O fault that needs investigating, not something to paper over with a restart.
+
+## The common path
+
+Most of a service's life is a small loop. The diagram below shows the states a healthy Simple service moves through, plus the two ways it leaves Active.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Inactive
+    Inactive --> Starting: start / trigger / dependency
+    Starting --> Active: ready (READY=1 or alive)
+    Active --> Stopping: stop / shutdown / conflict
+    Stopping --> Inactive: exited (clean stop / shutdown)
+    Stopping --> Failed: exited (conflict / BindsTo eviction)
+    Active --> Backoff: crash + restart allowed
+    Backoff --> Starting: backoff delay elapsed
+    Active --> Failed: crash + no restart
+    Starting --> Failed: timeout / hook / setup failure
+    Failed --> Starting: explicit start
+```
+
+A few things this picture makes concrete:
+
+- An automatic restart always routes **through Backoff**, never through Failed. `Backoff → Starting` is the retry; `Failed` is reached only when restarts are exhausted or disabled. This is why [`OnFailure`](~peios/services-and-jobs/supervision) fires once at the end, not on every retry.
+- `Starting` can fail *before any process exists* — a parent-side setup error, a failed pre-hook, a condition or assert. The cause records which.
+- `Failed → Starting` is how a manual `start` (or a recovery path) revives a dead service; automatic restarts never originate from `Failed`.
+- `Stopping` has **two** exits. A clean stop or a shutdown lands in `Inactive`. But a service stopped because it lost a [`Conflicts`](~peios/services-and-jobs/dependencies) race (`ConflictEviction`) or because its [`BindsTo`](~peios/services-and-jobs/dependencies) target went away (`BindsToPropagation`) comes to rest in `Failed`, carrying that cause — so an evicted or bound-out service shows as Failed in `status` and needs a `reset` (or, for a bound service, its target returning) before it starts again. It was not shut down on purpose, so peinit does not treat it as cleanly Inactive.
+
+Oneshot services follow a parallel path through **Completed** instead of Active: `Starting → Completed`, and then either staying there (`RemainAfterExit=1`) or passing through to `Inactive`. See [Simple and Oneshot services](~peios/services-and-jobs/service-types).
+
+> [!NOTE]
+> **A crash while `Reloading` is still a crash.** If a service's main process *dies* while it is re-reading its configuration, peinit treats that as an ordinary `ProcessCrash` and routes it through the [restart policy](~peios/services-and-jobs/supervision) — `Reloading → Backoff` if a restart is warranted, or `Reloading → Failed` if it is not. This is why you can see a service jump straight from Reloading into Backoff or Failed. It is *distinct* from an `ExecReload` **command** failing: a failed reload command leaves the running process untouched and the service stays `Active`, reporting the failure without changing state.
+
 ## Readiness gating during boot
 
 The dependent-satisfaction rule is what makes boot orderly. A service's dependents do not start until it satisfies them:
@@ -127,14 +145,6 @@ The dependent-satisfaction rule is what makes boot orderly. A service's dependen
 - A **Skipped** service satisfies dependents immediately — it succeeded by not needing to run.
 
 If a service does not reach readiness within its `StartTimeout`, its dependents diverge by relationship: `Requires` dependents transition to Failed (`DependencyFailure`); `Wants` dependents start anyway. That difference is the whole point of the two relationship types — see [Dependencies and ordering](~peios/services-and-jobs/dependencies).
-
-## The Abandoned state
-
-`Abandoned` is the one state that reflects a kernel-level problem rather than a service-level one. peinit reaches it when it has sent SIGKILL to a service's process group but the processes are still there after a grace period — the post-kill timeout, **5 seconds** by default. If the service's cgroup has not emptied within it, the processes are wedged in **uninterruptible kernel sleep** (D-state), typically behind a hung mount or a broken storage controller, and the service is marked Abandoned (its cgroup leaked).
-
-peinit cannot kill a D-state process; nothing in userspace can. So it stops trying: it marks the service Abandoned, leaks the cgroup (it cannot be removed while populated), and moves on rather than hanging. The leak is never silent — it shows up in the service's `warnings` and, on a later start, peinit creates a fresh "generational" cgroup so the new instance is unaffected by the stuck old one.
-
-An Abandoned service is cleared with `reset`, which re-checks the cgroup: if it finally emptied, peinit cleans up; if it is still populated, peinit leaves it leaked and warns you. An Abandoned service is a sign of an underlying I/O fault that needs investigating, not something to paper over with a restart.
 
 ## Invariants
 

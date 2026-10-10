@@ -1,7 +1,7 @@
 ---
 title: Boot and boot modes
 type: concept
-description: The two-phase boot — hardcoded bootstrap, then registry-driven — and the Full, Safe, and Recovery modes with the boot-attempt counter between them.
+description: Check the current boot, understand Full, Safe and Recovery modes, and plan console access before repairing a failed boot.
 related:
   - peios/services-and-jobs/dependencies
   - peios/services-and-jobs/supervision
@@ -11,65 +11,33 @@ related:
   - peios/registry-concepts/overview
 ---
 
-peinit's boot has two phases and a chicken-and-egg problem to solve. The problem: peinit reads everything it does from the [registry](~peios/registry-concepts/overview), but the registry is served by a daemon that something has to start first — and the identity authority that would mint that daemon's token does not exist yet either. The solution is to split boot into a **hardcoded** bootstrap that needs no registry, and a **registry-driven** phase that starts once the registry is up. The boundary between them is `registryd`.
+On a running machine, use `svctl boot` or **System Settings › Startup & Shutdown** to see the mode, why it was chosen, and whether the boot has been confirmed successful.
 
-## Where peinit takes over
+- **Full** starts the normal boot-triggered set.
+- **Safe** starts a reduced boot-triggered set. Use the reported graph error or requested-mode reason to decide what to repair.
+- **Recovery** provides an unrestricted SYSTEM shell on the console and skips Phase 2 services. `svctl boot` is not available there.
 
-peinit is PID 1, but it is not the *first* thing that runs. The [initramfs](~peios/boot-and-trust-establishment/initramfs-stage) assembles and mounts the real root — decryption, RAID/LVM, the root filesystem itself — and then hands control to peinit. The contract peinit relies on is narrow:
+> [!IMPORTANT]
+> Recovery needs physical, IPMI, or serial console access; there is no remote recovery service. Confirm that access before a change that may leave the machine unable to boot. Recovery offers no TCB guarantee.
 
-- The real root is already mounted **read-write**, and `/proc`, `/sys`, `/dev` are mounted and moved into it.
-- peinit is exec'd as PID 1 from a fixed path on the real root.
+## How this boot went
 
-peinit **does not** assemble, decrypt, repair, or even re-mount the root — those need tools and configuration that belong to the initramfs. It also does not `fsck` the root or mount non-root storage (a data partition is mounted by an ordinary Oneshot service, not by peinit). For the trust and identity side of this handoff — signatures, the SYSTEM token peinit inherits — see [peinit at PID 1](~peios/boot-and-trust-establishment/peinit-pid-1).
+`svctl boot` asks peinit, and so does **System Settings**, at the top of its **Startup & Shutdown** section:
 
-## Phase 1: the hardcoded bootstrap
+```
+$ svctl boot
+boot: full
+reason: normal
+unconfirmed boots before this one: 0 (recovery at 3)
+confirmed: yes
+grace: 30s
+```
 
-Phase 1 is compiled into peinit. It cannot change at runtime and touches no registry. It does the minimum to make Phase 2 possible:
+- **boot** is the mode, and **reason** why: `normal`, `requested` (`peios.safemode=1`), or a Safe mode peinit chose itself because a full boot couldn't be planned, with what stopped it.
+- **unconfirmed boots before this one** is the boot-attempt counter as this boot found it, and the threshold at which the machine starts in Recovery.
+- **confirmed** says whether this boot has counted as a success yet: every Critical service holding for `BootSuccessGrace`, and the counter put back to 0. Until then it names what it is waiting for.
 
-1. **Confirm the root is writable** with a single probe write. registryd's storage needs a writable root even for reads, so a read-only root cannot support Phase 2 → Recovery.
-2. **Mount the remaining virtual filesystems** — `/dev/pts`, `/dev/shm`, `/run`, `/sys/fs/cgroup` — mounting each only if absent. A failure here → Recovery.
-3. **Restore the persisted random seed** from `/var/state/peinit/random-seed`, mixing it into the kernel's entropy pool early so anything that needs randomness during boot gets it. A missing seed is normal — first boots and stateless live boots have none — so peinit just carries on; a seed problem is never fatal and never sends boot to Recovery.
-4. **Establish the machine-id** from `/lcl/etc/machine-id` — a stable, opaque identifier for this install (used for log correlation, instance identity, and software compatibility). It is *not* a security principal: it is not a SID, an account, or a credential, and no authorisation decision depends on it. If the file is missing, empty, or malformed, peinit generates a fresh 128-bit ID and writes it before continuing.
-5. **Set the clock from the hardware RTC**, so early timestamps and the boot counter are meaningful. A failure here → Recovery.
-6. **Start registryd** and wait for it to signal readiness, then **probe-read** the schema-version key to confirm it is actually serving reads. Any failure → Recovery — there is no Phase 2 without a registry.
-7. **Provision boot-time paths.** With registryd up and before Phase 2 starts, peinit applies the entries under `Machine\System\Init\ProvisionedPaths\` — the registry-driven equivalent of tmpfiles.d, creating directories and files (with Peios security descriptors) that no single service owns. Best-effort entries that fail are logged and skipped, but an entry marked `Required=1` that cannot be provisioned sends boot → Recovery. The individual keys are cataloged in the [registry key reference](~peios/services-and-jobs/registry-key-reference).
-8. **Infrastructure setup** — create the [control socket](~peios/services-and-jobs/controlling-services) and the [jobs socket](~peios/services-and-jobs/jobs-and-operations), and bring up the loopback interface. A control-socket or jobs-socket failure → Recovery; a loopback failure is logged as a warning and boot continues.
-
-Most Phase 1 failures are fatal to a normal boot, because none of the later machinery can run without this foundation — the only outcome is [Recovery mode](#recovery-mode). The exceptions are the fail-soft steps called out above: a missing or unusable random seed, a regenerated machine-id, and best-effort provisioned paths all let boot continue.
-
-> [!CAUTION]
-> Packaged images, VM templates, and live ISOs must not ship a populated `/lcl/etc/machine-id` or a `/var/state/peinit/random-seed` file. A shipped machine-id gives every clone the same identity, and a shipped seed is a public value that is not acceptable entropy. Clone and reset tooling should remove or truncate `/lcl/etc/machine-id` so peinit generates a fresh ID on the next boot, and should never bake a seed into the image — if you need strong first-boot randomness for a stateless image, provide a real kernel entropy source (hardware RNG or virtio-rng) instead.
-
-### registryd and loregd
-
-`registryd` is an **interface**, not a specific program. It is the path peinit execs to get a registry source daemon — the component that implements the registry's persistent storage and answers peinit's reads. The *implementation* behind that interface can vary; by default it is **loregd**.
-
-This split matters in exactly one place: **Recovery mode**. In normal operation you only ever deal with the `registryd` abstraction — peinit starts it, treats it as opaque, and reads the registry through it. But when the registry *itself* is what broke, you need tools that work *without* a running registry, and those tools talk to the implementation directly. That is why the recovery tooling is named `loregd` (`loregd --inspector`, `--recover-from-backup`, …): in recovery you are working with the storage implementation, not the registry abstraction. It is the one context where the distinction is visible to an administrator.
-
-## Phase 2: the registry-driven boot
-
-With registryd serving reads, peinit boots the rest of the system from the registry:
-
-1. **Read all definitions** under `Machine\System\Services\`. (A registry read timing out here → Recovery.)
-2. **Build and validate the dependency graph** from the boot-triggered services and their transitive [dependency closure](~peios/services-and-jobs/dependencies). Validation runs *before* anything starts.
-3. **Start services in dependency order**, in [parallel](~peios/services-and-jobs/dependencies) up to `MaxParallelStarts`, with [readiness gating](~peios/services-and-jobs/the-service-lifecycle) releasing each service's dependents as it becomes satisfied.
-
-Only services with a `boot` trigger are start candidates; demand-only services are pulled in only if something boot-triggered depends on them, and [Disabled](~peios/services-and-jobs/triggers-and-timers) services are excluded from the graph (but kept in the model for on-demand start). The whole boot runs against one [snapshot](~peios/services-and-jobs/defining-a-service) — mid-boot registry edits do not perturb it.
-
-The platform daemons come up first because everything rests on them. They are all SYSTEM, all minted by peinit (no authd yet), and all `ErrorControl=Critical`:
-
-| Service | Phase | Identity source | Readiness | ErrorControl |
-|---|---|---|---|---|
-| registryd | 1 | minted by peinit | sd_notify | Critical |
-| eudev | 2 | minted by peinit (privileges stripped) | process alive | Normal |
-| lpsd | 2 | minted by peinit | sd_notify | Critical |
-| authd | 2 | minted by peinit | sd_notify | Critical |
-| eventd | 2 | minted by peinit | sd_notify | Critical |
-| networking | 2 | authd | sd_notify | Normal |
-| sshd | 2 | authd | process alive | Normal |
-| application services | 2 | authd | per-service | Normal |
-
-Once authd is up, every subsequent service gets its token through the [normal authd flow](~peios/services-and-jobs/identity-and-privileges). The order above is *emergent* from the standard role definitions' dependencies, not hardcoded — change the dependencies and the order changes. In practice login services such as `sshd` come up last, so the system is fully operational before it starts accepting user sessions.
+Recovery mode never answers: it runs a recovery shell and no Phase 2 services or peinit control interface. Registryd may already be running, but there is no control socket to ask. Anyone signed in may ask; see [who can manage a service](~peios/services-and-jobs/who-can-manage-a-service) for the descriptor.
 
 ## The three boot modes
 
@@ -115,11 +83,11 @@ On a machine with the dynamic-boot feature, **System Settings › Startup & Shut
 
 Recovery mode is the last resort, and it offers **no TCB guarantee** — the administrator gets an unrestricted SYSTEM shell on the console and must treat it with corresponding care. It is a maintenance *environment*, not a degraded boot.
 
-In Recovery, peinit completes the Phase 1 basics, *tries* to start registryd (ignoring failure — the shell must appear regardless), skips all Phase 2 services, and execs a SYSTEM shell on `/dev/console` (`/bin/recsh` if present, else `/bin/sh`), respawning it if it exits. It is entered when:
+In Recovery, peinit completes the Phase 1 basics and starts registryd only if that boot has not already attempted it; a failed registryd start is not repeated. Registryd failure does not prevent the shell. peinit skips all Phase 2 services and execs a SYSTEM shell on `/dev/console` (`/bin/recsh` if present, else `/bin/sh`), respawning it if it exits. It is entered when:
 
 - the **boot-attempt counter reaches N** (default 3),
 - the kernel command line says `peios.recovery=1`, or
-- **registryd fails during Phase 1** — entered immediately, with no reboot and no counter increment, because there is no Phase 2 to attempt.
+- **registryd fails during Phase 1** — entered immediately, without rebooting, because there is no Phase 2 to attempt. The counter has already been incremented for this attempt.
 
 Because the registry itself may be what broke, recovery provides tools that work without it — talking to the [loregd implementation](#registryd-and-loregd) directly:
 
@@ -127,7 +95,10 @@ Because the registry itself may be what broke, recovery provides tools that work
 |---|---|
 | `loregd --inspector` | Read the storage database directly for diagnosis. |
 | `loregd --recover-from-backup` | Restore from an automatic backup taken on every registryd startup. |
-| `loregd --dangerously-clear-database` | Wipe the registry entirely. Recoverable, because role definitions are the source of truth for service config. |
+| `loregd --dangerously-clear-database` | Last resort: wipe the registry entirely. Role definitions can re-supply service configuration; this is not restoration of all registry data. |
+
+> [!WARNING]
+> Start with the inspector and a verified backup. `--dangerously-clear-database` destroys the registry database; do not run it as a routine diagnostic step or assume it restores data not supplied by roles.
 
 > [!IMPORTANT]
 > Recovery mode requires console access — physical, IPMI, or serial. There is no remote recovery in the current design (emergency SSH and registry historical reversion are noted as post-v1 work). Plan console access for any machine you need to be able to recover.
@@ -137,11 +108,12 @@ Because the registry itself may be what broke, recovery provides tools that work
 The counter is what turns a crash-looping Critical service into an eventual Recovery shell instead of an infinite reboot loop. It is a plain integer in a file at `/.peinit/boot-attempts` — *not* in the registry, because the registry may be the very thing that is broken.
 
 - peinit **reads** it at startup, before choosing a mode. The Recovery threshold (`counter ≥ N`) is checked against this pre-increment value, so the default N of 3 admits exactly three attempts before Recovery. A missing file counts as 0; a corrupt or unreadable one → Recovery. Override N with `peios.bootattempts=N` on the kernel command line, or set it to `0` to disable the check when the counter is itself the fault.
-- peinit **increments** it once per boot, right after confirming the root is writable and before Phase 2 — never before the root is known writable, or a read-only root would silently lose the increment and defeat escalation.
+- peinit **increments** it once per boot after the root, mount, seed, machine-ID and clock steps, before registryd starts. A registryd startup failure therefore still consumes an attempt. An earlier failure that enters Recovery before this point does not increment it.
+- `peios.recovery=1` forces Recovery but does not suppress the increment once that point is reached.
 - The counter is **reset to 0** on a successful Full or Safe boot (after the grace period).
 - If the counter file cannot be *written* (disk full), peinit treats it as 0 and continues — a write failure must not by itself trigger Recovery.
 
-A [Critical service](~peios/services-and-jobs/supervision) exhausting its restart budget — at boot or at runtime — triggers a sync and reboot, which increments the counter on the next boot. Repeat that enough and the counter crosses N, and peinit stops trying and hands you a Recovery shell. The counter deliberately does *not* try to catch a peinit too broken to reach its own increment; that is a binary-integrity problem, not a boot-loop problem.
+A [Critical service](~peios/services-and-jobs/supervision) exhausting its restart budget — at boot or at runtime — triggers a sync and reboot. Repeated boots that never complete the success grace accumulate attempts until the counter reaches N and peinit enters Recovery. A failure after a confirmed boot still reboots the machine, but that boot already reset the counter: repeated late failures can therefore continue without reaching the Recovery threshold. Use `svctl boot` to distinguish these cases. The counter deliberately does *not* try to catch a peinit too broken to reach its own increment; that is a binary-integrity problem, not a boot-loop problem. See the [TRM counter cycle](~peios/advanced-peios/peinit/boot/the-boot-attempt-counter#the-cycle) for the exact increment boundary.
 
 ## Boot configuration
 
@@ -151,32 +123,13 @@ A [Critical service](~peios/services-and-jobs/supervision) exhausting its restar
 | `Machine\System\Boot\BootSuccessGrace` | 30 | Seconds a Critical service must hold a satisfying state before boot counts as successful. |
 | `Machine\System\Boot\ShutdownTimeout` | 90 | Maximum seconds for the whole [shutdown](~peios/services-and-jobs/shutdown) sequence. |
 | `Machine\System\Boot\PostKillTimeout` | 5 | Seconds a service cgroup may take to drain after SIGKILL before it counts as stuck. |
-| `Machine\System\Boot\SettleTimeout` | 5 | Seconds peinit waits for devices to settle before services that wait for them start. |
+| `Machine\System\Boot\SettleTimeout` | 5 | Seconds peinit waits for the boot service set to settle before starting `boot:settled` services anyway. |
 
 All but `ShutdownTimeout` are read at boot, so a change applies at the next one; `ShutdownTimeout` applies the next time peinit re-reads its configuration (`svctl reload-config`). **System Settings** shows and changes them in its **Startup & Shutdown** section, under **Timeouts**: **Apply** and **Undo** appear once one has been edited. Changing them needs write access to `Machine\System\Boot` — as shipped, Administrators.
 
-## How this boot went
-
-`svctl boot` asks peinit, and so does **System Settings**, at the top of its **Startup & Shutdown** section:
-
-```
-$ svctl boot
-boot: full
-reason: normal
-unconfirmed boots before this one: 0 (recovery at 3)
-confirmed: yes
-grace: 30s
-```
-
-- **boot** is the mode, and **reason** why: `normal`, `requested` (`peios.safemode=1`), or a Safe mode peinit chose itself because a full boot couldn't be planned, with what stopped it.
-- **unconfirmed boots before this one** is the boot-attempt counter as this boot found it, and the threshold at which the machine starts in Recovery.
-- **confirmed** says whether this boot has counted as a success yet: every Critical service holding for `BootSuccessGrace`, and the counter put back to 0. Until then it names what it is waiting for.
-
-Recovery mode never answers: it runs a recovery shell and no services, so there is no peinit control socket to ask. Anyone signed in may ask; see [who can manage a service](~peios/services-and-jobs/who-can-manage-a-service) for the descriptor.
-
 ## The kernel command line
 
-peinit reads four `peios.*` tokens. They are deliberately few: everything peinit can read *after* registryd is serving belongs in the registry instead, where it can be inspected, secured and changed without editing a boot entry. What is left is either a per-boot mode decision or a Phase 1 value — one peinit needs before there is a registry to ask.
+peinit reads the following `peios.*` tokens. They are deliberately few: everything peinit can read *after* registryd is serving belongs in the registry instead, where it can be inspected, secured and changed without editing a boot entry. What is left is either a per-boot mode decision or a Phase 1 value — one peinit needs before there is a registry to ask.
 
 | Token | Effect |
 |---|---|
@@ -216,10 +169,57 @@ A few lines escape all of this: whatever peinit and prelude print *before* they 
 
 On an installed machine the command line is part of the boot image, which is made when Peios is installed or upgraded, so editing that file changes nothing on its own. With the dynamic-boot feature installed, its `mkuki-watch` service makes the boot image again whenever the file changes; then System Settings offers `peios.bootattempts` and `peios.quiet` as choices — how many boots may fail before Recovery, and what peinit writes on the console — and writes them into the file with **Apply at Next Boot**, which appears once one has been changed. Nothing else on the line is offered: a mistake there can leave a machine that doesn't boot. Writing the file needs write access to it, which as shipped only Administrators have.
 
-Unknown `peios.*` tokens are ignored, as is a malformed value on either of the two valued tokens — this parser runs before anything exists to report a diagnostic to, and refusing to boot over a typo in a tuning knob is the worse outcome.
+Unknown `peios.*` tokens are ignored, as is a malformed value on a valued token — this parser runs before anything exists to report a diagnostic to, and refusing to boot over a typo in a tuning knob is the worse outcome.
 
 > [!NOTE]
 > There is no token that selects services. Which services start is decided entirely by what is defined under `Machine\System\Services` — see [Defining a service](~peios/services-and-jobs/defining-a-service). A console shell or a login prompt is an ordinary service definition with a [`TTYPath`](~peios/services-and-jobs/execution-environment), not a boot flag.
+
+## Where peinit takes over
+
+peinit is PID 1, but it is not the *first* thing that runs. The [initramfs](~peios/boot-and-trust-establishment/initramfs-stage) assembles and mounts the real root — decryption, RAID/LVM, the root filesystem itself — and then hands control to peinit. The contract peinit relies on is narrow:
+
+- The real root is already mounted **read-write**, and `/proc`, `/sys`, `/dev` are mounted and moved into it.
+- peinit is exec'd as PID 1 from a fixed path on the real root.
+
+peinit **does not** assemble, decrypt, repair, or even re-mount the root — those need tools and configuration that belong to the initramfs. It also does not `fsck` the root or mount non-root storage (a data partition is mounted by an ordinary Oneshot service, not by peinit). For the trust and identity side of this handoff — signatures, the SYSTEM token peinit inherits — see [peinit at PID 1](~peios/boot-and-trust-establishment/peinit-pid-1).
+
+## Phase 1: the hardcoded bootstrap
+
+Phase 1 is compiled into peinit. It cannot change at runtime and touches no registry. It does the minimum to make Phase 2 possible:
+
+1. **Confirm the root is writable** with a single probe write. registryd's storage needs a writable root even for reads, so a read-only root cannot support Phase 2 → Recovery.
+2. **Mount the remaining virtual filesystems** — `/dev/pts`, `/dev/shm`, `/run`, `/sys/fs/cgroup` — mounting each only if absent. A failure here → Recovery.
+3. **Restore the persisted random seed** from `/var/state/peinit/random-seed`, mixing it into the kernel's entropy pool early so anything that needs randomness during boot gets it. A missing seed is normal — first boots and stateless live boots have none — so peinit just carries on; a seed problem is never fatal and never sends boot to Recovery.
+4. **Establish the machine-id** from `/lcl/etc/machine-id` — a stable, opaque identifier for this install (used for log correlation, instance identity, and software compatibility). It is *not* a security principal: it is not a SID, an account, or a credential, and no authorisation decision depends on it. If the file is missing, empty, or malformed, peinit generates a fresh 128-bit ID. If it cannot persist the ID, boot continues with a warning and an ID valid only for this boot; failure to obtain random bytes sends boot to Recovery.
+5. **Set the clock from the hardware RTC**, so early timestamps and the boot counter are meaningful. A failure here → Recovery.
+6. **Start registryd** and wait for it to signal readiness, then **probe-read** the schema-version key to confirm it is actually serving reads. Any failure → Recovery — there is no Phase 2 without a registry.
+7. **Provision boot-time paths.** With registryd up and before Phase 2 starts, peinit applies the entries under `Machine\System\Init\ProvisionedPaths\` — the registry-driven equivalent of tmpfiles.d, creating directories and files (with Peios security descriptors) that no single service owns. Best-effort entries that fail are logged and skipped, but an entry marked `Required=1` that cannot be provisioned sends boot → Recovery. The individual keys are cataloged in the [registry key reference](~peios/services-and-jobs/registry-key-reference).
+8. **Infrastructure setup** — create the [control socket](~peios/services-and-jobs/controlling-services) and the [jobs socket](~peios/services-and-jobs/jobs-and-operations), and bring up the loopback interface. A control-socket or jobs-socket failure → Recovery; a loopback failure is logged as a warning and boot continues.
+
+Most Phase 1 failures are fatal to a normal boot, because none of the later machinery can run without this foundation — the only outcome is [Recovery mode](#recovery-mode). The exceptions are the fail-soft steps called out above: a missing or unusable random seed, a regenerated machine-id, and best-effort provisioned paths all let boot continue.
+
+> [!CAUTION]
+> Packaged images, VM templates, and live ISOs must not ship a populated `/lcl/etc/machine-id` or a `/var/state/peinit/random-seed` file. A shipped machine-id gives every clone the same identity, and a shipped seed is a public value that is not acceptable entropy. Clone and reset tooling should remove or truncate `/lcl/etc/machine-id` so peinit generates a fresh ID on the next boot, and should never bake a seed into the image — if you need strong first-boot randomness for a stateless image, provide a real kernel entropy source (hardware RNG or virtio-rng) instead.
+
+### registryd and loregd
+
+`registryd` is an **interface**, not a specific program. It is the path peinit execs to get a registry source daemon — the component that implements the registry's persistent storage and answers peinit's reads. The *implementation* behind that interface can vary; by default it is **loregd**.
+
+This split matters in exactly one place: **Recovery mode**. In normal operation you only ever deal with the `registryd` abstraction — peinit starts it, treats it as opaque, and reads the registry through it. But when the registry *itself* is what broke, you need tools that work *without* a running registry, and those tools talk to the implementation directly. That is why the recovery tooling is named `loregd` (`loregd --inspector`, `--recover-from-backup`, …): in recovery you are working with the storage implementation, not the registry abstraction. It is the one context where the distinction is visible to an administrator.
+
+## Phase 2: the registry-driven boot
+
+With registryd serving reads, peinit boots the rest of the system from the registry:
+
+1. **Read all definitions** under `Machine\System\Services\`. (A registry read timing out here → Recovery.)
+2. **Build and validate the dependency graph** from the boot-triggered services and their transitive [dependency closure](~peios/services-and-jobs/dependencies). Validation runs *before* anything starts.
+3. **Start services in dependency order**, in [parallel](~peios/services-and-jobs/dependencies) up to `MaxParallelStarts`, with [readiness gating](~peios/services-and-jobs/the-service-lifecycle) releasing each service's dependents as it becomes satisfied.
+
+Only services with a `boot` trigger are start candidates; demand-only services are pulled in only if something boot-triggered depends on them, and [Disabled](~peios/services-and-jobs/triggers-and-timers) services are excluded from the graph (but kept in the model for on-demand start). The whole boot runs against one [snapshot](~peios/services-and-jobs/defining-a-service) — mid-boot registry edits do not perturb it.
+
+The installed service graph determines the platform order. `registryd` and `authd` use the SYSTEM bootstrap path; standard eventd and lpsd deployments use `Identity=Service` and obtain tokens through authd. See [Service identity](~peios/services-and-jobs/identity-and-privileges). A non-SYSTEM service’s authority dependency is derived from its identity rather than left to an administrator to remember.
+
+Do not infer readiness or shutdown order from a fixed list of daemon names. Check the installed definitions and the service status. The [boot implementation](~peios/advanced-peios/peinit/boot/phase-2) describes graph construction and validation.
 
 ## Where to start
 
