@@ -30,10 +30,9 @@ excerpts. Do not add private content, credentials, or runtime data to preview bu
    article link, search, and a print page. Confirm main auto-deploy is off and no
    production domain is attached. A successful local build is not hosted verification.
 
-The script downloads and checks the same Trail artifact pinned in
-`validate-docs.yml` (or checks a supplied `TRAIL_BIN`). A changed upstream artifact
-fails closed; review and update both pins together. Linux x86-64, Bash, Python 3,
-`curl`, and `sha256sum` are required.
+The script downloads and checks its pinned Trail artifact (or checks a supplied
+`TRAIL_BIN`). A changed upstream artifact fails closed; review any pin update.
+Linux x86-64, Bash, Python 3, `curl`, and `sha256sum` are required.
 
 Trail's root `url` controls canonical metadata, sitemaps, and outward print links;
 it has no base-URL environment override. The build substitutes the validated
@@ -51,11 +50,11 @@ TRAIL_BIN=/path/to/verified/trail \
 bash .github/scripts/build_cloudflare_preview.sh /tmp/peios-preview-site
 ```
 
-Keep the GitHub `Validate documentation pull requests` workflow enabled separately:
-it tests the link checker, strictly builds the proposed merge and exact PR base,
-and rejects newly broken local links. A Cloudflare branch build does not replace
-that merge/base regression check. Preview URLs are not access controls; Cloudflare's
-preview `noindex` behavior does not make a public deployment private.
+The optional rendered-link checker and its unit tests can be run separately as
+described in `.github/README.md`; there is no automatic pull-request validation
+workflow. A Cloudflare branch build does not compare links against a base build.
+Preview URLs are not access controls; Cloudflare's preview `noindex` behavior
+does not make a public deployment private.
 
 References: [Git integration](https://developers.cloudflare.com/pages/configuration/git-integration/),
 [branch controls](https://developers.cloudflare.com/pages/configuration/branch-build-controls/),
