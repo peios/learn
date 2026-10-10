@@ -113,18 +113,18 @@ The pre-4.0 aliases (`mkdosfs`, `dosfsck`, `dosfslabel`) are deliberately not sh
 
 ## Where these tools live
 
-Everything above is in **`/usr/bin`**, reached as `/bin` through the runtime view. None of it is in `/sbin`: that is for daemons, which appear in service definitions, and a filesystem tool is a privileged binary a person runs.
+The user-facing filesystem tools above are installed in **`/usr/bin`**, reached as `/bin` through the runtime view. See [Install destinations](~peios/advanced-peios/pspu/package-format-and-repository-protocol/install-destinations) for the broader package-layout policy.
 
-The `fsck.<type>` backends are the exception, and they sit in **`/usr/libexec/fsck/`**:
+The `fsck` dispatcher also uses type-specific checker names in **`/usr/libexec/fsck/`**, exposed through `/libexec/fsck`:
 
 ```
 /libexec/fsck/fsck.ext2   fsck.ext3   fsck.ext4
                 fsck.fat    fsck.vfat   fsck.msdos
 ```
 
-These are not commands you type. `fsck` picks a checker by exec'ing `fsck.<type>` for the filesystem type it detects or is given, so they are a private interface between the front-end and its backends — which is exactly what `libexec` distinguishes. `fsck` searches `/libexec/fsck` first, then the directories on your `PATH`, so a third-party checker installed elsewhere on `PATH` is still found.
+These backend paths are the dispatch interface: `fsck` picks `fsck.<type>` for the filesystem type it detects or is given. The checker can also have a direct operator interface: `e2fsck` remains in `/usr/bin`, and `fsck.fat` remains there with the `fat`, `vfat` and `msdos` backend names linking to it. This layout is explicit in the pinned [e2fsprogs recipe](https://github.com/peios/pkgs/blob/92b0caf88e87c72931eee188a07ac87883d913c7/net.sourceforge.e2fsprogs/pekit.toml#L144-L162) and [dosfstools recipe](https://github.com/peios/pkgs/blob/92b0caf88e87c72931eee188a07ac87883d913c7/io.github.dosfstools.dosfstools/pekit.toml#L98-L105). `fsck` searches `/libexec/fsck` first, then the directories on your `PATH`, so a third-party checker installed elsewhere on `PATH` is still found.
 
-The `mkfs.<type>` names stay in `/usr/bin` for the opposite reason: Peios ships no `mkfs` front-end, so nothing ever dispatches on them and they are only ever typed.
+The `mkfs.<type>` names stay directly available in `/usr/bin`: Peios ships no `mkfs` front-end.
 
 
 ## Why these tools are packaged, not rewritten
