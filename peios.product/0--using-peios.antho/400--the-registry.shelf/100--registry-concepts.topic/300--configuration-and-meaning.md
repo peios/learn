@@ -4,6 +4,7 @@ type: how-to
 description: Look up a setting, record its current state, make a typed change, and distinguish registry read-back from consumer acceptance.
 related:
   - peios/registry-concepts/keys-values-and-types
+  - peios/registry-concepts/find-a-setting
   - peios/registry-administration/regman
   - peios/registry-concepts/watches
   - peios/registry-administration/bootstrap-and-self-configuration
@@ -16,6 +17,9 @@ still decides whether it is valid and when to use it. Treat a change as
 finished only after checking both the stored result and the consumer.
 
 ## 1. Look up the setting
+
+If you do not know its key, start with [Find where a setting lives](~peios/registry-concepts/find-a-setting).
+Confirm that it is operator configuration rather than a service's reported state.
 
 ```sh
 regman 'Machine\System\KMES' BufferCapacity

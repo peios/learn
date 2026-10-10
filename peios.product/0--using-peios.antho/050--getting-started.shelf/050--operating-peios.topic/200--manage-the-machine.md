@@ -73,6 +73,8 @@ collects the account tasks and access precautions in one place.
   changing the network through a remote desktop.
 - **Set the time zone or clock:**
   [Time zone and setting the clock](~peios/time/time-zone-and-setting-the-clock).
+- **Find software, configuration or service data on disk:**
+  [Where files live](~peios/disks-and-filesystems/filesystem-layout).
 - **Inspect disks and filesystems:**
   [Disk Manager](~peios/disks-and-filesystems/disk-manager) is read-only.
   For changes, follow [Managing mounts](~peios/mount-policies/managing-mounts),
@@ -82,6 +84,9 @@ collects the account tasks and access precautions in one place.
   those guides before making changes.
 
 ## Configuration beyond the settings apps
+
+Start with [Find where a setting lives](~peios/registry-concepts/find-a-setting)
+to locate its documentation and the component that reads it.
 
 Use [Registry Editor](~peios/registry-administration/registry-editor) or
 [`reg`](~peios/registry-administration/reg) for settings that require a

@@ -3,6 +3,7 @@ title: Disks and filesystems
 type: how-to
 description: Identify storage safely, choose a partitioning or formatting workflow, and inspect filesystem and security-descriptor state.
 related:
+  - peios/disks-and-filesystems/filesystem-layout
   - peios/disks-and-filesystems/formatting-with-security-descriptors
   - peios/disks-and-filesystems/mke2fs
   - peios/disks-and-filesystems/installing-to-disk
@@ -37,6 +38,7 @@ not evidence that a disk is blank.
 
 | What you need to do | Guide |
 |---|---|
+| Find software, configuration, service state or user data | [Where files live](~peios/disks-and-filesystems/filesystem-layout) |
 | Inspect disks, partitions and mounts on the desktop | [Disk Manager](~peios/disks-and-filesystems/disk-manager), currently inspection-only |
 | Diagnose block or inode pressure without changing data | [Find why a filesystem is full](~peios/disks-and-filesystems/diagnose-storage-pressure) |
 | Write or inspect a GPT | [Partitioning](~peios/disks-and-filesystems/partitioning) |

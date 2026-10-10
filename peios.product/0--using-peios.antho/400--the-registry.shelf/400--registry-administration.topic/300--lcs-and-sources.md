@@ -43,11 +43,15 @@ peinit starts its provider early because later services need the registry.
 The default provider takes one `HiveName=DatabasePath` argument per hive;
 its own startup does not depend on reading registry configuration.
 
-The documented default database paths are
-`/var/state/registry/machine.regdb` and `/var/state/registry/users.regdb`.
-Inspect the deployed startup configuration before assuming those are the
-paths on a particular installation. Do not launch another source against
-the same databases as an exploratory repair step.
+The reviewed peinit bootstrap passes
+`Machine=/var/state/loregd/Machine.hive` and
+`Users=/var/state/loregd/Users.hive` to the source. These paths are peinit's
+boot policy, not defaults chosen by `loregd`; see the pinned
+[service definition](https://github.com/peios/peinit/blob/0e20fef16f3c170d8fba0e3a169b617e7b4da3aa/src/service/definition.rs#L211-L223).
+The `/var/state/registry/*.regdb` paths in generic loregd examples do not
+establish the deployed locations. Inspect the installed startup configuration
+before assuming these paths apply to a particular image or release. Do not
+launch another source against the same databases as an exploratory repair step.
 
 The [loregd command-line reference](~peios/loregd/startup/command-line)
 covers arguments and validation. The

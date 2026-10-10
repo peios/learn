@@ -4,6 +4,7 @@ type: how-to
 description: Inspect live registry settings, learn their meaning with regman, make a controlled change, and verify the consuming service before choosing recovery.
 related:
   - peios/registry-concepts/keys-values-and-types
+  - peios/registry-concepts/find-a-setting
   - peios/registry-concepts/configuration-and-meaning
   - peios/registry-administration/regman
   - peios/registry-administration/reg
@@ -35,7 +36,9 @@ regman 'Machine\System\KMES' BufferCapacity
 - `regman` explains the expected type, default, valid range and when the
   setting applies. It reads installed documentation, not live state.
 
-If you do not know the path, try `regman -k buffer`, or browse with
+If you do not know the path, try `regman -k buffer`.
+[Find where a setting lives](~peios/registry-concepts/find-a-setting) maps
+common locations. You can also browse with
 [Registry Editor](~peios/registry-administration/registry-editor).
 The editor shows the same manual beside each key and value.
 
