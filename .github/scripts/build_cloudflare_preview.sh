@@ -59,7 +59,9 @@ PY
 
 # Reviewed Trail artifact for this preview build.
 # The upstream latest tag is mutable: a replacement must fail until reviewed.
-trail_sha256=a84799039de3088177fddeee213f27a072f71c84070a9ccd957263abb7a7c5a1
+# Official asset 629169380, release 409248812; built from main 516517f9269f56b8e5aa336d482755f12a185708.
+# Provenance: https://github.com/peios/trail/actions/runs/38092198080
+trail_sha256=30bd5d5f13ade06d7b9bd364fb2e6579578c008eec35e301f729f42e1d257854
 if [[ -n ${TRAIL_BIN:-} ]]; then
   cp -- "$TRAIL_BIN" "$work/trail"
 else
