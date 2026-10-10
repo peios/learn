@@ -45,15 +45,13 @@ If you see `lpsd` failing to start, the usual causes are that `authd` is not run
 
 Each source declares the SID namespace it is authoritative for, and `authd` confines it there. That is what stops a directory deciding who administers your machine, and equally what stops a local source handing out domain identities.
 
-The same confinement applies to **numbers**. A source is given a range of POSIX identifiers and counts inside it, and `authd` adds the base — so a source's principals land in its own range whatever the source sends, and the numbers below every range, uid 0 among them, belong to `authd` alone. `lpsd` starts at 1,000,000; a directory source would be given somewhere well clear of it.
-
-That is why a uid on a Peios machine is larger than you might expect, and why moving a source's range is a configuration change rather than a migration: nothing a source stores was ever an absolute number.
+The same confinement applies to **numbers**. Sources assert relative POSIX identifiers; `authd` applies each source's assigned range and refuses out-of-range values. That keeps source-provided numbers clear of uid 0 and other sources' ranges. See [Numeric Scope](~peios/principal-source-interface/numeric-scope#rebasing) for the rebasing and bounds rules.
 
 ## Seeing a principal, rather than a number
 
 Signing in is one half. The other is that everything on the system can turn an identifier back into a name — `ls -l` showing an owner, `id` showing a group.
 
-That goes to `authd` too, on a socket of its own, and for a reason worth knowing: a source counts its POSIX identifiers relative to a range it is never told the base of, so **only the authority can work out who a uid belongs to**. See [resolving names](~peios/managing-local-principals/resolving-names).
+That goes to `authd` too, on a socket of its own: the authority resolves effective POSIX identifiers and applies the machine's source-search order. See [resolving names](~peios/managing-local-principals/resolving-names) for what lookup answers mean, and [Identity Lookup](~peios/logon/identity-lookup#why-the-authority-answers-this) for the protocol boundary.
 
 ## Where to start
 

@@ -118,7 +118,7 @@ or **Contents unknown**, never “not formatted”.
 
 The Disk Manager guide describes policy reads as requiring Manage Volumes.
 Some command/SDK pages instead say TCB only; see the unresolved
-[privilege discrepancy](~peios/mount-policies/managing-mounts#privilege-requirement)
+[privilege discrepancy](~peios/mount-policies/managing-mounts#check-policy-access)
 before diagnosing a policy-read failure.
 
 Disk insertion/removal and mounts changed elsewhere should appear within a

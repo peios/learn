@@ -20,9 +20,7 @@ Separate from `/run/logon.sock`, but the same standard — [PGSS §2](~peios/log
 
 ## Why the authority, and only the authority
 
-A principal source counts POSIX identifiers **relative** to a range it is never told the base of. `authd` adds the base — so `jack`, stored by `lpsd` as 1000, signs in as uid 1001000.
-
-That arithmetic exists in exactly one place, and only that place can run it backwards. **No source can answer "who is uid 1001000", because no source knows what 1001000 means.** It is not that the authority is a convenient place to put this; it is the only party that can do it at all.
+The protocol assigns this role to the authority: sources assert **relative** POSIX identifiers and answer numeric queries in their own relative namespace, while applications ask the authority about **effective**, machine-wide identifiers. The [Identity Lookup contract](~peios/logon/identity-lookup#why-the-authority-answers-this) defines that boundary; [Numeric Scope](~peios/principal-source-interface/numeric-scope#the-authority-tells-the-source-its-range) explains how the authority applies a source's range even though the source knows it.
 
 The same holds for names. A bare name may exist in more than one source, and which one wins is a property of the machine rather than of any source in it.
 

@@ -12,7 +12,8 @@ Storage](~peios/advanced-peios/peios-kernel/kacs/facs/descriptor-storage).
 > kernel contract permits enabled `SeManageVolumePrivilege` or `SeTcbPrivilege`.
 > The kernel contract also allows templates only with synthesising classes,
 > caps them at 65,535 bytes, and rejects non-empty templates for deny-missing.
-> The SDK wrapper documents different small-buffer handling from the raw
+> The [SDK wrapper](~peios/developing-for-peios/sdk-reference/sdk-files/mount-policy)
+> documents different small-buffer handling from the raw
 > syscall error table below. These differences need implementation verification;
 > do not use these notes to infer a broader grant of access or a safe retry.
 
@@ -87,6 +88,15 @@ The kernel:
 Like the write syscall, this is `SeTcbPrivilege`-gated. The mount policy is system-level state, exposed only to TCB-tier callers.
 
 This is the kernel's read-back-the-current-policy interface. A management tool reads the policy, perhaps applies a transformation, and writes the new value back. The read-modify-write pattern is what most policy management code uses.
+
+### Reading the generation
+
+Compare the value from `kacs_get_mount_policy` with your earlier read to detect
+a change. Initial values are implementation-defined, and values from different
+superblocks are unrelated. The counter identifies changes, not a wall-clock
+change time. See the [kernel administration
+contract](~peios/advanced-peios/peios-kernel/kacs/facs/descriptor-storage#administration)
+for generation increments and cache invalidation.
 
 ## Errors
 

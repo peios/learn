@@ -84,7 +84,7 @@ The class applies to the whole superblock; it is not a per-file permission.
   same directory tree.
 - Ephemeral SD synthesis prevents synthesis write-back, not other disk writes.
   Select read-only separately when required, and read the [inspection
-  warning](~peios/mount-policies/managing-mounts#inspect-and-attach-a-filesystem):
+  warning](~peios/mount-policies/managing-mounts#attach-a-filesystem):
   a read-only filesystem mount alone can still replay an ext4 journal.
 
 ## Where to start

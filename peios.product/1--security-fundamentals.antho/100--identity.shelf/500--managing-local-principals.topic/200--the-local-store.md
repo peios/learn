@@ -39,17 +39,15 @@ Well-known groups — `BUILTIN\Administrators`, `Everyone`, `Authenticated Users
 
 Linux programs call `getuid` and `getgroups` and have never heard of a token, so every token carries POSIX numbers alongside the SIDs. Those numbers begin here.
 
-**A principal's Unix ID is their RID**, and a group's is its RID. One object, one number — so a uid in a log tells you the RID without a lookup.
+**A principal's stored Unix ID is their RID**, and a group's is its RID. These numbers are **relative**: `authd` adds a base from the registry before the number reaches a token, so `jack` with RID 1000 stores 1000 and signs in as uid **1001000** when the base is 1,000,000.
 
-The numbers stored here are **relative**. `lpsd` knows nothing about where its range sits: `authd` adds a base from the registry before the number reaches a token, so `jack` with RID 1000 stores 1000 and signs in as uid **1001000** when the base is 1,000,000.
-
-That indirection is not bookkeeping. It is what stops a principal source reaching uid 0 or another source's numbers — `authd` reserves everything below the sources' ranges for its own, and refuses a relative number that runs past the end of a range rather than wrapping it. A source can only ever express numbers inside the range it was given.
+The range is a boundary enforced by `authd`: an out-of-range relative ID is refused, so a source cannot number its principals as uid 0 or in another source's range. [Numeric Scope](~peios/principal-source-interface/numeric-scope#rebasing) specifies the rebasing and bounds checks.
 
 It also means moving a range is a registry edit rather than a rewrite: nothing stored here was ever absolute.
 
-`lps list` and `lps show` display the **effective** number, with the base already added, because that is the one an operator will see everywhere else.
+`lps list` and `lps show` display the **effective** number, with the base already added, because that is the one an operator will see everywhere else. The authority communicates the range at [registration](~peios/principal-source-interface/registration#registered) for that purpose; `lpsd` must still assert relative identifiers.
 
-The same indirection is why `getpwuid` has to reach `authd` rather than `lpsd`: the arithmetic that made a number absolute happened in `authd`, and only `authd` can run it backwards. See [resolving names](~peios/managing-local-principals/resolving-names).
+At lookup time, `getpwuid` asks `authd` about the effective number; `authd` queries the relevant source in its relative namespace. See [resolving names](~peios/managing-local-principals/resolving-names).
 
 > [!NOTE]
 > A `-` where a uid should be means `authd` has assigned this machine no range at all, and every principal here will sign in as `nobody`. The `UnixIDBase` value on this source is missing or unusable.

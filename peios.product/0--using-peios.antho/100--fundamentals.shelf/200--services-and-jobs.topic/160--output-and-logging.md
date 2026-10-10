@@ -32,8 +32,6 @@ peinit captures stdout and stderr, including hooks and health checks, and tags l
 
 Pipe wiring and tagging are described in the [output-flow reference](~peios/advanced-peios/peinit/output-handling/service-output-flow#capturing-output).
 
-<!-- Keep old links in the article and Trail's three print bundles. -->
-
 ## Logs and events have different limits
 
 Service logs and structured events take separate paths:

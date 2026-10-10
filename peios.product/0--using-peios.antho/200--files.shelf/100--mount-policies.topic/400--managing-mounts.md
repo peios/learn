@@ -1,19 +1,21 @@
 ---
 title: Managing mounts
 type: how-to
-description: Inspect mounts, choose a policy at attach time, verify class and template changes, and troubleshoot policy failures.
+description: Inspect live mount policies in Disk Manager, attach a filesystem, check the limits on changing an existing policy, and verify startup mounts.
 related:
   - peios/mount-policies/overview
   - peios/mount-policies/policy-classes
   - peios/mount-policies/sd-storage-by-filesystem
+  - peios/disks-and-filesystems/disk-manager
   - peios/privileges/overview
 ---
 
-Inspect the current mount and choose its missing-descriptor policy before
-changing anything. A policy change affects every path sharing the superblock,
-but it does not update stored descriptors or revoke already-open handles.
+Identify the filesystem and inspect its current state before attaching storage
+or planning a policy change. Verify both the missing-descriptor class and the
+synthesis template. If it is already mounted, read the [change
+limits](#before-changing-an-already-mounted-policy) before proceeding.
 
-## Inspect and attach a filesystem
+## Inspect live mounts and policy
 
 Use these read-only listings first:
 
@@ -26,17 +28,33 @@ mount
 `/etc/mtab`. The listing is limited to mounts your token may observe. An empty
 or partial listing does not prove that a device is unused.
 
-For a new mount, the command shape is:
+Match the intended filesystem to a verified [stable source
+name](~peios/disks-and-filesystems/stable-device-names), then check its live
+source, target and filesystem type. To inspect its policy in **Disk Manager**:
 
-```
-mount [-t TYPE] [-o OPTIONS] SOURCE TARGET
-```
+1. Open the launcher and type `disk`.
+2. Select [**Mounts**](~peios/disks-and-filesystems/disk-manager#mounts), then
+   the intended mount to see its options and policy.
+3. Open **Permissions…** to inspect the synthesis template. The [UI policy
+   labels](~peios/disks-and-filesystems/disk-manager#files-without-permissions)
+   explain the missing-descriptor choices.
 
-Choose `-o policy=deny-missing`, `-o policy=synth-ephemeral`, or
-`-o policy=synth-persist` using [Policy
-classes](~peios/mount-policies/policy-classes). `--synth-sddl SDDL` supplies a
-well-formed template with an owner, and is valid only with a `synth-*` policy.
-Use a verified [stable source name](~peios/disks-and-filesystems/stable-device-names).
+Check both class and template; the ordinary `mount` listing is not a template
+dump. If Disk Manager cannot read the policy, verification remains incomplete.
+Missing details do not establish the intended policy, and the GUI does not
+bypass the privilege gate. See [what Disk Manager may
+show](~peios/disks-and-filesystems/disk-manager#what-you-may-see-and-change).
+
+### Check policy access
+
+> [!WARNING]
+> Published privilege requirements disagree: command and SDK descriptions say
+> `SeTcbPrivilege`; the kernel contract permits enabled `SeManageVolumePrivilege`
+> or `SeTcbPrivilege`; Disk Manager describes Manage Volumes. This affects
+> policy reads and changes. Confirm the deployed contract; administrator
+> membership alone is not proof that either operation will work.
+
+## Attach a filesystem
 
 > [!WARNING]
 > Ephemeral synthesis avoids writing back synthesised security descriptors;
@@ -46,107 +64,79 @@ Use a verified [stable source name](~peios/disks-and-filesystems/stable-device-n
 > stays read-only](~peios/disks-and-filesystems/installing-to-disk#how-the-disk-scan-stays-read-only)
 > explains its additional safeguards; a policy choice alone is not that procedure.
 
-`policy=` works only on a new filesystem mount. Bind, move, remount,
-propagation and list mode reject it; `mount -o remount` is not a policy-change
-interface. The policy is set on the detached filesystem before publication. If
-that step fails, no mount with the unintended policy is attached.
+For a new mount, the command shape is:
 
-After success, list mounts again and confirm the source, target and filesystem.
-Use a privileged policy reader to confirm the class and template; the ordinary
-mount listing is not a template dump. See the full
-[`mount`](~peios/mount-policies/mount) and
-[`umount`](~peios/mount-policies/umount) references for flags and status codes.
+```
+mount [-t TYPE] [-o OPTIONS] SOURCE TARGET
+```
 
-## kacs_set_mount_policy
+Choose `-o policy=deny-missing`, `-o policy=synth-ephemeral`, or
+`-o policy=synth-persist` using [Policy
+classes](~peios/mount-policies/policy-classes). Use the verified stable source
+name and the intended target mount point. Use persistent synthesis only when
+writing SDs is intended; select read-only separately if file-data writes must
+be prevented.
 
-This is the administrative interface for changing an existing superblock's
-policy. The target fd can refer to an object anywhere on that superblock.
-The update replaces the class and template atomically and returns a new
-generation; it does not walk the filesystem.
+`--synth-sddl SDDL` supplies a well-formed template with an owner, and is valid
+only with a `synth-*` policy. Review the [synthesis chain and
+fallback](~peios/mount-policies/policy-classes#the-synthesis-chain) before
+exposing the volume: parent inheritance takes precedence, and omitting a
+template does not imply private access.
 
-The [kernel administration contract](~peios/advanced-peios/peios-kernel/kacs/facs/descriptor-storage#administration)
-explains the operation. The original argument table, validation sequence and
-return values are retained in [Mount-policy syscall
-notes](~peios/advanced-peios/peios-kernel/kacs/facs/mount-policy-syscalls#kacs-set-mount-policy).
+If setting the attach-time policy fails, no mount with the unintended policy
+is attached. The [`mount` reference](~peios/mount-policies/mount#kacs-mount-policy)
+describes that guarantee and the full option contract.
 
-### Privilege requirement
+After success, [inspect the live mount and policy](#inspect-live-mounts-and-policy)
+again. Confirm the source, target, filesystem, class and template.
 
-> [!WARNING]
-> Published descriptions disagree about the privilege gate. The command and
-> SDK pages say `SeTcbPrivilege`; the kernel contract and policy-change event
-> reference permit enabled `SeManageVolumePrivilege` or `SeTcbPrivilege`.
-> Confirm the contract for the deployed version before planning a change.
-> Do not interpret administrator membership alone as proof the call will work.
+## Before changing an already-mounted policy
 
-The older TCB-only description routes ordinary administrators through a
-privileged management tool, with peinit and other TCB components applying boot
-policy. Disk Manager currently cannot make changes at all; see
-[Disk Manager](~peios/disks-and-filesystems/disk-manager).
+`mount` sets policy only for a new filesystem mount. Bind, move, remount,
+propagation and list mode reject `policy=`; `mount -o remount` is not a
+policy-change interface. Disk Manager cannot commit changes because its
+privileged disk service is missing, including changes offered by its forms.
 
-### The template SD
+The kernel exposes a privileged interface for an existing filesystem instance
+(the superblock), but these operator tools do not provide a ready-to-use
+command or working GUI flow for changing its policy. Confirm a supported
+privileged integration for the deployed system before proceeding, including
+its [policy access requirements](#check-policy-access).
 
-Choose a template deliberately: it supplies a descriptor when parent inheritance
-does not yield one, commonly at the filesystem root. It is a complete
-self-relative SD containing owner, primary group, DACL and optional SACL.
-Malformed templates are rejected without changing the current policy.
+For integration authors, the [kernel administration
+contract](~peios/advanced-peios/peios-kernel/kacs/facs/descriptor-storage#administration),
+[SDK wrappers](~peios/developing-for-peios/sdk-reference/sdk-files/mount-policy)
+and [syscall notes](~peios/advanced-peios/peios-kernel/kacs/facs/mount-policy-syscalls)
+cover arguments, template validation, buffer handling, errors and generation
+semantics. The references retain their unresolved contract differences.
+A rejected policy change leaves the current class and template unchanged.
 
-The kernel contract limits it to 65,535 bytes and accepts it only for synthesis;
-setting deny-missing clears the template and rejects a non-empty one. Earlier
-syscall notes describe a 64 KiB cap and an optional template more generally.
-That discrepancy remains unverified. With no usable parent or template,
-synthesis uses the [fallback](~peios/mount-policies/policy-classes#the-synthesis-chain).
+A second mount of the same device does not establish an independent policy
+boundary. Read the [`mount` superblock-reuse
+restrictions](~peios/mount-policies/mount#other-flags) before relying on a
+separate instance; detaching and reattaching is not a generic policy-change
+procedure.
 
-## kacs_get_mount_policy
+### What a policy change affects
 
-A privileged reader uses this interface to retrieve the current class,
-generation and, when requested, template. Read it before and after a change;
-checking the class alone will miss an unintended template.
+- All bind paths sharing the filesystem instance share the new policy.
+  Independent superblocks are unaffected, even when reached beneath this mount.
+- Stored descriptors remain unchanged. Already-open handles retain their
+  granted rights; future access checks use the new policy.
+- No file tree is rewritten or provisioned. Changing ephemeral to persistent
+  does not save every cached SD immediately; later missing-descriptor accesses
+  derive under the new policy and schedule best-effort write-back.
+- Deny-missing can leave files without stored SDs inaccessible. Corrupt
+  descriptors remain denied under every managed class; synthesis does not
+  repair them.
 
-The privilege discrepancy above applies to reads too. For fd/argument details,
-see [the retained syscall
-notes](~peios/advanced-peios/peios-kernel/kacs/facs/mount-policy-syscalls#kacs-get-mount-policy).
-The [SDK wrapper](~peios/developing-for-peios/sdk-reference/sdk-files/mount-policy)
-has its own documented buffer convention; do not substitute raw-syscall error
-handling for that wrapper.
-
-## The generation counter
-
-Every successful policy or template replacement increments a per-superblock
-counter. Cached policy-derived state is checked against it and re-derived on
-next access if stale. Applying a policy therefore does not require an immediate
-scan of every inode. The [kernel reference](~peios/advanced-peios/peios-kernel/kacs/facs/descriptor-storage#administration)
-covers the cache mechanism.
-
-### What the generation counter affects
-
-Missing-SD and ephemeral-synthesis cache entries, template-derived state, and
-pending persistent-synthesis entries are invalidated lazily. Stored SDs and
-already-open fds' granted masks are unchanged. Uncached inodes simply use the
-current policy on their next access.
-
-### Reading the counter
-
-Compare the value from `kacs_get_mount_policy` with your earlier read to detect
-a change. Initial values are implementation-defined, and values from different
-superblocks are unrelated. The counter identifies changes, not a wall-clock
-change time.
-
-## What happens at a policy change
-
-The class and template are replaced, the generation increments, and future
-accesses discard stale policy-derived state. Files with stored SDs keep them;
-open handles retain their masks. No file tree is rewritten or reorganised.
-
-## What policy changes do not do
-
-- Switching ephemeral to persistent does not save every cached SD immediately.
-  A later access re-synthesises a missing descriptor under the new policy and
-  schedules write-back.
-- Switching to deny-missing does not provision files you have not visited.
-  Any remaining missing SD can cause denial.
-- A change does not close handles or revoke their cached rights.
-- Other superblocks are unaffected, even when reached beneath this mount.
-  Bind paths sharing this superblock are affected.
+Before hardening an adopted filesystem, check [class
+transitions](~peios/mount-policies/policy-classes#class-transitions) and
+[validate descriptor
+preservation](~peios/mount-policies/sd-storage-by-filesystem#validate-descriptor-preservation),
+including rarely accessed files. Persistent synthesis is incremental adoption,
+not a whole-tree guarantee; mounted `sd` output alone does not prove durable
+storage.
 
 ## Mount non-root storage at startup
 
@@ -174,34 +164,27 @@ After the service runs, inspect its [status and
 logs](~peios/services-and-jobs/defining-a-service#change-and-verify). A successful
 Oneshot reports successful command completion and can then return to
 **Inactive**; its status alone does not establish the current mount or policy.
-Separately [inspect the live mount](#inspect-and-attach-a-filesystem), checking
-source, target and filesystem, and [read the policy](#kacs-get-mount-policy) to
+Separately [inspect the live mount](#inspect-live-mounts-and-policy), checking
+source, target and filesystem, and [read the policy](#inspect-live-mounts-and-policy) to
 confirm both class and template.
 
-## Use patterns
+## Check unexpected results
 
-| Task | Apply and verify |
-|---|---|
-| Boot-time policy | For non-root storage, follow the [startup service handoff](#mount-non-root-storage-at-startup), then verify the live mount, class and template separately. |
-| Adopt a non-Peios filesystem | Use persistent synthesis only when you intend to write SDs. Check stored descriptors, including rarely accessed files, before changing to deny-missing. |
-| Attach removable media | Use ephemeral synthesis to avoid SD write-back. Select read-only separately if file-data writes must also be prevented, and heed the [inspection warning](#inspect-and-attach-a-filesystem) about other disk writes. |
-| Harden an existing deployment | Review templates, move from ephemeral to persistent if adoption is intended, then validate preservation before deny-missing. Each transition is per superblock; it does not convert the tree in one pass. |
+- **Attachment failed:** read the command's diagnostic and [`mount` exit
+  status](~peios/mount-policies/mount#exit-status). Check the source, options and
+  reported permission or filesystem failure. A failed attach-time policy step
+  does not publish a mount with an unintended policy.
+- **Policy details are unavailable:** check [policy
+  access](#check-policy-access) and Disk Manager's visibility limits. Do not
+  treat an unreadable class or template as successful verification.
+- **A file is still denied:** distinguish a [missing descriptor from a corrupt
+  one](~peios/mount-policies/policy-classes#corrupt-sd-handling). Deny-missing
+  rejects missing SDs, and switching to synthesis does not repair corrupt SDs.
+- **Old access still works through an open handle:** existing handles retain
+  their granted rights. Check future access using a new handle.
 
-## Errors
-
-| Symptom | What to check |
-|---|---|
-| `-EBADF` from a policy call | The fd must name an object on the intended superblock. |
-| `-EPERM` | Check the enabled privilege and deployed-version contract; see the discrepancy above. |
-| `-EINVAL` on set | Unknown or `unmanaged` class, reserved fields, malformed/oversized template, or incompatible template input. A rejected change leaves current state unchanged. |
-| `-ERANGE` on raw get | The original syscall notes say the required template size is returned for a too-small buffer. The SDK wrapper instead documents success with a length and null template pointer; follow the interface actually used. |
-| Denial after a successful policy change | Check whether the SD is missing or corrupt. Corrupt SDs remain denied under synthesis; policy changes do not repair them. |
-| Old access still works through an open fd | Existing handles retain their granted masks. Test future access with a new handle. |
-
-Do not use `unmanaged` as a workaround: the public ABI rejects it. StrataFS's
-fixed policy also cannot be changed. Read the full error tables in the
-[syscall notes](~peios/advanced-peios/peios-kernel/kacs/facs/mount-policy-syscalls#errors)
-and the [mount command](~peios/mount-policies/mount#exit-status).
+`unmanaged` is reserved for the kernel and cannot be set administratively.
+StrataFS's policy is fixed; neither is a workaround for an access failure.
 
 ## See also
 
@@ -212,3 +195,5 @@ and the [mount command](~peios/mount-policies/mount#exit-status).
 - [Privileges](~peios/privileges/overview): understand the privilege gate.
 - [File Descriptor Storage](~peios/advanced-peios/peios-kernel/kacs/facs/descriptor-storage):
   kernel policy, caching, write-back and repair contract.
+- [`mount`](~peios/mount-policies/mount): attachment options and status codes.
+- [`umount`](~peios/mount-policies/umount): detachment options and status codes.
