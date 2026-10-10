@@ -10,7 +10,11 @@ related:
 
 The clock always runs in UTC. The **time zone** is how the time is shown:
 the offset from UTC, and when summer time starts and ends, for one place.
-There is one time zone for the whole machine.
+There is one time zone for the whole machine. Before changing it, inspect
+`clock status` and `clock sources`: a wrong zone changes the display, while
+an unsynchronised clock needs a source or manual-time correction. Verify
+the effective zone in status rather than assuming a saved choice took
+effect.
 
 ## In System Settings
 
@@ -26,7 +30,10 @@ bottom of the window says why.
   next minute. **UTC** takes it away.
 - **Set Time Automatically** is on until you turn it off. Then a date and
   a time open under it, in the zone chosen, with **Set Clock**. Turning the
-  switch on again goes back to the time servers.
+  switch on again goes back to the time servers. **It starts them afresh
+  and can jump the clock by any size when sources agree.** Plan for the
+  effect on timers, file timestamps and log ordering before switching it
+  on.
 - **Time Servers** are where the time comes from: **Change…** opens the
   list under its row, and **Allow Unauthenticated Servers**, **Use Network
   Time Servers** and the minimum and maximum poll intervals apply as they
@@ -35,9 +42,17 @@ bottom of the window says why.
   server: whether it is in use, a candidate, or rejected, whether it is
   authenticated (NTS), its offset, and when it was last heard.
 
-Changing any of it needs write access to `Machine\System\Time`, which as
-shipped only Administrators have. Anyone else sees all of it, and the
-section says once, at the top, why they can't change it.
+Changing the settings needs write access to `Machine\System\Time`, which
+as shipped only Administrators have. Anyone else sees all of it, and the
+section says once, at the top, why they can't change it. Asking timed to
+set the clock or reload separately needs its control right, granted by
+default to SYSTEM and Administrators. The [control
+descriptor](~peios/time/the-clock-command#when-reload-is-refused) and the
+registry key's write permissions are separate checks.
+
+After a change, check the zone and synchronisation shown at the top, and
+**Server Status** when using automatic time. A saved setting is not proof
+that a source has been accepted or that the clock has synchronised.
 
 ## In a terminal
 
@@ -62,8 +77,11 @@ The names are the files under `/usr/share/zoneinfo`, from the tzdata
 package. `zone1970.tab` there lists the ones worth choosing between, one
 per region whose clocks have agreed since 1970.
 
-To set the clock yourself, turn off setting it automatically, then ask
-timed:
+To set the clock yourself, first check the effective zone with `clock
+status`. You need registry write access to turn automatic time off and
+timed's control right to set the clock. A manual set is a jump: plan for
+its effect on timers, file timestamps and log ordering before proceeding.
+Then turn off setting it automatically and ask timed:
 
 ```
 $ reg set Machine/System/Time Automatic dword:0
@@ -72,9 +90,17 @@ the clock is set
 ```
 
 `clock set` takes a local time, in the machine's zone. timed refuses while
-`Automatic` is 1, since its next poll would put the clock back. Setting
-`Automatic` to 1 again starts the time servers afresh, and the first to
-agree set the clock, however far off it is.
+`Automatic` is 1, since its next poll would put the clock back. Inspect
+`clock status` after the set: check the effective zone and the
+`Automatic is 0: the clock is set by hand` indication. Manual time is not
+network synchronisation.
+
+Setting `Automatic` to 1 again starts the time servers afresh. **Once
+usable sources agree, the initial correction can be of any size.** Plan
+for that clock jump before re-enabling automatic time. Afterwards, run
+`clock status` and `clock sources` and check the selected sources,
+authentication, state, accuracy and fresh updates. Re-enabling the setting
+does not itself prove synchronisation.
 
 ## Why not just set the clock?
 

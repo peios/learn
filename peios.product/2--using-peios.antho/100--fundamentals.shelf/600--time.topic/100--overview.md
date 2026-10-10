@@ -1,7 +1,7 @@
 ---
 title: Keeping the time
 type: concept
-description: How a Peios machine knows what time it is — timed, authenticated network sources, and why the default is three independent operators rather than one.
+description: Inspect clock status and time sources, choose the right correction, and understand how timed keeps the machine clock.
 related:
   - peios/time/configuring-sources
   - peios/time/time-zone-and-setting-the-clock
@@ -9,15 +9,50 @@ related:
   - peios/trust/overview
 ---
 
-The machine's clock is kept by **timed**, a service that runs from boot.
+Start by asking **timed**, the service that keeps the machine's clock,
+what it is doing:
+
+```
+$ clock status
+$ clock sources
+```
+
+These commands inspect the clock; they do not change it. In `clock status`,
+read **state**, **time zone**, **following**, **accuracy** and the age of the
+last update. In `clock sources`, look for a chosen source, contributing
+candidates, authentication and any failure notes. [The clock command
+reference](~peios/time/the-clock-command) explains each field and the
+command's exit statuses.
+
+Choose the next step from what you find:
+
+- **The displayed time is in the wrong zone:** check the effective **time
+  zone** before changing the machine clock. The clock runs in UTC; a zone
+  changes how programs show it. Follow [the time-zone
+  procedure](~peios/time/time-zone-and-setting-the-clock).
+- **The machine is unsynchronised or sources are failing:** inspect the
+  configured policy and each source's state in [configuring time
+  sources](~peios/time/configuring-sources). If status says
+  `Automatic is 0: the clock is set by hand`, automatic time is disabled.
+- **The state is `settling` or `spike`:** timed is still converging or
+  checking a large change. Read the [status
+  meanings](~peios/time/the-clock-command#status) before intervening.
+- **There is no suitable time server:** use the [manual-time
+  procedure](~peios/time/time-zone-and-setting-the-clock#in-a-terminal).
+  Check the zone and the consequences of a clock jump first.
+
+After a change, run both inspection commands again. A saved setting or a
+successful reload does not by itself establish synchronisation. Check the
+effective zone, source list, authentication, state, accuracy and fresh
+updates rather than relying only on the displayed wall time.
 
 Setting the clock needs `SeSystemtimePrivilege`. timed's service identity
-holds it, and so do Administrators. timed keeps the clock from network
-time servers, and treats any change it didn't make as an error to correct:
-a clock set behind its back is put back at the next poll. To set the clock
-yourself, turn off setting it automatically and ask timed to set it; see
-[the time zone, and setting the clock by
-hand](~peios/time/time-zone-and-setting-the-clock).
+holds it, and so do Administrators. timed runs from boot and keeps the
+clock from network time servers. Changing it behind timed's back can lead
+to a correction or a refusal of an excessive offset; see [why not just set
+the clock](~peios/time/time-zone-and-setting-the-clock#why-not-just-set-the-clock).
+Registry changes and timed control requests have [separate permission
+checks](~peios/time/the-clock-command#when-reload-is-refused).
 
 ## Why this is worth caring about
 
@@ -35,21 +70,23 @@ depend on, and an attacker who can move it has more than a wrong clock.
 
 ## Sources are not trusted individually
 
-timed polls several servers and does **not** believe any of them. Each one
-reports not a time but an *interval* it promises the true time lies
-within, and timed looks for the largest set of intervals that overlap. A
-server outside that overlap is a **falseticker** and is discarded, however
-confident it sounded.
+timed compares several servers. Each one reports not just a time but an
+*interval* in which it estimates the true time lies, and timed looks for
+the largest set of intervals that overlap. A server outside that overlap
+is a **falseticker** and is discarded, however confident it sounded.
 
-The consequence is worth stating, because it is what makes the scheme
-work: a server that claims great accuracy and is wrong excludes *itself*.
-Its interval is narrow, so it cannot reach the agreement. Overclaiming is
-the one lie the arrangement punishes automatically.
+This can reject a wrong source whose narrow interval disagrees with the
+others. It is not a guarantee that the agreeing sources are correct:
+shared upstream clocks, operators or network failures can give several
+sources the same error. Authentication identifies a source; it does not
+prove that source's clock is right.
 
-With three independent sources this survives one liar. With two that
-disagree there is no way to tell which is right, and timed reports itself
-unsynchronised rather than guessing — which is why the shipped default is
-three operators and why you should configure at least three of your own.
+Configure at least three sources with independent failure modes. With one,
+there is nothing to compare it against. With two that disagree, timed
+reports itself unsynchronised rather than choosing between them. Three
+can let an agreeing, correct majority exclude one wrong source, provided
+those assumptions hold. Counting three names alone does not establish
+that independence.
 
 ## Every source is authenticated
 
@@ -63,14 +100,19 @@ store](~peios/trust/overview), over trustd's socket — so a certificate
 authority you distrust is distrusted here too, immediately, without timed
 needing to be restarted.
 
-On a network that blocks port 4460 the honest outcome is a machine that
-says it is unsynchronised. `AllowUnauthenticated` exists for networks
+When timed needs a new NTS handshake, a network that blocks port 4460
+prevents that exchange. Cached cookies can avoid a fresh handshake, as
+explained below; blocking the port does not by itself mean existing
+authenticated time is lost. If no usable sources remain, the machine
+reports itself unsynchronised. `AllowUnauthenticated` exists for networks
 where that is not acceptable; see [configuring
 sources](~peios/time/configuring-sources) for what you give up.
 
 ## The default sources
 
-A machine that has been told nothing uses four names in our own zone:
+The documented shipped fallback set uses four names in our own zone,
+when no earlier [source selection](~peios/time/configuring-sources#precedence-is-first-match-not-merge)
+supplies a list:
 
 ```
 0.time.peios.org    →  time.cloudflare.com
@@ -79,11 +121,13 @@ A machine that has been told nothing uses four names in our own zone:
 3.time.peios.org    →  ptbtime2.ptb.de
 ```
 
-Three independent operators in three jurisdictions — a commercial network,
-a Swedish national infrastructure operator, and Germany's national
-metrology institute. Independence is what makes the votes worth counting:
-three servers run by one operator would agree with each other about
-anything.
+The list is intended to span three operators in three jurisdictions: a
+commercial network, a Swedish national infrastructure operator, and
+Germany's national metrology institute. Two of the names are from the
+same operator; four names are not four independent sources. Operator
+variety reduces a shared failure risk, but is not proof of independent
+upstream clocks or correct time. Check `clock sources` for what the
+machine actually selected and can reach.
 
 The indirection through `time.peios.org` is deliberate. If an operator
 withdraws its service, that is a DNS change rather than a new image for
@@ -94,15 +138,20 @@ every machine.
 Both are worth knowing about, because both look like bugs when you meet
 them.
 
-**NTS needs TLS; TLS needs a clock.** A machine whose battery has died
-boots reading 1970, and every certificate it holds is "not yet valid", so
-it cannot complete the handshake that would tell it the real time. timed
-breaks this by refusing to let the clock sit below **its own build
-timestamp** — every certificate in the shipped trust store was valid at
-that moment, by construction. The clock is wrong, but it is wrong in a way
-that TLS tolerates, and the first poll fixes it. `clock status` reports
-the floor so that "my clock is being clamped" is visible rather than
-mysterious.
+**NTS needs TLS; TLS needs a clock.** A machine with a dead RTC battery
+may boot reading 1970. Otherwise valid certificates can then appear
+"not yet valid", blocking the handshake that would obtain authenticated
+time. timed sets a lower bound at **its own build timestamp**, reported as `floor`
+in `clock status`. The [clock-step event
+reference](~peios/events/timed/timed-clock-stepped) calls this `boot-floor`
+and explicitly says the real time is not yet known.
+
+The floor is a bootstrap aid, not current time or a guarantee that TLS
+will succeed. A remote server's certificate still has to be valid at the
+clock's reading and trusted by the machine. Reachability, authentication
+and source agreement still matter, so do not assume the first poll will
+fix the clock. If it remains on the floor, inspect the source failure
+notes rather than treating the build date as a verified time.
 
 **A fresh handshake needs a clock too.** So the cookies from the last one
 are kept under `/var/state/timed`, and a reboot usually needs no handshake
@@ -119,10 +168,10 @@ of software quietly assumes the clock only goes forwards, and stepping it
 backwards breaks timers, file timestamps and anything measuring a
 duration.
 
-The clock is stepped in exactly two situations:
+The documented automatic discipline permits steps in these situations:
 
-- **at startup**, once, however large the correction — this is what lets a
-  machine with a dead battery start correctly;
+- **at startup**, once, however large the correction, when usable sources
+  agree;
 - **after fifteen minutes of consistent disagreement**, when the offset is
   too large to slew away. Fifteen minutes because a congested network or a
   server having a moment looks exactly like a genuine step until time
@@ -132,6 +181,11 @@ The clock is stepped in exactly two situations:
 An offset larger than a thousand seconds appearing *after* the machine was
 synchronised is refused outright and logged loudly. A machine that far out
 has a problem a time client should not paper over.
+
+Manual sets and the boot floor are also clock steps. Turning automatic
+time back on starts the sources afresh and can cause an initial
+correction of any size. Plan for that jump before re-enabling it; source
+changes and reloads are not a promise of uninterrupted wall-clock time.
 
 Every step is recorded in the event log as a `timed.clock.stepped` event,
 with the clock's reading just before and just after it, so a jump in the
@@ -149,12 +203,15 @@ switch it off.
 
 The clock is a crystal running at the wrong rate — consistently wrong, by
 some tens of parts per million. timed learns that rate and writes it to
-`/var/state/timed/drift`, so the next boot starts already correcting for
-it and is within milliseconds after one poll rather than after twenty.
+`/var/state/timed/drift`, so the next boot starts with the previously
+learned rate rather than learning it entirely from scratch. This can
+shorten settling time; it does not guarantee a particular accuracy after
+one poll.
 
-It is also what holds the clock right when the network goes away: a
-machine that knows its crystal is 12 ppm fast stays within a second for
-about a day on its own.
+The rate estimate also helps when the network goes away. Holdover still
+depends on how stable the crystal remains and how accurate that estimate
+was. Use the reported state and accuracy rather than assuming a fixed
+period of correct time without sources.
 
 ## What timed does not do
 

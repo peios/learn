@@ -10,9 +10,10 @@ related:
 
 `clock` reads over timed's socket and prints. It **writes no policy** —
 time policy is registry configuration, and `reg` is how a registry value is
-set, so there is no second permission model to keep in step with the
-first. The two verbs that act are `reload`, and `set`, which asks timed to
-set the clock while it isn't being set automatically.
+set. Registry writes and timed's control requests have separate access
+checks. The two verbs that act are `reload`, and `set`, which asks timed
+to set the clock while it isn't being set automatically; see [when reload
+is refused](#when-reload-is-refused).
 
 It is called `clock` and not `time` because `time` is a shell keyword:
 `time status` would run `status` and report how long it took.
@@ -61,45 +62,28 @@ one before it, so this is the one in force.
 | `spike` | A large offset has appeared and is being timed to see whether it is real. The clock is deliberately untouched meanwhile. |
 | `unsynchronised` | Nothing is believed and the clock is free-running. With `Automatic is 0: the clock is set by hand` after it, nothing is being asked: the clock is set by hand. |
 
-## Setting the clock
-
-```
-$ clock set 2026-10-04 14:05
-the clock is set
-$ clock set 2026-10-04T14:05:30
-$ clock set @1791122700
-```
-
-The time is local, in the machine's time zone, to the minute or the
-second, or `@` and a number of seconds since 1970 in UTC. timed sets the
-clock only while `Machine\System\Time Automatic` is 0; otherwise it keeps
-the clock from its sources, the next poll would put it back, and it
-refuses:
-
-```
-$ clock set 2026-10-04 14:05
-clock: the clock is kept from its sources; set Automatic to 0 to set it by hand
-```
-
-Like `reload`, it needs the control right.
-
-**accuracy** is the honest bound: how wrong this machine's time might be,
-with every uncertainty between here and the reference clock added up. It
-is the number a Kerberos deployment cares about, and the number to check
-before blaming a clock skew on something else.
+**accuracy** is timed's estimate of how wrong this machine's time might
+be, combining the reported uncertainties between here and the reference
+clock. Check it when investigating Kerberos clock skew. It depends on the
+source measurements and is not independent proof that the time is right.
 
 **frequency** is what the crystal is doing, in parts per million, and it is
 persistent — it is written to `/var/state/timed/drift` and read back at the
 next boot. Tens of ppm is an ordinary machine. Approaching ±500 means the
 hardware is at the edge of what the discipline can correct.
 
-**stepped** is non-zero after a boot on a machine whose clock was wrong,
-which is normal. It growing *later* is not, and means something is
-repeatedly moving the clock.
+**stepped** can be non-zero after a boot on a machine whose clock was
+wrong. Later growth means there have been further steps; check whether
+these followed a manual set or re-enabling automatic time. Unexpected or
+repeated growth warrants investigation. The [clock-step event
+reference](~peios/events/timed/timed-clock-stepped) explains how to tell
+manual, automatic and boot-floor steps apart.
 
-**floor** is the build timestamp. If the machine's clock reads exactly
-this, nothing has told it the real time yet and it is sitting on the floor
-so that TLS can work — see [the overview](~peios/time/overview).
+**floor** is the build timestamp, the lower bound timed will use. If the
+clock remains there after boot, it may not yet have acquired real time.
+The floor does not establish synchronisation or guarantee a successful
+TLS handshake; inspect the source notes and see [the bootstrap
+explanation](~peios/time/overview).
 
 ## Sources
 
@@ -128,7 +112,7 @@ source's replies.
 
 **reach** is the last eight polls as an octal bitmask, newest in the low
 bit — the classic NTP display. `377` is eight for eight; `376` means the
-poll before last was missed; `0` means nothing for eight polls, at which
+most recent poll was missed; `0` means nothing for eight polls, at which
 point the source's stored measurements are discarded rather than left to
 vote with stale numbers.
 
@@ -136,6 +120,32 @@ vote with stale numbers.
 interval by much is the first sign of trouble.
 
 A source that is not contributing prints a note underneath saying why.
+
+## Setting the clock
+
+```
+$ clock set 2026-10-04 14:05
+the clock is set
+$ clock set 2026-10-04T14:05:30
+$ clock set @1791122700
+```
+
+The time is local, in the machine's time zone, to the minute or the
+second, or `@` and a number of seconds since 1970 in UTC. timed sets the
+clock only while `Machine\System\Time Automatic` is 0; otherwise it keeps
+the clock from its sources, the next poll would put it back, and it
+refuses:
+
+```
+$ clock set 2026-10-04 14:05
+clock: the clock is kept from its sources; set Automatic to 0 to set it by hand
+```
+
+Like `reload`, it needs the control right. Changing `Automatic` needs
+registry write access separately. A manual set jumps the clock and changes
+the basis of later timestamps. Check the zone and plan for that jump
+before setting it, then inspect `clock status`; see [the complete
+procedure](~peios/time/time-zone-and-setting-the-clock#in-a-terminal).
 
 ## Exit statuses
 
@@ -162,4 +172,7 @@ secret, and a program deciding whether the clock is trustworthy enough to
 validate a certificate should not need a privilege to find out.
 
 The descriptor is `Machine\System\Time ControlSecurity`; by default SYSTEM
-and Administrators may control, and everybody may query.
+and Administrators may control, and everybody may query. This is distinct
+from write access to the registry key: a successful policy write does not
+prove that the caller may reload or set the clock, and a refused reload
+does not undo that write.
