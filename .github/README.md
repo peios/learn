@@ -27,21 +27,19 @@ writes it to `dist/` instead. Both need a `trail` binary — `cargo build --rele
 in [peios/trail](https://github.com/peios/trail), or the prebuilt Linux binary
 from that repository's latest release.
 
-## Pull-request validation
+## Optional rendered-link checks
 
-`.github/workflows/validate-docs.yml` strictly builds the proposed merge and the
-exact base commit recorded in the pull-request event, using the same
-checksum-pinned Trail binary. It then checks rendered HTML navigation links.
-The proposed merge and base are separate, shallow checkouts; their outputs and
-the binary stay outside both site roots. This read-only workflow does not deploy.
+The optional rendered-link checker compares two separately built revisions.
+Build the candidate and an exact base commit with the same verified Trail binary,
+keeping both outputs and the binary outside the source checkouts. These checks
+run on demand; they are not an automatic pull-request workflow.
 
 The rendered-link check fails when a source-page/href pair is broken in the
-proposed merge but was not broken in the event base. It reports baseline,
+candidate but was not broken in the chosen base. It reports baseline,
 candidate, newly broken, inherited, and resolved-or-removed pair counts, along
 with duplicate occurrence counts. Existing generated print-view fragment defects
 remain visible without blocking unrelated documentation fixes. There is no saved
-allowlist: every PR compares fresh builds of its exact event base and proposed
-merge. Increasing occurrences of an already-broken pair does not create a new
+allowlist: compare fresh builds of the chosen exact base and candidate. Increasing occurrences of an already-broken pair does not create a new
 pair; the same broken href on another source page does.
 
 Run the standard-library tests with Python 3.9 or newer:
@@ -59,7 +57,7 @@ $ python3 -B .github/scripts/check_rendered_links.py /tmp/trail-base-site /tmp/t
 Build both revisions with the same verified Trail binary and `trail build
 --strict --out <output-directory>`. Use separate source checkouts and output
 directories outside the site roots. Do not compare a candidate against itself or
-against a moving branch if you want the same regression boundary as CI.
+against a moving branch if you want a reproducible regression boundary.
 
 The checker reads `a` and `area` hrefs from HTML, including generated print pages.
 It resolves relative and root-relative paths, directory `index.html` pages, and

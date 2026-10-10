@@ -57,7 +57,7 @@ if count != 1:
 path.write_text(root + marker + tables)
 PY
 
-# Same reviewed artifact as the read-only pull-request validation workflow.
+# Reviewed Trail artifact for this preview build.
 # The upstream latest tag is mutable: a replacement must fail until reviewed.
 trail_sha256=a84799039de3088177fddeee213f27a072f71c84070a9ccd957263abb7a7c5a1
 if [[ -n ${TRAIL_BIN:-} ]]; then
