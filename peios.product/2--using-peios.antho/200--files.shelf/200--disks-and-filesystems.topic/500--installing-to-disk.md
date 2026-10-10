@@ -1,8 +1,10 @@
 ---
-title: Installing to disk
-type: concept
-description: How a Peios system is copied from a live medium onto a disk, and how the installed system boots itself afterwards.
+title: Install, upgrade, or repair a disk
+type: how-to
+description: Choose an installer operation, verify the target disk, follow progress, and recover from failures, with the older peios-install script documented separately.
 related:
+  - peios/installing-peios/on-a-pc
+  - peios/disks-and-filesystems/first-boot-setup
   - peios/disks-and-filesystems/overview
   - peios/disks-and-filesystems/formatting-with-security-descriptors
   - peios/disks-and-filesystems/mke2fs
@@ -11,201 +13,275 @@ related:
   - peios/mount-policies/policy-classes
 ---
 
-A live Peios runs from a read-only squashfs with a tmpfs stacked on top, so every write it accepts is discarded at reboot. Installing to disk replaces that arrangement with a writable filesystem that survives — and, less obviously, replaces a security policy chosen at *mount* time with one the filesystem carries itself.
+Boot the Peios install medium to install a fresh system, upgrade a disk to the medium's release, or repair an existing installation. For writing a USB stick and configuring PC firmware, start with [Install Peios on a PC](~peios/installing-peios/on-a-pc).
 
-Installation is five steps and one retirement. Nothing about it is magic, and all of it can be done by hand — the installer on the medium does exactly these steps, and so does the `peios-install` script it succeeds.
+A live system discards its writes at reboot. An installed system uses a writable filesystem on disk, so its changes persist.
+
+## Before you start
+
+- Back up the target disk before changing it, and identify it by model, size, and device name.
+- Keep the machine powered and the medium connected while a job runs.
+- Use a trusted network if you use the browser installer. On media that enable it, anyone who can reach the address can open the installer without signing in.
+- Choose the operation that matches your goal:
+
+| Goal | Operation | Effect |
+|---|---|---|
+| Replace everything on a disk with a new Peios system | Install | Erases the disk; first-boot setup creates the administrator account. |
+| Keep an installed system and move to the medium's newer release | **Upgrade an installation** | Updates eligible packages and boot files; does not run first-boot setup again. |
+| Restore boot files, check the root filesystem, or reseed its root descriptor | **Repair an existing system** | Runs the repair you select; it is not a reinstall. |
+
+> [!CAUTION]
+> Installation erases the **whole selected disk**, including other operating systems, recovery partitions, encrypted volumes, and files. A filesystem the installer cannot inspect may have no contents listed in the confirmation; that does not protect it from erasure. A failed install after partitioning has already erased the disk.
+
+The current installer is `installerd`, with console and browser surfaces. The older [`peios-install` script](#two-ways-to-invoke-it) is a separate path: it copies the running system and its accounts. Do not assume the two paths have the same account or certificate behavior.
 
 ## The installer
 
-Boot the medium and the installer is on the console: a form, driven from the keyboard, that asks three things — what to do, which disk, and whether you mean it — and then shows the work as it happens.
+### Select and verify the disk
 
-It is two programs. `installerd` runs as SYSTEM and does everything that touches a disk; `install-tui` draws the form and holds no privilege at all. They speak [MSIP](~peios/services-and-jobs/overview), which is why closing the form does not stop an installation (the daemon owns it, and another surface can attach and watch it finish) and why the same form can be driven from a script with `msip-drive`.
+1. Choose the operation on the first page.
+2. Select a disk using the **device, model, size, and bus** columns. The boot medium is listed and marked but cannot be selected; other removable disks are marked too. Floppy drives are not listed.
+3. Use **Rescan** if the hardware has changed. If disks are missing, read any unclaimed-controller warning beside the table. It identifies the controller kind, PCI vendor/device, and bus location. RAID or VMD mode is a common cause; check firmware settings rather than selecting another disk by guesswork.
+4. Read the confirmation page. For installation, it names the disk, warns that all of it will be erased, and lists recognised systems and other filesystems containing files, with labels and used space. **Back** returns to disk selection with your choice retained.
+5. Start only when the disk and operation are correct. In the browser, hold down the installation button rather than clicking it once.
 
-**Keys.** Tab and Shift+Tab move between fields; Up and Down walk a list, and step to the next field at its ends; Enter presses the highlighted action, or moves on from a field; Space toggles a checkbox. Esc asks before leaving. F1 lists all of this. Ctrl+L repaints the screen, for when something else has written on the console.
+The confirmation uses a fresh read of the disk. EFI system and Windows recovery partitions are not separately called out, and uninspectable filesystems are not claimed to be empty. A disk that has been removed, or a script request naming the boot medium, is rejected with a reason.
 
-Things that are greyed out can still be reached with Tab, and the footer says why they are greyed. A page opens with the cursor on the first thing that can be answered.
+Selecting and inspecting disks does not write to them. See [how the scan stays read-only](#how-the-disk-scan-stays-read-only) for the supported filesystems and safeguards.
 
-**The disk page** is a table — device, model, size, bus — rather than a list of names, because a disk is chosen on several facts at once. The medium you booted from is listed and marked, so you know where it went, and cannot be chosen. A removable disk is marked too. A floppy drive is not listed at all.
+### Follow progress and check the result
 
-Before it shows the page, `installerd` looks at what each disk holds: its partitions, how much of each filesystem is in use, and whether a system lives there — a Peios release, another Linux by the name it gives itself, or Windows. It sends that with each row, for a surface that draws more than a table to show beside the disks; the terminal form shows the table alone. Rescan looks again.
+The progress page identifies the target, lists phases, and shows every command and its output. It asks for no input. Leave the machine and medium alone until it finishes.
 
-**Looking changes nothing on any disk**, including the ones you have no intention of choosing. A read-only mount does not promise that — ext4 replays its journal on one — so no partition is mounted. Each is bound to a read-only loop device and *that* is mounted, which leaves a filesystem driver nothing it can write to, and ext3 and ext4 are told `noload` besides. The mount is `synth-ephemeral`, so a filesystem from another system, which carries no descriptors, is readable without any being written. FAT, exFAT, NTFS and ext2, ext3 and ext4 are read this way. Anything else — swap, an encrypted volume, a filesystem not in that list — is listed by its size and what the partition table calls it, and not opened. Nothing on a disk is trusted to say where to look: a symbolic link on it is never followed, since from the installer it would resolve against the medium.
+Copy progress measures data written, rather than directory count. The installer estimates the image's size first, for example `1.2 GiB to copy`, then checks filesystem usage several times a second. `/usr` is most of the copy. The estimate runs slightly low, so progress waits just short of complete until copying actually finishes.
 
-If the machine has a storage controller that no driver has claimed, the page says so with the table: what kind of controller, its PCI vendor and device, and where it is on the bus. That is the usual reason a machine's disks are missing from the list — they are behind a controller in a RAID or VMD mode — and the way out is in the firmware's settings, not here.
+**Closing the form does not cancel the job.** `installerd` owns the work. Another console or browser surface can attach to the same conversation and watch it. Both surfaces share choices, including the selected disk; coordinate with anyone else using them.
 
-**Whether you mean it.** Choosing a disk to install onto leads to a page that says which disk, that all of it will be erased, and what you would miss of what is on it: a system by the name it gives itself, and any other filesystem with files in it by its label and how much is in use. An EFI system partition or a Windows recovery partition is not named in its own right, and a filesystem the installer could not look into is not claimed to hold anything. The disk is read again for this page rather than remembered from the one before, and the same facts go with the sentence as structure, for a surface that draws the disk. Back returns to the disk page with the disk still chosen.
+A successful install ends with **Installation complete. Reboot to start Peios.** The finish page offers **Reboot now** and **Back to the start**. After completion, remove the USB medium before restarting so firmware boots the installed disk. If you land in the installer again, remove the medium and restart; do not reinstall.
 
-`installerd` goes on only with a disk it can see and that is not the medium. A disk pulled since the page was drawn, or the medium named by a script, is turned down on the disk page with the reason.
+Check that the installed disk reaches [first-boot setup](~peios/disks-and-filesystems/first-boot-setup), then complete it and sign in. The current installer copies the shipped image, so live-session accounts are not carried over. Editions without first-boot setup use their own account-provisioning seeds instead.
 
-**While it works.** The page a job runs on asks nothing. It says what the job is being done to and that the machine and the medium are to be left alone until it finishes, lists the job's phases with how far along each is, and under them shows what the job says of itself: every command it runs, and what that command prints. For an install the disk goes with the sentence as structure again, exactly as the confirmation had it, because a surface can join while the job is under way and this page is then the first it sees.
+### If a job fails
 
-How far along the copy is means how much of the system has been written. `installerd` works out what the image will come to on the disk before it copies anything and says so (`1.2 GiB to copy`), then asks the target filesystem several times a second how much it holds. The image is copied one top-level directory at a time and `/usr` is nearly all of it, so a figure that counted directories would stand still through most of the copy. The total is an estimate and runs a little under, so the phase waits just short of finished until the copy itself is over.
+- Read the failed phase and its command output. A failed job ends the conversation; it does not resume from that point. The next conversation begins at the first page.
+- Do not treat failure as a rollback. Partitioning and formatting may already have changed the disk.
+- If copying finished but boot setup failed, [Repair boot files](#repairing-an-installed-system) can complete that part of a half-finished install.
+- If **Reboot now** fails, the finish page stays open and reports why. The daemon asks peinit to restart the machine, as `reboot` does; the surface itself has no restart privilege.
 
-**When it is done.** A job that fails ends the conversation, with why: the step that failed and how. Nothing is picked up where it stopped. After a failure the next conversation starts from the first page, and an install that stopped after partitioning has already erased the disk.
+### Console controls
 
-A job that finishes goes on to one more page, which says what it came to (for an install, *Installation complete. Reboot to start Peios.*) and offers **Reboot now** and **Back to the start**. Every job here changes what the machine starts from, so each offers the restart. It is `installerd` that restarts the machine, by asking peinit as `reboot` does, because the form holds no privilege to. If peinit takes the request, the conversation ends saying the machine is restarting, and the machine goes down. If it does not, the page says why and stays. Back to the start goes back to the first page in the same conversation.
+| Key | Action |
+|---|---|
+| Tab / Shift+Tab | Move between fields, including disabled fields. The footer explains why a field is disabled. |
+| Up / Down | Move through a list; at either end, move to the next field. |
+| Enter | Press the highlighted action or advance from a field. |
+| Space | Toggle a checkbox. |
+| Esc | Ask before leaving. |
+| F1 | Show key help. |
+| Ctrl+L | Repaint the whole screen. |
 
-**The console.** The form is drawn to the size of the terminal, read once when it starts, and the kernel is kept quiet on the console while it is open; the [first-boot](~peios/disks-and-filesystems/first-boot-setup) page explains both. On a serial line the renderer assumes a modern terminal emulator — rounded corners, ticks, a spinner. On a real machine's console it detects the Linux VT and uses only what the kernel's font can draw, and sets the VT's sixteen colours to the same palette an emulator would have, so the two look alike. `--plain` forces the conservative set, for a serial terminal that really is one.
+A page focuses its first answerable field. The console form reads terminal size once at startup; first-boot setup uses the same renderer. See [console sizing and output](~peios/disks-and-filesystems/first-boot-setup#how-it-gets-the-console) if the form is small or its display is damaged.
 
-First-boot setup is the same renderer with a different daemon, so all of this holds there too.
+On Linux virtual terminals the renderer uses the kernel font's supported characters and sets the sixteen-colour palette. On a serial connection it assumes a modern emulator with rounded corners, ticks, and a spinner. `--plain` forces conservative characters for terminals that need them.
 
 ### In a browser
 
-A medium can also be installed from a browser on another device, by opening the machine's address. This needs `installer-gxwi`, the graphical surface, from the `dev.peios.installer-gxwi` package, and a medium that makes it GXWI's overlay: everyone who opens the address is then sent to the installer instead of the sign-in page, with no logon. It draws the same conversation as the console form, so an installation can be started on one and watched on the other, and two people looking see the same disk chosen.
+Open `https://<machine-address>:7780` from another device, unless the image uses a different GXWI port. Browser installation requires `installer-gxwi` from `dev.peios.installer-gxwi` and a medium that enables it as GXWI's overlay. Such a medium opens the installer instead of a sign-in page.
 
-What makes it the overlay is a seed the package ships, `installer-gxwi-overlay`, which sets `OverlayUsername` to `peios` (the medium's account, which has no credential) and `OverlaySession` to `/usr/bin/installer-gxwi` in `Machine\Software\GXWI`. An edition lists it under [`live_autoapply`](~peios/peiso/editions-and-upgrades/release-toml), never `autoapply`: the medium applies it, and `installerd` deletes the live queue from the disk it installs, so the installed machine carries the program and opens on its sign-in page. Listed under `autoapply` instead, every installed machine's address would stay the installer, since GXWI never falls back to the sign-in page from an overlay it was asked for.
+The medium generates its own HTTPS certificate. Before trusting a browser warning, compare the browser's SHA-256 fingerprint with the one read at the machine's own console. The live medium's `peios` account needs no password:
 
-The address is `https://`, with a certificate the medium made for itself as it started, so the browser warns before the installer appears. Before going past the warning, check that the browser's SHA-256 fingerprint for it is the machine's: sign in at the machine's own console and run `cat /var/state/gxwi/certificate.sha256` (the medium's `peios` account needs no password). Every installation, from either surface, carries that key and certificate into the installed system, where GXWI keeps them, so the browser that installed the machine goes on trusting it and [first-boot setup](~peios/disks-and-filesystems/first-boot-setup) opens in the same tab without a second warning. `peios-install`, and a medium without GXWI, leave the installed system to make a key of its own when it first starts. See [the machine's certificate](~peios/signing-in-from-a-browser/the-certificate).
+```sh
+cat /var/state/gxwi/certificate.sha256
+```
 
-The button that begins an installation is held down rather than pressed. When the machine restarts, the page waits for it and goes where it lands: [first-boot setup](~peios/disks-and-filesystems/first-boot-setup), which is the same page with `oobe-gxwi` behind it, Peios, or the installer again if the machine started from the medium.
+Do not sign in or enter a password if the fingerprints differ. A page delivered through the connection you are checking is not an independent source for the fingerprint. See [the machine's certificate](~peios/signing-in-from-a-browser/the-certificate).
+
+An `installerd` installation, from either surface, carries the medium's GXWI key and certificate into the installed system. At the same address, the browser can retain its trust through first-boot setup. The older `peios-install` script, or a medium without GXWI, leaves the installed system to generate its own key when GXWI starts.
+
+After restarting, the browser page waits and follows the machine to setup, the desktop, or the installer if it booted from the medium again. Browser trust affects that waiting page: if the certificate was only bypassed at a warning rather than imported as trusted, the browser may show its own connection error instead. Reopen the address manually in that case.
+
+## Upgrading from the medium
+
+Use **Upgrade an installation** to move an existing disk to the release on the medium without a network or a fresh installation.
+
+1. Select the disk and compare the installed and medium releases on the confirmation page. Both show the edition and full package version.
+2. Check that **Upgrade** is enabled. It is enabled only for a newer version of the same edition, using peipkg's ordering including revision.
+3. Confirm, follow the phase output, and restart from the installed disk when the job completes.
+
+A disabled button explains the mismatch: already current, a newer installed release, another edition, or no recognised Peios installation. Backing out leaves the disk unchanged. To inspect the release without writing to the target, the installer copies its package database to tmpfs and asks peipkg there.
+
+The upgrade follows [`upgrade-peios`](~peios/peiso/editions-and-upgrades/upgrading-peios) on the mounted target:
+
+1. Upgrade the **edition and its dependency closure**, using the alternate-upgrade bypass for the medium's fixed, intentionally stale repository index.
+2. Stage the release's shared `autoapply` **seeds** with `upgrade-peios --seeds-only`. Install-only setup seeds are not repeated.
+3. Upgrade **other packages** for which the medium carries a newer revision, in every root including the initramfs. Edition dependencies are floors rather than pins.
+4. Regenerate the **boot files** from the upgraded disk, as boot repair does.
+
+The medium's repository is removed from the target whether the upgrade succeeds or fails. Operator customisations under `/lcl` are retained, with the generated boot command line under `/lcl/etc/boot/` rebuilt as part of boot setup.
+
+> [!IMPORTANT]
+> A rebuild without a version or revision increase is not an upgrade. Peipkg orders by version and then revision. If the edition package has the same version and revision as the installed one, the medium is already current even if other build contents changed. A build intended for upgrade must bump the edition and every changed package it wants upgraded.
+
+## Repairing an installed system
+
+Choose **Repair an existing system**, select the installed disk, and choose one operation. Repairs target that disk, never the boot medium.
+
+| Operation | What it does | Limit or next step |
+|---|---|---|
+| **Repair boot files** | Regenerates the command line under `lcl/etc/boot/`, initramfs image, and UKI on the ESP from the disk's kernel and initramfs tree. | It cannot repair a damaged kernel or initramfs tree; that requires reinstalling. |
+| **Check the filesystem** | Runs `e2fsck -pf` on the root: forced checking with automatic preen repairs. | Refuses if anything on the disk is mounted. Unfixed problems require a shell and manual `e2fsck`. |
+| **Reseed security descriptors** | Re-stamps the root directory's inheritable descriptor with the value used by the installer. | This is the root policy; it does not define a different policy for every subtree. |
+
+Boot repair uses the installed `disk-boot`, not a possibly older copy from the medium, and leaves the installed repository list alone. For a half-finished installation whose copy completed but boot setup failed, it detects the remaining `live-boot` package and finishes the installation's package swap.
+
+Filesystem checking reports whether the filesystem was clean, problems were fixed, or a reboot is required before reuse. Only problems it cannot fix automatically count as failure.
+
+Each repair ends at the finish page. Use **Back to the start** to perform another repair in the same boot, or **Reboot now** when finished.
 
 ## Two ways to invoke it
 
-```
+This section describes the older **`peios-install` script**, not a command-line interface to the current installer conversation. Use an appropriately authorised administrative session; mounting requires `SeManageVolumePrivilege`, and the script must be able to preserve the copied security metadata. See [privilege categories](~peios/privileges/categories).
+
+> [!CAUTION]
+> These commands format their targets. Device names below are examples, not recommendations. Check the actual disks and partitions with [`part list`](~peios/disks-and-filesystems/partitioning) before substituting your targets. The script copies live accounts and credentials; read the [account warning](#the-first-account-service-is-retired-the-account-is-not) before using the result.
+
+```sh
 peios-install --yes --whole-disk /dev/vda      # partition the disk, then install
-peios-install --yes /dev/vda1 /dev/vda2        # install onto partitions that exist
+peios-install --yes /dev/vda1 /dev/vda2        # format and install onto existing partitions
 ```
 
-The first form runs [`part`](~peios/disks-and-filesystems/partitioning) before anything else — a fresh GPT, a 512 MiB ESP, and a root filling the remainder — and then proceeds exactly as the second. **The whole disk is erased.**
+The whole-disk form runs [`part`](~peios/disks-and-filesystems/partitioning) to create a fresh GPT, a 512 MiB EFI system partition (ESP), and a root partition using the remainder. It then follows the two-partition form. **The whole disk is erased.**
 
-If the disk already carries a partition table `part` did not create, the install stops rather than overwriting it; `--force` is how you say you meant it. That refusal happens before the first `mkfs`, so nothing has changed when it does.
+A partition table not created by `part` is refused before formatting; `--force` explicitly overrides that protection. Do not use it merely to make an unexplained refusal disappear.
 
-The second form is for any layout other than the one above: partition however you like with `part`, then name the two partitions.
+For another partition layout, create it with `part`, then supply the ESP and root partitions to the second form. Both named partitions will be formatted. The installer does not offer separate `/home`, swap, or encryption setup.
 
-## What the installer does
+### What it refuses before it starts
 
-**1. Format the EFI system partition.** UEFI requires FAT, so this is `mkfs.vfat -F 32`. A FAT filesystem cannot hold a security descriptor and never will, so the ESP's access policy comes entirely from its mount — necessarily one of the synthesising classes.
+Before formatting the named partitions, the script rejects a target that is not a block device, the same partition supplied twice, or either partition currently mounted:
 
-**2. Format the root, with a descriptor.** This is the step with no equivalent on other systems:
-
-```
-mke2fs -t ext4 -E root_sddl="O:SYG:SYD:(A;OICI;GA;;;SY)(A;OICI;GA;;;BA)(A;OICI;GRGX;;;WD)(A;OICIIO;GA;;;S-1-3-0)" /dev/vdb2
-```
-
-The descriptor is written to the root directory's `security.peios.sd` at format time, so the filesystem is administrable from the instant it exists. Because every ACE is inheritable, everything created inside it derives its own descriptor from that one.
-
-It is byte-for-byte the descriptor the live system's own root carries, which is the point: an installed system should not quietly have a different access policy from the medium it was installed from.
-
-The final ACE is `CREATOR OWNER`, inherit-only: whoever creates an object gets full control of it. Without it a non-administrator could create a file it could not then read back, because the inherited SYSTEM and Administrators ACEs are a non-empty DACL and a token's default DACL is only consulted when inheritance yields nothing at all. Everyone gets read and execute rather than read alone because on Peios execute is also traverse, and a principal that cannot traverse a directory cannot enter it — which would leave every service that does not run as SYSTEM unable to reach its own working directory. See [Formatting with security descriptors](~peios/disks-and-filesystems/formatting-with-security-descriptors).
-
-**3. Copy the system.** `cp -ax`, which preserves owner, DACL, SACL, timestamps, links and extended attributes, and stops at filesystem boundaries. Every one of those is required rather than best-effort, so a descriptor that cannot be carried across stops the install instead of quietly downgrading it. Mountpoints are recreated as empty directories rather than copied into: `/proc`, `/sys` and `/dev` are mount-moved into the new root by prelude at boot, and `/bin`, `/etc`, `/lib` and the rest are StrataFS views mounted over theirs. What lives *behind* those views — `/usr` and `/lcl` — is ordinary content on the root filesystem, and is copied in full.
-
-**4. Write the kernel command line.** The installed system needs `root=`, naming the filesystem that did not exist until step 2. That cannot be package data, so it is generated: the `dev.peios.disk-boot` package ships a template at `/usr/share/disk-boot/cmdline` carrying everything stable, and the installer appends `root=UUID=<the new root>` and writes the result to `/lcl/etc/boot/cmdline` on the target. Package data supplies the general part; the operator tree holds the per-install part.
-
-**5. Build the boot artifact.** `mkuki` bundles the kernel, the initramfs and that command line into a single EFI binary, written to the ESP at `EFI/BOOT/BOOTX64.EFI`.
-
-That last path is the removable-media fallback, which UEFI firmware boots without an NVRAM entry. A Peios installation therefore needs **no bootloader and no boot manager** — there is nothing between the firmware and the kernel.
-
-## What it refuses before it starts
-
-Both partitions you name are about to be formatted, so the installer checks them before it does anything irreversible. It stops if either is not a block device, if you name the same partition twice, or — the one worth stating plainly — **if either is currently mounted**:
-
-```
+```text
 # peios-install --yes /dev/vda1 /dev/vda2
 peios-install: /dev/vda2 is mounted; refusing to format it
 ```
 
-That last check is what stands between you and naming the partition you are running from. All of it happens before the first `mkfs`, so a rejected install has changed nothing.
+These checks prevent formatting a mounted running system. A refusal before the first `mkfs` has not formatted either partition; do not confuse that with a later failure after a whole-disk partitioning step has already changed the disk.
 
-## The first-account service is retired, the account is not
+### The first-account service is retired, the account is not
 
-Your accounts come across. What does not is the thing that *creates* them.
+The script copies the running system, including lpsd's account store at `/var/state/lpsd/principals`. It removes the `lpsd-first-account` service so that the live-image provisioner does not run against the populated store every boot:
 
-A live image ships `lpsd-first-account`: a oneshot service that runs `lps add` at boot to create the development account. It is written for exactly one situation, which is a live image — the root there is a tmpfs, so every boot starts from an empty store and the provisioner has work to do.
-
-An installed system is the other situation. The accounts themselves live in lpsd's store at `/var/state/lpsd/principals`, which is ordinary content on the root filesystem and is copied like everything else. So the installed machine already has the account before it first boots, and re-running a provisioner against a populated store is not a harmless no-op: the script carries no idempotence guard, so `lps add` fails on the name that already exists and the service crashes on every boot. Once installation grows a "choose a password" step, it would be worse than noisy — a provisioner that reasserts the image's credential would undo the operator's choice at the next reboot.
-
-So before it copies anything, the installer deletes the service from the registry:
-
-```
+```sh
 reg del 'Machine\System\Services\lpsd-first-account'
 ```
 
-Note *which* registry. It removes the key from the **live** system it is running on, not from the target — the registry is a live database served by `registryd`, and the only thing that can safely edit it is the `registryd` currently holding it open, so the removal happens at the source and the copy never carries it. Running the installer again, or running it from an already-installed system, finds nothing to remove and says so. The removal is checked afterwards and a failure stops the install, which happens before either partition is formatted and therefore costs nothing.
+This deletion is made in the **live source registry**, through the running `registryd`, before the copy and before either partition is formatted. The script verifies it; a deletion failure stops the install. If the key is already absent, it reports that and continues. Editing the source through its registry service avoids modifying an open database behind `registryd`'s back.
+
+Retiring the service does not remove or secure the copied accounts. Otherwise its non-idempotent `lps add` would fail on the existing name, and a provisioner that reasserted an image credential could overwrite an operator's later choice.
 
 > [!CAUTION]
-> One thing this deliberately does not solve: the account arrives with the password it had, and on an image that shipped a development account that password is in the image and therefore public. Treat a system installed this way as carrying a known credential and change it — `lps` is the tool — before the machine is anywhere it matters.
+> Treat a copied development account as publicly accessible: it may retain a known image password or a passwordless policy. Secure it before using the machine on a network that matters. For the live `peios` account, set a password **and then require password sign-in**:
+>
+> ```sh
+> lps password peios
+> lps policy peios password
+> ```
+>
+> Setting the password alone does not change a passwordless account's sign-in policy. See [Creating accounts](~peios/managing-local-principals/creating-accounts).
 
-`installerd`, the installer this page's script is being replaced by, does not have the problem at all. It copies the **shipped image** rather than the running root, so no live session's accounts come across; the development account's seed is staged for the boot medium alone and never reaches the disk; and the machine asks for a real account and password the first time it boots. See [First boot](~peios/disks-and-filesystems/first-boot-setup).
+The current `installerd` path avoids this transfer: it copies the **shipped image**, omits the live development-account seed, and uses the edition's first-boot setup to create an administrator.
+
+## What the installer does
+
+This section explains the disk and boot artifacts so you can interpret failures. It is not a sequence to run on top of an installation already in progress.
+
+### 1. Format the EFI system partition
+
+`mkfs.vfat -F 32` creates the FAT ESP required by UEFI. FAT cannot store Peios security descriptors, so its access policy comes from a synthesising mount policy.
+
+### 2. Format the root with a security descriptor
+
+The root is ext4, stamped at format time with the system's inheritable descriptor. The example target is `/dev/vdb2`; formatting it is destructive:
+
+```sh
+mke2fs -t ext4 -E root_sddl="O:SYG:SYD:(A;OICI;GA;;;SY)(A;OICI;GA;;;BA)(A;OICI;GRGX;;;WD)(A;OICIIO;GA;;;S-1-3-0)" /dev/vdb2
+```
+
+The root's `security.peios.sd` makes SYSTEM the owner, grants SYSTEM and Administrators full control, and grants Everyone read and execute. Execute also means directory traversal, so non-SYSTEM services can reach their working directories. The final `CREATOR OWNER` ACE is inherit-only and grants a newly created object's creator full control.
+
+The live system uses the same root policy. Without the creator-owner ACE, a non-administrator could create a file it could not read back: an inherited non-empty DACL takes precedence over the token's default DACL. See [Formatting with security descriptors](~peios/disks-and-filesystems/formatting-with-security-descriptors).
+
+### 3. Copy the system and preserve its security
+
+The older script uses `cp -ax` to copy the running root; the current installer takes the shipped image. Copying must preserve owner, DACL, SACL, timestamps, links, and extended attributes. A descriptor that cannot be preserved stops installation rather than silently reducing protection.
+
+The copy stays within filesystem boundaries. Mountpoints are recreated as empty directories: prelude mount-moves `/proc`, `/sys`, and `/dev` at boot, and StrataFS mounts views over `/bin`, `/etc`, `/lib`, and the other view directories. Their backing content in `/usr` and `/lcl` is ordinary root-filesystem content and is copied.
+
+### 4. Write the kernel command line
+
+`dev.peios.disk-boot` supplies the stable template at `/usr/share/disk-boot/cmdline`. The installer appends `root=UUID=<the new root>` and writes the per-install command line to `/lcl/etc/boot/cmdline` on the target.
+
+### 5. Build the boot artifact
+
+`mkuki` bundles the kernel, initramfs, and command line into `EFI/BOOT/BOOTX64.EFI` on the ESP. UEFI can boot this fallback path without an NVRAM entry. There is no separate bootloader or boot manager between firmware and kernel.
 
 ## Use UUIDs, not device names
 
-Step 4 records the root by UUID, and the reason is worth understanding rather than copying.
+The installed command line identifies the root by UUID because device names can change. A disk seen as `/dev/vdb` behind the install medium may become `/dev/vda` when the medium is removed.
 
-The disk that is `/dev/vdb` while you install — second device, behind the install medium — is `/dev/vda` when you boot it with the medium removed. A device name baked into the command line is a name for *where a disk was plugged in*, not for the disk, and it stops being true the moment the arrangement changes.
-
-The initramfs resolves the UUID by probing block devices directly rather than reading `/dev/disk/by-uuid`, because no device manager runs in the initramfs and those directories do not exist there — see [Stable device names](~peios/disks-and-filesystems/stable-device-names).
+The initramfs probes block devices directly to resolve the UUID. It cannot rely on `/dev/disk/by-uuid`, because no device manager has created those paths there. See [Stable device names](~peios/disks-and-filesystems/stable-device-names).
 
 ## How the installed system boots
 
-The initramfs contains **two** hooks that can mount a root, and both are present in every image:
+Both root-mounting hooks are present in every image:
 
-| Hook | Mounts |
+| Hook | Root it mounts |
 |---|---|
-| `mount-root.sh` | a live medium's squashfs, with a tmpfs overlay above it |
-| `mount-root-disk.sh` | an installed root partition, directly |
+| `mount-root.sh` | Live squashfs with a writable tmpfs overlay. |
+| `mount-root-disk.sh` | Installed root partition directly, without an overlay. |
 
-Both run at every boot. `root=` on the command line decides which one acts; the other exits successfully having done nothing. [Boot hooks](~peios/boot-and-trust-establishment/boot-hooks) covers the mechanism.
+`root=` determines which hook acts; the other exits successfully without doing work. See [Boot hooks](~peios/boot-and-trust-establishment/boot-hooks).
 
-Two differences in what the disk hook does are worth calling out, because they are the point of installing at all.
+The disk hook uses `policy=deny-missing` and does not run `seed-sd`. The installed filesystem already carries descriptors, so a missing one is an error to investigate. The live squashfs has none: it uses `synth-ephemeral` and seeds an inheritable descriptor on the tmpfs above it.
 
-**It mounts the partition directly — no overlay.** The live path stacks a tmpfs because the layer beneath it is read-only. An installed root is writable, so an overlay would serve only to throw away everything written to it.
+To inspect the installed root descriptor:
 
-**It mounts `policy=deny-missing`, and runs no `seed-sd`.** A live root has no descriptors at all — the squashfs ships none — so the live system mounts it `synth-ephemeral` and has KACS invent one per inode, then seeds a single inheritable descriptor onto the tmpfs above. An installed root needs none of that: it carries a real descriptor, written at format time, so a file *without* one is a fault worth surfacing rather than a gap to paper over.
-
-This is the substantive difference between the two, and it is easy to check on a running installed system:
-
-```
-# sd show /
-  Owner:      LocalSystem (S-1-5-18)
-  DACL: (2 ACEs)
-    [0] allow LocalSystem (S-1-5-18)                   0x10000000  [CI,OI]
-    [1] allow BUILTIN\Administrators (S-1-5-32-544)    0x10000000  [CI,OI]
+```sh
+sd show /
 ```
 
-No `ID` flag on either ACE. `ID` is `INHERITED_ACE`, so its absence means this descriptor is *explicit* — stored on the root inode by `mke2fs`, not derived from an ancestor and not synthesised at mount. The filesystem's access policy is a property of the filesystem.
+Check the owner and actual ACEs against the root policy above. `ID` means `INHERITED_ACE`; the root's explicit format-time ACEs should not carry it. The installed filesystem carries this access policy itself rather than relying on a mount-time template.
 
-## Upgrading from the medium
+## How the disk scan stays read-only
 
-The first page also offers **Upgrade an installation**: move a system already on a disk to the release this medium carries, without a network and without erasing anything. It is the same procedure as [`upgrade-peios`](~peios/peiso/editions-and-upgrades/upgrading-peios) run against a mounted disk, and it is how a test machine takes a build made somewhere else — build the image, boot the machine from it with its disk attached, upgrade, reboot.
+`installerd` discovers partitions, used space, and recognised Peios, Linux, or Windows systems without writing to the disks. A read-only filesystem mount alone is not sufficient for ext4, which may replay its journal.
 
-Choose the disk and the confirmation page says what the disk holds and what the medium carries, both as edition and full package version. The **Upgrade** button is live only when the medium is newer, by peipkg's own ordering, revision included. Otherwise it is greyed and the footer says why: already current, the disk holds something newer, a different edition, or not a Peios system at all. Reading the disk to say this is the same reading the disk page makes, so backing out of the page leaves the disk exactly as it was. Which release a disk holds is peipkg's to say, and peipkg cannot open its database on a filesystem it cannot write to, so the database is copied off the disk to a tmpfs and peipkg is asked there.
+Instead, each inspected partition is bound to a read-only loop device, and that device is mounted. Ext3 and ext4 also use `noload`. The mount uses `synth-ephemeral`, allowing filesystems from other systems to be read without writing security descriptors to them.
 
-The upgrade itself, on the mounted target:
+FAT, exFAT, NTFS, ext2, ext3, and ext4 are inspected this way. Swap, encrypted volumes, and other filesystems are listed by size and partition-table type without opening them. Symbolic links on the inspected disk are never followed, because they could resolve against the install medium. The daemon supplies this detail to surfaces; the console disk page itself shows the table.
 
-1. **The edition**, with peipkg's alternate-upgrade bypass — the step `upgrade-peios` would take, taken here so the medium's fixed repository index can be declared stale-but-expected. Its closure comes with it.
-2. **The release's seeds**, staged for the next boot by `upgrade-peios --seeds-only`. Only the shared `autoapply` list: first-boot setup does not run again on an upgraded machine.
-3. **Everything else** the medium carries a newer revision of, in every root under the target, the initramfs included. The edition floors its dependencies rather than pinning them, so this is what brings a whole fresh build across.
-4. **The boot files**, rewritten from the upgraded disk exactly as the repair does, so the new kernel is what boots.
+## Installer services and image configuration
 
-The medium's repository is removed from the target whether or not the upgrade got through. Nothing under `/lcl` is touched.
+`installerd` runs as SYSTEM and performs privileged disk operations. `install-tui` only draws the console form and has no privileges of its own. They speak [MSIP](~peios/services-and-jobs/overview), which also allows scripted interaction through `msip-drive` and surfaces attaching to an existing job.
 
-**Nothing moves without a revision bump.** peipkg orders by version and then revision, and a package rebuilt under the same revision is invisible to any upgrade. For the edition that is the whole gate: an image whose edition package has the same version as the disk's is "already current" however much else changed. A build meant to be taken by upgrade bumps the edition, and every package it wants seen.
+For a browser-enabled medium, the `installer-gxwi-overlay` seed sets these values under `Machine\Software\GXWI`:
 
-## Repairing an installed system
+| Value | Setting |
+|---|---|
+| `OverlayUsername` | `peios`, the medium's passwordless account |
+| `OverlaySession` | `/usr/bin/installer-gxwi` |
 
-The first page offers **Repair an existing system** beside the install. Choose the disk holding it and the repair menu offers three operations, each on the same disk the install writes and never on the medium.
-
-**Repair boot files** regenerates what a disk boots from: the kernel command line under `lcl/etc/boot/`, the initramfs image, and the UKI on the ESP, all rebuilt from the kernel and initramfs tree already on the disk. It does not reinstall `disk-boot` from the medium — a machine upgraded since it was installed may hold a newer one — and it does not touch the installed system's repository list. The one exception is a half-finished install, where the copy landed and boot setup died: that disk still carries `live-boot`, and the repair finishes the install instead, swapping the packages as an install would. If the kernel or the initramfs tree is what is damaged, this cannot help; that is a reinstall.
-
-**Check the filesystem** runs `e2fsck -pf` on the root: forced, because a filesystem that believes it is clean is exactly the one you chose to check, and preen, because there is nobody to answer questions. It refuses while anything on the disk is mounted. e2fsck reports through its exit status, and the finish message reads it back: the filesystem was clean, problems were found and fixed, or fixed with a reboot wanted before the disk is used. Only problems it could not fix on its own are a failure, and the answer then is a shell and `e2fsck` by hand.
-
-**Reseed security descriptors** re-stamps the descriptor on the root of the tree — the single inheritable one that is the whole tree's access policy, as the last section below explains — with the value the install wrote.
-
-Each ends on the page that offers the restart. Back to the start leads to the first page, and from there to the next repair, so the three can be run in one boot.
+The edition must list this seed under [`live_autoapply`](~peios/peiso/editions-and-upgrades/release-toml), **not `autoapply`**. `installerd` deletes the live queue from the installed disk. That leaves the graphical installer program installed without making it the permanent browser entry point. If the seed is shared through `autoapply`, the installed machine keeps opening the installer; GXWI does not fall back from a requested overlay to sign-in.
 
 ## What the installer does not do
 
-**It does not choose your partition layout.** `--whole-disk` writes one specific arrangement — a 512 MiB ESP and a root filling everything else — and that is all it will ever write. Anything else is a job for [`part`](~peios/disks-and-filesystems/partitioning) followed by the two-partition form of the installer.
-
-**It does not choose a layout.** One ESP, one root, no separate `/home`, no swap, no encryption. Each of those is a real thing to want and none of them exists yet.
-
-**It does not express a per-directory access policy.** The whole installed tree inherits from that single descriptor on the root. That is a complete answer for a system tree where everything is administrator-owned, and it is not a way to say "readable system tree, private home directories" — one inheritable ACL cannot say two different things. Per-subtree descriptors are the work that makes that expressible.
+- **Offer multiple automatic layouts.** The whole-disk layout is one 512 MiB ESP and one root using the remainder. Separate `/home`, swap, and encryption are not installer options. Use the older script's two-partition form only when you have deliberately prepared another supported layout.
+- **Make every directory's policy the same as its intended use.** The root descriptor supplies a baseline; a private subtree needs its own protected descriptor. Account home directories have that separate policy, created at [first sign-in](~peios/managing-local-principals/creating-accounts#what-a-new-account-gets).
+- **Recover every failed system.** Boot repair needs an intact kernel and initramfs tree; automatic filesystem checking cannot fix every error. Read the reported failure before choosing a destructive reinstall.
 
 ## Where to go next
 
-For the format-time descriptor and how a populated tree gets its own, read [Formatting with security descriptors](~peios/disks-and-filesystems/formatting-with-security-descriptors).
-
-For the hook mechanism the two root-mounting hooks share, read [Boot hooks](~peios/boot-and-trust-establishment/boot-hooks).
-
-For what `deny-missing` does with a file that has no descriptor, and why the live path cannot use it, read [Policy classes](~peios/mount-policies/policy-classes).
+- [Complete first-boot setup](~peios/disks-and-filesystems/first-boot-setup).
+- [Understand format-time descriptors](~peios/disks-and-filesystems/formatting-with-security-descriptors).
+- [Inspect the boot hooks](~peios/boot-and-trust-establishment/boot-hooks).
+- [Understand missing-descriptor failures](~peios/mount-policies/policy-classes).

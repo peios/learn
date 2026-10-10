@@ -1,99 +1,189 @@
 ---
-title: First boot
-type: concept
-description: What an installed Peios asks the first time it starts — an account, a password, a name for the machine — and how that flow gets the console and gives it back.
+title: Complete first-boot setup
+type: how-to
+description: Create the first administrator account, name the machine, optionally set a wired address, and verify sign-in after installing Peios.
 related:
+  - peios/installing-peios/on-a-pc
   - peios/disks-and-filesystems/installing-to-disk
-  - peios/services-and-jobs/triggers-and-timers
   - peios/managing-local-principals/creating-accounts
+  - peios/networking/configuring-profiles
+  - peios/signing-in-from-a-browser/the-certificate
+  - peios/services-and-jobs/triggers-and-timers
   - peios/peiso/editions-and-upgrades/release-toml
 ---
 
-An installer writes a system to a disk. It does not ask who you are — deliberately, because every question asked before the copy is a question answered while a progress bar could have been running instead. So the machine asks once, the first time it boots, and that is **first-boot setup**.
+Complete first-boot setup after installing Peios to disk. It creates the first administrator account, sets the machine's name, and optionally applies a manual wired-network address. When it succeeds, you can sign in with your new account and setup does not run again.
 
-It is two services and one conversation:
+The installer copies the system first; these questions are asked on the installed system's first boot. Setup is available on the console and, on images that include `oobe-gxwi`, in a browser.
 
-| | |
-|---|---|
-| `oobed` | The engine. Runs as SYSTEM because it creates the machine's first account and writes its name. Speaks [MSIP](~peios/services-and-jobs/overview) on `/run/oobed.sock`. |
-| `oobe-tui` | The surface. Draws the form on the console and holds no privilege of its own. |
+## Before you start
 
-The split is the same one the installer makes, for the same reason: creating an administrator needs privilege that a program drawing boxes on a terminal must not have.
-
-## In a browser
-
-A machine with no screen has nobody at its console, so setup can also be done from a browser on another device, by opening the machine's address. This needs `oobe-gxwi`, the graphical surface, installed at `/bin/oobe-gxwi`; without it setup is on the console alone.
-
-Where it is installed, `oobed` makes it GXWI's overlay for as long as setup is pending. Everyone who opens the address is sent to setup instead of the sign-in page. Both surfaces draw the same conversation, so it can be started on one and finished on the other.
-
-An overlay runs as an account that needs no credential, and before setup the machine has no accounts. So `oobed` makes one as it starts: `peios-oobe-setup`, with no password and no groups, which its socket admits. When setup completes, `oobed` removes the overlay, so the sign-in page comes back, and then the account and its home directory. A setup that fails leaves all of it in place, as it leaves everything else, and the next boot offers it again.
+- Boot from the installed disk, with the install medium removed after installation has completed.
+- Choose an account name, a non-empty password, and a machine name. Their rules are listed below.
+- Keep the install medium for recovery until you have successfully signed in.
+- You do not need a network for console setup. For browser setup, use a wired connection on a trusted network and verify the machine's certificate.
+- Expect an English setup interface and US console keyboard layout. Language and keyboard choices are made after setup, so take care when entering a password with a different physical keyboard layout.
 
 > [!WARNING]
-> While setup is pending, whoever opens the machine's address first answers its questions, including the administrator's name and password. The same is true of the console. Keep a machine that has not been set up off networks you do not trust.
->
-> The page is served over HTTPS with a certificate the machine made for itself, which no browser trusts until told to. Before going past the browser's warning, check that the certificate's SHA-256 fingerprint matches the machine's own: sign in at the machine's own console and run `cat /var/state/gxwi/certificate.sha256`. That is what tells you the password you choose goes to this machine and nobody between; a page that came over the connection you are checking cannot tell you that. A machine installed from a browser carries the medium's certificate, so the browser that installed it has already been told, and setup follows the installation in the same tab without a second warning. See [the machine's certificate](~peios/signing-in-from-a-browser/the-certificate).
->
-> `peios-oobe-setup` has no password, so anything that signs in without a credential can sign in as it while it exists. It has no groups; what it can reach is setup itself, which the address offers anyone.
-
-The account page will not take the name `peios-oobe-setup`: setup keeps an account that already exists, and would otherwise finish with no account you can use.
+> Until setup is complete, anyone who can open the machine's address or use its console can choose the administrator account and password. Keep an unconfigured machine off networks you do not trust.
 
 ## What it asks
 
-1. **Language and keyboard**, shown but not chosen here: setup itself is in English, and the console is US layout until it is done. Choose both afterwards, in [System Settings](~peios/desktop-apps/settings-apps), Language & Keyboard.
-2. **Network**, which never gates anything. Setup does not need a network; the page says what `net status` reports, a line for each interface (connected, not connected, not used), and **Check again** asks again, so a cable plugged in while the page is open shows up without leaving it. In a browser, the interface whose address the page was opened by is marked as the way in. Joining a wireless network is shown and disabled.
+### 1. Language and keyboard
 
-   **Configure manually** gives one wired interface an address of its own, with a gateway and name servers if you want them. It is checked as you save it (an address needs the length of its network, `192.168.1.20/24`, and a gateway must be on that network) but not applied: setup keeps it, says so on the network page, and applies it last, after the account and the machine's name. Until then the machine keeps the address it has, so a browser setting it up keeps reaching it. What it writes is an ordinary [profile and rule](~peios/networking/configuring-profiles), `Profiles\default\manual-<interface>` and an exception under `Rules\Interface\wired` naming the interface by its stable id, which you can change or delete afterwards like any other.
-3. **An account and a password.** This is the one that matters, and the reason first-boot setup exists: it is where an installed machine gets its first administrator.
+The page shows the current language and keyboard information but does not change them. Setup is in English and the console uses the US layout until setup finishes. Afterwards, open **System Settings → Language & Keyboard**. See [the settings overview](~peios/desktop-settings/overview) for the distinction between System Settings, Desktop Settings, and personal settings.
 
-   The account is made at the very end, and a name or password the [principal store](~peios/managing-local-principals/creating-accounts) would refuse there would fail the whole of setup. So the page refuses them itself, when you press Next, and says why on the field: an empty password, two passwords that differ, and a name that is empty, is not plain ASCII, is longer than 256 characters, contains any of `@ \ / : ,`, or is the name of a group every machine has (`Administrators`, `Users`, `Guests`, `Everyone`, `Authenticated Users`). Spaces inside a name are fine; spaces around it are trimmed.
+### 2. Network
 
-   In a browser, what you type stays in your browser until you press Next, and is never shown to anyone else who has the page open. The page shows who the account will be as you type the name, and whether the second password matches the first. It also shows how strong the password looks, from *Easily guessed* (a common password, or the account's own name) to *Very strong*. That is advice only: setup takes any password that is not empty.
-4. **A name for the machine**, offered as a suggestion you can accept with one keypress. Domain join is shown and disabled.
+The network page is informational; lack of connectivity does not block setup. It shows what `net status` reports for each interface: connected, not connected, or not used. Choose **Check again** after connecting a cable. In the browser, the interface carrying your current connection is marked.
 
-   The name is what the machine calls itself and what it tells a DHCP server it is called, so it has to be one name a network will carry: letters, digits and hyphens, at most 63 of them, with no hyphen at either end, no dots and no spaces. `localhost` is refused, since every machine is that to itself. Anything else is turned down on the page when you press Finish; spaces around the name are trimmed. In a browser, the page says as you type whether the name fits, and shows the account's shell prompt as it will read on the machine, such as `jack@workshop:~$`. Under the field are a few names to pick from: the one setup offered first, and made-up ones after it, each one a network will carry. **Shuffle** makes up others.
+Wi-Fi joining is shown but disabled. Continue without network configuration, or choose **Configure manually** for a wired interface.
 
-Then it applies, and says so: the account, then the name, then an address given by hand, each as a step of its own.
+For a manual address:
 
-In a browser, the page then goes on to the sign-in page by itself, where you sign in as the account you just made. Setup's last act is to give the machine's address back to GXWI, so the page waits for the sign-in page to answer there. If you gave the interface your browser came in through an address of its own, the machine moves out from under the page as setup ends; the page asks the new address too, and follows the machine there once it answers. Where nothing answers, as when the new address is on a network your browser cannot reach, the page says so: the machine's own screen shows where it is.
+1. Enter an address with its network prefix, such as `192.168.1.20/24`.
+2. Add a gateway and name servers if needed. A gateway must be on the address's network.
+3. Save and check the network page's confirmation that the setting is kept for later.
 
-GXWI's sign-in page has the same backdrop as setup: the same glows, a field of stars and the Peios lockup in the same corner. So setup does not cut to it. "Setup is complete" stays on screen for a moment, then setup's page fades, leaving the stars and the lockup, and the sign-in form rises into place over the same stars. They carry on from where setup left them, through each step of signing in. Following the machine to an address given by hand, the page fades the same way, but the sign-in page there starts with stars of its own.
+Saving validates the values but **does not change the active address yet**. Setup applies the address after creating the account and setting the machine name, so the browser can keep reaching the current address while you answer the remaining questions. Note the new address before finishing.
+
+### 3. Account and password
+
+This account is the machine's first **administrator**. Choose a password you intend to use for sign-in; the setup page refuses an empty password or mismatched confirmation.
+
+Account names must:
+
+- Be non-empty, plain ASCII, and no longer than 256 characters.
+- Contain none of these characters: `@`, `\`, `/`, `:`, or `,`.
+- Not be `Administrators`, `Users`, `Guests`, `Everyone`, or `Authenticated Users`.
+- Not be `peios-oobe-setup`, the temporary account reserved for browser setup.
+
+Spaces inside a name are allowed; spaces around it are trimmed. Validation happens when you choose **Next**, before the account is created. A rejected field explains what to change.
+
+In a browser, typed account details remain in your browser until **Next** and are not shown to other people viewing the setup conversation. The page previews the account name, checks matching passwords, and rates apparent password strength from **Easily guessed** to **Very strong**. The strength meter is advice, not an acceptance rule: any non-empty matching password is accepted.
+
+### 4. Machine name
+
+Accept the suggestion or enter one label with:
+
+- Letters, digits, and hyphens only, up to 63 characters.
+- No leading or trailing hyphen, dots, or spaces.
+- A name other than `localhost`.
+
+Spaces around the name are trimmed. This is the name the machine uses for itself and supplies to DHCP. Domain joining is shown but disabled.
+
+The browser validates as you type, previews a prompt such as `jack@workshop:~$`, and offers suggested names. **Shuffle** generates more suggestions. The daemon validates the name when you choose **Finish**.
+
+### Finish and verify sign-in
+
+Choose **Finish** once the account, name, and any manual network setting are correct. Setup shows each change as it applies:
+
+1. Create the account.
+2. Set the machine name.
+3. Apply a manually configured network address, if supplied.
+
+On the console, setup releases the terminal and the login prompt appears. In a browser, **Setup is complete** is shown briefly before the page transitions to sign-in, retaining the same backdrop. Sign in with the account and password you just created.
+
+Check that:
+
+- The new account can sign in.
+- The machine name is the one you chose.
+- If you configured a manual address, the machine is reachable there from a device on the appropriate network.
+- A later boot goes directly to sign-in rather than repeating setup.
+
+For additional accounts and account administration, continue to [Creating accounts](~peios/managing-local-principals/creating-accounts).
+
+## In a browser
+
+Open `https://<machine-address>:7780`, unless the image uses a different GXWI port. The graphical surface must be installed at `/bin/oobe-gxwi`; without it, use the console.
+
+While setup is pending, GXWI shows setup instead of its sign-in page. The console and browser share one conversation, so you can start on one and finish on the other. Coordinate with anyone else who has it open.
+
+### Verify the certificate before entering a password
+
+GXWI uses HTTPS with a certificate the machine makes for itself. Check its SHA-256 fingerprint against a trusted reading from the machine's own console:
+
+```sh
+cat /var/state/gxwi/certificate.sha256
+```
+
+Do not use a page delivered over the unverified connection as the source of that fingerprint. If the fingerprints differ, do not enter a password.
+
+An installation made by `installerd` from either surface carries the medium's GXWI certificate into the installed system. If you verified it on the live medium, you can compare against that fingerprint during first-boot setup. At the same address, the browser can keep the trust you established during installation.
+
+The older `peios-install` path, or a medium without GXWI, does not carry that key across. If you have not already verified the installed machine and cannot obtain its fingerprint through trusted console access before creating an account, complete setup on the console first. Then sign in locally to verify the certificate before using browser sign-in. See [the machine's certificate](~peios/signing-in-from-a-browser/the-certificate) for the full trust procedure.
+
+### If the network address changes
+
+Setup keeps the current address until its final apply step. If you change the interface your browser uses, the page then checks both the old and new addresses and follows the machine when it answers. At the new address, the sign-in page starts a new backdrop rather than retaining the old page's animation.
+
+If the browser cannot reach the new network, the page reports it; use the machine's screen to check its address. Open the new address from a device that can reach it.
+
+> [!NOTE]
+> The PC installation guide records a **2026.8** HTTPS limitation: after a manual address change, the page can remain on its starfield instead of reconnecting. Once setup finishes, open `https://<new-address>:7780` manually. A browser may warn again for the new address; verify the fingerprint rather than assuming that any new warning is safe. See [First boot on a PC](~peios/installing-peios/on-a-pc#first-boot).
+
+The browser's waiting page also depends on certificate trust. If the certificate was only bypassed at a warning rather than imported, a restart can produce a browser error instead of an automatic reconnect. Reopen the address manually and follow the certificate guide.
+
+### The temporary setup account
+
+Before setup, the machine has no normal account for a graphical session. `oobed` creates `peios-oobe-setup` with no password and no groups, and its socket admits that account. The browser overlay uses it to draw the setup conversation.
+
+On successful setup, `oobed` removes the overlay, restores GXWI sign-in, and removes the temporary account and its home directory. Failed setup leaves them in place for the next attempt.
+
+> [!WARNING]
+> While the temporary account exists, any sign-in mechanism accepting a passwordless account can sign in as it. It has no groups; its intended access is setup itself, which is already available at the machine's address. Network isolation remains important until setup has finished.
+
+The account-name page reserves `peios-oobe-setup` because setup preserves an account that already exists; choosing that name would otherwise leave no usable account after cleanup.
+
+## If setup does not finish
+
+| Symptom | Next step |
+|---|---|
+| Account, password, or machine name is rejected | Read the field error and compare it with the rules above. Validation happens before final application. |
+| No network or Wi-Fi joining is disabled | Continue on the console; a network is not required. Use wired networking for browser access. |
+| Browser stays on the old address or a starfield after a manual network change | Check the address on the machine's screen and open the new HTTPS address yourself. See the 2026.8 caveat above. |
+| Browser setup is absent | The image may not include `oobe-gxwi`; use the console. If setup itself is absent, check the edition's provisioning choice below. |
+| Setup was closed with Esc or failed | It is not retired. Restart to be offered setup again. A returned login prompt does not prove account creation succeeded. |
+| Setup repeatedly fails and no usable account exists | Boot the install medium for recovery. Do not assume you can sign in to repair setup locally. |
+| Console text is damaged | Press **Ctrl+L** to repaint. |
+| Form no longer fits after resizing a serial-terminal window | The size was read once at startup. Restart with the desired terminal size, or use the current form size. |
+
+### It runs once
+
+Only a successful setup removes the `oobed` and `oobe-tui` service definitions. A failed or abandoned run leaves them so the next boot can retry. It does not retire the only setup path before an account has been successfully provisioned.
+
+A machine whose setup keeps failing may have no account you can use. The install medium is the recovery route, as for a system that will not boot. [Installer repair operations](~peios/disks-and-filesystems/installing-to-disk#repairing-an-installed-system) describe what the medium can repair and their limits; they are not a guarantee that every setup failure is automatically repairable.
 
 ## How it gets the console
 
-Both first-boot setup and the [login prompt](~peios/signing-in/overview) want `/dev/console`, and a terminal has one owner at a time. Setup's surface names a higher [`TTYPrecedence`](~peios/services-and-jobs/triggers-and-timers), so peinit gives it the console and **skips** the login prompt for that boot — the prompt is not started and written over, it is not started at all.
+This section explains service behavior useful when diagnosing startup or display problems.
 
-When setup's surface exits, the console is released and the login prompt's `tty:released` trigger brings it up. That happens however setup ended: finished, abandoned with Esc, or crashed. The console is never left with nobody on it.
+| Service | Responsibility |
+|---|---|
+| `oobed` | Runs as SYSTEM to create the first account and set the machine name. Serves the [MSIP](~peios/services-and-jobs/overview) conversation on `/run/oobed.sock`. |
+| `oobe-tui` | Draws the console form without privileged rights of its own. |
+
+Setup and the [login prompt](~peios/signing-in/overview) both use `/dev/console`. Setup has higher [`TTYPrecedence`](~peios/services-and-jobs/triggers-and-timers), so peinit gives it the console and does not start the login prompt at that point.
+
+When the surface exits, whether successfully, through Esc, or after a crash, it releases the console. The login prompt's `tty:released` trigger then starts it. The terminal is not left without an owner, even though an unsuccessful setup may still leave no usable account.
 
 ### How big the form is
 
-A serial console cannot say how large it is. There is no geometry in a byte stream, so the kernel leaves the terminal at no size at all and a hypervisor has nothing to pass through — which is why a form on one used to be drawn 80 columns by 24 rows in the corner of whatever window was really there.
+A serial byte stream carries no terminal geometry. The surface moves the cursor beyond the bottom-right corner and reads back its clamped position to discover the size. The installer uses the same renderer.
 
-So the surface asks. It moves the cursor past the bottom-right corner, where the terminal stops it at the real edge, and reads back where it ended up. The form is then drawn to that. The installer's surface does the same thing, being the same renderer.
-
-Two consequences worth knowing:
-
-- **The size is taken once, when the form starts.** Resizing the window after that changes nothing, because the guest is never told. Reboot, or accept the shape you have.
-- **A console that does not answer gets 80x24**, the old behaviour — a real serial port with nothing on the far end, or output captured to a file.
+- The size is read once when the form starts. Later window resizing is not reported to the guest and does not resize the form.
+- A terminal that does not answer falls back to **80×24**, including captured output or a serial port with no responding terminal.
 
 ### The console goes quiet while a form is open
 
-The kernel writes to `/dev/console` too, and it does not take turns: a message lands wherever the cursor is, and one landing on the bottom row scrolls the screen. A surface repaints only the cells it believes changed, so it never learns what the kernel did, and the damage stays until something forces a full repaint.
+The daemon lowers kernel console output while the conversation is open and restores it when the conversation ends, including if the daemon dies. It does this in the privileged engine rather than in the unprivileged surface. `installerd` uses the same approach.
 
-So `oobed` lowers the kernel's console output for as long as a conversation is open, and puts it back when the conversation ends — however it ends, the daemon dying included. The engine does this rather than the surface because it needs privilege and the surface deliberately has none. `installerd` does the same for the installer.
-
-Only `KERN_EMERG` still prints, so a panic is never hidden. And only the *kernel* is quieted — peinit and the services write to the console themselves and are unaffected, which is why a page change repaints in full and why **Ctrl-L** repaints on demand.
-
-## It runs once
-
-On success `oobed` removes both service definitions — its own and the surface's — and exits. The second boot has no setup to do and nothing left over to explain.
-
-**Only on success.** A run that failed, or that you left with Esc, removes nothing, so the next boot asks again. That is not tidiness: retiring after a failure would delete the only route back to the question, and a machine with no account yet cannot be logged into to put it back by hand.
-
-> [!NOTE]
-> Which means a machine whose setup keeps failing is a machine you cannot log into. The recovery is the install medium, the same as for any system that will not boot. It is the reason setup asks as little as it does.
+Only `KERN_EMERG` kernel messages continue to print, so a panic is not hidden. Peinit and other services can still write directly to the console. Those writes can disrupt the form, so page changes repaint it in full and **Ctrl+L** requests a full repaint.
 
 ## Where it comes from
 
-`oobe-service` is a registry seed, shipped inert by `dev.peios.oobe` and opted into by the edition's [`install_autoapply`](~peios/peiso/editions-and-upgrades/release-toml) list. That list exists for exactly this: seeds an installed machine applies and a boot medium does not. Setup running on the medium would take the console away from the installer.
+`dev.peios.oobe` ships the inert `oobe-service` registry seed. An edition opts into it through [`install_autoapply`](~peios/peiso/editions-and-upgrades/release-toml), so it runs on the installed system rather than taking the console away from the live installer.
 
-An image with no `dev.peios.oobe`, or an edition that does not list the seed, simply boots to a login prompt — on a machine with whatever accounts its own seeds provisioned.
+An image without `dev.peios.oobe`, or an edition that omits that seed, boots directly to a login prompt using whatever accounts its own seeds provisioned. Do not assume every custom image provides this setup flow.
+
+A manual network choice is saved as an ordinary [profile and rule](~peios/networking/configuring-profiles): `Profiles\default\manual-<interface>` plus an exception under `Rules\Interface\wired`, naming the interface by stable ID. After setup, you can change or delete those settings like any other network profile and rule.

@@ -1,11 +1,19 @@
 ---
-title: Atrium
+title: Atrium (HTTP interface)
 type: concept
-description: "The Peios web UI — log in from a browser and get a desktop served by the machine: apps, windows, a terminal, on port 8080."
+description: "Reference for the Atrium desktop on HTTP port 8080. For the GXWI connection described in the installation guides, use Sign in from a browser."
 related:
   - peios/services-and-jobs/overview
   - peios/networking/overview
 ---
+
+> [!IMPORTANT]
+> This page describes the Atrium interface and its plain-HTTP
+> connection on port 8080. The GXWI installation and desktop guides use
+> HTTPS on port 7780. For that interface, start with
+> [Sign in from a browser](~peios/signing-in-from-a-browser/open-the-desktop).
+> The release boundary is not documented here; do not apply these
+> connection, session or app instructions to a GXWI image without checking.
 
 **Atrium** is the Peios web UI. Point a browser at port 8080 of a
 Peios machine — `http://<address>:8080` — and log in with a Peios

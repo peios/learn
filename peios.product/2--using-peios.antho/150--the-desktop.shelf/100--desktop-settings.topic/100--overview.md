@@ -9,10 +9,10 @@ related:
   - peios/desktop-settings/for-all-users
 ---
 
-**Desktop Settings** holds the settings of the desktop itself: GXWI, which
-serves it, Fenestra, which draws and arranges its windows, and fenesh, the
-shell with its top bar, dock and launcher. It ships with fenesh. Open it
-from the launcher (type `desktop`).
+Open **Desktop Settings** from the launcher (type `desktop`) to change
+your wallpaper, clock, dock, keyboard shortcuts and default apps. Use
+**For You** for your own choices and **All Users** for the machine's
+defaults.
 
 Settings that belong to the machine rather than the desktop live in
 System Settings, and a person's own account settings, such as their
@@ -59,3 +59,11 @@ ask first, under their row.
 - [Keyboard shortcuts](~peios/desktop-settings/keyboard-shortcuts)
 - [Default apps](~peios/desktop-settings/default-apps)
 - [Settings for all users](~peios/desktop-settings/for-all-users)
+
+## Desktop components
+
+For troubleshooting or advanced configuration, the desktop consists of
+GXWI, which serves it; Fenestra, which arranges the windows; and fenesh,
+which provides the top bar, dock and launcher. Desktop Settings ships
+with fenesh. The settings that select those components are under
+[Advanced](~peios/desktop-settings/for-all-users#advanced).
