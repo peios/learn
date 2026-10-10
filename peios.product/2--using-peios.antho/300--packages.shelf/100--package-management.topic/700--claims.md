@@ -1,12 +1,27 @@
 ---
 title: Claims
 type: reference
-description: A claim is a shared filesystem name that only one installed package may hold. How claims materialise as symlinks, and the claim command for reassigning them.
+description: Inspect or change the package supplying a shared filesystem name, control auto-claim during installation, and handle an unheld claim after removal.
 related:
   - peios/package-management/overview
   - peios/package-management/dependency-resolution
   - peios/package-management/installing-and-removing
 ---
+
+Use `peipkg claim` when several installed packages can supply the same shared
+name and you need to check or choose its holder. This does not enable a
+feature or restart a service.
+
+```
+peipkg claim registryd
+peipkg claim registryd grant org.example.altregd
+peipkg claim registryd
+```
+
+In this example, grant only after the first command lists
+`org.example.altregd` as an installed eligible provider. Review the affected
+links, approve the change, and inspect the holder again. Revoking a claim or
+removing its holder leaves it unheld; another provider is not chosen for you.
 
 Some filesystem names can be provided by more than one package. Two registry daemons — `dev.peios.loregd` and an alternative — both install a working binary, but only one of them can own `/usr/sbin/registryd`. peipkg calls that shared name a **claim**, and it owns the machinery that decides which package holds it.
 
@@ -28,12 +43,12 @@ A claim materialises as a **symlink** on disk. The link lives at the **claim pat
 
 The claim symlink is **owned and managed by peipkg**. It is not shipped inside any package's payload; no provider installs it, and removing a provider does not remove it out from under peipkg. peipkg creates, repoints, and tears down the link as part of the transactions that install, remove, grant, and revoke.
 
-The two sides of a claim are declared in package manifests:
-
-- A **provider** package declares the **target** file it offers for a claim — the real binary the shared name would resolve to.
-- A **consumer** package references the **claim path** where it expects the shared name to appear.
-
-peipkg joins the two. A provider can offer a target for a claim, a consumer can depend on the name being present, and peipkg mediates between them, keeping exactly one provider wired to the shared path at any moment.
+Package declarations determine which paths a claim exposes and which target
+each provider supplies. The [role model](~peios/peipkg/roles-and-claims/the-model),
+[eligibility checks](~peios/peipkg/roles-and-claims/eligibility) and
+[materialisation reference](~peios/peipkg/roles-and-claims/materialisation)
+describe those internals. Claim links are relative on disk so roots remain
+relocatable; the status output shows logical paths and targets.
 
 ## Claims and provides/replaces
 
@@ -87,7 +102,7 @@ eligible providers:
   org.example.altregd
 ```
 
-**Grant.** `grant <package>` makes an installed eligible provider the holder. peipkg atomically repoints all of the claim's links to that package's targets — every path the claim covers moves together, or none does. The named package must be an installed eligible provider for the claim.
+**Grant.** `grant <package>` makes an installed eligible provider the holder. peipkg repoints the claim's links to that package's targets in one transaction. Review the [transaction and recovery limits](~peios/package-management/transactions-and-recovery) before treating that as a whole-system snapshot. The named package must be an installed eligible provider for the claim.
 
 ```
 $ peipkg claim registryd grant org.example.altregd
@@ -99,7 +114,7 @@ $ peipkg claim registryd grant org.example.altregd
 |---|---|
 | `--yes`, `-y` | Skip the confirmation prompt. Applies to `grant` and `revoke`. |
 
-`grant` and `revoke` each run as a standalone transaction. Like every other peipkg change they appear in [`history`](~peios/package-management/transactions-and-recovery), can be reversed with [`undo`](~peios/package-management/keeping-a-system-current), and are fully auditable — each emits a `claim` event to the [audit stream](~peios/auditing/overview). A reassignment is never a silent, unrecorded edit to a symlink; it is a first-class, reversible operation.
+`grant` and `revoke` each run as a standalone transaction, appear in [`history`](~peios/package-management/transactions-and-recovery), and can be reversed with [`undo`](~peios/package-management/keeping-a-system-current). They also emit a claim-change event under the system's emission policy; the [audit reference](~peios/peipkg/security/audit) describes the policy and emission-failure limits. Use the claim command rather than silently editing its symlinks by hand.
 
 ## What happens on uninstall
 
@@ -116,6 +131,16 @@ to reassign it, run:
 ```
 
 If the holder was the only eligible provider, the claim is left unheld with nothing to promote, and any consumer relying on the shared name will find it absent until a new provider is installed.
+
+## If a claimed name is missing or wrong
+
+Inspect `peipkg claim <claim>` first. An unheld claim needs an explicit grant
+to an eligible provider. A held role can legitimately have no link if no
+package declares a path for it. For a missing target or a disagreement between
+reported links and disk, check the holder's files with `peipkg verify` and
+consult [A broken claim](~peios/peipkg/failure-modes/a-broken-claim). Do not assume
+that a normal unrelated transaction will repair a link whose database record
+already matches the desired state.
 
 ## Exit status
 

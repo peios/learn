@@ -10,7 +10,34 @@ related:
   - peios/package-management/named-roots
 ---
 
-Keeping a Peios system current is two commands in sequence — `refresh` to learn what is available, then `upgrade` to move to it. The other two commands here, `downgrade` and `undo`, go the other way: they walk a change back when an upgrade turns out badly.
+For routine maintenance, refresh, review the upgrade plan, apply it, then
+check the outcome. First choose the intended [root](~peios/package-management/named-roots)
+and preserve important local changes. `upgrade` can also update nested roots,
+so review every root's result.
+
+```
+peipkg refresh
+peipkg upgrade --dry-run
+peipkg upgrade
+peipkg history
+peipkg verify
+```
+
+Read refresh failures before proceeding: a dry run and the final invocation
+can use different inputs if metadata or installed packages changed in between.
+After the change, review verification differences and configuration-file
+warnings, and check the affected software separately. A file check does not
+establish that a service or feature is working.
+
+| Your situation | Command |
+|---|---|
+| Apply available updates | `upgrade`, after `refresh` and plan review |
+| Reverse the most recent committed transaction | `undo`, after checking `history` and its dry run |
+| Restore one package to a particular older version | `downgrade <package> <version>` |
+| An operation was interrupted and is pending | [`recover`](~peios/package-management/transactions-and-recovery), then verify |
+
+Version reversal changes package payloads. It does not reverse registry
+state, runtime or user data, or setup performed by feature scripts.
 
 ## Refreshing repository metadata
 
@@ -33,7 +60,7 @@ Refresh has two properties worth knowing:
 
 What "verified" means here — signing keys, freshness floors, the handling of an unsigned repository — is the subject of [Repositories and trust](~peios/package-management/repositories-and-trust).
 
-Run `refresh` before an upgrade. An upgrade plans against whatever metadata is cached, so an upgrade without a recent refresh moves you to the newest version peipkg last heard about.
+Run `refresh` before an upgrade. An upgrade plans against cached metadata, so without a recent refresh it cannot consider newer releases that the cache does not contain. The selected version still depends on the request, source preferences and constraints.
 
 Skip it for long enough and peipkg stops waiting for you: an install, upgrade, or downgrade against a repository whose trust state has passed its **maximum trusted age** (30 days by default) refreshes that repository itself, and refuses to proceed against one that stays stale — unreachable, or frozen on an unchanging index — unless you pass `--allow-stale`. The bound and its configuration are covered in [Repositories and trust](~peios/package-management/repositories-and-trust).
 
@@ -43,7 +70,7 @@ Skip it for long enough and peipkg stops waiting for you: an install, upgrade, o
 peipkg upgrade [package]...
 ```
 
-With no arguments, `upgrade` considers every installed package and moves each one that has a newer available version forward to it. With one or more package names, it upgrades only those — and still pulls in any new dependencies they need.
+With no arguments, `upgrade` considers every installed package for an available newer version that satisfies resolution. With one or more package names, it upgrades only those — and still pulls in any new dependencies they need.
 
 ```
 $ peipkg refresh && peipkg upgrade
@@ -64,7 +91,7 @@ proceed? [y/N]
 
 By default, when named roots are configured, `upgrade` **cascades**: it reconciles the current root and every named root nested under it, each as an independent continue-on-error transaction with its own summary. `--no-recurse` disables that and upgrades the current root alone. See [Named roots](~peios/package-management/named-roots) for the named-roots model.
 
-If there is nothing to do — every package already at its newest version — peipkg says so and exits.
+If the plan contains no updates, peipkg says so and exits. That is a result against the available metadata and constraints, not proof that every upstream release is installed.
 
 ## Downgrading
 
@@ -90,6 +117,13 @@ A downgrade is treated as a deliberate move. Going backward — onto a version t
 peipkg undo
 ```
 
+Before applying `undo`, identify the most recent committed transaction:
+
+```
+peipkg history
+peipkg undo --dry-run
+```
+
 `undo` reverses the most recent committed transaction. If that transaction installed a package, `undo` removes it; if it upgraded, downgraded, or removed packages, `undo` restores each one to the version it had before.
 
 ```
@@ -100,6 +134,13 @@ the following changes will be made:
   downgrade  zlib 1.3.2 -> 1.3.1
 proceed? [y/N]
 ```
+
+Check that the old packages are available before relying on undo. The
+[technical reference](~peios/peipkg/upgrade-and-removal/downgrade-and-undo#undo)
+describes archive-based resolution requiring a reachable repository or usable
+cache; it does not promise retained transaction backups. Even where undo is
+exempt from freshness gating, that does not guarantee it can fetch an old
+version offline.
 
 Be precise about what `undo` is. It is not a rollback of committed state — the previous transaction happened and stays in the history. `undo` computes the inverse of that transaction and applies it as a new transaction of its own. The history grows; it does not rewind. That new transaction can itself be undone, and so on.
 
@@ -117,7 +158,7 @@ $ peipkg upgrade --dry-run   # preview the move
 $ peipkg upgrade        # apply it
 ```
 
-`downgrade` and `undo` are the recovery commands — use them when an upgrade has brought in a change you want to remove. Every one of these commands is a [transaction](~peios/package-management/transactions-and-recovery), so every one of them is atomic and itself reversible.
+`downgrade` and `undo` are the recovery commands — use them when an upgrade has brought in a change you want to remove. They apply a new package transaction. Read the [recovery limits](~peios/package-management/transactions-and-recovery) before relying on another reversal, and verify after a failed or interrupted attempt.
 
 ## Exit status
 

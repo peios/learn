@@ -1,7 +1,7 @@
 ---
 title: Repositories and trust
-type: concept
-description: The repo commands, the trust ceremony that anchors a repository to a signing key, key rotation, signature policy, priority, and freshness protection.
+type: how-to
+description: Add a trusted source, refresh it, diagnose trust or freshness failures, and understand what removing a repository changes.
 related:
   - peios/package-management/overview
   - peios/package-management/installing-and-removing
@@ -9,9 +9,45 @@ related:
   - peios/package-management/dependency-resolution
 ---
 
-A **repository** is where packages come from: an HTTP or HTTPS location that serves `.peipkg` files alongside signed indexes describing them. A Peios system has zero or more repositories configured, and the `peipkg repo` commands manage that configuration.
+Before adding a repository, obtain its base URL and signing-key fingerprint
+through a channel you trust. The fingerprint is your trust decision;
+peipkg cannot tell you whether the publisher deserves that trust.
 
-Beyond configuration, this page covers **trust**: establishing that the packages a repository serves are genuinely the ones its operator published, and not something a network attacker or a compromised mirror substituted.
+## Choose the repository task
+
+| Task | Command or check |
+|---|---|
+| See configured sources | `peipkg repo list` |
+| Inspect trust and freshness | `peipkg repo list --json` |
+| Add a new source | `peipkg repo add <name> <base-url> --anchor <fingerprint>` |
+| Trust configuration already supplied by an image | `peipkg repo add <name>` after checking that configuration |
+| Fetch current metadata | `peipkg refresh <name>` |
+| Stop using a source | `peipkg repo remove <name>`; installed packages remain |
+
+After an add or refresh, check the result and preview the package operation
+that will use it. Check package origin in the plan; a trusted signature
+authenticates a publisher's content, not its safety or suitability.
+
+## When a repository blocks work
+
+- **Not trusted:** inspect the configured URL and anchors, then deliberately
+  run `repo add <name>` if they are the source you intend to trust.
+- **Signature or anchor mismatch:** verify the URL and fingerprint through
+  the publisher's trusted channel. Do not switch to unsigned mode to make the
+  error disappear.
+- **Unreachable or stale:** retry refresh when the source is reachable. Only
+  use `--allow-stale` when you deliberately accept older metadata; it is
+  warned and audited.
+- **Unusable cached metadata:** the cache reference says to refresh or remove
+  the repository from configuration. Another failure chapter describes
+  warning and continuing without it. Because the sources disagree, inspect
+  the resulting plan's repositories instead of assuming the same candidate
+  set was used. See [The index cache](~peios/peipkg/repositories/the-index-cache#when-the-cache-fails)
+  and [An unreachable repository](~peios/peipkg/failure-modes/an-unreachable-repository#when-the-cache-is-unusable).
+
+Removing a repository is a deliberate source change, not a neutral retry:
+it removes trust state and the recorded freshness floor as well as the
+configuration. Do not remove and re-add it merely to bypass a rollback warning.
 
 ## What a repository serves
 
@@ -113,9 +149,21 @@ In unsigned mode, only the transport stands between you and a substituted packag
 
 ## Priority
 
-`--priority` is a number — lower is stronger, default `50` — that decides which repository wins when **more than one offers the same package**. If both an `official` repository at priority `10` and an `internal` one at priority `20` carry `nginx`, the resolver takes the `official` build. Priority does not restrict anything; it only breaks ties. Its full role in version selection is covered in [Dependency resolution](~peios/package-management/dependency-resolution).
+`--priority` is a number: lower is stronger, and the default is `50` for
+all repositories, including the official one. Set it deliberately when you
+configure multiple sources. It is a selection preference and a comparison
+used by trust guards; it is not a restriction on what a repository can publish.
 
-Priority also feeds one of the safety checks there: a package from a *lower*-priority repository that tries to displace a package installed from a *higher*-priority one is flagged for explicit authorisation, so a low-trust repository cannot quietly take over a package you got from a trusted one.
+The detailed [candidate-selection rules](~peios/peipkg/resolution/candidate-selection)
+place repository priority before version in their ordered preferences;
+other operator descriptions previously presented version first. Review the
+actual plan rather than assuming either the newest build or one particular
+source must win.
+
+A lower-priority repository using `replaces` to displace a package from a
+higher-priority one needs explicit authorisation. The resolver also guards
+certain low-trust virtual providers. See [Elevated authorisation](~peios/package-management/dependency-resolution#elevated-authorisation)
+for the separate questions and their limits.
 
 ## Freshness — defeating a stale-repository attack
 
@@ -129,9 +177,21 @@ Going backward is one half of the attack; standing still is the other. A frozen 
 
 When an install, upgrade, or downgrade finds a repository's trust state older than its maximum, peipkg refreshes that repository first. If it cannot — the repository is unreachable, or it refreshes without progressing — the operation is refused rather than planned against outdated metadata. Passing `--allow-stale` to the operation overrides the refusal; the override is warned about and recorded in the audit stream. A maximum above 180 days draws a warning on every operation, because a bound that loose effectively disables the check.
 
-There is a third way to stand still, and it needs its own check. Maximum trusted age asks *how long since I last refreshed successfully* — and a repository can keep that answer flattering forever by bumping its index version on every publication while stamping the index with an ancient `generated_at`. Every refresh looks like progress; the metadata never actually moves. So peipkg separately enforces a **maximum index staleness** measured from the index's own `generated_at`: **90 days** by default, tunable per repository with `max_index_staleness_days` in its `.repo` file or `--max-index-staleness-days` at add time.
+The operator interface also documents a **maximum index staleness** measured
+from the index's `generated_at`: **90 days** by default, configured with
+`max_index_staleness_days` in the `.repo` file or `--max-index-staleness-days`
+at add time. This is intended to catch a publisher advancing the version
+while retaining an ancient generation timestamp.
 
-The two are deliberately independent, and raising one does not widen the other — a `max_trusted_age_days` of 180 still leaves the 90-day staleness window in place. An index past that window triggers a refresh before any install proceeds, and the same `--allow-stale` override applies, with the same warning and audit record. A staleness bound above 365 days draws a warning on every operation.
+> [!WARNING]
+> The [refresh reference](~peios/peipkg/repositories/refresh#what-is-not-checked)
+> says this additional index-age check is not implemented, in conflict with
+> the documented option here. This guide preserves the option and its stated
+> limits, but does not establish which behaviour your build implements.
+> Inspect `index_generated` and the publisher's current metadata rather than
+> relying on that bound alone.
+
+The two documented settings are independent: raising one does not widen the other — a `max_trusted_age_days` of 180 still leaves the 90-day staleness window in place. The operator interface describes a forced refresh for an index past the window, the same warned and audited `--allow-stale` override, and a warning on every operation when the staleness bound is above 365 days. The implementation conflict above applies to those expectations too.
 
 ## Listing and removing repositories
 
@@ -148,7 +208,11 @@ official  https://pkgs.peios.org  priority=10  required
 internal  https://pkg.corp.example  priority=20  required
 ```
 
-`repo remove` deletes a repository's configuration and the trust state peipkg recorded for it. Packages already installed from that repository stay installed — removing a repository controls where future packages come from; it does not remove past ones. Those packages simply no longer have a source for upgrades until you add a repository that carries them again.
+`repo remove` deletes a repository's configuration and the trust state peipkg recorded for it. Packages already installed from that repository stay installed — removing a repository controls where future packages come from; it does not remove past ones. Check their origin with `list` and `info`, and review any future source
+substitution. The [cross-repository guard reference](~peios/peipkg/repositories/cross-repository-guards#orphaned-packages)
+describes packages whose origin has disappeared as orphans, including named
+upgrade refusal when no configured source offers them. Do not infer that
+removing a source also removed or replaced its packages.
 
 ## Where the configuration lives
 
@@ -163,10 +227,16 @@ trust_anchors    = ["ef86709c4b1d8a02e5f3c719d640aa8b7c2e9105f8d3b6470a1c2e9d8b5
 
 The files are hand-editable, and editing one is a legitimate way to configure a repository — a trust anchor written into the file is you supplying that anchor out of band. `peipkg repo add` is the convenient front end: it runs the ceremony and writes the file for you. Who may edit these files is, like everything else on Peios, the [security descriptor](~peios/security-descriptors/overview) on `/lcl/conf/peipkg/`.
 
+A repository's `allow_sd_overrides` setting defaults to `false`. The
+[configuration reference](~peios/peipkg/repositories/configuration#allowing-security-descriptor-overrides)
+documents refusal of packages declaring file security descriptors unless
+you explicitly permit that repository to supply them. This permission is a
+separate trust decision; it does not give peipkg rights beyond your account.
+
 ## Exit status
 
 | Code | Meaning |
 |---|---|
 | `0` | The operation succeeded — the repository was added, listed, or removed. |
-| `1` | The operation failed — the trust ceremony failed (`repo add` backs out and leaves nothing behind), or the subcommand was missing, unknown, or given the wrong arguments (a missing `repo add <name> <base-url>`, a malformed option). Removing a name that is not configured is not a failure. |
+| `1` | The operation failed — the trust ceremony failed (a newly created configuration is removed; a pre-existing `.repo` file is retained), or the subcommand was missing, unknown, or given the wrong arguments (a missing `repo add <name> <base-url>`, a malformed option). Removing a name that is not configured is not a failure. |
 | `2` | A usage error before any command ran — no command, an unknown command, or a malformed global option. |

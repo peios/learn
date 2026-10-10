@@ -1,7 +1,7 @@
 ---
 title: Using feat
-type: reference
-description: The feat command — listing features, what each is, installing, turning on and off and removing them — its exit codes, and its JSON answers and driven mode for a program.
+type: how-to
+description: Inspect a feature, install or enable it, turn it off or remove setup, and recover a failed lifecycle step.
 related:
   - peios/features/overview
   - peios/features/feature-manager
@@ -10,6 +10,61 @@ related:
 
 `feat` runs a feature's scripts and records its state. It runs them as
 you: what you may change is what you could change by hand.
+
+## Inspect, change and check a feature
+
+Start by reading the feature's own description; it tells you what setup does
+and when it takes effect. For example:
+
+```
+feat list
+feat info dynamic-boot
+feat add dynamic-boot
+feat info dynamic-boot
+```
+
+`add` installs and enables the feature. Use `install` instead if you want
+setup only, or `enable` when it is already installed. For `dynamic-boot`, the
+services start at the next boot; an enabled state does not mean they have
+already started. Read the script output as well as the final state.
+
+The scripts run with your rights. Permission to update the feature's state
+does not guarantee permission for every action its scripts attempt.
+
+## Turn off or remove setup
+
+```
+feat disable <name>
+feat info <name>
+```
+
+This leaves the feature installed but off. To remove what it set up:
+
+```
+feat remove <name>
+feat info <name>
+```
+
+`remove` turns an enabled feature off first. It does not remove the package
+that supplies the scripts, so the feature remains available to set up again.
+Remove setup before removing its package with peipkg.
+
+## Recover an interrupted feature
+
+1. Read the failed script's output and inspect `feat info <name>` or
+   `feat list` to identify the interrupted phase.
+2. Address the reported cause, such as missing authority or a resource the
+   script needs. Updating the recorded state alone does not finish the work.
+3. Run the same command again to retry the step from the start. Feature
+   scripts are required to tolerate that retry.
+4. Inspect the result again. If you want to back out, an interrupted enable
+   can be disabled, and an interrupted install can be removed.
+
+An interruption is recorded rather than automatically rolled back as a package
+transaction. If the definition is missing, restore the supplying package first
+so the feature's scripts can perform the retry or teardown. See
+[Interrupted](~peios/features/overview#interrupted) and
+[When its package is removed](~peios/features/overview#when-its-package-is-removed).
 
 ## Commands
 
@@ -58,46 +113,21 @@ they run, between the lines `feat` writes.
 
 ## For a program
 
+Human commands and their exit codes are above. Programs can query JSON or
+run a change in driven mode; the complete schemas and error codes are in the
+[feat client reference](~peios/peipkg/the-tools/feat-client-interface).
+
 ### `--json`
 
-`feat list --json` answers with a JSON array, one object a feature, and
-`feat info <name> --json` with one object:
-
-| Member | Is |
-|---|---|
-| `name` | The feature's name, its directory under `/libexec/features/`. |
-| `title`, `description` | What it says it is, from its `feature.toml`, or `null`. A description's paragraphs are separated by a blank line, with no other line breaks. |
-| `state` | As `feat list` writes it. |
-| `defined` | `false` for a feature whose definition is gone, known only by the state the registry still holds. |
-| `phases` | The scripts it has: `install`, `enable`, `disable`, `uninstall`. |
-| `may_change` | Whether you may change its state, asked of the registry (see below). |
-| `metadata_problem` | Present only when its `feature.toml` couldn't be read, saying why. The feature is still listed. |
-
-`may_change` is found by opening, for writing, the registry key a change
-would write: the feature's own key, or where that isn't made yet, the key it
-would be made in. Nothing is written. It says nothing of what the feature's
-scripts may do, which they find out as they run.
+`feat list --json` returns an array and `feat info <name> --json` an object.
+See [query members and permission checks](~peios/peipkg/the-tools/feat-client-interface#json)
+for `state`, `defined`, `may_change` and the other fields. Permission to write
+state says nothing about whether a script can complete its work.
 
 ### `--driven`
 
-`feat --driven <command> <name>` makes a change and reports it as JSON Lines
-on standard output, one event a line, for a program running `feat` on
-someone's behalf (Feature Manager is one). The events are the part of
-[peipkg's driven mode](~peios/peipkg/the-tools/the-driven-mode) that applies;
-`feat` asks nothing, so it reads nothing, and a script's standard input is
-empty.
-
-| Event | Members | Means |
-|---|---|---|
-| `progress` | `phase`, `step`, `steps` | A script is starting: `phase` is `install`, `enable`, `disable` or `uninstall`, `step` of the `steps` this change will run. |
-| `message` | `text` | A line a script wrote, on its standard output or error, or what `feat` says it did. |
-| `done` | `summary`, `state` | The change is made, or needed nothing; `state` is the feature's now. |
-| `error` | `code`, `message` | The change failed. |
-
-Exactly one `done` or `error` ends the run. `error`'s `code` is one of
-`usage`, `not-found`, `denied`, `state`, `script` (a script failed; its
-output came before, as messages) and `failed`.
-
-A program that goes away mid-change doesn't stop it: `feat` carries on and
-the scripts run to their end. `list` and `info` aren't changes, so
-`--driven` refuses them with a `usage` error; ask them with `--json`.
+`feat --driven <command> <name>` emits JSON Lines for a change. It asks no
+questions and gives scripts empty standard input. See
+[events and terminal outcomes](~peios/peipkg/the-tools/feat-client-interface#driven).
+A client going away does not stop the change; inspect its eventual state.
+Use `--json` for `list` and `info`, which driven mode refuses.

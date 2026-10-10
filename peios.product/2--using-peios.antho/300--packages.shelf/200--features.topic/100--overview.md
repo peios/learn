@@ -1,7 +1,7 @@
 ---
 title: Features
 type: concept
-description: What a feature is — set-up beyond the files a package installs, done by the feature's own scripts as you — how its state is kept, what it means when one is left interrupted, and where to manage them.
+description: Decide whether you need a package or a feature change, inspect lifecycle state, recover an interrupted step, and remove setup before its package.
 related:
   - peios/features/using-feat
   - peios/features/feature-manager
@@ -9,16 +9,24 @@ related:
   - peios/writing-features/writing-a-feature
 ---
 
-A package only puts files in place. Installing one never runs anything, so
-it can never change what this machine does beyond the files it delivers.
-Some software needs more than files, though: a service defined in the
-registry, a setting changed, something made that the files rely on. A
-**feature** is how that is done. Each one is a small set of scripts that
-set something up, turn it on, turn it off and take it away again.
+Installing a package makes its files available. A **feature** performs
+additional setup, such as defining a service or changing a setting, through
+scripts you explicitly run. Installing its package does not run those scripts
+or turn the feature on. Package-manager maintenance steps are a separate,
+[closed set](~peios/peipkg/side-effects/the-recognised-set), not feature scripts.
 
-Features are deliberately plain and few. A package brings a feature's
-scripts with it; nothing runs them until someone asks, with the `feat`
-command or with [Feature Manager](~peios/features/feature-manager).
+Start with `feat list` and `feat info <name>` to see what is available, its
+state and what it says it will change. Use [Using feat](~peios/features/using-feat)
+for the commands, or open [Feature Manager](~peios/features/feature-manager)
+from the launcher by typing `feature`.
+
+| What you want | Tool |
+|---|---|
+| Install or remove the files that supply a feature | `peipkg` or Package Manager |
+| Set up a feature without turning it on | `feat install <name>` |
+| Set it up and turn it on | `feat add <name>` |
+| Turn it off but keep its setup | `feat disable <name>` |
+| Undo its setup before removing its package | `feat remove <name>` |
 
 ## What a feature can do
 
@@ -62,32 +70,28 @@ turned off, an interrupted install removed.
 
 ## Where its state is kept
 
-A feature's definition is read-only, in `/libexec/features/<name>/`. Its
-state is the registry's, under `Machine\System\Features\<name>`, in the value
-`State`:
+Changing a feature requires write access to its registry state. As shipped,
+Administrators can change it and everyone can read it. Use `feat` or Feature
+Manager rather than editing numeric state to make a failed step look complete:
+the scripts' work may still be unfinished.
 
-| `State` | Means |
-|---|---|
-| 0 | Not installed |
-| 1 | Installing (interrupted, if nothing is running) |
-| 5 | Installed |
-| 6 | Turning on |
-| 10 | On |
-| 9 | Turning off |
-| 4 | Removing |
-
-Changing a feature needs write access there. As shipped, only Administrators
-have it; everyone can read it, so anyone can see what is set up.
+The [client reference](~peios/peipkg/the-tools/feat-client-interface#where-its-state-is-kept)
+keeps the definition path, registry key and complete numeric state mapping.
 
 ## When its package is removed
 
 Removing the package that brought a feature takes its scripts away, but
-not what they set up, since removing a package runs nothing. The registry
+not what they set up, since package removal does not run the feature's
+teardown scripts. The registry
 still holds the feature's state, and both `feat list` and Feature Manager
 show it as having no definition. Installing the package again brings the
 scripts back, so the feature can be turned off or removed properly.
 
-Remove a feature before removing its package.
+Remove a feature before removing its package. Verify the feature's state
+with `feat list` or `feat info <name>` after the removal. If its definition
+is already missing, install the supplying package again, inspect the feature,
+then use `feat remove <name>` while the scripts are available. Package `undo`
+or `recover` is not a substitute for running the feature's teardown scripts.
 
 ## Features in an image
 

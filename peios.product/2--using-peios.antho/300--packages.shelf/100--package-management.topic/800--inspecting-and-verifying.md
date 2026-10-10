@@ -1,7 +1,7 @@
 ---
 title: Inspecting and verifying
 type: how-to
-description: The read-only commands — list, info, files, owns, and search to see what is installed and available, verify to check files are intact, clean to tidy the cache.
+description: Find installed software and file owners, check package contents after a change, interpret verification differences, and optionally clean the metadata cache.
 related:
   - peios/package-management/overview
   - peios/package-management/installing-and-removing
@@ -9,7 +9,27 @@ related:
   - peios/package-management/transactions-and-recovery
 ---
 
-The commands on this page change nothing. They report what is installed, look up a package in the repositories, check that installed files are still intact, and tidy the metadata cache. Use them to see what is on a system and to check that it is still as it should be.
+Use the query commands to identify installed software and its source, or
+`verify` to compare installed files with peipkg's records. These checks are
+read-only. The optional `clean` command below does delete cache data.
+
+Run them against the same root as the change you are checking, with
+`peipkg --root TARGET ...` when that is not `/`.
+
+| Question | Command |
+|---|---|
+| What is installed? | `peipkg list` |
+| Which version and source supplied a package? | `peipkg info <package>` |
+| Which files does it own? | `peipkg files <package>` |
+| Who owns this path? | `peipkg owns <path>` |
+| What can my repositories install? | `peipkg search <term>` |
+| Did files change or disappear? | `peipkg verify [package]...` |
+| What operation ran? | [`peipkg history`](~peios/package-management/transactions-and-recovery#the-transaction-log) |
+
+A successful file check does not test service health, feature state or user
+data. After a failed transaction, read the
+[recovery limits](~peios/package-management/transactions-and-recovery)
+even if history says `rolled-back`.
 
 ## Listing what is installed
 
@@ -124,25 +144,52 @@ If every checked file is intact, `verify` says so and exits `0`. If anything div
 
 With `--json` it emits the problems as an array, each a `package` and a `problem`, and exits `0` whether or not it found any: an empty array means every checked file is intact.
 
+## Investigate an unexpected verification result
+
+1. Use `info` and `files` to establish the package, version and affected paths.
+2. Compare the result with intended edits. For configuration under
+   `/usr/etc/` or legacy `/etc/`, a `.peipkg-new` sibling can mean an upgrade
+   preserved your edit and wrote a new default beside it. That original path
+   can continue to report a mismatch against the new recorded hash.
+3. If the difference is unexpected, consider an interrupted rollback, storage
+   corruption or tampering; a hash mismatch alone does not distinguish them.
+   Preserve files you need before attempting replacement.
+4. Repair deliberately, then verify again. There is no `reinstall` command;
+   the [file-mismatch reference](~peios/peipkg/failure-modes/a-file-that-does-not-match)
+   describes removal and installation as separate transactions or a version
+   change and change back. Preview dependency and removal consequences first.
+
+`verify` does not repair anything, and an unowned `.peipkg-new` or backup is
+not proof that the current package's recorded files are intact.
+
 ## Cleaning the metadata cache
 
 ```
 peipkg clean
 ```
 
-peipkg keeps a verified copy of each repository's metadata in a local cache. When you remove a repository, its cached metadata is no longer needed. `clean` deletes only those orphaned cache files — the ones belonging to repositories that are no longer configured.
+`clean` deletes unused metadata-cache data; it is a write operation, not a
+package verification or recovery command. The [cache reference](~peios/peipkg/repositories/the-index-cache#structure)
+describes content-addressed objects, with pointers naming each repository's
+current metadata, and collection of objects no pointer references.
 
 ```
 $ peipkg clean
 removed 2 orphaned cache file(s)
 ```
 
-`clean` never touches the metadata of a repository that is still configured, so it cannot leave you needing a refresh. It is pure housekeeping, and it is optional; run it whenever you like.
+Earlier operator guidance described deletion solely by removed repository;
+the technical reference instead describes unreferenced-object collection,
+which can also cover superseded objects from a still-configured source. Do
+not rely on a repository being configured to preserve every old cached object.
+This guide does not establish which cache layout your tool version uses.
+Cleaning is optional housekeeping, not a way to recover a pending transaction;
+it does not replace reviewing `history`, running `recover` or checking files.
 
 ## Exit status
 
 | Code | Meaning |
 |---|---|
-| `0` | The command succeeded. For `verify`, every checked file was intact. |
-| `1` | The command failed — a named package is not installed, a path is owned by nothing, or, for `verify`, at least one file had diverged. |
+| `0` | The command succeeded. For plain `verify`, every checked file was intact. `verify --json` also exits `0` when it finds problems: inspect the array. |
+| `1` | The command failed — a named package is not installed, a path is owned by nothing, or, for plain `verify`, at least one file had diverged. |
 | `2` | A usage error — an unknown command or a malformed option. |

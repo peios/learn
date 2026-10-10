@@ -10,11 +10,33 @@ related:
   - peios/package-management/composing-a-root
 ---
 
-Every peipkg command runs against a **root** — a subtree it treats as a complete Peios installation. By default that root is `/`, the running system. The [`--root DIR`](~peios/package-management/overview) global option points peipkg at a different one: an image mounted at `DIR`, an offline system under maintenance, a tree being built.
+Before changing an offline installation or an initramfs tree, check which
+**root** peipkg will use. With no `--root`, the default is the running system
+at `/`; install can also follow a package's `default_root`.
 
-A single bare path is enough when there is exactly one alternate tree and you always spell it out in full. It stops being enough when a system is several cooperating trees that are built and kept current together. Peios's **dynamic initramfs** is the case that motivates this page: a real system root at `/` and an initramfs image at `boot/initramfs`, both assembled from ordinary packages, both upgraded by the same package manager. Passing `--root boot/initramfs` on every command that touches the image — and remembering that path everywhere — is the friction named roots remove.
+## Check the target before changing it
 
-So `--root` generalises. A root can **register** other roots under it by name, reference them by that name instead of a path, compose those names by dotting, install a dependency into a *different* root than its depender, and upgrade every nested root in one command. The mechanism is deliberately general — the initramfs is one arrangement it expresses, not a special case wired into the tool.
+```
+peipkg root list --tree
+peipkg root show initramfs
+peipkg --root initramfs list
+```
+
+Use a registered name such as `initramfs`, or a literal path containing `/`,
+such as `/mnt/image` or `./tree`. Put the global option before the command:
+
+```
+peipkg --root /mnt/image list
+peipkg --root /mnt/image upgrade --dry-run --no-recurse
+```
+
+Read the resolved path and status before applying changes. A `dangling` root
+has a binding but no target tree; repeating an install does not make that a
+valid target. An unregistered name or a resolution cycle is an error.
+
+An upgrade normally visits nested roots too, with independent per-root
+results. Use `--no-recurse` when you intend to update only the selected root,
+and use the same root for history, verification and recovery afterwards.
 
 ## What a named root is
 
@@ -148,7 +170,7 @@ By default `peipkg upgrade` reconciles the current root and every named root nes
 
 Each root is upgraded as an independent transaction that continues on error: peipkg walks the tree, upgrades each root on its own, and prints a per-root summary. One root's failure does not abort the others — a broken upgrade in `initramfs` leaves `/`'s upgrade to complete and report normally, and vice versa. You get one summary per root and a clear picture of which succeeded.
 
-Each of those per-root upgrades is an ordinary transaction with the full atomic guarantee of [Transactions and recovery](~peios/package-management/transactions-and-recovery); the cascade runs several of them, it does not weaken any one.
+The cascade is not one all-roots transaction. Check every per-root summary: success in one root does not mean another succeeded. Apply the [transaction recovery checks](~peios/package-management/transactions-and-recovery) to any root whose operation failed or was interrupted.
 
 | Option | Effect |
 |---|---|
@@ -158,15 +180,16 @@ Use `--no-recurse` when you deliberately want to move just one root — for exam
 
 ## Cross-root dependencies
 
-A dependency can be routed into a different root than the package that declares it. A manifest writes this with `IN`:
+Installing a package can pull dependencies into another registered root.
+`install` is the verb that honours that routing. Review every target before
+approving: the operation can affect more than the root you selected.
 
-```
-Depends: foo IN initramfs
-```
-
-This says "I depend on `foo`, and `foo` belongs in the `initramfs` root" — the root name is resolved through the registries from the depending package's root. It is what lets a whole root be composed out of ordinary packages through the dependency graph: a single package installed into `/` can pull the pieces of the initramfs into `initramfs` as its dependencies, so the image is built by the same resolver and the same packages as everything else. An image builder starting from nothing can assemble an entire multi-root arrangement like this offline, from a declarative manifest, with the separate `peipkg-compose` binary — see [Composing a root](~peios/package-management/composing-a-root).
-
-`install` is the only verb that crosses roots. When resolution produces a plan whose changes land in more than one root, that plan is committed as a **two-phase commit** across the participating roots, under a single generated **cross-root transaction id** that ties the per-root pieces together. Either the change lands in every participating root or in none — the multi-root plan is atomic as a whole, not merely per root.
+The [cross-root dependency reference](~peios/peipkg/installation-roots/cross-root-dependencies)
+keeps the manifest syntax and routing details. It also documents two limits:
+upgrade, downgrade, removal and undo use single-root resolution for dependency
+fields, and removing the last dependent does not automatically remove a
+cross-root dependency. Inspect the relevant roots rather than assuming later
+operations repeat the install's routing or clean up another tree.
 
 A plan that reaches beyond the current root announces it before you approve:
 
@@ -177,13 +200,24 @@ You are never taken across a root boundary silently; a cross-root plan always sh
 
 ## Cross-root undo and recovery
 
-Because a cross-root install commits as a unit, it reverses as a unit.
+The operator interface describes `undo` of a cross-root transaction as
+reversing all participating roots together; there is no supported partial-root
+undo of that transaction. Check the history and preview the inverse plan
+before applying it.
 
-**`undo`** on a cross-root transaction reverses all of its participating roots together. There is no way to walk back only the `/` half of a change that also touched `initramfs` — the cross-root transaction id binds the pieces, and `undo` reverses the whole. See [Keeping a system current](~peios/package-management/keeping-a-system-current) for `undo` in general.
+For an interrupted operation, make all participants reachable and run
+`peipkg recover`. The [crash-recovery reference](~peios/peipkg/transactions/crash-recovery#cross-root-the-exception)
+describes sequential per-root commits: after one sibling commits, a pending
+sibling can be rolled forward using its persisted completion data. Missing
+completion data causes refusal rather than a safe automatic reversal. An
+ordinary single-root operation refuses pending cross-root work.
 
-**`recover`** understands cross-root transactions too. It reconciles them across every reachable root, walking the registry outward from the current root to find each participant. A cross-root commit that was torn by an interruption is resolved the same way a single-root one is — with one addition that follows from the two-phase commit: a torn commit is rolled back if it was interrupted before its point of no return, or rolled forward to completion if it had already passed that point. Either way every participating root ends in the same, consistent state.
-
-This is the single-root recovery model of [Transactions and recovery](~peios/package-management/transactions-and-recovery) extended across roots: the same commit-instant guarantee, now applied to a commit that spans several trees at once. Read that page for the underlying transaction model this builds on.
+Earlier operator guidance described a two-phase, all-roots commit with no
+partial outcome. The technical recovery description is narrower. Do not rely
+on an interruption leaving every root at the same version; inspect history
+and verify each reachable participant after recovery, and treat a refused
+root as unresolved. See [Transactions and recovery](~peios/package-management/transactions-and-recovery)
+for the available checks and failed-rollback limits.
 
 ## Exit status
 

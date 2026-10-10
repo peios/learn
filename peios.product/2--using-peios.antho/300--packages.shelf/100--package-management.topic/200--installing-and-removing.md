@@ -1,7 +1,7 @@
 ---
 title: Installing and removing packages
 type: how-to
-description: install puts packages on the system; remove takes them off. The plan-and-confirm flow, raw installs from a local .peipkg file, and cascade removals.
+description: Find a package, review and apply its plan, verify the result, and remove it without leaving feature setup behind.
 related:
   - peios/package-management/overview
   - peios/package-management/keeping-a-system-current
@@ -11,12 +11,46 @@ related:
   - peios/package-management/named-roots
 ---
 
-`peipkg install` puts packages on the system; `peipkg remove` takes them off. They are the two commands you reach for most, and they share one flow — peipkg works out the full set of changes, shows it to you, and waits for your approval before touching anything.
+Use `peipkg` for package files and [feat](~peios/features/using-feat) for the
+setup a package's features perform. Installing a feature's package makes its
+scripts available; it does not turn the feature on. On the desktop, use
+[Package Manager](~peios/package-management/package-manager).
+
+## Before changing software
+
+- Check that you are working on the intended [root](~peios/package-management/named-roots).
+  The default is `/`; a package's `default_root` can redirect an install when
+  you have not specified `--root`.
+- You need access to peipkg's records and authority to write the affected
+  paths. peipkg runs as you and grants no additional rights.
+- Use a repository whose signing-key anchor you have verified through a
+  trusted channel. See [Repositories and trust](~peios/package-management/repositories-and-trust).
+- Keep an independent copy of important local changes before replacing or
+  removing files. Transaction recovery and version undo have
+  [documented limits](~peios/package-management/transactions-and-recovery).
+
+## Install and check a package
+
+For example, to install GNU Grep from a configured, trusted repository:
 
 ```
-$ peipkg install nginx
-$ peipkg remove oldtool
+peipkg refresh
+peipkg search grep
+peipkg install org.gnu.grep --dry-run
+peipkg install org.gnu.grep
+peipkg info org.gnu.grep
+peipkg verify org.gnu.grep
 ```
+
+Review the source, versions, dependencies, removals, claims and target roots
+in the plan before approving. A dry run does not reserve its inputs: review
+the plan again when applying, especially after refreshing metadata or
+another package change. `info` shows the installed version and origin;
+`verify` checks files, not whether the application is running or configured.
+
+If the operation fails or is interrupted, use the
+[recovery procedure](~peios/package-management/transactions-and-recovery#recovering-an-interrupted-transaction)
+before treating the system as restored.
 
 ## Installing packages
 
@@ -28,401 +62,20 @@ Each argument is either the **name** of a package to fetch from a configured rep
 
 ### Canonical package names
 
-New Peios catalogue packages use canonical reverse-DNS names. The leading
-segments identify the upstream namespace and the final segment preserves the
-familiar package name, even when that deliberately repeats part of the
-namespace:
+Use the complete canonical name returned by `peipkg search`. Current catalogue
+commands do not resolve a short final component such as `grep` to
+`org.gnu.grep`. Virtual capabilities remain unqualified and are a separate
+[dependency mechanism](~peios/package-management/dependency-resolution).
 
-```
-com.amd.amd-ucode
-org.gnu.bash
-org.sourceware.elfutils
-org.peios.peinit
-```
+Canonical names use reverse-DNS namespaces, for example `org.gnu.bash`,
+`com.amd.amd-ucode` and `org.peios.peinit`. Third-party software retains its
+upstream namespace; Peios-owned software uses `org.peios`. A name identifies
+the software, not who signed or endorsed the package. Check its repository
+origin separately.
 
-Peios-built packages of third-party software retain the upstream namespace;
-Peios-owned software and Peios-specific integration packages use `org.peios`.
-The name identifies the packaged software, while the repository signature and
-build provenance identify who packaged it. It does not imply that upstream
-signed or endorsed a downstream package.
-
-Related payloads retain that canonical base. For example,
-`org.sourceware.elfutils-libs` carries libdw and libasm,
-`org.sourceware.elfutils-libelf` carries libelf, and
-`org.sourceware.elfutils-devel` carries their development interfaces without
-requiring the command-line tools to be installed.
-
-The elfutils tools include command manuals and `eu-make-debug-archive` for
-preparing an offline debugging archive. To archive one executable, use
-`eu-make-debug-archive debug.a -e /path/to/program`; its debugging information
-must be available. The optional `--sudo` mode requires a separately installed
-and authorized privilege helper. The debuginfod service/client and stackprof
-components are not included in this family.
-
-GNU C Library administration commands and their manuals are in
-`org.gnu.glibc-bin`. Profiling and tracing commands, including the Perl-based
-`mtrace`, are in `org.gnu.glibc-utils`. Extra legacy character converters are
-in `org.gnu.glibc-gconv-extra`, and the reference manual is in
-`org.gnu.glibc-doc`, as HTML under `/usr/share/doc/org.gnu.glibc/html/`. These utilities retain Peios's fixed authority and resolver
-providers; installing them does not make local passwd files an account authority.
-
-Libtraceevent's library symbols are in `org.kernel.libtraceevent-libs-debuginfo`,
-while plugin symbols are in `org.kernel.libtraceevent-debuginfo`. The tracing
-libraries provide their API manuals and HTML documentation through their
-respective `-doc` packages.
-
-Mozilla root-certificate data is installed by `org.mozilla.ca-certificates`
-at `/usr/share/ca-certificates/mozilla.crt`. The package supplies server-authentication
-roots from the tracked Firefox release data; it does not install machine trust
-policy by itself. A flat PEM store cannot express Mozilla's per-root distrust
-dates, so loading it alone does not reproduce every Firefox trust restriction.
-
-The eudev family follows the same rule: `io.github.eudev-project.eudev`
-contains the daemon, tools, rules and Peios service integration;
-`io.github.eudev-project.eudev-libudev` contains the runtime library; and
-`io.github.eudev-project.eudev-devel` contains the public header, linker name
-and pkg-config metadata. Installing libudev for an application therefore does
-not pull in the system device manager. The device-manager package uses
-`peiosutils` for the core applets in its coldplug hook; it does not install the
-GNU Coreutils bootstrap package into the running system.
-
-FIGlet is installed as `org.figlet.figlet`. Its commands, font catalogue and
-manuals form one small runtime package; detached debugging symbols and sources
-use the conventional `-debuginfo` and `-debugsource` suffixes.
-
-The file-identification command is `com.darwinsys.file`. Its libmagic ABI,
-architecture-independent format database and development interface are split
-as `com.darwinsys.file-libmagic`, `com.darwinsys.file-magic` and
-`com.darwinsys.file-devel`, so library consumers do not acquire the command.
-
-GNU `find` and `xargs` are installed as `org.gnu.findutils`; their manuals are
-in `org.gnu.findutils-common`. The `locate` and `updatedb` tools are omitted
-until Peios has a service design for maintaining their global index. Because
-Peipkg normalizes POSIX ownership and mode metadata, `find` predicates such as
-`-user`, `-group` and `-perm` inspect that compatibility metadata; they do not
-query KACS policy and must not be used as authorization checks.
-
-GNU Bison's parser generator, `yacc` frontend and parser skeletons are in
-`org.gnu.bison`. Install `org.gnu.bison-devel` when a project uses the
-traditional `liby.a` convenience library or the `bison-i18n.m4` Autoconf macro.
-Generated-parser message catalogs are independently available through
-`org.gnu.bison-runtime`.
-
-GNU Binutils' assembler, linker and object tools are in `org.gnu.binutils`;
-headers, linker names and static libraries are in `org.gnu.binutils-devel`.
-The optional profiler is `org.gnu.binutils-gprofng`, including its command
-manuals. Its library's linker name and static archive are separately available
-in `org.gnu.binutils-gprofng-devel`, which also installs the matching profiler
-runtime. Ordinary compiler builds do not need the profiler.
-
-The Flex scanner generator is `io.github.westes.flex`; its `flex++` frontend
-is included with the command. The independently usable libfl runtime is
-`io.github.westes.flex-libs`, while `io.github.westes.flex-devel` adds the C++
-header, static archive and linker name without folding those development files
-into either runtime package.
-
-GNU Awk is installed as `org.gnu.gawk` and provides both the `gawk` and `awk`
-command names. Loadable extensions and the password/group lookup helpers stay
-with the interpreter, reusable Awk libraries and manuals are in
-`org.gnu.gawk-common`, and `org.gnu.gawk-devel` provides `gawkapi.h` for
-building additional extensions. Arbitrary-precision MPFR arithmetic is
-enabled. Persistent arrays are disabled because their process-wide ASLR
-manipulation is outside the Peios process contract. The interactive debugger
-(`gawk -D`) has GNU Readline line editing and command history.
-
-The GNU debugger is installed as `org.gnu.gdb`, with the `gcore`, `gstack` and
-`gdb-add-index` helpers, Python scripting, the text user interface (`gdb
--tui`), Readline line editing and iconv character-set conversion. It reads
-compressed debug sections (zlib, zstd and LZMA MiniDebugInfo) and finds a
-program's symbols in the matching `-debuginfo` package by build ID under
-`/usr/lib/debug`. The remote debugging stub is the separate
-`org.gnu.gdb-gdbserver`, and `org.gnu.gdb-devel` adds the JIT reader interface
-header. Guile scripting, CTF trace files, Intel Processor Trace, debuginfod
-lookups and source highlighting are not included.
-
-The Expat XML parser library is installed as `io.github.libexpat.expat`; its
-headers, pkg-config and CMake files are in `io.github.libexpat.expat-devel`, the
-static library in `io.github.libexpat.expat-static`, and the `xmlwf`
-well-formedness checker in `io.github.libexpat.expat-tools`.
-
-DWZ, the DWARF duplicate-removal tool, is installed as `org.sourceware.dwz`.
-Catalogue packages are built with it, so their `-debuginfo` payloads are
-already deduplicated per file. Debugedit's tools are `org.sourceware.debugedit`;
-its RPM-style `find-debuginfo` driver is the separate
-`org.sourceware.debugedit-find-debuginfo`, which brings in GDB and DWZ.
-
-util-linux's libblkid and `getopt` are joined by three command packages:
-`org.kernel.util-linux-schedutils` (`taskset`, `chrt`, `ionice` and `renice`,
-for CPU affinity and scheduling), `org.kernel.util-linux-script` (`script`,
-`scriptreplay` and `scriptlive`, for recording terminal sessions) and
-`org.kernel.util-linux-extra` (`flock`, `setsid`, `rev`, `col`, `colcrt` and
-`colrm`). util-linux commands that duplicate peiosutils, or that manage logons,
-storage, capabilities or namespaces, are not included.
-
-Tcl 8.6 is installed as `org.tcl-lang.tcl`: `tclsh`, libtcl and the script
-library. Its headers (including the private ones under
-`/usr/include/tcl-private`), stubs library, `tclConfig.sh` and C API manuals
-are in `org.tcl-lang.tcl-devel`. Expect is `org.tcl-lang.expect`, providing
-the `expect` interpreter and `package require Expect`, with
-`org.tcl-lang.expect-devel` for embedding; Expect's example scripts
-(`autoexpect`, `unbuffer`, `mkpasswd` and the rest) are not shipped. The
-DejaGnu test harness, `runtest`, is `org.gnu.dejagnu`, and its `dejagnu.h`
-unit-test header is `org.gnu.dejagnu-devel`.
-
-Three C and C++ unit-testing frameworks are available for building and running
-test suites:
-
-- GoogleTest and GoogleMock are `com.google.googletest`, with headers, the
-  CMake package (`find_package(GTest)`) and pkg-config modules in
-  `com.google.googletest-devel` and static libraries in
-  `com.google.googletest-static`. The shared libraries' sonames carry the full
-  release version, so test binaries rebuild with each GoogleTest update.
-- CUnit (the maintained CUnity continuation of SourceForge CUnit) is
-  `com.gitlab.cunity.cunit`, which holds the XML report stylesheets; headers,
-  the pkg-config module and the CMake package are in
-  `com.gitlab.cunity.cunit-devel`. CUnit builds only a static library,
-  `com.gitlab.cunity.cunit-static`, which the development package brings in.
-- Check is `io.github.libcheck.check`, with headers, the pkg-config module and
-  the `AM_PATH_CHECK` Autoconf macro in `io.github.libcheck.check-devel` and
-  the static library in `io.github.libcheck.check-static`. `checkmk`, which
-  generates Check test programs from compact descriptions, is the separate
-  `io.github.libcheck.check-checkmk`.
-
-GNU Gettext's catalog commands are installed as `org.gnu.gettext`, with
-manuals, extraction rules, project templates and the commands' translated
-messages in `org.gnu.gettext-common`. Project maintainers install
-`org.gnu.gettext-devel` for `autopoint`, `gettextize`, the Autoconf macros and
-public headers. The independently usable `libasprintf`, `libgettextpo` and
-`libtextstyle` ABIs are separate runtime packages. Glibc supplies Peios's
-`libintl`; Gettext therefore does not install a competing implementation,
-while its commands and shell integration retain full native-language support.
-Java, C#, Emacs and terminal-styling integrations are not included. The
-optional `po-fetch` and AI-assisted `spit` helpers are also omitted until their
-complete runtime dependencies are available as Peios packages.
-
-GNU gperf is installed as `org.gnu.gperf`. Its generated C and C++ source has
-no gperf runtime dependency, so no development or runtime-library subpackage
-is needed; debugging symbols and their matching source are available through
-the conventional `org.gnu.gperf-debuginfo` and `org.gnu.gperf-debugsource`
-packages.
-
-GNU GMP's C runtime is `org.gnu.gmp`; the C++ wrapper is the independently
-installable `org.gnu.gmp-c++`, so C-only consumers do not acquire libstdc++.
-Headers and linker names are in `org.gnu.gmp-devel`, while static archives are
-in `org.gnu.gmp-static`. Builds use GMP's generic x86-64 runtime dispatch
-rather than instructions selected from the package builder's CPU, so the
-published libraries remain portable across Peios x86-64 systems.
-
-GNU Grep is installed as `org.gnu.grep` and provides the `grep`, `egrep` and
-`fgrep` command names. Its manuals and translated messages are in
-`org.gnu.grep-common`. Basic, extended, fixed-string and Perl-compatible
-(`grep -P`) regular expressions are all supported; `grep -P` uses the PCRE2
-library from `org.pcre.pcre2`, which is installed alongside Grep.
-
-GNU gzip is installed as `org.gnu.gzip`, containing `gzip`, `gunzip`, `zcat`
-and `uncompress`; its manuals are in `org.gnu.gzip-common`. The optional
-`org.gnu.gzip-utils` package adds the non-interactive shell helpers such as
-`zgrep`, `zdiff`, `zforce`, `znew` and `gzexe` together with their declared
-command dependencies. `zless` and `zmore` are omitted until the catalogue has
-a pager provider, so installing the utilities never leaves unusable commands.
-
-The Integer Set Library runtime is installed as `io.sourceforge.libisl.isl`.
-Headers, the linker name and pkg-config metadata are in
-`io.sourceforge.libisl.isl-devel`; the static archive and its static GMP
-closure are in `io.sourceforge.libisl.isl-static`. Published builds use ISL's
-portable mode rather than selecting instructions from the package builder's
-CPU.
-
-Kernel module administration commands are installed as `org.kernel.kmod`;
-the independently usable libkmod runtime is `org.kernel.kmod-libs`. Headers
-and pkg-config metadata are in `org.kernel.kmod-devel`, with the static archive
-in `org.kernel.kmod-static`. The tools support gzip-, xz- and zstd-compressed
-modules and PKCS#7 signature reporting. `depmod` is a machine-facing command
-at `/libexec/depmod`; package transactions invoke it when a kernel-module
-payload changes.
-
-The Linux capabilities runtimes libcap and libpsx are installed as
-`org.kernel.libcap`. Capability inspection and file-capability commands are in
-`org.kernel.libcap-tools`, development interfaces in
-`org.kernel.libcap-devel`, and both static archives in
-`org.kernel.libcap-static`. Go and PAM integrations are not included in this
-package family.
-
-Libconfig's C runtime is installed as `io.github.hyperrealm.libconfig`; its
-self-contained C++ runtime is `io.github.hyperrealm.libconfig-c++`. Headers,
-linker names, pkg-config and CMake metadata for both interfaces are in
-`io.github.hyperrealm.libconfig-devel`, while the static archives are in
-`io.github.hyperrealm.libconfig-static`.
-
-The libnl protocol-library family is installed as
-`io.github.thom311.libnl`. Its command suite, CLI support library, dynamically
-loaded traffic-control modules and lookup databases are in
-`io.github.thom311.libnl-tools`. Install `io.github.thom311.libnl-devel` for
-the complete public header and pkg-config surface, and
-`io.github.thom311.libnl-static` for the seven static libraries.
-
-The hardware performance-event discovery and encoding runtime is
-`net.sourceforge.perfmon2.libpfm`. Its public headers, linker name and API/PMU
-manuals are in `net.sourceforge.perfmon2.libpfm-devel`; the static encoder is
-in `net.sourceforge.perfmon2.libpfm-static`. Python bindings are not included.
-
-GNU Libtool's command-line tools, macros and support files are installed as
-`org.gnu.libtool`. The configured `libtool` command records the target
-compiler and ABI paths, so this package is architecture-specific even though
-its commands are shell scripts. The independently usable libltdl runtime is
-`org.gnu.libtool-ltdl`; its headers and linker metadata are in
-`org.gnu.libtool-ltdl-devel`, with the static archive in
-`org.gnu.libtool-ltdl-static`.
-
-GNU M4 is installed as `org.gnu.m4`. The package includes the command,
-localised messages and manual; matching source, debuginfo and debugsource
-packages are published alongside it.
-
-GNU Make is installed as `org.gnu.make`. Install `org.gnu.make-devel` to
-compile loadable modules against its `gnumake.h` interface. Guile integration
-is not included. Recipes use Peios' `/usr/bin/sh` system-shell path by default.
-
-Meson is installed as `com.mesonbuild.meson`. The package includes the
-`meson` command and manual, and declares Ninja as a runtime dependency because
-Meson's normal build workflow invokes it. Meson's Python implementation is
-private to the application rather than exposed as a system-wide Python
-library.
-
-GNU MPFR's shared runtime is installed as `org.gnu.mpfr`. Its public headers,
-linker name and pkg-config metadata are in `org.gnu.mpfr-devel`; the static
-archive and its static GMP closure are in `org.gnu.mpfr-static`. The library is
-built with thread-safe storage and publishes matching source, debuginfo and
-debugsource packages.
-
-ncurses terminal-information utilities are installed as `org.gnu.ncurses`.
-The wide-character ABI 6 libraries are in `org.gnu.ncurses-libs`, while the
-terminal database and tabset files are in `org.gnu.ncurses-terminfo`. Headers,
-linker names, pkg-config metadata and API manuals are in
-`org.gnu.ncurses-devel`; static libraries are in `org.gnu.ncurses-static`.
-Narrow-character, C++ and Ada compatibility surfaces are not included.
-
-The Ninja build executor is installed as `org.ninja-build.ninja`. Its Bash and
-Zsh completions, Vim syntax file, README, source manual and `ninja(1)` command
-reference are included with the command. The command reference is generated
-from the packaged executable's help output. Ninja uses the system shell to
-execute build rules, so the package depends on `org.git.kernel.dash`; matching
-source, debuginfo and debugsource packages are published alongside it.
-
-IANA timezone data is installed as `org.iana.tzdata` under
-`/usr/share/zoneinfo`. The build uses the backward-compatible fat TZif format
-so older timezone compilers preserve final transitions that change daylight
-saving status or an abbreviation without changing the UTC offset.
-
-The numactl command suite is installed as `io.github.numactl.numactl`. The
-shared libnuma runtime is `io.github.numactl.libnuma`; its headers, linker
-name, pkg-config metadata and API manuals are in
-`io.github.numactl.libnuma-devel`, while the static archive and its static
-libatomic closure are in `io.github.numactl.libnuma-static`. Matching source,
-debuginfo and debugsource packages are published alongside the family.
-
-OpenSSL's general cryptography runtime, providers, engines and vendor
-configuration are installed as `org.openssl.libcrypto`; the TLS runtime is
-`org.openssl.libssl`. The `openssl` command and its user manuals are in
-`org.openssl.openssl`, while certificate-management Perl utilities are in the
-architecture-independent `org.openssl.openssl-perl` package. Headers, linker
-names, pkg-config and CMake metadata, and API manuals are in
-`org.openssl.openssl-devel`; static libraries are in
-`org.openssl.openssl-static`. Package-owned configuration is stored beneath
-`/usr/etc/ssl` and appears at OpenSSL's compiled `/etc/ssl` lookup path through
-Peios's merged configuration view. Matching source, debuginfo and debugsource
-packages are published alongside the family.
-
-The kernel DWARF and BTF tool suite is installed as `org.kernel.pahole`. It
-includes `pahole` and the accompanying dwarves inspection tools, shell
-utilities and runtime data. The public libdwarves ABI is split into
-`org.kernel.libdwarves`, with headers and linker names in
-`org.kernel.libdwarves-devel`, so library consumers do not acquire the command
-suite. Release builds use upstream's signed tarballs because those contain the
-embedded libbpf sources needed for a complete build; matching source,
-debuginfo and debugsource packages are published alongside the family.
-
-The ELF metadata editor is installed as `org.nixos.patchelf`. It includes the
-`patchelf` command, manual and Zsh completion, with matching source, debuginfo
-and debugsource packages. The command can inspect and change an ELF object's
-interpreter, run path, dynamic dependencies, SONAME and executable-stack
-state. Upstream release archives are not maintainer-signed, so newly
-discovered releases use an explicit HTTPS trust-on-first-use exception and
-become immutable once recorded in Pekit's SHA-256 lock.
-
-PCI inspection and configuration tools are installed as `cz.ucw.pciutils`.
-It includes `lspci`, `setpci`, `pcilmr`, `update-pciids` and their manuals.
-The shared libpci ABI and bundled PCI ID database are in `cz.ucw.libpci`;
-headers, linker input, pkg-config metadata and the API manual are in
-`cz.ucw.libpci-devel`, while the static archive is in
-`cz.ucw.libpci-static`. Builds enable compressed ID files, explicit DNS
-lookups, kernel-module lookup through libkmod and udev HWDB fallback. Matching
-source, debuginfo and debugsource packages are published alongside the family,
-using release archives authenticated by maintainer Martin Mares's OpenPGP key.
-
-Standard network-name databases are installed as `org.debian.netbase`. The
-package places the protocol, service and Ethernet-type registries in `/usr/etc`;
-Peios's merged configuration view exposes those vendor defaults as
-`/etc/protocols`, `/etc/services` and `/etc/ethertypes` for libc and networking
-tools. The RPC registry remains part of glibc at `/usr/etc/rpc`. Locally managed
-configuration can therefore override these files without modifying package
-payloads. Perl's shared runtime depends on netbase because its Socket, IO and
-Net::Ping modules perform named protocol and service lookups.
-
-Perl is installed as `org.perl.perl`, which also provides the `perl` virtual
-capability used by existing build dependencies. Architecture-independent core
-modules are in `org.perl.perl-modules`; the shared embedding library and XS
-modules are in `org.perl.libperl`; and public CORE headers and linker names are
-in `org.perl.perl-devel`. Language, utility and module manuals are split into
-`org.perl.perl-doc`. The threaded interpreter uses stable major.minor module
-paths so a patch update does not abandon locally installed modules, and links
-the catalogue's zlib and bzip2 rather than bundled copies. Crypt, GDBM and DB
-extensions remain disabled until their libraries have production packages.
-Matching source, debuginfo and debugsource packages are published alongside the
-family. CPAN currently offers Sigstore bundles rather than a detached OpenPGP
-signature Pekit can verify, so discovered releases become immutable through
-their Pekit SHA-256 lock after HTTPS retrieval until Sigstore verification is
-available.
-
-The system pkg-config implementation is `org.pkgconf.pkgconf`. It provides both
-the `pkgconf` and `pkg-config` command names and the `bomtool`, `spdxtool` and
-`pccritic` metadata utilities. Install `org.pkgconf.pkgconf-devel` when
-regenerating Autoconf builds that need the `pkg.m4` macros. The independently
-usable shared library is `org.pkgconf.libpkgconf`; public headers, linker name and
-pkg-config metadata are in `org.pkgconf.libpkgconf-devel`, with the static
-archive in `org.pkgconf.libpkgconf-static`. Matching source, debuginfo and
-debugsource packages are published alongside the family.
-
-GNU Readline's line-editing and history libraries are installed as
-`org.gnu.readline`, linked against ncurses' `libtinfo`. Headers, linker names,
-pkg-config metadata and the `readline(3)` and `history(3)` manuals are in
-`org.gnu.readline-devel`, with static archives in `org.gnu.readline-static`.
-Interactive `bc`, the `gawk` debugger and Python's `readline` module (which
-serves `input()` and the basic REPL selected by `PYTHON_BASIC_REPL`) use it,
-giving Emacs- or vi-style editing, history recall and `~/.inputrc` key
-bindings. Bash builds its own bundled copy of Readline and does not depend on
-this package.
-
-Rsync is installed as `org.samba.rsync`, which also provides and replaces the
-earlier `rsync` package name. The main package supports IPv6, iconv, generic
-extended attributes, OpenSSL-accelerated checksums, xxHash, zstd and rolling
-checksum SIMD. POSIX ACL support is omitted because Peios uses KACS DACLs.
-The TLS transport wrapper is in `org.samba.rsync-ssl`, and the Python-based
-restricted SSH-command wrapper is in `org.samba.rrsync`, so ordinary local
-transfers do not acquire either interpreter. The command can be invoked in
-daemon mode manually, but Peios does not currently install an rsync peinit
-service. Matching source, debuginfo and debugsource packages are published
-alongside the family.
-
-For now, commands require the complete canonical name:
-
-```
-peipkg install com.amd.amd-ucode
-```
-
-References to concrete packages in package metadata likewise record complete
-canonical names; virtual capability names remain unqualified. Unqualified-name
-resolution may be added in future when the final component identifies exactly
-one package, but it is not part of the current command contract.
+The [catalogue package-family reference](~peios/peipkg/catalogue-package-families)
+retains the full name list, split-library and development packages, included
+commands, unsupported components, and build/trust qualifications.
 
 Installing a package rarely means installing just that package. peipkg works out everything the request implies — the dependencies the package needs, and the dependencies of those in turn — and presents the whole set. How that set is computed is the subject of [Dependency resolution](~peios/package-management/dependency-resolution); this page is about the flow around it.
 
@@ -439,9 +92,9 @@ the following changes will be made:
 proceed? [y/N]
 ```
 
-Nothing has been downloaded and nothing on the system has changed. peipkg waits for an answer. Anything other than `y` or `yes` — including pressing Enter, or end-of-input — is a refusal, and the command exits having done nothing.
+No package payload has been downloaded or installed by this plan. peipkg waits for an answer. Anything other than `y` or `yes` — including pressing Enter, or end-of-input — is a refusal, and the command exits having done nothing.
 
-Answer `y` and peipkg carries the plan out as a single [transaction](~peios/package-management/transactions-and-recovery): it downloads and verifies every package, then commits the change atomically.
+Answer `y` and peipkg carries the plan out as a single [transaction](~peios/package-management/transactions-and-recovery): it downloads and verifies every package, then applies the change. Read the outcome and any warnings; after an interruption, follow the recovery procedure.
 
 | Option | Effect |
 |---|---|
@@ -451,9 +104,17 @@ Answer `y` and peipkg carries the plan out as a single [transaction](~peios/pack
 | `--allow-stale` | Proceed although a repository's trust state exceeds its maximum trusted age. See [Repositories and trust](~peios/package-management/repositories-and-trust). |
 | `--claim <names>` | Comma-separated claims to force-claim, overriding the current holder(s). |
 | `--claim-all` | Force-claim every claim the installed packages provide, overriding incumbents. |
-| `--dangerously-bypass-path-restrictions` | Permit packages that declare `special_system_package` to install outside the payload layout rules. Exempts nothing that has not declared itself special, and never reaches `/lcl/policy`. Needed only for the handful of packages whose job is to lay down the filesystem structure those rules protect. |
+| `--dangerously-bypass-path-restrictions` | Permit packages that declare `special_system_package` to install outside the payload layout rules. Exempts nothing that has not declared itself special. The technical sources disagree on whether `/lcl/policy` remains protected under the bypass; do not rely on that exclusion (see the warning below). Needed only for the handful of packages whose job is to lay down the filesystem structure those rules protect. |
 
 `--dry-run` is the safe way to see what a command would do. `--yes` is for scripts and unattended runs — but note that it skips only the routine prompt. A plan that contains an action needing deliberate authorisation will still stop and ask; `--yes` does not override that. See [Elevated authorisation](~peios/package-management/dependency-resolution) for which actions those are and why.
+
+> [!WARNING]
+> The [installation validation reference](~peios/peipkg/installation/validation#destinations-are-checked-here)
+> says the special-package bypass skips the destination check entirely,
+> including `/lcl/policy`; earlier operator guidance said that path was
+> excluded. This documentation does not establish a narrower boundary.
+> Only grant the bypass after reviewing the package's destinations and the
+> authority of the account running it.
 
 `--claim-all` cannot be combined with `--claim` or `--no-claim`. Claims — shared names exactly one package may hold — are covered in [Claims](~peios/package-management/claims).
 
@@ -477,7 +138,7 @@ A package supplied as an explicit local file takes precedence over any repositor
   install    nginx 1.27.4  (local file)
 ```
 
-In the future, peipkg will be able to consult system policy to decide whether raw installs are permitted at all, and that gate will be configurable. For now a raw install is always allowed; the verification above is what stands behind it.
+There is currently no policy gate that refuses raw installs as a class. Format and hash checks establish integrity, not the file's publisher or trustworthiness.
 
 ## Removing packages
 
@@ -488,7 +149,42 @@ peipkg uninstall <package>...
 
 `remove` and `uninstall` are the same command. Each argument names an installed package; peipkg plans the removal — the files to take off disk — and runs the plan-and-confirm flow described above.
 
-A removal leaves shared directories in place and removes only the files the package owns. peipkg knows which files those are from its database, so a removal is clean and complete.
+Before removing a package that supplies a feature, inspect and remove that
+feature with `feat` first. Removing the package does not undo the feature's
+setup and takes away the scripts needed to undo it. If that already happened,
+[restore the feature definition](~peios/features/overview#when-its-package-is-removed)
+before removing the feature.
+
+Inspect the package and preview the removal:
+
+```
+peipkg info <package>
+peipkg files <package>
+peipkg remove <package> --dry-run
+peipkg remove <package>
+peipkg list
+peipkg history
+```
+
+A removal releases the package's files and claims. Shared or non-empty
+directories remain; empty directories owned by no remaining package can be
+removed. If the package held a claim, no alternative is promoted
+[automatically](~peios/package-management/claims#what-happens-on-uninstall).
+
+### Keep or remove local changes
+
+For a modified configuration file under `/usr/etc/` or the legacy `/etc/`,
+peipkg asks whether to remove it, keep it, or abort:
+
+- **Remove:** the prior content is kept at a sibling backup path.
+- **Keep:** the file stays but becomes unowned.
+- **Abort:** the removal stops. End-of-input also aborts.
+
+`--yes` does not answer this per-file question. Binaries, libraries and data
+are not hashed at uninstall, so a hand-patched binary can be removed without
+a question. Use `verify` and preserve anything you need before approving.
+The [uninstall reference](~peios/peipkg/upgrade-and-removal/uninstall) describes
+these rules and database-integrity warnings.
 
 ### Removing something that is depended on
 
@@ -500,7 +196,7 @@ peipkg will not, by default, leave the system inconsistent. If you ask to remove
 | `--dry-run` | Print the plan and stop. |
 | `--yes`, `-y` | Skip the `proceed?` prompt. |
 
-`--cascade` turns that refusal into a wider plan: peipkg computes the full set of packages that would be left with a broken dependency and adds them to the removal. The plan then shows everything that will be removed. Review it before approving, because a cascade can reach further than expected.
+`--cascade` turns that refusal into a wider plan: peipkg computes the full set of packages that would be left with a broken dependency and adds them to the removal. The plan then shows everything that will be removed. Review it before approving, because a cascade can reach further than expected. There is no implemented system-critical-package guard: even removing the package manager is an ordinary removal. Do not use a cascade as a shortcut around a dependency you have not identified.
 
 ```
 $ peipkg remove --cascade libfoo

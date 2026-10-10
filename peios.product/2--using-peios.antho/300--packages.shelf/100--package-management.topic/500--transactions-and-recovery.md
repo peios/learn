@@ -1,7 +1,7 @@
 ---
 title: Transactions and recovery
-type: concept
-description: Every peipkg change is an atomic, reversible transaction. This page covers the three phases, the commit instant, interrupted runs, and recover and history.
+type: how-to
+description: Distinguish an interrupted transaction from a completed change, recover pending work, verify the files, and handle documented rollback limits.
 related:
   - peios/package-management/overview
   - peios/package-management/keeping-a-system-current
@@ -10,81 +10,93 @@ related:
   - peios/auditing/overview
 ---
 
-Every change peipkg makes — an install, an upgrade, a downgrade, a removal — is a **transaction**. A transaction is atomic: it either happens completely or not at all. There is no state in which a package is half-installed, and no failure, signal, or sudden power loss that can leave one there.
+After an interrupted or failed package operation, inspect its history,
+recover pending work, and verify what is on disk before making another change.
+Use `undo` or `downgrade` only when you mean to reverse a **committed** change.
 
-This page explains how that guarantee is built, what an interrupted run leaves on disk, and the two commands — `recover` and `history` — that exist because of it.
-
-## The three phases
-
-Every operation moves through the same three phases.
-
-```mermaid
-flowchart LR
-    P["Plan<br/>read-only, no lock"] -->|"you approve"| S["Stage<br/>lock held; fetch + verify"]
-    S --> C["Commit<br/>the atomic flip"]
-    C --> D["Done"]
-    P -.->|"abort"| X["Nothing changed"]
-    S -.->|"abort / crash"| X
-```
-
-**Plan.** peipkg reads your request, reads the installed set, reads the cached repository metadata, and computes the ordered list of changes — or rejects the request. This phase is entirely read-only and takes no lock. It is why `--dry-run` and the query commands never block, even while another transaction is running, and why a plan can always be abandoned for free.
-
-**Stage.** Once you approve the plan, peipkg takes a single-writer lock — only one transaction touches the system at a time — and prepares everything. It downloads every `.peipkg` in the plan and **verifies all of them before staging any one of them**, so no package's contents can influence another's verification. Verified payloads are written into a staging area, each file hash-checked as it lands. Nothing the system uses has changed yet.
-
-**Commit.** peipkg moves the staged files into place and records the new package state. This is the phase that changes the system.
-
-## The one instant that matters
-
-Within the commit there is a **single instant** — the moment peipkg records the new state in its database — that divides the entire operation in two:
-
-- **Before it:** any failure, any signal, any power loss rolls everything back. The staged files are discarded, any displaced files are put back, and the system is exactly as it was.
-- **After it:** the operation is complete and durable.
-
-There is no third outcome. A transaction is never "partly applied". The rest of this page describes the machinery that delivers this guarantee.
-
-## Backups make rollback free
-
-When peipkg replaces or removes a file, it does not overwrite or delete it. It **renames the old file aside** — to a sibling name in the same directory — and puts the new file in place. The old contents are untouched, just under a different name.
-
-Rolling back is then simply renaming everything back. No data is copied, no contents are reconstructed; the rollback is the same cheap rename operation in reverse. This is why a failed transaction recovers to a byte-exact prior state.
-
-Those set-aside files also outlive a successful commit for a while — retained so that an [`undo`](~peios/package-management/keeping-a-system-current) of a recent transaction is fast and needs no network. They are cleaned up automatically as they age out.
-
-## What an interruption leaves behind
-
-If a transaction is interrupted mid-stage or mid-commit, you may find files with these names near where a package was being installed:
-
-| Name | Is |
+| What you see | What to do |
 |---|---|
-| `<name>.peipkg-staged-<id>` | An incoming file that had been staged but not yet moved into place. |
-| `<name>.peipkg-backup-<id>` | A file that had been renamed aside to make room — the backup. |
+| A pending transaction after an interruption | Run `peipkg recover`, then inspect history and verify files |
+| A committed update you want to reverse | Review [`undo` or `downgrade`](~peios/package-management/keeping-a-system-current) |
+| A `rolled-back` record but damaged or missing files | Follow [failed-rollback checks](#when-recovery-does-not-restore-the-files); history alone is not proof of restoration |
+| A committed change with a maintenance warning | Read the warning; a failed post-commit side effect does not undo the package change |
+| An interrupted feature script | Use [feat recovery](~peios/features/using-feat#recover-an-interrupted-feature); package recovery does not reverse feature setup |
 
-These names are deliberate. They have no leading dot, so they are visible rather than hidden — you are meant to find them and understand them. The `<id>` is the transaction number; look it up with `peipkg history` to see which operation left it.
-
-You do not clean these up by hand. peipkg knows about them and resolves them itself — see `recover`, next.
+> [!WARNING]
+> The transaction model describes all-or-nothing changes, but the
+> [failed-rollback reference](~peios/peipkg/failure-modes/a-failed-rollback)
+> documents a case where rollback errors are discarded and history is marked
+> `rolled-back` even though files were not restored. The
+> [visibility reference](~peios/peipkg/transactions/visibility) also documents
+> transient missing paths during file replacement. Do not interpret the
+> transaction model as a guarantee that a running application cannot observe
+> an intermediate file state, or that every failed operation recovered.
 
 ## Recovering an interrupted transaction
 
+Use the same root as the failed operation. If it was an offline or named
+root, put `--root TARGET` before each command below.
+
 ```
+peipkg history
 peipkg recover
+peipkg history
+peipkg verify
 ```
 
-When a transaction is interrupted before it commits, peipkg records it as **pending**. The next time peipkg starts any transaction it checks for a pending one first and rolls it back automatically before doing anything else — so in normal use recovery just happens, and you never see it.
+1. Record the transaction id, state, affected packages and error. Do not
+   delete staged files or backups before recovery has had a chance to use them.
+2. Run `recover`. A pending single-root transaction is rolled back; if none is
+   pending, the command says so. A committed transaction has only cleanup
+   left and is not reversed by `recover`.
+3. Read the result and inspect history again. Recovery can itself fail.
+4. Verify the affected packages, or all packages as above. Review each
+   difference against intentional edits and any `.peipkg-new` file.
 
-`peipkg recover` runs that step on demand. Use it when a transaction was interrupted and you want the system put right immediately, without waiting for the next install or upgrade.
-
-```
-$ peipkg recover
-recovered: the interrupted transaction was rolled back
-```
-
-Recovery only ever **rolls back**. A transaction that was interrupted after its commit instant is already complete — there is nothing pending and nothing to recover. Recovery deals exclusively with the "before the instant" case, and it always resolves it the same way: back to the prior state.
-
-If there is no pending transaction, `recover` says so and exits cleanly.
+Ordinary install, upgrade and removal commands attempt recovery of pending
+single-root work before starting new work. Explicit `recover` lets you deal
+with the interruption first and produces a recovery audit event; the automatic
+path does not. Read-only package queries remain available without waiting
+for the transaction lock. A second writer reports `transaction in progress`;
+wait for that operation to finish before trying another change.
 
 ### Across more than one root
 
-When an operation spans more than one named root, those roots commit as a unit under a single **cross-root transaction**, and `undo` reverses all participating roots together. `recover` reconciles pending cross-root transactions across every reachable root: a torn commit is rolled back, or — if it had already passed the commit instant — rolled forward to completion. See [Named roots](~peios/package-management/named-roots) for how multiple roots come about.
+A pending cross-root operation needs its participating roots to be reachable.
+An ordinary single-root operation refuses a pending cross-root transaction;
+run `peipkg recover` explicitly. Recovery can roll forward roots still pending
+when a sibling has already committed, rather than rolling everything back.
+A root missing the persisted completion data can be refused instead of
+recovered. Do not assume a successful check of one root establishes the state
+of every other root.
+
+The [cross-root recovery reference](~peios/peipkg/transactions/crash-recovery#cross-root-the-exception)
+describes these limits. See [Named roots](~peios/package-management/named-roots#cross-root-undo-and-recovery)
+for checking the targets.
+
+## When recovery does not restore the files
+
+The [failure reference](~peios/peipkg/rollback-and-recovery/completeness#when-rollback-itself-fails)
+documents rollback failure after I/O errors, a filesystem becoming read-only,
+or permissions changing during the operation. In that case the journal may
+already have been closed, so another `recover` can find nothing to retry.
+
+- Use `peipkg verify` to identify recorded files that differ or are missing.
+- Inspect the affected paths for staged or backup siblings, and keep the
+  evidence while deciding whether the old or new content is wanted.
+- Establish why writes or restoration failed before attempting repair.
+- Reconcile affected files and package records manually where necessary.
+  There is no `reinstall` verb: the reference describes removal and
+  installation as two transactions, or a version change and change back.
+  Review dependency, feature and claim consequences before removing anything.
+- Verify again after repair. A clean file check does not test services,
+  feature scripts, registry state or user data.
+
+There is no implemented indeterminate-state mode, forensic report command,
+or `recover` option to accept the current filesystem as authoritative. Further
+writes are not automatically blocked after every failed rollback. See
+[Indeterminate state](~peios/peipkg/rollback-and-recovery/indeterminate-state)
+for the distinction between intended handling and available tools.
 
 ## The transaction log
 
@@ -108,41 +120,83 @@ $ peipkg history
 
 The history is what [`undo`](~peios/package-management/keeping-a-system-current) reads to find the most recent transaction, and what ties a stray `*.peipkg-backup-<id>` file back to the operation that created it.
 
+## What an interruption leaves behind
+
+| Name | Meaning |
+|---|---|
+| `<name>.peipkg-staged-<id>` | Incoming content staged beside its destination |
+| `<name>.peipkg-backup-<id>` | The displaced original, renamed beside its destination |
+
+The names have no leading dot and carry the transaction id shown by
+`history`. They are recovery material, not ordinary cache files. Do not
+remove them just to tidy a directory after an interruption. A committed
+transaction can also leave cleanup behind after a crash; use its recorded
+state and the [recovery reference](~peios/peipkg/failure-modes/an-interrupted-transaction)
+to distinguish the cases.
+
 ## Configuration files on upgrade
 
-Upgrading a package raises a question for any configuration file under `/etc/` that the package owns: the new version ships a new default, but you may have edited the old one. peipkg decides per file, by comparing the file on disk against the hash it recorded at install:
+Package defaults live under `/usr/etc/`; `/etc/` is the merged configuration
+view. Modified-file protection also recognises legacy package paths under
+`/etc/`. It does not make `/etc/` a current package destination.
 
-- **Unchanged since install** — peipkg replaces it with the new default. You wanted the package's settings, and you get the current ones.
-- **Edited since install** — peipkg keeps your file untouched and writes the new default beside it as `<name>.peipkg-new`. The upgrade report notes it:
-
-  ```
-  peipkg: warning: /etc/nginx/nginx.conf has been modified since install —
-    keeping it; the new default was written to /etc/nginx/nginx.conf.peipkg-new
-  ```
-
-Your edits are never silently discarded, and the new defaults are never silently lost — you are simply told the two diverged and left to merge them when you choose.
+When a default is unchanged since installation, an upgrade can replace it.
+When you edited it, peipkg preserves your file and writes the new default as
+`<name>.peipkg-new`, with a warning. Compare and merge the changes deliberately.
+The new sibling is unowned and is not removed by uninstall. The original
+path can continue to appear in `verify` because its recorded hash is now the
+new package's hash; that report alone does not mean your preserved edit is
+corruption. See [Configuration files](~peios/peipkg/upgrade-and-removal/configuration-files).
 
 ## Side effects run after commit
 
-A few packages need a system-wide step after their files are in place — refreshing the shared-library cache, the kernel-module map, or the manual-page index. peipkg runs those steps after the commit instant, once per transaction.
+A package can request a standard maintenance operation from a closed set;
+it cannot supply arbitrary install-time scripts. Those maintenance steps run
+after commit. A failure is reported as a warning, and the package change
+stands. Read which step and root failed, then use the
+[invocation and retry rules](~peios/peipkg/side-effects/invocation) for that
+step. A later transaction that requests it can run it again; a warning does
+not mean the cache was already repaired.
 
-Because they run after the operation is already complete and durable, a side-effect step that fails is reported as a warning, not a failure. The transaction stands; the step is one that corrects itself the next time it runs. An install is never rolled back over a stale cache.
+## The three phases
+
+For operating the system, distinguish the plan you can decline, the work in
+progress, and the reported outcome. A dry run previews a request without
+applying package changes; it does not reserve the metadata or installed state
+for a later invocation. The [commit procedure](~peios/peipkg/transactions/the-commit-procedure)
+and [journal](~peios/peipkg/transactions/the-journal) describe the implementation.
+
+## The one instant that matters
+
+For a single-root transaction, the database commit is the durability boundary:
+pending work is recovered by rollback, while committed work is not reversed
+by `recover`. This boundary does not remove the failure and visibility limits
+above. See [Atomicity](~peios/peipkg/transactions/atomicity) and
+[Crash recovery](~peios/peipkg/transactions/crash-recovery).
+
+## Backups make rollback free
+
+Renaming displaced files avoids copying their contents for rollback; it does
+not make restoration infallible or promise a lasting backup. The
+[backup reference](~peios/peipkg/rollback-and-recovery/backups#retention)
+says ordinary transaction backups are discarded at commit, while earlier
+operator guidance described a retention window. Do not rely on transaction
+backups for a later undo. The [undo reference](~peios/peipkg/upgrade-and-removal/downgrade-and-undo#undo)
+describes resolving from archive metadata and requiring a reachable repository
+or usable cache. Keep independent backups for data you must recover.
 
 ## Why this shape
 
-The pay-off of the three-phase model is concrete:
-
-- An install interrupted by a crash or a power cut never leaves a broken package — it leaves either the old state or the new one.
-- The plan you approve under `--dry-run` is the plan that executes — resolution is read-only and deterministic.
-- Queries and dry-runs never wait on an in-flight transaction, because only staging and commit take the lock.
-- Every transaction is reversible, by `undo` for a recent one or `downgrade` for a specific package.
-
-The model rests on one principle: all the fallible work — downloading, verifying, staging — happens before the commit instant, so the commit itself is the only point at which the system changes state.
+Planning, journalling and a database commit support recovery; they are not a
+whole-system snapshot. Package-version reversal affects the package payload,
+not registry state, runtime data, user data or feature setup. The
+[transaction](~peios/peipkg/transactions/scope) and
+[rollback](~peios/peipkg/rollback-and-recovery/transaction-rollback) chapters
+hold the implementation detail and its limits.
 
 ## Where to go next
 
-For the commands that reverse a committed transaction, read [Keeping a system current](~peios/package-management/keeping-a-system-current).
-
-For how a transaction that spans several named roots commits and recovers as a unit, read [Named roots](~peios/package-management/named-roots).
-
-For the events every transaction emits, read [Auditing](~peios/auditing/overview).
+- [Reverse a completed update](~peios/package-management/keeping-a-system-current)
+- [Inspect files and ownership](~peios/package-management/inspecting-and-verifying)
+- [Check named roots](~peios/package-management/named-roots)
+- [Understand package audit records](~peios/peipkg/security/audit)
