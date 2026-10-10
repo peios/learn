@@ -277,6 +277,6 @@ A few clarifications:
 
 For the stage that runs the hooks, read [The initramfs stage](~peios/boot-and-trust-establishment/initramfs-stage).
 
-For the build that validates hooks and resolves their order, read [mkirf](~peios/boot-and-trust-establishment/mkirf).
+For the build that validates hooks and resolves their order, read [mkirf](~peios/boot-images/mkirf).
 
 For what takes over once a hook has mounted the real root, read [peinit at PID 1](~peios/boot-and-trust-establishment/peinit-pid-1).

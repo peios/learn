@@ -148,4 +148,4 @@ For the events audit and alarm ACEs produce, and where they go, read [Auditing](
 
 For how the SACL's labels and policies fit into the full check pipeline, read [Access decisions](~peios/access-decisions/overview).
 
-To read and edit a SACL from a shell, read [The sd command](~peios/security-descriptors/sd-command).
+To read and edit a SACL from a shell, read [The sd command](~peios/files-and-directories/sd).

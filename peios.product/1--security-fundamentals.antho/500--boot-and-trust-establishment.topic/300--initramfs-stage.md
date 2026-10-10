@@ -7,7 +7,7 @@ related:
   - peios/boot-and-trust-establishment/bootstrap-tokens
   - peios/boot-and-trust-establishment/boot-hooks
   - peios/boot-and-trust-establishment/peinit-pid-1
-  - peios/boot-and-trust-establishment/mkirf
+  - peios/boot-images/mkirf
 ---
 
 The kernel cannot reach the real root filesystem on its own. By the time it has finished its own initialisation it can speak to a CPU and some memory, but the disk the system is installed on may sit behind a storage driver that is not yet loaded, a volume manager that has not been assembled, or an encrypted container that has not been unlocked. Mounting that filesystem is work, and it is work that has to be done in userspace — the kernel does not mount real roots by guesswork.
@@ -71,7 +71,7 @@ Because hooks are shell scripts, the initramfs has to carry a shell. That shell 
 
 The initramfs carries its own set of kernel modules, shipped by the **kernel-modules-irf** package. It is a separate root from the real one and shares nothing with it, so it needs its own copy of anything it uses — the same reason it needs its own mountpoints and its own loader link.
 
-The set is deliberately a **subset**. The initramfs only has to reach the root filesystem, so it carries storage controllers and block devices, the input drivers a passphrase prompt needs, filesystem and crypto drivers, and network drivers for a root reached over the network. It does not carry graphics, sound, media or wireless: the real root can load those for itself once it is mounted, and everything in the initramfs is paid for on every boot — it is loaded whole into memory, and under a [UKI](~peios/boot-and-trust-establishment/mkuki) it sits inside an image the firmware verifies in one piece.
+The set is deliberately a **subset**. The initramfs only has to reach the root filesystem, so it carries storage controllers and block devices, the input drivers a passphrase prompt needs, filesystem and crypto drivers, and network drivers for a root reached over the network. It does not carry graphics, sound, media or wireless: the real root can load those for itself once it is mounted, and everything in the initramfs is paid for on every boot — it is loaded whole into memory, and under a [UKI](~peios/boot-images/mkuki) it sits inside an image the firmware verifies in one piece.
 
 The set is **closed under its own dependencies**: the build indexes it with `depmod -e` against the kernel's symbol table and fails if any module in it imports a symbol that neither the kernel nor another module in the set provides. That matters because a subset is exactly where an ordinary index goes quiet — depmod cannot record a dependency it cannot resolve, so a module whose provider was left out indexes cleanly and fails at boot with an unknown symbol. Every module the initramfs carries is therefore one it can load.
 
@@ -164,7 +164,7 @@ The `rd.break` shells are true breakpoints, not failures: prelude forks them, so
 
 Because the directory is the source and the initramfs image is a build product, the two have to be kept in step. Whenever `/boot/initramfs/` changes — a feature package is installed or removed, the kernel is updated, an administrator edits a hook — the image has to be rebuilt from the directory.
 
-The tool that does this is **mkirf** — see [mkirf](~peios/boot-and-trust-establishment/mkirf) for the full command reference. It reads `/boot/initramfs/`, resolves the order the hooks must run in, checks the directory is internally consistent, and writes the compressed initramfs image. Three properties of it matter to an operator:
+The tool that does this is **mkirf** — see [mkirf](~peios/boot-images/mkirf) for the full command reference. It reads `/boot/initramfs/`, resolves the order the hooks must run in, checks the directory is internally consistent, and writes the compressed initramfs image. Three properties of it matter to an operator:
 
 - **It validates.** mkirf will not produce an image from a directory that cannot boot. A hook set with an impossible ordering, a hook that depends on a capability nothing provides, a missing `init` — each of these stops the build with a clear error. A misconfigured boot is caught when the image is built, on a running system where the message is easy to read, rather than as a mystery failure at the next boot. [Boot hooks](~peios/boot-and-trust-establishment/boot-hooks) covers exactly what is checked.
 - **It is deterministic.** The same directory always compiles to the same image, byte for byte — identities, timestamps, and ordering are all normalised. This is what makes "did anything actually change?" a meaningful question, and it underpins later work such as signed boot artifacts.
@@ -204,4 +204,4 @@ For the deployment-specific scripts prelude runs, read [Boot hooks](~peios/boot-
 
 For the init system prelude hands the machine to, read [peinit at PID 1](~peios/boot-and-trust-establishment/peinit-pid-1).
 
-For the tool that compiles `/boot/initramfs/` into the image, read [mkirf](~peios/boot-and-trust-establishment/mkirf).
+For the tool that compiles `/boot/initramfs/` into the image, read [mkirf](~peios/boot-images/mkirf).

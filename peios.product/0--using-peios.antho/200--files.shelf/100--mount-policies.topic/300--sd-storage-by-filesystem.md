@@ -22,7 +22,7 @@ A successful file-data copy is not enough to make a deny-missing volume usable.
 1. Identify the source and destination filesystem types with
    [`lsblk`](~peios/mount-policies/lsblk) and the live mount listing.
 2. For mounted files, inspect effective permissions through
-   [`sd`](~peios/security-descriptors/sd-command), which uses the security API.
+   [`sd`](~peios/files-and-directories/sd), which uses the security API.
    This does not establish that an SD is stored: a synthesis mount can return
    a usable in-memory descriptor while the canonical xattr is still absent.
    Direct operations on the canonical SD xattr are sealed.

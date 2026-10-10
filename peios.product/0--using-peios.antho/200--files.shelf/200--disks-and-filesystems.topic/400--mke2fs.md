@@ -9,7 +9,7 @@ related:
   - peios/mount-policies/sd-storage-by-filesystem
   - peios/security-descriptors/overview
   - peios/security-descriptors/inheritance
-  - peios/security-descriptors/sd-command
+  - peios/files-and-directories/sd
 ---
 
 `mke2fs` creates an ext2, ext3 or ext4 filesystem. Peios packages it from upstream e2fsprogs, so the generic surface — `-t`, `-b`, `-L`, `-O`, `-i`, `-m`, the full extended-option list — is exactly the upstream one and its canonical documentation is the `mke2fs(8)` man page shipped with the package.
@@ -148,6 +148,6 @@ Peios ships no `/etc/mke2fs.conf`, so the compiled-in profile is what you get un
 
 For the model behind the two options — why stamping beats mount-time synthesis, and what one inheritable ACE on the root does and does not express — read [Formatting with security descriptors](~peios/disks-and-filesystems/formatting-with-security-descriptors).
 
-For reading and rewriting descriptors on a mounted filesystem, read [The sd command](~peios/security-descriptors/sd-command).
+For reading and rewriting descriptors on a mounted filesystem, read [The sd command](~peios/files-and-directories/sd).
 
 For how the descriptor is stored, and when `ea_inode` becomes load-bearing, read [SD storage by filesystem](~peios/mount-policies/sd-storage-by-filesystem).

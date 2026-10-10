@@ -101,4 +101,4 @@ If you are interested in the restricted-token model — the sandbox primitive wh
 
 If you need to understand UAC-style elevation — the linked Full/Limited token pair that lets one principal have two tokens for the same session — read [Elevation and linked tokens](~peios/security-fundamentals/tokens/elevation).
 
-To work with tokens from a shell — inspect, adjust, duplicate, restrict, impersonate — read [The token command](~peios/tokens/token-command).
+To work with tokens from a shell — inspect, adjust, duplicate, restrict, impersonate — read [The token command](~peios/system-and-processes/token).

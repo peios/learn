@@ -67,7 +67,7 @@ User and device claims are covered on [Claims on a token](~peios/identity/claims
 
 The expression bytecode is **postfix** (reverse Polish notation), evaluated by a stack machine. Literal tokens push values onto the stack; operator tokens pop operands, do their work, and push a result. The final stack must contain exactly one tri-state value, which is the expression's result.
 
-On the wire an expression is bytecode; the textual form, which [`sd --if`](~peios/security-descriptors/sd-command) accepts, looks like:
+On the wire an expression is bytecode; the textual form, which [`sd --if`](~peios/files-and-directories/sd) accepts, looks like:
 
 ```
 @User.Department == "Engineering"

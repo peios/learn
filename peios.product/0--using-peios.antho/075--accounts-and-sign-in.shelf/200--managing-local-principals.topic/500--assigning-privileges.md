@@ -233,5 +233,5 @@ To see what a sign-in *would* get before anyone signs in, open the user in Princ
 ## See also
 
 - [Privileges](~peios/privileges/overview) — the model these records feed.
-- [The token command](~peios/tokens/token-command) — reading the privileges and integrity a live token actually carries.
+- [The token command](~peios/system-and-processes/token) — reading the privileges and integrity a live token actually carries.
 - [Authorities and principal sources](~peios/authentication/principal-sources) — the accounts these records apply to.

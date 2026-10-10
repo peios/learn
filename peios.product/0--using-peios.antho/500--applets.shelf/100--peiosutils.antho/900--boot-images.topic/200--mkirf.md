@@ -86,4 +86,4 @@ The two positionals are both required:
 
 - [The initramfs stage](~peios/boot-and-trust-establishment/initramfs-stage) — what `mkirf`'s output is for.
 - [Boot hooks](~peios/boot-and-trust-establishment/boot-hooks) — the `# /// hook` metadata block and how order is resolved.
-- [mkuki](~peios/boot-and-trust-establishment/mkuki) — wraps `mkirf`'s image, together with a kernel and command line, into a bootable UEFI unified kernel image.
+- [mkuki](~peios/boot-images/mkuki) — wraps `mkirf`'s image, together with a kernel and command line, into a bootable UEFI unified kernel image.

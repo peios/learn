@@ -4,11 +4,11 @@ type: reference
 description: Build a UEFI unified kernel image — kernel, initramfs, and command line appended as PE sections onto an EFI stub. Has a watch mode.
 related:
   - peios/boot-and-trust-establishment/initramfs-stage
-  - peios/boot-and-trust-establishment/mkirf
+  - peios/boot-images/mkirf
   - peios/boot-and-trust-establishment/overview
 ---
 
-`mkuki` builds a **UEFI unified kernel image (UKI)**: it takes a PE/COFF EFI stub and appends the kernel, the initramfs, and the kernel command line to it as named PE sections, producing a single EFI binary that UEFI firmware boots directly. Where [`mkirf`](~peios/boot-and-trust-establishment/mkirf) produces the initramfs image, `mkuki` is the step that wraps that image — together with a kernel and a command line — into one bootable artifact. The two are the two halves of Peios' Dynamic Boot system.
+`mkuki` builds a **UEFI unified kernel image (UKI)**: it takes a PE/COFF EFI stub and appends the kernel, the initramfs, and the kernel command line to it as named PE sections, producing a single EFI binary that UEFI firmware boots directly. Where [`mkirf`](~peios/boot-images/mkirf) produces the initramfs image, `mkuki` is the step that wraps that image — together with a kernel and a command line — into one bootable artifact. The two are the two halves of Peios' Dynamic Boot system.
 
 ```
 mkuki (--kernel PATH | --kernel-dir PATH) --initramfs PATH
@@ -52,7 +52,7 @@ Directory selection matters most in watch mode. Kernel package upgrades replace 
 
 ## Watch mode
 
-With `--watch`, `mkuki` stays resident: it builds once up front, then rebuilds the UKI whenever an input changes — so the boot image tracks a new kernel, a freshly-repacked initramfs (`mkirf`'s half of Dynamic Boot), or an edited command-line file with no manual step. Like [`mkirf`'s watch mode](~peios/boot-and-trust-establishment/mkirf), it is a foreground loop that runs until killed; supervising it is a service manager's job, and a rebuild that fails (for example, a kernel caught mid-copy) is logged rather than fatal, so fixing the input recovers on the next change.
+With `--watch`, `mkuki` stays resident: it builds once up front, then rebuilds the UKI whenever an input changes — so the boot image tracks a new kernel, a freshly-repacked initramfs (`mkirf`'s half of Dynamic Boot), or an edited command-line file with no manual step. Like [`mkirf`'s watch mode](~peios/boot-images/mkirf), it is a foreground loop that runs until killed; supervising it is a service manager's job, and a rebuild that fails (for example, a kernel caught mid-copy) is logged rather than fatal, so fixing the input recovers on the next change.
 
 The watched inputs are the kernel source, `--initramfs`, and—only if it is a `--cmdline-file`, since a literal `--cmdline` is static—the command-line file. For `--kernel` and the other concrete files, `mkuki` watches each input's **parent directory** non-recursively rather than the file itself. This survives atomic temp-and-rename writes, which appear as directory events where a stale single-file inode watch would miss them. A `--kernel-dir` tree is watched recursively so release directories can be replaced.
 
@@ -85,5 +85,5 @@ Exactly one of `--kernel` or `--kernel-dir`, and exactly one of `--cmdline` or `
 
 ## See also
 
-- [mkirf](~peios/boot-and-trust-establishment/mkirf) — builds the `.initrd` payload `mkuki` wraps.
+- [mkirf](~peios/boot-images/mkirf) — builds the `.initrd` payload `mkuki` wraps.
 - [The initramfs stage](~peios/boot-and-trust-establishment/initramfs-stage) — what the bundled initramfs does once firmware boots the UKI.

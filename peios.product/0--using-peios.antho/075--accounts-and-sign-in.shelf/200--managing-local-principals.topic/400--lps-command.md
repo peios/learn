@@ -6,7 +6,7 @@ related:
   - peios/managing-local-principals/overview
   - peios/managing-local-principals/creating-accounts
   - peios/local-principal-interfaces/the-admin-socket
-  - peios/logon-sessions/logonse-command
+  - peios/system-and-processes/logonse
 ---
 
 `lps` administers the **local principal store** — this machine's own accounts and groups, held by `lpsd`.

@@ -157,4 +157,4 @@ For how the ACEs in a DACL actually decide "allowed" or "denied" — first-write
 
 For the full numeric catalog of ACE types, flags, and access-mask bits, see [ACE types and flags](~peios/advanced-peios/constants-and-catalogs/ace-types-and-flags).
 
-To read and edit ACLs from a shell, read [The sd command](~peios/security-descriptors/sd-command).
+To read and edit ACLs from a shell, read [The sd command](~peios/files-and-directories/sd).

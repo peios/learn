@@ -5,7 +5,7 @@ description: Print the groups a user belongs to.
 related:
   - peios/system-and-processes/id
   - peios/authentication/resolving-names
-  - peios/tokens/token-command
+  - peios/system-and-processes/token
 ---
 
 `groups` prints the groups a user belongs to.
@@ -44,7 +44,7 @@ Both forms are lossy in the same way, and unavoidably so — a group can only be
 - Your **logon session** SID is minted fresh for each sign-in and has no number either.
 - A group's **attributes** are not representable. A deny-only group — one that can block access through a deny entry but grant nothing through an allow entry — is printed exactly like an ordinary membership.
 
-[`token show --all`](~peios/tokens/token-command) is the lossless view, with every SID and its attributes.
+[`token show --all`](~peios/system-and-processes/token) is the lossless view, with every SID and its attributes.
 
 ## Exit status
 

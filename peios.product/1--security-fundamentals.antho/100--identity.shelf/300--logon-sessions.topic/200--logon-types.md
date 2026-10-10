@@ -108,4 +108,4 @@ For how a session is created, destroyed, and forcibly revoked, read [Session lif
 
 For the well-known group SIDs (`S-1-5-4` Interactive, `S-1-5-2` Network, and the rest) that authd derives from the logon type, read [Well-known principals](~peios/identity/well-known-principals).
 
-To see the logon type of each active session from a shell, read [The logonse command](~peios/logon-sessions/logonse-command).
+To see the logon type of each active session from a shell, read [The logonse command](~peios/system-and-processes/logonse).

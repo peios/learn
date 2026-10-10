@@ -54,7 +54,7 @@ This topic gathers the commands that deal with the **running system** rather tha
 | [`groups`](~peios/system-and-processes/groups) | Print the groups a user belongs to. |
 | [`logname`](~peios/system-and-processes/logname) | Print the login name of the user a process is running as. |
 
-These report the **projection** of a token onto POSIX user and group numbers, which is what Linux programs see. The numbers grant nothing on their own — [`id`](~peios/system-and-processes/id) explains what they can and cannot say, and [`token`](~peios/tokens/token-command) shows the identity underneath them.
+These report the **projection** of a token onto POSIX user and group numbers, which is what Linux programs see. The numbers grant nothing on their own — [`id`](~peios/system-and-processes/id) explains what they can and cannot say, and [`token`](~peios/system-and-processes/token) shows the identity underneath them.
 
 **Storage and terminal**
 

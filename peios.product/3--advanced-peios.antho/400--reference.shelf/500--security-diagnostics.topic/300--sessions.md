@@ -72,7 +72,7 @@ for each pid in /proc/*:
     cross-reference with the sessions listing
 ```
 
-This produces a complete picture of which thread is in which session. The [`logonse`](~peios/logon-sessions/logonse-command) command uses exactly this pattern — it walks the running processes to render which processes belong to which session.
+This produces a complete picture of which thread is in which session. The [`logonse`](~peios/system-and-processes/logonse) command uses exactly this pattern — it walks the running processes to render which processes belong to which session.
 
 ## Tracking session lifecycle
 

@@ -9,8 +9,8 @@ related:
   - peios/boot-and-trust-establishment/peinit-pid-1
   - peios/boot-and-trust-establishment/authd-handoff
   - peios/boot-and-trust-establishment/kernel-invariants
-  - peios/boot-and-trust-establishment/mkirf
-  - peios/boot-and-trust-establishment/mkuki
+  - peios/boot-images/mkirf
+  - peios/boot-images/mkuki
   - peios/tokens/overview
   - peios/process-integrity-protection/overview
 ---
@@ -91,4 +91,4 @@ If you want the authd transition — what authd does at startup, the CAAP cache 
 
 If you want the kernel-level invariants that the boot chain depends on — the LSM stack, the build config flags, what the kernel refuses to do — read [Kernel invariants](~peios/boot-and-trust-establishment/kernel-invariants).
 
-The boot *artifacts* themselves are built by two command-line tools, the two halves of Peios' Dynamic Boot system. [mkirf](~peios/boot-and-trust-establishment/mkirf) compiles the `/boot/initramfs/` source tree into the deterministic initramfs image; [mkuki](~peios/boot-and-trust-establishment/mkuki) then wraps that image, together with a kernel and command line, into the single UEFI unified kernel image the firmware boots. Both can run once or stay resident, keeping the boot image current as their inputs change.
+The boot *artifacts* themselves are built by two command-line tools, the two halves of Peios' Dynamic Boot system. [mkirf](~peios/boot-images/mkirf) compiles the `/boot/initramfs/` source tree into the deterministic initramfs image; [mkuki](~peios/boot-images/mkuki) then wraps that image, together with a kernel and command line, into the single UEFI unified kernel image the firmware boots. Both can run once or stay resident, keeping the boot image current as their inputs change.

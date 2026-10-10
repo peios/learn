@@ -150,4 +150,4 @@ This is the canonical way to enumerate sessions. Other tools — `eventd` consum
 
 For the token-side half of the same story — the references whose rise and fall drive a session's life — read [Token lifecycle](~peios/security-fundamentals/tokens/lifecycle).
 
-To list, create, and destroy sessions from a shell, read [The logonse command](~peios/logon-sessions/logonse-command).
+To list, create, and destroy sessions from a shell, read [The logonse command](~peios/system-and-processes/logonse).

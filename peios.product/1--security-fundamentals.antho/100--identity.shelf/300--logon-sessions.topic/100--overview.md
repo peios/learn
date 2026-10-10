@@ -101,4 +101,4 @@ If you want the creation, destruction, and forced sign-out mechanics — includi
 
 If you want to see which sessions are currently active on a running system, read [Inspecting tokens, sessions, and processes](~peios/inspecting/overview).
 
-To work with sessions from a shell — list them, see their processes, create and destroy them — read [The logonse command](~peios/logon-sessions/logonse-command).
+To work with sessions from a shell — list them, see their processes, create and destroy them — read [The logonse command](~peios/system-and-processes/logonse).
