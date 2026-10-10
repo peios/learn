@@ -1,7 +1,7 @@
 ---
 title: Disks and filesystems
-type: concept
-description: The tools Peios ships for creating, checking and inspecting ext2/3/4 and FAT filesystems, and why they are packaged from upstream rather than rewritten.
+type: how-to
+description: Identify storage safely, choose a partitioning or formatting workflow, and inspect filesystem and security-descriptor state.
 related:
   - peios/disks-and-filesystems/formatting-with-security-descriptors
   - peios/disks-and-filesystems/mke2fs
@@ -12,17 +12,64 @@ related:
   - peios/security-descriptors/overview
 ---
 
-Creating a filesystem is the one operation that happens *before* Peios has any say over it. A block device holds bytes; a filesystem is a structure imposed on those bytes; only when that structure is mounted does the kernel begin making access decisions about what it contains. Everything on this page happens on the early side of that line.
+Start with the disk's identity and current use. Partitioning and formatting can
+destroy data; a familiar device name is not enough to identify the target.
 
-Peios ships two upstream families: **e2fsprogs** for ext2/3/4, and **dosfstools** for FAT. Both are the tools you know from any Linux system. e2fsprogs carries a small Peios patchset, and the one place it diverges is security descriptors, which [Formatting with security descriptors](~peios/disks-and-filesystems/formatting-with-security-descriptors) covers. dosfstools carries no functional patch at all, for a reason worth stating up front: a FAT filesystem has no extended attributes, so it has nowhere to keep a security descriptor and there is nothing for that work to extend.
+```sh
+part list
+lsblk
+mount
+```
 
-## Why these tools are packaged, not rewritten
+Compare size, model/serial where available, partition layout and mount points.
+Use [Disk Manager](~peios/disks-and-filesystems/disk-manager) for a desktop
+inspection, and [Stable device names](~peios/disks-and-filesystems/stable-device-names)
+for references that must survive a reboot. Unreadable contents are unknown,
+not evidence that a disk is blank.
 
-Most user-facing commands on Peios come from peiosutils, which reworks each tool for the Peios security model — `mount` grew a `policy=` option, `lsblk` reports SD-derived owner and mode, `ls` reads SDs rather than POSIX modes. `mkfs` and `fsck` are deliberately not in that set.
+> [!WARNING]
+> The device paths in these guides are examples. Before any partition-table
+> write or format, verify the whole disk or partition, preserve data you need,
+> and release mounts and other users of that device. Never run an example
+> against a disk merely because its name matches the page.
 
-The reason is where the security seam falls. **`mount` is the seam**: it is the operation that takes a filesystem and places it under KACS, choosing the mount policy that governs every access from that point on. `mkfs` and `fsck` sit below the seam. They write and repair a Linux-compatible on-disk format that Peios deliberately mirrors byte for byte — an ext4 filesystem made on Peios is an ext4 filesystem, readable anywhere. Rewriting them would mean reimplementing a format Peios does not want to change, and taking on the correctness burden of a filesystem checker for no security benefit.
+## Where to start
 
-So Peios packages e2fsprogs from upstream and carries a patch series for the one thing upstream has no concept of.
+| What you need to do | Guide |
+|---|---|
+| Inspect disks, partitions and mounts on the desktop | [Disk Manager](~peios/disks-and-filesystems/disk-manager), currently inspection-only |
+| Write or inspect a GPT | [Partitioning](~peios/disks-and-filesystems/partitioning) |
+| Create an ext filesystem with its root permissions already present | [Formatting with security descriptors](~peios/disks-and-filesystems/formatting-with-security-descriptors) and [`mke2fs`](~peios/disks-and-filesystems/mke2fs) |
+| Copy the live system onto bootable storage | [Installing to disk](~peios/disks-and-filesystems/installing-to-disk) |
+| Record a filesystem, partition or hardware identity | [Stable device names](~peios/disks-and-filesystems/stable-device-names) |
+| Attach existing storage and choose missing-SD behaviour | [Mount policies](~peios/mount-policies/overview) |
+| Explain a file in a merged system directory | [StrataFS](~peios/disks-and-filesystems/stratafs/overview) |
+
+## Where this sits in a running system
+
+`debugfs` is the tool to reach for when you want to inspect an image *offline* — without mounting it, and therefore without KACS being involved at all. It reads and writes extended attributes directly, which makes it the way to confirm that a security descriptor really landed on disk:
+
+```
+debugfs -R "ea_list <2>" /dev/vda2
+```
+
+Inode 2 is always the root directory of an ext filesystem, so this asks what extended attributes the filesystem's root carries.
+
+`e2fsck` has a specific place in boot. Checking and repairing the root filesystem is the initramfs's job, not peinit's — by the time peinit runs, the root is already mounted, and a filesystem checker cannot repair a filesystem that is in use. See [The initramfs stage](~peios/boot-and-trust-establishment/initramfs-stage).
+
+## FAT and the EFI system partition
+
+The reason Peios ships FAT tooling at all is the **EFI system partition**. UEFI requires the ESP to be FAT, so a system that cannot format FAT cannot create its own boot partition.
+
+An ESP is also the clearest case of a filesystem that holds no access control of its own. There is no extended-attribute channel, so no security descriptor is ever written to it, and none can be. Its entire access policy comes from the mount — necessarily one of the synthesising classes, since `facs_deny_missing` on a filesystem where every file is permanently missing an SD would make the whole partition unreachable. See [SD storage by filesystem](~peios/mount-policies/sd-storage-by-filesystem).
+
+The practical consequence: the protection on your boot partition is the mount policy and the physical security of the disk, not a descriptor on the files. Treat the contents accordingly.
+
+## What is not here yet
+
+**Partition tables other than GPT.** `part` writes GPT and only GPT. Peios boots through UEFI with no bootloader, so MBR has nothing to do on a Peios system — but a disk that already carries one is recognised and named rather than silently overwritten. Resizing, moving and MBR↔GPT conversion do not exist either. See [Partitioning](~peios/disks-and-filesystems/partitioning).
+
+**Filesystems other than ext2/3/4 and FAT.** The mount side understands XFS, Btrfs and NTFS as well — see [SD storage by filesystem](~peios/mount-policies/sd-storage-by-filesystem) — but Peios ships creation tools only for the ext and FAT families.
 
 ## What ships
 
@@ -78,40 +125,16 @@ These are not commands you type. `fsck` picks a checker by exec'ing `fsck.<type>
 
 The `mkfs.<type>` names stay in `/usr/bin` for the opposite reason: Peios ships no `mkfs` front-end, so nothing ever dispatches on them and they are only ever typed.
 
-## FAT and the EFI system partition
 
-The reason Peios ships FAT tooling at all is the **EFI system partition**. UEFI requires the ESP to be FAT, so a system that cannot format FAT cannot create its own boot partition.
+## Why these tools are packaged, not rewritten
 
-An ESP is also the clearest case of a filesystem that holds no access control of its own. There is no extended-attribute channel, so no security descriptor is ever written to it, and none can be. Its entire access policy comes from the mount — necessarily one of the synthesising classes, since `facs_deny_missing` on a filesystem where every file is permanently missing an SD would make the whole partition unreachable. See [SD storage by filesystem](~peios/mount-policies/sd-storage-by-filesystem).
+Peios ships upstream **e2fsprogs** for ext2/3/4 and **dosfstools** for FAT.
+The on-disk formats remain Linux-compatible. e2fsprogs has Peios additions for
+security descriptors; dosfstools has no functional patch because FAT has no
+xattr channel in which to store one.
 
-The practical consequence: the protection on your boot partition is the mount policy and the physical security of the disk, not a descriptor on the files. Treat the contents accordingly.
-
-## Where this sits in a running system
-
-`debugfs` is the tool to reach for when you want to inspect an image *offline* — without mounting it, and therefore without KACS being involved at all. It reads and writes extended attributes directly, which makes it the way to confirm that a security descriptor really landed on disk:
-
-```
-debugfs -R "ea_list <2>" /dev/vda2
-```
-
-Inode 2 is always the root directory of an ext filesystem, so this asks what extended attributes the filesystem's root carries.
-
-`e2fsck` has a specific place in boot. Checking and repairing the root filesystem is the initramfs's job, not peinit's — by the time peinit runs, the root is already mounted, and a filesystem checker cannot repair a filesystem that is in use. See [The initramfs stage](~peios/boot-and-trust-establishment/initramfs-stage).
-
-## What is not here yet
-
-**Partition tables other than GPT.** `part` writes GPT and only GPT. Peios boots through UEFI with no bootloader, so MBR has nothing to do on a Peios system — but a disk that already carries one is recognised and named rather than silently overwritten. Resizing, moving and MBR↔GPT conversion do not exist either. See [Partitioning](~peios/disks-and-filesystems/partitioning).
-
-**Filesystems other than ext2/3/4 and FAT.** The mount side understands XFS, Btrfs and NTFS as well — see [SD storage by filesystem](~peios/mount-policies/sd-storage-by-filesystem) — but Peios ships creation tools only for the ext and FAT families.
-
-## Where to start
-
-For the security-descriptor model — why a filesystem you intend to keep should carry a real SD from the moment it is created, and how the tree gets one — read [Formatting with security descriptors](~peios/disks-and-filesystems/formatting-with-security-descriptors).
-
-For the exact command surface, including the extended options and the Peios defaults baked into the binary, read [`mke2fs`](~peios/disks-and-filesystems/mke2fs).
-
-For how these tools are put to work copying a live system onto a disk that then boots itself, read [Installing to disk](~peios/disks-and-filesystems/installing-to-disk).
-
-For the names a disk keeps across reboots — `/dev/disk/by-uuid` and its siblings, and the device manager that maintains them — read [Stable device names](~peios/disks-and-filesystems/stable-device-names).
-
-For what happens to a filesystem once it is attached to the mount tree, read [Mount policies](~peios/mount-policies/overview).
+Filesystem creation and offline repair operate below the mounted access-control
+layer. `mount` is where a filesystem enters KACS and receives its policy.
+Peios-specific tools such as `mount`, `lsblk` and `ls` use that security model;
+rewriting the formatters and checkers would instead duplicate upstream format
+and repair logic without changing this boundary.

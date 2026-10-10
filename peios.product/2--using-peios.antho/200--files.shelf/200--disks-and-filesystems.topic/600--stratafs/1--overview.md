@@ -1,7 +1,7 @@
 ---
 title: StrataFS
-type: reference
-description: StrataFS merges ordinary directories by precedence while keeping each stratum independently manageable. Mounting a stack and the stratafs inspection tool.
+type: how-to
+description: Inspect a StrataFS stack, trace a merged path, compare local overrides and check write-routing and security limits.
 related:
   - peios/disks-and-filesystems/overview
   - peios/mount-policies/mount
@@ -9,85 +9,14 @@ related:
   - peios/boot-and-trust-establishment/boot-hooks
 ---
 
-StrataFS presents several ordinary directories as one merged directory tree.
-The directories remain ordinary and independently manageable at their real
-paths; the StrataFS mount only supplies the merged view.
+Use `stratafs` to find which real file supplies a merged path, where a write
+would go, and whether local changes hide a packaged default. Start with the
+read-only inspector before removing an override or changing a stack.
 
-Strata are ordered from highest to lowest precedence. For each name, the first
-stratum that holds it is its **provider**. Directories at the same name merge,
-so their children are resolved in the same precedence order. A non-directory
-provider masks every lower object at that name, including a lower directory's
-whole subtree.
-
-## A `/bin` example
-
-Suppose `/usr/bin` contains packaged programs and `/lcl/bin` is for local
-changes. Mount this stack at `/bin`:
-
-```sh
-mount -t stratafs none /bin -o 'strata=/lcl/bin+create:/usr/bin+ro'
-```
-
-`/lcl/bin` has higher precedence and receives newly-created objects. The `+ro`
-on `/usr/bin` means “do not modify this stratum **through `/bin`**”. It does not
-make the real `/usr/bin` mount read-only: an authorised writer can still modify
-`/usr/bin/tool` directly at `/usr/bin/tool`.
-
-Reading `/bin/tool` uses `/lcl/bin/tool` when it exists, otherwise
-`/usr/bin/tool`. Writing an existing packaged tool through `/bin` copies it to
-`/lcl/bin` first and changes the copy. Removing that copy through `/bin`
-restores the unchanged `/usr/bin` version to view, because StrataFS does not use
-whiteouts.
-
-## The base Peios topology
-
-The `dev.peios.fsbase-stratafs-mount-hooks` package installs the `mount-rootfs-stratafs-base.sh` [boot hook](~peios/boot-and-trust-establishment/boot-hooks)
-in the initramfs. It runs after the deployment-specific hook has mounted the
-real root and before prelude hands off to it, mounting the conventional
-root-level views as one boot step:
-
-| View | Strata, highest precedence first |
-|---|---|
-| `/bin` | `/lcl/bin+create`, `/usr/bin+ro+am` |
-| `/sbin` | `/lcl/sbin+create`, `/usr/sbin+ro+am` |
-| `/lib` | `/lcl/lib+create`, `/usr/lib+ro` |
-| `/libexec` | `/lcl/libexec+create`, `/usr/libexec+ro+am` |
-| `/share` | `/lcl/share+create`, `/usr/share+ro+am` |
-| `/include` | `/lcl/include+create`, `/usr/include+ro+am` |
-| `/etc` | `/system/retc`, `/lcl/etc+create`, `/usr/etc+ro+am` |
-| `/conf` | `/lcl/conf+create`, `/usr/conf+ro+am` |
-
-`am` permits an optional vendor directory to be absent when the system boots
-and makes it participate automatically if a later package creates it. The
-operator create directories are provisioned by `fsbase`; their absence is a
-boot error rather than something StrataFS silently creates, because their own
-security descriptors govern creation through each view.
-
-`/lib` views `/usr/lib` rather than the architecture triplet directory beneath
-it, so `/lib/modules` and `/lib/firmware` resolve. Both matter: kmod has
-`/lib/modules` compiled in, and the kernel's firmware loader searches
-`/lib/firmware`, and neither can be told to look elsewhere. Shared libraries are
-unaffected — the loader finds them through its own absolute system search path
-rather than through this view — and `/lib/x86_64-linux-peios/` still resolves,
-one level down, which is the shape a foreign binary expects.
-
-`/lib64` is not a StrataFS view. On x86-64 it remains the package-owned relative
-symlink `lib64 -> usr/lib/x86_64-linux-peios`, because the psABI dynamic-loader
-path must work before any hook can mount the base topology. It is a distinct
-object from the `/lib` view above and is unaffected by what that view maps.
-
-The mount option grammar is:
-
-```text
-strata=<stratum>[:<stratum>]...
-<stratum> := <path>[+<flag>]...
-<flag> := create | ro | am
-```
-
-Paths are absolute. `create` selects the one stratum that receives creations
-and copy-up, `ro` prevents modification through the merged view, and `am`
-allows the stratum directory itself to be temporarily absent. Literal `:`,
-`+`, `,`, and `\` in a path are escaped with `\`.
+StrataFS presents ordinary directories as one view while leaving their real
+paths independently manageable. Highest precedence wins for each name.
+Directories merge; a non-directory provider masks lower objects of that name,
+including a lower directory's subtree.
 
 ## Inspecting a stack
 
@@ -203,6 +132,106 @@ Exit status has probe-friendly meaning:
 | `0` | Success; for `sweep`, no entries; for `diff`, no difference. |
 | `1` | `sweep` found entries or `diff` found a difference. |
 | `2` | Usage, visibility, malformed-state, or operational error. |
+
+
+## Check permissions and unexpected results
+
+- If an inspection fails, check access to every participating real directory.
+  The inspector runs with your rights and fails rather than presenting an
+  incomplete protected view. It does not elevate your token.
+- If deleting a local entry exposes a packaged file, that is the documented
+  no-whiteout behaviour. Use `resolve` and `diff` before removing the override.
+- A routing answer is not permission to mutate. `write: copy_up` still needs
+  the actual KACS checks and a usable create stratum.
+- If a direct stratum path works but its merged path is denied, check stored
+  SDs. StrataFS's [fixed deny-missing
+  contract](~peios/advanced-peios/peios-kernel/stratafs/security/mount-policy)
+  does not use a lower mount's synthesis policy to repair a missing descriptor.
+  This conflicts with the general stacking description in [SD storage by
+  filesystem](~peios/mount-policies/sd-storage-by-filesystem#stacked-filesystems-overlayfs-and-stratafs).
+- For a copied-up file, check preservation rather than assuming ordinary
+  creation inheritance. The [StrataFS copy-up
+  contract](~peios/advanced-peios/peios-kernel/stratafs/security/copy-up-descriptors)
+  preserves the source's full descriptor; ordinary new creations inherit.
+  A descriptor-preservation failure fails the copy-up.
+
+For kernel errors and recovery conditions, use [StrataFS failure
+modes](~peios/advanced-peios/peios-kernel/stratafs/failure-modes). For example,
+a copy-up made stale by a changed provider requires reopening; an open that
+succeeds does not guarantee the first write will succeed.
+
+## A `/bin` example
+
+Suppose `/usr/bin` contains packaged programs and `/lcl/bin` is for local
+changes. The command below mounts a new stack at `/bin`; it is a configuration
+example, not an inspection command. Check the current stack first and do not
+replace a running system view merely to try it out:
+
+
+```sh
+mount -t stratafs none /bin -o 'strata=/lcl/bin+create:/usr/bin+ro'
+```
+
+`/lcl/bin` has higher precedence and receives newly-created objects. The `+ro`
+on `/usr/bin` means “do not modify this stratum **through `/bin`**”. It does not
+make the real `/usr/bin` mount read-only: an authorised writer can still modify
+`/usr/bin/tool` directly at `/usr/bin/tool`.
+
+Reading `/bin/tool` uses `/lcl/bin/tool` when it exists, otherwise
+`/usr/bin/tool`. Writing an existing packaged tool through `/bin` copies it to
+`/lcl/bin` first and changes the copy. Removing that copy through `/bin`
+restores the unchanged `/usr/bin` version to view, because StrataFS does not use
+whiteouts.
+
+## The base Peios topology
+
+The `dev.peios.fsbase-stratafs-mount-hooks` package installs the `mount-rootfs-stratafs-base.sh` [boot hook](~peios/boot-and-trust-establishment/boot-hooks)
+in the initramfs. It runs after the deployment-specific hook has mounted the
+real root and before prelude hands off to it, mounting the conventional
+root-level views as one boot step:
+
+| View | Strata, highest precedence first |
+|---|---|
+| `/bin` | `/lcl/bin+create`, `/usr/bin+ro+am` |
+| `/sbin` | `/lcl/sbin+create`, `/usr/sbin+ro+am` |
+| `/lib` | `/lcl/lib+create`, `/usr/lib+ro` |
+| `/libexec` | `/lcl/libexec+create`, `/usr/libexec+ro+am` |
+| `/share` | `/lcl/share+create`, `/usr/share+ro+am` |
+| `/include` | `/lcl/include+create`, `/usr/include+ro+am` |
+| `/etc` | `/system/retc`, `/lcl/etc+create`, `/usr/etc+ro+am` |
+| `/conf` | `/lcl/conf+create`, `/usr/conf+ro+am` |
+
+`am` permits an optional vendor directory to be absent when the system boots
+and makes it participate automatically if a later package creates it. The
+operator create directories are provisioned by `fsbase`; their absence is a
+boot error rather than something StrataFS silently creates, because their own
+security descriptors govern creation through each view.
+
+`/lib` views `/usr/lib` rather than the architecture triplet directory beneath
+it, so `/lib/modules` and `/lib/firmware` resolve. Both matter: kmod has
+`/lib/modules` compiled in, and the kernel's firmware loader searches
+`/lib/firmware`, and neither can be told to look elsewhere. Shared libraries are
+unaffected — the loader finds them through its own absolute system search path
+rather than through this view — and `/lib/x86_64-linux-peios/` still resolves,
+one level down, which is the shape a foreign binary expects.
+
+`/lib64` is not a StrataFS view. On x86-64 it remains the package-owned relative
+symlink `lib64 -> usr/lib/x86_64-linux-peios`, because the psABI dynamic-loader
+path must work before any hook can mount the base topology. It is a distinct
+object from the `/lib` view above and is unaffected by what that view maps.
+
+The mount option grammar is:
+
+```text
+strata=<stratum>[:<stratum>]...
+<stratum> := <path>[+<flag>]...
+<flag> := create | ro | am
+```
+
+Paths are absolute. `create` selects the one stratum that receives creations
+and copy-up, `ro` prevents modification through the merged view, and `am`
+allows the stratum directory itself to be temporarily absent. Literal `:`,
+`+`, `,`, and `\` in a path are escaped with `\`.
 
 ## Where to go next
 

@@ -1,7 +1,7 @@
 ---
 title: Policy classes
-type: concept
-description: The four policy classes, the synthesis chain that produces an SD when one is missing (parent → mount template → fallback), and the universal corrupt-SD rule.
+type: how-to
+description: Choose a missing-descriptor policy, plan an adoption or recovery, and distinguish missing SDs from corrupt ones.
 related:
   - peios/mount-policies/overview
   - peios/mount-policies/sd-storage-by-filesystem
@@ -10,141 +10,150 @@ related:
   - peios/security-descriptors/inheritance
 ---
 
-The four policy classes are the answer to one question: when FACS needs an SD for a file and the filesystem doesn't have one, what should happen?
+Choose the class for the files you expect to find, then verify that expectation:
+use deny-missing for provisioned storage, ephemeral synthesis when SDs must not
+be written to the volume, and persistent synthesis to adopt existing files.
+Changing class is not a bulk conversion and does not repair corrupt descriptors.
 
-The three managed classes — `facs_deny_missing`, `facs_synthesize_ephemeral`, `facs_synthesize_persistent` — answer the question in three different ways. The fourth, `unmanaged`, answers it by stepping out of the question entirely: FACS doesn't apply, so the question doesn't arise.
-
-This page covers each class in detail, the synthesis chain that produces an SD when one is needed, and the universal corrupt-SD rule.
+The command-line spellings are `policy=deny-missing`,
+`policy=synth-ephemeral` and `policy=synth-persist`; see
+[Managing mounts](~peios/mount-policies/managing-mounts) for application and
+privilege requirements.
 
 ## facs_deny_missing
 
-A FACS-managed mount where missing SDs are treated as an error. Every file on a `facs_deny_missing` mount must have a valid SD; one that does not is unreachable.
+Use this for a filesystem whose files are expected to carry valid SDs, including
+provisioned system mounts such as root, `/home` and `/var`. The base-image build
+is expected to supply descriptors, and subsequent creation inherits from the
+parent. A restore that skips security metadata breaks that expectation.
 
-The runtime behaviour:
+A missing SD produces `-EACCES` for operations requiring an SD-based access
+check. Ordinary reads, writes, deletion and permission changes can therefore
+fail before you can repair the file through the usual path.
 
-1. The kernel reads the file's SD from the filesystem (typically an xattr).
-2. If no SD is present, the access fails. The kernel returns `-EACCES` for any operation that would require an SD-based access check.
-3. The file is effectively unreadable, unwritable, undeletable, unmodifiable. Every access fails because there is no policy to evaluate against.
+> [!IMPORTANT]
+> The original operator description says to use `kacs_set_sd` with `WRITE_DAC`,
+> while warning that the caller may be unable to acquire the required access.
+> The kernel reference separately documents an `O_PATH`/`AT_EMPTY_PATH` repair
+> route under `SeRestorePrivilege`, and intermediate-traverse exceptions.
+> Follow the [documented repair contract](~peios/advanced-peios/peios-kernel/kacs/facs/descriptor-storage#missing-descriptors)
+> for the deployed version; do not assume an inaccessible file can be repaired
+> merely by changing its mount policy.
 
-This is the strict mode. It is appropriate for filesystems where every file should have been provisioned with an SD — system mounts, application storage, anywhere the operator has set up the filesystem deliberately.
-
-The defaults for Peios system mounts (the root filesystem, `/home`, `/var`) are `facs_deny_missing`. The image-build process ensures every file in the base image has an SD; subsequent file creation always inherits an SD from the parent. There is no path by which a file without an SD legitimately ends up on these filesystems.
-
-If somehow a file does end up without an SD — a backup-restore tool that skipped xattrs, a misbehaving filesystem driver — that file is unreachable. The fix is to give it an SD (`kacs_set_sd`, requires WRITE_DAC, which the caller may not have if they cannot read the file).
-
-Practical upshot: a `facs_deny_missing` mount is strict. Files without SDs stay unreachable until given one. This is the right setting for filesystems where you trust the provisioning.
+Before switching an adopted volume to this class, verify stored SDs on the files
+you need, including files that ordinary usage may never have touched.
 
 ## facs_synthesize_ephemeral
 
-A FACS-managed mount where missing SDs are synthesised in memory, but **not written back** to the filesystem. The synthesised SD is used for the access check; it does not become part of the file's persistent state.
+Use this when the filesystem cannot store SDs or when reading it must not add
+security metadata. Typical uses include removable media, FAT/exFAT and NFS
+client mounts. The kernel reads a stored SD if one exists; otherwise it derives
+one through the synthesis chain below and uses it for the access check.
 
-The runtime behaviour:
+The result is cached only while the inode is in memory. It is never written
+back. After eviction, a later open synthesises again; unchanged inputs produce
+the same SD. This costs work on a cold inode, but leaves on-disk metadata alone.
+It does not prohibit writes to file contents: read-only mounting is separate.
 
-1. The kernel reads the file's SD from the filesystem.
-2. If no SD is present, the kernel **synthesises** one using the synthesis chain (covered below).
-3. The synthesised SD is used for the access check.
-4. The synthesised SD is **not** written back to the filesystem. It exists only in the kernel's cache for the duration this inode is in memory.
-5. On a subsequent open of the same file (after the inode has been evicted from cache, say), the SD is synthesised again. The same inputs produce the same output, so the same SD comes out — but the synthesis is repeated.
-
-This class is appropriate for filesystems where you can't or don't want to write SDs:
-
-- **Removable media** (USB drives, optical media). You don't want to modify the media just because you read a file on it.
-- **FAT and exFAT.** These filesystems have no xattr support; the SD has nowhere to go even if you wanted to write it.
-- **NFS client mounts.** The actual file lives on a remote server; modifying its SD via xattr would have unpredictable effects.
-- **tmpfs and devtmpfs.** Per-instance pseudo-filesystems with no real persistence.
-
-The synthesis-only-in-memory pattern lets FACS apply access control to these filesystems without changing their on-disk content. The trade-off is that the cost of synthesising is paid every time the inode is cold.
+Earlier guidance also lists tmpfs/devtmpfs here. The kernel TRM documents
+stricter defaults for those filesystems; check the [filesystem-specific
+notes](~peios/mount-policies/sd-storage-by-filesystem#tmpfs-and-devtmpfs) rather
+than assuming their class.
 
 ## facs_synthesize_persistent
 
-A FACS-managed mount where missing SDs are synthesised **and** written back. Each file is synthesised once; from then on it has a real SD.
+Use this to adopt a volume whose missing descriptors should become persistent.
+The first access derives an SD, uses the cached value immediately, and schedules
+write-back. A later access reads the stored SD after write-back succeeds.
 
-The runtime behaviour:
+Write-back is deferred until the triggering operation finishes, normally before
+its syscall returns to userspace. It is best-effort, not evidence that every
+file now has a stored descriptor. If the entry is evicted or the task exits
+first, the next access derives the same value and retries. A policy/template
+change before write-back discards the pending value and derives against the
+new inputs, rather than saving a superseded SD.
 
-1. The kernel reads the file's SD from the filesystem.
-2. If no SD is present, the kernel synthesises one using the synthesis chain.
-3. The synthesised SD is used for the access check — immediately, from the kernel's cache.
-4. The synthesised SD is **also** written back to the filesystem (typically as the SD xattr). The file now has a persistent SD.
-5. On a subsequent open, the SD is read from storage — no re-synthesis needed.
+This is incremental adoption: regularly used files acquire SDs first;
+rarely-used files wait until accessed. Once all required files have stored SDs,
+you can switch to deny-missing. Any stragglers become inaccessible to normal
+SD-based operations. Existing stored descriptors are unaffected.
 
-The write-back in step 4 does not happen *during* the access — it is **deferred** until just after the triggering operation finishes (when the kernel can safely write without holding the locks the access is using). In practice the SD is on disk by the time the syscall that first touched the file returns to userspace, so for an observer it is effectively immediate.
-
-Because the synthesised SD is a deterministic function of its inputs (the parent's SD, or the mount template), the on-disk copy is a *cache* of a value the kernel can always recompute. If the write-back is interrupted — the inode is evicted first, or the process exits in the gap — nothing is lost: the next access re-synthesises the identical SD and tries the write-back again. A file is never left with the *wrong* SD, only occasionally with the SD still in memory rather than on disk. (A mount-template change in that gap simply discards the pending SD and re-synthesises against the new template, so a superseded SD is never frozen onto the disk.)
-
-This class is for filesystems being adopted into Peios. A previously-unmanaged filesystem (say, an ext4 volume from a Linux system without KACS) can be mounted with `facs_synthesize_persistent`; every file accessed gets an SD on first access; over time, every file ends up with an SD.
-
-The use case: migrating an existing filesystem to KACS-managed without a single-pass conversion tool. The synthesis-on-access pattern lets the conversion happen incrementally as files are touched. After enough time, every regularly-accessed file has been adopted; rarely-touched files get adopted the next time they are read.
-
-After all files have SDs, the mount can be switched to `facs_deny_missing` for strict mode. The transition is a single `kacs_set_mount_policy` call; existing SDs are unaffected, and any straggler files without SDs become unreachable (which is the desired effect of switching to strict).
+For the locking and task-work mechanism, use the [kernel write-back
+reference](~peios/advanced-peios/peios-kernel/kacs/facs/descriptor-storage#deferred-write-back).
 
 ## unmanaged
 
-The unmanaged class is the special case for filesystems FACS shouldn't apply to. The kernel uses its own per-operation access rules for files under this mount; no SD-based access check runs at FACS's level.
+This class is reserved for kernel-managed pseudo-filesystems. It skips FACS,
+not all security checks:
 
-Specifically:
+- `/proc/<pid>/*` uses process-SD and PIP checks under the two-check rule.
+- `/sys` uses the kernel's per-operation rules, including writes restricted to
+  `BUILTIN\Administrators` and SYSTEM.
+- `/sys/kernel/security/kacs/*` has explicit descriptors maintained and read by
+  the kernel's own logic.
 
-- `/proc` is `unmanaged`. Access to `/proc/<pid>/*` files is governed by the process-level checks (process SD + PIP, per the two-check rule), not by FACS.
-- `/sys` is `unmanaged`. Writes are restricted to `BUILTIN\Administrators` and `SYSTEM` by hardcoded rule.
-- `/sys/kernel/security/kacs/*` has explicit SDs set by the kernel; reading these uses the kernel's own logic.
-
-The `unmanaged` class cannot be set via the public ABI. The `kacs_set_mount_policy` syscall rejects attempts to set this class with `-EINVAL`. Only the kernel itself sets this class — at boot, for the pseudo-filesystems it manages.
-
-The reason for restricting this: making a regular filesystem `unmanaged` would mean FACS has no say over it at all, which would be a meaningful operational decision but also a security-relevant one. The kernel reserves the class for its own use.
-
-If you mount a regular filesystem and don't want FACS to apply, the closest you can get is `facs_synthesize_ephemeral` with a permissive mount template — files get a permissive synthesised SD that effectively grants access. This is not the same as no FACS, but it is the closest path available through the public ABI.
+`kacs_set_mount_policy` rejects `unmanaged` with `-EINVAL`; operators cannot
+use it to disable FACS on a regular filesystem. An ephemeral policy with a
+permissive template can grant broad access to files missing SDs, but still runs
+FACS and must be reviewed as a security change. It is not a substitute for
+repairing a broken descriptor.
 
 ## The synthesis chain
 
-For the two synthesising classes, when the kernel needs to produce an SD for a file with none, it uses a chain of sources. The first source that yields a usable SD wins.
+When a managed synthesis policy finds no SD, it tries these sources in order:
 
-```mermaid
-flowchart LR
-    A["File has no SD"] --> B["Inherit from parent directory"]
-    B -->|parent has inheritable ACEs| F["Use computed SD"]
-    B -->|parent has none / no parent| C["Mount-level SD template"]
-    C -->|template is set| F
-    C -->|no template| D["Hardcoded fallback SD"]
-    D --> F
-```
+1. Parent-directory inheritance, using inheritable ACEs as for a newly-created
+   child. See [Inheritance](~peios/security-descriptors/inheritance).
+2. The mount-level template, commonly needed at the filesystem root where no
+   parent on that filesystem supplies a usable descriptor.
+3. The fallback: owner and group SYSTEM; `GENERIC_ALL` for SYSTEM and
+   `BUILTIN\Administrators`; `GENERIC_READ | GENERIC_EXECUTE` for Everyone.
 
-In order:
+A missing template does not imply private access: the fallback grants other
+users read-and-execute. Review the template before exposing a volume. Earlier
+notes call the template limit 64 KB; the [kernel
+contract](~peios/advanced-peios/peios-kernel/kacs/facs/descriptor-storage#administration)
+specifies at most 65,535 bytes.
 
-1. **Parent directory inheritance.** The kernel reads the parent directory's SD and computes what a newly-created child would inherit (per the [Inheritance](~peios/security-descriptors/inheritance) rules). If this produces a usable SD (with inheritable ACEs from the parent), that SD is used.
-2. **Mount-level SD template.** Each FACS-managed mount can carry a default SD template — set via `kacs_set_mount_policy` along with the policy class. The template is a complete self-relative SD (max 64 KB). If the parent did not yield an SD, the template is used.
-3. **Hardcoded fallback.** If neither the parent nor the template produces an SD, the kernel uses a hardcoded fallback: `GENERIC_ALL` to SYSTEM and `BUILTIN\Administrators`; `GENERIC_READ | GENERIC_EXECUTE` to Everyone. The owner is set to SYSTEM, group to SYSTEM.
-
-The fallback is conservative: administrators get full control, others get read-and-execute. It is what every filesystem mounted with `facs_synthesize_*` and no specific configuration falls back to, and what every root-of-mount file ends up with on a freshly-installed Peios system.
-
-For most mounts, the fallback is the safety net — typical files have parents with inheritable ACEs, and synthesis lands on step 1. The template is used for files at the root of the mount (where there's no parent on this filesystem) or in unusual cases where parent-inheritance doesn't apply.
+The [kernel synthesis
+reference](~peios/advanced-peios/peios-kernel/kacs/facs/descriptor-storage#missing-descriptors)
+also specifies recursive parent synthesis, a 32-ancestor limit that fails
+closed with `EACCES`, and creator inputs independent of the accessor's token.
+Use that reference for implementation details.
 
 ## Corrupt SD handling
 
-A universal rule across all FACS-managed classes: **a corrupt SD is treated as a denial**. If the SD on a file exists but fails structural validation — bad header, malformed ACL, invalid SID, exceeds the size limit, anything that prevents the parser from making sense of it — the access check fails with `-EACCES`.
+A stored SD that fails structural validation produces `-EACCES` under all three
+managed classes. Bad headers, malformed ACLs, invalid SIDs and oversized
+values do not trigger synthesis. Missing and corrupt are different conditions.
 
-The kernel does not fall back to synthesis when an existing SD is corrupt. The synthesis path is for files with no SD; a file with a *broken* SD is different. The kernel:
+The kernel emits a corruption audit event once per inode per cache population,
+not on every repeated access. A restore producing many corrupt SDs may therefore
+produce a burst of events as files are first accessed.
 
-1. Detects the corruption when reading the SD.
-2. Returns `-EACCES` for the access.
-3. Emits an audit event (one per inode per cache population — the same corrupt SD encountered repeatedly during one mount's lifetime produces one audit event for that inode, not one per access).
-
-The corruption audit event is part of the audit stream and useful for diagnostics. A misbehaving backup-restore tool that produced corrupt SDs on a restored set of files generates a flurry of these events when the files are first accessed.
-
-The corrupt-SD rule is the same across all three FACS-managed classes. `facs_deny_missing` denies missing; `facs_synthesize_*` synthesises missing; all three deny corrupt. The "missing" and "corrupt" cases are different — missing is "no SD was attached" and is recoverable through synthesis or operator intervention; corrupt is "the SD that was attached is broken" and requires either fixing the SD or accepting denial.
+Changing to a synthesising policy does not make a corrupt SD valid. Recovery
+requires fixing the descriptor or accepting denial. The [kernel repair
+reference](~peios/advanced-peios/peios-kernel/kacs/facs/descriptor-storage#corrupt-descriptors)
+documents set-security under `SeRestorePrivilege` and offline xattr repair on
+an unmounted filesystem.
 
 ## Class transitions
 
-Changing a mount's policy class is allowed (subject to access rules covered in [Managing mounts](~peios/mount-policies/managing-mounts)). The interesting transitions:
+| Transition | Check before changing |
+|---|---|
+| Persistent synthesis to deny-missing | Confirm the required files have stored SDs; files still missing one will be denied. |
+| Ephemeral to persistent synthesis | Confirm that saving metadata is intended and supported. Each later missing-SD access saves its newly derived result. |
+| Deny-missing to a synthesis class | Treat this as a deliberate relaxation for recovery/adoption. Review the template; corrupt SDs remain denied. |
 
-- **`facs_synthesize_persistent` → `facs_deny_missing`.** Common during migration. As files are adopted by `synthesize_persistent`, they accumulate SDs. Once enough have been adopted, switch to `deny_missing` to enforce strictness. Any file still missing an SD becomes unreachable; an administrator can either accept that or set SDs on the holdouts.
-- **`facs_synthesize_ephemeral` → `facs_synthesize_persistent`.** Less common. Would convert an ephemeral mount to a persistent one — the next access of any file without a stored SD would write the synthesised SD back. This effectively "snapshots" the synthesis on first access.
-- **`facs_deny_missing` → `facs_synthesize_*`.** Unusual; would relax strictness. The kernel allows it but the operational reasoning is rarely good — synthesis is a recovery mechanism, not an everyday setting.
-
-A class transition is just a policy update; no files are touched at the transition. The new policy applies to future accesses. Existing cached state (synthesised SDs in memory) may need to be re-evaluated — see the generation counter in [Managing mounts](~peios/mount-policies/managing-mounts).
+A transition changes policy only; no files are touched at that moment. Future
+accesses re-evaluate stale synthesis state. Existing handles keep their masks,
+and stored SDs remain unchanged. See [Managing
+mounts](~peios/mount-policies/managing-mounts) before applying the change.
 
 ## Where to go next
 
-For how each filesystem physically stores the SD, read [SD storage by filesystem](~peios/mount-policies/sd-storage-by-filesystem).
-
-For the syscalls that set and read a mount's policy, read [Managing mounts](~peios/mount-policies/managing-mounts).
-
-For choosing a policy from the command line at attach time, read [mount](~peios/mount-policies/mount).
+- [SD storage by filesystem](~peios/mount-policies/sd-storage-by-filesystem):
+  verify where descriptors can persist.
+- [Managing mounts](~peios/mount-policies/managing-mounts): apply and read back
+  the class and template.
+- [`mount`](~peios/mount-policies/mount): exact attach-time options.

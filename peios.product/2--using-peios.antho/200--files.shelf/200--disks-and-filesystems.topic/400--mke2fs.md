@@ -1,7 +1,7 @@
 ---
 title: mke2fs
 type: reference
-description: "The Peios additions to mke2fs: the root_sddl and root_sd_file extended options, security-descriptor-aware population, and the compiled-in Peios defaults."
+description: Create an ext filesystem with root_sddl or root_sd_file, verify the stored descriptor, and check Peios defaults and failure conditions.
 related:
   - peios/disks-and-filesystems/overview
   - peios/disks-and-filesystems/installing-to-disk
@@ -14,7 +14,15 @@ related:
 
 `mke2fs` creates an ext2, ext3 or ext4 filesystem. Peios packages it from upstream e2fsprogs, so the generic surface — `-t`, `-b`, `-L`, `-O`, `-i`, `-m`, the full extended-option list — is exactly the upstream one and its canonical documentation is the `mke2fs(8)` man page shipped with the package.
 
-This page documents only what Peios adds, which is security descriptors and a changed set of defaults.
+This page documents the Peios security-descriptor options and defaults. For a
+new system volume, choose the root ACL before formatting and verify it offline
+before mounting.
+
+> [!WARNING]
+> Formatting destroys the target's previous filesystem contents. Identify and
+> unmount the intended partition, preserve needed data, and replace the example
+> `/dev/vda2` only after checking its identity. Do not use formatting to repair
+> permissions on a filesystem you need to keep.
 
 ```
 mke2fs [-t ext4] [-E root_sddl=SDDL | root_sd_file=PATH] [-d DIRECTORY] DEVICE
@@ -29,7 +37,10 @@ Peios adds two options to `-E`. Both set the security descriptor written to the 
 | `root_sddl=SDDL` | The descriptor as an inline SDDL string. |
 | `root_sd_file=PATH` | The descriptor as SDDL read from `PATH`. |
 
-`root_sd_file` exists because `-E` takes a comma-separated list and SDDL contains commas. Any descriptor with more than one ACE, or with a conditional expression, is easier to pass in a file than to quote on a command line.
+`-E` takes a comma-separated option list. Use `root_sd_file` when the SDDL
+contains embedded commas, such as in a conditional expression, or when shell
+quoting would be difficult. Multiple ACEs do not by themselves require commas;
+the inline example below contains two ACEs.
 
 The file holds **SDDL text, not binary** — it is the same string `root_sddl` would take, in a file. Trailing newlines are stripped, so an ordinary one-line text file works. Anything else in the file is part of the descriptor: there is no comment syntax and no blank-line handling.
 
@@ -40,6 +51,10 @@ If the SDDL does not parse, `mke2fs` prints `Invalid root SDDL:` followed by the
 Neither option has a default. Omit both and the filesystem is created with no security descriptor on its root, which is upstream behaviour — mount it under a synthesising policy or it will be unreachable.
 
 ### Example
+
+This example grants SYSTEM and Administrators full control through inheritable
+ACEs. It is not the installer's broader readable-system-tree policy.
+
 
 ```
 mke2fs -q -t ext4 -E root_sddl="O:SYG:SYD:(A;OICI;GA;;;SY)(A;OICI;GA;;;BA)" /dev/vda2
@@ -76,6 +91,13 @@ Directories are stamped before their contents are visited, so a child always rei
 
 The merge follows the same rules as [inheritance](~peios/security-descriptors/inheritance) on a live system, and runs entirely in userspace — no kernel and no KACS are involved, so a populated Peios filesystem can be built on a host that is not running Peios.
 
+
+> [!IMPORTANT]
+> The population contract above leaves nodes without `user.peios.sd` unstamped,
+> yet says they inherit on first access. That needs reconciliation with
+> deny-missing policy. Check stored SDs before depending on those nodes on a
+> strict mount; access under synthesis is not proof that metadata was preserved.
+
 ## Peios defaults
 
 `mke2fs` reads its defaults from a profile. Peios changes three of them, and the changed profile is **compiled into the binary**, so it applies whether or not a configuration file exists.
@@ -106,6 +128,21 @@ Peios ships no `/etc/mke2fs.conf`, so the compiled-in profile is what you get un
 | `1` | Failure. Includes an unparseable `root_sddl`/`root_sd_file` value, an unreadable `root_sd_file`, and a failure to write the descriptor to the new filesystem. |
 
 `mke2fs` distinguishes no further; unlike `e2fsck`, it has no bitwise-summed status. When the security-descriptor options fail they report the offending value on standard error before exiting, and no filesystem is created.
+
+
+## Troubleshoot before retrying
+
+- `Invalid root SDDL:`: inspect the exact descriptor or file content. A
+  `root_sd_file` is SDDL text with trailing newlines stripped; comments and
+  extra content are not ignored.
+- A filesystem that will not mount: check whether a custom profile removed
+  Peios defaults or enabled the unsupported `quota` feature described above.
+- Root access denied: confirm that a descriptor was stamped and that the
+  selected mount policy matches the filesystem's state.
+- An SD-writing failure: do not assume the target's previous contents survived.
+  The source groups this with failures where no filesystem is created, but the
+  partial-write/rollback boundary is not documented. Inspect the target before
+  deciding whether a destructive retry is appropriate.
 
 ## See also
 
