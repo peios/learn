@@ -106,13 +106,14 @@ remain active. The loregd [exit contract](~peios/loregd/startup/exit-and-shutdow
 also permits a source to keep running after storage-operation failures.
 Do not launch a second source against the same hive files.
 
-The documented loregd [command line](~peios/loregd/startup/command-line)
+The [source-checked loregd implementation](~peios/loregd/startup/command-line#unsupported-recovery-switches)
 takes one or more `HiveName=DatabasePath` declarations and rejects arguments
-without `=`. It does not document offline inspection, backup-recovery or
-database-clearing switches. Its [startup sequence](~peios/loregd/startup/startup-sequence)
-describes SQLite WAL recovery and orphan cleanup, but does not establish an
-automatic backup on each start. These are not interchangeable recovery
-mechanisms.
+without `=`. It has no offline inspection, backup-recovery or database-clearing
+switches and [does not create an automatic startup backup](~peios/loregd/startup/startup-sequence#backup-and-repair-limits).
+Startup WAL recovery and orphan cleanup are not backup restoration or a
+database-corruption repair facility. The linked references pin these findings
+to the implementation revision checked; identify the installed provider and
+revision before choosing a recovery procedure.
 
 Offline inspection, repair or database replacement therefore needs a
 procedure supported by the installed provider and version. Establish the
