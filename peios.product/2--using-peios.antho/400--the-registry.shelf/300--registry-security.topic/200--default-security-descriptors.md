@@ -1,7 +1,7 @@
 ---
 title: Default security descriptors
-type: concept
-description: Where a component keeps the security descriptors it stamps at runtime — the SdDefaults convention — and the reject-or-keep rule that guards it.
+type: how-to
+description: Inspect a component’s SdDefaults overrides, check when new objects receive them, and avoid mistaking a default change for existing-object permission repair.
 related:
   - peios/registry-concepts/configuration-and-meaning
   - peios/registry-security/access-control
@@ -10,77 +10,101 @@ related:
   - peios/security-descriptors/inheritance
 ---
 
-Some software stamps [security descriptors](~peios/security-descriptors/overview) onto objects it creates at runtime — a freshly mounted filesystem root, a state file, a spool directory. Each of those descriptors is a policy decision: who can enumerate this directory, who can read this file, what everything created beneath this root will inherit. Decisions like that are configuration, and in Peios configuration has one home. The **SdDefaults** convention is the standard place a component keeps these descriptors, so that an operator can inspect them, change them, and trust that every component publishes them the same way.
+An **SdDefaults** value tells a component which security descriptor to
+stamp on an object it creates. Changing it affects future stamping; it
+does not repair the permissions of objects already on disk or in memory.
 
-## Default security descriptors, in one sentence
+<a id="default-security-descriptors-in-one-sentence"></a>
+<span id="default-security-descriptors--default-security-descriptors-in-one-sentence"></span>
+<span id="registry-security-default-security-descriptors--default-security-descriptors-in-one-sentence"></span>
+<span id="using-peios-registry-security-default-security-descriptors--default-security-descriptors-in-one-sentence"></span>
+<a id="the-convention"></a>
+<span id="default-security-descriptors--the-convention"></span>
+<span id="registry-security-default-security-descriptors--the-convention"></span>
+<span id="using-peios-registry-security-default-security-descriptors--the-convention"></span>
+## Find the component's default
 
-**A component keeps each security descriptor it stamps at runtime as a named SDDL value under `Machine\Software\<Software>\SdDefaults\`, with a compiled-in copy as the fallback — a value that is present and valid overrides the compiled default; a value that is invalid is ignored, loudly.**
+The convention is a named `REG_SZ` value containing SDDL under:
 
-## The convention
-
-```
-Machine\Software\<Software>\SdDefaults\<SD Name>
-```
-
-- `Machine\Software\<Software>` is the component's own configuration key — the same key the rest of its settings live under.
-- `SdDefaults` is the literal subkey name.
-- `<SD Name>` names the object the descriptor protects: `SpoolDirectory`, `StateFile`, `Run`. One value per descriptor, stored as a string containing SDDL.
-
-A fictional spooler that creates its spool directory at startup would publish:
-
-```
-Machine\Software\ExampleSpooler\SdDefaults\SpoolDirectory
-    REG_SZ  "O:SYG:SYD:(A;OICI;GA;;;SY)(A;OICI;GA;;;BA)"
+```text
+Machine\Software\<Software>\SdDefaults
 ```
 
-The defaults are **per component, deliberately**. A single shared tree of default descriptors would need every SD name to be unique across every application ever written — a namespacing promise nobody can keep. Scoping the names under the component that reads them dissolves the problem, and it keeps discovery unsurprising: a component's descriptors live where the rest of its configuration lives.
+The value name identifies the object, such as `SpoolDirectory`, `StateFile`
+or `Run`. These are examples, not names every component provides. Each
+component keeps its own names beside its own configuration.
+
+Use `regman` for the exact key and value before editing it. Read its
+**Applies** field: the relevant object may be stamped at startup, on a
+mount, or only when it is first created. Inspect the current override
+with `reg get` or Registry Editor, and record whether it was absent.
 
 ## Compiled default, registry override
 
-The registry value is an override, never the only copy. Every component that follows the convention carries a compiled-in default for each named descriptor, and resolves the one to use at the point where it stamps it:
-
-| State of `SdDefaults\<SD Name>` | Descriptor in force |
+| Override state | Descriptor the convention selects |
 |---|---|
-| Absent | The compiled-in default. This is the normal state — the key need not exist at all. |
-| Present, valid SDDL | The registry value. |
-| Present, invalid | The compiled-in default. The stored value is ignored, and an event records the key, the rejected value, and the descriptor actually in force. |
+| Absent | The component's compiled-in default. The key need not exist. |
+| Present and valid SDDL | The registry override. |
+| Invalid | The compiled-in default, with an event identifying the rejection and descriptor in force. |
 
-This is the registry's general [reject-or-keep](~peios/registry-concepts/configuration-and-meaning) rule applied to descriptors, and here it is doing its most important work. A security descriptor that fails to parse is never repaired, never approximated, and never replaced with something broader: the descriptor in force is always one that was compiled in and reviewed. A typo in an SdDefaults value costs you your customisation, not your system.
+An invalid descriptor is not repaired or broadened automatically. This
+fallback does not prove that the policy is the one you intended: inspect
+the rejection event and verify the actual descriptor on the created object.
+A syntactically valid descriptor can also grant more access than intended,
+so validity alone is not a security review.
 
 ## When a change takes effect
 
-A default descriptor is read when the component stamps it — typically when the object is created. Two consequences follow:
+1. Read the value's manual and understand when its component stamps the object.
+2. Save the old value and the relevant recovery state.
+3. Make the intended SDDL change with the correct type and destination layer.
+4. Let the component create or stamp an object through its documented workflow.
+5. Inspect that object's actual permissions and the component's events.
 
-- Changing a value affects objects stamped **after** the change. It does not rewrite objects that already exist.
-- Where the stamped object is a directory whose descriptor carries inheritable ACEs, everything created beneath it derives its descriptor at creation time ([inheritance](~peios/security-descriptors/inheritance) is computed once, when the child is born). Changing the default later does not re-derive existing children.
+Changing the default does not rewrite existing objects. Children inherit
+from their parent at creation, so existing descendants are not updated
+either. Do not delete a live object merely to force restamping without
+understanding that component's recovery procedure.
 
-So the honest answer to "when does my change apply?" varies by descriptor — next boot, next mount, next time the object is recreated — and the component's [`regman`](~peios/registry-administration/regman) documentation is where that answer lives. Every `<SD Name>` a component publishes has a regman entry, and its `Applies` line states exactly this.
+Layer removal can remove the override value, but it cannot undo descriptors
+already stamped onto objects while the override was effective. This is
+separate from the rule that a registry key's own descriptor is
+[not layered](~peios/registry-security/access-control#the-sharp-edge-security-is-not-layered).
 
 ## The values are access policy — protect them
 
-Whoever can write a component's SdDefaults values decides what access the component will grant on the objects it creates. These values are not settings *about* security; they **are** the security. A component's `SdDefaults` key therefore carries a tight security descriptor of its own — writable by Administrators and SYSTEM, no wider — which the registry enforces like [any other key](~peios/registry-security/access-control). The arrangement is self-hosting: the store that holds the descriptors is protected by the same mechanism the descriptors configure.
+Whoever can write these values controls access to objects the component
+will create. The convention protects the `SdDefaults` key so only SYSTEM
+and Administrators can write. Check its actual permissions and the
+[write destination layer](~peios/registry-security/access-control).
+
+Do not confuse the key's **Permissions…** with the descriptor stored as a
+value: the first governs who may change configuration, while the second
+is consumed as policy for another object.
 
 ## What the convention does not cover
 
-**Bootstrap seeding.** The very first descriptors of a boot — the seed stamped onto a fresh root before any registry source is attached — are compiled into the tools that write them, and are not customisable through the registry. There is no registry to read at that point in boot; that is not a gap in the convention but the reason it has a floor.
-
-**Kernel fallbacks.** The descriptors the kernel synthesises when a mount policy has no template are fixed. They are the floor under a missing policy, not configuration. The DACL applied when a created object has no parent to inherit from is not a kernel fallback at all: it is the creating token's default DACL, which `authd` sets from the `DefaultDacl` value of the principal's policy record (see [Assigning privileges](~peios/privileges/assigning-privileges)), and a token with none leaves such an object with a null DACL.
-
-**Files installed by packages.** A package payload entry gets its descriptor by inheritance from its destination directory, or from a declaration in the package manifest — see [PSPU §5.20](~peios/package-format-and-repository-protocol/security-descriptor-overrides). SdDefaults governs what software stamps at runtime, not what the package manager installs.
+- **Bootstrap seeds:** descriptors needed before a registry source exists
+  are compiled into the tools that stamp them.
+- **Kernel fallback templates:** fixed fallbacks used when mount policy has
+  no template are not SdDefaults settings. An object created without a
+  parent instead uses the creating token's default DACL; `authd` obtains
+  that from the principal's `DefaultDacl` policy value. A token with none
+  leaves such an object with a null DACL. See
+  [Assigning privileges](~peios/privileges/assigning-privileges).
+- **Package payload files:** these inherit at their destination or use a
+  package-manifest descriptor declaration; see
+  [PSPU §5.20](~peios/package-format-and-repository-protocol/security-descriptor-overrides).
 
 ## For component authors
 
-If your component stamps descriptors at runtime, follow the convention:
-
-1. Ship a compiled default for every named descriptor. The registry value is an override; your component must work, with reviewed policy, on a system where the `SdDefaults` key has never been created.
-2. Name each value for the object it protects, not for its content — `SpoolDirectory`, not `SystemOnlyOici`.
-3. Resolve with reject-or-keep. An unparseable value is ignored in favour of the compiled default, and the rejection is recorded in an event naming the key, the rejected value, and the descriptor in force. Never substitute anything broader than the compiled default.
-4. Document every name in `regman`, including an `Applies` line that says when a change is picked up.
+The convention requires a reviewed compiled default for each object-named
+value, fallback to that default with a recorded rejection for invalid
+SDDL, and a `regman` entry specifying when it is stamped. Do not substitute
+a broader policy on parse failure.
 
 ## Where to go next
 
-For the doctrine behind reject-or-keep — why the registry stores values it does not validate, and why readers keep their last known-good — read [Configuration, not storage](~peios/registry-concepts/configuration-and-meaning).
-
-For what an SDDL string actually says — owner, DACL, ACEs, and the inheritance flags that make one descriptor govern a whole tree — start at [Security descriptors](~peios/security-descriptors/overview) and [Inheritance](~peios/security-descriptors/inheritance).
-
-For protecting the `SdDefaults` key itself, read [Access control on keys](~peios/registry-security/access-control).
+- [SDDL and security descriptors](~peios/security-descriptors/overview)
+- [Inheritance](~peios/security-descriptors/inheritance)
+- [Make and verify registry changes](~peios/registry-concepts/configuration-and-meaning)

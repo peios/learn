@@ -1,7 +1,7 @@
 ---
 title: Registry Editor
 type: how-to
-description: Browse and change the registry from the desktop — its keys as a tree, each key's values with their types and what the registry manual says of them, typed forms to edit them, new and deleted keys, permissions, layers, export, import, backup and restore, and a word on anything you may not read or change.
+description: Inspect registry settings and their manual, choose a write layer, make a controlled desktop edit, and verify or recover the result.
 related:
   - peios/registry-concepts/overview
   - peios/registry-concepts/keys-values-and-types
@@ -14,6 +14,19 @@ of the key you pick, which you can change. A *key* is a container in the registr
 and a *value* is a named, typed piece of data in a key. It reads the
 registry as you, so it shows what you may read, and it says what you may
 not.
+
+## Before changing anything
+
+1. Browse to the exact key and inspect its current values. Select a value
+   to see its winning layer and the registry manual beside it.
+2. Check the manual's expected type, valid values and application timing.
+   A saved value can still be rejected by the component that reads it.
+3. Check **Writes go to** in the bar. Your change goes to that layer,
+   which may differ from the layer currently winning the value.
+4. Record the original state. Use **Files → Back up…** if recovery needs
+   key permissions and layered entries; **Export…** is a reviewable
+   configuration document with different coverage.
+5. Save one intended change, then [verify it](#verify-a-saved-change).
 
 ## Opening it
 
@@ -91,9 +104,9 @@ Editor shows the same, at the foot of the pane:
 
 Values the manual documents that aren't set on the key are listed after
 the values that are, greyed, with **Not set** and the default the manual
-gives, as in **Not set · default 30**. Whatever reads a value that isn't
-set uses its default. They aren't values, so they aren't counted or
-exported. Select one to see what the manual says of it, and double-click
+gives, as in **Not set · default 30**. Check the manual for the consumer's
+missing-value behavior; some retain a previously active value. These
+manual-only entries aren't stored values, so they aren't counted or exported. Select one to see what the manual says of it, and double-click
 it or choose **Set…** to start a new value with its name, the type the
 manual gives it and, where the default is a plain value, the default.
 
@@ -117,9 +130,12 @@ pane or on its right-click menu. The pane shows a form for its type:
 Data that doesn't fit its type is edited as bytes, and keeps its type.
 **Save** writes it, and **Cancel** or **Esc** leaves it as it was.
 
-If someone else changes the value while you're editing it, **Save**
-refuses, and the list shows the value as it now is. Select **Save** again
-to replace their change with yours.
+If **Save** reports a concurrent change, it refuses the edit and refreshes
+the list. Review the current value and destination layer before choosing
+**Save** again; submitting your edit again can replace another writer's
+entry in that layer. Conditional-write checks are scoped to the
+destination layer, so do not assume they guard every change to another
+layer's effective winner. See [Transactions](~peios/registry-advanced/transactions#avoid-overwriting-another-writer).
 
 **New value…** adds a value to the key shown. Give it a name, or leave the
 name empty for the key's default value, and pick its type: text, text
@@ -134,8 +150,10 @@ To delete a value, select it and choose **Delete…**, then confirm.
 - **Delete key…** deletes the key shown and everything under it, keys and
   values, after asking. It is all or nothing: if any part can't be
   deleted, nothing is. Links under it are deleted; the keys they point to
-  are not. A key with more than about a thousand keys under it can't be
-  deleted at once; delete some of them first.
+  are not. Large trees can exceed file-descriptor or transaction limits
+  and be refused. Review the [deletion limits](~peios/registry-tools/reg#reg-del-key-value)
+  and agree a smaller deletion scope before splitting the operation: separate
+  deletions are no longer one atomic change.
 
 The root keys can't be deleted. Changes go to the base layer, the one
 every change goes to unless it names another.
@@ -149,7 +167,9 @@ A [layer](~peios/registry-layers/layers) is a set of registry entries
 that can override another. **Layers…** in the bar opens them in a window
 of their own, each with its precedence, whether it is enabled, and who
 owns it. Where entries for the same value are in several layers, the one
-in the layer of highest precedence wins.
+in the layer of highest precedence wins; at equal precedence, the
+most recent write to that value wins. Different values can have different
+winning layers.
 
 - **New layer…** creates one. A layer may be disabled from the start: it
   then takes part only for programs that name it.
@@ -167,7 +187,8 @@ precedence 0, and can't be changed.
 into, base unless you choose another. You need to be allowed to write into
 it as well as to change the key: if you may not, the key is shown
 read-only, with the reason. Deleting a value deletes only that layer's
-entry for it; an entry beneath, in a lower layer, then shows.
+entry for it; another surviving entry can then show. Deletion does not
+necessarily leave the value absent or select its documented default.
 
 The pane says which layer a value's data came from. The registry can't
 yet list a value's entries in the layers beneath the one that wins, so
@@ -177,12 +198,19 @@ that entry is there.
 
 ## Permissions
 
+> [!WARNING]
+> Changing a key's permissions is not a layered edit. Disabling or deleting
+> the selected layer does not restore the key's old owner or permissions.
+> Existing open handles keep their granted rights until they are reopened.
+
 Each key has its own permissions, which say who may read it, change it
 and so on. **Permissions…** in the pane, or on the key's right-click
 menu, opens them in the permissions editor. **Read** covers reading the
 key's values and listing the keys under it, and **Write** covers changing
-values and creating keys. Each person or group added to a key applies to
-the keys under it as well.
+values and creating keys. The editor adds inheritable grants for
+children. Inheritance is computed at creation; changing the parent does
+not by itself rewrite keys that already exist. Inspect the actual
+descriptors on existing descendants.
 
 Some values hold a security descriptor: a list of who may do what, kept
 for a program that reads it, such as a service's `ServiceSecurity`.
@@ -210,13 +238,27 @@ opens a file dialog, where you choose where to save or what to open:
   bar. It is all or nothing: if any part can't be written, none is.
 - **Back up…** copies the key and everything under it, permissions and
   layers included, to a backup file.
-- **Restore…** replaces the key and everything under it with what a
-  backup holds, after asking.
+- **Restore…** replaces the key's contents and subtree and restores its
+  security descriptor from a backup, after asking. It does not merge with
+  the current contents.
 
 Backing up needs the privilege to back up files and keys
 (SeBackupPrivilege), and restoring the privilege to restore them
 (SeRestorePrivilege). Administrators hold both. Without them, the
-buttons are shown disabled, with the reason.
+buttons are shown disabled, with the reason. A backup containing or
+matching positive-precedence layers additionally needs `SeTcbPrivilege`
+for restore; having the restore privilege alone is not enough.
+
+An export does not include key permissions or the full set of layer
+entries. A backup preserves tagged entries, but its layer manifest does
+not recreate missing layer definitions. Before recovery after layer
+deletion, check whether the needed metadata was included. See
+[Backup and restore](~peios/registry-administration/backup-and-restore).
+
+Review the target before importing or restoring. A restore can rewrite
+owners and permissions throughout that subtree. If a write or commit
+times out or reports a source failure, refresh and inspect state before
+retrying; the error does not prove that it was rolled back.
 
 The file dialog shows one folder at a time, starting in your home folder.
 Open a folder to go into it; **Up** and **Home** move about, and you can
@@ -261,3 +303,15 @@ Saving a value is `reg set`, a new key is `reg new`, and deleting is
 import are `reg export --json` and `reg apply`, back up and restore are
 `reg backup` and `reg restore`, and layers are `reg layer`. See
 [reg](~peios/registry-tools/reg).
+
+## Verify a saved change
+
+After saving, inspect the displayed value, type and winning layer. Use
+**Refresh** or **F5** for a fresh read. If a different layer still wins,
+check [Layers](~peios/registry-layers/layers) rather than saving repeatedly.
+
+Then follow the manual's application timing and inspect the consuming
+component's status and events. An updated row proves what is stored,
+not that a service accepted it. Follow
+[Change a setting and verify it](~peios/registry-concepts/configuration-and-meaning)
+for rejected settings and recovery choices.

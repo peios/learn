@@ -1,7 +1,7 @@
 ---
 title: Private hives and layers
 type: concept
-description: Private hives and layers give one caller its own view of the registry — the building block for sandboxing, with authorisation deferred to KACS.
+description: Understand why a service or sandbox can see different registry values, and find the token and layer boundaries that govern its private view.
 related:
   - peios/registry-administration/lcs-and-sources
   - peios/registry-layers/layers
@@ -9,34 +9,61 @@ related:
   - peios/registry-concepts/overview
 ---
 
-Everything in the core topic describes one shared registry that every process sees the same way (subject to access control). **Private hives** and **private layers** relax that: they let a particular caller see a registry that differs from everyone else's — the building block for sandboxing and container-style isolation.
+A service or sandbox can see different registry data from an administrator
+looking up the same path. Before concluding that the store is inconsistent,
+check whether the workload uses a private hive or private layer through
+its effective thread credentials.
 
-This is an advanced feature, and a partly forward-looking one. The registry defines how a private hive or layer participates in [resolution](~peios/registry-layers/layers); but *who* is allowed to see one is decided by a thread's credentials, and that credential model is part of KACS and not yet fully specified. Treat this page as the shape of the feature, not a how-to.
+This page explains the diagnostic distinction. It does not provide a
+command for creating private views; `reg` does not manage their attachment.
+Use the workload's documented isolation mechanism and the technical
+references below.
 
 ## Private hives
 
-A **private hive** is a hive that is visible only to threads whose credentials carry a matching scope — an opaque identity that marks "you are allowed to see this hive". To everyone else it does not exist.
+A private hive is visible to threads whose tokens carry its scope identity.
+Private hives are considered before global hives, so a private `Machine`
+can shadow the global `Machine` for that thread without changing the path.
 
-The powerful case is **shadowing**. A private hive can take the same name as a global one — `Machine\`, say — and for a thread that carries the scope, the private hive is what `Machine\` resolves to, not the global one. A sandboxed process can therefore be given an entirely separate `Machine\` while every other process continues to see the real one, with no change to the paths anyone uses. That is complete registry isolation without a parallel namespace: same paths, different contents, decided by who is asking.
+An operator reading the global path therefore has not necessarily inspected
+the workload's configuration. Identify which credentials and scope the
+workload actually uses before comparing values or planning recovery.
+Do not assume a global-hive backup captures a separate private hive.
 
 ## Private layers
 
-A **private layer** is a [layer](~peios/registry-layers/layers) that is globally disabled — invisible in normal resolution — but attached to a specific thread's credentials. For that thread, and only that thread, the layer is treated as active and competes in the per-value contest at its precedence exactly like any other layer. Everyone else resolves as if it were not there.
+A disabled layer can be active for a thread whose credentials name it.
+It then competes using the normal precedence-and-write-order rules.
+Disabling it globally does not remove it from those private views.
 
-This is the lighter-weight tool, for when you want a different *value* here and there rather than a whole separate hive:
+This is per thread, not necessarily per process: different impersonation
+tokens can give threads in one process different views. Check the relevant
+request or service identity rather than only the process's nominal identity.
 
-- **Per-session overrides** — run one application with experimental settings without disturbing other sessions.
-- **Testing** — inject configuration for one process without writing it into the shared registry.
-- **Sandboxing** — give a confined process a slightly different view without standing up a private hive.
-
-Private layers are **per thread, not per process**: because the attachment rides on a thread's credentials, different threads in the same process can carry different private layers (for instance, a service thread acting on behalf of a particular client). The number a thread can carry is bounded.
+Typical uses are session-specific overrides, test settings and sandbox
+configuration. Those uses do not establish who may attach a private view.
 
 ## Authorisation lives in KACS
 
-The registry defines only the *resolution* behaviour — private hives are checked ahead of global ones, and a thread's private layers fold into its contests. The decision about whether a thread may join a scope or attach a layer belongs to KACS's credential model. One constraint is already clear and worth stating: attaching a layer that sits *above* others in precedence must be privileged, or an unprivileged process could attach an existing high-precedence policy layer to itself and gain a window onto configuration it should not see or influence. The isolation is only as strong as the rule that decides who may carry a scope or a private layer.
+The token mechanism governs attachment. The kernel TRM documents scope
+GUIDs and private-layer names entering credentials at token creation,
+gated by `SeCreateTokenPrivilege`. That is a broad token-creation gate,
+not per-scope ownership authorization.
+
+> [!WARNING]
+> Do not assume attaching a disabled high-precedence layer performs a
+> separate `SeTcbPrivilege` check. The current TRM explicitly documents
+> that this precedence check is absent on the attachment path. Review
+> the token-creation boundary before relying on private views for isolation.
+
+Use the [private-hive](~peios/lcs/the-data-model/private-hives) and
+[private-layer](~peios/lcs/layers/private-layers) TRM sections for the
+credential model and its documented limitations. Configured limits can
+also reject a registry operation when the token carries too many scopes
+or private layers; this is not automatically a key-permission problem.
 
 ## Where to go next
 
-For the resolution model these build on — precedence, recency, and the per-value contest — read [Layers](~peios/registry-layers/layers).
-
-For where private hives are routed and served, read [LCS and sources](~peios/registry-administration/lcs-and-sources).
+- [Effective values and layers](~peios/registry-layers/layers)
+- [Key and layer permissions](~peios/registry-security/access-control)
+- [Private-layer attachment and limits](~peios/lcs/layers/private-layers)

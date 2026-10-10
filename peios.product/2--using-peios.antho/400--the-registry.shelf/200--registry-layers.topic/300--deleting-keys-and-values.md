@@ -1,7 +1,7 @@
 ---
 title: Deleting keys and values
-type: concept
-description: Deleting a key withdraws one layer's claim to a name — the key stays if another layer still claims it, and there is no recursive delete.
+type: how-to
+description: Choose per-layer deletion, masking or hiding; review recursive deletion and verify what remains visible afterward.
 related:
   - peios/registry-layers/layers
   - peios/registry-layers/what-layers-are-for
@@ -10,42 +10,93 @@ related:
   - peios/registry-concepts/overview
 ---
 
-Deletion is one more thing the [layered model](~peios/registry-layers/layers) quietly reshapes. "Delete this key" sounds absolute, but in a store where a name is the winner of a per-layer contest, removing a key really means withdrawing *one layer's claim* to that name. Several behaviours follow that are worth knowing before you delete anything.
+Before deleting, inspect the current value and its winning layer. A
+registry deletion normally removes an entry in the selected layer; a
+remaining entry can become visible afterward.
 
-## Deletion, in one sentence
+<a id="deletion-in-one-sentence"></a>
+<span id="deleting-keys-and-values--deletion-in-one-sentence"></span>
+<span id="registry-layers-deleting-keys-and-values--deletion-in-one-sentence"></span>
+<span id="using-peios-registry-layers-deleting-keys-and-values--deletion-in-one-sentence"></span>
+<a id="deleting-withdraws-a-claim"></a>
+<span id="deleting-keys-and-values--deleting-withdraws-a-claim"></span>
+<span id="registry-layers-deleting-keys-and-values--deleting-withdraws-a-claim"></span>
+<span id="using-peios-registry-layers-deleting-keys-and-values--deleting-withdraws-a-claim"></span>
+## Choose the operation you mean
 
-**Deleting a key withdraws one layer's claim to a name; the key disappears only if no layer still claims it — and even then, anything holding it open keeps working until it lets go.**
+| Intent | Operation | Result |
+|---|---|---|
+| Withdraw one layer's value | `reg del KEY NAME --layer LAYER` | Removes that layer's entry; another may surface. |
+| Keep a value absent through a layer | `reg mask KEY NAME --layer LAYER` | Adds a tombstone that competes with other entries. |
+| Withdraw one layer's key name | `reg del KEY --layer LAYER` | Removes that layer's claim; another may remain. |
+| Mask a key name through a layer | `reg hide KEY --layer LAYER` | Adds a hidden-key entry. |
+| Withdraw a whole configuration layer | `reg layer del LAYER` | Removes its entries across the registry. |
 
-## Deleting withdraws a claim
+`KEY`, `NAME` and `LAYER` are placeholders. Masking and hiding still obey
+[precedence and write order](~peios/registry-layers/layers); they do not
+ignore stronger entries. `reg unmask` and `reg unhide` remove the selected
+layer's markers. `reg mask KEY --all` applies a blanket tombstone to values
+on that key. See the [`reg` reference](~peios/registry-tools/reg).
 
-When you delete a key, you remove its name in a particular layer — the [base layer](~peios/registry-layers/what-layers-are-for) unless you say otherwise. Nothing about the key is special-cased; its claim in that layer is simply withdrawn, and it drops out of the [contest](~peios/registry-layers/layers) for that name.
-
-If another layer still names the key, it stays visible through that layer. So deleting a key that a role also provides removes only *your* claim — the role's key remains until the role does. To remove a key everywhere, every layer's claim has to go. For anything delivered by a role or a policy, that means removing the *layer* (which [reverts cleanly](~peios/registry-layers/what-layers-are-for)) rather than deleting the key — deleting it in the base layer would not touch the role's claim anyway.
-
-(The hive roots themselves — `Machine\`, `Users\<SID>\` — cannot be deleted or hidden. They are the anchors the namespace hangs from.)
-
-## There is no recursive delete
-
-You cannot delete a key that still has visible child keys; the deletion is refused. There is no "delete this whole subtree" primitive. Removing a populated subtree is a deliberate walk from the leaves upward, performed by whatever tool you are using — not a single sweep in the kernel.
-
-This is a safety property, not a limitation to work around. A mistaken delete cannot take a populated subtree down with it; you have to mean it, key by key.
-
-## Deleting out from under an open handle
-
-A key can be deleted while a process still has it open, and the registry handles that the same way Linux handles deleting an open file (the *unlink* model). The open handle keeps working — reads, writes, and watches all continue against the now-unnamed key — and the key is only truly discarded once the last handle closes. Meanwhile, new attempts to open it *by path* fail at once: the name is gone, even though the object lingers for whoever still holds it.
-
-So "deleted" means "no longer reachable by name", not "destroyed this instant". A service that had the key open does not break mid-operation; it holds the last reference until it closes, and only then does the key go away.
+Hive roots cannot be deleted or hidden.
 
 ## Deleting values
 
-A value works the same way one level down. Deleting a value withdraws a layer's write for that value name. If a lower-precedence or older layer also wrote that value, its write resurfaces as the new effective value — the ordinary [revert](~peios/registry-layers/what-layers-are-for). Remove a value's only write and the value simply becomes absent.
+1. Read `reg get KEY NAME -L` and confirm the destination layer.
+2. Remove only the intended layer's entry.
+3. Read the value again. It may be absent or replaced by another winner.
+4. Verify the consumer's response. Absence may select a default or retain
+   a prior runtime setting, depending on that component's documented behavior.
+
+Do not assume deleting the effective value restores its compiled default.
+Do not use deletion to probe for hidden entries on a live system.
+
+<a id="there-is-no-recursive-delete"></a>
+<span id="deleting-keys-and-values--there-is-no-recursive-delete"></span>
+<span id="registry-layers-deleting-keys-and-values--there-is-no-recursive-delete"></span>
+<span id="using-peios-registry-layers-deleting-keys-and-values--there-is-no-recursive-delete"></span>
+## Deleting a populated key
+
+The kernel's single-key delete refuses visible child keys, but the tools
+provide recursive deletion:
+
+- `reg del KEY -r --layer LAYER` walks the subtree and deletes in a
+  transaction. It deletes links without following their targets.
+- Registry Editor's **Delete key…** deletes the shown key and its subtree
+  after confirmation. Check **Writes go to** first.
+
+Inspect the subtree with `reg tree KEY --values` and save an appropriate
+[backup](~peios/registry-administration/backup-and-restore) before proceeding.
+The command opens the keys before deleting; file-descriptor and transaction
+limits can cause the whole operation to be refused. See
+[`reg del`](~peios/registry-tools/reg#reg-del-key-value) for the documented limits.
+
+`reg del -r` prompts only when input is a terminal, unless the prompt is
+explicitly skipped. Non-terminal input proceeds without confirmation.
+A failure before commit aborts the batch. After a commit timeout or source
+failure, inspect state before retrying; an error does not prove rollback.
+
+## Deleting out from under an open handle
+
+An open handle refers to a key object, not just its name. Removing its
+last name does not revoke existing handles: their reads, writes and
+watches can continue while the object remains open. New opens by the
+removed path fail, or resolve another key if layers provide one.
+
+If a service must use a replacement key, it may need to reopen it through
+its documented reload or restart procedure. The
+[LCS deletion reference](~peios/lcs/the-data-model/deletion-and-orphans)
+covers object lifetime.
 
 ## Permission
 
-Deleting (or hiding) a key requires delete permission on it — see [Access control on keys](~peios/registry-security/access-control). As everywhere in the registry, the check is against the key you are deleting, decided by its security descriptor, with no check on the keys above it.
+Deleting or hiding a key requires `DELETE` on that key. Deleting or
+masking a value requires `KEY_SET_VALUE` on its key. Layer-targeted
+operations also require permission to write into the layer. Parent
+permissions alone do not establish access to descendants.
 
 ## Where to go next
 
-For the contest that "withdrawing a claim" feeds back into, read [Layers](~peios/registry-layers/layers).
-
-For removing configuration in bulk — deleting a layer, which is what you do instead of deleting a role's or policy's keys — read [What layers are for](~peios/registry-layers/what-layers-are-for).
+- [Recover using a layer](~peios/registry-layers/what-layers-are-for)
+- [Key and layer access checks](~peios/registry-security/access-control)
+- [Verify the consumer after a change](~peios/registry-concepts/configuration-and-meaning)

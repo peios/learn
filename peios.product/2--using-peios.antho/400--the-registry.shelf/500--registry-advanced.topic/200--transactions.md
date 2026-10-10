@@ -1,7 +1,7 @@
 ---
 title: Transactions
-type: concept
-description: A transaction groups several registry writes into one all-or-nothing commit — how a role installs without ever being half-applied.
+type: how-to
+description: Apply related registry changes atomically in one hive, understand per-file batch limits, and check state before retrying a timed-out commit.
 related:
   - peios/registry-layers/what-layers-are-for
   - peios/registry-layers/layers
@@ -10,39 +10,109 @@ related:
   - peios/registry-concepts/overview
 ---
 
-Most registry writes stand alone. But sometimes a set of changes only makes sense *together* — a role's keys and values are one coherent configuration, and a half-written version would be worse than none at all. A **transaction** makes several writes atomic: all of them commit, or none do. This is a developer-facing feature — you reach for it when *writing* to the registry, not when operating a running system — which is why it sits among the advanced topics.
+Use a transaction when several registry changes must become visible
+together. `reg apply` and Registry Editor's **Import…** provide an
+operator-facing way to apply a registry document as one batch.
 
-## Transactions, in one sentence
+<a id="transactions-in-one-sentence"></a>
+<span id="transactions--transactions-in-one-sentence"></span>
+<span id="registry-advanced-transactions--transactions-in-one-sentence"></span>
+<span id="using-peios-registry-advanced-transactions--transactions-in-one-sentence"></span>
+<a id="all-or-nothing"></a>
+<span id="transactions--all-or-nothing"></span>
+<span id="registry-advanced-transactions--all-or-nothing"></span>
+<span id="using-peios-registry-advanced-transactions--all-or-nothing"></span>
+## Apply one reviewed document
 
-**A transaction groups many registry writes into one all-or-nothing commit, so other readers only ever see the complete change, never a partial one.**
+Prepare or review a JSON registry document, then apply it with:
 
-## All or nothing
+```sh
+reg apply reviewed.json
+```
 
-Inside a transaction you perform a series of writes and then commit. At commit, they all take effect together. If you abort instead — or the process dies, or the transaction sits open too long and times out — none of them take effect. There is no partial application.
+`reviewed.json` is your reviewed file. All its operations must target one
+hive; cross-hive batches are rejected even if both hives use the same
+source. JSON is supported input; text-format batch input is not implemented.
 
-External readers see only committed state. Until you commit, your in-progress writes are invisible to everyone else; the instant you commit, the whole set appears at once. A service reading configuration never catches a transaction halfway. Within your own transaction you *do* see your own pending writes, so you can write a value and read it back before committing.
+`reg export --json KEY FILE` creates a reviewable starting point containing
+keys and effective values. It does not export key descriptors. A manually
+prepared document can include descriptor changes, which must be reviewed
+as security changes and need the relevant rights. See
+[`reg apply`](~peios/registry-tools/reg#reg-apply-file) for its schema and
+version caveat for descriptor support.
 
-## The canonical use: installing a role
-
-This is why [role installation](~peios/registry-layers/what-layers-are-for) is clean. A role's entire configuration — its keys, its values, its layer — is written inside one transaction and committed as a unit. The role is never observed half-installed: either the whole role is there or none of it is. (Removing a role is the *other* mechanism — deleting its layer — covered with [layers](~peios/registry-layers/what-layers-are-for).)
-
-Any consistent multi-key update wants the same treatment: change several related settings as one atomic step, rather than letting readers see an inconsistent in-between.
+A successful transaction publishes its changes together. Other readers do
+not see intermediate writes; reads inside a bound transaction see their
+own pending writes. This is registry atomicity, not a guarantee that all
+consuming services will apply the new configuration simultaneously.
 
 ## Limits worth knowing
 
-- **One store at a time.** A transaction is scoped to a single hive's store; it cannot span hives backed by different [sources](~peios/registry-administration/lcs-and-sources). Atomicity across separate stores is not offered.
-- **No nesting.** Transactions are flat — there are no sub-transactions or savepoints.
-- **Bounded lifetime.** An open transaction holds a write position, so it cannot be left open indefinitely; if it is not committed in time it is aborted automatically. This stops a stalled or abandoned writer from blocking everyone else's writes to that store.
-- **Abandonment is safe.** Closing the handle without committing aborts cleanly, and a process dying does the same — there are no orphaned transactions left holding things up.
+- **One hive per batch.** Cross-hive atomicity is not available.
+- **Directory imports are separate batches.** `reg apply --dir DIR` applies
+  each file in its own transaction; the directory is not one atomic unit.
+- **No nesting or savepoints.** Keep each document's recovery scope clear.
+- **Bounded time and size.** A transaction can time out or exceed resource
+  limits. `reg apply` errors need investigation, not an assumption that
+  splitting the file preserves its consistency requirements.
+- **Source support is required.** A source can reject the needed transaction
+  mode; the default `loregd` supports transactions.
 
-## Transactions and layers
+<a id="the-canonical-use-installing-a-role"></a>
+<span id="transactions--the-canonical-use-installing-a-role"></span>
+<span id="registry-advanced-transactions--the-canonical-use-installing-a-role"></span>
+<span id="using-peios-registry-advanced-transactions--the-canonical-use-installing-a-role"></span>
+<a id="transactions-and-layers"></a>
+<span id="transactions--transactions-and-layers"></span>
+<span id="registry-advanced-transactions--transactions-and-layers"></span>
+<span id="using-peios-registry-advanced-transactions--transactions-and-layers"></span>
+## Atomic changes and removable changes are different
 
-A transaction provides *atomicity*; it is not a [layer](~peios/registry-layers/layers) and it does not change which write wins. The two compose: a role install uses a transaction to apply its writes atomically *and* a layer to make them removable later. Keep them distinct — atomicity is "all together", layering is "which one wins, and how to revert".
+A role can use a transaction to apply related registry entries together
+and a layer to keep those entries removable later. A transaction does
+not select the winning layer or create a history of previous states.
+Layer removal also does not undo a key's descriptor changes.
 
-Transactions are not conflict-detected at the value level. If two committed transactions wrote the same value, both succeed, and the usual rule settles it: the more recent write wins, exactly as in [layer resolution](~peios/registry-layers/layers). A transaction guarantees its *own* writes land together; it does not lock anyone else out of the values it touched. (For the case where you must not clobber a concurrent change, a conditional write lets a single write proceed only if the value has not changed since you read it.)
+Review [layer recovery](~peios/registry-layers/what-layers-are-for) separately
+from whether the original write was atomic.
+
+## Avoid overwriting another writer
+
+Transactions are not value-level conflict detection. If your change
+depends on a value remaining unchanged since you read it, use the
+conditional-write mechanism rather than assuming the transaction protects
+that read.
+
+`reg set --expected-seq N` checks the destination layer's own entry. A
+mismatch returns exit status `6` without the write. `reg get -L` shows only
+the effective winner, so its sequence is suitable only when that winner
+is in your intended destination layer. It does not expose a shadowed
+layer's sequence.
+
+## If a commit times out
+
+> [!WARNING]
+> A timeout after commit dispatch means the operation may or may not have
+> committed. Read the affected state and inspect consumer events before
+> retrying. A timed-out transaction status is not proof of rollback.
+
+A source failure returned during commit can also follow a successful
+storage commit. Check current state before resubmitting a batch after
+such an error.
+
+A late successful response can publish the committed change and notify
+watchers even after the caller was told it timed out. Closing an
+uncommitted transaction normally aborts it, as does process exit, but
+that is not a way to undo an already-dispatched successful commit.
+
+The [LCS commit and failure reference](~peios/lcs/transactions/commit-and-failure)
+describes these outcomes. After a successful batch, use the same
+[consumer verification](~peios/registry-concepts/configuration-and-meaning)
+as for a single write.
 
 ## Where to go next
 
-For how a role uses a transaction and a layer together, read [What layers are for](~peios/registry-layers/what-layers-are-for).
-
-For the recency rule that settles competing writes, read [Layers](~peios/registry-layers/layers).
+- [`reg` batch formats and exit statuses](~peios/registry-tools/reg)
+- [Restore a saved subtree](~peios/registry-administration/backup-and-restore)
+- [LCS transaction scope and lifetime](~peios/lcs/transactions/scope-and-lifetime)
+- [Isolation and conditional writes](~peios/lcs/transactions/isolation-and-the-mutation-log)

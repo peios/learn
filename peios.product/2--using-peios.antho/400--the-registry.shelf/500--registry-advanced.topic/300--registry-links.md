@@ -1,7 +1,7 @@
 ---
 title: Registry links
-type: concept
-description: A key can be a symbolic link to another key — the one place the registry interprets a value — with layered targets and privileged creation.
+type: how-to
+description: Inspect a registry link without following it, distinguish its stored target from the key it reaches, and understand privileged creation and layered targets.
 related:
   - peios/registry-concepts/keys-values-and-types
   - peios/registry-layers/layers
@@ -9,39 +9,79 @@ related:
   - peios/registry-concepts/overview
 ---
 
-A registry key can be a **symbolic link** to another key. Open a link key by its path and the registry follows it through to the target, handing you a handle on the target key. Links let one part of the namespace point at another, the way a filesystem symlink does.
+A registry link redirects a key path to another key. A normal open follows
+it, so an inspection may show the target's values rather than the link's
+own stored target. Check which object you are operating on before changing
+or deleting a link.
 
-Links are an advanced feature with a small, sharp set of rules, and they are the **one exception** to a property the rest of the topic relies on.
+<a id="managing-the-link-itself"></a>
+<span id="registry-links--managing-the-link-itself"></span>
+<span id="registry-advanced-registry-links--managing-the-link-itself"></span>
+<span id="using-peios-registry-advanced-registry-links--managing-the-link-itself"></span>
+## Inspect the link without following it
 
-## A link is a flag plus a target value
+For a suspected link at `KEY`, use:
 
-Two pieces make a link, and both are needed:
+```sh
+reg info KEY --no-follow
+reg get KEY @ --no-follow
+```
 
-- The key is **marked** as a link when it is created. This is a fixed property of the key.
-- The key's **default value**, of type `REG_LINK`, holds the **target path** — an absolute registry path the link points at.
+Replace `KEY` with the actual path. The first shows the key's metadata,
+including its link flag; the second reads its unnamed target value.
+Add `-L` to the value read to see the winning target's layer and sequence.
+Omitting `--no-follow` follows the link by default.
 
-When path resolution reaches a link key, the registry reads that target and continues resolving from there; the handle you get back refers to the target, not the link.
+These are inspection commands. Do not assume an option documented for
+`get` and `info` is available on every mutating subcommand. Check the
+[`reg` command reference](~peios/registry-tools/reg#symlinks) before changing
+a link itself.
 
-## The one place the registry reads a value
+<a id="a-link-is-a-flag-plus-a-target-value"></a>
+<span id="registry-links--a-link-is-a-flag-plus-a-target-value"></span>
+<span id="registry-advanced-registry-links--a-link-is-a-flag-plus-a-target-value"></span>
+<span id="using-peios-registry-advanced-registry-links--a-link-is-a-flag-plus-a-target-value"></span>
+<a id="the-one-place-the-registry-reads-a-value"></a>
+<span id="registry-links--the-one-place-the-registry-reads-a-value"></span>
+<span id="registry-advanced-registry-links--the-one-place-the-registry-reads-a-value"></span>
+<span id="using-peios-registry-advanced-registry-links--the-one-place-the-registry-reads-a-value"></span>
+## What makes a key a link
 
-[Keys, values, and types](~peios/registry-concepts/keys-values-and-types) made a point of it: the registry stores a value's type and bytes but never interprets them. `REG_LINK` is the single exception. It is the one type the registry acts on itself — following it during path resolution — rather than handing it back untouched. Everything else remains opaque; links are the lone case where the store cares what a value *says*.
+A link has both a fixed link flag set at creation and an unnamed default
+value of type `REG_LINK` containing an absolute registry target path.
+A `REG_LINK` value alone does not turn an ordinary key into a link.
 
-## Managing the link itself
-
-Normally you want to follow a link. To operate on the link key *itself* — to change where it points or delete it — you open it with a flag that says "open the link, do not follow it". Without that flag every open lands on the target, which would make the link impossible to manage.
+This is the exception to the registry's ordinary opaque-data behavior:
+LCS reads the target during path resolution. The handle returned by a
+normal open refers to the resolved target.
 
 ## Creating a link is privileged
 
-Because a link silently redirects whoever opens it, creating one is restricted. It requires the `KEY_CREATE_LINK` right on the parent **and** a privileged caller (the system-trust privilege, or Administrator membership). A link is a small piece of trusted plumbing, not something an ordinary process gets to introduce into a path other callers will traverse.
+The command form is `reg link KEY TARGET`. Creation requires
+`KEY_CREATE_SUB_KEY` and `KEY_CREATE_LINK` on the parent, plus either
+`SeTcbPrivilege` or Administrator membership, in addition to applicable
+layer rights.
+Use it only when redirecting that namespace is intended.
 
-There is one safety rule worth knowing: a link target is followed **literally**, and the `CurrentUser\` convenience alias is *not* expanded inside it. This stops a link from redirecting a privileged service that resolves `CurrentUser\` into the service's *own* user hive — a classic confused-deputy trap. Link targets route by their literal hive name. Resolution is also bounded by a hop limit, so a cycle of links fails rather than looping forever.
+Targets are followed literally. `CurrentUser` is not expanded inside a
+link target, so do not use it expecting a caller-specific user redirect.
+Resolution has a hop limit; cycles fail rather than loop indefinitely.
 
 ## Layers can redirect a link
 
-The target is an ordinary [layered](~peios/registry-layers/layers) value — the link key's default value — so it plays by the same rules as any other value. A higher-precedence or more-recent layer can write a *different* `REG_LINK` target and redirect the link; remove that layer and the original target resurfaces, by the usual automatic revert. And if a layer writes a default value that is *not* a `REG_LINK` onto a key that is still flagged as a link, resolution through it fails until the offending layer is removed or overridden. The link's *identity* is fixed at creation; its *target* is just configuration, and configuration is layered.
+The default target value is layered. A higher-precedence or later
+same-precedence write can change where the link resolves. Removing that
+entry lets the next winner determine the target; it need not be the
+historical target you expected.
+
+A winning default value whose type is not `REG_LINK` can make resolution
+through the still-flagged link fail. Inspect the link with `--no-follow`
+and check the target's winning layer before attempting a repair. Verify
+both the stored target and the intended resolved key after recovery.
 
 ## Where to go next
 
-For the opaque-value rule this is the exception to, read [Keys, values, and types](~peios/registry-concepts/keys-values-and-types).
-
-For how a layer can redirect or break a link, read [Layers](~peios/registry-layers/layers).
+- [Layer selection](~peios/registry-layers/layers)
+- [Deletion, including recursive tools that do not follow links](~peios/registry-layers/deleting-keys-and-values)
+- [LCS symlink implementation](~peios/lcs/the-data-model/symlinks) and
+  [ABI](~peios/lcs/lcs-abi) for programmatic link handling

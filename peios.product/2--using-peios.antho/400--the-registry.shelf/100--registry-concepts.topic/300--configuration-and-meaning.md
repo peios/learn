@@ -1,7 +1,7 @@
 ---
-title: Configuration, not storage
-type: concept
-description: The registry stores values it does not understand — meaning lives in the owning subsystem and in regman, and a stored value can differ from the one in use.
+title: Change a setting and verify it
+type: how-to
+description: Look up a setting, record its current state, make a typed change, and distinguish registry read-back from consumer acceptance.
 related:
   - peios/registry-concepts/keys-values-and-types
   - peios/registry-administration/regman
@@ -11,78 +11,141 @@ related:
   - peios/registry-concepts/overview
 ---
 
-A registry value is a type tag and a pile of bytes. The registry stores it, returns it on request, and protects it with a [security descriptor](~peios/registry-security/access-control) — but it never asks what the value *means*. As [Keys, values, and types](~peios/registry-concepts/keys-values-and-types) put it, the registry is typed but opaque: it knows the tag, not the meaning. This page is about what follows from that, because it is the single most counterintuitive thing about the registry and the thing that most often trips people up.
+A registry write changes stored configuration. The program that reads it
+still decides whether it is valid and when to use it. Treat a change as
+finished only after checking both the stored result and the consumer.
 
-## Configuration and meaning, in one sentence
+<a id="configuration-and-meaning-in-one-sentence"></a>
+<span id="configuration-and-meaning--configuration-and-meaning-in-one-sentence"></span>
+<span id="registry-concepts-configuration-and-meaning--configuration-and-meaning-in-one-sentence"></span>
+<span id="using-peios-registry-concepts-configuration-and-meaning--configuration-and-meaning-in-one-sentence"></span>
+<a id="where-meaning-lives"></a>
+<span id="configuration-and-meaning--where-meaning-lives"></span>
+<span id="registry-concepts-configuration-and-meaning--where-meaning-lives"></span>
+<span id="using-peios-registry-concepts-configuration-and-meaning--where-meaning-lives"></span>
+## 1. Look up the setting
 
-**The registry holds configuration; it does not understand it. Meaning lives in the subsystem that reads the value and in `regman`, the manual that documents it — never in the registry itself.**
-
-Every config system you have used before bundles storage and meaning together: the file holds the setting *and* the program that parses the file knows what the setting means, in one place. The registry splits them on purpose. Storage is the registry's job. Meaning lives in two other places.
-
-## Where meaning lives
-
-**In the subsystem that owns the value.** The code that reads `Machine\System\KMES\BufferCapacity` is the thing that knows it must be a power of two, knows the compiled-in default, and knows what to do when it changes. That knowledge is in KMES, not in the store. Ask the registry "is this a sensible buffer capacity?" and it has no answer — it was never told what the value is for.
-
-**In [`regman`](~peios/registry-administration/regman), for a human.** `regman` is the registry's manual — the `man` of the registry. Give it a path and it tells you what a key or value actually does:
-
-```
-$ regman Machine\System\KMES BufferCapacity
-
-  Type     REG_QWORD
-  Default  4194304  (4 MB)
-  Valid    65536–268435456 bytes (64 KB–256 MB), power of two
-  Applies  live — ring-buffer swap
-
-Per-CPU ring buffer capacity, in bytes. Must be a power of two; values
-that are not are treated as invalid and ignored.
+```sh
+regman 'Machine\System\KMES' BufferCapacity
 ```
 
-`regman` is shipped documentation that lives *beside* the registry, not inside it — because the registry cannot describe itself, the manual has to sit next to it. This is the backbone of configuring a Peios system: before you touch a knob, `regman` is how you find out what it is, what values are legal, and what changing it will cost you (the `Applies` line — live, on restart, or on reboot). `regman` reads its own shipped docs; it does not read the live registry, so it tells you what a setting *is*, not what it is currently set to.
+Read the expected **Type**, **Default**, **Valid** range and **Applies**
+field. In this example, the documented type is `REG_QWORD`; the value is a
+power-of-two buffer capacity and applies live. Other settings may apply
+only on service restart or reboot.
 
-## Reject-or-keep
+`regman` reads package documentation, not the live registry. If it has no
+entry, find the owning component's documentation before changing the
+value. An undocumented setting is not evidence that any type or value is safe.
 
-Because the store never validates, validation happens where the value is *read*. This produces the rule that surprises people:
+## 2. Inspect and prepare recovery
 
-**A write the registry accepts is just stored bytes. The subsystem that owns the value validates it on read — and a value it judges invalid is ignored, not applied.** The subsystem keeps its last known-good value. It never clamps the bad value to the nearest legal one, and never silently corrects it.
-
-```mermaid
-flowchart LR
-    A["Admin writes a value"] --> B["Registry stores the bytes (always succeeds)"]
-    B --> C["Owning subsystem reads it"]
-    C --> D{"Valid?"}
-    D -->|yes| E["Apply the new value"]
-    D -->|no| F["Keep last known-good value + log the rejection"]
+```sh
+reg ls Machine/System/KMES -l
+reg get Machine/System/KMES BufferCapacity -L
 ```
 
-KMES is the worked example. Write a `BufferCapacity` that is not a power of two and the write *succeeds* — the registry has no opinion about powers of two. When KMES reads it, it rejects the value, keeps the capacity it was already using, and emits an event naming the key, the value it rejected, and the value it is still running on.
+Record the effective value, type and winning layer. `-L` shows only the
+winner, not every shadowed entry. If the setting is absent, record that
+fact too; writing the documented default is not the same as leaving it unset.
 
-## Written versus used
+Choose the layer to write into, check [permissions](~peios/registry-security/access-control),
+and decide how you will recover. Use a [backup](~peios/registry-administration/backup-and-restore)
+when you need the subtree's permissions and layered entries retained.
+A JSON export is useful for review but is not an equivalent backup.
 
-That leaves two sources of truth that can legitimately disagree:
+## 3. Make the smallest intended change
 
-- **The registry shows what was *written*.** Read the key back and you see the value the admin set — including a rejected one, sitting there looking authoritative.
-- **The log shows what is actually *in use*.** When a subsystem rejects a value and keeps its previous one, it says so in the event log. That record, not the registry read, is the truth about what the system is running on.
+For example, after deciding an 8 MiB buffer is appropriate for this machine:
 
-So "what is this subsystem actually configured to right now?" is not always answered by reading the registry. If a change does not seem to have taken effect, the registry will happily show you the value you wrote; the [audit and event log](~peios/auditing/overview) is where you find out it was refused and why. This is why observability matters here: the registry is the *intent*, the log is the *reality*, and they are allowed to differ.
+```sh
+reg set Machine/System/KMES BufferCapacity qword:8388608 --layer base
+reg get Machine/System/KMES BufferCapacity -L
+```
 
-## The registry does this to itself
+The type is explicit and the destination is explicit. A higher-precedence
+layer can still win, so read-back may show a different value. See
+[Layers](~peios/registry-layers/layers) before rewriting the setting repeatedly.
 
-The cleanest demonstration is the registry subsystem configuring itself. It reads its own tuning parameters from `Machine\System\Registry\` and applies exactly this discipline to them: a valid value is hot-swapped into effect; an invalid one (out of range, wrong type) is ignored, the previous known-good value is retained, and an audit event is emitted naming the key, the rejected value, and the value still in force. Values are never clamped. The subsystem that owns the entire registry treats its *own* configuration as "stored bytes I must validate before I trust" — see [How the registry boots and configures itself](~peios/registry-administration/bootstrap-and-self-configuration).
+For a guarded update, `reg set --expected-seq N` can reject a concurrent
+change with exit status `6`. The check is against the destination layer's
+entry: use the sequence from `reg get -L` only when that winning entry is
+in the layer you intend to write. If it is not, the effective sequence is
+not a sequence for your target layer. See [`reg`](~peios/registry-tools/reg#reg-set-key-value-data)
+and the [transaction notes](~peios/registry-advanced/transactions).
 
-## There is no invalid registry
+<a id="written-versus-used"></a>
+<span id="configuration-and-meaning--written-versus-used"></span>
+<span id="registry-concepts-configuration-and-meaning--written-versus-used"></span>
+<span id="using-peios-registry-concepts-configuration-and-meaning--written-versus-used"></span>
+## 4. Verify that the consumer accepted it
 
-Put plainly: a value is never "invalid" at the registry level, because the store has no standard to judge it against. **Validity is a verdict, and the reader makes it.** The same bytes could be valid to one subsystem and meaningless to another; the registry holds them either way.
+1. Confirm the effective value and type with `reg` or Registry Editor.
+2. Follow **Applies**: allow the live consumer to process the change, or
+   arrange its documented restart or reboot if required.
+3. Inspect that component's status and relevant events. A watch notification
+   or a successful `reg set` is not an acceptance acknowledgement.
+4. Test the behavior the setting was intended to change.
 
-So "is this configuration valid?" is not a question you ask the registry. You ask the subsystem that owns the value — or you read the log to see what verdict it already reached.
+Use the [event and audit guides](~peios/auditing/overview) for reading
+records. Do not treat silence in the log alone as proof of acceptance.
 
-## Why it is built this way
+<a id="reject-or-keep"></a>
+<span id="configuration-and-meaning--reject-or-keep"></span>
+<span id="registry-concepts-configuration-and-meaning--reject-or-keep"></span>
+<span id="using-peios-registry-concepts-configuration-and-meaning--reject-or-keep"></span>
+<a id="there-is-no-invalid-registry"></a>
+<span id="configuration-and-meaning--there-is-no-invalid-registry"></span>
+<span id="registry-concepts-configuration-and-meaning--there-is-no-invalid-registry"></span>
+<span id="using-peios-registry-concepts-configuration-and-meaning--there-is-no-invalid-registry"></span>
+## If the stored value is rejected
 
-Briefly, because it is worth knowing the trade rather than dwelling on it: keeping the store meaning-free keeps it small and uniform, lets it hold a value for a subsystem that is not running yet or a key nobody has read, and lets configuration be delivered from outside — a domain Group Policy, say — without the kernel needing a built-in schema for every subsystem on the machine. The price is that the store cannot tell you whether a value is sensible. That price is paid by `regman` (which documents what *should* be there) and the logs (which record what the system actually did).
+Consumers validate their configuration. Under **reject-or-keep**, a
+rejected setting remains stored while the consumer keeps its last
+known-good value and logs the rejection. It does not clamp or silently
+repair the invalid value.
 
-## Where to go next
+Check the event for the rejected value and the retained value. Correct the
+type or data according to the component's manual, then repeat both checks.
+The consumer's documented fallback matters: for example,
+[SdDefaults](~peios/registry-security/default-security-descriptors) uses a
+compiled descriptor when an override is invalid.
 
-If you want to see how a subsystem *notices* a configuration change so it can re-validate and re-apply, read [Watching for changes](~peios/registry-concepts/watches).
+<a id="the-registry-does-this-to-itself"></a>
+<span id="configuration-and-meaning--the-registry-does-this-to-itself"></span>
+<span id="registry-concepts-configuration-and-meaning--the-registry-does-this-to-itself"></span>
+<span id="using-peios-registry-concepts-configuration-and-meaning--the-registry-does-this-to-itself"></span>
+## Registry settings follow the same check
 
-If you want the registry's own bootstrap and self-configuration story — the purest example of reject-or-keep — read [How the registry boots and configures itself](~peios/registry-administration/bootstrap-and-self-configuration).
+LCS reads its own settings under `Machine\System\Registry`. It validates
+changes before using them and logs rejections. Deleting one of these
+values does not necessarily reset the running parameter: the documented
+LCS behavior is to retain the last active value when a parameter is
+missing. See [Registry startup and configuration](~peios/registry-administration/bootstrap-and-self-configuration).
 
-If you are ready for the layered model beneath the single value you read, read [Layers](~peios/registry-layers/layers).
+<a id="why-it-is-built-this-way"></a>
+<span id="configuration-and-meaning--why-it-is-built-this-way"></span>
+<span id="registry-concepts-configuration-and-meaning--why-it-is-built-this-way"></span>
+<span id="using-peios-registry-concepts-configuration-and-meaning--why-it-is-built-this-way"></span>
+## If the write fails or times out
+
+A write can fail because of access, input, capacity or source errors.
+Use the [`reg` exit-status reference](~peios/registry-tools/reg#exit-status)
+to distinguish them. After a timeout or source failure, read the affected
+state before retrying: a dispatched write or commit may still have succeeded.
+
+<a id="where-to-go-next"></a>
+<span id="configuration-and-meaning--where-to-go-next"></span>
+<span id="registry-concepts-configuration-and-meaning--where-to-go-next"></span>
+<span id="using-peios-registry-concepts-configuration-and-meaning--where-to-go-next"></span>
+## Recover deliberately
+
+- For an isolated edit, restore the intended value in the intended layer
+  and verify the consumer again.
+- To withdraw a layer's entry, use [per-layer deletion](~peios/registry-layers/deleting-keys-and-values).
+- To remove a bundle of configuration, review [layer recovery](~peios/registry-layers/what-layers-are-for).
+- To replace a damaged subtree from a snapshot, follow
+  [backup and restore](~peios/registry-administration/backup-and-restore).
+
+Removing configuration does not reverse changes to a key's security
+descriptor or undo effects already performed by a consumer.

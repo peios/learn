@@ -1,7 +1,7 @@
 ---
 title: Backup and restore
-type: concept
-description: Export a subtree to a stream and restore one back wholesale — how the system is seeded, recovered, and migrated. Restore is a replace, not a merge.
+type: how-to
+description: Choose JSON export or a privileged registry backup, plan layer-definition recovery, and restore a subtree without confusing replacement with merge.
 related:
   - peios/registry-administration/bootstrap-and-self-configuration
   - peios/registry-administration/lcs-and-sources
@@ -10,45 +10,129 @@ related:
   - peios/registry-concepts/overview
 ---
 
-Beyond reading and writing individual values, the registry can move whole subtrees at once: **export** a key and everything beneath it to a stream, and **restore** such a stream back into the tree. This is the bulk-data path, and it is the mechanism behind things you have already met — [first-boot seeding](~peios/registry-administration/bootstrap-and-self-configuration) — as well as the disaster-recovery and migration any real deployment needs.
+Use a **backup** when recovery must preserve a subtree's security
+descriptors and tagged layer entries. Use a **JSON export** for a
+reviewable configuration document. They serve different purposes.
 
-## Backup and restore, in one sentence
+<a id="backup-and-restore-in-one-sentence"></a>
+<span id="backup-and-restore--backup-and-restore-in-one-sentence"></span>
+<span id="registry-administration-backup-and-restore--backup-and-restore-in-one-sentence"></span>
+<span id="using-peios-registry-administration-backup-and-restore--backup-and-restore-in-one-sentence"></span>
+<a id="what-it-is-for"></a>
+<span id="backup-and-restore--what-it-is-for"></span>
+<span id="registry-administration-backup-and-restore--what-it-is-for"></span>
+<span id="using-peios-registry-administration-backup-and-restore--what-it-is-for"></span>
+## Choose the recovery format
 
-**Backup streams a point-in-time copy of a subtree out; restore replaces a subtree wholesale from such a stream — both are privileged, whole-subtree operations, not value-by-value edits.**
+| Need | Tool | Important limit |
+|---|---|---|
+| Review or transfer visible keys and values | `reg export --json KEY FILE` and `reg apply FILE` | Export does not save key security descriptors or the complete layered store. |
+| Recover a subtree with its descriptors and layer entries | `reg backup KEY FILE` and `reg restore KEY FILE` | Privileged; restore replaces the target contents and descendants. |
+| Recover a managed configuration bundle | The role or policy workflow, or a reviewed layer operation | Layer removal does not restore key permissions or reverse consumer side effects. |
+
+Registry Editor offers these under **Files** as **Export…**, **Import…**,
+**Back up…** and **Restore…**. Its export is a JSON registry document.
+Text-format `reg export` is for review; text input to `reg apply` is not
+implemented, so use JSON for reapplication.
+
+## Take a backup before a risky change
+
+For example, to capture the KMES configuration subtree:
+
+```sh
+reg backup Machine/System/KMES kmes.snap
+```
+
+Confirm the command succeeded and retain the file together with its
+original key path and the change it precedes. Choose a protected file
+location: backup privilege can include configuration you could not read
+through ordinary key access. A failed or interrupted output is not a
+verified recovery copy.
 
 ## Backup is a point-in-time snapshot
 
-A backup captures a key and its entire subtree as it stands at one instant — a consistent snapshot, unaffected by writes happening concurrently. The result is a self-contained stream you can send to a file, a pipe, or across a network.
+A backup captures a consistent subtree while other writes can continue.
+It includes key descriptors, layer-tagged entries and absence markers,
+rather than just effective values. The stream has integrity checks to
+reject truncation or corruption on restore. Integrity does not establish
+that an unknown backup is trustworthy.
 
-It is **full-fidelity with respect to [layers](~peios/registry-layers/layers)**: a backup records every layer's writes, not merely the effective values. Restore it and the layered structure comes back intact — the base values, the role layers, the policy overlays, all of them, resolving the way they did before. A backup is not a flattened picture of "what the values currently are"; it is the whole stack.
+> [!WARNING]
+> A backup's layer manifest records layer information for validation; it
+> does not recreate layer definitions. A layer definition is included only
+> if its metadata key under `Machine\System\Registry\Layers\<Name>` is
+> part of the backed-up subtree.
 
-The stream is also self-verifying: it carries an integrity check, so a truncated or corrupted backup is caught when you try to restore it, rather than restored as garbage.
+If you restore entries for a layer that no longer exists, and the backup
+does not restore that layer's metadata, those entries remain inactive
+until real metadata exists. This matters when recovering after layer
+deletion or moving configuration to another machine. Review which layer
+definitions are needed before relying on a narrow subtree snapshot.
+See the [LCS backup reference](~peios/lcs/backup-and-restore/backup)
+and [restored-layer rules](~peios/lcs/backup-and-restore/restore#layers-in-a-restored-stream).
 
 ## Restore is replace, not merge
 
-This is the rule to internalise. Restoring into a key **replaces** that key's contents and entire subtree: the existing descendants are removed and the backup's contents take their place. It is not a merge and it does not add to what is there — whatever was under the target key before is gone, supplanted by the stream.
+Before restoring:
 
-The target key itself survives as the anchor — it keeps its identity and its place in the tree — and everything beneath it is rebuilt from the backup. The whole operation is atomic: it either completes and swaps the new subtree in, or fails and leaves the original untouched. There is no half-restored state to clean up.
+1. Confirm the backup is trusted and corresponds to the intended target.
+2. Save the current target if you need a way back from the restore itself.
+3. Review the target subtree, affected consumers and restored permissions.
+4. Confirm needed layer metadata exists or is included, and arrange any
+   required privileges or consumer restart/reload.
+5. Run restore only after approving the replacement scope.
+
+For the earlier example:
+
+```sh
+reg restore Machine/System/KMES kmes.snap
+```
+
+The target key object remains, but its mutable fields, values and
+contents are restored and its descendants are replaced. Its immutable
+volatile/link flags must match the backup root. Do not assume a backup
+can be restored onto any arbitrary key.
+
+The operation uses one transaction. A rejected stream or a failure
+before commit leaves no partial restored subtree. If the commit times
+out or reports a source failure, its result can be uncertain: inspect the
+live state before retrying or reporting that nothing changed.
+
+`reg restore` prompts on terminal input; with non-terminal input it
+proceeds without that prompt. Do not use a script's lack of a prompt as
+evidence that the operation is non-destructive.
 
 ## Both bypass per-key permissions — by design
 
-Backup and restore do not consult the security descriptor on each key the way an ordinary open does. They are gated by **privilege** instead — a backup privilege to read the whole subtree, a restore privilege to write it. This is the same model as file backup: a backup operator reads files they were never granted access to, because reading-for-backup is the privilege, not per-file permission.
+Backup requires `SeBackupPrivilege`; restore requires `SeRestorePrivilege`.
+They bypass ordinary per-key checks and are audited independently of each
+key's audit settings.
 
 > [!WARNING]
-> **The privilege to restore is, in effect, the privilege to rewrite security on everything in the target subtree.** A backup carries each key's security descriptor, and restore writes those descriptors back — so restoring lets the caller replace owners and permissions throughout the subtree, which is close to taking ownership of all of it. Granting restore privilege is therefore a serious act, not a routine one: read it as "may rewrite this subtree, security and all," because that is what it grants.
+> Restore writes the backed-up security descriptors, including the
+> target key's descriptor. Its privilege effectively permits rewriting
+> owners and permissions throughout the target subtree.
 
-(Both operations are audited every time they run, regardless of a key's own audit settings — see the [auditing topic](~peios/auditing/overview).)
+`SeRestorePrivilege` alone is not enough for every snapshot. A manifest
+layer with precedence above 0, or a matching existing layer above 0,
+requires `SeTcbPrivilege`. Restored layer metadata is also subject to
+its positive-precedence check. See the
+[restore precedence gate](~peios/lcs/backup-and-restore/restore#the-precedence-gate).
 
-## What it is for
+## Verify the recovery
 
-- **First-boot seeding.** A fresh machine's registry is empty; its initial configuration is delivered by *restoring* a seed. Same mechanism, described in [bootstrap](~peios/registry-administration/bootstrap-and-self-configuration).
-- **Disaster recovery.** Snapshot a subtree — or a whole hive — and restore it after a failure or a bad change.
-- **Migration.** Move configuration between machines by backing up on one and restoring on another; the stream is portable.
+- Inspect the subtree and representative effective values with `reg tree`,
+  `reg get -L` and Registry Editor.
+- Inspect key descriptors and `reg layer ls -l`; missing or different
+  layer definitions can change what is effective.
+- Check relevant consumer status and events after the setting's documented
+  application point. Restore notifications require watchers to re-read;
+  they are not consumer acceptance acknowledgements.
+- Check fresh opens when restored permissions matter; existing handles
+  retain the rights granted when they were opened.
 
 ## Where to go next
 
-For where restore comes from at first boot, read [How the registry boots and configures itself](~peios/registry-administration/bootstrap-and-self-configuration).
-
-For who actually performs these operations — the kernel coordinating the store — read [LCS and sources](~peios/registry-administration/lcs-and-sources).
-
-For the privilege model they lean on, read [Access control on keys](~peios/registry-security/access-control).
+- [Change a setting and verify it](~peios/registry-concepts/configuration-and-meaning)
+- [Recover using a layer](~peios/registry-layers/what-layers-are-for)
+- [LCS backup and restore implementation](~peios/lcs/backup-and-restore/the-stream)

@@ -1,7 +1,7 @@
 ---
 title: Keys, values, and types
-type: concept
-description: The registry's data model — a tree of keys holding named typed values, the value types, the naming rules, and why a value is typed but never interpreted.
+type: reference
+description: Address a key and value correctly, choose explicit value types, and distinguish stored data, defaults and volatile keys.
 related:
   - peios/registry-concepts/overview
   - peios/registry-concepts/configuration-and-meaning
@@ -10,88 +10,108 @@ related:
   - peios/file-access/overview
 ---
 
-The registry's data model has exactly two kinds of thing in it: **keys** and **values**. A key is a node in the tree — a container that holds child keys and values. A value is a leaf — a named, typed piece of data living inside a key. There is no third kind of thing, and the nesting only ever happens through keys. That smallness is deliberate, and it is worth getting precise about before anything else, because every later idea is built on this shape.
+A registry command usually takes a **key path** and a separate **value
+name**. Keeping them separate avoids changing the wrong setting:
 
-## Two levels, and only two
+```sh
+reg get Machine/System/KMES BufferCapacity
+reg ls Machine/System/KMES -l
+```
 
-Keys nest; values do not. A key can contain other keys (its subkeys) and it can contain values, but a value cannot contain anything — it is always a leaf. You cannot put a value "inside" another value, and there is no record type between a key and a value.
+<a id="two-levels-and-only-two"></a>
+<span id="keys-values-and-types--two-levels-and-only-two"></span>
+<span id="registry-concepts-keys-values-and-types--two-levels-and-only-two"></span>
+<span id="using-peios-registry-concepts-keys-values-and-types--two-levels-and-only-two"></span>
+## Keys and values in a command
 
-| | Holds | Held by | Role |
-|---|---|---|---|
-| **Key** | Subkeys and values | Its parent key | The container — the registry's directories |
-| **Value** | Nothing (a leaf) | Exactly one key | The data — the registry's files |
+Keys contain subkeys and values; values do not contain other values.
+`reg get KEY` lists the key's effective values. `reg get KEY NAME` reads
+one value. The literal `@` in the value-name position addresses the
+unnamed **default value**, if the key has one.
 
-This two-level rule is a hard constraint, not a convention. When you want structure, you make subkeys; when you want data, you make values. There is no other axis.
+A key need not have a default value. A default value is also different
+from a setting's *documented default*: a consumer may use a compiled-in
+default when no registry value is present.
 
 ## Keys
 
-A **key** is identified by its path — `Machine\System\KMES` names a key three levels down from the `Machine\` hive root. Each key holds its children and its values, and each key is a first-class secured object with its own [security descriptor](~peios/registry-security/access-control); that is what makes "who can read or change this configuration" a per-key decision.
+`Machine\System\KMES` names a key. Its permissions cover the values it
+contains. To give two values different permissions, put them in different
+keys; there are no per-value permission lists.
 
-A few naming rules apply to each component of a path (each segment between separators):
-
-- Any UTF-8 is allowed in a key name **except** backslash, forward slash, and the null byte. Backslash is the separator; forward slash is accepted on input and normalised to a backslash; null is never allowed.
-- Components cannot be empty. `Machine\\System` (a doubled separator) and a trailing separator are both invalid.
-
-Every key also has one **default value** — the single value whose name is the empty string. It is the key's "main" value, the one you get when you read the key without naming a value. Most keys also carry additional named values alongside it.
+Key-name components cannot contain `\`, `/` or a null byte. Empty
+components, doubled separators and trailing separators are invalid.
 
 ## Values
 
-A **value** is a `(name, type, data)` triple stored in a key. A key can hold many values, each with a distinct name, plus the one unnamed default value.
-
-Value names follow almost the same rules as key names, with one difference: **backslash and forward slash are allowed** in a value name. Value names are not paths — they are not hierarchical — so a separator inside one has no special meaning. Only the null byte is forbidden, and the empty string is reserved for the default value.
+A value has a name, a type tag and data. Unlike a key-name component, a
+value name may contain `/` or `\`: it is not a path. The null byte is
+forbidden; the empty name is reserved for the default value.
 
 ## The value types
 
-A value's **type** is a small tag stored alongside its data. The full set:
+Use the type the owning component documents in `regman`. For a command-line
+write, an explicit prefix avoids unintended type inference:
 
-| Type | Holds |
-|---|---|
-| `REG_DWORD` / `REG_QWORD` | A 32-bit / 64-bit integer. |
-| `REG_DWORD_BIG_ENDIAN` | A 32-bit integer in big-endian byte order. |
-| `REG_SZ` | A string. |
-| `REG_EXPAND_SZ` | A string containing references to be expanded (e.g. environment variables) by whatever reads it. |
-| `REG_MULTI_SZ` | An array of strings. |
-| `REG_BINARY` | Raw bytes with no further structure. |
-| `REG_LINK` | A symbolic-link target. The one type the registry acts on itself — see [Registry links](~peios/registry-advanced/registry-links). |
-| `REG_NONE` | No type / no meaningful data. |
+| Type | Meaning to a reader | `reg set` prefix |
+|---|---|---|
+| `REG_DWORD` | 32-bit integer | `dword:` |
+| `REG_QWORD` | 64-bit integer | `qword:` |
+| `REG_DWORD_BIG_ENDIAN` | Big-endian 32-bit integer | `dword-be:` |
+| `REG_SZ` | Text | `sz:` |
+| `REG_EXPAND_SZ` | Text whose references the consumer expands | `expand:` |
+| `REG_MULTI_SZ` | List of strings | `multi:` |
+| `REG_BINARY` | Bytes | `hex:` or `bin:` |
+| `REG_LINK` | A link target on a link key | `link:` |
+| `REG_NONE` | No type | `none:` |
 
-There are also three hardware-resource types carried over for format fidelity. Peios assigns them no meaning — they behave exactly like `REG_BINARY` and the registry never produces them itself. You will essentially never author one.
+For example, `sz:007` preserves the text `007`. Without the prefix,
+`reg` infers an integer and loses the leading zeros. See
+[`reg` value literals](~peios/registry-tools/reg#value-literals-and-types)
+for encoding lists, bytes and numbers.
 
-Peios' tools agree on how each type's data is laid out in bytes. `reg`, Registry Editor and the `peios` Rust crate all use this layout:
-- **Strings** (`REG_SZ`, `REG_EXPAND_SZ`): UTF-8, not the UTF-16 Windows uses, ending in one null byte.
-- **`REG_LINK`:** the target path in UTF-8 with no null byte at all. The registry takes its length as its end, and won't follow a link whose target has a null in it.
-- **`REG_MULTI_SZ`:** each string followed by a null byte, then one more null byte to end the list.
-- **Integers:** little-endian, except `REG_DWORD_BIG_ENDIAN`.
+The hardware-resource types are retained for format fidelity and have no
+Peios-specific meaning. Byte encodings, including Peios UTF-8 strings and
+link targets, are documented in the
+[LCS value representation](~peios/lcs/the-data-model/values#tool-value-encodings).
 
 ## Typed, but opaque
 
-Here is the property the rest of the topic leans on. The registry stores a value's type tag and its raw bytes, and that is **all** it does with them. It does not check that the bytes match the type. It does not parse a `REG_DWORD` into a number. It does not know that `Machine\System\KMES\BufferCapacity` is supposed to be a power of two, what its default is, or which subsystem reads it. The single exception is `REG_LINK` on a link key, which the kernel follows during path resolution.
+The registry does not check whether ordinary value data is sensible for
+its consumer. A known type tag can accompany malformed data, such as a
+number with the wrong length. Registry Editor shows such data in red as
+bytes. Unknown type codes and invalid requests can still be rejected;
+"opaque" does not mean every write succeeds.
 
-So "typed" here means **tagged**, not **validated**. The type travels with the value so that a reader knows how to interpret the bytes — but the interpreting, the validating, and the deciding-what-to-do are all somebody else's job.
-
-Two consequences follow immediately, and both get their own treatment:
-
-- The registry can hold a value for a subsystem that is not even running, or a setting nobody has read yet. Storage does not require a reader.
-- Whether a value is *valid* is never the registry's verdict. That belongs to whatever reads it — which is the whole subject of [Configuration, not storage](~peios/registry-concepts/configuration-and-meaning).
+`REG_LINK` on a link key is the exception: the kernel interprets it to
+resolve the target. For other settings, follow
+[Change a setting and verify it](~peios/registry-concepts/configuration-and-meaning).
 
 ## Names, case, and paths
 
-Paths use the backslash as their canonical separator. A forward slash is accepted on input and normalised to a backslash, so `Machine/System/KMES` and `Machine\System\KMES` name the same key; the stored, canonical form always uses backslashes.
+`reg` accepts forward slashes and backslashes as path separators. In a
+shell, use forward slashes or quote a backslash path:
 
-Comparison is **case-insensitive but case-preserving**. `KMES` and `kmes` resolve to the same key, but the registry keeps whatever case you wrote for display. The matching uses a fixed Unicode case-folding rule, so it does not depend on locale.
+```sh
+reg get 'Machine\System\KMES' BufferCapacity
+```
 
-One sharp edge: there is **no Unicode normalisation**. Two different byte sequences that render as the same character (a precomposed `é` versus `e` plus a combining accent) are two *different* keys. Case is folded; representation is not.
+Names are case-insensitive and retain their display case. Case matching
+is locale-independent, but there is no Unicode normalization: visually
+identical names with different Unicode representations can be distinct.
 
 ## Volatile keys
 
-A key can be created **volatile**, meaning it is stored only in memory and disappears on reboot or when its store unloads. It is the registry's home for runtime-only state that should never survive a restart. Volatility is fixed at creation, and there is one structural rule: the children of a volatile key must themselves be volatile (you cannot place a persistent key under a non-persistent one).
+A volatile key is held in memory and disappears on reboot or when its
+store unloads. Its children must also be volatile. `reg info KEY` shows
+whether a key is volatile; Registry Editor also shows this in the key pane.
 
-Watch the word, because it collides with a different idea. "Volatile" describes **storage persistence** — does this key survive a reboot. It says nothing about **how quickly a configuration change takes effect** — whether editing a setting applies live, on service restart, or only on reboot. That second property belongs to each individual setting and is recorded in `regman` as its `applies` field. A value can live in a perfectly persistent (non-volatile) key and still only take effect on reboot. Keep the two apart.
+Volatility is about persistence. It does not tell you when a setting
+applies. A persistent setting may still require a reboot; check the
+`regman` **Applies** field.
 
 ## Where to go next
 
-If you want the idea that the registry stores values it does not understand — what `regman` documents, what "reject-or-keep" means, and why the value the registry shows can differ from the value a subsystem is using — read [Configuration, not storage](~peios/registry-concepts/configuration-and-meaning).
-
-If you want the layered truth beneath the single value you read — precedence, the base layer, and automatic revert — read [Layers](~peios/registry-layers/layers).
-
-If you want the security model — why every key carries a security descriptor and what the registry-specific access rights are — read [Access control on keys](~peios/registry-security/access-control).
+- [Make and verify a change](~peios/registry-concepts/configuration-and-meaning)
+- [Understand which layer wins](~peios/registry-layers/layers)
+- [Check key permissions](~peios/registry-security/access-control)

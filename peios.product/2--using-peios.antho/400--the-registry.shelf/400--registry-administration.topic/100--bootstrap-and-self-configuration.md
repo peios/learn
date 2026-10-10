@@ -1,7 +1,7 @@
 ---
-title: How the registry boots and configures itself
-type: concept
-description: The registry runs on compiled-in defaults from the instant the kernel loads and hot-swaps to registry-backed configuration once its store is up.
+title: Registry startup and configuration
+type: how-to
+description: Inspect registry subsystem settings, understand startup defaults and missing-value behavior, and find early registry-source failures.
 related:
   - peios/registry-concepts/configuration-and-meaning
   - peios/registry-administration/backup-and-restore
@@ -11,60 +11,95 @@ related:
   - peios/registry-concepts/overview
 ---
 
-The registry holds the configuration for everything on the system. Which raises an awkward question: what configures the *registry*? The honest answer is that it mostly configures itself — and doing that means breaking a circular dependency, because the registry's own settings live in the registry, and the store those settings live in is itself a service that has to start up. This page is how that knot is untied, and it doubles as the purest example of the [reject-or-keep](~peios/registry-concepts/configuration-and-meaning) discipline.
+LCS uses compiled-in defaults at startup, then reads its settings from
+`Machine\System\Registry` when the `Machine` hive becomes available.
+For routine tuning, inspect and document the specific parameter before
+changing it:
 
-## Bootstrap, in one sentence
-
-**The registry subsystem is fully operational on compiled-in defaults from the instant the kernel loads, and hot-swaps to registry-backed configuration once its store comes up — it never enters a "waiting for configuration" state.**
-
-## The circular dependencies
-
-Three loops have to be broken at boot:
-
-- The registry reads its own operational parameters (timeouts, size limits, and so on) from a key under the `Machine\` hive — but that hive is held by a store that has not started yet.
-- Other early services want to read *their* configuration from the registry before that same store is up.
-- On a brand-new install there is no data at all: the store's database is empty.
-
-A configuration store that refused to function until it was configured would deadlock on the first of these. The registry is designed so that never happens.
-
-## Compiled-in defaults
-
-Every operational parameter the registry uses has a **compiled-in default** that produces correct behaviour. From the moment the kernel module loads, the registry runs on those defaults — it is immediately operational and never blocks waiting for configuration. The [base layer](~peios/registry-layers/what-layers-are-for) likewise exists unconditionally, hardcoded, needing no persisted state. So before any store has registered, the machinery is already alive; it simply has no hives to serve yet.
-
-## Hot-swap, not restart
-
-When the store registers and the configuration keys become readable, the registry **reads, validates, and swaps its parameters in place** — no restart, no re-initialisation. Operations already in flight finish on the values they started with; new operations pick up the new values. The transition from "compiled-in defaults" to "registry-backed configuration" is seamless and is the *only* configuration transition there is.
-
-```mermaid
-flowchart LR
-    A["Kernel loads — registry live on compiled-in defaults"] --> B["Store registers its hives"]
-    B --> C["Read Machine\System\Registry\* parameters"]
-    C --> D["Validate and hot-swap into effect"]
+```sh
+reg get Machine/System/Registry
+regman 'Machine\System\Registry'
 ```
+
+Use the [normal change-and-verification workflow](~peios/registry-concepts/configuration-and-meaning).
+These parameters affect the registry itself, so keep changes narrow and
+record a recovery value before modifying them.
+
+<a id="bootstrap-in-one-sentence"></a>
+<span id="bootstrap-and-self-configuration--bootstrap-in-one-sentence"></span>
+<span id="registry-administration-bootstrap-and-self-configuration--bootstrap-in-one-sentence"></span>
+<span id="using-peios-registry-administration-bootstrap-and-self-configuration--bootstrap-in-one-sentence"></span>
+<a id="compiled-in-defaults"></a>
+<span id="bootstrap-and-self-configuration--compiled-in-defaults"></span>
+<span id="registry-administration-bootstrap-and-self-configuration--compiled-in-defaults"></span>
+<span id="using-peios-registry-administration-bootstrap-and-self-configuration--compiled-in-defaults"></span>
+<a id="the-circular-dependencies"></a>
+<span id="bootstrap-and-self-configuration--the-circular-dependencies"></span>
+<span id="registry-administration-bootstrap-and-self-configuration--the-circular-dependencies"></span>
+<span id="using-peios-registry-administration-bootstrap-and-self-configuration--the-circular-dependencies"></span>
+## What startup defaults do and do not mean
+
+The kernel's registry machinery and base layer can operate before there
+is stored configuration. That does not make hives available before their
+source registers. Until a source supplies a hive, a path naming it cannot
+be opened.
+
+The `registryd` role, supplied by `loregd` by default, starts early so the
+rest of the system can read configuration. Its backing database paths
+come from startup arguments rather than registry settings. See
+[LCS and sources](~peios/registry-administration/lcs-and-sources).
+
+<a id="hot-swap-not-restart"></a>
+<span id="bootstrap-and-self-configuration--hot-swap-not-restart"></span>
+<span id="registry-administration-bootstrap-and-self-configuration--hot-swap-not-restart"></span>
+<span id="using-peios-registry-administration-bootstrap-and-self-configuration--hot-swap-not-restart"></span>
+<a id="the-self-watch"></a>
+<span id="bootstrap-and-self-configuration--the-self-watch"></span>
+<span id="registry-administration-bootstrap-and-self-configuration--the-self-watch"></span>
+<span id="using-peios-registry-administration-bootstrap-and-self-configuration--the-self-watch"></span>
+## When a registry parameter change applies
+
+LCS watches its configuration and validates changes before publishing
+new operational parameters; the normal transition needs no LCS restart.
+Use the parameter's manual and the
+[LCS operational-parameters reference](~peios/lcs/bootstrap/operational-parameters)
+for type, range and effect. That reference also describes the limits of
+in-flight parameter snapshots; do not assume every ongoing operation
+changes at exactly the same instant.
 
 ## It applies reject-or-keep to itself
 
-This is the cleanest demonstration of the idea from [Configuration, not storage](~peios/registry-concepts/configuration-and-meaning): the registry treats its *own* configuration as untrusted bytes it must validate. A parameter value that is valid is hot-swapped into effect. One that is invalid — out of range, wrong type — is **ignored**: the registry keeps the value it was already using and emits an audit event naming the key, the rejected value, and the value still in force. It never clamps the bad value to something legal. The subsystem that owns the entire registry does not trust even its own settings until it has checked them — and when stored and in-force disagree, the audit log is the truth.
+A valid parameter is adopted. An invalid value, wrong type or missing
+parameter leaves the previously active value in force, which may be the
+compiled default or a previously accepted value. Values are not clamped.
+The documented rejection event is `lcs.config.value.rejected`.
+
+> [!WARNING]
+> Deleting a registry tuning value is not a reliable way to reset its
+> running value to the compiled default. Read the parameter documentation,
+> write the intended valid value if a reset is needed, and verify the result.
+
+Read-back shows stored data, so inspect the registry's events too. A
+missing whole configuration key during first boot differs from individual
+missing parameters in an existing key; the TRM describes that distinction.
 
 ## First boot, with no data
 
-A fresh install has an empty store, and the sequence is built to cope:
+The source creates hive roots with their initial security descriptors.
+LCS keeps its defaults while configuration is absent. The init system
+then restores a seed containing the initial configuration; LCS notices
+it, reads the settings and validates them.
 
-1. The store — `registryd`, the base registry source [peinit](~peios/services-and-jobs/overview) starts at early boot (see [LCS and sources](~peios/registry-administration/lcs-and-sources)) — starts, finds its database empty, and creates the hive root keys with their default [security descriptors](~peios/registry-security/access-control) — but no configuration beneath them.
-2. The registry looks for its parameter keys, finds nothing, and keeps its compiled-in defaults. It is fully operational regardless.
-3. The init system (not the registry's concern) restores a **seed** — a [backup](~peios/registry-administration/backup-and-restore) of the system's initial configuration — that populates `Machine\` with the system's real configuration.
-4. That write trips the registry's watch on its own configuration area; it re-reads, validates, and hot-swaps to the seeded values. Normal operation continues.
-
-At no point is there a stall. Empty store, missing keys, seed arriving later — each is handled by "use the defaults until something better shows up", driven by the same [watch](~peios/registry-concepts/watches) mechanism every other reactive consumer uses.
-
-## The self-watch
-
-The registry notices changes to its own configuration the same way any service notices changes — by watching the subtree — except the watcher is internal to the kernel rather than a userspace handle. It is the [reaction loop](~peios/registry-concepts/watches) turned on the registry itself: a change to a parameter key fires the watch, the registry re-reads and re-validates, and applies or rejects. There is no polling and no special-case configuration path; self-configuration is just the registry being one more consumer of the registry.
+For a machine that does not reach normal startup, examine the source's
+early diagnostic output and the init-system failure information. With
+`loregd`, peinit relays output to the console if the source fails before
+readiness; after logging starts, its buffered output reaches eventd.
+Do not assume missing configuration alone proves that the databases need
+to be replaced or seeded again.
 
 ## Where to go next
 
-If you want the store itself — what it is, how the kernel and the userspace store divide the work, and the trust boundary between them — read [LCS and sources](~peios/registry-administration/lcs-and-sources).
-
-If you want the validation discipline this page leans on, read [Configuration, not storage](~peios/registry-concepts/configuration-and-meaning).
-
-If you want the change-notification mechanism behind the self-watch, read [Watching for changes](~peios/registry-concepts/watches).
+- [Source availability and recovery checks](~peios/registry-administration/lcs-and-sources)
+- [Backup and restore, including destructive replacement](~peios/registry-administration/backup-and-restore)
+- [Kernel boot sequence](~peios/lcs/bootstrap/the-boot-sequence) and
+  [self-watch implementation](~peios/lcs/bootstrap/the-self-watch)
