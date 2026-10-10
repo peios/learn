@@ -1,7 +1,7 @@
 ---
-title: Boot hooks
-type: concept
-description: Boot hooks do the deployment-specific work of early boot. Where they live, the metadata block, the four ordering keys, and the exit-code protocol.
+title: Writing a boot hook
+type: how-to
+description: Write initramfs hooks with capability metadata, explicit outcomes and shared console reporting.
 related:
   - peios/boot-and-trust-establishment/initramfs-stage
   - peios/boot-and-trust-establishment/overview
@@ -25,13 +25,13 @@ Every regular file directly in either directory is a hook, and prelude runs all 
 
 **A file name identifies a hook.** The same name in both directories is one hook with two candidate bodies, not two hooks: the operator's copy wins and the packaged one is skipped, so a shipped hook can be replaced without deleting a package's payload. The build says which file lost, because a hook silently replaced by another is exactly the kind of thing that should not be quiet.
 
-An older `hooks/` directory at the initramfs root is still read, and every hook found there produces a build warning naming where it should move. That is deliberate: a hook in a directory nobody scans is not an error — it simply is not there, and the boot fails much later with nothing mounted — so the move cannot be a flag day. The warning going quiet is what says the migration is done. Hooks are `#!/usr/bin/sh` scripts, and the initramfs's `/usr/bin/sh` is provided by dash. The full package-storage path is required because hooks run before a `/bin` runtime view exists.
+An older `hooks/` directory at the initramfs root is still read, and every hook found there produces a build warning naming where it should move. That is deliberate: a hook in a directory nobody scans is not an error — it simply is not there, and the boot fails much later with nothing mounted — so the move cannot be a flag day. The warning going quiet is what says the migration is done. Choose a shebang whose interpreter exists in the initramfs when the hook runs. The examples below use `#!/usr/bin/sh`; this is not a universal requirement. The [reviewed disk-root hook](https://github.com/peios/pkgs/blob/92b0caf88e87c72931eee188a07ac87883d913c7/dev.peios.disk-boot/src/mount-root-disk.sh#L1-L21) uses `#!/bin/sh`. Verify the interpreter and required tools in the image you build.
 
 ## How hooks get there
 
 There are two ways a hook reaches the directory, and they are identical as far as prelude is concerned:
 
-- **From a package.** Most hooks arrive as part of a feature peipkg. Installing `peios-luks` (disk encryption) drops a hook that unlocks encrypted volumes; installing a filesystem feature drops a hook that mounts that kind of root. The package's payload simply includes a file under `/usr/libexec/prelude/hooks.d/`, and removing the package removes the hook. This is the feature-as-a-package model applied to boot: there is no edition of Peios that "has LUKS" and another that does not — there is a `peios-luks` package, and a machine either has it installed or it does not.
+- **From a package.** A package can supply a hook under `/usr/libexec/prelude/hooks.d/`, together with the tools it needs. Verify the selected image actually includes both; the encryption examples below do not establish that a particular encryption package is available.
 - **By hand.** An administrator can write a hook and place it in `/lcl/libexec/prelude/hooks.d/` directly. A site with an unusual storage arrangement, or a one-off need, does not have to build a package — a script in the directory is a hook.
 
 Either way, the next time the initramfs is built the new hook is picked up. (See [The initramfs stage](~peios/boot-and-trust-establishment/initramfs-stage) for the build.)
@@ -79,7 +79,7 @@ The four are two ways to *supply* a capability crossed with two ways to *consume
 
 **`provides` and `contributes` differ in what "satisfied" means.** With alternatives, one supplier doing the job is enough — for example, two hardware-specific implementations of the same discovery step in a custom image. With contributors, the capability is not satisfied until every one of them has completed — three hooks each unlocking a layer of an encrypted stack, say. A capability must be one or the other; declaring it both ways is a build error, because there would be no answer to whether it is satisfied yet.
 
-The format is a small, deliberate subset of TOML: enough to declare two lists of names, and no more. It is checked **strictly** when the initramfs is built — an unknown key, a list that is not well-formed, a block that is opened and never closed, two blocks in one file — each of these is a build error, not a quiet misread. A typo in a hook's metadata is caught at build time, with a message naming the hook and the line.
+The format is a small, deliberate subset of TOML: enough to declare four optional lists of names, and no more. It is checked **strictly** when the initramfs is built — an unknown key, a list that is not well-formed, a block that is opened and never closed, two blocks in one file — each of these is a build error, not a quiet misread. A typo in a hook's metadata is caught at build time, with a message naming the hook and the line.
 
 The metadata lives *inside* the hook script, not in a separate file, so a hook is a single self-contained thing: copy the script and its ordering travels with it.
 
@@ -227,7 +227,9 @@ Three rules worth stating:
 
 ## Writing a hook
 
-A complete, minimal hook — one that mounts an ext4 root from a known partition:
+These examples illustrate hook metadata and exit handling, not a ready-to-use encrypted-root configuration. They assume the named devices, interpreter, tools and suitable mount/access policy are supplied by your image. Adapt and test them in an appropriate development image before using them for boot; the literal device names are examples.
+
+A minimal example that mounts an ext4 root from a known partition:
 
 ```sh
 #!/usr/bin/sh
@@ -280,3 +282,14 @@ For the stage that runs the hooks, read [The initramfs stage](~peios/boot-and-tr
 For the build that validates hooks and resolves their order, read [mkirf](~peios/boot-images/mkirf).
 
 For what takes over once a hook has mounted the real root, read [peinit at PID 1](~peios/boot-and-trust-establishment/peinit-pid-1).
+
+## Implementation scope
+
+The metadata and ordering behavior is described by
+[mkirf's hook implementation](https://github.com/peios/peiosutils/blob/3344d4690476fd66bfaec99b1ae92190bbcba06f/src/uu/mkirf/src/hooks.rs),
+and the runtime outcomes by
+[prelude's scheduler](https://github.com/peios/prelude/blob/1632ea9c1b3d1b40bad69e100f08de54444843ad/crates/prelude/src/main.rs#L829-L1083).
+The console helpers come from
+[hook-log.sh](https://github.com/peios/prelude/blob/1632ea9c1b3d1b40bad69e100f08de54444843ad/src/hook-log.sh).
+These pinned sources do not verify that a particular released image supplies
+the tools or storage configuration used in an illustrative hook.

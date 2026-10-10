@@ -6,7 +6,7 @@ related:
   - peios/disks-and-filesystems/overview
   - peios/mount-policies/mount
   - peios/file-access/overview
-  - peios/boot-and-trust-establishment/boot-hooks
+  - peios/developing-for-peios/writing-boot-hooks/writing-a-boot-hook
 ---
 
 Use `stratafs` to find which real file supplies a merged path, where a write
@@ -185,7 +185,7 @@ whiteouts.
 
 ## The base Peios topology
 
-The `dev.peios.fsbase-stratafs-mount-hooks` package installs the `mount-rootfs-stratafs-base.sh` [boot hook](~peios/boot-and-trust-establishment/boot-hooks)
+The `dev.peios.fsbase-stratafs-mount-hooks` package installs the `mount-rootfs-stratafs-base.sh` [boot hook](~peios/developing-for-peios/writing-boot-hooks/writing-a-boot-hook)
 in the initramfs. It runs after the deployment-specific hook has mounted the
 real root and before prelude hands off to it, mounting the conventional
 root-level views as one boot step:

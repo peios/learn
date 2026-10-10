@@ -9,7 +9,7 @@ related:
   - peios/disks-and-filesystems/overview
   - peios/disks-and-filesystems/formatting-with-security-descriptors
   - peios/disks-and-filesystems/mke2fs
-  - peios/boot-and-trust-establishment/boot-hooks
+  - peios/developing-for-peios/writing-boot-hooks/writing-a-boot-hook
   - peios/boot-and-trust-establishment/initramfs-stage
   - peios/mount-policies/policy-classes
 ---
@@ -244,14 +244,21 @@ The initramfs probes block devices directly to resolve the UUID. It cannot rely 
 
 ## How the installed system boots
 
-Both root-mounting hooks are present in every image:
+The reviewed installer replaces the live boot components with the disk-boot
+components before rebuilding the installed initramfs. It then verifies that
+`mount-root-disk.sh` is present and that the live `mount-root.sh` is absent.
+An installed image therefore does not select between both hooks at boot.
 
-| Hook | Root it mounts |
-|---|---|
-| `mount-root.sh` | Live squashfs with a writable tmpfs overlay. |
-| `mount-root-disk.sh` | Installed root partition directly, without an overlay. |
+For disk boot, `root=` identifies the partition to mount; it is not a live/disk
+mode switch. A missing or empty `root=` makes the disk hook fail rather than
+silently leave the work to another hook. The disk hook mounts that partition
+directly, without the live medium's writable overlay.
 
-`root=` determines which hook acts; the other exits successfully without doing work. See [Boot hooks](~peios/boot-and-trust-establishment/boot-hooks).
+This follows the pinned [installer checks](https://github.com/peios/installer/blob/0b687372ad41132668824216da51558bbfe53c01/installerd/src/real.rs#L774-L852)
+and [disk-root hook](https://github.com/peios/pkgs/blob/92b0caf88e87c72931eee188a07ac87883d913c7/dev.peios.disk-boot/src/mount-root-disk.sh#L6-L70).
+Check the image you operate; these are source-level descriptions, not a boot
+repair procedure. For authoring and ordering, see
+[Writing a boot hook](~peios/developing-for-peios/writing-boot-hooks/writing-a-boot-hook).
 
 The disk hook uses `policy=deny-missing` and does not run `seed-sd`. The installed filesystem already carries descriptors, so a missing one is an error to investigate. The live squashfs has none: it uses `synth-ephemeral` and seeds an inheritable descriptor on the tmpfs above it.
 
@@ -294,5 +301,5 @@ The edition must list this seed under [`live_autoapply`](~peios/peiso/editions-a
 
 - [Complete first-boot setup](~peios/disks-and-filesystems/first-boot-setup).
 - [Understand format-time descriptors](~peios/disks-and-filesystems/formatting-with-security-descriptors).
-- [Inspect the boot hooks](~peios/boot-and-trust-establishment/boot-hooks).
+- [Inspect the boot hooks](~peios/developing-for-peios/writing-boot-hooks/writing-a-boot-hook).
 - [Understand missing-descriptor failures](~peios/mount-policies/policy-classes).

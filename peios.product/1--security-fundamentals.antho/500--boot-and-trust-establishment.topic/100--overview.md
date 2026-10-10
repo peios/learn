@@ -5,7 +5,7 @@ description: How a freshly-started kernel becomes a running system with real ide
 related:
   - peios/boot-and-trust-establishment/bootstrap-tokens
   - peios/boot-and-trust-establishment/initramfs-stage
-  - peios/boot-and-trust-establishment/boot-hooks
+  - peios/developing-for-peios/writing-boot-hooks/writing-a-boot-hook
   - peios/boot-and-trust-establishment/peinit-pid-1
   - peios/boot-and-trust-establishment/authd-handoff
   - peios/boot-and-trust-establishment/kernel-invariants
@@ -83,7 +83,7 @@ If you want the kernel-direct bootstrap tokens — what SYSTEM and Anonymous con
 
 If you want the initramfs stage — prelude, the in-memory startup environment, the `/boot/initramfs/` directory it is built from, and the handoff to the real root — read [The initramfs stage](~peios/boot-and-trust-establishment/initramfs-stage).
 
-If you want how the initramfs is composed — boot hooks, the capabilities they declare, how their order is resolved, and how to write one — read [Boot hooks](~peios/boot-and-trust-establishment/boot-hooks).
+If you want how the initramfs is composed — boot hooks, the capabilities they declare, how their order is resolved, and how to write one — read [Boot hooks](~peios/developing-for-peios/writing-boot-hooks/writing-a-boot-hook).
 
 If you want peinit's role — what makes it the right thing to be PID 1, the service-launching pattern, the lifecycle-manager role that falls out of PIP — read [peinit at PID 1](~peios/boot-and-trust-establishment/peinit-pid-1).
 

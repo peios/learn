@@ -4,7 +4,7 @@ type: reference
 description: Compile the /boot/initramfs/ source tree into a deterministic cpio initramfs image, resolving hook order and validating the layout. Has a watch mode.
 related:
   - peios/boot-and-trust-establishment/initramfs-stage
-  - peios/boot-and-trust-establishment/boot-hooks
+  - peios/developing-for-peios/writing-boot-hooks/writing-a-boot-hook
   - peios/boot-and-trust-establishment/overview
 ---
 
@@ -14,7 +14,7 @@ related:
 mkirf [--watch] [--debounce SECS] [--exclude GLOB]... [--compress ALGO] <src-dir> <out-file>
 ```
 
-This page is the command reference. For what the initramfs stage *is* — prelude, the `/boot/initramfs/` layout, and the handoff to the real root — see [The initramfs stage](~peios/boot-and-trust-establishment/initramfs-stage); for how hooks declare their order, see [Boot hooks](~peios/boot-and-trust-establishment/boot-hooks). `mkirf` reads `<src-dir>` and writes `<out-file>`; it never writes back into the source tree, so the directory you inspect is always exactly what packages and you have put there.
+This page is the command reference. For what the initramfs stage *is* — prelude, the `/boot/initramfs/` layout, and the handoff to the real root — see [The initramfs stage](~peios/boot-and-trust-establishment/initramfs-stage); for how hooks declare their order, see [Boot hooks](~peios/developing-for-peios/writing-boot-hooks/writing-a-boot-hook). `mkirf` reads `<src-dir>` and writes `<out-file>`; it never writes back into the source tree, so the directory you inspect is always exactly what packages and you have put there.
 
 ## What a build does
 
@@ -85,5 +85,5 @@ The two positionals are both required:
 ## See also
 
 - [The initramfs stage](~peios/boot-and-trust-establishment/initramfs-stage) — what `mkirf`'s output is for.
-- [Boot hooks](~peios/boot-and-trust-establishment/boot-hooks) — the `# /// hook` metadata block and how order is resolved.
+- [Boot hooks](~peios/developing-for-peios/writing-boot-hooks/writing-a-boot-hook) — the `# /// hook` metadata block and how order is resolved.
 - [mkuki](~peios/boot-images/mkuki) — wraps `mkirf`'s image, together with a kernel and command line, into a bootable UEFI unified kernel image.
