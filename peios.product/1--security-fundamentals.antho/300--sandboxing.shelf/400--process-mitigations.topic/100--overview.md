@@ -96,7 +96,7 @@ Three patterns for setting mitigations:
 - **The process itself, during startup.** A program can request protections for its own PSB, preferably before untrusted input. Late application must validate existing state; it cannot exempt incompatible startup mappings simply because they were created before the request.
 - **An authorised supervisor.** A caller with `PROCESS_SET_INFORMATION` and PIP dominance can request changes to another process. Authority does not bypass activation limits: the Kernel TRM documents CFIB as self-only and CFIF as unavailable.
 
-These are application patterns, not evidence of the current service launcher's behavior. The Kernel TRM describes between-fork-and-exec setting as typical of peinit, but the [peinit account](~peios/boot-and-trust-establishment/peinit-pid-1) explicitly says it does not apply per-service mitigation flags this way. Do not assume a service received them; inspect the running process.
+These are application patterns, not evidence of the service launcher's behavior. The [source-checked peinit 0.0.12 launch path](~peios/boot-and-trust-establishment/peinit-pid-1#service-mitigation-limits) does not apply an additional per-service mitigation mask. Inherited or self-applied flags may still be present; inspect the running process rather than inferring protection from its launcher's identity.
 
 In each case, success must be checked and committed state verified. [Applying and lifecycle](~peios/process-mitigations/applying-and-lifecycle) explains that evidence; the existing [SDK reference](~peios/sdk-processes/process-h#setting-mitigations) holds the programming interface.
 

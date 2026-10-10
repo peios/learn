@@ -5,6 +5,7 @@ description: Check query scope, visibility, failures, retention and storage evid
 related:
   - peios/logs-and-events/overview
   - peios/logs-and-events/event-viewer
+  - peios/logs-and-events/save-incident-evidence
   - peios/services-and-jobs/output-and-logging
   - peios/evctl/using-evctl
 ---
@@ -113,7 +114,9 @@ record does not prove that the history is complete.
 Keep the service, job and boot identifiers, incident time range, filters,
 visibility notices, exact errors, and retention values. Use **Copy** on
 relevant Event Viewer rows to keep all fields, or retain completed
-`evctl` results together with their query and diagnostics.
+`evctl` results together with their query and diagnostics. Follow
+[Save incident event evidence](~peios/logs-and-events/save-incident-evidence)
+for private output files, completion checks and a bounded capture.
 
 Leave quarantined files intact and involve the administrator responsible
 for recovery. eventd does not automatically repair them. Do not delete,

@@ -5,6 +5,7 @@ description: eventd keeps three records of what happens on a Peios machine — l
 related:
   - peios/logs-and-events/event-viewer
   - peios/logs-and-events/find-missing-records
+  - peios/logs-and-events/save-incident-evidence
   - peios/services-and-jobs/output-and-logging
   - peios/auditing/overview
 ---
@@ -116,3 +117,6 @@ and the [missing-record checks](~peios/logs-and-events/find-missing-records).
   on dashboards of your own.
 - **In a terminal:** `evctl` runs a query in eventd's query language and
   prints what comes back. See [Using evctl](~peios/evctl/using-evctl).
+- **For incident review:** [Save incident event evidence](~peios/logs-and-events/save-incident-evidence)
+  keeps a bounded query result with its diagnostics, completion status
+  and context.

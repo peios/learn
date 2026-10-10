@@ -81,6 +81,13 @@ Start with [Keeping the time](~peios/time/overview): inspect the effective
 time zone, clock state and source failures before changing the clock.
 A wrong time zone and an unsynchronised clock need different corrections.
 
+## A write fails or a filesystem is full
+
+Keep the exact error and affected path. [Find why a filesystem is full](~peios/disks-and-filesystems/diagnose-storage-pressure)
+distinguishes block space, inode pressure and incomplete directory measurements
+before choosing a supported remedy. Do not turn a permission or I/O failure
+into a deletion task without evidence.
+
 ## A package or feature change was interrupted
 
 For a package operation, follow

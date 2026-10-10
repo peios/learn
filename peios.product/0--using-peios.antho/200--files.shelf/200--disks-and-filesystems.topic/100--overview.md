@@ -38,6 +38,7 @@ not evidence that a disk is blank.
 | What you need to do | Guide |
 |---|---|
 | Inspect disks, partitions and mounts on the desktop | [Disk Manager](~peios/disks-and-filesystems/disk-manager), currently inspection-only |
+| Diagnose block or inode pressure without changing data | [Find why a filesystem is full](~peios/disks-and-filesystems/diagnose-storage-pressure) |
 | Write or inspect a GPT | [Partitioning](~peios/disks-and-filesystems/partitioning) |
 | Create an ext filesystem with its root permissions already present | [Formatting with security descriptors](~peios/disks-and-filesystems/formatting-with-security-descriptors) and [`mke2fs`](~peios/disks-and-filesystems/mke2fs) |
 | Copy the live system onto bootable storage | [Installing to disk](~peios/disks-and-filesystems/installing-to-disk) |

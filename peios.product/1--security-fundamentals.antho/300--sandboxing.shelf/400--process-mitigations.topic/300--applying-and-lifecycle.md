@@ -46,7 +46,7 @@ Satisfying both gates does not make every mitigation available remotely. The Ker
 
 For a launcher using this pattern, distinguish the parent's code **running in the freshly forked child** from a parent targeting another process's pidfd. Both are possible application contexts, but only the former is self-application. Do not infer that a requested service policy was applied from the launcher's identity alone.
 
-The source descriptions differ on peinit: the Kernel TRM calls between-fork-and-exec setting typical, while the [peinit account](~peios/boot-and-trust-establishment/peinit-pid-1) says it does not apply per-service mitigation flags this way. The generic lifecycle pattern does not establish current peinit behavior or a release transition. Verify the running service's committed state.
+In the [source-checked peinit 0.0.12 launch path](~peios/boot-and-trust-establishment/peinit-pid-1#service-mitigation-limits), no additional per-service mitigation mask is applied. This does not imply that a service has no mitigations: inherited flags and application self-hardening are separate. Verify the running service's committed state, including after the process is replaced; a generic launcher pattern is not evidence that peinit applies it.
 
 ## Where in the process lifecycle
 
