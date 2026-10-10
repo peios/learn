@@ -107,4 +107,3 @@ Possible failures from `kacs_get_mount_policy`:
 | `-ERANGE` | A template buffer was provided but is smaller than the template. The required size is written to the output. |
 
 In normal operation both calls succeed. Failures are typically privilege issues or malformed inputs.
-
