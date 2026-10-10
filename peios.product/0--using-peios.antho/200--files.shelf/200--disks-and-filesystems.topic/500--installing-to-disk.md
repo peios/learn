@@ -4,6 +4,7 @@ type: how-to
 description: Choose an installer operation, verify the target disk, follow progress, and recover from failures, with the older peios-install script documented separately.
 related:
   - peios/installing-peios/on-a-pc
+  - peios/msip-daemons/rehearse-the-headless-installer
   - peios/disks-and-filesystems/first-boot-setup
   - peios/disks-and-filesystems/overview
   - peios/disks-and-filesystems/formatting-with-security-descriptors
@@ -57,7 +58,9 @@ Copy progress measures data written, rather than directory count. The installer 
 
 **Closing the form does not cancel the job.** `installerd` owns the work. Another console or browser surface can attach to the same conversation and watch it. Both surfaces share choices, including the selected disk; coordinate with anyone else using them.
 
-A successful install ends with **Installation complete. Reboot to start Peios.** The finish page offers **Reboot now** and **Back to the start**. After completion, remove the USB medium before restarting so firmware boots the installed disk. If you land in the installer again, remove the medium and restart; do not reinstall.
+A successful install job reaches **Installation complete. Reboot to start Peios.** The conversation stays open on this finish page, which offers **Reboot now** and **Back to the start**. After the job completes, remove the USB medium before restarting so firmware boots the installed disk. If you land in the installer again, remove the medium and restart; do not reinstall.
+
+In the [reviewed installer source](https://github.com/peios/installer/blob/0b687372ad41132668824216da51558bbfe53c01/installerd/src/flow_impl.rs#L104-L131), choosing **Reboot now** ends the conversation only after the restart request is accepted. That is not confirmation that the machine restarted or booted successfully; check the installed system separately.
 
 Check that the installed disk reaches [first-boot setup](~peios/disks-and-filesystems/first-boot-setup), then complete it and sign in. The current installer copies the shipped image, so live-session accounts are not carried over. Editions without first-boot setup use their own account-provisioning seeds instead.
 
@@ -262,7 +265,7 @@ FAT, exFAT, NTFS, ext2, ext3, and ext4 are inspected this way. Swap, encrypted v
 
 ## Installer services and image configuration
 
-`installerd` runs as SYSTEM and performs privileged disk operations. `install-tui` only draws the console form and has no privileges of its own. They speak [MSIP](~peios/services-and-jobs/overview), which also allows scripted interaction through `msip-drive` and surfaces attaching to an existing job.
+`installerd` runs as SYSTEM and performs privileged disk operations. `install-tui` only draws the console form and has no privileges of its own. They speak [MSIP](~peios/services-and-jobs/overview), which also allows scripted interaction through `msip-drive` and surfaces attaching to an existing job. To study the driver, use [Rehearse the headless installer in a lab](~peios/msip-daemons/rehearse-the-headless-installer), a source-derived synthetic dry-run exercise with a private socket. It is not a validated recipe for unattended installation on real disks.
 
 For a browser-enabled medium, the `installer-gxwi-overlay` seed sets these values under `Machine\Software\GXWI`:
 

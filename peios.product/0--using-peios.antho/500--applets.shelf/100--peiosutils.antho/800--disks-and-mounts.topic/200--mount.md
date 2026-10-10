@@ -39,7 +39,7 @@ Paths, `-o key=value` values, labels and UUIDs are handled as **opaque byte stri
 
 ### Canonicalisation
 
-By default source and target paths are canonicalised (made absolute, symlinks resolved). `-c` / `--no-canonicalize` disables that; `X-mount.nocanonicalize[=source|target]` is the `-o` form and can disable it for just one side. The final path handed to the kernel is protected against a TOCTOU symlink swap on its last component.
+By default source and target paths are canonicalised (made absolute, symlinks resolved). `-c` / `--no-canonicalize` disables that; `X-mount.nocanonicalize[=source|target]` is the `-o` form and can disable it for just one side. The final path handed to the kernel is protected against a TOCTOU symlink swap on its last component. This does not reject every symlink in the original input: default canonicalisation has already resolved it.
 
 ## Operation modes (verbs)
 
@@ -138,7 +138,7 @@ These never reach the filesystem. They include the meta-verbs `remount`, `bind`,
 
 | Option | Effect |
 |---|---|
-| `X-mount.mkdir[=mode]` | Create the target directory if missing (default mode `0755`; the alias of `-m`). |
+| `X-mount.mkdir[=mode]` | Attempt to create missing target directories, like `-m`. In the [reviewed implementation](#source-verified-execution-limits), the requested mode is not applied. |
 | `X-mount.subdir=DIR` | Attach subdirectory `DIR` of a freshly mounted filesystem at the target. Effective only for a new-instance mount; silently ignored (noted under `-v`) for bind/move/remount/propagation. |
 | `X-mount.noloop` | Suppress the implicit loop device for a regular-file source. |
 | `X-mount.auto-fstypes=LIST` | Constrain the `-t auto` probe to these types. |
@@ -159,7 +159,7 @@ This is the genuinely Peios-specific part of `mount`. A mount policy is a per-su
 
 `policy=unmanaged` is **not** user-settable; only the kernel sets the unmanaged class, for its own pseudo-filesystems. `policy=` is valid only on a **new mount** of a real filesystem — combining it with bind/move/remount/propagation, or with list mode, is a usage error. See [Policy classes](~peios/mount-policies/policy-classes) for what each class does and [SD storage by filesystem](~peios/mount-policies/sd-storage-by-filesystem) for how the SD is physically stored.
 
-The policy is applied to the *detached* filesystem before it is attached: if setting it fails, nothing is ever published with an unintended policy (no rollback needed). In kernel source `8e0e22de3a59cad506bbbf8873de456e16ad272d`, the policy gate accepts enabled `SeManageVolumePrivilege` or `SeTcbPrivilege` and requires successful privilege-use marking. Failure of that gate gives `EPERM` (exit 1) and no attachment. `--synth-sddl` is validated client-side first — it must be well-formed SDDL and must include an owner.
+The policy is applied to the *detached* filesystem before it is attached: if setting it fails, that filesystem is not attached with an unintended policy. This is an attachment guarantee, not whole-command rollback: target creation may already have occurred. In kernel source `8e0e22de3a59cad506bbbf8873de456e16ad272d`, the policy gate accepts enabled `SeManageVolumePrivilege` or `SeTcbPrivilege` and requires successful privilege-use marking. Failure of that gate gives `EPERM` (exit 1) and no attachment. `--synth-sddl` is validated client-side first — it must be well-formed SDDL and must include an owner.
 
 > [!WARNING]
 > The [peiosutils 0.8.18 diagnostic](https://github.com/peios/peiosutils/blob/3344d4690476fd66bfaec99b1ae92190bbcba06f/src/uu/mount/src/policy.rs#L84-L99) still says the policy operation requires `SeTcbPrivilege`. That is not the full gate in the pinned kernel. See [Check policy access](~peios/mount-policies/managing-mounts#check-policy-access) before interpreting this as a need to grant TCB; administrator membership alone is not enough, and automatic escalation or a global `CAP_SYS_ADMIN` remap is not a remedy.
@@ -189,13 +189,13 @@ A regular-file source is backed by a loop device automatically **when the type i
 | `-B`, `--bind` / `-R`, `--rbind` / `-M`, `--move` / `--beneath` | The structural verbs. |
 | `--make-*`, `--make-r*` | Propagation changes. |
 | `--exclusive` | Force a unique superblock instance (no reuse). Meaningful only for multi-instance filesystems (e.g. `tmpfs`) or read-only block mounts; on an already-mounted writable block device it fails with `EBUSY` (exit 32). |
-| `-m`, `--mkdir[=MODE]` | Create the target directory if missing (default mode `0755`). |
+| `-m`, `--mkdir[=MODE]` | Attempt to create missing target directories. The requested MODE is parsed but not applied at the [reviewed source revision](#source-verified-execution-limits). |
 | `-L`, `--label LABEL` / `-U`, `--uuid UUID` | Select the source by filesystem label / UUID. |
 | `-c`, `--no-canonicalize` | Do not canonicalise paths. |
-| `-f`, `--fake` | Dry run: parse, resolve and plan everything but skip the mount syscalls and the policy step. |
+| `-f`, `--fake` | Skip mount and policy syscalls; target preparation still runs. With `--mkdir` or `X-mount.mkdir`, directories may be created. See [execution limits](#source-verified-execution-limits). |
 | `-v`, `--verbose` | Narrate resolved values and each syscall; drain the kernel `fs_context` log. Repeatable but `-vv` is the same as `-v`. |
 | `-l`, `--show-labels` | In list mode, append each filesystem's label. |
-| `--onlyonce` | Skip the mount if it is already present (a driver-aware check against live mount state, not a naive string match). |
+| `--onlyonce` | Accepted and stored, but unused by the [reviewed execution path](#source-verified-execution-limits). Do not rely on it to skip an existing mount or make repeat startup safe. |
 | `-N`, `--namespace NS` | Operate inside mount namespace `NS` (a PID, an ns file path, or a named namespace). Source resolution happens in the caller's namespace; the mount lands in the target namespace. |
 | `-i`, `--internal-only` | Do not invoke a `mount.<type>` helper. |
 | `-n`, `--no-mtab` | Accepted and ignored (Peios has no mtab). |
@@ -203,6 +203,35 @@ A regular-file source is backed by a loop device automatically **when the type i
 | `-h`, `--help` / `-V`, `--version` | Standard. |
 
 No external mount helpers ship in this version, so a network or FUSE type fails with "no helper for type" (exit 1) — a clean deferral, not a crash.
+
+## Source-verified execution limits
+
+These limits were checked in peiosutils `3344d4690476fd66bfaec99b1ae92190bbcba06f`.
+They describe that implementation, not a runtime test or a historical release
+boundary; check the version in the image you operate.
+
+- **No already-mounted guard from `--onlyonce`.** The [request parser](https://github.com/peios/peiosutils/blob/3344d4690476fd66bfaec99b1ae92190bbcba06f/src/uu/mount/src/request.rs#L148-L168)
+  stores it, but the [executor](https://github.com/peios/peiosutils/blob/3344d4690476fd66bfaec99b1ae92190bbcba06f/src/uu/mount/src/flow.rs)
+  never consults it. Inspect existing mounts before a repeat operation; this
+  finding does not mean every repeat necessarily succeeds or creates an overmount.
+- **`--fake` can create targets.** [Target preparation](https://github.com/peios/peiosutils/blob/3344d4690476fd66bfaec99b1ae92190bbcba06f/src/uu/mount/src/flow.rs#L37-L65)
+  precedes the [new-mount fake return](https://github.com/peios/peiosutils/blob/3344d4690476fd66bfaec99b1ae92190bbcba06f/src/uu/mount/src/flow.rs#L117-L120).
+  With either mkdir option it may write directories. It is not a zero-write
+  preview or proof that a real mount's authority and filesystem checks will pass.
+- **MODE is not target security.** The [creation helper](https://github.com/peios/peiosutils/blob/3344d4690476fd66bfaec99b1ae92190bbcba06f/src/uu/mount/src/flow.rs#L483-L502)
+  discards the requested mode and ignores the directory-creation result before
+  continuing path preparation. Do not rely on `--mkdir=0700` for privacy.
+  Establish and verify the target's [native security](~peios/file-access/managing-file-security)
+  separately; a parsed option is not a verified descriptor.
+- **Failure can follow attachment.** [New-mount execution](https://github.com/peios/peiosutils/blob/3344d4690476fd66bfaec99b1ae92190bbcba06f/src/uu/mount/src/flow.rs#L126-L176)
+  sets policy before attachment, but a subsequent propagation step can fail
+  after the mount is attached. Retain diagnostics and inspect the live source,
+  target, filesystem, writable state and policy before retrying. Do not infer
+  an unchanged system from a nonzero exit status.
+
+These gaps matter for [startup integration](~peios/mount-policies/managing-mounts#mount-non-root-storage-at-startup):
+`--onlyonce` is not an idempotence mechanism, and a failed or stopped command
+is not by itself a verified detach or recovery procedure.
 
 ## List mode
 

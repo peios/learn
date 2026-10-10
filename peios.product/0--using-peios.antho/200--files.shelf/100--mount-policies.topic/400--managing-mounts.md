@@ -96,7 +96,10 @@ is attached. The [`mount` reference](~peios/mount-policies/mount#kacs-mount-poli
 describes that guarantee and the full option contract.
 
 After success, [inspect the live mount and policy](#inspect-live-mounts-and-policy)
-again. Confirm the source, target, filesystem, class and template.
+again. Confirm the source, target, filesystem, writable state, class and template.
+Also inspect after a failure: target creation or attachment may already have
+happened before a later step fails. The [source-verified execution limits](~peios/mount-policies/mount#source-verified-execution-limits)
+explain why neither a nonzero status nor `--fake` proves nothing changed.
 
 ## Before changing an already-mounted policy
 
@@ -168,6 +171,14 @@ arguments must be confirmed for the deployed system before creating a
 definition. There is no dedicated mount-registry schema established here, and
 [Disk Manager](~peios/disks-and-filesystems/disk-manager#at-startup) cannot
 currently save startup mounts.
+
+A complete integration must also define repeat-start, missing-device and
+partial-failure handling. In the [reviewed mount implementation](~peios/mount-policies/mount#source-verified-execution-limits),
+`--onlyonce` supplies no existing-mount guard, and mkdir MODE is not applied.
+Do not use those options as proof of safe repeat activation or private target
+security. Device coldplug completion does not guarantee a particular disk
+stays present. A successful Oneshot becoming Inactive does not unmount the
+filesystem; command/service state and live mount state are separate.
 
 After the service runs, inspect its [status and
 logs](~peios/services-and-jobs/defining-a-service#change-and-verify). A successful
