@@ -30,9 +30,10 @@ each entry is something somebody chose, which is what keeps an audit of
 ## What programs actually read
 
 The store itself is a socket, `/run/trustd/trust.sock`. Peios-native
-programs ask it directly and are told when the answer changes, so a
-certificate withdrawn at ten past three stops being accepted by a running
-service at ten past three.
+programs can ask it directly and subscribe to changes. A running program
+must refresh its own trust state when it receives an update; socket
+publication alone does not prove that every consumer stopped using a
+cached certificate.
 
 Almost nothing does that yet, so trustd also *renders* the store to the
 files the portable software ecosystem expects:
@@ -49,11 +50,12 @@ changes. Use `trust` or Security Policy to make a lasting change. The
 `GenerateLinuxTrustFiles` value decides whether they exist at all — see
 [the compat files](~peios/trust/the-compat-files).
 
-Trust belongs to the machine, not to each program. A package that uses TLS
-does not depend on `ca-certificates` or on trustd: installing the root store
-alone renders nothing, and the image that runs the program provides trustd.
-Without trustd, the files above do not exist and certificate validation
-fails.
+Installing the root-store package alone renders nothing; the image that
+runs programs using machine trust must provide the service that composes
+and renders it. Conversely, trustd being absent or stopped does not prove
+that previously rendered files are absent or current. Inspect the actual
+consumer paths and service health rather than inferring trust from the
+daemon's presence alone.
 
 > [!NOTE]
 > There is no `update-ca-certificates` and no directory to drop a `.crt`
@@ -82,7 +84,8 @@ compat       GenerateLinuxTrustFiles = 1
 
 `generation` increases every time the store changes, so a program holding
 a copy can tell whether it is current without fetching it again.
-`health` is `degraded` when the last composition failed — see
+`health` is `degraded` when composition or compatibility-file rendering
+failed — see
 [when the store is degraded](~peios/trust/adding-and-distrusting#when-the-store-is-degraded).
 
 Use `trust list` for the roots in force and `trust show <fingerprint>` for
@@ -93,14 +96,21 @@ store](~peios/trust/adding-and-distrusting#verify-the-change).
 
 ## Composition is all or nothing
 
-If the shipped bundle cannot be read, or yields implausibly few roots, or
-every root would be distrusted, trustd **keeps whatever it rendered last**
-and reports itself degraded. It never writes a partial store.
+If the shipped bundle cannot be read, yields implausibly few roots, or
+would leave no usable roots, composition fails before a new set is
+installed. The inspected [trustd 0.1.6 source](https://github.com/peios/trustd/blob/2fd7d86aac00e207320bda1ae11045aec3d61fbf/trustd/src/main.rs#L114-L146)
+leaves the previous in-memory set and rendered files untouched in that
+case and reports degraded health. On a first start, there may be no
+previous in-memory set or rendered files to retain.
 
-That is deliberate, and the reasoning is worth stating: a silently empty
-trust store breaks every TLS client on the machine at once, and a silently
-truncated one might be missing the distrust that was the point of the last
-change. Stale-but-whole is a recoverable state; partial is not.
+Rendering is a separate step. In that source, the socket's new set is
+installed before the compatibility files are written, and a rendering
+failure does not roll it back. The files can therefore disagree with the
+socket or with one another. Composition's all-or-nothing check is not a
+transaction across every trust consumer; see [the rendering
+limits](~peios/trust/the-compat-files#three-artifacts-because-the-ecosystem-does-not-agree)
+and [degraded-store diagnosis](~peios/trust/adding-and-distrusting#when-the-store-is-degraded).
+This is a pinned source finding, not verification of an installed image.
 
 A single bad *entry* is different. An addition that is not a certificate,
 is not a CA, or has expired is skipped with a warning and everything else

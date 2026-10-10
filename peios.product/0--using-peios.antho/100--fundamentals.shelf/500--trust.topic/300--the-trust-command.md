@@ -48,7 +48,10 @@ fingerprint, and every verb that takes a fingerprint accepts that prefix —
 what is printed can be pasted back in. An ambiguous prefix is refused
 rather than guessed at.
 
-`--purpose ServerAuth` narrows the listing to roots carrying that purpose.
+`--purpose ServerAuth` narrows the socket listing to roots carrying that
+purpose. It is not an inventory of the compatibility files: the inspected
+renderer does not filter them by purpose. See the [source-qualified
+limitation](~peios/trust/adding-and-distrusting#purposes).
 
 ## Showing one root
 
@@ -81,7 +84,10 @@ The separation of `2` from `1` is what lets a script tell "this machine
 does not trust that CA" from "I could not find out". A successful write
 means the decision was recorded; [verify the effective
 store](~peios/trust/adding-and-distrusting#verify-the-change) before treating
-the change as applied.
+the change as applied. Likewise, a successful `trust reload` means the
+request was accepted: the [inspected daemon](https://github.com/peios/trustd/blob/2fd7d86aac00e207320bda1ae11045aec3d61fbf/trustd/src/main.rs#L243-L246)
+returns success even when refresh left degraded health. Read `trust
+status` afterwards.
 
 ## When a write is refused
 

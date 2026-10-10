@@ -114,18 +114,27 @@ $ clock reload
 ### Precedence is first match, not merge
 
 ```
-Servers  →  the domain  →  DHCP, if enabled  →  the shipped fallback set
+Servers  →  DHCP, if enabled and offered  →  the shipped fallback set
 ```
 
-The first of those that names anything is the *whole* list. Setting
-`Servers` does not add to the fallback set, it replaces it — a machine
-told exactly which servers to use should not also be quietly talking to
-somebody else's.
+That is the selection order in the inspected
+[timed 0.1.10 source](https://github.com/peios/timed/blob/c1db503a60108542c8586c574802e5f2339dbcb4/timed/src/main.rs#L367-L402).
+A separate domain-discovery tier is mentioned as a future version in its
+configuration comments; it is not implemented in this selector. A domain
+policy that writes `Servers` still takes effect as registry configuration.
+This is a pinned source finding, not verification of an installed image.
+
+The first nonempty list is the *whole* list. `Servers` means entries that
+parsed successfully; if all are malformed, there is no explicit list and
+selection continues. A valid explicit list replaces the fallback set.
+Authentication filtering happens after selection: if the selected list
+contains only plain-NTP sources and `AllowUnauthenticated` is `0`, those
+sources are excluded without falling through to public NTS servers.
 
 To remove an explicit override, delete the value. This restores selection
-by the chain above: domain sources still take precedence over eligible
-DHCP sources, and the shipped fallback is used only if no earlier choice
-names any servers. Deletion does not necessarily select public servers:
+by the chain above: DHCP can take precedence when enabled and offered, and
+the shipped fallback is used only if no earlier choice supplies a list.
+Deletion does not necessarily select public servers:
 
 ```
 $ reg del Machine/System/Time Servers
@@ -171,8 +180,8 @@ $ clock reload
 ## DHCP time servers
 
 `UseFromDHCP` is `0` by default, as on Windows. DHCP sources are eligible
-only when no explicit `Servers` list or domain selection supplies names,
-according to the precedence above. They are unauthenticated, so they also
+only when no successfully parsed explicit `Servers` list supplies names,
+according to the source-qualified precedence above. They are unauthenticated, so they also
 require `AllowUnauthenticated` to be `1`. Enabling `UseFromDHCP` alone does
 not meet that authentication policy.
 
@@ -186,9 +195,9 @@ run. The [authentication tradeoff](#turning-authentication-off) applies.
 $ reg set Machine/System/Time UseFromDHCP dword:1
 ```
 
-This changes eligibility; it does not override `Servers` or domain
-selection, enable unauthenticated time by itself, or prove DHCP offered a
-usable source. [netd's resolver
+This changes eligibility; it does not override a valid `Servers` list,
+enable unauthenticated time by itself, or prove DHCP offered a usable
+source. [netd's resolver
 channel](~peios/netd/what-netd-publishes/the-resolver-channel) reports DHCP
 option 42 time servers independently of `Dns.Offered`; timed decides
 whether to use them under its own policy. Reload after the intended

@@ -87,9 +87,21 @@ server. Say otherwise if you mean otherwise:
 $ trust add corp-ca corp-root.pem --purposes ServerAuth,CodeSigning
 ```
 
-This version renders `ServerAuth` roots and carries the rest, so a root
-recorded for another purpose is stored faithfully and used when the
-feature that consumes it arrives.
+The purpose is recorded with the addition and can filter socket queries.
+Do not assume it limits the compatibility files. The inspected
+[trustd 0.1.6 renderer](https://github.com/peios/trustd/blob/2fd7d86aac00e207320bda1ae11045aec3d61fbf/trustd/src/render.rs#L95-L108)
+writes every composed root to both PEM bundles and to the
+[hashed directory](https://github.com/peios/trustd/blob/2fd7d86aac00e207320bda1ae11045aec3d61fbf/trustd/src/render.rs#L158-L186),
+including an addition whose purposes omit `ServerAuth`. This differs from
+the [intended ServerAuth-only rendering](https://github.com/peios/trustd/blob/2fd7d86aac00e207320bda1ae11045aec3d61fbf/trustd/src/store.rs#L65-L68)
+described in the source.
+
+**Do not use a non-ServerAuth purpose as an isolation boundary for a
+machine-wide addition on that implementation.** The certificate's DER is
+preserved; this finding does not establish whether a particular TLS
+consumer accepts it, which also depends on the certificate and that
+consumer's validation rules. This is source inspection, not a live TLS
+test or a claim about every installed version.
 
 ## Distrusting a certificate authority
 
@@ -102,11 +114,13 @@ distrusted 018e13f0772532cf809bd1b17281867283fc48c6e13be9c69812854a490c1b05
   was: CN=DigiCert TLS ECC P384 Root G5,O=DigiCert\, Inc.,C=US
 ```
 
-After a successful composition, within a second or two the root is gone
-from the store, gone from the rendered bundle, and its file is gone from
-the hashed directory. Nothing is rebuilt and nothing is rebooted:
-**withdrawal never waits for a package**. Check the result below; a
-degraded store can still be serving the previous trust set.
+After trustd observes the decision and successfully composes and renders
+the new set, the root is absent from its socket set, the rendered bundles
+and the hashed directory. **Withdrawal does not require a package
+update.** Check the result below: a composition failure retains the old
+set, while a rendering failure can leave the socket and files different.
+Neither a registry write nor socket readback proves that every running
+application has stopped using a cached copy.
 
 A certificate is named by its SHA-256 fingerprint — never by subject name,
 which is forgeable and reused. Any of these work:
@@ -143,7 +157,9 @@ A successful write records a decision. Check that trustd has applied it:
    warnings in trustd's log; a skipped entry does not establish trust.
 2. Run `trust list` to inspect the effective set. For an addition, use
    `trust show <fingerprint>` to check its full fingerprint, source and
-   purposes. Use `trust list --purpose ServerAuth` for TLS-server trust.
+   purposes. `trust list --purpose ServerAuth` filters the socket reply;
+   it does not inventory or constrain the compatibility files. See the
+   [purpose limitation](#purposes).
 3. For a distrust, check that the certificate is absent from `trust list`
    and that the decision appears in `trust list --distrusted`. The latter
    reads the registry, so it is not enough on its own. After `trust restore`,
@@ -197,13 +213,15 @@ $ trust status
 health       degraded — cannot read /usr/share/ca-certificates/mozilla.crt: …
 ```
 
-`degraded` means the last attempt to compose the store failed, and what is
-rendered is what was rendered before — possibly stale, never partial. The
-machine keeps working with the trust it last had.
+`degraded` can report either a composition failure or a rendering failure.
+They need different readback. In the inspected
+[trustd 0.1.6 refresh path](https://github.com/peios/trustd/blob/2fd7d86aac00e207320bda1ae11045aec3d61fbf/trustd/src/main.rs#L103-L202),
+a composition failure leaves the previous set and files untouched. A
+rendering failure happens after the socket set has changed; it can leave
+old, new or missing compatibility artifacts. Do not assume all consumers
+still use one last-good store.
 
-The usual causes are a missing or damaged `ca-certificates` package, or a
-distrust list that would empty the store entirely. Use the error in
-`trust status` to choose the next step:
+Use the error in `trust status` to choose the next step:
 
 - For a missing or damaged bundle, [check the installed
   package](~peios/package-management/inspecting-and-verifying#verifying-installed-files)
@@ -211,6 +229,13 @@ distrust list that would empty the store entirely. Use the error in
 - For a distrust list that would empty the store, review
   `trust list --distrusted` and correct unintended decisions. Do not restore
   an intentionally distrusted CA just to clear the health warning.
+- For `render failed`, preserve the operation and path in the error and
+  investigate that filesystem failure. Compare the socket set with the
+  files the affected program actually uses; the `rendered` paths can be
+  retained from the last successful render and are not a fresh file
+  inventory after failure. Do not hand-edit the generated files or assume
+  a successful `trust list` proves they were updated. See [compatibility
+  rendering limits](~peios/trust/the-compat-files).
 
 Once the cause is fixed, ask trustd to recompose:
 
@@ -222,9 +247,12 @@ Reload requires permission to control trustd; Security Policy exposes its
 `ControlSecurity` permissions under **Settings → Trust Service**. If reload
 is refused, have an authorized administrator perform it.
 
-Run `trust status` again and confirm `health` is `ok`, then [verify the
-intended change](#verify-the-change). Until recovery succeeds, do not assume
-a newly recorded addition or distrust is in force.
+The inspected daemon replies successfully to an authorized `trust reload`
+even if recomposition or rendering failed. Run `trust status` again and
+confirm `health` is `ok`, then [verify the intended
+change](#verify-the-change) and retest the affected application. Until
+recovery succeeds, do not assume a newly recorded addition or distrust is
+in force for every consumer.
 
 Skipped entries are different and are not a degraded state: `trust status`
 counts them and the log names each one. Correct the named entry, then check

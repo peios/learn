@@ -49,9 +49,16 @@ stepped      +2.1d in total since start
 floor        1788142329 (the build timestamp; the clock is never set below it)
 ```
 
-**time zone** is the zone timed has put in `/etc/localtime`, or `UTC (none
-chosen)`. A zone chosen in the registry that timed couldn't use leaves the
-one before it, so this is the one in force.
+**time zone** is the name timed has recorded for `/etc/localtime`. In the
+inspected timed 0.1.10 source, [restart identification](https://github.com/peios/timed/blob/c1db503a60108542c8586c574802e5f2339dbcb4/timed/src/localtime.rs#L94-L118)
+requires the saved name and zone data to match that file. If identification
+fails, the [command prints `UTC (none chosen)`](https://github.com/peios/timed/blob/c1db503a60108542c8586c574802e5f2339dbcb4/clock/src/main.rs#L140-L144)
+even though the file may contain another zone. A later successful apply
+restores the reported name. After a copy failure, the retained name is not
+a fresh verification of the file either. Check timed's log and the
+[time-zone procedure](~peios/time/time-zone-and-setting-the-clock#in-a-terminal)
+before relying on an unexpected display. This is source inspection, not
+installed-image validation.
 
 **state** is the field to read first:
 

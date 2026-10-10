@@ -46,9 +46,10 @@ as `uk`, `de` or `dvorak`, loaded at boot by the `console-keymap` service.
 Absent, it is the kernel's built-in US layout.
 
 In **System Settings**, in the **Language & Keyboard** section, **Layout**
-under **Console Keyboard** lists every layout installed, grouped by
-kind (QWERTY, QWERTZ, AZERTY and the rest). Choosing one writes the value
-and restarts `console-keymap`, which loads it at once. In a terminal:
+under **Console Keyboard** offers installed console layouts, grouped by
+kind (QWERTY, QWERTZ, AZERTY and the rest). Choosing one saves the value;
+when the service is available and you may restart it, the app also requests
+a `console-keymap` restart to load it. In a terminal:
 
 ```sh
 reg set Machine/System/Console Keymap sz:uk
@@ -57,9 +58,17 @@ svctl restart console-keymap
 
 Changing it needs write access to `Machine\System\Console`, which as
 shipped only Administrators have, and loading it at once needs the right
-to restart the service; without that, it applies at the next boot. Only a
-name is accepted, never a path. A name that is not a keymap leaves the
-layout as it was, and the service logs why.
+to restart the service. Without that right, a configured boot-triggered
+`console-keymap` service can apply it at the next boot. On a custom image
+without that service, saving the preference does not arrange for it to be
+loaded, now or at boot; System Settings reports that condition.
+
+A saved value or an accepted restart request is not proof that the loader
+finished. Check the [service status](~peios/services-and-jobs/controlling-services)
+and [output](~peios/services-and-jobs/output-and-logging) if it does not take
+effect, and verify the layout at the machine's text console. Only a name is
+accepted, never a path. A name that is not a keymap leaves the layout as it
+was, and the service logs why.
 
 This is the keyboard plugged into the machine, on its text consoles. The
 desktop's keyboard is the browser's, and a terminal over SSH uses the

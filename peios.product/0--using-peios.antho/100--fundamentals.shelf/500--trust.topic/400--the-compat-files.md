@@ -26,16 +26,31 @@ were rendered.
 | `/etc/ssl/certs/<subject-hash>.0` | OpenSSL's default `CApath` |
 
 The hashed directory is not decoration. OpenSSL looks a certificate up
-there by a hash of its subject, and a stale file left behind for a root
-that has been distrusted would go on being trusted through that path. So
-the directory is replaced **atomically** — the new one is built alongside
-and exchanged in a single operation — and there is no moment at which it
-holds a mixture of the old set and the new.
+there by a hash of its subject, so updating a PEM bundle alone does not
+withdraw a root from that lookup path. Roots whose subject hashes collide
+use successive suffixes, `.0`, `.1` and so on.
+
+The inspected [trustd 0.1.6 renderer](https://github.com/peios/trustd/blob/2fd7d86aac00e207320bda1ae11045aec3d61fbf/trustd/src/render.rs#L158-L200)
+builds a new `certs` directory, installs it, and then replaces `cert.pem`
+separately. It first tries an atomic directory exchange. Its
+[fallback path](https://github.com/peios/trustd/blob/2fd7d86aac00e207320bda1ae11045aec3d61fbf/trustd/src/render.rs#L246-L286)
+uses separate renames, which can temporarily leave `certs` absent; failure
+after the first rename can leave it absent until repaired. There is no
+single atomic switch covering the socket and all three file paths.
+
+A rendering error can occur after some artifacts changed, and the socket
+set is updated before rendering starts. Follow [degraded-store
+diagnosis](~peios/trust/adding-and-distrusting#when-the-store-is-degraded)
+rather than assuming a last-good store everywhere. These are pinned source
+limits, not live filesystem or installed-image verification. Also see the
+[purpose-filtering limitation](~peios/trust/adding-and-distrusting#purposes):
+that renderer includes all composed roots, regardless of their recorded
+purposes.
 
 ## Turning them off
 
-`Machine\System\Trust GenerateLinuxTrustFiles` decides whether the files
-exist:
+`Machine\System\Trust GenerateLinuxTrustFiles` requests the compatibility
+mode. These effects require successful rendering or removal:
 
 | Value | Effect |
 |---|---|
@@ -49,10 +64,12 @@ general-purpose system it breaks curl, Python, Go binaries and anything
 else that reads a bundle, and the breakage looks like a certificate
 problem rather than a configuration one, so set it deliberately.
 
-Switching to `0` **removes** the rendered files rather than leaving them.
-Stale trust left in force is worse than none: a root distrusted after the
-switch would go on being accepted by everything reading the abandoned
-copy.
+Switching to `0` asks trustd to remove the rendered files. Successful
+removal leaves the directory itself empty. The inspected renderer removes
+`cert.pem` and then the contents of `certs` in separate operations; a
+failure can leave some files behind. Check health and the actual paths
+before treating compatibility trust as disabled. A saved `0` or a socket
+reply alone does not prove removal succeeded.
 
 ```
 $ reg set Machine/System/Trust GenerateLinuxTrustFiles dword:0
@@ -64,8 +81,9 @@ The socket keeps serving throughout — `trust list` still answers, and so
 does any program that speaks to trustd directly.
 
 In Security Policy, the **Certificate Files** switch under **Settings**
-writes the same value. Turning it on applies at once; turning it off asks
-first, since it breaks every program that reads a path.
+writes the same value. Turning it off asks first because programs that
+rely on these paths can lose their trust store. Allow trustd to apply the
+change, then verify health and the affected application.
 
 To restore compatibility files after disabling them:
 

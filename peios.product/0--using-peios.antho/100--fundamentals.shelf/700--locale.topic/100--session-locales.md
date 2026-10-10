@@ -46,6 +46,17 @@ and **Match Language**, removes the person's own value. Each is written as it is
 categories under `CurrentUser\Locale`, which is the person's
 `Users\<SID>\Locale`.
 
+**Match Language** removes the personal format overrides; machine category
+overrides can still apply. To use the same locale for your language and all
+five formats despite those machine overrides, select that locale explicitly
+in both lists. Confirm the result in a new session with the commands below.
+
+> [!NOTE]
+> Both settings screens save `LANG` and all five format categories together.
+> If you have configured format categories individually, use `reg` for a
+> one-value change: changing **Language** in the screen can also replace or
+> remove those format overrides.
+
 From a shell, use `reg`. Use
 `lps show NAME` to find a local principal's SID, or `token user` within
 that principal's session, then substitute the SID after the principal has
