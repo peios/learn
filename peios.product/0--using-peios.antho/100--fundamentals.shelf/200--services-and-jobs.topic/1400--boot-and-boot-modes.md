@@ -77,7 +77,7 @@ The first two are *configuration* errors — rebooting would just hit them again
 > [!NOTE]
 > `SafeMode=1` and `ErrorControl=Critical` are *filters within the boot-triggered set*. They do not make a demand-only service auto-start in Safe mode — a service with no `boot` trigger stays demand-only regardless.
 
-On a machine with the dynamic-boot feature, **System Settings › Startup & Shutdown › Always Start in Safe Mode** puts `peios.safemode=1` on the command line the next boot image is made from. It holds for every boot until it is turned off again, and while the machine is in Safe mode because of it, System Settings says so.
+On a machine with the dynamic-boot feature, **System Settings › Startup & Shutdown › Always Start in Safe Mode** puts `peios.safemode=1` on the command line the next boot image is made from. Its next-boot effect depends on a successful rebuild to the intended boot partition; verify the [activation chain](~peios/peiso/editions-and-upgrades/upgrading-peios#check-what-an-update-has-activated). Once present in the booted image it holds until changed there, and while the machine is in Safe mode because of it, System Settings says so.
 
 ### Recovery mode
 
@@ -162,7 +162,7 @@ A few lines escape all of this: whatever peinit and prelude print *before* they 
 
 **System Settings** shows the command line this boot was started with, under **Kernel Command Line** in the **Startup & Shutdown** section, and the one the next boot image will be made from, `/lcl/etc/boot/cmdline`, where they differ.
 
-On an installed machine the command line is part of the boot image, which is made when Peios is installed or upgraded, so editing that file changes nothing on its own. With the dynamic-boot feature installed, its `mkuki-watch` service makes the boot image again whenever the file changes; then System Settings offers `peios.bootattempts` and `peios.quiet` as choices — how many boots may fail before Recovery, and what peinit writes on the console — and writes them into the file with **Apply at Next Boot**, which appears once one has been changed. Nothing else on the line is offered: a mistake there can leave a machine that doesn't boot. Writing the file needs write access to it, which as shipped only Administrators have.
+On an installed machine the command line is part of the boot image, so editing that file changes nothing on its own. Dynamic Boot supplies `mkuki-watch`, but package delivery or feature enablement alone does not mean it is running or rebuilding successfully. Check its selected input, output filesystem and completed rebuild using the [activation checklist](~peios/peiso/editions-and-upgrades/upgrading-peios#check-what-an-update-has-activated). With the feature installed, System Settings offers `peios.bootattempts` and `peios.quiet` as choices — how many boots may fail before Recovery, and what peinit writes on the console — and writes them into the file with **Apply at Next Boot**, which appears once one has been changed. Nothing else on the line is offered: a mistake there can leave a machine that doesn't boot. Writing the file needs write access to it, which as shipped only Administrators have.
 
 Unknown `peios.*` tokens are ignored, as is a malformed value on a valued token — this parser runs before anything exists to report a diagnostic to, and refusing to boot over a typo in a tuning knob is the worse outcome.
 

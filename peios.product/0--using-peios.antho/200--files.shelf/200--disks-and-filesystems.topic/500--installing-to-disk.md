@@ -216,7 +216,7 @@ The live system uses the same root policy. Without the creator-owner ACE, a non-
 
 ### 3. Copy the system and preserve its security
 
-The older script uses `cp -ax` to copy the running root; the current installer takes the shipped image. Copying must preserve owner, DACL, SACL, timestamps, links, and extended attributes. A descriptor that cannot be preserved stops installation rather than silently reducing protection.
+The older script uses `cp -ax` to copy the running root; the current installer takes the shipped image. `cp -a` requests owner, DACL, SACL, timestamps, links and extended attributes, but its [recursive source-symlink path can suppress a returned copy error](~peios/files-and-directories/cp#when-a-preserve-cannot-be-honoured). Do not treat a successful status from that older copy step as proof that every link and required attribute was preserved. This limitation does not establish how the current installer reports a failed image copy.
 
 The copy stays within filesystem boundaries. Mountpoints are recreated as empty directories: prelude mount-moves `/proc`, `/sys`, and `/dev` at boot, and StrataFS mounts views over `/bin`, `/etc`, `/lib`, and the other view directories. Their backing content in `/usr` and `/lcl` is ordinary root-filesystem content and is copied.
 

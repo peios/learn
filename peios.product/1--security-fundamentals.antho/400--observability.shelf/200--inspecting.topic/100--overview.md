@@ -34,7 +34,7 @@ have identified, and the example paths with the actual objects.
 | What identity is a thread impersonating? | `token show --pid PID --tid TID --all` | Identify the failing thread and record the time; it may have reverted since the failure. |
 | What is this process's protection? | [`logonse psb --pid PID`](~peios/system-and-processes/logonse#logonse-psb) | The PSB reports PIP, mitigations and process GUID, not its security descriptor. |
 | Which logon sessions and processes are visible? | `logonse list`, `logonse show ID`, or Task Manager's **Signed in** | The session list and the visible-process list have different access limits. |
-| What rules protect a file? | [`sd show ./report.txt --all`](~peios/files-and-directories/sd#sd-show) | Descriptor inspection is access-controlled; unreadable parts remain unknown. |
+| What rules protect a file? | [`sd show ./report.txt --all`](~peios/files-and-directories/sd#sd-show) | Queries owner, group, DACL and the label subset, not the full SACL. `--all` adds formatting detail, not audit ACEs or a complete export. |
 | What rules protect a registry key? | [`reg sd Machine/App`](~peios/registry-tools/reg#reg-sd-key) | The default view is owner, group and DACL; SACL reading needs separate authority. |
 | What was recorded about an earlier attempt? | [Event Viewer](~peios/logs-and-events/event-viewer) or [evctl](~peios/evctl/using-evctl) | Audit policy, reader permissions, query scope, retention and transport all limit the answer. |
 

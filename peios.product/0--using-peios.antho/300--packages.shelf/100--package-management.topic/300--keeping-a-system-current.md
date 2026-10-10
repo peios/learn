@@ -27,7 +27,9 @@ Read refresh failures before proceeding: a dry run and the final invocation
 can use different inputs if metadata or installed packages changed in between.
 After the change, review verification differences and configuration-file
 warnings, and check the affected software separately. A file check does not
-establish that a service or feature is working.
+establish that a service or feature is working. For kernel and service updates,
+follow [Check what an update has activated](~peios/peiso/editions-and-upgrades/upgrading-peios#check-what-an-update-has-activated)
+to distinguish installed payloads, boot artifacts and running code.
 
 | Your situation | Command |
 |---|---|

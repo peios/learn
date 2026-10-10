@@ -61,7 +61,8 @@ if you close the window, which stays, saying so, until it is done.
 The upgrade doesn't restart the machine. Its displayed release and
 completed package/seed steps do not establish which kernel or service
 binaries are running. Follow the [outcome checks](~peios/peiso/editions-and-upgrades/upgrading-peios#check-the-outcome),
-and verify boot readiness separately before relying on a kernel update.
+and follow the [activation inspection checklist](~peios/peiso/editions-and-upgrades/upgrading-peios#check-what-an-update-has-activated)
+before relying on a kernel update.
 
 ## When something stops it
 

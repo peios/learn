@@ -106,8 +106,8 @@ protection. See [Who can inspect what](~peios/inspecting/overview#who-can-inspec
 
 ## Find the object and its SD
 
-For a file, [`sd show`](~peios/files-and-directories/sd#sd-show) renders the
-security descriptor:
+For a file, [`sd show`](~peios/files-and-directories/sd#sd-show) queries owner,
+group, DACL and the integrity-label subset:
 
 ```console
 sd show ./report.txt --all
@@ -116,6 +116,9 @@ sd show ./report.txt --all
 Replace the example path with the object you identified. `sd` follows a named
 symbolic link by default; its documented `--no-follow-symlinks` option selects
 the link itself. Inspect the same object the failed operation meant to reach.
+`--all` changes formatting, not selection: this view does not include audit
+ACEs or the rest of the SACL, and its summaries omit some ACE payload details.
+Do not infer that undisplayed policy is absent.
 
 For a registry key, [`reg sd`](~peios/registry-tools/reg#reg-sd-key) prints owner,
 group and DACL by default:
@@ -130,8 +133,8 @@ Only when you already have the authority to read the SACL, request it explicitly
 reg sd Machine/App --sacl
 ```
 
-The SACL needs `ACCESS_SYSTEM_SECURITY`; the ordinary owner/group/DACL view does
-not establish which SACL labels or policies exist. Similarly, a refused
+The full SACL needs `ACCESS_SYSTEM_SECURITY`; the default registry
+owner/group/DACL view does not establish which SACL labels or policies exist. Similarly, a refused
 `sd show` is a failed inspection, not a decoded explanation of the original
 operation. Keep the returned error and the scope of any descriptor you obtained.
 For a process's descriptor, use the separate

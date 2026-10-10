@@ -26,7 +26,10 @@ feat info dynamic-boot
 `add` installs and enables the feature. Use `install` instead if you want
 setup only, or `enable` when it is already installed. For `dynamic-boot`, the
 services start at the next boot; an enabled state does not mean they have
-already started. Read the script output as well as the final state.
+already started. Read the script output as well as the final state. For the
+watchers, output destination and rebuild evidence, use the [update-activation
+checks](~peios/peiso/editions-and-upgrades/upgrading-peios#check-what-an-update-has-activated);
+enabled or running alone is not proof of boot readiness.
 
 The scripts run with your rights. Permission to update the feature's state
 does not guarantee permission for every action its scripts attempt.

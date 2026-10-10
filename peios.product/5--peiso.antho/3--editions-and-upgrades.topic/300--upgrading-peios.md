@@ -106,6 +106,123 @@ as proof that all installed code is active or that every kernel update's
 boot artifacts are ready. [Upgrading from the medium](#from-the-medium) is
 a separate path with explicit boot-file regeneration.
 
+## Check what an update has activated
+
+Use these inspection steps after reviewing the package and seed results above.
+They do not regenerate boot files, start services or restart the machine. If a
+step cannot be verified, record **boot activation not yet verified** rather
+than treating the update as ready to boot.
+
+### Compare installed and running code
+
+For a kernel update on the live system, record:
+
+```sh
+uname -r
+peipkg info dev.peios.kernel
+peipkg files dev.peios.kernel
+```
+
+`uname -r` identifies the running kernel release. Compare it with the intended
+release in the installed kernel's payload paths, not directly with the edition
+or package version: those are different identifiers. A difference before
+restart is not proof that a restart will select the new kernel. For alternate
+roots, select the intended package root separately; `uname` still describes
+the running system.
+
+Service status gives state, job, PID and start information, not an executing
+binary's build identity. `svctl --version` is the client version. Use the
+affected service's own reload/restart requirements and functional checks;
+package installation or a registry-definition reload does not prove it has
+adopted new code.
+
+### Inspect Dynamic Boot's actual state
+
+The located live regeneration mechanism is the optional **Dynamic Boot**
+feature, whose scripts define `mkirf-watch` and `mkuki-watch`. Package delivery,
+feature setup, enablement and running services are separate states:
+
+```sh
+feat info dynamic-boot
+svctl status mkirf-watch
+svctl status mkuki-watch
+svctl definition show mkirf-watch
+svctl definition show mkuki-watch
+```
+
+The reviewed feature initially creates disabled services. Enabling it after
+boot clears that flag but does not retroactively start them; disabling it does
+not stop an already-running watcher. Image setup before boot-time service
+enumeration can differ. Check the actual services rather than inferring their
+state from the feature record. This section supplies no automatic start or
+restart sequence.
+
+In the packaged definitions, `mkirf-watch` writes
+`/system/boot/initramfs.cpio.zst`, and `mkuki-watch` writes
+`/boot/efi/EFI/BOOT/BOOTX64.EFI`. Verify the definitions on your machine. The
+UKI launcher chooses its command-line input at startup: a nonempty
+`/lcl/etc/boot/cmdline`, otherwise `/usr/share/live-boot/cmdline`. Creating the
+preferred file later does not prove an existing watcher switched to it.
+
+### Verify the destination and rebuild evidence
+
+Before relying on watcher output, use [storage inspection](~peios/mount-policies/managing-mounts#inspect-live-mounts-and-policy)
+to identify the intended EFI System Partition and the filesystem at the output
+path. Plain `mount` lists mounts visible in the caller's namespace; that is not
+proof of firmware selection or another namespace's view.
+
+> [!WARNING]
+> `mkuki` can create missing output directories without checking that they are
+> on the intended ESP. A **wrote** message can therefore describe an ordinary
+> directory, not the boot partition. The reviewed feature scripts do not supply
+> a complete ESP-mount arrangement. If the mapping is absent or uncertain,
+> stop the boot-readiness claim; do not choose a device or create a mount recipe
+> by guesswork.
+
+In **Services Manager**, inspect **Logs…** for each watcher over the update's
+job/time interval. Both can report `rebuild failed` and remain running; an
+Active/Alive state or **watching** message is not build success. `mkuki` also
+rejects zero or multiple regular `vmlinuz-*` candidates rather than selecting
+the newest one.
+
+Look for successful cpio replacement and a subsequent successful UKI rebuild
+using the final settled inputs, retaining all rebuild/watch errors. A **wrote**
+message follows output replacement, but the watchers run independently of the
+package transaction: it is not an all-input generation or bootability
+attestation. Intermediate builds can observe different update stages. Missing
+logs or timestamps alone cannot establish success; [log visibility and delivery
+limits](~peios/services-and-jobs/output-and-logging) still apply.
+
+### Check after a separately planned restart
+
+Only follow the machine's supported restart procedure once its prerequisites
+and recovery access are established. After it actually boots, run `uname -r`
+again and compare the intended release. Check queued-seed state, affected
+service jobs/status and their functional behavior separately. An accepted
+restart request, installed edition name or old successful build message does
+not replace these observations.
+
+The [installer-medium upgrade](#from-the-medium) is a separate path that mounts
+its selected ESP and explicitly rebuilds boot files. It is not evidence that
+the live watcher destination is configured, nor a harmless generic repair.
+
+### Activation evidence and scope
+
+This checklist follows pinned static source, not a deployed-system test:
+
+- [Dynamic Boot setup](https://github.com/peios/pkgs/blob/92b0caf88e87c72931eee188a07ac87883d913c7/dev.peios.feat-dynamic-boot/src/install.sh#L13-L42),
+  [enable](https://github.com/peios/pkgs/blob/92b0caf88e87c72931eee188a07ac87883d913c7/dev.peios.feat-dynamic-boot/src/enable.sh#L2-L12),
+  [disable](https://github.com/peios/pkgs/blob/92b0caf88e87c72931eee188a07ac87883d913c7/dev.peios.feat-dynamic-boot/src/disable.sh#L2-L12),
+  and [launcher paths](https://github.com/peios/pkgs/blob/92b0caf88e87c72931eee188a07ac87883d913c7/dev.peios.feat-dynamic-boot/src/watch-uki.sh#L18-L34).
+- [mkirf failure handling](https://github.com/peios/peiosutils/blob/3344d4690476fd66bfaec99b1ae92190bbcba06f/src/uu/mkirf/src/watch.rs#L44-L85)
+  and [mkuki watch/build behavior](https://github.com/peios/peiosutils/blob/3344d4690476fd66bfaec99b1ae92190bbcba06f/src/uu/mkuki/src/mkuki.rs#L263-L440).
+- [Kernel payload naming](https://github.com/peios/pkm/blob/8e0e22de3a59cad506bbbf8873de456e16ad272d/packages.pekit/kernel.package.pekit.toml#L7-L32)
+  and [running-kernel readback](https://github.com/peios/peiosutils/blob/3344d4690476fd66bfaec99b1ae92190bbcba06f/src/uu/uname/src/uname.rs#L61-L87).
+- [Installer boot-file generation](https://github.com/peios/installer/blob/0b687372ad41132668824216da51558bbfe53c01/installerd/src/real.rs#L818-L890).
+
+Check applicability to your image. These sources establish separate stages,
+not a complete live ESP setup, combined artifact verifier or successful boot.
+
 ## For a program
 
 `upgrade-peios --status --json` answers with one object:

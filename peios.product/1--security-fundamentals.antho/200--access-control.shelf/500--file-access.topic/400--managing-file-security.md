@@ -11,7 +11,7 @@ related:
   - peios/files-and-directories/sd
 ---
 
-Use [`sd`](~peios/files-and-directories/sd) to inspect and change a file's owner, access rules, audit rules or integrity label. Start with one known path and one intended change. A permission failure is a reason to [diagnose the denied operation](~peios/access-decisions/debugging-a-denial), not to replace the descriptor or grant full control.
+Use [`sd`](~peios/files-and-directories/sd) to inspect selected file policy and make bounded changes to its owner, access rules, audit rules or integrity label. Start with one known path and one intended change. A permission failure is a reason to [diagnose the denied operation](~peios/access-decisions/debugging-a-denial), not to replace the descriptor or grant full control.
 
 > [!WARNING]
 > Ownership is not a recovery guarantee. An `OWNER RIGHTS` ACE can suppress the owner's implicit `READ_CONTROL` and `WRITE_DAC`, and other access layers can still deny a change. Taking ownership preserves the existing DACL, including that suppression. Before removing access, establish which authorized principal can still read and repair the policy. See [Ownership and implicit rights](~peios/security-descriptors/ownership).
@@ -26,7 +26,7 @@ sd show ./report.txt --sddl
 sd check ./report.txt read --explain
 ```
 
-Record the owner, DACL entries and their order, inheritance flags, and any displayed label or audit policy. Keep the output as a before-change record. It is not a tested rollback procedure: restoring it would require the relevant rights, and a partial or failed inspection is not a complete descriptor backup.
+Record the owner, group, displayed DACL entries and their order, inheritance flags, and label information. Keep the output as a before-change record. [`sd show` queries owner, group, DACL and the label subset](~peios/files-and-directories/sd#sd-show), not the full SACL; `--all` and `--sddl` do not add audit entries. Its output is not a complete descriptor backup or a tested rollback input. Human and JSON summaries also omit some ACE payload details. If the change requires inspecting audit policy or other omitted data, resolve that verification gap before writing.
 
 A named symlink follows its target by default. To inspect or change the link itself, use the documented `--no-follow-symlinks` (`-P`) flag consistently. Confirm which object you mean before writing.
 
@@ -63,7 +63,7 @@ sd allow ./report.txt @self:read
 
 `@self` means the current caller's user SID, not the file owner and not the user of another application. Choose the intended principal explicitly. This adds an ACE; it does not remove earlier denies or bypass mandatory policy. A later allow cannot change a right already decided by an earlier matching ACE.
 
-Run only the command matching the intended change. Avoid concurrent edits to the same descriptor. Component selection preserves unselected fields, but a read/edit/write sequence does not reserve the policy against another writer. The [kernel storage contract](~peios/advanced-peios/peios-kernel/kacs/facs/descriptor-storage#caching) describes last-writer-wins behavior and a cache/xattr publication window, not an end-to-end transaction.
+Run only the command matching the intended change. Avoid concurrent edits to the same descriptor. With an existing valid descriptor, component selection preserves unselected fields, but a read/edit/write sequence does not reserve the policy against another writer. The [kernel storage contract](~peios/advanced-peios/peios-kernel/kacs/facs/descriptor-storage#caching) describes last-writer-wins behavior and a cache/xattr publication window, not an end-to-end transaction.
 
 ## 4. Verify policy and the original operation
 
@@ -74,7 +74,7 @@ sd show ./report.txt --all
 sd check ./report.txt read --explain
 ```
 
-Check that the intended principal and rights changed and that unrelated owner, audit, label and inheritance policy stayed as intended. Then retry the original operation with its actual caller. Check both access that should succeed and access the policy should still refuse, where it is safe to do so.
+Check the intended principal, rights and unrelated policy within the returned view. Matching `sd show` output cannot verify audit ACEs, omitted payloads or complete descriptor equality. Audit-policy changes need a separately established full-SACL inspection path; this guide does not supply one. Then retry the original operation with its actual caller. Check both access that should succeed and access the policy should still refuse, where it is safe to do so.
 
 Existing file handles keep the rights granted when they were opened. A DACL edit is not a revocation of those handles; use a fresh open to test future access. See [The handle model](~peios/file-access/the-handle-model).
 
@@ -97,7 +97,7 @@ Requests for several components must pass every required check. MIC, PIP and oth
 
 Without `SeRestorePrivilege`, a new owner must be the caller's user SID or a token group carrying `SE_GROUP_OWNER`. Being the owner or an administrator does not itself prove the operation can pass `WRITE_OWNER`. See [Changing ownership](~peios/security-descriptors/ownership#changing-ownership).
 
-A label-only change preserves non-label SACL entries; a full SACL write replaces the whole SACL. The integrity constraint applies through either path. Existing mandatory resource attributes cannot be removed or modified without `SeTcbPrivilege`.
+A label-only change preserves non-label SACL entries; a full SACL write replaces the whole SACL. The integrity constraint applies through either path: a label above the caller's integrity needs enabled `SeRelabelPrivilege`, even for a full SACL write. `SeSecurityPrivilege` or `SeRestorePrivilege` alone does not remove that constraint. Existing mandatory resource attributes cannot be removed or modified without `SeTcbPrivilege`.
 
 For programs, the [SDK guide](~peios/sdk-access-control/securing-files#raw-file-security-interface) covers `kacs_get_sd`, `kacs_set_sd`, mutually exclusive SACL/label requests, the 65,535-byte validation limit and component merging. Operator changes should use the component command rather than construct a binary descriptor.
 
