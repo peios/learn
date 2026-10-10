@@ -11,13 +11,17 @@ the same socket.
 ## The packet socket [*dhcp4-sockets.packet-socket]
 
 One per running client: `AF_PACKET`, `SOCK_DGRAM`, protocol `ETH_P_IP`,
-bound to the interface. A classic BPF filter passes only an IPv4 UDP
-datagram whose fragment offset is zero and that is addressed to port 68.
-It tests the offset alone, not the more-fragments flag, so a later
-fragment is refused but a first fragment passes. Everything read is
-checked again for an IPv4 header and UDP port 68, but not for
-fragmentation, then decoded as a DHCP message: a first fragment is
-decoded as if it were the whole datagram.
+bound to the interface. In the proposed corrected source, a classic BPF filter
+passes only an IPv4 UDP datagram that is not a fragment and is addressed
+to port 68. It refuses both a non-zero fragment offset and the
+more-fragments flag; the don't-fragment flag is allowed. Everything read
+is checked again for an IPv4 header and UDP port 68, then decoded as a
+DHCP message.
+
+In versions 0.1.7 (described by this manual) and 0.1.8, the filter tests
+only the fragment offset: a later fragment is refused but a first
+fragment passes and is decoded as if it were the whole datagram. The
+proposed source correction above is not present in those releases.
 
 The socket sees every frame on the interface that passes the filter, so
 it receives both broadcast replies and replies unicast to the lease
