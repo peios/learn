@@ -9,9 +9,9 @@ related:
   - peios/registry-administration/regman
 ---
 
-When a program on this machine validates a TLS certificate, the set of
-certificate authorities it will accept comes from one place: **trustd**,
-the trust store.
+Programs that use the machine's TLS trust get their certificate authorities
+from **trustd**, the trust store. A program with its own private trust store
+is separate; see [packages and private trust stores](~peios/trust/adding-and-distrusting#packages-may-offer-trust-never-take-it).
 
 trustd composes that set from two inputs and serves the result.
 
@@ -43,8 +43,9 @@ files the portable software ecosystem expects:
 /etc/ssl/certs/<hash>.0              OpenSSL's default CApath
 ```
 
-Those files are a **copy of an answer**, not the answer. Editing one
-changes nothing: trustd overwrites it the next time anything changes. The
+Those files are a **copy of an answer**, not the answer. Editing one does
+not change trustd's policy, and trustd overwrites it the next time anything
+changes. Use `trust` or Security Policy to make a lasting change. The
 `GenerateLinuxTrustFiles` value decides whether they exist at all — see
 [the compat files](~peios/trust/the-compat-files).
 
@@ -63,6 +64,9 @@ fails.
 
 ## Seeing what is in force
 
+Start with `trust status` to check the store's health and whether the
+compatibility files are enabled:
+
 ```
 $ trust status
 generation   7
@@ -79,7 +83,13 @@ compat       GenerateLinuxTrustFiles = 1
 `generation` increases every time the store changes, so a program holding
 a copy can tell whether it is current without fetching it again.
 `health` is `degraded` when the last composition failed — see
-[when the store is degraded](~peios/trust/adding-and-distrusting).
+[when the store is degraded](~peios/trust/adding-and-distrusting#when-the-store-is-degraded).
+
+Use `trust list` for the roots in force and `trust show <fingerprint>` for
+one root's full fingerprint, source and purposes. `trust list --distrusted`
+shows the registry's distrust decisions; it does not by itself prove that
+trustd has applied them. After a change, [verify the effective
+store](~peios/trust/adding-and-distrusting#verify-the-change).
 
 ## Composition is all or nothing
 

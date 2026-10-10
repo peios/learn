@@ -11,8 +11,11 @@ The machine's trust store is a socket. The files under `/etc/ssl` are a
 compatibility rendering of it, for software that reads trust from a path —
 which today is very nearly all software.
 
-They are generated. Editing one changes nothing except until the next time
-anything changes, and a header at the top of the bundle says so.
+They are generated. A manual edit lasts only until the next change, and a
+header at the top of the bundle says so. Use [adding and
+distrusting](~peios/trust/adding-and-distrusting) to change trust policy.
+Use `trust status` to check whether these files are enabled and where they
+were rendered.
 
 ## Three artifacts, because the ecosystem does not agree
 
@@ -63,6 +66,18 @@ does any program that speaks to trustd directly.
 In Security Policy, the **Certificate Files** switch under **Settings**
 writes the same value. Turning it on applies at once; turning it off asks
 first, since it breaks every program that reads a path.
+
+To restore compatibility files after disabling them:
+
+```
+$ reg set Machine/System/Trust GenerateLinuxTrustFiles dword:1
+$ trust status
+```
+
+Confirm `GenerateLinuxTrustFiles = 1`, the rendered paths, and `health` of
+`ok`, then retry the affected program. If the store is degraded, follow
+[the recovery steps](~peios/trust/adding-and-distrusting#when-the-store-is-degraded)
+before relying on the rendered trust.
 
 ## Why a copy, when name resolution gets a pointer
 

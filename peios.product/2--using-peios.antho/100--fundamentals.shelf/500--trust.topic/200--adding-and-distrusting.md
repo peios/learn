@@ -13,6 +13,11 @@ under `Machine\System\Trust\Certificates`. Change them with `trust` on a
 terminal, or **Security Policy** on the desktop (type `security` in the
 launcher), which takes the same steps.
 
+Before making a change, check `trust status` and `trust list`. You need
+write access to the relevant registry key; by default SYSTEM and
+Administrators may write, and everybody may read. See [who may change
+it](~peios/trust/overview#who-may-change-it).
+
 ## In Security Policy
 
 Security Policy's **Certificates** sections show what `trust status`,
@@ -67,7 +72,7 @@ a CA (`basicConstraints`), and it must not have expired. trustd checks it
 again when it reads it — it never trusts the writer — but doing it here
 means a mistake is a message rather than a line in a log.
 
-To undo:
+To withdraw this named addition:
 
 ```
 $ trust remove corp-ca
@@ -97,11 +102,11 @@ distrusted 018e13f0772532cf809bd1b17281867283fc48c6e13be9c69812854a490c1b05
   was: CN=DigiCert TLS ECC P384 Root G5,O=DigiCert\, Inc.,C=US
 ```
 
-Within a second or two the root is gone from the store, gone from the
-rendered bundle, and its file is gone from the hashed directory. Nothing
-is rebuilt and nothing is rebooted, which is the reason the shipped roots
-can be package data in the first place: **withdrawal never waits for a
-package**.
+After a successful composition, within a second or two the root is gone
+from the store, gone from the rendered bundle, and its file is gone from
+the hashed directory. Nothing is rebuilt and nothing is rebooted:
+**withdrawal never waits for a package**. Check the result below; a
+degraded store can still be serving the previous trust set.
 
 A certificate is named by its SHA-256 fingerprint — never by subject name,
 which is forgeable and reused. Any of these work:
@@ -128,6 +133,26 @@ $ trust list --distrusted
 $ trust restore 018e13f0772532cf
 restored 018e13f0772532cf809bd1b17281867283fc48c6e13be9c69812854a490c1b05
 ```
+
+## Verify the change
+
+A successful write records a decision. Check that trustd has applied it:
+
+1. Run `trust status`. If health is `degraded`, follow [the recovery steps
+   below](#when-the-store-is-degraded). If entries were skipped, read the
+   warnings in trustd's log; a skipped entry does not establish trust.
+2. Run `trust list` to inspect the effective set. For an addition, use
+   `trust show <fingerprint>` to check its full fingerprint, source and
+   purposes. Use `trust list --purpose ServerAuth` for TLS-server trust.
+3. For a distrust, check that the certificate is absent from `trust list`
+   and that the decision appears in `trust list --distrusted`. The latter
+   reads the registry, so it is not enough on its own. After `trust restore`,
+   check the effective set again: removing a distrust does not supply a
+   certificate that is no longer shipped or added.
+
+Retest the affected application. Programs with private trust stores use
+their own policy; a successful `trust` command is not an application TLS
+test.
 
 ## Doing it from the registry
 
@@ -177,11 +202,30 @@ rendered is what was rendered before — possibly stale, never partial. The
 machine keeps working with the trust it last had.
 
 The usual causes are a missing or damaged `ca-certificates` package, or a
-distrust list that would empty the store entirely. Fix the cause and:
+distrust list that would empty the store entirely. Use the error in
+`trust status` to choose the next step:
+
+- For a missing or damaged bundle, [check the installed
+  package](~peios/package-management/inspecting-and-verifying#verifying-installed-files)
+  and repair the package problem. Do not edit the generated `/etc/ssl` files.
+- For a distrust list that would empty the store, review
+  `trust list --distrusted` and correct unintended decisions. Do not restore
+  an intentionally distrusted CA just to clear the health warning.
+
+Once the cause is fixed, ask trustd to recompose:
 
 ```
 $ trust reload
 ```
 
+Reload requires permission to control trustd; Security Policy exposes its
+`ControlSecurity` permissions under **Settings → Trust Service**. If reload
+is refused, have an authorized administrator perform it.
+
+Run `trust status` again and confirm `health` is `ok`, then [verify the
+intended change](#verify-the-change). Until recovery succeeds, do not assume
+a newly recorded addition or distrust is in force.
+
 Skipped entries are different and are not a degraded state: `trust status`
-counts them and the log names each one.
+counts them and the log names each one. Correct the named entry, then check
+the effective set again.

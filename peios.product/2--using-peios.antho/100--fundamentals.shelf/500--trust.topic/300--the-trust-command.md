@@ -7,13 +7,16 @@ related:
   - peios/trust/adding-and-distrusting
 ---
 
-`trust` is the trust store's operator command. It **reads over trustd's
-socket and writes to the registry**, and the asymmetry is worth
-understanding: only trustd knows the *effective* set, because the shipped
-roots are package data rather than registry entries, so a listing read from
-the registry would show a handful of local decisions and none of the
-hundred and fifty roots actually in force. Writes go the other way, to the
-registry, so that `trust` and `reg` pass through the same access check.
+`trust` is the trust store's operator command. It **reads the effective
+store over trustd's socket and writes decisions to the registry**. Start
+with `trust status` for health, `trust list` for the roots in force, and
+`trust show <fingerprint>` for one root's details.
+
+The registry holds local additions and distrusts, not the shipped roots.
+`trust list --distrusted` reads those decisions directly. Writes made with
+`trust` and `reg` pass through the same access check. For changes and
+verification, follow [adding and distrusting
+certificates](~peios/trust/adding-and-distrusting).
 
 ## Verbs
 
@@ -75,7 +78,10 @@ tool.
 | `64` | The command line was not understood. |
 
 The separation of `2` from `1` is what lets a script tell "this machine
-does not trust that CA" from "I could not find out".
+does not trust that CA" from "I could not find out". A successful write
+means the decision was recorded; [verify the effective
+store](~peios/trust/adding-and-distrusting#verify-the-change) before treating
+the change as applied.
 
 ## When a write is refused
 
@@ -87,4 +93,10 @@ trust: not permitted to change Machine\System\Trust\Certificates\Distrust —
 
 `trust` has no privilege of its own to grant. Changing the machine's trust
 is a registry write, and whether you may make it is decided by the key's
-security descriptor — the same answer `reg` would get.
+security descriptor — the same answer `reg` would get. Ask an administrator
+with write access to make the intended change; editing a generated
+certificate file is not a substitute.
+
+`trust reload` is a service-control request, not a registry write. Its
+permission is separate from permission to change trust decisions; Security
+Policy exposes trustd's `ControlSecurity` under **Settings → Trust Service**.
