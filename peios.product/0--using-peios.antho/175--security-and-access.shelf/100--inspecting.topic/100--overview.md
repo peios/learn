@@ -3,10 +3,10 @@ title: Inspecting security state
 type: how-to
 description: Choose a supported read-only view of tokens, sessions, process protection or object policy, and understand what missing or refused information can establish.
 related:
-  - peios/access-decisions/debugging-a-denial
+  - peios/inspecting/debugging-a-denial
   - peios/inspecting/tokens
-  - peios/inspecting/sessions
-  - peios/inspecting/processes
+  - peios/security-diagnostics/sessions
+  - peios/security-diagnostics/processes
   - peios/system-and-processes/token
   - peios/system-and-processes/logonse
   - peios/threads-and-processes/task-manager
@@ -18,7 +18,7 @@ acts as, which session it belongs to, how it is protected, or what policy covers
 an object. Start with the supported command or desktop view for that question,
 and keep any access refusal or incomplete-view notice with the result.
 
-For a failed operation, start with [Debugging a denial](~peios/access-decisions/debugging-a-denial).
+For a failed operation, start with [Debugging a denial](~peios/inspecting/debugging-a-denial).
 It puts the caller, object and requested action together before interpreting
 security state. A token dump alone does not tell you whether access is allowed.
 
@@ -39,7 +39,7 @@ have identified, and the example paths with the actual objects.
 | What was recorded about an earlier attempt? | [Event Viewer](~peios/logs-and-events/event-viewer) or [evctl](~peios/evctl/using-evctl) | Audit policy, reader permissions, query scope, retention and transport all limit the answer. |
 
 For files, `sd check` can explain a simulated access check without performing the
-file operation. Read [the rehearsal's limits](~peios/access-decisions/debugging-a-denial#rehearse-a-file-check-within-its-limits)
+file operation. Read [the rehearsal's limits](~peios/inspecting/debugging-a-denial#rehearse-a-file-check-within-its-limits)
 before treating its result as an explanation of an application's failure.
 
 ## Who can inspect what
@@ -55,7 +55,7 @@ apply:
   grant access to its token or memory.
 - **Another process's descriptor:** `READ_CONTROL` plus PIP dominance for owner,
   group and DACL inspection. SACL inspection additionally needs
-  `ACCESS_SYSTEM_SECURITY`. See [Inspecting processes](~peios/inspecting/processes).
+  `ACCESS_SYSTEM_SECURITY`. See [Inspecting processes](~peios/security-diagnostics/processes).
 - **The kernel's full session listing:** Administrators or SYSTEM, through the
   descriptor on `/sys/kernel/security/kacs/sessions`. `logonse` reports a refusal
   and can fall back to the sessions of processes you may inspect. Even an
@@ -112,7 +112,7 @@ a refused token query can both be correct under the separate access rules.
 primary token, or the documented thread selector when impersonation is involved.
 Separate present from enabled; neither proves the application supplied any
 required intent or that another policy allowed the operation. Continue with
-[Debugging a denial](~peios/access-decisions/debugging-a-denial#privileges).
+[Debugging a denial](~peios/inspecting/debugging-a-denial#privileges).
 
 ## Two ways to read a token
 
@@ -138,13 +138,14 @@ handles text, or make every surface follow the same access rules.
 - [Inspecting tokens](~peios/inspecting/tokens): choose a token and interpret its
   identity, groups, privileges and restrictions.
 - [logonse](~peios/system-and-processes/logonse) and
-  [Inspecting sessions](~peios/inspecting/sessions): session reports, their
-  coverage, and the underlying listing format.
+  the [session-listing reference](~peios/security-diagnostics/sessions): use the
+  command for session reports; consult the reference for the underlying format.
 - [Task Manager](~peios/threads-and-processes/task-manager) and
-  [Inspecting processes](~peios/inspecting/processes): process views and the
-  separate token, PSB and descriptor surfaces.
-- [Debugging a denial](~peios/access-decisions/debugging-a-denial): combine these
+  the [process-inspection reference](~peios/security-diagnostics/processes): use
+  Task Manager for process views; consult the reference for the lower-level surfaces.
+- [Debugging a denial](~peios/inspecting/debugging-a-denial): combine these
   observations with the failed action and object policy.
-- [The event stream](~peios/inspecting/the-event-stream): raw transport diagnosis
+- [The event stream](~peios/security-diagnostics/the-event-stream): raw transport diagnosis
   when events are not reaching eventd. For ordinary recorded-event inspection,
-  use Event Viewer or evctl instead.
+  use [Event Viewer](~peios/logs-and-events/event-viewer) or
+  [evctl](~peios/evctl/using-evctl) instead.

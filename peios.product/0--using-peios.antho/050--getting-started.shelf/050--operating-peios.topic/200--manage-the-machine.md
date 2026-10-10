@@ -15,6 +15,9 @@ only when you intend to affect everyone who uses the machine.
 
 ## Accounts and desktop settings
 
+[Manage local accounts and groups](~peios/managing-local-principals/overview)
+collects the account tasks and access precautions in one place.
+
 - **Create an account or change local membership:**
   [Principals Manager](~peios/managing-local-principals/principals-manager)
   on the desktop, or [Creating accounts](~peios/managing-local-principals/creating-accounts)

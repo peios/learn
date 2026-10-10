@@ -1,14 +1,14 @@
 ---
-title: Managing local principals
+title: Authorities and principal sources
 type: concept
 description: Where the accounts on a Peios machine live — the authority that mints tokens, the sources that hold identity, and lpsd, the one that owns the local store.
 related:
   - peios/identity/overview
   - peios/logon-sessions/overview
-  - peios/managing-local-principals/the-local-store
+  - peios/authentication/the-local-store
   - peios/managing-local-principals/creating-accounts
   - peios/managing-local-principals/lps-command
-  - peios/managing-local-principals/resolving-names
+  - peios/authentication/resolving-names
 ---
 
 Signing in on Peios involves three separate things, and it is worth being able to name them before you administer any of them.
@@ -29,7 +29,7 @@ Putting them in one process means a defect in the first becomes a compromise of 
 
 The division runs through what a source is even able to *say*. A source states **who someone is**: their SID, their memberships, their POSIX identifiers, where their session starts. It never states **how much this machine trusts them** — privileges and integrity levels are `authd`'s, decided from local policy, and there is no message with which a source could ask for one.
 
-That local policy is a registry key, one record per principal, and it is where you go to change what an account may *do* as opposed to who it is: [assigning privileges](~peios/privileges/assigning-privileges).
+That local policy is a registry key, one record per principal, and it is where you go to change what an account may *do* as opposed to who it is: [assigning privileges](~peios/managing-local-principals/assigning-privileges).
 
 ## How they find each other
 
@@ -51,12 +51,12 @@ The same confinement applies to **numbers**. Sources assert relative POSIX ident
 
 Signing in is one half. The other is that everything on the system can turn an identifier back into a name — `ls -l` showing an owner, `id` showing a group.
 
-That goes to `authd` too, on a socket of its own: the authority resolves effective POSIX identifiers and applies the machine's source-search order. See [resolving names](~peios/managing-local-principals/resolving-names) for what lookup answers mean, and [Identity Lookup](~peios/logon/identity-lookup#why-the-authority-answers-this) for the protocol boundary.
+That goes to `authd` too, on a socket of its own: the authority resolves effective POSIX identifiers and applies the machine's source-search order. See [resolving names](~peios/authentication/resolving-names) for what lookup answers mean, and [Identity Lookup](~peios/logon/identity-lookup#why-the-authority-answers-this) for the protocol boundary.
 
 ## Where to start
 
-- [The local store](~peios/managing-local-principals/the-local-store) — what `lpsd` keeps, and where.
-- [Resolving names](~peios/managing-local-principals/resolving-names) — how a name, a SID or a number becomes a principal.
+- [The local store](~peios/authentication/the-local-store) — what `lpsd` keeps, and where.
+- [Resolving names](~peios/authentication/resolving-names) — how a name, a SID or a number becomes a principal.
 - [Creating accounts](~peios/managing-local-principals/creating-accounts) — the first one, and every one after.
 - [The `lps` command](~peios/managing-local-principals/lps-command) — the full reference.
 

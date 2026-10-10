@@ -156,7 +156,7 @@ A reserved privilege's LUID position in the bitmask is allocated, but no kernel 
 
 Two privileges deserve a special note: `SeChangeNotifyPrivilege` and `SeCreateSymbolicLinkPrivilege` are **granted to every principal on a stock machine**. The reason is that they are needed for almost every program to function normally — without `SeChangeNotifyPrivilege`, a process cannot traverse a directory to reach a file, so a token lacking it cannot so much as start a shell; without `SeCreateSymbolicLinkPrivilege`, a process cannot create the symlinks that build systems and packaging tools depend on.
 
-They are granted by the shipped policy — a record for `Everyone` — rather than being built into authd, so both are visible and both can be taken away. See [assigning privileges](~peios/privileges/assigning-privileges). `SeChangeNotifyPrivilege` alone is additionally authd's compiled floor, applied when a machine has no policy key at all, because a machine that cannot start a shell cannot be repaired from a console.
+They are granted by the shipped policy — a record for `Everyone` — rather than being built into authd, so both are visible and both can be taken away. See [assigning privileges](~peios/managing-local-principals/assigning-privileges). `SeChangeNotifyPrivilege` alone is additionally authd's compiled floor, applied when a machine has no policy key at all, because a machine that cannot start a shell cannot be repaired from a console.
 
 Their effect is broad-but-uninteresting: on a stock machine every token has them, so any reasoning about access that does not explicitly involve their absence can ignore them. They are mentioned here for completeness; they will rarely be the answer to a question about who can do what.
 

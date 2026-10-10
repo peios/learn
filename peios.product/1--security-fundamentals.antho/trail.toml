@@ -1,2 +1,2 @@
 title = "Peios Security Fundamentals"
-description = "Understand identities, permissions, isolation and auditing, and follow the linked tools when you need to inspect or manage them."
+description = "Understand the access-control model: identities, authentication, tokens, permissions, isolation and auditing. Practical administration and diagnosis are in Using Peios."

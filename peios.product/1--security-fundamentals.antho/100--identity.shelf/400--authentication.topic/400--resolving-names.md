@@ -3,11 +3,11 @@ title: Resolving names
 type: concept
 description: How a name, a SID or a POSIX identifier becomes a principal — why only the authority can answer, the search order, and why "unavailable" is not "not found".
 related:
-  - peios/managing-local-principals/overview
-  - peios/managing-local-principals/the-local-store
+  - peios/authentication/principal-sources
+  - peios/authentication/the-local-store
   - peios/linux-compatibility/name-service-switch
   - peios/identity/sids
-  - peios/privileges/assigning-privileges
+  - peios/managing-local-principals/assigning-privileges
 ---
 
 Every program that prints a name for a file's owner is asking the same question: *who is this?* On Peios that question goes to `authd`, over a socket of its own:
@@ -119,4 +119,4 @@ It keeps the three answers apart: *not found* comes back as no principal, and a 
 
 For how Linux programs reach this resolution through `getpwnam` and friends, read [Name service switch](~peios/linux-compatibility/name-service-switch).
 
-For where the local principals being resolved actually live, read [The local store](~peios/managing-local-principals/the-local-store).
+For where the local principals being resolved actually live, read [The local store](~peios/authentication/the-local-store).

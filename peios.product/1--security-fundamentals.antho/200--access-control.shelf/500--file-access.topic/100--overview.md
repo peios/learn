@@ -4,7 +4,7 @@ type: concept
 description: FACS applies KACS access control to files. AccessCheck runs once at open; the granted mask is cached on the fd and gates every later operation.
 related:
   - peios/file-access/the-handle-model
-  - peios/file-access/managing-file-security
+  - peios/file-permissions/managing-file-security
   - peios/file-access/special-cases
   - peios/mount-policies/overview
   - peios/access-decisions/overview
@@ -72,7 +72,7 @@ The kernel exposes two ways to open a file:
 
 Both paths converge in FACS. The cached mask on the resulting fd is the same shape regardless of which syscall produced the open.
 
-For an operator, the important distinction is between a successful open and a successful later operation: that operation may need a right the handle did not receive. Diagnose the actual caller and operation with [Debugging a denial](~peios/access-decisions/debugging-a-denial), and use [Managing file security](~peios/file-access/managing-file-security) for a deliberate policy change.
+For an operator, the important distinction is between a successful open and a successful later operation: that operation may need a right the handle did not receive. Diagnose the actual caller and operation with [Debugging a denial](~peios/inspecting/debugging-a-denial), and use [Managing file security](~peios/file-permissions/managing-file-security) for a deliberate policy change.
 
 The programmer-facing kernel references are [KACS-Native Open](~peios/advanced-peios/peios-kernel/kacs/facs/native-open) and [Legacy Open Compatibility](~peios/advanced-peios/peios-kernel/kacs/facs/legacy-open). Their exact masks and edge cases have [documented discrepancies](~peios/advanced-peios/peios-kernel/kacs/kacs-abi-notes#open-interface-documentation-discrepancies); this overview does not resolve them. Native creation can also accept a caller-supplied SD; see [creation rules](~peios/advanced-peios/peios-kernel/kacs/facs/native-open#caller-supplied-descriptors) and [Inheritance](~peios/security-descriptors/inheritance) for the distinction from inherited policy.
 
@@ -105,6 +105,6 @@ If you want the handle model in detail — what is cached, what operations check
 
 For programming, use the [SDK opening reference](~peios/sdk-files/opening-a-file), the [native](~peios/advanced-peios/peios-kernel/kacs/facs/native-open) and [legacy](~peios/advanced-peios/peios-kernel/kacs/facs/legacy-open) kernel references, and the generated [KACS ABI](~peios/advanced-peios/peios-kernel/kacs/kacs-abi). Read the [open-interface discrepancy note](~peios/advanced-peios/peios-kernel/kacs/kacs-abi-notes#open-interface-documentation-discrepancies) alongside them.
 
-To inspect a file's policy, make a bounded change with `sd`, and verify the original operation, read [Managing file security](~peios/file-access/managing-file-security).
+To inspect a file's policy, make a bounded change with `sd`, and verify the original operation, read [Managing file security](~peios/file-permissions/managing-file-security).
 
 If you want the edge cases — O_PATH, the exec dual gate, append-only files, sticky bit, POSIX ACLs that no longer work, NFS dual authority — read [Special cases](~peios/file-access/special-cases).

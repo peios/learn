@@ -92,7 +92,7 @@ Because only `KACS_SECINFO_DACL` is selected, the owner, group, and SACL are lef
 
 ## Raw file-security interface
 
-The SDK helpers above wrap `kacs_get_sd` and `kacs_set_sd`. The following low-level details belong to programs implementing descriptor tools; shell users should use [Managing file security](~peios/file-access/managing-file-security). The generated [KACS ABI](~peios/advanced-peios/peios-kernel/kacs/kacs-abi) is the source for syscall numbers and `KACS_SECINFO_*` constants; the `*_SECURITY_INFORMATION` names below are their specification spellings.
+The SDK helpers above wrap `kacs_get_sd` and `kacs_set_sd`. The following low-level details belong to programs implementing descriptor tools; shell users should use [Managing file security](~peios/file-permissions/managing-file-security). The generated [KACS ABI](~peios/advanced-peios/peios-kernel/kacs/kacs-abi) is the source for syscall numbers and `KACS_SECINFO_*` constants; the `*_SECURITY_INFORMATION` names below are their specification spellings.
 
 Raw access to `security.peios.sd` or `system.ntfs_security` is denied for reads, writes and removal. In particular, a raw read would expose the SACL without the component-specific `ACCESS_SYSTEM_SECURITY` gate. The syscall pair unifies access rules, validates descriptors and abstracts filesystem storage; see [File Descriptor Storage](~peios/advanced-peios/peios-kernel/kacs/facs/descriptor-storage).
 

@@ -5,8 +5,8 @@ description: See this machine's users and groups from the desktop — who each i
 related:
   - peios/managing-local-principals/overview
   - peios/managing-local-principals/lps-command
-  - peios/managing-local-principals/resolving-names
-  - peios/managing-local-principals/the-admin-socket
+  - peios/authentication/resolving-names
+  - peios/local-principal-interfaces/the-admin-socket
 ---
 
 **Principals Manager** shows this machine's **principals**, the users and
@@ -163,7 +163,7 @@ one **record** per user or group in the registry, which `authd` reads at
 every sign-in. Each record may give **privileges**, an **integrity**
 level, an **owner** for what they make, and a **default DACL**, the
 permissions an object they make gets when it has no parent to inherit
-from. See [Assigning privileges](~peios/privileges/assigning-privileges)
+from. See [Assigning privileges](~peios/managing-local-principals/assigning-privileges)
 for what each does and how records combine.
 
 **Privileges**, in the bar, lists the records: who each is for, how many

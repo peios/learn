@@ -100,7 +100,7 @@ Both flags are set at token creation and **cannot be changed at runtime**. A pro
 
 The object's label comes from its SACL, as above. The **token's** level is decided once, when the token is minted, and never changes afterwards.
 
-For a logon token that is **local policy** — a per-principal record in the registry that `authd` reads at every sign-in, keyed on the SIDs the token ends up carrying. A principal source has no way to influence it, deliberately: how much a machine trusts someone is not a fact about them that a directory could know. A principal no record names gets Medium. See [assigning privileges](~peios/privileges/assigning-privileges) for the record format.
+For a logon token that is **local policy** — a per-principal record in the registry that `authd` reads at every sign-in, keyed on the SIDs the token ends up carrying. A principal source has no way to influence it, deliberately: how much a machine trusts someone is not a fact about them that a directory could know. A principal no record names gets Medium. See [assigning privileges](~peios/managing-local-principals/assigning-privileges) for the record format.
 
 For service tokens, peinit decides. For the SYSTEM token, the kernel does.
 

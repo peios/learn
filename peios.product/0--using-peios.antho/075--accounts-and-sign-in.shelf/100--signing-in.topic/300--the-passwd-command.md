@@ -7,7 +7,7 @@ related:
   - peios/signing-in/the-login-command
   - peios/managing-local-principals/lps-command
   - peios/managing-local-principals/creating-accounts
-  - peios/privileges/assigning-privileges
+  - peios/managing-local-principals/assigning-privileges
 ---
 
 `passwd` changes your own password.
@@ -73,7 +73,7 @@ A message ending `whether the password changed is not known` means the authority
 
 Every authenticated principal can connect to `/run/logon.sock` so that `passwd` works for them. That does not let them originate a logon for anybody else, which still takes a `LogonTypes` record on their own policy entry.
 
-A machine whose administrator has replaced the socket's descriptor with `LogonSocketDescriptor` may not admit you. See [assigning privileges](~peios/privileges/assigning-privileges).
+A machine whose administrator has replaced the socket's descriptor with `LogonSocketDescriptor` may not admit you. See [assigning privileges](~peios/managing-local-principals/assigning-privileges).
 
 ## Exit status
 
@@ -85,6 +85,6 @@ A machine whose administrator has replaced the socket's descriptor with `LogonSo
 
 ## See also
 
-- [Signing in](~peios/signing-in/overview) — the conversation this is one kind of.
+- [How authentication works](~peios/authentication/overview) — the conversation this is one kind of.
 - [The `lps` command](~peios/managing-local-principals/lps-command) — setting another principal's password, as an administrator.
 - [PGSS §2.20](~peios/logon/credential-change) — the credential-change conversation, specified.

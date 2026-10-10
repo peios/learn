@@ -7,12 +7,12 @@ related:
   - peios/security-descriptors/dacl-evaluation
   - peios/identity/well-known-principals
   - peios/privileges/overview
-  - peios/file-access/managing-file-security
+  - peios/file-permissions/managing-file-security
 ---
 
 Every security descriptor names an owner, a SID associated with the object's access policy. An owner normally receives `READ_CONTROL` to read the descriptor and `WRITE_DAC` to change its DACL. Ownership does **not** automatically grant access to file contents, and it is **not** a guarantee against locking yourself out.
 
-Before relying on ownership to repair access, inspect the DACL for `OWNER RIGHTS` ACEs and check the other access layers. For a shell workflow, use [Managing file security](~peios/file-access/managing-file-security); this page explains when ownership helps and when it does not.
+Before relying on ownership to repair access, inspect the DACL for `OWNER RIGHTS` ACEs and check the other access layers. For a shell workflow, use [Managing file security](~peios/file-permissions/managing-file-security); this page explains when ownership helps and when it does not.
 
 ## The implicit rights
 
@@ -57,7 +57,7 @@ For example, the documented shell form for making the current caller the owner o
 sd owner ./report.txt @self
 ```
 
-Use it only when that is the intended ownership policy and the required authority is established. It leaves the DACL in place and does not itself restore file-data or DACL-edit access. Inspect and verify as described in [Managing file security](~peios/file-access/managing-file-security).
+Use it only when that is the intended ownership policy and the required authority is established. It leaves the DACL in place and does not itself restore file-data or DACL-edit access. Inspect and verify as described in [Managing file security](~peios/file-permissions/managing-file-security).
 
 ## SeTakeOwnership and recovery limits
 
@@ -71,7 +71,7 @@ It does **not** bypass:
 - OWNER RIGHTS suppression after the owner changes. The unchanged DACL can still withhold `WRITE_DAC`.
 
 > [!IMPORTANT]
-> Confirm privilege availability on the deployed build before planning recovery. Older privilege prose says take-ownership and relabel are absent from the published ABI, but the current [generated ABI](~peios/advanced-peios/peios-kernel/kacs/kacs-abi) defines their constants. A constant alone does not establish which names `authd` or a service's privilege configuration accepts, or what the caller's token actually holds. [Assigning privileges](~peios/privileges/assigning-privileges#what-this-cannot-express-yet) explains that unresolved distinction; do not assume either universal availability or universal unavailability.
+> Confirm privilege availability on the deployed build before planning recovery. Older privilege prose says take-ownership and relabel are absent from the published ABI, but the current [generated ABI](~peios/advanced-peios/peios-kernel/kacs/kacs-abi) defines their constants. A constant alone does not establish which names `authd` or a service's privilege configuration accepts, or what the caller's token actually holds. [Assigning privileges](~peios/managing-local-principals/assigning-privileges#what-this-cannot-express-yet) explains that unresolved distinction; do not assume either universal availability or universal unavailability.
 
 `SeRestorePrivilege` is also not a generic promise that an arbitrary file handle can repair a descriptor. The [set-security contract](~peios/advanced-peios/peios-kernel/kacs/facs/set-security#the-serestoreprivilege-bypass) distinguishes live checks through a path or `O_PATH` handle from cached rights on an ordinary fd. Verify the supported repair mechanism rather than improvising one from privilege names.
 
@@ -105,7 +105,7 @@ If no authorized repair route is established, stop and resolve that with the sys
 
 ## Where to go next
 
-- [Managing file security](~peios/file-access/managing-file-security) — inspect, choose a bounded change and verify it.
+- [Managing file security](~peios/file-permissions/managing-file-security) — inspect, choose a bounded change and verify it.
 - [The sd command](~peios/files-and-directories/sd) — exact shell syntax.
 - [Inheritance](~peios/security-descriptors/inheritance) — creator placeholders and child descriptors.
 - [Privileges](~peios/privileges/overview) — how privilege-held rights differ from ownership.

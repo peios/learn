@@ -4,7 +4,7 @@ type: concept
 description: Every FACS-managed fd carries a granted access mask, stamped at open and immutable. What the cache contains, which operations consult it, and fd transfer.
 related:
   - peios/file-access/overview
-  - peios/file-access/managing-file-security
+  - peios/file-permissions/managing-file-security
   - peios/file-access/special-cases
   - peios/access-decisions/overview
 ---
@@ -135,6 +135,6 @@ Knowing the handle model has practical implications for code that handles files:
 
 For the interfaces that establish the granted mask, see the programmer-facing [native-open](~peios/advanced-peios/peios-kernel/kacs/facs/native-open) and [legacy-open](~peios/advanced-peios/peios-kernel/kacs/facs/legacy-open) kernel references, with their [unresolved documentation differences](~peios/advanced-peios/peios-kernel/kacs/kacs-abi-notes#open-interface-documentation-discrepancies).
 
-For reading and writing the SD behind a handle, read [Managing file security](~peios/file-access/managing-file-security).
+For reading and writing the SD behind a handle, read [Managing file security](~peios/file-permissions/managing-file-security).
 
 For the edges of the model — O_PATH, the exec dual gate, append-only handles — read [Special cases](~peios/file-access/special-cases).

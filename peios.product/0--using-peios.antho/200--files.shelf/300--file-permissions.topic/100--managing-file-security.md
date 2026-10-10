@@ -11,7 +11,7 @@ related:
   - peios/files-and-directories/sd
 ---
 
-Use [`sd`](~peios/files-and-directories/sd) to inspect selected file policy and make bounded changes to its owner, access rules, audit rules or integrity label. Start with one known path and one intended change. A permission failure is a reason to [diagnose the denied operation](~peios/access-decisions/debugging-a-denial), not to replace the descriptor or grant full control.
+Use [`sd`](~peios/files-and-directories/sd) to inspect selected file policy and make bounded changes to its owner, access rules, audit rules or integrity label. Start with one known path and one intended change. A permission failure is a reason to [diagnose the denied operation](~peios/inspecting/debugging-a-denial), not to replace the descriptor or grant full control.
 
 > [!WARNING]
 > Ownership is not a recovery guarantee. An `OWNER RIGHTS` ACE can suppress the owner's implicit `READ_CONTROL` and `WRITE_DAC`, and other access layers can still deny a change. Taking ownership preserves the existing DACL, including that suppression. Before removing access, establish which authorized principal can still read and repair the policy. See [Ownership and implicit rights](~peios/security-descriptors/ownership).
@@ -78,7 +78,7 @@ Check the intended principal, rights and unrelated policy within the returned vi
 
 Existing file handles keep the rights granted when they were opened. A DACL edit is not a revocation of those handles; use a fresh open to test future access. See [The handle model](~peios/file-access/the-handle-model).
 
-A nonzero `sd` status can mean a failed operation, an unreachable path, or a denied `sd check`; read the diagnostic. After recursive work, inspect the reported failures and representative descendants rather than treating the whole tree as changed. If the result differs from the intention, stop widening the change and use the [denial guide](~peios/access-decisions/debugging-a-denial).
+A nonzero `sd` status can mean a failed operation, an unreachable path, or a denied `sd check`; read the diagnostic. After recursive work, inspect the reported failures and representative descendants rather than treating the whole tree as changed. If the result differs from the intention, stop widening the change and use the [denial guide](~peios/inspecting/debugging-a-denial).
 
 ## Why the xattr layer is denied
 
@@ -115,7 +115,7 @@ See [Use-Time Checks](~peios/advanced-peios/peios-kernel/kacs/facs/use-time) for
 
 If a change is denied, check the required component right, the caller, owner-SID constraints, integrity and other mandatory policy before retrying. A read-only mount can refuse a write even if the descriptor permits it. Do not infer that a failed multi-object run left every object unchanged.
 
-The [SDK error reference](~peios/sdk-access-control/securing-files#file-security-errors) distinguishes access, validation, buffer and path errors for programs. For an operator, keep `sd`'s diagnostic and follow [Debugging a denial](~peios/access-decisions/debugging-a-denial).
+The [SDK error reference](~peios/sdk-access-control/securing-files#file-security-errors) distinguishes access, validation, buffer and path errors for programs. For an operator, keep `sd`'s diagnostic and follow [Debugging a denial](~peios/inspecting/debugging-a-denial).
 
 ## See also
 

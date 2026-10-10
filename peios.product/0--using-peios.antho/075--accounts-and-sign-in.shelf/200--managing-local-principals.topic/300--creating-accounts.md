@@ -4,7 +4,7 @@ type: how-to
 description: How the first account on a machine comes to exist, how to create the ones after it, and what happens on an image that ships a development account.
 related:
   - peios/managing-local-principals/overview
-  - peios/managing-local-principals/the-local-store
+  - peios/authentication/the-local-store
   - peios/managing-local-principals/lps-command
   - peios/boot-and-trust-establishment/overview
 ---
@@ -197,4 +197,4 @@ An account created with `--no-password` has no current password to prove, so it 
 
 For the full command surface — every flag, the group and claim subcommands, and the exit statuses — read [The `lps` command](~peios/managing-local-principals/lps-command).
 
-For what the store holds and why RIDs are never reused, read [The local store](~peios/managing-local-principals/the-local-store).
+For what the store holds and why RIDs are never reused, read [The local store](~peios/authentication/the-local-store).

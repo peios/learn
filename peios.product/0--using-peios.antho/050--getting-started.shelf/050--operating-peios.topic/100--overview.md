@@ -32,6 +32,8 @@ For manual disk preparation and the legacy `peios-install` script, use
 That route has different account and first-boot behavior; follow the
 instructions for the installer you actually used.
 
+For a local console or SSH session, see [Sign in](~peios/signing-in/overview).
+
 ## Do everyday work
 
 - [Manage the machine](~peios/operating-peios/manage-the-machine): accounts,

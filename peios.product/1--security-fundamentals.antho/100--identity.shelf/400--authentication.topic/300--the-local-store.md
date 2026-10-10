@@ -3,7 +3,7 @@ title: The local store
 type: concept
 description: What lpsd keeps on disk — the machine's domain SID, its principals, and the argon2id verifiers that stand in for their passwords — and why it is one file.
 related:
-  - peios/managing-local-principals/overview
+  - peios/authentication/principal-sources
   - peios/managing-local-principals/creating-accounts
   - peios/identity/sids
   - peios/security-descriptors/overview
@@ -47,7 +47,7 @@ It also means moving a range is a registry edit rather than a rewrite: nothing s
 
 `lps list` and `lps show` display the **effective** number, with the base already added, because that is the one an operator will see everywhere else. The authority communicates the range at [registration](~peios/principal-source-interface/registration#registered) for that purpose; `lpsd` must still assert relative identifiers.
 
-At lookup time, `getpwuid` asks `authd` about the effective number; `authd` queries the relevant source in its relative namespace. See [resolving names](~peios/managing-local-principals/resolving-names).
+At lookup time, `getpwuid` asks `authd` about the effective number; `authd` queries the relevant source in its relative namespace. See [resolving names](~peios/authentication/resolving-names).
 
 > [!NOTE]
 > A `-` where a uid should be means `authd` has assigned this machine no range at all, and every principal here will sign in as `nobody`. The `UnixIDBase` value on this source is missing or unusable.
@@ -68,7 +68,7 @@ Each verifier carries the cost parameters it was created with, so raising them a
 
 **Well-known group definitions.** The store defines the groups *this machine* creates, and records memberships of everything else as SIDs. `BUILTIN\Administrators` exists on every Peios machine whether or not this store mentions it; `lpsd` only records that `jack` is in it.
 
-**Privileges and integrity levels.** What a principal may *do* is not stored here at all. `authd` decides it, from local policy keyed on the SIDs a token ends up carrying — a registry key rather than this file, so that it stays readable by an administrator and this file can stay readable by nobody. A principal source says who someone is; it has no way to say how much this machine trusts them. See [assigning privileges](~peios/privileges/assigning-privileges).
+**Privileges and integrity levels.** What a principal may *do* is not stored here at all. `authd` decides it, from local policy keyed on the SIDs a token ends up carrying — a registry key rather than this file, so that it stays readable by an administrator and this file can stay readable by nobody. A principal source says who someone is; it has no way to say how much this machine trusts them. See [assigning privileges](~peios/managing-local-principals/assigning-privileges).
 
 ## The descriptor
 

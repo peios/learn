@@ -40,7 +40,7 @@ for local-account administration. Do not infer that an account is missing
 from the sign-in error alone.
 
 For an administrator investigating the failure, the
-[sign-in audit trail](~peios/signing-in/overview#what-the-audit-trail-records)
+[sign-in audit trail](~peios/authentication/overview#what-the-audit-trail-records)
 explains the authority's and local account service's events. Those records
 are available only to accounts permitted to read them.
 
@@ -98,7 +98,7 @@ uses the feature's own lifecycle, rather than package transaction recovery.
 
 ## An action is denied, or records seem to be missing
 
-For a refused operation, follow [Debugging a denial](~peios/access-decisions/debugging-a-denial).
+For a refused operation, follow [Debugging a denial](~peios/inspecting/debugging-a-denial).
 Collect the failing operation, identity and required access before changing
 permissions. The task guide explains the access needed for that operation.
 

@@ -7,7 +7,7 @@ related:
   - peios/services-and-jobs/supervision
   - peios/services-and-jobs/controlling-services
   - peios/services-and-jobs/boot-and-boot-modes
-  - peios/access-decisions/debugging-a-denial
+  - peios/inspecting/debugging-a-denial
 ---
 
 Collect the current state and cause before changing anything:
@@ -86,7 +86,7 @@ A control command returns `ACCESS_DENIED`. peinit ran [AccessCheck](~peios/acces
 - `shutdown` and `reload-config` need `SYSTEM_SHUTDOWN` / `SYSTEM_RELOAD_CONFIG` in peinit's control descriptor.
 - The check uses your **effective** identity at connect time — if you are [impersonating](~peios/impersonation/overview), that is what is checked.
 
-Under the default descriptors every denial is recorded by the kernel as a `kacs.audit.access.checked` event naming the caller, the target (its **object kind** is `service`, `job` or `peinit-system`) and the rights requested and granted. Walk it through [Debugging a denial](~peios/access-decisions/debugging-a-denial).
+Under the default descriptors every denial is recorded by the kernel as a `kacs.audit.access.checked` event naming the caller, the target (its **object kind** is `service`, `job` or `peinit-system`) and the rights requested and granted. Walk it through [Debugging a denial](~peios/inspecting/debugging-a-denial).
 
 > [!NOTE]
 > If `list` shows fewer services than you expect, that is not a bug — `list` **omits** services you lack `SERVICE_QUERY_STATUS` on rather than denying them. You are seeing exactly what your token can see. `job list` does the same with `JOB_QUERY`.

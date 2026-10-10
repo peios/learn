@@ -163,7 +163,7 @@ This section explains service behavior useful when diagnosing startup or display
 | `oobed` | Runs as SYSTEM to create the first account and set the machine name. Serves the [MSIP](~peios/services-and-jobs/overview) conversation on `/run/oobed.sock`. |
 | `oobe-tui` | Draws the console form without privileged rights of its own. |
 
-Setup and the [login prompt](~peios/signing-in/overview) both use `/dev/console`. Setup has higher [`TTYPrecedence`](~peios/services-and-jobs/triggers-and-timers), so peinit gives it the console and does not start the login prompt at that point.
+Setup and the [login prompt](~peios/signing-in/the-login-command) both use `/dev/console`. Setup has higher [`TTYPrecedence`](~peios/services-and-jobs/triggers-and-timers), so peinit gives it the console and does not start the login prompt at that point.
 
 When the surface exits, whether successfully, through Esc, or after a crash, it releases the console. The login prompt's `tty:released` trigger then starts it. The terminal is not left without an owner, even though an unsuccessful setup may still leave no usable account.
 

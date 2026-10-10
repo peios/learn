@@ -138,7 +138,7 @@ owner/group/DACL view does not establish which SACL labels or policies exist. Si
 `sd show` is a failed inspection, not a decoded explanation of the original
 operation. Keep the returned error and the scope of any descriptor you obtained.
 For a process's descriptor, use the separate
-[process-SD inspection reference](~peios/inspecting/processes#reading-the-process-sd)
+[process-SD inspection reference](~peios/security-diagnostics/processes#reading-the-process-sd)
 with an authorised diagnostic tool; the PSB and a token report do not replace it.
 
 In the parts you can read, look for:
@@ -220,7 +220,7 @@ several records; `MAXIMUM_ALLOWED` success is not evidence that a particular
 right was granted, and it produces no access-check privilege-use record.
 See [Find missing records](~peios/logs-and-events/find-missing-records).
 
-Use [the raw event stream](~peios/inspecting/the-event-stream) only to diagnose
+Use [the raw event stream](~peios/security-diagnostics/the-event-stream) only to diagnose
 the transport itself. It requires `SeSecurityPrivilege`, can lose events, and
 is not a replacement for recorded history.
 

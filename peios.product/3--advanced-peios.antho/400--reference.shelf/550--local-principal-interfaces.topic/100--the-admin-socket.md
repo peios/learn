@@ -4,7 +4,7 @@ type: reference
 description: The socket lps talks to lpsd over — where it is, who may use it, and what decides that — and the self socket on which any principal reads their own account and sets their display name. Useful if you are writing tooling against them or diagnosing a refusal.
 related:
   - peios/managing-local-principals/lps-command
-  - peios/managing-local-principals/overview
+  - peios/authentication/principal-sources
   - peios/security-descriptors/overview
   - peios/tokens/overview
 ---
@@ -79,7 +79,7 @@ A caller refused because it is not an administrator is **not** recorded. The adm
 
 The wire protocol is `PLPS`, sharing its codec and header layout with PGSS Logon ([PGSS §2](~peios/logon/scope-and-roles)) and PSI ([PSPU §2](~peios/principal-source-interface/scope-and-roles)). It is specified in [PSPU §10](~peios/local-principal-administration/scope-and-roles): every request, its reply, and how a request is refused.
 
-If you are writing tooling in Rust, the `libauthd-client` crate in the authd repository speaks it, as `lps` and Principals Manager do, and reports a refusal with `lpsd`'s reason. A program that only needs to *read* principals should ask the identity socket instead, which anyone may use: see [Resolving names](~peios/managing-local-principals/resolving-names). A program reading or changing the account of the person running it uses the self socket, below.
+If you are writing tooling in Rust, the `libauthd-client` crate in the authd repository speaks it, as `lps` and Principals Manager do, and reports a refusal with `lpsd`'s reason. A program that only needs to *read* principals should ask the identity socket instead, which anyone may use: see [Resolving names](~peios/authentication/resolving-names). A program reading or changing the account of the person running it uses the self socket, below.
 
 ## The self socket
 
@@ -102,4 +102,4 @@ Changing a password or an SSH key is not done here, because it asks for the curr
 ## See also
 
 - [The `lps` command](~peios/managing-local-principals/lps-command) — the client this socket serves.
-- [Managing local principals](~peios/managing-local-principals/overview) — the authority/source split behind the design.
+- [Authorities and principal sources](~peios/authentication/principal-sources) — the authority/source split behind the design.

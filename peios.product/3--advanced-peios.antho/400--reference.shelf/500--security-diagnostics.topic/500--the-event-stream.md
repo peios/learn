@@ -4,7 +4,7 @@ type: reference
 description: revstrm is a diagnostic probe that attaches directly to the KMES ring buffers and prints every audit event it drains. Options, output format, and caveats.
 related:
   - peios/inspecting/overview
-  - peios/inspecting/sessions
+  - peios/security-diagnostics/sessions
   - peios/auditing/events-and-transport
   - peios/auditing/overview
 ---

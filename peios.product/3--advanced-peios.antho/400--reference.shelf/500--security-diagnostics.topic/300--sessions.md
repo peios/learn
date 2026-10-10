@@ -135,6 +135,6 @@ The lack of kernel-side timer enforcement is a deliberate simplification. Adding
 
 ## Where to go next
 
-For the rest of a process's inspectable state — its PSB and its process SD — read [Inspecting processes](~peios/inspecting/processes).
+For the rest of a process's inspectable state — its PSB and its process SD — read [Inspecting processes](~peios/security-diagnostics/processes).
 
 For what sessions are, how they are created, and how revocation actually works, read [Session lifecycle](~peios/logon-sessions/lifecycle).

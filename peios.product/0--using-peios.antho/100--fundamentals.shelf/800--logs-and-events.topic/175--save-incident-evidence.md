@@ -6,7 +6,7 @@ related:
   - peios/logs-and-events/find-missing-records
   - peios/logs-and-events/overview
   - peios/evctl/using-evctl
-  - peios/file-access/managing-file-security
+  - peios/file-permissions/managing-file-security
 ---
 
 Use `evctl` to save a finite event query before changing configuration or
@@ -23,7 +23,7 @@ Work in an **existing, writable directory you control**, whose native
 security descriptor and new-file inheritance already restrict access to
 the intended readers. Event payloads and diagnostics may contain sensitive
 information. Check the destination policy before writing, using
-[Managing file security](~peios/file-access/managing-file-security) and
+[Managing file security](~peios/file-permissions/managing-file-security) and
 [Inheritance](~peios/security-descriptors/inheritance). If the required
 policy is unknown, have the responsible administrator check it first.
 Do not rely on `chmod` or a shell `umask` to establish Peios-native privacy.

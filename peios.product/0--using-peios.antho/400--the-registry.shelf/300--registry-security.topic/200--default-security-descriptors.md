@@ -83,7 +83,7 @@ is consumed as policy for another object.
   parent instead uses the creating token's default DACL; `authd` obtains
   that from the principal's `DefaultDacl` policy value. A token with none
   leaves such an object with a null DACL. See
-  [Assigning privileges](~peios/privileges/assigning-privileges).
+  [Assigning privileges](~peios/managing-local-principals/assigning-privileges).
 - **Package payload files:** these inherit at their destination or use a
   package-manifest descriptor declaration; see
   [PSPU §5.20](~peios/package-format-and-repository-protocol/security-descriptor-overrides).

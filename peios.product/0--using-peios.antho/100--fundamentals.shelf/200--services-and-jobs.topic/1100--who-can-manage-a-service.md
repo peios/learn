@@ -103,7 +103,7 @@ Every control command runs the same gate:
 5. **Granted** → execute the command.
 
 > [!NOTE]
-> Every denial is recorded by default: the built-in descriptor's SACL audits every refusal, for everyone, and peinit names the service in each check so the record says which one it was. Look for it in the event viewer as `kacs.audit.access.checked` with **object kind** `service` and the service's name. A `ServiceSecurity` you write yourself is used as it is, so keep a SACL on it (for example `S:(AU;FA;0xf;;;WD)`) if you still want its denials recorded. If you are debugging a denial, the audit record has everything you need; see [Debugging a denial](~peios/access-decisions/debugging-a-denial).
+> Every denial is recorded by default: the built-in descriptor's SACL audits every refusal, for everyone, and peinit names the service in each check so the record says which one it was. Look for it in the event viewer as `kacs.audit.access.checked` with **object kind** `service` and the service's name. A `ServiceSecurity` you write yourself is used as it is, so keep a SACL on it (for example `S:(AU;FA;0xf;;;WD)`) if you still want its denials recorded. If you are debugging a denial, the audit record has everything you need; see [Debugging a denial](~peios/inspecting/debugging-a-denial).
 
 ## The system control descriptor
 

@@ -5,10 +5,10 @@ description: Inspecting a process's PSB (PIP, mitigations) through /proc/<pid>/p
 related:
   - peios/threads-and-processes/task-manager
   - peios/system-and-processes/logonse
-  - peios/access-decisions/debugging-a-denial
+  - peios/inspecting/debugging-a-denial
   - peios/inspecting/overview
   - peios/inspecting/tokens
-  - peios/inspecting/sessions
+  - peios/security-diagnostics/sessions
   - peios/process-integrity-protection/overview
   - peios/process-integrity-protection/the-process-security-descriptor
   - peios/process-mitigations/overview
@@ -150,7 +150,7 @@ The inspection surfaces are for the present moment. For historical questions, th
 
 ## Where to go next
 
-For inspecting the live flow of audit events rather than current state, read [The event stream](~peios/inspecting/the-event-stream).
+For inspecting the live flow of audit events rather than current state, read [The event stream](~peios/security-diagnostics/the-event-stream).
 
 For the identity half of a process's state — obtaining and querying token fds — read [Inspecting tokens](~peios/inspecting/tokens).
 

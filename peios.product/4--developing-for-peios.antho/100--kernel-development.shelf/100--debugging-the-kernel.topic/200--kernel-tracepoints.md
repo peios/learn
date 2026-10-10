@@ -4,7 +4,7 @@ type: how-to
 description: "Enabling and reading the kacs:, kmes:, and lcs: tracepoint systems — at runtime through tracefs, at boot through the kernel command line."
 related:
   - peios/debugging-the-kernel/overview
-  - peios/access-decisions/debugging-a-denial
+  - peios/inspecting/debugging-a-denial
   - peios/advanced-peios/kernel-abi-reference/overview
 ---
 
@@ -76,4 +76,4 @@ A `kacs:` access-decision event answers "what did KACS decide about this object,
 - **`mount_policy`** — the resolved [mount policy](~peios/mount-policies/overview) for the object's filesystem, which frequently explains a denial on an unmanaged or synthesis-only mount.
 - **`access`** — the desired-access mask being checked.
 
-For a worked example of tracing a specific denial end to end, see [Debugging a denial](~peios/access-decisions/debugging-a-denial).
+For a worked example of tracing a specific denial end to end, see [Debugging a denial](~peios/inspecting/debugging-a-denial).

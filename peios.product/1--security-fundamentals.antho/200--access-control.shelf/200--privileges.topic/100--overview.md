@@ -35,7 +35,7 @@ A token's privileges are decided at one moment: when the token is minted. That h
 
 There is no path to *gain* a privilege after a token is minted. AdjustPrivileges can enable or disable a privilege the token already has, and can permanently remove a privilege, but cannot add one that was not present at creation. A token's privilege bitmask is at most what was put there at the start.
 
-The privilege policy authd consults — which principals get which privileges — is **local to the machine**, and lives in the registry under `Machine\Generic\Authn\Policy`, one record per principal. authd reads it at every logon. See [assigning privileges](~peios/privileges/assigning-privileges) for the record format and the rules.
+The privilege policy authd consults — which principals get which privileges — is **local to the machine**, and lives in the registry under `Machine\Generic\Authn\Policy`, one record per principal. authd reads it at every logon. See [assigning privileges](~peios/managing-local-principals/assigning-privileges) for the record format and the rules.
 
 That it is local is the design rather than an implementation detail. A principal source — the local store, or a directory — says who someone is: their SID, their memberships, their POSIX identifiers. It never says how much this machine trusts them, and the protocol it speaks gives it no way to. So a directory can tell this machine that you are a member of `Domain Admins`; whether that membership carries `SeLoadDriverPrivilege` here is this machine's answer, not the directory's.
 

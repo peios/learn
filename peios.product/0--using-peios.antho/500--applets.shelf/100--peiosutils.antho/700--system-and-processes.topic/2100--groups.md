@@ -4,7 +4,7 @@ type: reference
 description: Print the groups a user belongs to.
 related:
   - peios/system-and-processes/id
-  - peios/managing-local-principals/resolving-names
+  - peios/authentication/resolving-names
   - peios/tokens/token-command
 ---
 
@@ -30,7 +30,7 @@ The example above is not a mistake, and it is the thing worth knowing about this
 
 **`groups`** reads the calling process's credential — the projection of its [token's](~peios/tokens/overview) group set. That set includes the groups the authority *staples on* when the token is minted: `Everyone` and `Local` are on every token, whoever you are.
 
-**`groups jack`** looks the name up through the [principal store](~peios/managing-local-principals/resolving-names), which returns **recorded** memberships — the ones something actually wrote down.
+**`groups jack`** looks the name up through the [principal store](~peios/authentication/resolving-names), which returns **recorded** memberships — the ones something actually wrote down.
 
 The stapled groups are not recorded anywhere, because membership in them is a **rule**, not a stored fact. Everyone is in `Everyone`; nothing needs to record it, and nothing can enumerate it. So they appear in the first answer and not the second.
 

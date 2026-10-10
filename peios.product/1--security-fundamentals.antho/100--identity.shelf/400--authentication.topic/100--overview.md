@@ -1,11 +1,11 @@
 ---
-title: Signing in
+title: How authentication works
 type: concept
 description: How a sign-in works on Peios — the conversation with the authority on /run/logon.sock, the roles involved, and why authentication and derivation are separate.
 related:
   - peios/logon-sessions/overview
   - peios/logon-sessions/logon-types
-  - peios/managing-local-principals/overview
+  - peios/authentication/principal-sources
   - peios/tokens/overview
   - peios/signing-in/the-login-command
   - peios/signing-in/the-passwd-command
@@ -21,7 +21,7 @@ Knowing its shape is worth the few minutes it takes. It explains why a login pro
 
 **The client** connects and speaks on the principal's behalf. `login` is a client. So is any greeter, remote access daemon or kiosk agent you might write. A client renders the prompts it is asked to render, returns the answers, and installs the token it is given. It is not trusted, and nothing it sends is taken as fact.
 
-**A principal source** knows who exists and verifies credentials. It asserts an identity and can do nothing else — it cannot mint a token, grant a privilege or create a session, because the protocol it speaks has no message for any of those. `lpsd` is the local one. See [managing local principals](~peios/managing-local-principals/overview).
+**A principal source** knows who exists and verifies credentials. It asserts an identity and can do nothing else — it cannot mint a token, grant a privilege or create a session, because the protocol it speaks has no message for any of those. `lpsd` is the local one. See [principal sources](~peios/authentication/principal-sources).
 
 ## The conversation
 
@@ -73,7 +73,7 @@ An authority never distinguishes an unknown principal from a bad credential — 
 
 `lpsd` holds to the timing half by verifying an unknown name against a decoy: a real verifier over a password nobody knows, so both outcomes cost one full derivation. Returning early for a name it did not recognise would make "does this account exist?" answerable by anyone who can time a sign-in.
 
-Account **existence** is not a secret, and Peios does not pretend otherwise — it is answered plainly on a different socket, `/run/ident.sock`, which is how `ls -l` turns an owner into a name. What the logon socket refuses to do is let you learn it by guessing credentials. See [resolving names](~peios/managing-local-principals/resolving-names).
+Account **existence** is not a secret, and Peios does not pretend otherwise — it is answered plainly on a different socket, `/run/ident.sock`, which is how `ls -l` turns an owner into a name. What the logon socket refuses to do is let you learn it by guessing credentials. See [resolving names](~peios/authentication/resolving-names).
 
 ## What the audit trail records
 
@@ -91,6 +91,6 @@ The caller is told only that authentication failed, but the audit trail may know
 - [The `login` command](~peios/signing-in/the-login-command) — the terminal client, and how a live image signs in without being asked anything.
 - [The `passwd` command](~peios/signing-in/the-passwd-command) — changing your own password.
 - [Logon sessions](~peios/logon-sessions/overview) — the kernel object a successful sign-in creates.
-- [Managing local principals](~peios/managing-local-principals/overview) — the accounts being signed in to.
+- [Authorities and principal sources](~peios/authentication/principal-sources) — the accounts being signed in to.
 
 The protocol is specified rather than merely documented: [PGSS §2](~peios/logon/scope-and-roles) is Logon, and [PSPU §2](~peios/principal-source-interface/scope-and-roles) is PSI, the interface principal sources speak. Read those if you are writing a client or a source of your own.

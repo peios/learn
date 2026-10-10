@@ -4,10 +4,10 @@ type: how-to
 description: Select the right token, read its identity and security fields with token, and distinguish what the report proves from what needs object policy or historical evidence.
 related:
   - peios/system-and-processes/token
-  - peios/access-decisions/debugging-a-denial
+  - peios/inspecting/debugging-a-denial
   - peios/inspecting/overview
-  - peios/inspecting/sessions
-  - peios/inspecting/processes
+  - peios/security-diagnostics/sessions
+  - peios/security-diagnostics/processes
   - peios/tokens/overview
   - peios/sdk-tokens/query
 ---
@@ -19,7 +19,7 @@ primary token and a thread's impersonation token can describe different callers.
 
 A report is current state, not a record of an earlier failure and not a list of
 everything that caller may access. For a denial, keep the object and requested
-operation alongside it; follow [Debugging a denial](~peios/access-decisions/debugging-a-denial).
+operation alongside it; follow [Debugging a denial](~peios/inspecting/debugging-a-denial).
 
 ## Reading from the shell
 
@@ -114,7 +114,7 @@ same as adjusting the one you previously inspected.
 
 **Would this token be allowed to access an object?** The token is only one input.
 For a file, use the documented `sd check` rehearsal and its
-[limits](~peios/access-decisions/debugging-a-denial#rehearse-a-file-check-within-its-limits).
+[limits](~peios/inspecting/debugging-a-denial#rehearse-a-file-check-within-its-limits).
 For other objects or caller-specific inputs, use their supported diagnostic
 path or ask the component owner to investigate.
 
@@ -175,7 +175,7 @@ follow this operator workflow.
 ## See also
 
 - [token](~peios/system-and-processes/token): the complete command interface.
-- [Debugging a denial](~peios/access-decisions/debugging-a-denial): caller,
+- [Debugging a denial](~peios/inspecting/debugging-a-denial): caller,
   object, requested action and audit evidence together.
 - [Tokens](~peios/tokens/overview): the identity model behind the fields.
 - [Working with tokens](~peios/sdk-access-control/working-with-tokens): developer

@@ -5,7 +5,7 @@ description: Getting and setting a file's descriptor by path or by fd, with the 
 
 A file's SD can be accessed **by path** or **by fd**. In both cases `secinfo` is a mask of `KACS_SECINFO_*` bits selecting which components (owner, group, DACL, SACL, …) the operation touches — you read or write just the parts you name and leave the rest alone.
 
-The rights required scale with the components you touch (see [Managing file security](~peios/file-access/managing-file-security)):
+The rights required scale with the components you touch (see [Managing file security](~peios/file-permissions/managing-file-security)):
 
 | Component (`KACS_SECINFO_*`) | Reading needs | Writing needs |
 |---|---|---|

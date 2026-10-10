@@ -4,7 +4,7 @@ type: concept
 description: The PKM subsystems — KACS, KMES, LCS — expose static tracepoints to the standard Linux tracing stack of ftrace, perf, and eBPF.
 related:
   - peios/debugging-the-kernel/kernel-tracepoints
-  - peios/access-decisions/debugging-a-denial
+  - peios/inspecting/debugging-a-denial
   - peios/inspecting/overview
   - peios/advanced-peios/kernel-abi-reference/overview
 ---
@@ -14,7 +14,7 @@ Most questions about *why* the Peios kernel did something — why an access was 
 The PKM security subsystems each expose a tracepoint system:
 
 - **`kacs:`** — the access-control decisions. Every instrumented KACS hook records its verdict (allow/deny), the object it acted on (inode number and superblock magic — never a pathname), and a `reason` code naming the exact return path it took. This is where "why was this denied?" is answered.
-- **`kmes:`** — the health of the event substrate: ring-buffer drops, capacity swaps, rate-limit throttling, backpressure. These trace the *machinery*, not the security events KMES ships to userspace (those are the [event stream](~peios/inspecting/the-event-stream)).
+- **`kmes:`** — the health of the event substrate: ring-buffer drops, capacity swaps, rate-limit throttling, backpressure. These trace the *machinery*, not the security events KMES ships to userspace (those are the [event stream](~peios/security-diagnostics/the-event-stream)).
 - **`lcs:`** — the registry source device: request/response round-trips, timeouts, transaction state transitions, source mark-downs.
 
 Because these are ordinary kernel tracepoints, everything the kernel's tracing stack can do applies unchanged: enable individual events or whole subsystems, attach ftrace filters and triggers, sample with perf, or attach eBPF programs. They cost nothing when disabled (a patched-out branch) and record structured fields rather than formatted text, so you filter on `ret`, `reason`, or an inode number directly.

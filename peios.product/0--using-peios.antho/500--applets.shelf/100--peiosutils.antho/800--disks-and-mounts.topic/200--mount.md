@@ -221,7 +221,7 @@ boundary; check the version in the image you operate.
 - **MODE is not target security.** The [creation helper](https://github.com/peios/peiosutils/blob/3344d4690476fd66bfaec99b1ae92190bbcba06f/src/uu/mount/src/flow.rs#L483-L502)
   discards the requested mode and ignores the directory-creation result before
   continuing path preparation. Do not rely on `--mkdir=0700` for privacy.
-  Establish and verify the target's [native security](~peios/file-access/managing-file-security)
+  Establish and verify the target's [native security](~peios/file-permissions/managing-file-security)
   separately; a parsed option is not a verified descriptor.
 - **Failure can follow attachment.** [New-mount execution](https://github.com/peios/peiosutils/blob/3344d4690476fd66bfaec99b1ae92190bbcba06f/src/uu/mount/src/flow.rs#L126-L176)
   sets policy before attachment, but a subsequent propagation step can fail

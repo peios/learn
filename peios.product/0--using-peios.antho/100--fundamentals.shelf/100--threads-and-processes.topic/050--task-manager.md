@@ -6,7 +6,7 @@ related:
   - peios/threads-and-processes/overview
   - peios/threads-and-processes/the-process-security-block
   - peios/services-and-jobs/overview
-  - peios/inspecting/processes
+  - peios/security-diagnostics/processes
 ---
 
 **Task Manager** shows what is running on the machine now: every

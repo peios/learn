@@ -5,7 +5,7 @@ description: The logonse command lists logon sessions and their processes, creat
 related:
   - peios/logon-sessions/overview
   - peios/logon-sessions/lifecycle
-  - peios/inspecting/sessions
+  - peios/security-diagnostics/sessions
   - peios/process-mitigations/overview
 ---
 
@@ -50,7 +50,7 @@ $ logonse show 1007
 
 ### Where the answers come from
 
-The sessions come from the kernel's own list, [`/sys/kernel/security/kacs/sessions`](~peios/inspecting/sessions), which only `BUILTIN\Administrators` and SYSTEM may read. It lists every session, including one that has no process — held alive only by a token file descriptor somewhere, or made and not yet used — and such a session shows `pids: none you can see`.
+The sessions come from the kernel's own list, [`/sys/kernel/security/kacs/sessions`](~peios/security-diagnostics/sessions), which only `BUILTIN\Administrators` and SYSTEM may read. It lists every session, including one that has no process — held alive only by a token file descriptor somewhere, or made and not yet used — and such a session shows `pids: none you can see`.
 
 The processes come from walking the running processes and reading each one's token (`/proc/<pid>/token`) to find which session it belongs to. That shows only the processes you may inspect: an administrator sees every process but the protected ones, such as `peinit` and `authd`, which no administrator can inspect. Processes start and exit while the walk runs, so it is a close approximation of the moment, not a locked one.
 

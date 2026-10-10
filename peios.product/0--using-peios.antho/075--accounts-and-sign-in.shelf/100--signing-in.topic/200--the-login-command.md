@@ -10,7 +10,7 @@ related:
   - peios/services-and-jobs/controlling-services
 ---
 
-`login` is the terminal client for [signing in](~peios/signing-in/overview). It collects an identifier, renders whatever credential prompts the authority sends, installs the token it is granted, and replaces itself with your shell.
+`login` is the terminal client for [signing in](~peios/authentication/overview). It collects an identifier, renders whatever credential prompts the authority sends, installs the token it is granted, and replaces itself with your shell.
 
 ```
 login [name] [options]
