@@ -62,8 +62,8 @@ Select a group a user is in, or a member of a group, to go to it.
 - a **name**, which they sign in with;
 - a **full name**, if you want one shown;
 - a **password**, typed twice; or tick **Signs in without a password**,
-  and nothing is asked for when they sign in, at any sign-in prompt on
-  the machine;
+  and nothing is asked for on sign-in paths that permit credential-free
+  access; SSH does not permit this;
 - whether they are an **Administrator**, who may change the machine and
   its users and groups;
 - a **home** folder and a **shell**, if not `/home/<name>` and
@@ -90,9 +90,10 @@ Select a local user, and their buttons are below their details:
 - **Sign-in** chooses what they sign in with, and the ways they may sign
   in.
   - **Signs in with**: a password, an SSH key, either, nothing (no
-    password is asked for, at any sign-in prompt on the machine), or
+    credential is asked for where credential-free sign-in is permitted,
+    excluding SSH), or
     nothing accepted (every sign-in is refused, though nothing shows them
-    as disabled). Giving them a password or a key doesn't change this, so
+    as disabled). Adding a key doesn't change this, so
     a key added isn't used until this allows one.
   - **May sign in**: as the machine's default allows (at the machine, on
     a remote desktop, over the network, and the rest a person uses), or
@@ -143,11 +144,16 @@ A built-in group whose members are recorded here, such as
 renamed, described or deleted: `authd` defines it, the same on every
 Peios machine.
 
-The machine always keeps an enabled administrator who can sign in.
+The local account store protects the last enabled administrator under
+its sign-in checks.
 Disabling or deleting the last one, taking away every way they could
 sign in to administer, or leaving them nothing to sign in with, such as
 removing the only key of one who signs in only with a key, is refused,
 and the window says why.
+
+This [last-administrator guard](~peios/managing-local-principals/creating-accounts#the-last-administrator-guard)
+does not check whether a console, remote service or network path is
+reachable. Verify fresh access before closing a working administrator session.
 
 ## Privileges
 

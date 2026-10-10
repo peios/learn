@@ -38,13 +38,15 @@ A principal who needs no credential is signed in immediately, with no prompt at 
 
 Both attempt a named principal and fall back to an ordinary prompt rather than failing. They differ in what they offer to collect.
 
-**`--try <name>`** attempts the principal with `login`'s full capabilities. A passwordless principal is signed in immediately; one with a password is prompted for it.
+**`--try <name>`** attempts the principal with `login`'s full capabilities. A principal whose policy requires no credential is signed in immediately; one whose policy calls for a password is prompted for it.
 
 **`--try-no-password <name>`** attempts the principal while declaring that it can collect nothing, so only a principal who needs no credential can succeed. This is what a console autologon uses.
 
 Neither flag asserts that anyone is authenticated. The authority still decides, and understating what you can collect only denies you prompts you could have rendered — so running either by hand gains you nothing you did not already have.
 
-| | Passwordless | Has a password | No such principal |
+The first two columns below describe credential policy, not just whether a password is stored. They assume an enabled account with console logon permitted and, for password sign-in, a password set.
+
+| | No credential required | Password required | No such principal |
 |---|---|---|---|
 | `login alice` | signed in | prompts | `user alice does not exist` |
 | `login --try alice` | signed in | prompts, then falls back if wrong | falls back silently |
@@ -66,7 +68,7 @@ login: Password incorrect
 Username:
 ```
 
-A `--try-no-password` that was refused before anything was rendered has interrupted nobody, and stays quiet. That is what keeps a line about a failed autologon off the console of every machine where the principal simply has a password.
+A `--try-no-password` that was refused before anything was rendered has interrupted nobody, and stays quiet. That is what keeps a line about a failed autologon off the console of every machine where the principal requires a credential.
 
 Falling back is limited to denials another principal could survive. A failure of the authority itself is reported and `login` exits, because offering a prompt that cannot work either would spin a console.
 
@@ -84,9 +86,11 @@ A console that signs in on its own is a passwordless principal plus `--try-no-pa
 /bin/login --console --try-no-password peios
 ```
 
-The same service definition suits an image where `peios` has a password: the attempt is refused before anything is rendered, and an ordinary prompt appears. No second seed, and no conditional configuration.
+The same service definition suits an image where `peios` requires a password: the attempt is refused before anything is rendered, and an ordinary prompt appears. No second seed, and no conditional configuration.
 
-To turn autologon off, give the principal a password with [`lps password`](~peios/managing-local-principals/lps-command), or take `--try-no-password` out of the `login-console` service's `Arguments`. To move the prompt to another terminal, change the service's `TTYPath` — see [controlling services](~peios/services-and-jobs/controlling-services).
+To require a password instead of autologon, first set the principal's password with [`lps password`](~peios/managing-local-principals/lps-command), then select `lps policy <name> password`. Setting the password alone leaves the `none` credential policy and autologon unchanged.
+
+Taking `--try-no-password` out of the `login-console` service's `Arguments` stops the automatic attempt, but does not change the account's credential policy: a principal whose policy is still `none` can still sign in at that prompt without a credential. To move the prompt to another terminal, change the service's `TTYPath` — see [controlling services](~peios/services-and-jobs/controlling-services).
 
 **System Settings** chooses it in its **Startup & Shutdown** section, under **Console Sign-In**: **Automatic Sign-In** is **Off**, or one of the local accounts. The choice is written the moment it is made, as `Arguments`: `--console`, followed by `--try-no-password` and the account if one is chosen. It applies the next time `login-console` starts, at the latest the next boot. Changing it needs write access to `Machine\System\Services\login-console`, which as shipped only Administrators have.
 

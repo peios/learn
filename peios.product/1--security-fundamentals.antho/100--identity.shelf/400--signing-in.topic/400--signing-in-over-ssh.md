@@ -12,6 +12,8 @@ related:
 
 The SSH server lets people sign in to this machine from another over the network, with their password or one of their SSH keys. It is the `sshd` service, from the `dev.peios.openssh` package. Every SSH sign-in is a `RemoteInteractive` logon through the same authority as any other: see [Signing in](~peios/signing-in/overview).
 
+That includes commands without a PTY and SFTP: the account must permit `remote-interactive`, not just `network`. An account with credential policy `none` cannot sign in over SSH. Password authentication requires an actual password and a policy allowing it; key authentication requires an enrolled key and a policy of `key` or `either`. The [SSH implementation contract](~peios/logon/ssh-public-key-authentication) records the release-qualification and compatible-build requirements.
+
 Four things about the server are settings:
 
 | Setting | Where it is | Shipped as |

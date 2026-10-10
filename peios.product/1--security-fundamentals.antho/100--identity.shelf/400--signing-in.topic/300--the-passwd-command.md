@@ -60,7 +60,7 @@ printf '%s\n' "$current" "$new" "$new" | passwd
 | Message | Meaning |
 |---|---|
 | `Authentication failed.` | The current password was wrong, or the password was reset by an administrator while you were changing it. |
-| `This account has no password to change. …` | The account signs in with no password, or exists only to run a service. An administrator can give it one with `lps password`. |
+| `This account has no password to change. …` | The account has no password available for this change, or exists only to run a service. For an ordinary account, an administrator can set a password with `lps password` and select a policy that allows it with `lps policy`. A service principal cannot be given a credential. |
 | `This account is disabled.` | An administrator has disabled the account. |
 | `This account has no credential that can be changed here.` | You are signed in as an identity that no principal source holds, such as `SYSTEM`. |
 | `Too many attempts. The password is unchanged.` | The new password was refused three times. |
