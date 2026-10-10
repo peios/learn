@@ -21,12 +21,18 @@ A shim MUST:
    machine can never be without, and the only one the shim knows.
 3. Answer `NSS_STATUS_UNAVAIL` for everything else when the resolver
    cannot be reached. [*nri-shim.unreachable-resolver-is-unavail] There is nothing behind it.
-4. Report an over-full caller buffer as `NSS_STATUS_TRYAGAIN` with
-   `ERANGE`, so glibc retries with a larger one. [*nri-shim.over-full-buffer-is-tryagain-erange]
+4. Report an over-full caller buffer as `NSS_STATUS_TRYAGAIN`, with
+   `*errnop = ERANGE` and `*h_errnop = NETDB_INTERNAL` (`-1`), so glibc
+   retries with a larger one. [*nri-shim.over-full-buffer-is-tryagain-erange]
 
 A shim MUST NOT read `/etc/hosts`, `/etc/resolv.conf` or any file; [*nri-shim.reads-no-file]
 MUST NOT speak DNS itself; [*nri-shim.speaks-no-dns] and MUST NOT cache. [*nri-shim.does-not-cache] Each would be a second
 policy path the resolver cannot see.
+
+The complete buffer-exhaustion triple is required by the
+[glibc NSS interface](https://sourceware.org/glibc/manual/2.42/html_node/NSS-Modules-Interface.html):
+`NETDB_INTERNAL` tells the caller to examine `errnop`, including its
+`ERANGE` buffer-size indication.
 
 ## Status mapping
 
