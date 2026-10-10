@@ -99,7 +99,15 @@ cat /var/state/gxwi/certificate.sha256
 
 Do not sign in or enter a password if the fingerprints differ. A page delivered through the connection you are checking is not an independent source for the fingerprint. See [the machine's certificate](~peios/signing-in-from-a-browser/the-certificate).
 
-An `installerd` installation, from either surface, carries the medium's GXWI key and certificate into the installed system. At the same address, the browser can retain its trust through first-boot setup. The older `peios-install` script, or a medium without GXWI, leaves the installed system to generate its own key when GXWI starts.
+`installerd` attempts to carry the medium's GXWI key and certificate into the
+installed system from either surface. This is best-effort: a skipped or failed
+transfer does not fail the installation. Existing browser trust can continue
+only if the installed system presents the verified certificate and its other
+certificate checks pass. If the fingerprint changes, verify it through the
+installed machine's trusted console before entering credentials; see
+[certificate carry-over](~peios/signing-in-from-a-browser/the-certificate#installation-and-first-boot).
+The older `peios-install` script, or a medium without GXWI, leaves the installed
+system to generate its own key when GXWI starts.
 
 After restarting, the browser page waits and follows the machine to setup, the desktop, or the installer if it booted from the medium again. Browser trust affects that waiting page: if the certificate was only bypassed at a warning rather than imported as trusted, the browser may show its own connection error instead. Reopen the address manually in that case.
 

@@ -126,7 +126,14 @@ Once disk boot is working, you can put the internal disk first in firmware boot 
 
 [First-boot setup](~peios/disks-and-filesystems/first-boot-setup) creates your administrator account, sets the machine's name, and optionally applies a manual wired-network address. It is available on the console and, when the image includes it, at the browser address.
 
-An `installerd` installation carries the live medium's GXWI key and certificate into the installed system. At the same address, the browser can keep using the certificate you checked. Automatic waiting and reconnecting also depend on browser trust; if the tab shows a browser error after restart, reopen the address manually.
+`installerd` attempts to carry the live medium's GXWI key and certificate into
+the installed system. The transfer can be skipped or fail without failing the
+installation, so the completion message does not prove that the certificate is
+unchanged. If the installed fingerprint differs, verify it through the
+installed machine's trusted console before entering credentials. See
+[certificate carry-over and first boot](~peios/signing-in-from-a-browser/the-certificate#installation-and-first-boot).
+Automatic waiting and reconnecting also depend on browser trust; if the tab
+shows a browser error after restart, reopen the address manually.
 
 > [!NOTE]
 > **Peios 2026.8:** after assigning a new address to the interface your browser uses, the setup page may stay on its starfield rather than follow the machine over HTTPS. Once setup finishes, open `https://<new-address>:7780` yourself. The browser can warn again at the new address; compare the certificate with the fingerprint you verified. The general first-boot guide describes automatic reconnection, so keep this release-specific workaround in mind.
