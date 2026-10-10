@@ -122,4 +122,4 @@ If you want to understand intent-gated privileges — why SeBackup and SeRestore
 
 If you want to see how privileges are organised — the kernel-standalone group, the AccessCheck-influencing group, the application-level group, the reserved group — read [Privilege categories](~peios/privileges/categories).
 
-If you want the full catalog of named privileges with their numeric LUIDs and one-line descriptions, that is in the [Constants and catalogs](~peios/constants-and-catalogs/overview) reference.
+If you want the full catalog of named privileges with their numeric LUIDs and one-line descriptions, that is in the [Constants and catalogs](~peios/advanced-peios/constants-and-catalogs/overview) reference.

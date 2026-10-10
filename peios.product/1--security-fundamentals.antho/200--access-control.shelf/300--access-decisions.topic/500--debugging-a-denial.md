@@ -1,173 +1,381 @@
 ---
 title: Debugging a denial
 type: how-to
-description: An access was denied and you need to know why — the systematic walk through the pipeline, what to inspect, in what order, and what each finding means.
+description: Diagnose an access refusal with the caller, object and operation in hand, using supported inspection tools, audit evidence and policy-specific next steps.
 related:
   - peios/access-decisions/overview
-  - peios/access-decisions/mandatory-integrity-control
-  - peios/access-decisions/privileges-in-the-pipeline
-  - peios/access-decisions/narrowing-layers
+  - peios/threads-and-processes/task-manager
+  - peios/system-and-processes/token
+  - peios/files-and-directories/sd
+  - peios/registry-tools/reg
+  - peios/logs-and-events/event-viewer
   - peios/inspecting/overview
-  - peios/auditing/overview
+  - peios/sdk-access-control/checking-access
 ---
 
-A call returned `ACCESS_DENIED`, or a file open failed with `EACCES`, or a registry read came back empty. The access check decided "no", and you need to know which layer of the pipeline produced the denial. What follows is the systematic walk.
+Start with the operation that failed, then gather the evidence you are allowed
+to read. The aim is to explain the refusal and decide whether the caller or the
+policy needs review. A refusal can be the intended protection working.
 
-The pipeline has many steps, but the practical answer almost always falls in one of six categories. This page covers them in the order to check, with the inspection mechanics for each.
+Use the inspection commands below before changing permissions, privileges or
+labels. An empty registry result or a missing process detail is not, by itself,
+evidence that a particular access-check layer denied the original operation.
 
-## The six places a denial can come from
+## Record the failed operation
 
-Before stepping through, the list of candidates:
+Keep these together:
 
-1. **The token cannot be used.** The thread is impersonating at the Identification level (step 0).
-2. **MIC denied it.** The caller's integrity level is below the object's mandatory label, and the policy bits cover the requested category (step 5).
-3. **PIP denied it.** The caller's process trust label does not dominate the object's, and the requested right is outside the explicitly-allowed mask (step 5).
-4. **The DACL did not grant it.** The walk produced an empty result for the requested bits (step 8).
-5. **A narrowing layer stripped it.** Restricted-token pass, confinement, or CAAP removed bits the DACL had granted (steps 10–12).
-6. **A privilege was needed and not present, or present and not enabled, or present and missing its intent flag.** Steps 4 and 9 did not pre-decide the bits as granted.
+- **What failed and when:** the application's message, error or exit status,
+  timestamp, and the action you asked it to perform.
+- **The caller:** the application or service, its PID, and the failing thread's
+  TID if the application's diagnostics identify it. A service acting for a
+  client may be using an impersonation token rather than its primary token.
+- **The object:** the exact file path, registry key, process or other resource.
+  For a file, establish whether the operation targeted a symbolic link or its
+  target. For a registry operation, keep the key and value name separate.
+- **The access requested:** read, write, execute, change permissions, or another
+  specific operation. Keep the requested access mask when the diagnostic or
+  audit record supplies it; an application may ask for more than its visible
+  action suggests.
+- **The point of failure:** opening an object, using an already-open handle,
+  or a service's own authorisation check. These are different questions.
 
-For each of these, this page covers what to look at and what the finding means.
+Access is normally decided when a handle is opened. Later operations use the
+rights stored on that handle; inspecting today's descriptor does not reconstruct
+what an older handle received. See [The decision is made at open](~peios/access-decisions/overview#the-decision-is-made-at-open-and-it-stays-made).
 
 ## Find the thread and its tokens
 
-Almost every investigation starts with finding the thread that made the call and inspecting its tokens. The mechanics:
+Use [Task Manager](~peios/threads-and-processes/task-manager) to find the process
+by name, PID, person or service. Check its command, owner, service or job, and
+signed-in session where visible. Read any notice about hidden details or
+protection before interpreting the view.
 
-- The thread's primary token: `cat /proc/<pid>/task/<tid>/token` produces a query-only handle (or use `kacs_open_thread_token` programmatically). The handle can be queried with `KACS_IOC_QUERY` for fields including `user_sid`, `groups`, `integrity_level`, `privileges`, `restricted_sids`, `confinement_sid`, `auth_id`, and `impersonation_level`.
-- The thread's effective token (impersonation if installed, primary otherwise): `cat /sys/kernel/security/kacs/self` when run from the thread itself; for another thread, the same `/proc/<pid>/task/<tid>/token` path returns the effective token.
+In a terminal, use the read-only subcommands of
+[`token`](~peios/system-and-processes/token). Replace `PID` and `TID` with the
+identified process and thread:
 
-For a non-self thread, you need `PROCESS_QUERY_INFORMATION` on the process and PIP dominance. For `/proc/self/token` and `/sys/kernel/security/kacs/self`, the kernel always permits inspection.
+```console
+token show --pid PID --all
+token privs --pid PID
+token show --pid PID --tid TID --all
+```
 
-With the effective token in hand, several denials are immediately diagnosable:
+`--pid` selects the process's **primary** token. The command's `--tid` selector
+is for a thread's impersonation token and is used with `--pid`; use it when
+investigating impersonation. The identity that matters is the one the failing
+thread used: its impersonation token while impersonating, otherwise its primary
+token. If that identity is no longer available, record the gap rather than
+substituting the inspection tool's own token. Running `token show --all` without
+a target shows the tool's own token, not another application's.
 
-- **`impersonation_level == Identification`** — the thread is at the wrong impersonation level. AccessCheck on this token denies everything at step 0. Either the client did not request a higher level on the socket, or the two-gate model silently downgraded the impersonation. See [The two-gate model](~peios/impersonation/the-two-gates).
-- **`integrity_level` is low and the object is high** — possible MIC denial; check the object's label next.
-- **`restricted_sids` is non-empty** — the token is restricted. The denial may be from the restricted-token pass; check what SIDs are in the restricted list.
-- **`confinement_sid` is set and `confinement_exempt` is false** — the token is confined. The denial may be from the confinement pass.
-- **A privilege you expected to be enabled is in the `present` set but not the `enabled` set** — the privilege is not active; AccessCheck cannot use it.
-- **A privilege you expected to be on the token is absent entirely** — authd did not include it; this is a privilege-policy question, not an access-check question.
+The `/proc/<pid>/token`, `/proc/<pid>/task/<tid>/token` and
+`/sys/kernel/security/kacs/self` surfaces provide token **handles**, not text to
+read with `cat`. The process path identifies the primary token; the thread path
+identifies the effective token. The command does the querying and decoding.
+[Inspecting tokens](~peios/inspecting/tokens) documents those interfaces for tool
+authors.
+
+Record the user SID, group attributes, token type and impersonation level,
+integrity and mandatory policy, present and enabled privileges, restricted SIDs,
+and confinement identity and capabilities where available. Keep token and
+session IDs with the time of inspection: the thread can revert impersonation,
+and token adjustments can change the state after the failure.
+
+For process protection and session context, use
+[`logonse`](~peios/system-and-processes/logonse):
+
+```console
+logonse psb --pid PID
+logonse list
+logonse show ID
+```
+
+Here `ID` is the logon-session ID you have identified. `token show` calls it
+`session_id`; it is separate from `interactivity_scope`. A PSB report shows
+protection, mitigations and the process GUID; it is not the process's security
+descriptor.
+
+**Inspection has its own access checks.** Reading another process's token needs
+`PROCESS_QUERY_INFORMATION`, PIP dominance, and `TOKEN_QUERY` on the token.
+Reading its PSB needs `PROCESS_QUERY_LIMITED` and does not require PIP dominance.
+The full kernel session list is restricted to Administrators and SYSTEM;
+`logonse` can show a partial process-based view instead. A refused query or an
+absent process in that view is a limit on your evidence, not a reason to remove
+protection. See [Who can inspect what](~peios/inspecting/overview#who-can-inspect-what).
 
 ## Find the object and its SD
 
-Read the security descriptor of the object:
+For a file, [`sd show`](~peios/files-and-directories/sd#sd-show) renders the
+security descriptor:
 
-- For files: `kacs_get_sd` on the path. Returns the SD as a self-relative binary blob.
-- For registry keys: the equivalent registry API on the key.
-- For tokens: query the token handle with the appropriate KACS_IOC_QUERY class.
-- For processes: query the PSB.
+```console
+sd show ./report.txt --all
+```
 
-Parse the SD into its four components (owner, group, DACL, SACL).
+Replace the example path with the object you identified. `sd` follows a named
+symbolic link by default; its documented `--no-follow-symlinks` option selects
+the link itself. Inspect the same object the failed operation meant to reach.
 
-The most useful things to read:
+For a registry key, [`reg sd`](~peios/registry-tools/reg#reg-sd-key) prints owner,
+group and DACL by default:
 
-- **The owner SID.** Does the caller match? If yes, owner implicit rights apply (unless suppressed — see next).
-- **OWNER RIGHTS suppression.** Is there an ACE on `S-1-3-4` (OWNER RIGHTS) in the DACL? If so, the owner's implicit `READ_CONTROL | WRITE_DAC` is suppressed; the owner gets only what that ACE grants.
-- **The DACL.** What ACEs are present, in what order? Are there any `INHERIT_ONLY` ACEs that look like they should grant access but are actually skipped during the walk?
-- **The mandatory integrity label.** Look for a `SYSTEM_MANDATORY_LABEL_ACE` in the SACL. The SID indicates the object's integrity level; the mask indicates the policy bits.
-- **The PIP trust label.** A `SYSTEM_PROCESS_TRUST_LABEL_ACE` in the SACL marks the object as PIP-protected.
-- **CAAP references.** `SYSTEM_SCOPED_POLICY_ID_ACE` entries point to central access policies that contribute to the decision.
-- **Resource attributes.** `SYSTEM_RESOURCE_ATTRIBUTE_ACE` entries. Relevant if any of the DACL's conditional ACEs references `@Resource.*`.
+```console
+reg sd Machine/App
+```
 
-## Walk the pipeline
+Only when you already have the authority to read the SACL, request it explicitly:
 
-With token and SD in hand, walk the pipeline. The questions, in order:
+```console
+reg sd Machine/App --sacl
+```
 
-### Impersonation level (pipeline step 0)
+The SACL needs `ACCESS_SYSTEM_SECURITY`; the ordinary owner/group/DACL view does
+not establish which SACL labels or policies exist. Similarly, a refused
+`sd show` is a failed inspection, not a decoded explanation of the original
+operation. Keep the returned error and the scope of any descriptor you obtained.
+For a process's descriptor, use the separate
+[process-SD inspection reference](~peios/inspecting/processes#reading-the-process-sd)
+with an authorised diagnostic tool; the PSB and a token report do not replace it.
 
-Is the effective token an impersonation token at the Identification level? If yes, that is the denial. AccessCheck stops at step 0; no further evaluation occurs. The fix is at the client end: either the client requested Identification (and should have requested Impersonation), or the two-gate model downgraded a higher request to Identification (consult [The two-gate model](~peios/impersonation/the-two-gates)).
+In the parts you can read, look for:
 
-### MIC (pipeline step 5)
+- **Owner and DACL:** the owner SID, ordered allow/deny ACEs, inheritance flags,
+  and the SIDs and rights each ACE names. `INHERIT_ONLY` (`IO`) rules apply to
+  descendants rather than this object. A non-inherit-only access-control ACE
+  naming `OWNER RIGHTS` suppresses the owner's implicit `READ_CONTROL | WRITE_DAC`
+  grant.
+- **Mandatory label:** the first applicable `SYSTEM_MANDATORY_LABEL_ACE` in the
+  SACL and its policy bits.
+- **Process-trust label:** an applicable `SYSTEM_PROCESS_TRUST_LABEL_ACE` and
+  the rights its mask allows a non-dominant caller.
+- **Other policy inputs:** scoped central-policy references
+  (`SYSTEM_SCOPED_POLICY_ID_ACE`), resource attributes
+  (`SYSTEM_RESOURCE_ATTRIBUTE_ACE`) and conditional ACEs.
 
-Is the object's effective mandatory label at a higher level than the token's `integrity_level`?
+A component omitted from your permitted view is unknown, not empty. Reading an
+owner or finding one allow ACE is not enough to establish effective access.
 
-If yes, look at the label's policy bits. For the bits set, the corresponding rights are pre-decided as denied:
+## Rehearse a file check, within its limits
 
-- `NO_READ_UP` → read-category bits are denied.
-- `NO_WRITE_UP` → write-category bits are denied (the default for unlabelled objects).
-- `NO_EXECUTE_UP` → execute-category bits are denied.
+For a file, [`sd check`](~peios/files-and-directories/sd#sd-check) explains a
+check without performing the requested file operation:
 
-If the requested right falls in a denied category, MIC is the denial. The fix is to either raise the token's integrity (typically by re-authenticating with elevated rights via UAC-style flow) or lower the object's label (requires `SeRelabelPrivilege` for raising, normal SACL access for lowering). Note that a privilege grant from step 4 (SeBackup, SeRestore) **survives** MIC — if MIC blocked write but the caller had `SeRestorePrivilege` with `RESTORE_INTENT`, the write may still succeed.
+```console
+sd check ./report.txt read --pid PID --explain
+```
 
-### PIP (pipeline step 5)
+Choose the documented permission name or mask that matches the failed request.
+Without `--pid`, the check uses your own token. Save the explanation and any
+error, not just the exit status: a non-zero status can also mean the path was
+unreachable or the tool could not complete the check.
 
-Does the object have a `SYSTEM_PROCESS_TRUST_LABEL_ACE`? If so, look at its SID's type and trust levels and compare to the calling process's PSB.
+Treat this as evidence about the inputs tested. The command documents a process
+token selector, not a thread selector or switches for every optional
+access-check input. It does not establish that it reproduced a service's
+impersonated caller, local claims, backup/restore intent or process-trust context.
+It also does not test rights on an existing handle. An allowed rehearsal is not
+a guarantee that the application's full operation will succeed. If the result
+differs, compare the caller, target, requested rights and timing before changing
+policy.
 
-For dominance: both `pip_type` and `pip_trust` on the caller must be at least the ACE's values. If not, only the rights in the ACE's mask are permitted, and **privilege-granted bits are revoked** (this is the difference between PIP and MIC).
+## Check audit evidence
 
-If PIP denied a right, the fix is to run the caller as a more-trusted binary (PIP is about the binary's signature, not about the caller's identity). See [Process integrity protection](~peios/process-integrity-protection/overview).
+Check the recorded attempt alongside the live state, rather than treating logs
+as a last resort. In [Event Viewer](~peios/logs-and-events/event-viewer), select
+the relevant time range and filter **Type** to `kacs.audit.access.checked`.
+Select a record to inspect its fields. The terminal route is
+[Using evctl](~peios/evctl/using-evctl).
 
-### Privileges (pipeline steps 4 and 9)
+Correlate the timestamp, emitting process, subject token/session and object
+information actually present in the record. The subject is the caller; an
+`object.process.*` or `object.token.*` field identifies the target. Some checks
+cannot supply a path or a complete object identity, so do not infer one.
 
-Did the caller need a privilege to get the right? For example, the right is `ACCESS_SYSTEM_SECURITY` (SACL access), or the DACL granted nothing and the caller would need `SeBackup` to read.
+For a matching [access-check record](~peios/events/kacs/kacs-audit-access-checked):
 
-Check:
+- Compare `access.requested` and `access.granted`. The requested mask is already
+  generic-mapped to the object's rights.
+- `access.denied-integrity` and `access.denied-trust`, when present, identify
+  bits withheld by the mandatory-integrity or process-trust checks.
+- `trigger.ace` identifies the **audit** ACE that caused a SACL-driven record;
+  it is not a trace naming the DACL ACE that denied access.
+- `fields.attestation.userspace` marks an advisory syscall check whose descriptor
+  and supplied context came from userspace. It is not proof that the real
+  operation used those same inputs.
 
-- Is the privilege present on the token?
-- Is it enabled?
-- Did the caller pass the appropriate intent flag (`BACKUP_INTENT`, `RESTORE_INTENT`)?
+For a [`kacs.audit.privilege.used`](~peios/events/kacs/kacs-audit-privilege-used)
+record with `operation.name` equal to `access-check`, a false `outcome.success`
+means a privilege contributed rights that did not survive. It does not mean the
+privilege was absent, and it does not identify one narrowing layer on its own.
 
-If any of those is no, the privilege did not fire. The fix depends on which:
+**No record is not proof of no attempt.** Access auditing depends on matching
+SACL rules or token policy, and syscall SACL records additionally require the
+calling process's enabled `SeAuditPrivilege`. Reader permissions, query scope,
+retention and transport loss also limit what you can see. One check can produce
+several records; `MAXIMUM_ALLOWED` success is not evidence that a particular
+right was granted, and it produces no access-check privilege-use record.
+See [Find missing records](~peios/logs-and-events/find-missing-records).
 
-- Privilege absent → authd's privilege policy does not grant this privilege to this principal. A policy-level change, not an access-control change.
-- Privilege present but disabled → the calling code should enable it via AdjustPrivileges before the operation.
-- Privilege enabled but no intent flag → the calling code should pass the flag in `privilege_intent` to AccessCheck.
+Use [the raw event stream](~peios/inspecting/the-event-stream) only to diagnose
+the transport itself. It requires `SeSecurityPrivilege`, can lose events, and
+is not a replacement for recorded history.
 
-### The DACL walk (pipeline step 8)
+## The six places a denial can come from
 
-Run the DACL walk manually, paying attention to:
+For a completed access check, these are the common policy questions. They are
+not a classification of every application error or failed inspection:
 
-- **Ordering.** Is the DACL in canonical order (explicit deny, explicit allow, inherited deny, inherited allow)? An out-of-order DACL produces surprising first-writer-wins results.
-- **`INHERIT_ONLY` ACEs.** Are there ACEs that look relevant but have the `IO` flag set? They are skipped during the walk.
-- **The matching identity.** Does the caller match the SIDs in the ACEs? Remember:
-  - The token's `user_sid` matches.
-  - Each group in `groups` with `SE_GROUP_ENABLED` set matches for allow ACEs.
-  - Groups with `SE_GROUP_USE_FOR_DENY_ONLY` set match for deny ACEs only.
-  - The well-known SIDs Everyone, Authenticated Users, etc. match according to their semantics.
-  - `OWNER RIGHTS` and `PRINCIPAL_SELF` match per the [virtual group injection](~peios/security-descriptors/ownership) rules.
-- **Conditional ACEs.** If any ACE has a conditional expression, evaluate it against the token's claims, the object's resource attributes, and the local claims (if any). A conditional that should evaluate TRUE but evaluates UNKNOWN (because a referenced attribute is missing) does not grant access for an allow ACE.
+1. Could the impersonation token be used for access at all?
+2. Did mandatory integrity control (MIC) withhold the requested rights?
+3. Did process integrity protection (PIP) withhold them?
+4. Did the DACL grant them for this caller?
+5. Did a restricted-token pass, confinement or central policy narrow the grant?
+6. Did an operation that legitimately needs a privilege have it present, enabled
+   and, where required, accompanied by the caller's intent?
 
-After the walk, the result is the bits the DACL would grant. If the requested right is missing from this result, the DACL is the denial.
+## Review the relevant policy
 
-### Narrowing layers (pipeline steps 10–12)
+Use the evidence above to choose the relevant review below. The
+[access-decision overview](~peios/access-decisions/overview) explains the complete
+ordering; a visible allow rule or a hand-worked DACL alone is not a full verdict.
 
-If the DACL granted the right but the final result does not have it, a narrowing layer stripped it. Check each:
+### Impersonation level
 
-- **Restricted-token pass.** If `restricted_sids` is non-empty, walk the DACL using only those SIDs. If the restricted-only result lacks the right, the restricted pass stripped it. (Privileges restored after this pass — privilege-granted bits are immune.)
-- **Confinement.** If the token is confined, walk the DACL using `confinement_sid` and `confinement_capabilities`. If that result lacks the right, confinement stripped it. (Privileges are not restored — they can be lost here.)
-- **CAAP.** If the SACL has `SYSTEM_SCOPED_POLICY_ID_ACE` entries, look up each referenced policy and evaluate its rules. If any rule's effective DACL would not have granted the right, CAAP stripped it. The recovery policy applies if a referenced policy is missing from the kernel cache.
+An **impersonation-type** token at Identification level cannot be used for an
+access check. Confirm the type as well as the level. Ask the application's
+owner to review what the client requested and whether the
+[two-gate model](~peios/impersonation/the-two-gates) downgraded it. Identification
+may have been deliberate; do not assume the client intended to delegate more
+authority.
 
-### Audit (pipeline steps 13–14)
+### MIC
 
-If the steps above did not produce a clear answer, check the audit log. The access check emits audit events that record:
+Compare the caller's integrity and mandatory policy with the object's applicable
+mandatory label and the requested rights. `NO_READ_UP`, `NO_WRITE_UP` and
+`NO_EXECUTE_UP` affect the corresponding mapped categories. An object without an
+applicable label defaults to Medium with no-write-up; an unreadable SACL does
+not establish that this default applies.
 
-- The requested mask, the granted mask.
-- Which privileges contributed (and whether they survived).
-- The matched ACE (for SACL-driven audits).
-- The subject and process.
+Review whether the workload was launched at its intended integrity and whether
+the object's label matches its purpose. Do not lower a label or elevate the
+caller merely to make the test pass. MIC does not revoke rights already granted
+by backup/restore privileges, so an integrity mismatch alone is not the full
+answer. See [Mandatory integrity control](~peios/access-decisions/mandatory-integrity-control).
 
-A `kacs.audit.privilege.used` event with `outcome.success` false tells you a privilege fired and was stripped — that points at confinement/CAAP/PIP. A `kacs.audit.access.checked` event with `outcome.success` false tells you the check as a whole did not grant what was asked; compare `access.requested` with `access.granted` to see which bits were missing. The audit trail is often the fastest way to localise a denial.
+### PIP
+
+PIP compares process trust, not the user's identity or token integrity. Both
+caller trust axes must dominate the object's applicable trust label; otherwise
+the label's mask limits the allowed rights and can revoke privilege grants.
+Use the permitted PSB view and any recorded `access.denied-trust` evidence.
+
+For a protected service, review whether the client is using its supported
+interface and intended binary. Administrator membership or another privilege
+does not bypass this boundary. Review unexpected protection or signing state
+with the component owner. See [Process integrity protection](~peios/process-integrity-protection/overview).
+
+### Privileges
+
+First establish that this operation is intended to use a privilege. Then
+separate three findings:
+
+- **Absent:** review the principal's privilege assignment with its policy owner.
+- **Present but disabled:** review the application's use of that privilege.
+- **Enabled but intent missing:** backup/restore intent belongs to the caller's
+  operation, and cannot be inferred from the token dump.
+
+A privilege's presence is not a general access grant. Enabling privileges or
+adding backup/restore intent is not a routine repair for an ordinary read or
+write. PIP, confinement and central policy can still constrain privilege-granted
+rights. See [Privileges in the pipeline](~peios/access-decisions/privileges-in-the-pipeline)
+and [Intent-gated privileges](~peios/privileges/intent-gated).
+
+### The DACL walk
+
+Compare the requested rights with the ordered ACEs and the caller's actual SID
+set. Enabled groups participate in allows; deny-only groups participate in
+denies. Check `INHERIT_ONLY`, owner-rights suppression and inherited rules before
+concluding that a rule applies. For conditional ACEs, missing claims or resource
+attributes can produce UNKNOWN, which does not grant access through an allow
+ACE.
+
+ACE order matters: the walk is first-writer-wins for each undecided right, not a
+search for any matching allow. Use [DACL evaluation](~peios/security-descriptors/dacl-evaluation)
+and [Ownership](~peios/security-descriptors/ownership) for the exact matching
+rules, including `OWNER RIGHTS` and `PRINCIPAL_SELF`.
+
+If the evidence points to the DACL, ask the resource's policy owner to compare
+its intended audience and rights with the current rules and inheritance. Avoid
+broad grants, ownership changes or inheritance resets as diagnostic shortcuts.
+
+### Narrowing layers
+
+A DACL grant may still be narrowed:
+
+- **Restricted token:** compare the restricting SIDs with the object's rules.
+  The write-restricted variant narrows only write-category rights. Privilege
+  grants can survive this pass; review the application's token construction.
+- **Confinement:** compare the confinement SID and declared capabilities with
+  the resource policy. Privileges do not bypass confinement. Review the
+  workload's intended capabilities with its deployment or policy owner.
+- **Central access policy (CAAP):** check referenced effective policies, their
+  applicability and resource attributes with the directory/policy owner. A
+  missing policy uses the documented recovery policy. A staged-policy mismatch
+  is a rollout signal, not a statement that the staged policy caused the denial.
+
+Do not remove restrictions, confinement or central-policy references to test a
+hypothesis. See [Narrowing layers](~peios/access-decisions/narrowing-layers) for
+the separate mechanisms and their policy-specific references.
 
 ## A compact checklist
 
-When a denial happens, in order:
+1. Keep the failing action, time, caller, object, requested rights and exact
+   error together.
+2. Identify the process in Task Manager; inspect the relevant token and PSB
+   using the documented commands and your existing authority.
+3. Read the descriptor components you are allowed to see. Mark inaccessible
+   components as unknown.
+4. For a file, use `sd check --explain` with the identified target and rights;
+   record which inputs the rehearsal does and does not reproduce.
+5. Correlate available audit evidence. Account for missing records and changes
+   since the failure.
+6. Take the finding to the appropriate application or policy owner. After an
+   approved correction, verify the original operation in its intended context;
+   a changed descriptor or an allowed rehearsal alone is not completion.
 
-1. Find the thread (`tid`, `pid`).
-2. Read the effective token. Note `user_sid`, `integrity_level`, `restricted_sids`, `confinement_sid`, `impersonation_level`, and which privileges are present-and-enabled.
-3. Read the object's SD. Note the owner, the DACL contents (with attention to order and `INHERIT_ONLY`), the mandatory label, the PIP label, and any CAAP references or conditional ACEs.
-4. Walk the pipeline mentally against these inputs.
-5. Check the audit log if the manual walk does not point at a single layer.
+## When the evidence is incomplete
 
-Most denials are diagnosed at step 4 with one of the six categories listed at the top. The remainder are either edge cases (a conditional ACE evaluating UNKNOWN because of a missing claim, a CAAP policy with a misconfigured applies-to expression) or programming bugs (the wrong token installed, an incorrect intent flag, a hand-built SD with bad ordering).
+Hand the investigation to the application or resource-manager developer when
+the failure depends on a transient impersonation token, caller-supplied claims,
+intent flags, object-type mapping or other inputs the operator tools cannot
+reproduce. Include the evidence collected, its timestamps and scope, and each
+inspection that was refused. Do not fill missing inputs with guesses.
 
-## When to use the access-check syscall directly
+The existing [SDK checking-access guide](~peios/sdk-access-control/checking-access)
+covers programmatic evaluation. Its [request reference](~peios/sdk-access/the-request)
+defines the token, descriptor, desired mask, generic mapping, privilege intent,
+self SID, local claims, object tree, PIP context and audit context. The
+[check](~peios/sdk-access/the-check) and [audit outputs](~peios/sdk-access/audit-outputs)
+references describe the granted mask, continuous-audit mask and staging-mismatch
+flag. The Kernel TRM [KACS ABI](~peios/peios-kernel/kacs/kacs-abi) preserves the
+raw syscall structures.
 
-For complex investigations, calling `kacs_access_check` directly is the precise tool. The syscall takes the token, the SD, the desired mask, and all the optional parameters (privilege_intent, self_sid, local_claims, the audit context, pip_type/pip_trust). It returns the granted mask, the continuous-audit mask, and the staging-mismatch flag.
-
-You can call it from a debugging tool with the exact inputs the failing code used and see what comes back. The granted mask tells you which bits ended up granted; the audit emissions tell you which layers fired. A denial that is inscrutable from logs becomes visible from a manual access-check invocation with a known set of inputs.
-
-This is how authoritative diagnoses work for the hard cases: reproduce the access check inputs, call the syscall manually, examine the output.
+These checks are advisory. A developer must match the original inputs and
+understand the [syscall's audit limits](~peios/peios-kernel/kacs/access-check/auditing)
+before treating a reproduction as an explanation. Calling or decoding a syscall
+is not a required operator step, and its answer does not perform or authorise
+the original operation.
 
 ## Where to go next
 
-For the inspection surfaces this walk relies on — reading tokens, sessions, and process state on a live system — read [Inspecting tokens, sessions, and processes](~peios/inspecting/overview).
-
-To rehearse an access check from a shell against a real file and token, read [The sd command](~peios/security-descriptors/sd-command).
+- [Task Manager](~peios/threads-and-processes/task-manager) and
+  [token](~peios/system-and-processes/token) for identifying the caller.
+- [sd](~peios/files-and-directories/sd) and
+  [registry access control](~peios/registry-security/access-control) for the
+  object's policy and the supported inspection commands.
+- [Event Viewer](~peios/logs-and-events/event-viewer) and
+  [Find missing records](~peios/logs-and-events/find-missing-records) for recorded
+  evidence and the limits of a search.
+- [Inspecting security state](~peios/inspecting/overview) for the underlying
+  interfaces and access requirements.

@@ -53,7 +53,9 @@ The authorization check happens **before** anything is read, so an unauthorised 
 
 A change is applied in memory, **written to disk, and only then reported as done**. If the write fails the change is rolled back and the command reports failure.
 
-So a command that reports success has persisted. A command that reports failure changed nothing — not "possibly changed something", but nothing: `lpsd` keeps a snapshot and restores it.
+So a successful reply from `lpsd` means the change has persisted. A refused request leaves the store unchanged, and a change that cannot be saved is rolled back. These guarantees concern the daemon's reply, not every error a client can report.
+
+If the connection is lost before the reply arrives, the outcome may be unknown: the change could have been saved before the reply was lost. Read back any inspectable account state before retrying; do not treat a transport error as proof that nothing changed. The protocol does not promise that retrying reverses or safely repeats the first request.
 
 ## What is recorded
 

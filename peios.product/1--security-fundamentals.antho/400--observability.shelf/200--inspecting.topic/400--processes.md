@@ -3,6 +3,9 @@ title: Inspecting processes
 type: concept
 description: Inspecting a process's PSB (PIP, mitigations) through /proc/<pid>/psb, and its process SD. Your own state is free; another process's PSB needs PROCESS_QUERY_LIMITED, and its SD needs READ_CONTROL plus PIP dominance.
 related:
+  - peios/threads-and-processes/task-manager
+  - peios/system-and-processes/logonse
+  - peios/access-decisions/debugging-a-denial
   - peios/inspecting/overview
   - peios/inspecting/tokens
   - peios/inspecting/sessions

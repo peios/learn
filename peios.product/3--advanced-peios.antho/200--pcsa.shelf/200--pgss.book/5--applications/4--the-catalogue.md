@@ -48,8 +48,7 @@ it read MUST notice when the directory changes, or MUST say, in its own
 documentation, how stale a remembered result may be.
 
 > [!NOTE]
-> This is the shape of PGSS Icons' theme (§4.4) and of Atrium's
-> application catalogue: a flat directory that is its own index. The
-> desktop-file databases that other systems rebuild after every install
-> exist because those catalogues could be anywhere and hold anything; a
-> catalogue that is one directory of small files needs none.
+> This is the shape of PGSS Icons' theme (§4.4): a flat directory that
+> is its own index. The desktop-file databases that other systems rebuild
+> after every install exist because those catalogues could be anywhere and
+> hold anything; a catalogue that is one directory of small files needs none.

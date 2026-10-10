@@ -1,6 +1,6 @@
 ---
 title: Prior Art
-description: Where this chapter sits against freedesktop desktop entries and MIME applications, Windows' shortcuts, App Paths, registered applications and default choices, MSIX manifests and Atrium's catalogue, and which resemblances are deliberate.
+description: Where this chapter sits against freedesktop desktop entries and MIME applications, Windows' shortcuts, App Paths, registered applications and default choices, MSIX manifests and the former Atrium catalogue, and which resemblances are deliberate.
 ---
 
 ## The freedesktop desktop entry specification
@@ -79,16 +79,15 @@ manager extracts, so that presence is enough.
 
 ## Atrium
 
-Atrium, Peios' web shell, has its own catalogue: one directory per web
-application under `/usr/share/atrium/apps/`, a `manifest.toml` in each,
-and "nothing runs at install and nothing registers: presence is the
-catalogue." This chapter keeps that sentence and its consequences, and
-takes TOML from it. It keeps Atrium's rule that the directory's name is
-the id, as the rule that the file's name is the id, and drops the `id`
-key that could disagree with it. Atrium's applications are documents
-and not processes, so its manifest says which document to load where
-this one says which program to run, and its icon is a file in the
-directory where this one is a name for PGSS Icons to resolve.
+Atrium was Peios' previous web shell and has been completely replaced by
+GXWI. Its historical application catalogue influenced this chapter's
+"presence is the catalogue" rule: installing a declaration is enough;
+nothing registers at install time.
+
+This chapter carries forward TOML declarations and names derived from the
+installed file, rather than a separate `id` key. The former Atrium model
+loaded a web document from an application directory; PGSS Applications
+declares a program to run and an icon name for PGSS Icons to resolve.
 
 ## Design influences
 

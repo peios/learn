@@ -27,6 +27,42 @@ can put a name to the byte. libpeios' SDDL codec does, printing 0x15 as
 `OTHER(0x04)` and `OTHER(0x15)`. PCDS §5.4 records the same state
 normatively.
 
+## Querying a token handle
+
+The ioctl is straightforward in shape:
+
+```
+ioctl(token_fd, KACS_IOC_QUERY, &args)
+```
+
+Where `args` is a `kacs_query_args` struct:
+
+| Field | Meaning |
+|---|---|
+| `token_class` | The numeric class identifying what to return (1–24 in v0.20). |
+| `buf_len` | Input: the size of the output buffer in bytes. Output: the actual number of bytes the query needed. |
+| `buf_ptr` | Userspace pointer to the output buffer. |
+
+The kernel:
+
+1. Validates the class against the catalog. Unknown classes return `-EINVAL`.
+2. Checks that the fd grants `TOKEN_QUERY`. If not, returns `-EACCES`.
+3. Computes the size the response needs.
+4. If `buf_ptr` is zero or `buf_len` is zero — this is a **size query** — writes the required size to `buf_len` and returns 0.
+5. If `buf_ptr` is non-zero but `buf_len` is smaller than required, returns `-ERANGE` with the required size still written to `buf_len`.
+6. Otherwise writes the response to the buffer and returns 0.
+
+The "two-call pattern" — size query then fetch — is the standard way to handle variable-length output:
+
+1. Call once with `buf_ptr = NULL` (or `buf_len = 0`). The kernel writes the required size into `buf_len` and returns 0.
+2. Allocate a buffer of the indicated size.
+3. Call again with `buf_ptr` set to the buffer and `buf_len` set to its size. The kernel writes the response.
+
+For classes with a fixed-size response, a single call with a buffer of the known size works in one go. The two-call pattern is needed only for classes whose response size depends on the token's contents (the groups class, the restricted-SIDs class, the default-DACL class, the claims classes).
+
+The ioctl is idempotent — multiple queries for the same class produce the same result as long as the token has not been modified. Tokens carry a `modified_id` counter that increments on adjustment; if a query is part of a pipeline that depends on consistency across multiple queries, the `modified_id` can be queried first to detect mid-pipeline changes.
+
+
 ## Token query payloads [*abi-notes.token-query-payloads]
 
 The class numbers come from the header and are tabulated in §3.A;

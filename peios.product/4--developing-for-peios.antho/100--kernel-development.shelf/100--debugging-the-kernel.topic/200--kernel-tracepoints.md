@@ -5,7 +5,7 @@ description: "Enabling and reading the kacs:, kmes:, and lcs: tracepoint systems
 related:
   - peios/debugging-the-kernel/overview
   - peios/access-decisions/debugging-a-denial
-  - peios/kernel-abi-reference/overview
+  - peios/advanced-peios/kernel-abi-reference/overview
 ---
 
 PKM exposes its security subsystems through three tracepoint systems — `kacs:`, `kmes:`, and `lcs:` — registered with the standard Linux tracing infrastructure. This page shows how to turn them on and read them.

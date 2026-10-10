@@ -53,7 +53,7 @@ advertisement arrived.
 When an advertisement updates a prefix already held:
 
 - the on-link flag and the preferred lifetime are taken as advertised;
-- the valid lifetime follows RFC 4862 §5.5.3(e), so that an
+- the valid lifetime follows [RFC 4862 §5.5.3](https://datatracker.ietf.org/doc/html/rfc4862#section-5.5.3)(e), so that an
   unauthenticated advertisement cannot cut a live address short:
 
 | Advertised valid lifetime | Remaining valid lifetime | Result |

@@ -17,8 +17,13 @@ Both act as the operator, deliberately; the package manager acts as neither.
 
 ## Contents
 
+This example shows the three queues, including the GXWI desktop seeds
+listed in the [Experimental quick start](~peios/peiso/building-images/quick-start#open-the-web-desktop).
+It is not an exhaustive release manifest: inspect the selected edition's
+`/usr/share/peios/release.toml` for its complete lists.
+
 ```toml
-# Peios 2026.8 Experimental. Read by peiso and upgrade-peios.
+# Example registry queues. Read by peiso and upgrade-peios.
 [registry]
 autoapply = [
   "port-reservations",
@@ -34,7 +39,11 @@ autoapply = [
   "netd-default-profile",
   "resolvd-service",
   "resolvd-port",
-  "atriumd-service",
+  "gxwid-service",
+  "gxwi-config",
+  "gxwi-network",
+  "fenestra-config",
+  "fenesh-config",
 ]
 
 # The boot medium applies these and an installed machine does not.

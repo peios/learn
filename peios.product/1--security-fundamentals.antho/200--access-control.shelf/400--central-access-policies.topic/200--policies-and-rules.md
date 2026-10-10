@@ -40,7 +40,7 @@ Each rule is a small structured record:
 | `staged_dacl` | Optional. A proposed replacement for `effective_dacl`, evaluated in parallel for testing. |
 | `staged_sacl` | Optional. Same idea for `effective_sacl`. |
 
-Length-prefixed means each part starts with a 32-bit count of bytes followed by that many bytes. An absent field has length zero. The wire-format details are in the [Wire formats reference](~peios/wire-formats-reference/overview); for this page, what matters is the structure.
+Length-prefixed means each part starts with a 32-bit count of bytes followed by that many bytes. An absent field has length zero. The wire-format details are in the [Wire formats reference](~peios/advanced-peios/wire-formats-reference/overview); for this page, what matters is the structure.
 
 A rule with no applies-to expression and only an `effective_dacl` is the most common shape. It says "apply this DACL to every object that references this policy".
 
@@ -144,4 +144,4 @@ For how a policy's rules are actually evaluated during AccessCheck — the flow,
 
 For the staged DACL and SACL fields and the rollout pattern they enable, read [Staged policies](~peios/central-access-policies/staged-policies).
 
-For the byte-level layout these structures are encoded in, read [CAAP format](~peios/wire-formats-reference/caap-format).
+For the byte-level layout these structures are encoded in, read [CAAP format](~peios/advanced-peios/wire-formats-reference/caap-format).

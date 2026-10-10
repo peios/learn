@@ -167,14 +167,14 @@ become a service identity by accident.
 
 #### `--no-password`
 
-Creates a principal who signs in without being asked for anything. No password is collected, including in the interactive flow — an operator who has said the account needs no credential is not then asked to invent one.
+Creates a principal with credential policy `none`, which signs in without being asked for anything where the client and authority permit credential-free sign-in. No password is collected at creation, including in the interactive flow — an operator who has said the account needs no credential is not then asked to invent one.
 
 ```
 $ lps add kiosk --group Administrators --no-password --no-prompt
 created kiosk with RID 1003
 ```
 
-**This is a property of the account, not of a terminal.** Nothing scopes it to the console: the principal can be signed in at any logon prompt the machine offers, now or later. That is the right posture for a live image, where the medium is unauthenticated anyway and anyone holding it can read everything on it. It is the wrong posture for almost anything else.
+**This is a property of the account, not of a terminal.** Nothing scopes it to one console: any client that permits credential-free sign-in can use it, subject to logon-type and originator policy. [SSH](~peios/signing-in/signing-in-over-ssh) requires an actual password or an enrolled key and a policy allowing that credential; it refuses `none`. Credential-free sign-in is the right posture for a live image, where the medium is unauthenticated anyway and anyone holding it can read everything on it. It is the wrong posture for almost anything else.
 
 An empty password is **not** a way to spell this, and `lps` refuses one:
 
@@ -204,7 +204,7 @@ $ lps rename erin erin.k
 renamed erin to erin.k
 ```
 
-Its SID stays, so every file, permission and group membership that names it still does, and it signs in by the new name from now on. Its **home directory stays** where it was; move it with `lps set --home` if you want it to follow.
+Its SID stays, so every file, permission and group membership that names it still does, and it signs in by the new name from now on. Its **home directory stays** where it was. `lps set --home` changes the recorded path only; it does not move the directory or its files.
 
 A name held by another principal or by a local group is refused. Changing only the case, `erin` to `Erin`, is allowed.
 
@@ -212,7 +212,7 @@ A name held by another principal or by a local group is refused. Changing only t
 
 ### `lps enable <name>` / `lps disable <name>`
 
-A disabled principal keeps everything except the ability to sign in.
+A disabled principal keeps everything except the ability to start a new sign-in. It does not revoke already issued tokens; [ending existing sessions](~peios/logon-sessions/lifecycle) is a separate operation.
 
 Both are refused if they would leave the machine with no enabled administrator.
 
@@ -230,16 +230,18 @@ set the logon types for backup
 | Type | Signing in |
 |---|---|
 | `interactive` | at this machine: its console or desktop |
-| `remote-interactive` | to a desktop from somewhere else |
-| `network` | over the network, such as with SSH |
+| `remote-interactive` | to a remote desktop or over SSH, including commands without a PTY and SFTP |
+| `network` | to a network resource, such as a file share |
 | `network-cleartext` | over the network, with the password sent to this machine |
 | `batch` | as a scheduled job |
 | `new-credentials` | as a second identity for outgoing connections |
 | `service` | as a service, started by the service manager |
 
+The SSH mapping here follows the current [PGSS SSH implementation contract](~peios/logon/ssh-public-key-authentication), including its release-qualification and compatible-build limits.
+
 `default` returns the principal to the machine's default: every kind a person uses, and never `service`. There is no setting for "no sign-in at all"; `lps disable` is that.
 
-The last enabled administrator must keep `interactive`, `remote-interactive` or `network`, so the machine always has someone who can sign in to administer it.
+The last enabled administrator must keep `interactive`, `remote-interactive` or `network`. This is an [account-store guard](~peios/managing-local-principals/creating-accounts#the-last-administrator-guard); it does not check whether the corresponding console, service or network path is reachable.
 
 ## Passwords
 
@@ -280,7 +282,7 @@ credential policy updated
 | `password` | their password |
 | `key` | one of their SSH keys |
 | `either` | their password or one of their SSH keys |
-| `none` | nothing: nothing is asked for, at any sign-in prompt on the machine |
+| `none` | nothing, where credential-free sign-in is permitted; SSH refuses this policy |
 | `denied` | nothing: every sign-in is refused, whatever is offered |
 
 `none` is what `lps add --no-password` gives, and carries the same warning. `denied` stops a principal signing in and keeps everything else, as `lps disable` does, but nothing shows it as disabled, so `lps disable` is usually clearer.

@@ -18,7 +18,7 @@ MIC fires in step 5 of the access check pipeline — pre-DACL. Its decisions are
 
 ## The integrity levels
 
-In practice there are five standard integrity levels, strictly ordered — treat integrity as an enum even though, technically, it is not one (see below). These five are the levels anyone normally works with (canonical value catalog: [Other constants](~peios/constants-and-catalogs/other-constants)):
+In practice there are five standard integrity levels, strictly ordered — treat integrity as an enum even though, technically, it is not one (see below). These five are the levels anyone normally works with (canonical value catalog: [Other constants](~peios/advanced-peios/constants-and-catalogs/other-constants)):
 
 | Level | SID | RID | Typical use |
 |---|---|---|---|
@@ -47,7 +47,7 @@ The SACL ACE also lives there for a reason: changing the integrity label is a pr
 
 ## The MIC policy bits
 
-The mask of a `SYSTEM_MANDATORY_LABEL_ACE` contains MIC policy bits that say what non-dominant callers cannot do (canonical values: [ACE types and flags](~peios/constants-and-catalogs/ace-types-and-flags)):
+The mask of a `SYSTEM_MANDATORY_LABEL_ACE` contains MIC policy bits that say what non-dominant callers cannot do (canonical values: [ACE types and flags](~peios/advanced-peios/constants-and-catalogs/ace-types-and-flags)):
 
 | Bit | Value | Effect on non-dominant callers |
 |---|---|---|

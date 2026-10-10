@@ -6,12 +6,12 @@ related:
   - peios/privileges/overview
   - peios/privileges/lifecycle
   - peios/privileges/intent-gated
-  - peios/constants-and-catalogs/overview
+  - peios/advanced-peios/constants-and-catalogs/overview
 ---
 
 The privileges in Peios fall into four functional categories. Each category has a different relationship to the kernel and to the access check. Knowing which category a privilege is in tells you what it does, where it fires, and whether to expect it to participate in the DACL walk.
 
-This page is organised around the four categories. The full per-privilege catalog — name, LUID bit, one-line description for every privilege — is in [Constants and catalogs](~peios/constants-and-catalogs/overview).
+This page is organised around the four categories. The full per-privilege catalog — name, LUID bit, one-line description for every privilege — is in [Constants and catalogs](~peios/advanced-peios/constants-and-catalogs/overview).
 
 ## The four categories
 
@@ -154,12 +154,12 @@ A token can have these stripped by FilterToken if a sandbox wants to operate wit
 
 ## How to find the catalog
 
-The four-category model on this page is the conceptual structure. The byte-level catalog — every privilege name, its LUID bit position, its one-line effect — lives in [Constants and catalogs](~peios/constants-and-catalogs/overview). Cross-reference between the two when you need to look up a specific privilege.
+The four-category model on this page is the conceptual structure. The byte-level catalog — every privilege name, its LUID bit position, its one-line effect — lives in [Constants and catalogs](~peios/advanced-peios/constants-and-catalogs/overview). Cross-reference between the two when you need to look up a specific privilege.
 
 The naming convention is uniform: every privilege starts with `Se` and ends with `Privilege`. The middle is descriptive: `SeLoadDriver`, `SeBackup`, `SeChangeNotify`. There are no privileges outside this convention.
 
 ## Where to go next
 
-For the per-privilege reference — every name, LUID bit position, and one-line effect — see the [Privilege catalog](~peios/constants-and-catalogs/privilege-catalog).
+For the per-privilege reference — every name, LUID bit position, and one-line effect — see the [Privilege catalog](~peios/advanced-peios/constants-and-catalogs/privilege-catalog).
 
 For how the AccessCheck-influencing category actually participates in a check, read [Access decisions](~peios/access-decisions/overview).

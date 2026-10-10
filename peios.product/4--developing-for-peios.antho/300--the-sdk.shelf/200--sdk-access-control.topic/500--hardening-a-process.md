@@ -18,7 +18,7 @@ The common case is a program hardening itself early in `main`, before it process
 
 int main(void)
 {
-    /* Enforce W^X and shadow stacks; abort if either can't be turned on. */
+    /* Enforce W^X and speculation mitigation lock; abort on failure. */
     if (peios_process_set_mitigations(-1, KACS_MIT_WXP | KACS_MIT_SML) != 0) {
         perror("set_mitigations");
         return 1;   /* refuse to run unhardened */

@@ -2,4 +2,4 @@ title = "Peios"
 monogram = "Pe"
 color = "#3b82f6"
 
-description = "The operating system itself — identity, tokens, security descriptors, processes, and the kernel subsystems behind them."
+description = "Install and operate Peios, understand its security model, and find technical reference and developer guides."

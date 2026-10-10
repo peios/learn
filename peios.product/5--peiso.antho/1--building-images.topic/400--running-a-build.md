@@ -34,7 +34,7 @@ There is no `--version`, `--edition` or `--dwe` flag. Everything that shapes an 
 | `make iso` | build peiso from the tree, then `peiso iso experimental.toml` |
 | `make iso-dev` | the same with the `dev.toml` layer: a low squashfs level, so the squash stage takes a fraction of the time and the image is somewhat larger — the edit-boot loop's target, never a release. It writes the same build directory as `iso`. |
 | `make iso-dwe` | the same from `experimental-dwe.toml` |
-| `make boot` | boot the newest plain build: UEFI, serial console (the Makefile appends `console=ttyS0` through the stub's SMBIOS channel; the image itself names none), atriumd forwarded to `localhost:8080` |
+| `make boot` | boot the newest plain build: UEFI, serial console (the Makefile appends `console=ttyS0` through the stub's SMBIOS channel; the image itself names none), GXWI available at `https://127.0.0.1:7780/` on the host |
 | `make boot-cd` | boot the newest plain build with the medium attached as an optical drive, the way a hypervisor attaches an ISO |
 | `make boot-dwe` | boot the newest DWE build with a vsock device (`DWE_CID`, default 3) |
 | `make boot-quiet` / `boot-break` | add `peios.quiet=2` / `rd.break` to the command line via SMBIOS |
@@ -44,6 +44,8 @@ There is no `--version`, `--edition` or `--dwe` flag. Everything that shapes an 
 | `make clean-disk` / `make clean` | start the install test over / remove every build directory |
 
 The build directory a target uses is the newest `../peios-experimental-<version>[-dwe]/`; only peiso knows a build's resolved version, so the Makefile looks rather than guesses.
+
+Before signing in to GXWI, follow the [Quick start's certificate check](~peios/peiso/building-images/quick-start#open-the-web-desktop).
 
 ## Driving the running system
 

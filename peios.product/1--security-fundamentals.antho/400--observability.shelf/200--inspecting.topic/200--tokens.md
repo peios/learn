@@ -1,139 +1,182 @@
 ---
 title: Inspecting tokens
-type: reference
-description: Reading a token with KACS_IOC_QUERY on a token fd — obtaining fds, the query mechanics, the two-call pattern for variable-length data, and the class catalog.
+type: how-to
+description: Select the right token, read its identity and security fields with token, and distinguish what the report proves from what needs object policy or historical evidence.
 related:
+  - peios/system-and-processes/token
+  - peios/access-decisions/debugging-a-denial
   - peios/inspecting/overview
   - peios/inspecting/sessions
   - peios/inspecting/processes
   - peios/tokens/overview
-  - peios/tokens/token-types
+  - peios/sdk-tokens/query
 ---
 
-A token's fields are read through the `KACS_IOC_QUERY` ioctl on a token fd. The ioctl takes a query class — a small integer naming what to return — and returns the corresponding data structured per that class. There are 24 defined classes covering everything from "the user SID" to "the full set of user and device claims".
+Use the read-only forms of [`token`](~peios/system-and-processes/token) to learn
+who a process acts as and what identity, privileges and restrictions its token
+carries. Choose the target first: the inspection tool's token, a process's
+primary token and a thread's impersonation token can describe different callers.
 
-This page covers how to obtain a token fd, the query ioctl mechanics, the two-call pattern for queries with variable-length output, and an overview of the class catalog.
-
-## Obtaining a token fd
-
-Token fds come from a handful of syscalls and pseudo-files:
-
-| Source | Returns | Access check |
-|---|---|---|
-| `kacs_open_self_token` | The calling thread's effective token (or primary, with `KACS_REAL_TOKEN` flag) | None — always succeeds |
-| `kacs_open_process_token(pidfd)` | A target process's primary token | `PROCESS_QUERY_INFORMATION` + PIP dominance + token SD rights |
-| `kacs_open_thread_token(tid)` | A specific thread's effective token | Same as above |
-| `getsockopt(sock_fd, SOL_KACS, KACS_SO_PEER_TOKEN)` | The peer's captured identity on a connected Unix socket | None beyond the connection itself |
-| `/proc/<pid>/token` | The primary token of process `<pid>` | `PROCESS_QUERY_INFORMATION` + PIP dominance + `TOKEN_QUERY` on the token |
-| `/proc/<pid>/task/<tid>/token` | The effective token of thread `<tid>` in process `<pid>` | Same |
-| `/sys/kernel/security/kacs/self` | The calling thread's effective token | None — always readable |
-
-The fds carry an access mask. The mask is what the kernel granted at open time and what the subsequent ioctl will check against. A fd opened with `TOKEN_QUERY` cannot be used to install or duplicate the token; the ioctl will see the request as exceeding the fd's mask and refuse.
-
-The pseudo-files under `/proc` and `/sys/kernel/security/kacs/` return read-only fds — they carry `TOKEN_QUERY` and nothing else. To get a fd with more access you need one of the syscalls.
-
-## KACS_IOC_QUERY
-
-The ioctl is straightforward in shape:
-
-```
-ioctl(token_fd, KACS_IOC_QUERY, &args)
-```
-
-Where `args` is a `kacs_query_args` struct:
-
-| Field | Meaning |
-|---|---|
-| `token_class` | The numeric class identifying what to return (1–24 in v0.20). |
-| `buf_len` | Input: the size of the output buffer in bytes. Output: the actual number of bytes the query needed. |
-| `buf_ptr` | Userspace pointer to the output buffer. |
-
-The kernel:
-
-1. Validates the class against the catalog. Unknown classes return `-EINVAL`.
-2. Checks that the fd grants `TOKEN_QUERY`. If not, returns `-EACCES`.
-3. Computes the size the response needs.
-4. If `buf_ptr` is zero or `buf_len` is zero — this is a **size query** — writes the required size to `buf_len` and returns 0.
-5. If `buf_ptr` is non-zero but `buf_len` is smaller than required, returns `-ERANGE` with the required size still written to `buf_len`.
-6. Otherwise writes the response to the buffer and returns 0.
-
-The "two-call pattern" — size query then fetch — is the standard way to handle variable-length output:
-
-1. Call once with `buf_ptr = NULL` (or `buf_len = 0`). The kernel writes the required size into `buf_len` and returns 0.
-2. Allocate a buffer of the indicated size.
-3. Call again with `buf_ptr` set to the buffer and `buf_len` set to its size. The kernel writes the response.
-
-For classes with a fixed-size response, a single call with a buffer of the known size works in one go. The two-call pattern is needed only for classes whose response size depends on the token's contents (the groups class, the restricted-SIDs class, the default-DACL class, the claims classes).
-
-The ioctl is idempotent — multiple queries for the same class produce the same result as long as the token has not been modified. Tokens carry a `modified_id` counter that increments on adjustment; if a query is part of a pipeline that depends on consistency across multiple queries, the `modified_id` can be queried first to detect mid-pipeline changes.
-
-## Query class catalog
-
-There are 24 defined query classes. Each returns a structured payload defined for that class. The most commonly used:
-
-| Class | Returns |
-|---|---|
-| `TokenUser` | The token's `user_sid` and its attributes. |
-| `TokenGroups` | The `groups` array — every group SID with its attributes. Variable length. |
-| `TokenPrivileges` | The four privilege bitmasks — present, enabled, enabled-by-default, used. |
-| `TokenOwner` | The default owner SID. |
-| `TokenPrimaryGroup` | The default primary group SID. |
-| `TokenDefaultDacl` | The token's default DACL. Variable length. |
-| `TokenSource` | The source name and source-LUID identifying who minted the token. |
-| `TokenType` | Primary or Impersonation. |
-| `TokenImpersonationLevel` | Anonymous / Identification / Impersonation / Delegation. On a primary token this is the ceiling on everything derived from it — normally Delegation for a logon or service token. |
-| `TokenStatistics` | `token_id`, `auth_id` (the logon-session ID), `modified_id`, token type, and expiry. |
-| `TokenRestrictedSids` | The `restricted_sids` array. Variable length. |
-| `TokenInteractivityScope` | The interactive-environment scope. This is not the LogonSession ID; that is `auth_id` in `TokenStatistics`. |
-| `TokenOrigin` | The originating logon-session ID. |
-| `TokenElevationType` | Default / Full / Limited. |
-| `TokenIntegrityLevel` | The integrity SID. |
-| `TokenMandatoryPolicy` | The `mandatory_policy` flags (NO_WRITE_UP, NEW_PROCESS_MIN). |
-| `TokenLogonType` | How the token's logon session was created — interactive, network, batch, service, and so on. |
-| `TokenLogonSid` | The logon session's logon SID (`S-1-5-5-X-Y`). |
-| `TokenAppContainerSid` | The confinement SID. Empty if the token is not confined. |
-| `TokenCapabilities` | The confinement capability SIDs with their attributes. Variable length. |
-
-The remaining classes are `TokenDeviceGroups` (the device group SIDs), `TokenUserClaims` and `TokenDeviceClaims` (the claim arrays evaluated by conditional ACEs), and `TokenProjectedSupplementaryGids` (the token's projected Linux supplementary GIDs). Note there is no query class for the partner of a linked token pair — that goes through a separate ioctl, `KACS_IOC_GET_LINKED_TOKEN`, with its own access rules.
-
-Each class's exact byte-level payload format is in the [Wire formats reference](~peios/wire-formats-reference/overview); this page covers what each class is for.
-
-## Patterns by use case
-
-A handful of patterns come up repeatedly:
-
-**"Who is this thread acting as?"** Open the thread's effective token (`/proc/<pid>/task/<tid>/token` or `kacs_open_self_token`). Query `TokenUser` to get the principal SID. Optionally query `TokenImpersonationLevel` to see if this is an impersonation token, and what level.
-
-**"What rights does this token have on this object?"** This is not a query — you call AccessCheck with the token, the object's SD, and the access mask you want to test. Querying the token alone does not tell you the answer; the rights depend on the SD too.
-
-**"Which session does this token belong to?"** Query `TokenStatistics` to get `auth_id`. Look up that ID in `/sys/kernel/security/kacs/sessions` for the session's details.
-
-**"Is this token elevated?"** Query `TokenElevationType`. If Full, this token is the elevated half of a linked pair. If Default, it is not part of a pair. If Limited, it is the non-elevated half — the elevated counterpart is reachable via `KACS_IOC_GET_LINKED_TOKEN`.
-
-**"What privileges can this token actually exercise?"** Query `TokenPrivileges` and inspect both the present and enabled bitmasks. A privilege is exercisable if it is both present and enabled. A privilege that is present but disabled can be enabled via AdjustPrivileges; a privilege that is absent cannot.
-
-**"Has this token been adjusted since I last looked?"** Query `TokenStatistics`. The `modified_id` field is a counter that increments on every adjustment. If it has changed since your last query, the token has been adjusted.
-
-## What query classes do not let you do
-
-A few clarifications:
-
-- **You cannot modify a token through a query class.** Queries are read-only. Modification goes through AdjustPrivileges, AdjustGroups, AdjustDefault, or `kacs_set_sd`.
-- **You cannot enumerate every token on the system.** There is no "list all tokens" call. You can walk `/proc/*/token` to find tokens belonging to currently-running processes, but tokens held only by file descriptors with no associated running process are not enumerable.
-- **You cannot read tokens you do not have authority for.** A token fd with only `TOKEN_QUERY` lets you query, but the fd had to be opened with appropriate authority. The query ioctl does not bypass the access checks at open time.
-- **You cannot query undefined classes.** Class numbers outside the defined range (1–24) return `-EINVAL`. There are no hidden or reserved slots — all 24 defined classes are valid.
+A report is current state, not a record of an earlier failure and not a list of
+everything that caller may access. For a denial, keep the object and requested
+operation alongside it; follow [Debugging a denial](~peios/access-decisions/debugging-a-denial).
 
 ## Reading from the shell
 
-For a sysadmin debugging at a terminal, the [`token`](~peios/tokens/token-command) command is the utility that wraps this ioctl. It handles the two-call pattern, decodes the binary payloads, and renders the results as readable text — so the query classes above become `token` subcommands rather than raw ioctl calls.
+Start with a summary, then request only the detail needed:
 
-For programmatic use, the ioctl is what you call directly. Language bindings (the C SDK, the Python wrapper) provide ergonomic wrappers but ultimately call the same ioctl.
+```console
+token
+token show --all
+token show --pid PID --all
+token groups --pid PID
+token privs --pid PID
+token stats --pid PID
+```
 
-The pseudo-file approach — `/proc/<pid>/token`, `/sys/kernel/security/kacs/self` — gives you the token fd; the actual query still goes through the ioctl. Pseudo-files are just a convenient way to acquire the fd from the shell.
+The first two inspect the token running the command. `--pid PID` selects the
+identified process's **primary token**. Use [Task Manager](~peios/threads-and-processes/task-manager)
+to find and check the process rather than guessing its PID.
+
+For impersonation, the command documents `--tid TID` together with `--pid PID`:
+
+```console
+token show --pid PID --tid TID --all
+```
+
+The failing thread's **effective token** is its impersonation token while
+impersonating, otherwise the primary token. A primary-token report cannot stand
+in for an impersonated client's identity. If the thread has exited or reverted,
+keep that limitation with the result. Do not assume a query made later
+reconstructs the token used earlier.
+
+The other documented selectors are `--self` (the default), `--real` (your primary
+token specifically), and `--peer SOCK_FD` (a connected socket's captured peer
+identity). A peer token is the identity conveyed on that connection, not a
+general lookup of another process. See [Choosing which token](~peios/system-and-processes/token#choosing-which-token).
+
+`--raw` prints raw SIDs, `--label` uses labels where known, and `--json` requests
+structured output. Preserve the selector, timestamp and any error with a saved
+report. The command also has mutating subcommands; adjusting, duplicating,
+restricting or impersonating a token is not part of read-only inspection.
+
+## Read the fields as evidence
+
+| Field or question | Read with | What to check |
+|---|---|---|
+| Principal | `token user` | The user SID; a displayed name is a label for that identity. |
+| Groups | `token groups` | Group SIDs and attributes. Enabled groups can match allows; deny-only groups match denies. |
+| Privileges | `token privs` | Present and enabled are different. A disabled privilege cannot contribute, and presence alone does not bypass other policy. |
+| Integrity | `token integrity` | The token's level; compare it with the object's label and mandatory policy when diagnosing MIC. |
+| Logon context | `token logon`, `token stats` | Logon type, logon SID and session identity. The LogonSession ID is separate from interactive-environment scope. |
+| Confinement capabilities | `token caps` | Which capabilities are present; combine them with the confinement identity from the fuller report and the object's rules. |
+| Claims | `token claims` | User/device attributes available to conditional ACEs; the application may additionally supply per-call local claims. |
+| Default owner, group and DACL | `token owner`, `token group`, `token default-dacl` | Defaults for objects created with this token, not the security descriptor of every existing object. |
+| Origin and source | `token origin`, `token source` | The originating session of a derived token and information about what minted it. |
+| Type, impersonation level, restrictions, elevation and mandatory policy | `token show --all` | The full set of supported query classes, interpreted with the limits below. |
+
+Apply the same target selector to these field commands; without it they inspect
+your own token. `token query CLASS` is the documented raw named-class JSON form
+for tooling. The complete class numbers and payloads are maintained in the
+[Kernel ABI](~peios/peios-kernel/kacs/kacs-abi#token-constants)
+and [token query payload reference](~peios/peios-kernel/kacs/kacs-abi-notes#token-query-payloads),
+rather than duplicated here.
+
+`show --all` means every supported query class, not every internal token field.
+The ABI notes explicitly list fields with no query class, including
+`audit_policy`, `write_restricted` and `confinement_exempt`. Do not infer these
+from their absence in a report.
+
+## Patterns by use case
+
+**Who was this thread acting as?** Use the process and thread identity supplied
+by the failure report, inspect the relevant token, and distinguish its type from
+its impersonation level. A primary token also carries an impersonation ceiling;
+the level alone does not tell you that the thread is impersonating. For earlier
+state, correlate the available audit record instead.
+
+**Which session is this?** `token show` displays the LogonSession LUID as
+`session_id`; the underlying statistics field is `auth_id`.
+`interactivity_scope` is a separate interactive-environment scope. Use the logon
+session ID with [`logonse show ID`](~peios/system-and-processes/logonse#logonse-show),
+subject to the session view's access limits.
+
+**Is this the elevated half of a token pair?** The elevation type can be Full,
+Limited or Default. Full and Limited describe the two sides of a linked pair;
+Default means the token is not part of one. This is evidence about the token,
+not a recommendation to elevate it. The separate `token linked` command reports
+a linked counterpart where accessible.
+
+**Did the token change?** Token statistics include its ID and `modified_id`,
+which changes on adjustment. Keep both when comparing observations. Several
+queries are not an atomic snapshot, and replacing a thread's token is not the
+same as adjusting the one you previously inspected.
+
+**Would this token be allowed to access an object?** The token is only one input.
+For a file, use the documented `sd check` rehearsal and its
+[limits](~peios/access-decisions/debugging-a-denial#rehearse-a-file-check-within-its-limits).
+For other objects or caller-specific inputs, use their supported diagnostic
+path or ask the component owner to investigate.
+
+## Limits and refused queries
+
+- Reading another process's token needs `PROCESS_QUERY_INFORMATION`, PIP
+  dominance and the token's own `TOKEN_QUERY` grant. A refusal does not tell you
+  which of those checks failed. Protected processes can remain closed to an
+  administrator.
+- Self-access depends on the surface. The documented own-process `/proc`
+  token path is query-only without those checks; a direct self-open API checks
+  the token's descriptor and can be denied after that descriptor changes.
+- A missing or exited target, a denied query and an invalid request are
+  different results. Keep the tool's message; a failed query is not an empty
+  token.
+- Process-based inspection cannot enumerate tokens held only by descriptors.
+  Current queries cannot recover a destroyed token or historical fields.
+- Queries do not grant adjustment, installation, duplication or impersonation
+  rights. The `used` privilege state is not a timestamped history of each use;
+  use audit evidence for that question.
+
+See [Token access rights](~peios/peios-kernel/kacs/tokens/access-rights) for the
+per-surface checks and [Inspecting security state](~peios/inspecting/overview)
+for related views.
+
+## Obtaining a token fd
+
+This is the tool-author boundary. Token pseudo-files are **handles**, not
+human-readable text: `cat /proc/<pid>/token` is not an inspection command.
+The process path selects the primary token and
+`/proc/<pid>/task/<tid>/token` selects the thread's effective token; the
+`/sys/kernel/security/kacs/self` surface also provides a token handle.
+
+The SDK [opening reference](~peios/sdk-tokens/opening-and-creating-tokens) covers
+self, process, thread and socket-peer token acquisition and error results.
+The Kernel TRM [access-rights chapter](~peios/peios-kernel/kacs/tokens/access-rights)
+documents the query-only `/proc` handles, fixed peer-token rights, descriptor
+checks and cached handle rights. A handle with only `TOKEN_QUERY` cannot perform
+operations requiring other token rights.
+
+## KACS_IOC_QUERY
+
+Operators use `token` to perform and decode queries. Tool authors should start
+with the SDK [query reference](~peios/sdk-tokens/query) and
+[two-call buffer protocol](~peios/sdk-conventions/the-two-call-buffer-protocol).
+The SDK provides typed readers for common fields and the generic class reader
+for the rest.
+
+For a raw-ABI consumer, the preserved
+[querying-a-token-handle explanation](~peios/peios-kernel/kacs/kacs-abi-notes#querying-a-token-handle)
+covers `KACS_IOC_QUERY`, size probes, short buffers and the two-call sequence.
+The generated [KACS ABI](~peios/peios-kernel/kacs/kacs-abi) holds the exact ioctl
+number, argument layout and class constants; its
+[ABI notes](~peios/peios-kernel/kacs/kacs-abi-notes#token-query-payloads)
+define the returned bytes. There is no need to decode those bytes by hand to
+follow this operator workflow.
 
 ## See also
 
-- [Inspecting security state](~peios/inspecting/overview) — the topic overview and the shared access rules.
-- [The token command](~peios/tokens/token-command) — the shell wrapper around this ioctl.
-- [Tokens](~peios/tokens/overview) — what the queried fields mean.
-- [Wire formats reference](~peios/wire-formats-reference/overview) — byte-level payload formats for each query class.
+- [token](~peios/system-and-processes/token): the complete command interface.
+- [Debugging a denial](~peios/access-decisions/debugging-a-denial): caller,
+  object, requested action and audit evidence together.
+- [Tokens](~peios/tokens/overview): the identity model behind the fields.
+- [Working with tokens](~peios/sdk-access-control/working-with-tokens): developer
+  tasks using the SDK.

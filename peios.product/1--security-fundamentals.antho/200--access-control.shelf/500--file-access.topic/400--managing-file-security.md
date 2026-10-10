@@ -1,196 +1,125 @@
 ---
 title: Managing file security
-type: reference
-description: Reading and writing file SDs with kacs_get_sd and kacs_set_sd — the security_information bitmask, per-component access rules, and the LABEL flag.
+type: how-to
+description: Inspect a file's security descriptor, choose a narrow sd change, and verify the result without assuming ownership or a saved descriptor guarantees recovery.
 related:
   - peios/file-access/overview
   - peios/file-access/the-handle-model
   - peios/file-access/opening-files
   - peios/security-descriptors/overview
   - peios/security-descriptors/ownership
+  - peios/files-and-directories/sd
 ---
 
-Reading and writing a file's security descriptor is done through two dedicated syscalls — **`kacs_get_sd`** and **`kacs_set_sd`** — not through the xattr layer. Direct xattr access to the SD storage (the `security.peios.sd` or `system.ntfs_security` xattr) is unconditionally denied; the only way through is the syscall pair.
+Use [`sd`](~peios/files-and-directories/sd) to inspect and change a file's owner, access rules, audit rules or integrity label. Start with one known path and one intended change. A permission failure is a reason to [diagnose the denied operation](~peios/access-decisions/debugging-a-denial), not to replace the descriptor or grant full control.
 
-This page covers the syscalls, the `security_information` bitmask that decides which SD parts are accessed, the access rules, and the special `LABEL_SECURITY_INFORMATION` flag for setting the integrity label specifically.
+> [!WARNING]
+> Ownership is not a recovery guarantee. An `OWNER RIGHTS` ACE can suppress the owner's implicit `READ_CONTROL` and `WRITE_DAC`, and other access layers can still deny a change. Taking ownership preserves the existing DACL, including that suppression. Before removing access, establish which authorized principal can still read and repair the policy. See [Ownership and implicit rights](~peios/security-descriptors/ownership).
+
+## 1. Inspect the path and current policy
+
+These commands only inspect the example file; replace `./report.txt` with the intended path:
+
+```sh
+sd show ./report.txt --all
+sd show ./report.txt --sddl
+sd check ./report.txt read --explain
+```
+
+Record the owner, DACL entries and their order, inheritance flags, and any displayed label or audit policy. Keep the output as a before-change record. It is not a tested rollback procedure: restoring it would require the relevant rights, and a partial or failed inspection is not a complete descriptor backup.
+
+A named symlink follows its target by default. To inspect or change the link itself, use the documented `--no-follow-symlinks` (`-P`) flag consistently. Confirm which object you mean before writing.
+
+`sd check` rehearses an access decision without performing the operation. Its result is evidence for the selected token and descriptor; it does not prove that an application's original operation will work. If inspection fails or leaves necessary policy unknown, resolve that visibility gap before changing it.
+
+## 2. State the intended change
+
+Choose the smallest component and scope that express the policy. The [command reference](~peios/files-and-directories/sd) has the complete syntax.
+
+| Intended result | Documented command family | What to check first |
+|---|---|---|
+| Add an allow or deny ACE | `sd allow`, `sd deny` | Principal, exact rights, ACE order and inheritance flags. `--replace` removes existing rules for that principal and kind before adding. |
+| Remove a principal's DACL rules | `sd remove` | It removes **every allow and deny** rule for each named principal. Removing a deny can increase access. |
+| Change owner or primary group | `sd owner`, `sd group` | `WRITE_OWNER` and the new-owner SID restrictions below; ownership does not grant file-data access. |
+| Change audit rules | `sd audit`, `sd unaudit` | SACL authority. `unaudit` removes every SACL rule for the named principals. |
+| Change an integrity label | `sd integrity` | Intended mandatory policy, `WRITE_OWNER` and the caller's integrity constraint. Do not lower a label merely to make a denial disappear. |
+| Change inheritance or refresh children | `sd inherit`, `sd reset`, `sd propagate` | Whether explicit child rules or protection should survive; inspect the affected descendants first. |
+| Replace a reviewed descriptor or selected components | `sd set` | The full replacement and its recovery path. `--components` selects which owner/group/DACL/SACL parts to write; do not use a whole-descriptor replacement for a one-ACE change. |
+
+> [!WARNING]
+> Do not add `--recursive` as a convenience. It changes descendants as well as the named object, implies no-follow-symlinks, and is not a tree-wide transaction. `sd propagate` reports descendants it cannot change and continues. Protected descendants keep their own rules, but files below them can still be refreshed from those descendants. Review failures and partial results individually.
+
+`sd reset` drops explicit rules and protection and rebuilds the DACL from the parent. `sd remove --allow-empty` permits a present-but-empty DACL, which grants no rights through its ACE list. An absent DACL has very different, permissive semantics. Neither is a routine way to fix an unexplained denial; see [DACL evaluation](~peios/security-descriptors/dacl-evaluation).
+
+Inheritance is stored on the child. Changing the parent's rules does not update existing children automatically; propagation is a separate, intentional operation.
+
+## 3. Make the bounded change
+
+For example, if the approved policy is to add read access for the identity running `sd` on this one file:
+
+```sh
+sd allow ./report.txt @self:read
+```
+
+`@self` means the current caller's user SID, not the file owner and not the user of another application. Choose the intended principal explicitly. This adds an ACE; it does not remove earlier denies or bypass mandatory policy. A later allow cannot change a right already decided by an earlier matching ACE.
+
+Run only the command matching the intended change. Avoid concurrent edits to the same descriptor. Component selection preserves unselected fields, but a read/edit/write sequence does not reserve the policy against another writer. The [kernel storage contract](~peios/advanced-peios/peios-kernel/kacs/facs/descriptor-storage#caching) describes last-writer-wins behavior and a cache/xattr publication window, not an end-to-end transaction.
+
+## 4. Verify policy and the original operation
+
+After the change, inspect the same object again and compare it with the before-change record:
+
+```sh
+sd show ./report.txt --all
+sd check ./report.txt read --explain
+```
+
+Check that the intended principal and rights changed and that unrelated owner, audit, label and inheritance policy stayed as intended. Then retry the original operation with its actual caller. Check both access that should succeed and access the policy should still refuse, where it is safe to do so.
+
+Existing file handles keep the rights granted when they were opened. A DACL edit is not a revocation of those handles; use a fresh open to test future access. See [The handle model](~peios/file-access/the-handle-model).
+
+A nonzero `sd` status can mean a failed operation, an unreachable path, or a denied `sd check`; read the diagnostic. After recursive work, inspect the reported failures and representative descendants rather than treating the whole tree as changed. If the result differs from the intention, stop widening the change and use the [denial guide](~peios/access-decisions/debugging-a-denial).
 
 ## Why the xattr layer is denied
 
-You might expect that the SD, stored in an xattr, would be readable and writable through the standard `getxattr` / `setxattr` syscalls. It is not. The kernel refuses every xattr operation on the SD xattr regardless of who is asking and what they hold.
+Do not edit the backing `security.peios.sd` or `system.ntfs_security` xattr. Raw reads, writes and removal are denied. Use `sd`, or the component-aware SDK interface when writing a program; this keeps validation and the separate SACL gate intact. See [File Descriptor Storage](~peios/advanced-peios/peios-kernel/kacs/facs/descriptor-storage).
 
-The reasoning:
+## Rights and constraints
 
-- **Atomic semantics.** Reading or writing the SD via xattr would expose the raw bytes; tools could read a partial SD (during a write by someone else), or write an SD whose internal structure is inconsistent with the file's other state.
-- **Access rule unification.** The SD has its own access rules — `READ_CONTROL` to read, `WRITE_DAC` / `WRITE_OWNER` / `ACCESS_SYSTEM_SECURITY` to write different parts. Routing through `kacs_get_sd` / `kacs_set_sd` puts these rules in one place; routing through xattr would require duplicating them at the xattr layer.
-- **Format flexibility.** Different filesystems store the SD differently. The syscall abstraction lets the kernel translate; the xattr layer would force a specific format.
+| Component | Reading needs | Changing needs |
+|---|---|---|
+| Owner or primary group | `READ_CONTROL` | `WRITE_OWNER`; new-owner SID validation also applies. |
+| DACL | `READ_CONTROL` | `WRITE_DAC` |
+| SACL | `ACCESS_SYSTEM_SECURITY` | `ACCESS_SYSTEM_SECURITY`, gated by `SeSecurityPrivilege`. |
+| Integrity label only | `READ_CONTROL` | `WRITE_OWNER`; without `SeRelabelPrivilege`, the new label cannot exceed the caller's integrity. |
 
-So the syscall pair is the only path. Reading or writing the SD goes through them; xattr operations on the SD xattr are denied.
+Requests for several components must pass every required check. MIC, PIP and other access layers still apply; owner implicit rights are not an exception to all of them.
 
-## kacs_get_sd
+Without `SeRestorePrivilege`, a new owner must be the caller's user SID or a token group carrying `SE_GROUP_OWNER`. Being the owner or an administrator does not itself prove the operation can pass `WRITE_OWNER`. See [Changing ownership](~peios/security-descriptors/ownership#changing-ownership).
 
-The read syscall:
+A label-only change preserves non-label SACL entries; a full SACL write replaces the whole SACL. The integrity constraint applies through either path. Existing mandatory resource attributes cannot be removed or modified without `SeTcbPrivilege`.
 
-```
-size = kacs_get_sd(dirfd, path, security_info, buf, buf_len, flags)
-```
-
-Returns the SD bytes for the requested components.
-
-| Parameter | Meaning |
-|---|---|
-| `dirfd`, `path` | The file to read. Standard dirfd-relative resolution. |
-| `security_info` | A bitmask saying which components to return. See below. |
-| `buf`, `buf_len` | Output buffer. |
-| `flags` | AT_EMPTY_PATH (use dirfd as fd-relative), AT_SYMLINK_NOFOLLOW (don't follow terminal symlink). |
-
-The kernel:
-
-1. Resolves the path.
-2. Runs AccessCheck — the caller needs the access rights corresponding to the requested components (covered below).
-3. Reads the file's SD from its filesystem-native storage.
-4. Constructs a **subset SD** containing only the requested components. Other components have offset 0 in the header and the corresponding PRESENT bit is clear.
-5. Returns the subset SD in `buf`, with the total length as the return value.
-
-### Probe mode
-
-Calling with `buf_len = 0` (or `buf` = NULL) is a **probe** — the kernel computes the size the SD would take and returns it without writing to the buffer. The probe returns the same size value that a non-probe call would; the caller can use this size to allocate exactly the right buffer.
-
-The probe call always returns the size on success. It does not return `-ERANGE` — the probe is itself a question about size, and answering it is the kernel's job. `-ERANGE` would be the wrong signal for a deliberate probe.
-
-A non-probe call with `buf_len < required` returns `-ERANGE` with the required size written somewhere accessible (typically the same length parameter, or via a separate output). The caller can then reallocate and retry.
-
-### Access rules
-
-Different components need different rights:
-
-| Requested component (via `security_info` flag) | Required right |
-|---|---|
-| `OWNER_SECURITY_INFORMATION` | `READ_CONTROL` |
-| `GROUP_SECURITY_INFORMATION` | `READ_CONTROL` |
-| `DACL_SECURITY_INFORMATION` | `READ_CONTROL` |
-| `SACL_SECURITY_INFORMATION` | `ACCESS_SYSTEM_SECURITY` |
-| `LABEL_SECURITY_INFORMATION` | `READ_CONTROL` (the integrity label is in the SACL but its read is gated by READ_CONTROL, not ACCESS_SYSTEM_SECURITY) |
-
-(The numeric flag values are catalogued in [Other constants](~peios/constants-and-catalogs/other-constants).)
-
-`READ_CONTROL` is the standard "read SD" right and is implicitly granted to the owner. `ACCESS_SYSTEM_SECURITY` is gated by `SeSecurityPrivilege` — the SACL is read-restricted to administrators with the privilege.
-
-A caller asking for components they do not have rights for gets `-EACCES`. A caller asking for a mix can succeed for the components they can access — but the kernel does this as an all-or-nothing operation: if any requested component fails its access check, the whole call fails.
-
-For combining requested components: just OR the flags. `kacs_get_sd(..., OWNER | DACL, ...)` returns owner and DACL but not SACL or group.
-
-### SACL and LABEL are mutually exclusive
-
-`SACL_SECURITY_INFORMATION` and `LABEL_SECURITY_INFORMATION` cannot be combined in one call. Setting both flags returns `-EINVAL`. The reasoning: `LABEL_SECURITY_INFORMATION` is a focused query for just the integrity label (which lives in the SACL); it has different access requirements than reading the full SACL. The kernel keeps the two paths separate.
-
-## kacs_set_sd
-
-The write syscall:
-
-```
-result = kacs_set_sd(dirfd, path, security_info, sd_buf, sd_len, flags)
-```
-
-| Parameter | Meaning |
-|---|---|
-| `dirfd`, `path` | Target file. |
-| `security_info` | Which components to update. |
-| `sd_buf`, `sd_len` | The new SD bytes (self-relative format). |
-| `flags` | AT_EMPTY_PATH, AT_SYMLINK_NOFOLLOW. |
-
-The kernel:
-
-1. Resolves the path.
-2. Parses the SD blob. Rejects malformed SDs (size limit, bad ACL structure, etc.) with `-EINVAL`.
-3. Runs AccessCheck for the required rights per the components being updated.
-4. Validates additional rules — owner SID is the caller's own or a SE_GROUP_OWNER group (unless SeRestorePrivilege), MANDATORY-flagged resource attributes are not removed (unless SeTcbPrivilege), integrity label is not raised above caller's own (unless SeRelabelPrivilege).
-5. Writes the SD to the file's native storage.
-6. Returns 0 on success.
-
-The write is atomic: either all requested components are updated or none are.
-
-### Access rules for writes
-
-| Component | Required right |
-|---|---|
-| Owner | `WRITE_OWNER` (plus the owner SID validation) |
-| Group | `WRITE_OWNER` |
-| DACL | `WRITE_DAC` |
-| SACL | `ACCESS_SYSTEM_SECURITY` |
-| LABEL (integrity label only) | `WRITE_OWNER` (plus integrity constraint) |
-
-`WRITE_DAC` is the standard "modify DACL" right, implicitly granted to the owner. `WRITE_OWNER` is needed to change the owner field (and the validation rules apply per [Ownership](~peios/security-descriptors/ownership)). `ACCESS_SYSTEM_SECURITY` is the SACL gate.
-
-### The integrity label
-
-`LABEL_SECURITY_INFORMATION` (0x10) is the focused write path for setting just the integrity label. The label lives in the SACL as a `SYSTEM_MANDATORY_LABEL_ACE`, but setting it via this flag is treated as a separate operation from setting the full SACL — with different access requirements:
-
-- The right needed is `WRITE_OWNER`, not `ACCESS_SYSTEM_SECURITY`.
-- The caller cannot raise the integrity label above the calling token's own integrity level (without `SeRelabelPrivilege`).
-- Lowering the integrity label to at or below the caller's own integrity level is allowed.
-
-`LABEL_SECURITY_INFORMATION` and `SACL_SECURITY_INFORMATION` cannot be combined in one call — same rule as for reading.
-
-The use case: a process that wants to lower its files' integrity labels without holding `SeSecurityPrivilege`. The label is in the SACL conceptually, but setting it gets the `WRITE_OWNER` gate rather than the SACL gate, because adjusting the label down is a less sensitive operation than rewriting the audit policy.
-
-### SD parsing and validation
-
-The provided SD blob must be:
-
-- In self-relative format (`SE_SELF_RELATIVE` flag set in control bits).
-- Within the 65,535-byte size limit.
-- Internally consistent — the offsets in the header point to valid locations, the ACLs parse cleanly, the SIDs are well-formed.
-
-Any failure of validation returns `-EINVAL`. The original SD on the file is unchanged.
-
-### Setting only some components
-
-The `security_information` flags tell the kernel which components of the provided SD to apply. A blob containing owner + DACL with only `DACL_SECURITY_INFORMATION` set updates only the DACL; the file's existing owner is preserved.
-
-The blob structure must still be valid — components not being applied are typically absent (offset 0, PRESENT bit clear) in the blob, but the blob's header still needs to be a valid SD header.
-
-This is the pattern for updating one part of an SD without touching the others. Read the SD (probe + fetch), update the relevant component, write back with only that component's flag set.
-
-### Ownership transfer rules
-
-Setting the owner via `kacs_set_sd` triggers the rules described in [Ownership](~peios/security-descriptors/ownership):
-
-- The new owner must be the caller's own user_sid, **or** a SID in the caller's groups with `SE_GROUP_OWNER` set, **or** the caller must hold `SeRestorePrivilege`.
-- The caller must have `WRITE_OWNER` on the object, or hold `SeTakeOwnershipPrivilege`.
-
-A failure here returns `-EACCES`.
-
-The same rules apply whether you set ownership via `OWNER_SECURITY_INFORMATION` alone or in combination with other components.
+For programs, the [SDK guide](~peios/sdk-access-control/securing-files#raw-file-security-interface) covers `kacs_get_sd`, `kacs_set_sd`, mutually exclusive SACL/label requests, the 65,535-byte validation limit and component merging. Operator changes should use the component command rather than construct a binary descriptor.
 
 ## What about file mode (the POSIX rwx bits)?
 
-The traditional POSIX file mode — `chmod`-style read/write/execute bits — does not exist in the same way under FACS. The Linux mode bits are stored alongside the SD as ordinary inode metadata, but they are **not consulted by FACS for access control** (except the execute bit as an exec prerequisite). The DACL is what decides access; the mode is informational only.
+`chmod` changes mode metadata, not the DACL. FACS does not use the ordinary rwx bits to authorize access; the execute bit still matters as an exec prerequisite. Use `sd` to change the access policy.
 
-The mode-changing syscalls still work, gated on SD rights:
+- `fchmod()` needs `WRITE_DAC` in the fd's granted mask; otherwise it fails with `EACCES` (`EBADF` for an `O_PATH` fd). Legacy opens request this as a compatibility right.
+- `chmod()` runs a fresh check for `WRITE_DAC`.
+- Neither operation changes the descriptor.
 
-- `fchmod()` succeeds only if the fd's granted mask includes `WRITE_DAC` (legacy opens request it as a compat right); otherwise `-EACCES` (`-EBADF` on O_PATH fds).
-- `chmod()` runs a fresh access check requiring `WRITE_DAC` on the file's SD.
-- In both cases the mode bits are updated but the SD is untouched. To change what actually decides access, call `kacs_set_sd` with a new DACL.
-
-The mode is inert metadata; the SD is the truth.
+See [Use-Time Checks](~peios/advanced-peios/peios-kernel/kacs/facs/use-time) for the syscall behavior.
 
 ## Errors
 
-Common errors from both syscalls:
+If a change is denied, check the required component right, the caller, owner-SID constraints, integrity and other mandatory policy before retrying. A read-only mount can refuse a write even if the descriptor permits it. Do not infer that a failed multi-object run left every object unchanged.
 
-| Error | Cause |
-|---|---|
-| `-EACCES` | Access check failed for the requested components. |
-| `-EINVAL` | Malformed SD blob, invalid security_information combination, size limit exceeded, or other validation failure. |
-| `-EPERM` | Owner SID validation failed without SeRestorePrivilege, or integrity label too high without SeRelabelPrivilege, or attempted MANDATORY attribute removal without SeTcbPrivilege. |
-| `-ERANGE` | (`kacs_get_sd` only) Buffer too small; required size returned. |
-| `-ENOENT` | The target path does not exist. |
-| `-ELOOP` | AT_SYMLINK_NOFOLLOW and the path is a symlink. |
-
-Most failures are diagnostic and clear from the error code.
+The [SDK error reference](~peios/sdk-access-control/securing-files#file-security-errors) distinguishes access, validation, buffer and path errors for programs. For an operator, keep `sd`'s diagnostic and follow [Debugging a denial](~peios/access-decisions/debugging-a-denial).
 
 ## See also
 
-- [Ownership](~peios/security-descriptors/ownership) — the owner-transfer rules kacs_set_sd enforces.
-- [The sd command](~peios/security-descriptors/sd-command) — the shell wrapper for these syscalls.
+- [The sd command](~peios/files-and-directories/sd) — exact command syntax and flags.
+- [Ownership](~peios/security-descriptors/ownership) — owner-transfer rules and recovery limits.
+- [Securing files](~peios/sdk-access-control/securing-files) — SDK examples and the moved raw-interface detail.
 - [Opening files](~peios/file-access/opening-files) — supplying an SD at file creation instead.
