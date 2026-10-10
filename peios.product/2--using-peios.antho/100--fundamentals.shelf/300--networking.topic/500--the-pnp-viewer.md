@@ -1,7 +1,7 @@
 ---
 title: The PNP viewer
-type: concept
-description: pnpd serves the PNP viewer on port 8081 of Experimental images — the wire, the engine's verdicts, the policy editor, the live flows with their sentences, and the counter store.
+type: guide
+description: Reach the Experimental PNP viewer safely, find live listener and firewall evidence, and verify policy changes without confusing captured frames with delivered traffic.
 related:
   - peios/networking/overview
   - peios/networking/the-net-command
@@ -24,6 +24,35 @@ authenticate viewers; a viewer can inspect captured traffic and change network
 policy. Run it only on a trusted development network, and expose port 8081 to
 the host through a loopback-only forward. Do not deploy the Experimental image
 or expose pnpd to an untrusted network.
+
+## Reaching it
+
+On QEMU user-mode networking, forward the port:
+`make boot NET='-nic user,hostfwd=tcp:127.0.0.1:8080-:8080,hostfwd=tcp:127.0.0.1:8081-:8081'`,
+or `drive.py --hostfwd tcp:127.0.0.1:8081-:8081`, then open
+`http://localhost:8081`.
+
+## Start with the question
+
+| Question | Where to look |
+|---|---|
+| Did my firewall edit take effect? | Check enforcement, generation and any refusal banner in the header, then the **Policy** tab. |
+| Is this service actually listening, and as whom? | **Listeners** shows the native owner stamp the Flow layer uses. |
+| Which rule allowed or blocked this connection? | **Flows** shows the cached sentence and its rule; **Wire** shows individual evaluation badges. |
+| Why is there no packet beside a drop? | An outbound drop can occur before the transmit tap; the verdict is still shown as its own row. |
+| Did a rate-limit rule count what I expected? | **Counters**, including refusal counts and window approximation. |
+
+After narrowing the interface, protocol, address or port, compare the flow's
+rule with the policy and the native listener identity. Do not infer delivery
+from a captured packet alone. Read [Honesty rules](#honesty-rules) before
+treating a missing frame or badge as evidence.
+
+> [!WARNING]
+> Editing here writes live registry policy and can cut off this viewer or
+> another remote session. Keep the old rule values and a local recovery
+> path. The viewer does not document Network Manager's keep/undo countdown.
+> After a save, check the generation or refusal banner and test the intended
+> connection; an administrator can also use `net policy wait`.
 
 ## The wire tab
 
@@ -56,7 +85,8 @@ sent. Hover a count for what the store *refused* or what it did instead
 view's key fact, packets answered from a cached sentence, flows re-judged
 after a policy change or at a time edge, a REJECT with nothing to send):
 refusals are counted, never silent. A failed policy ingestion shows as a
-banner — the previous generation stays active, and the banner says so.
+banner: the previous generation stays active. Correct the named failure
+and verify a new generation rather than assuming the saved edit is active.
 
 ## The policy tab
 
@@ -88,8 +118,10 @@ judged it, and a ⏱ when a consulted time condition will expire it. A
 loopback flow shows two sentences, one per local endpoint. Tags the flow
 carries are listed by name where the policy mentions them.
 
-A flow with no sentence was never judged: it began under a permissive
-generation, or before the flow layer had a policy.
+A missing sentence can mean permissive operation or no Flow policy, but it
+can also mean the kernel could not allocate storage for the sentence and
+judges each packet instead. Check `flow_uncached`; see
+[The Flow layer](~peios/advanced-peios/peios-kernel/ntfe/the-flow-layer).
 
 ## The listeners tab
 
@@ -120,16 +152,12 @@ The viewer never silently lies:
 - **Drops are confessed** — both the tap's kernel drop count and the
   verdict ring's overwrite count are surfaced.
 - **Its own traffic is counted, not vanished.** pnpd excludes its own HTTP
-  flow from the packet ring and shows how many frames that hid; its
-  verdicts still appear, attributed like everyone else's.
+  flow from the packet ring and shows how many frames that hid. The viewer
+  description says its verdicts remain visible, while the kernel manual's
+  [event-stream chapter](~peios/advanced-peios/peios-kernel/ntfe/the-event-stream)
+  says pnpd hides and counts its own-port verdict events too. Do not rely on
+  complete visibility of the viewer's own connection when diagnosing it.
 - **Placement is stated.** Inbound frames are captured before the IP stack;
   outbound as handed to the driver. Verdicts come from the engine's seats,
   which stand elsewhere — the two views disagreeing is a diagnostic, not a
   bug to hide.
-
-## Reaching it
-
-On QEMU user-mode networking, forward the port:
-`make boot NET='-nic user,hostfwd=tcp:127.0.0.1:8080-:8080,hostfwd=tcp:127.0.0.1:8081-:8081'`,
-or `drive.py --hostfwd tcp:127.0.0.1:8081-:8081`, then open
-`http://localhost:8081`.

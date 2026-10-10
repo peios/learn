@@ -1,305 +1,232 @@
 ---
 title: Network policy
-type: concept
-description: How Peios Network Policy (PNP) decides what a packet may do and how an interface joins a network — rules as registry keys, a forest of trees, verdicts and effects, profiles, and the laws an author can rely on.
+type: guide
+description: Check active firewall policy, make a narrowly scoped change safely, verify acceptance and connectivity, and understand the rule behavior needed to troubleshoot it.
 related:
   - peios/networking/overview
   - peios/networking/network-policy-reference
   - peios/networking/the-pnp-viewer
 ---
 
-Peios Network Policy (PNP) is the machine's networking policy: the
-packet filter, and the statement of how each interface joins a network.
-It is configured the way everything else on Peios is: as registry keys
-under `Machine\System\Network`. There is no rule language file, no
-`iptables`-style command, and for the packet layers no daemon in the path
-— the kernel reads them from `Machine\System\Network\Rules` itself, and
-every change there becomes a new **policy generation** within a fraction
-of a second. The part of the kernel that does this is **NTFE**, the
-Network Traffic Filtering Engine: PNP is the policy, and NTFE is what
-enforces its packet layers. The interface layer is judged by netd, the network manager,
-from the same key and by the same rules. The
-[PNP viewer](~peios/networking/the-pnp-viewer) is the place to watch that
-happen and to write rules by hand; the
-[reference](~peios/networking/network-policy-reference) lists every fact,
-operator and action.
+Use Peios Network Policy (PNP) to decide which connections the machine
+allows and which interfaces join a network. Settings are registry keys
+under `Machine\System\Network`; there is no `iptables` configuration.
+The kernel's Network Traffic Filtering Engine (NTFE) enforces packet
+policy, while netd applies interface rules and profiles.
+
+For desktop changes, open [Network Manager](~peios/networking/network-manager)
+and use **Rules** or **Profile rules**. The
+[policy reference](~peios/networking/network-policy-reference) lists exact
+values and examples. Experimental also includes the
+[PNP viewer](~peios/networking/the-pnp-viewer), with important access risks.
+
+## Check and change policy safely
+
+1. **Identify the symptom.** For a service that cannot be reached, confirm
+   that it is listening and has permission to bind its port. A firewall
+   allow does not create a listener or grant a port reservation.
+2. **Check what is active.** As an administrator, run `net policy` to see
+   enforcement, generation and refusals. Use `net status` separately for
+   interface rules. A refused update leaves the previous accepted policy
+   active.
+3. **Preview the smallest change.** In Network Manager, use **Test a
+   connection** and **What this changes**. Its firewall exposure and
+   activity displays currently include labeled example data; a preview is
+   not evidence that a real connection worked.
+4. **Keep a recovery path.** Record the old rule values and retain local
+   access before changing the path used by a remote session. A rule or
+   network-label change can cut an existing connection on its next packet.
+5. **Apply, then verify.** After a registry edit, run `net policy wait`,
+   then `net policy`, and test the intended connection. Check `net status`
+   too if interface rules, profiles or network labels changed.
+
+> [!WARNING]
+> Policy writes apply live, without rebooting. Existing connections are
+> re-judged; they are not exempt. Direct registry writes and the PNP viewer
+> do not provide Network Manager's documented 30-second keep/undo flow.
+> Read [Making a change](~peios/networking/network-manager#making-a-change)
+> before relying on that recovery mechanism.
+
+`net policy` and `net policy wait` require access to the kernel device;
+ordinary users cannot open it. Editing rules requires registry write
+access. A successful write is not yet proof that the kernel ingested it;
+`net policy wait` fails on a refused generation or timeout.
 
 ## Rules are keys
 
-A rule is a registry key. Its **name** is its identity — the kernel
-attributes every decision to the rule that made it, as a path like
-`no-inbound/ssh-from-lan`. Its **values** are its match and its
-standing:
+A rule's path identifies it in diagnostics, such as
+`no-inbound/ssh-from-lan`. Its values specify:
 
-- Every value named `<Fact>.<Operator>` is a **condition** — `DstPort.Equal`
-  = `22`, `SrcAddr.Equal` = `10.0.0.0/8`, `FlowState.Equal` =
-  `established`. A rule matches a packet when *all* of its conditions
-  hold. A rule with no conditions matches everything.
-- `Actions` is a list of action expressions — `PASS`, `DROP`,
-  `REJECT(Prohibited)`, `COUNT(dns)`, `REPORT(3)`, and so on.
-- `Priority` is a plain integer (default 0, inherited by subkeys) used to
-  collate competing verdicts. `Enabled` = `0` switches a rule and
-  everything beneath it off.
+- **Conditions:** `<Fact>.<Operator>` values, such as `DstPort.Equal = 22`.
+  Every condition must hold. A rule with no conditions matches everything.
+- **Actions:** a list such as `PASS`, `DROP`, `REJECT(Prohibited)` or
+  `COUNT(dns)`.
+- **Priority:** a number, inherited by children and defaulting to 0 at a
+  root. `Enabled = 0` disables a rule and its entire subtree.
 
-**Subkeys are exceptions.** A subkey carves a narrower region out of its
-parent: `no-inbound` (`Direction.Equal` = `in`, `DROP`) with a subkey
-`ssh` (`DstPort.Equal` = `22`, `PASS`) drops all inbound traffic except
-SSH. A child only ever matches a subset of what its parent matches,
-because it is judged with its parent's conditions and its own.
-
-The rules under one layer key form a **forest**: any number of
-independent trees, in no particular order. Order carries no meaning
-anywhere in PNP — two trees that both match a packet are reconciled by
-priority and strictness, never by which came first. That is what lets
-policy from different sources (a local rule, an organisation's Group
-Policy) coexist without merging.
+Create a child key for an exception. The child must satisfy its parent's
+conditions as well as its own, so `no-inbound` can drop inbound traffic
+while a child allows SSH from a particular subnet. Order in the editor or
+registry does not decide which rule wins. Independent rule trees compete
+by priority and strictness, allowing local and organization policy to
+coexist without merging their trees.
 
 ## Three layers, and a fourth
 
-Rules live under one of four layer keys. Three are the kernel's, and a
-packet meets them in order:
+Choose the layer for the question you need to answer:
 
-- `Rules\RawPacket` — the wire-side escape hatch. Judged at the device
-  seats for *all* traffic, before conntrack on the way in; it sees
-  frames, not flows. Most policy never needs it.
-- `Rules\Packet` — the per-packet layer. Every traversal is judged here
-  exactly once, at its richest point: inbound IP after conntrack has
-  classified the flow, outbound as the frame leaves. It is the cheap
-  filter in front of the flow layer: the shipped policy passes every
-  tracked packet here and leaves the decisions to `Flow`.
-- `Rules\Flow` — the flow layer. A **flow** is what conntrack tracks: a
-  TCP connection, a UDP exchange, an ICMP echo and its reply. The flow
-  layer judges each flow **once**, on its first packet, and remembers the
-  verdict on the flow as its **sentence**; every later packet of the
-  flow, in either direction, reads the sentence instead of being judged.
-  This is where policy about *who may connect to what* lives, and where
-  it stays cheap: a rule here runs once per connection, not once per
-  packet.
+| Layer | Use it for |
+|---|---|
+| `Rules\Flow` | Who may connect to what. Most service and port policy belongs here. A flow is a TCP connection, UDP exchange or tracked ICMP echo exchange. |
+| `Rules\Packet` | Conditions that must be checked per packet. The baseline passes tracked traffic here and leaves connection decisions to `Flow`. Untracked traffic is decided here. |
+| `Rules\RawPacket` | Wire-side frame rules before connection tracking on ingress. Usually unnecessary for host access policy. |
+| `Rules\Interface` | Which profile an interface uses, or whether netd leaves it alone or keeps it down. |
 
-Traffic that will never reach the packet layer's proper seat — non-IP
-frames such as ARP, or frames on a bridge-enslaved port — is judged by
-the packet layer at the device seat instead, so nothing escapes it.
-Traffic conntrack does not track (a stray reply, an out-of-window
-segment) never reaches the flow layer; the packet layer's verdict is its
-last word.
+Allowing a flow does not override a drop in another layer. A fact absent
+at a layer cannot make its condition match. Check the
+[layer table](~peios/networking/network-policy-reference#layers) before
+moving a rule between layers.
 
-The fourth, `Rules\Interface`, is about interfaces rather than packets:
-see [Joining a network](#joining-a-network).
+The kernel's exact inbound/outbound order, bridge and non-IP fallback
+checks, and untracked-packet handling are in
+[Seats and dispatch](~peios/advanced-peios/peios-kernel/ntfe/seats-and-dispatch).
 
 ## Flows and sentences
 
-The flow layer's facts are the ones that are the same for every packet
-of the flow — addresses, ports, protocol, direction, interface, VLAN —
-plus two of its own: `Related` (the flow was expected by another, like
-an FTP data connection) and `Start.*`, the wall clock at the moment the
-flow began. `Direction` is the originator's side: a flow your machine
-opened is `out` for its whole life, replies included.
+A **sentence** is the flow's cached verdict. Normally the first packet
+is judged and later packets use it. The rule's direction is the
+originator's: a connection this machine opened remains `out`, including
+its replies.
 
-A sentence answers for the flow until one of two things makes it stale.
-**The policy changes** — a rule written or deleted, or the network on
-the other side of an interface changing, which PNP treats as the same
-event: a new generation re-judges every flow on its
-next packet, so a rule that now forbids a running connection cuts it
-then — and if the rule says `REJECT`, a TCP connection is reset at both
-ends at once: the end that sent the packet is refused, and the other end
-is torn down with a reset, the only teardown TCP understands
-mid-connection. PNP does not grandfather old connections past a new
-policy; the registry always says what is enforced. **The clock moves**: a rule that consulted `Time.Hour`
-(matched or not — a higher-priority rule that missed only on the hour
-may match later) makes the sentence expire at the moment that condition
-would next flip, and the flow is re-judged then. So `Time.Hour.Equal` =
-`9-17` → `PASS` cuts a connection at 18:00, on its next packet. If you
-mean *no new connections after 18:00, existing ones may finish*, write
-`Start.Hour` instead: it is fixed for the flow's life and never expires
-a sentence.
+Two changes can trigger a fresh judgment:
 
-Two endpoints, two sentences: a loopback flow is both an outbound
-connection from one local program and an inbound one to another, so the
-flow layer judges it twice, once as `out` and once as `in`, and the flow
-lives only if both said `PASS`.
+- **Policy or network context changes.** The next packet is judged against
+  the new generation. A newly forbidden existing connection stops then;
+  `REJECT` on an established TCP connection tears down both ends.
+- **A consulted `Time.*` condition changes.** `Time.Hour.Equal = 9-17`
+  can stop an existing connection at 18:00 UTC, on its next packet. Use
+  `Start.Hour` if only new connections should be restricted; it is fixed
+  for the flow's life.
+
+A loopback flow has two local endpoints and two judgments. Both must
+allow it. `COUNT` and `REPORT` effects at this layer run when a flow is
+judged, including a re-judgment, rather than on every packet.
+
+See [The Flow layer](~peios/advanced-peios/peios-kernel/ntfe/the-flow-layer)
+for caching, time expiry and the cases where no sentence can be retained.
 
 ## Who is speaking
 
-A rule can name the program, not only the address. The `Flow` layer
-knows who stands at this machine's end of every flow — which process,
-under which principal, as which service — because the kernel stamps
-that identity on the socket when the program creates, binds, listens,
-connects or accepts it. `Local.Service.Equal = resolvd` with
-`DstPort.Equal = 53` is "only the resolver asks the world names";
-`Local.User.Present = 0` is "no program stands behind this" (the kernel's
-own traffic, or nothing listening). On a loopback flow both ends are
-known, so "only resolvd may reach the registry's port" is one rule too.
-What is provable is what is stated: a program is its token, never a path
-or a name it claims for itself, and an end the kernel could not
-attribute is confessed in the status rather than guessed.
+Use `Flow` identity facts for a local program or service. For example,
+`Local.Service.Equal = resolvd` with `DstPort.Equal = 53` matches the
+resolver service's traffic to that port. Identity comes from the native
+token stamped on the socket, not a program path or a claimed name.
+
+`Local.User.Present = 0` means no attributable program user is present.
+The endpoint can instead be the kernel, a shared receiver or no listener.
+On loopback, `Remote.*` also describes the other local endpoint. Check the
+PNP viewer's **Listeners** and **Flows** when a service rule does not
+match; an unresolved identity is reported rather than guessed.
+
+[The identity facts](~peios/advanced-peios/peios-kernel/ntfe/the-identity-facts)
+describes socket stamping and exactly when each identity is available.
 
 ## Joining a network
 
-An **interface** is a place a network can be attached — an Ethernet
-socket, a radio, later a tunnel. It exists from the moment the hardware
-is found, cable or no cable; plugging in gives it a link, and then there
-is a **network** on the other side, which the machine did not choose and
-cannot see all of. What it can see is the network's **offer**: an address
-for you, a way out, servers that turn names into addresses, sometimes a
-name for you. The offer is claims. Nothing checks them.
+For addresses and routes, use [Configuring profiles](~peios/networking/configuring-profiles).
+An interface is the hardware or virtual link; the network is what is on
+the other side. The address, route, DNS and hostname it offers are claims,
+not verified trust.
 
-For each interface, PNP decides one thing: join the network found there,
-or do not; and if joining, what to accept from the offer and what to
-dictate instead. That decision is split along its natural seam.
+An interface rule selects by `Interface.Kind`, `Interface.Path`,
+`Interface.Id`, or an identified network's `Name` and `Trust`. Its verdict
+is `JOIN(profile)`, `IGNORE` or `DOWN`; no matching verdict leaves the
+interface ignored. Each interface has one profile or one of those other
+outcomes. Profiles contain settings, while rules contain the selection.
 
-**Which interfaces** is a rule in the `Interface` layer, conditioned on
-facts about the interface — `Interface.Kind`, `Interface.Path`,
-`Interface.Id` — and, once a network has been identified on it, about the
-network: `Network.Name`, `Network.Trust`. Those two, and `Network.Id`,
-are the packet layers' facts as well: the network netd identified on an
-interface is carried by every packet that crosses it, so "which network
-am I on" is told once, and the rule that chooses a profile for the home
-network and the rule that opens SSH there read the same record. Its verdicts are `JOIN(profile)`,
-`IGNORE` (never touch it; something else owns it) and `DOWN` (keep it
-dark). Every rule law below holds: exceptions are subkeys, the most
-specific rule speaks, priority collates, the backstop answers when nothing
-does — and the backstop is `IGNORE`. An interface is in exactly one
-profile, or ignored, or down. Rules never carry settings.
+A child profile inherits all parent values and replaces what it names.
+A bare profile accepts no offers; the shipped `default` profile supplies
+the friendly wired defaults. Network-dependent profile examples describe
+selection once the link and identity exist, not Wi-Fi association, which
+remains unfinished.
 
-**How to stand there** is a **profile** under `Profiles\`: a key of flat
-dotted values, `Address.Offered`, `Dns.Servers`, `Route.Gateway`, with
-no match block. Every value is a decision, and the important ones are
-trust: nothing the network offers is believed unless a bundle's `Offered`
-says so, so a profile's posture is visible by counting its Offereds — a
-hardened server has none. A subkey is a derived profile: it inherits
-every value above it and overrides what it names, so `office\london\db1`
-says only what differs. The friendly behaviour a laptop wants lives in the
-shipped `default` profile, deletable like everything else.
+The interface and firewall read the same network labels, so naming or
+reclassifying a network can change both. Identification is not proof:
+writing `Trust = home` is your decision to accept that identification.
+netd's protected `Status` records report its findings; do not edit them.
 
-The split is what makes the laptop possible: one radio, at home and in the
-office and in a cafe, is one interface with three correct profiles, and
-"which one now" is a condition over the network — a rule, in the place
-PNP already answers questions.
+netd and the kernel accept their own layers independently. A missing
+`JOIN` target can leave netd on its last good configuration while firewall
+changes still apply. DHCP and router discovery also need ordinary PNP
+allows; the baseline's rules are visible and deletable.
 
-The `Interface` layer is not the kernel's. Its executor is netd, which
-builds and judges the forest with the kernel's own rules engine, writes
-what it found and decided under `Interfaces\<id>\Status` and
-`Networks\<id>\Status` (keys only it may write, so a hand edit is refused
-rather than reverted), and reconciles the kernel to the result. Each
-executor refuses its own layers: a `JOIN` that names no profile keeps netd
-on its last good forest and never stalls the firewall. Joining needs
-netd's own DHCP and router-discovery traffic to pass the packet layers,
-and PNP grants that nothing implicitly — the permission is a visible rule
-of the shipped baseline.
+The [interface-layer chapters](~peios/advanced-peios/netd/the-interface-layer/profiles)
+cover parsing, generation validation, judgment and reconciliation.
 
 ## Verdicts and effects
 
-Actions come in two species. **Verdicts** decide the packet's fate:
-`PASS` (this layer approves), `DROP` (refuse silently), and `REJECT`
-(refuse and tell the sender). A `REJECT` names the story it tells:
-`REJECT(Refused)` — the default — looks like nothing is listening (a TCP
-reset or ICMP port-unreachable); `REJECT(Prohibited)` admits that policy
-refused the packet (ICMP admin-prohibited). PNP never impersonates a
-routing failure: when it speaks, it does not speak falsely, and `DROP` is
-the option for saying nothing. A refusal is sent from every layer and in
-both directions: an outbound `REJECT` fails the local program's connect
-at once with *connection refused* or *host unreachable*, instead of
-leaving it to time out. Only a protocol with no refusal vocabulary (ARP,
-other non-IP frames) drops instead, and says so in the event.
+| Action | What the operator or peer sees |
+|---|---|
+| `PASS` | This layer allows the traffic; other layers can still refuse it. |
+| `DROP` | Silent refusal, usually seen as a timeout. |
+| `REJECT` or `REJECT(Refused)` | An explicit refusal, like no listener: TCP reset or ICMP port-unreachable. |
+| `REJECT(Prohibited)` | An explicit policy refusal: ICMP admin-prohibited. |
+| `NULL` | No decision; an ancestor, another tree or the backstop decides. |
 
-In the flow layer, a verdict applies to the whole flow: a `DROP` or
-`REJECT` sentence refuses every later packet of it too, and effects run
-when the flow is judged, never per packet — `COUNT` there counts
-connections, `REPORT` fires once per connection.
+`REJECT` works inbound and outbound. An outbound refusal can fail the local
+operation promptly instead of leaving it to time out. Where no refusal
+can be sent, it degrades to a counted drop; see
+[Where a REJECT can speak](~peios/networking/network-policy-reference#where-a-reject-can-speak).
 
-**Effects** never decide anything; they happen alongside whatever is
-decided. `TAG` writes a named number onto the packet's flow, for later
-packets of that flow to read. `COUNT` emits into a named counter stream,
-which other rules read through windows and keys. `REPORT` emits an audit
-event. `PROMPT` defers to a userspace handler (in this release no handler
-transport exists, so a prompt takes its fallback immediately, and the
-prompt is still visible as an effect). `NULL` does nothing at all — an
-explicit abstention.
-
-A rule with no verdict in its actions **abstains**: it is a pure observer
-(`COUNT(dns), REPORT(3)` with nothing else is a perfectly good rule), and
-the decision belongs to someone else.
+Effects do not grant access. `TAG` marks a flow, `COUNT` contributes to a
+counter stream, and `REPORT` writes an audit event at its configured level.
+`PROMPT` currently has no handler transport and takes its fallback
+immediately. A rule containing only effects abstains from the verdict.
 
 ## The laws
 
-These hold without exception, and an author can lean on them.
+Use these checks when a rule behaves unexpectedly:
 
-**The backstop is DROP, compiled in.** If nothing in the forest yields a
-verdict for a packet, it is dropped, and the drop is attributed to
-`backstop`. Every permissive statement is therefore a visible, deletable
-rule. An empty forest drops everything; a machine boots *without* any
-policy loaded is loudly permissive (generation 0) until its first
-generation ingests. The interface layer's backstop is `IGNORE`: an
-interface no rule speaks for is left as the kernel left it, which is the
-same posture — nothing happens that no rule said.
+- **Backstop:** an ingested empty packet forest drops everything, attributed
+  to `backstop`; the interface backstop is `IGNORE`. Before any policy is
+  loaded, generation 0 is permissive and reported as such.
+- **Absent facts:** a condition on a missing fact is false, including
+  missing tags and counter cells. `Present` is the explicit existence test.
+- **Exceptions:** a matching child shadows its parent within that tree.
+  Trees never shadow one another.
+- **Abstention:** a triggered rule without a verdict hands the decision to
+  the nearest ancestor with a direct verdict. That ancestor's full action
+  list runs once; intervening abstainers do not run.
+- **Priority:** highest wins. At equal priority, `DROP` beats `REJECT`
+  beats `PASS`, and `Refused` beats `Prohibited`. An interface's verdict
+  order is `DOWN`, `IGNORE`, `JOIN`; conflicting profile selections need
+  correction rather than relying on rule order.
+- **Effects:** triggered rules' effects run even when another rule wins.
+  Matching uses the snapshot from before those writes. A count does not
+  affect the same evaluation's threshold; a later packet can see it.
+- **Whole generations:** malformed packet policy keeps the previous
+  generation active. A registry write returning is not acceptance; run
+  `net policy wait` before depending on the new rule.
+- **Tags:** reads can only go upward through `RawPacket` < `Packet` <
+  `Flow`. Downward reads are refused. Tags remain on a flow across policy
+  changes.
+- **Flow scope:** a flow is judged per local endpoint, then cached until
+  a policy change or consulted time condition makes it stale. Loopback
+  has two endpoints.
+- **Refusals:** PNP does not filter its own generated refusal packets.
+  Ordinary traffic, including echo, has no such bypass.
 
-**A condition over a fact the packet does not have is false.** An ARP
-frame has no `DstPort`; `DstPort.Equal` = `22` simply does not match it
-— it does not error, and it does not match by accident. This is the
-*absent-fact law*, and it applies to tags and counters too: a tag never
-set, a counter cell that does not exist, a counter keyed by an address on
-a packet with no address — all absent, all false.
-
-**The most specific matching rule in a lineage speaks.** Within one tree,
-a rule triggers only if it matches and none of its children match — a
-matching child shadows its parent. Shadowing exists only within a
-lineage; trees never shadow each other.
-
-**An abstaining rule hands the decision up its own parentage.** If the
-triggered rule yields no verdict, the decision walks up to the nearest
-ancestor whose actions contain a direct verdict, and that ancestor
-speaks for the region — executing its full action list once. Ancestors
-in between execute nothing.
-
-**Highest priority wins; ties go to the strictest verdict.** Among every
-verdict yielded across the forest, the highest `Priority` wins. At equal
-priority, `DROP` beats `REJECT` beats `PASS`; between two rejects the
-quieter story (`Refused`) wins. Priority is inherited by subkeys unless
-they set their own, and a root's default is 0.
-
-**Side effects always execute.** Every triggered rule's effects run,
-whether or not its verdict wins — an out-prioritised rule's `COUNT` and
-`REPORT` still happen. Observation is not authority.
-
-**Matching reads a snapshot taken before the rule ran.** Nothing a rule
-writes is visible to the same evaluation's matching. A `COUNT` lands
-after this packet's own reads, so a rule cannot trip its own threshold;
-the *next* packet sees the new count. A `TAG` written on a request is
-read on the reply of the same flow. This is temporal feedback, and it is
-the only kind PNP allows.
-
-**A generation is all or nothing.** The kernel validates the whole forest
-before publishing it. A malformed rule, an unknown fact, an unminted
-`REJECT` kind, or a counter view over a stream no rule writes refuses
-the *entire* new generation — and the previous one stays in force,
-loudly (the viewer shows a banner; the status reports the error). Policy
-never half-applies.
-
-**Written is not yet in force.** A registry write returns before the
-kernel has re-read the policy. `net policy wait` blocks until every
-change made so far is in force, and fails if the new generation was
-refused; a script that writes a rule and then depends on it runs that
-in between.
-
-**Tags flow upward only.** A layer reads tags written at or below its
-own height (`RawPacket` < `Packet` < `Flow`): a `Flow` rule may read a
-tag a `Packet` rule wrote, and the reverse is refused at ingestion. Tags
-themselves live on the flow and survive policy changes.
-
-**A flow is judged once per local endpoint.** The flow layer runs on a
-flow's first packet and its sentence answers for the rest, until the
-policy changes or a consulted time condition flips. A loopback flow has
-two local endpoints and is judged twice.
-
-**PNP does not judge its own refusals.** The reset or ICMP error a
-`REJECT` sends passes every seat unjudged. An outbound rule can never
-drop the refusal an inbound rule asked for, and the forged peer answer
-that fails a local connect is not inbound traffic for the policy to see.
+The full [evaluation algorithm](~peios/advanced-peios/peios-kernel/ntfe/evaluation),
+[generation ingestion](~peios/advanced-peios/peios-kernel/ntfe/ingestion-and-generations)
+and [stores](~peios/advanced-peios/peios-kernel/ntfe/the-stores) belong in
+the kernel technical reference; the [reference](~peios/networking/network-policy-reference)
+keeps the authoring vocabulary and limits.
 
 ## Rate limiting without a throttle verb
 
-PNP has no `THROTTLE`. Rate limiting is the pair `COUNT` + a counter
-view + a verdict, each of which obeys the laws above:
+PNP expresses a rate limit using a count, a view of that count, and a
+verdict. This example observes DNS queries and rejects queries from a
+source whose preceding count exceeds the threshold:
 
 ```text
 Rules\Packet\dns-watch     Protocol.Equal = udp, DstPort.Equal = 53
@@ -309,29 +236,31 @@ Rules\Packet\dns-flood     Protocol.Equal = udp, DstPort.Equal = 53
                            Actions = REJECT(Prohibited)
 ```
 
-`dns-watch` emits every DNS query into the `dns` stream and abstains.
-`dns-flood` reads that stream sliced ten seconds wide and keyed by source
-address, and refuses the twenty-first query in any ten-second window
-from one source. Because the count lands after the packet's own reads,
-the refusal starts on the *next* packet, and because refused queries
-slow the sender, the count decays and the window reopens — a throttle,
-assembled from parts that each mean one thing.
+`dns-watch` counts and abstains. `dns-flood` reads the ten-second view
+before the current packet's count lands. Windows are approximations;
+check the [counter view](~peios/networking/network-policy-reference#counter-views)
+and its observed counts rather than treating this as an exact throttle.
+As counts age out, the condition stops matching.
 
-**Scope a gated verdict to the traffic you mean.** `dns-flood` without
-its `Protocol` and `DstPort` conditions would refuse *every* packet from
-a source whose DNS count crossed the threshold — a machine-wide ban of
-that source, including its replies to the machine you are administering
-from. That is exactly what the rule says, and PNP will do it.
+> [!WARNING]
+> Keep the protocol and port conditions on the gated verdict. Without
+> them, the rule can refuse every packet from a source whose DNS count
+> crossed the threshold, including traffic for your remote session.
 
 ## Where things are visible
 
-Every evaluation emits an event on `/dev/peios-ntfe` carrying the verdict,
-the attributing rule's path, the layer and seat, and how many effects
-ran; the [viewer](~peios/networking/the-pnp-viewer) paints those onto the wire,
-lists every live flow with its sentence, and shows the counter store
-live. A packet answered by a cached sentence emits no event — there was
-no evaluation — and is counted instead. `REPORT` effects become KMES
-`ntfe.verdict.reported` events for the audit pipeline. Everything the stores
-refuse — a flow past its tag tripwire, a counter table at its key cap, a
-packet lacking a view's key, a refusal that could not be sent — is
-counted and shown; nothing is silent.
+- `net status`: interface verdict, selected rule/profile and refusal.
+- `net policy` and `net policy wait`: kernel acceptance and enforcement.
+- [Network Manager](~peios/networking/network-manager): configuration and
+  connection tests; read its **Example data** disclosures for firewall
+  displays.
+- [PNP viewer](~peios/networking/the-pnp-viewer): live verdict attribution,
+  flows, listeners and counter tables on Experimental, with its safety
+  warning observed.
+- [Event Viewer](~peios/logs-and-events/event-viewer):
+  `ntfe.verdict.reported` events requested by `REPORT` effects.
+
+A packet using a cached sentence has no new evaluation event. Missing
+events are not proof that traffic passed; check the sentence and surfaced
+drop/refusal counters. The [event-stream chapter](~peios/advanced-peios/peios-kernel/ntfe/the-event-stream)
+describes the kernel records and loss accounting.

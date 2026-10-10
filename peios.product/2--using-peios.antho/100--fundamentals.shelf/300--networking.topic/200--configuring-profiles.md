@@ -1,7 +1,7 @@
 ---
 title: Configuring profiles
 type: how-to
-description: Write a profile and an interface-layer rule in the registry — pick the interfaces, say what to take from the network and what to dictate — and watch netd apply it live.
+description: Inspect the current network, prepare a profile and matching rule, apply changes live with a recovery plan, and verify the accepted addresses, routes and DNS.
 related:
   - peios/networking/overview
   - peios/networking/network-policy-reference
@@ -12,7 +12,37 @@ related:
 
 Network configuration is two kinds of key under `Machine\System\Network`. A **profile**, a subkey of `Profiles`, says how an interface stands on a network: what to take from the network's offer and what to dictate. A **rule**, a subkey of `Rules\Interface`, says which interfaces stand in which profile. netd watches the subtree, so a change takes effect within a moment of the write — no restart, no reload command.
 
-Every value is documented on the machine, `regman Machine\System\Network`, and in the [reference](~peios/networking/network-policy-reference).
+Follow this order: inspect the active interface, prepare the profile, select
+it with a rule, then read back the accepted state. For desktop changes, use
+[Network Manager](~peios/networking/network-manager), whose profile editor
+shows inherited values and the interfaces a change affects.
+
+Every value is documented on the machine, `regman Machine\System\Network`,
+and in the [reference](~peios/networking/network-policy-reference).
+
+## Before you change anything
+
+- You need write access to the particular registry keys. Reading status
+  does not grant permission to change configuration; protected `Status`
+  keys are netd's output, not settings to edit.
+- Record the current rule, profile and values so you can restore them.
+  Keep local console access or another recovery path if this network
+  carries your remote session.
+- Profile and rule writes take effect live. Changing a profile's resolved
+  values restarts its interfaces' clients, even for a DNS-only profile
+  edit. No reboot or daemon reload is required.
+- Use a derived profile for one interface. Editing `default` affects
+  every interface using it and descendants that inherit the edited value.
+- The commands below are examples. Replace addresses, names, ids and bus
+  paths with your own. The `vpn`, `office`, `laptop`, `untrusted` and `home`
+  profile examples assume those profiles already exist.
+
+> [!WARNING]
+> Direct `reg` writes do not use Network Manager's **Keep this change?**
+> countdown. Do not assume an automatic rollback. If you use Network
+> Manager, read [which changes it can undo](~peios/networking/network-manager#making-a-change)
+> before applying one. A daemon restart can interrupt leased and
+> autoconfigured connectivity; it is not needed to apply these settings.
 
 ## See what you have
 
@@ -22,11 +52,18 @@ net rules
 net profiles
 ```
 
-`net status` shows each interface with its verdict: the rule that spoke and the profile it stands in. An image's baseline is a profile `default` that takes the network's address, way out and name servers, and a rule `wired` that puts every wired interface in it at priority 10.
+Keep this output for comparison after the change. `net status` shows each interface with its verdict: the rule that spoke and the profile it stands in. An image's baseline is a profile `default` that takes the network's address, way out and name servers, and a rule `wired` that puts every wired interface in it at priority 10.
 
 ## A static address
 
-Two keys. First a profile that says only what differs from `default`, as a subkey of it, so everything else — the name servers from the network, the link-local fallback — is inherited:
+Create the profile before a rule names it. This example derives `default/db1`
+from `default`, so values not listed here remain inherited, including
+`Dns.Offered` and `Address.LinkLocal`. Lists replace inherited lists; they
+do not append. An absent value inherits, while a present empty value means
+none.
+
+Confirm that `10.0.0.5/24` is appropriate and available on your network and
+that `10.0.0.1` is its gateway before adapting these example writes:
 
 ```
 reg new Machine/System/Network/Profiles/default/db1
@@ -41,10 +78,49 @@ Then a rule naming the interface by its bus path (from `net status`, stable acro
 ```
 reg new Machine/System/Network/Rules/Interface/wired/db1
 reg set Machine/System/Network/Rules/Interface/wired/db1 Interface.Path.Equal pci-0000:00:03.0
-reg set Machine/System/Network/Rules/Interface/wired/db1 Actions multi:JOIN(default/db1)
+reg set Machine/System/Network/Rules/Interface/wired/db1 Actions 'multi:JOIN(default/db1)'
 ```
 
-The exception is more specific than `wired`, so it speaks for that interface and DHCP stops. `net status` shows `JOIN(default/db1) by wired/db1` and `readiness routed` once the default route is in place. To pin the name servers as well, add `Dns.Offered = 0` and `Dns.Servers` to the profile.
+The exception is more specific than `wired`, so it selects `default/db1`
+for that interface and stops offered address acquisition. Check for
+`JOIN(default/db1) by wired/db1` and the intended address and gateway in
+`net status`; `readiness routed` appears once both a usable address and
+the default route are in place.
+
+Inherited `Dns.Offered` is a setting, not evidence that a server is
+available after address acquisition stops. Check `resolv status`. To pin
+DNS as well, set `Dns.Offered = 0` and `Dns.Servers` on this derived profile.
+The inherited link-local setting does not add a fallback beside a static
+address. See [desired state](~peios/advanced-peios/netd/interfaces/desired-state).
+
+## Verify the accepted settings
+
+```sh
+net rules
+net profiles
+net status
+resolv status
+```
+
+1. Confirm the rule names the intended profile and matches the intended
+   interface. `net profiles` lists each profile's own values, not a
+   flattened result; account for inherited values.
+2. Check that `net status` has no `policy REFUSED` line. Read the active
+   verdict, rule and profile, then the address, gateway, lease and warnings.
+3. Check the servers and domains in `resolv status`, and test a relevant
+   name with `resolv query <name>`.
+4. Test the service you actually need. Readiness `routed` proves a default
+   route exists, not that a remote service or the Internet answers.
+
+If you also changed firewall rules or a network's `Name` or `Trust`, an
+administrator should run `net policy wait` and check `net policy`.
+That verifies the kernel's packet policy; it does not substitute for
+checking netd's accepted profile in `net status`.
+
+If the result is wrong, restore the values you recorded and repeat the
+checks. `net reconcile` requests another pass; it does not undo a write.
+`net renew <interface>` asks to renew an existing DHCP lease without
+releasing it first. Both need `NETWORK_CONTROL`, granted to SYSTEM and Administrators by default.
 
 ## Facts a rule can name
 
@@ -72,7 +148,7 @@ reg set Machine/System/Network/Profiles/default Dns.Offered dword:0
 reg set Machine/System/Network/Profiles/default Dns.Servers multi:1.1.1.1,9.9.9.9
 ```
 
-Two more `Dns` values decide *which* names an interface's servers are asked for, which matters the moment a second interface appears — typically a VPN:
+Three more `Dns` values decide *which* names an interface's servers are asked for, which matters the moment a second interface appears — typically a VPN:
 
 ```
 reg set Machine/System/Network/Profiles/vpn Dns.Domains multi:corp.example
@@ -80,7 +156,7 @@ reg set Machine/System/Network/Profiles/vpn Dns.Default dword:1
 reg set Machine/System/Network/Profiles/vpn Dns.Exclusive dword:1
 ```
 
-`Dns.Domains` sends names under `corp.example` to this interface's servers. `Dns.Default` sends *every other* name there too (unset, an interface claims that only when it carries the default route). `Dns.Exclusive` goes further: while this interface is up, no other interface's servers are consulted for anything — the "ultimate protection" a VPN wants, and the setting that stops a hostile LAN from advertising the VPN's own domain. See [name resolution](~peios/networking/name-resolution).
+`Dns.Domains` sends names under `corp.example` to this interface's servers. `Dns.Default` sends *every other* name there too (unset, an interface claims that only when it carries the default route). `Dns.Exclusive` takes all queries only while the interface is at least `addressed` and supplies a DNS server. Without those conditions it does not prevent another interface from being chosen. Verify the VPN's addresses and server lines before relying on it to keep names off another network. See [name resolution](~peios/networking/name-resolution).
 
 To hold an offered address across a server outage:
 
@@ -102,11 +178,11 @@ reg set Machine/System/Network/Profiles/office Route.Gateway multi:10.0.0.1,fe80
 
 `Address.Families = ipv4` stops router discovery on interfaces in the profile and drops IPv6 entries from `Address.Static`. `Address.Temporary` adds daily-rotating temporary addresses beside the stable one, for machines whose traffic should not correlate over days; the stable address remains for inbound. An IPv6 entry in `Route.Gateway` — usually a link-local address — pins the default router instead of believing advertisements.
 
-The stable address is a keyed digest of the prefix and the interface's identity, not the MAC: it survives reboots and reinstalls that keep `/var/state/netd`, and a different network sees a different, unlinkable address.
+The stable address survives reboots and reinstalls that keep `/var/state/netd`; it is not derived directly from the MAC, and a different network sees an unrelated address. The [IPv6 address chapter](~peios/advanced-peios/netd/ipv6/addresses) documents derivation, lifetimes and rotation.
 
 ## Prefer a cable over WiFi
 
-Both interfaces get a default route; the metric decides which is used. Wired defaults to 100 and wireless to 600, so no configuration is needed. To invert it, set `Route.Metric` on the profiles.
+When both interfaces have default routes, the metric decides which is used. Wired defaults to 100 and wireless to 600, so no configuration is needed. To invert it, set `Route.Metric` on the profiles. This describes route preference once links exist; Wi-Fi association is not implemented by netd, wireless is not in the baseline, and Network Manager currently shows wireless as **Not managed**.
 
 ## Name a network, and behave differently on it
 
@@ -117,22 +193,28 @@ reg set Machine/System/Network/Networks/<id> Name palfrey-home
 reg set Machine/System/Network/Networks/<id> Trust home
 ```
 
-Then a rule can choose the profile by the network rather than the interface — the laptop case, one radio with a different profile at home, in the office and anywhere else:
+Changing either label can change both the selected profile and firewall
+access. Check the active interface and packet policy afterwards.
+
+The following illustrates choosing a profile by network. It is not a
+Wi-Fi setup procedure: a supplicant must supply the link, and wireless
+network-name identification is unfinished. Create the `untrusted` and
+`home` profiles before a rule names them:
 
 ```
 reg new Machine/System/Network/Rules/Interface/radio
 reg set Machine/System/Network/Rules/Interface/radio Interface.Kind.Equal wireless
-reg set Machine/System/Network/Rules/Interface/radio Actions multi:JOIN(untrusted)
+reg set Machine/System/Network/Rules/Interface/radio Actions 'multi:JOIN(untrusted)'
 reg new Machine/System/Network/Rules/Interface/radio/home
 reg set Machine/System/Network/Rules/Interface/radio/home Network.Name.Equal palfrey-home
-reg set Machine/System/Network/Rules/Interface/radio/home Actions multi:JOIN(home)
+reg set Machine/System/Network/Rules/Interface/radio/home Actions 'multi:JOIN(home)'
 ```
 
-Until a network has been identified on the link, the `Network.*` facts are absent, so the radio stands in `untrusted` first and moves to `home` once the network is known. `Trust` is your word until PNP's trust pass gives it evidence: a rule that conditions on it is stating that you accept the identification. The same word reaches the firewall: a `Flow` rule with `Network.Trust.Equal = home` sees the network the radio is on, so what you open at home stays shut at the cafe (see [the network context](~peios/networking/network-policy-reference#the-network-context)).
+Until a network has been identified on the link, the `Network.*` facts are absent, so the radio stands in `untrusted` first and moves to `home` once the network is known. `Trust` is your label, not verified evidence of network identity: a rule that conditions on it is stating that you accept the identification. The same word reaches the firewall: a `Flow` rule with `Network.Trust.Equal = home` sees the network the radio is on, so what you open at home stays shut at the cafe (see [the network context](~peios/networking/network-policy-reference#the-network-context)).
 
 ## Hand an interface to something else
 
-An `IGNORE` verdict means netd never touches a matched interface — no addresses, no routes, no link changes, no DHCP:
+An `IGNORE` verdict leaves a matched interface alone: no new addresses, routes, link changes or DHCP. If it was previously joined, existing addresses and routes remain; `IGNORE` is not a cleanup action:
 
 ```
 reg new Machine/System/Network/Rules/Interface/leave-alone
@@ -142,7 +224,7 @@ reg set Machine/System/Network/Rules/Interface/leave-alone Actions multi:IGNORE
 
 ## Take an interface down
 
-A `DOWN` verdict keeps a matched interface administratively down, whatever other rules say — `DOWN` is the strictest verdict, and the priority makes sure nothing outranks it:
+A `DOWN` verdict keeps a matched interface administratively down. `DOWN` wins equal-priority ties, but a higher-priority rule still wins. Check existing priorities before using the example priority 100:
 
 ```
 reg new Machine/System/Network/Rules/Interface/dead-card
@@ -151,7 +233,7 @@ reg set Machine/System/Network/Rules/Interface/dead-card Priority dword:100
 reg set Machine/System/Network/Rules/Interface/dead-card Actions multi:DOWN
 ```
 
-The interface id is in `net status`. Delete the rule, or set `Enabled = 0` on it, to bring the interface back.
+The interface id is in `net status`. Delete the rule, or set `Enabled = 0` on it, to let the remaining rules decide again. Verify that they select the intended profile; removing `DOWN` alone does not guarantee a `JOIN`.
 
 ## Ask for the same address
 
@@ -175,7 +257,23 @@ netd sets whatever is written, but a network carries the name as one label: lett
 
 ## When netd refuses
 
-A rule with an unknown fact, a `JOIN` naming a profile that does not exist, a profile with an unknown value, or two rules tied on priority naming different profiles for one interface refuses the whole generation: netd keeps the last good one and `net status` says why, as a `policy REFUSED` line. A `JOIN` of a profile that exists but has `Enabled = 0` is not a fault — that rule abstains and its parent, another rule or the backstop answers.
+An unknown fact, a `JOIN` naming a missing profile, or an unknown profile
+value refuses the whole new interface generation. netd keeps the last good
+one and `net status` reports `policy REFUSED` with the reason. Fix the named
+entry, then verify the next write was accepted; the registry listing alone
+does not tell you what is active.
+
+Two equal-priority rules selecting different profiles also refuse a runtime
+reload when the conflict affects an existing interface. At startup, or for
+an interface that appears later, the tied interface is instead ignored and
+its warning names both rules. Make one rule unambiguously win. The
+[generation](~peios/advanced-peios/netd/the-interface-layer/building-a-generation)
+and [interface judgment](~peios/advanced-peios/netd/the-interface-layer/judging-an-interface)
+chapters describe that distinction.
+
+A `JOIN` naming an existing but disabled profile abstains; its parent,
+another rule or the backstop answers. Disabling a profile does not exempt
+malformed values in it from validation.
 
 ## Where to go next
 

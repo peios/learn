@@ -1,16 +1,91 @@
 ---
 title: Network policy reference
 type: reference
-description: Every registry key, value, fact, operator, action and limit of Peios Network Policy — the packet layers the kernel reads and the interface layer netd executes — with the value forms each accepts.
+description: Look up profile settings and PNP rule syntax, check defaults and limits, and adapt examples with explicit verification of interface and firewall acceptance.
 related:
   - peios/networking/network-policy
   - peios/networking/the-pnp-viewer
 ---
 
-The complete vocabulary of PNP rules as the kernel reads them. The
-concepts — layers, the forest, the laws — are in
-[Network policy](~peios/networking/network-policy); this page is the lookup
-table.
+Use this page while editing profiles or rules. It covers the kernel's
+packet layers and netd's interface layer. Start with the
+[safe profile workflow](~peios/networking/configuring-profiles) or
+[firewall workflow](~peios/networking/network-policy#check-and-change-policy-safely)
+if you are making a change rather than looking up syntax.
+
+| To find | Go to |
+|---|---|
+| Addresses, gateway, DNS, hostname or MTU | [Profiles](#profiles) |
+| Where a setting belongs | [Registry layout](#registry-layout) |
+| A match value or comparison | [Conditions](#conditions) |
+| Allow, drop, reject, join or observe | [Actions](#actions) |
+| Which layer can see a fact | [Layers](#layers) |
+| Default image rules | [Development baseline](#the-development-baseline) |
+| A policy pattern to adapt | [Worked examples](#worked-examples) |
+
+Writes take effect live and can interrupt remote access. Record the old
+values before editing. Check `net status` for accepted interface settings;
+for packet-policy changes, an administrator runs `net policy wait` and
+`net policy`. These are separate acceptance checks.
+
+## Profiles
+
+`Profiles\<path>` is how an interface stands on a network, named by a
+`JOIN`. A profile is a key with flat dotted values and no match block.
+
+**Inheritance.** A subkey inherits every value of its ancestors and
+overrides those it names — per value name, wholesale: a list replaces a
+list, never appends. A present-but-empty value means *none*; an absent
+value means *inherit*. This is the same law as in `Rules\`: a subkey
+specialises its parent. A locally written profile may nest under one
+pushed by policy. `Enabled` = `0` makes a key and its subtree invisible.
+
+**Vocabulary.** Bundles are the claims a network can make; each has an
+`Offered` that says whether to believe it. Every compiled default is
+"believe nothing, do nothing": a bare profile brings the link up and
+nothing else. Unknown value names refuse the generation.
+
+| Bundle | Value | Type | Meaning | Default |
+|---|---|---|---|---|
+| `Address` | `Offered` | 0/1 | take the address the network offers (DHCPv4, IPv6 autoconfiguration) | 0 |
+| | `Families` | list | `ipv4`, `ipv6`: which families the bundle deals in at all; filters `Static` too | both |
+| | `Static` | list | CIDR addresses, either family | none |
+| | `LinkLocal` | 0/1 | self-assign 169.254/16 while nobody answers; dropped when a lease arrives | 0 |
+| | `Temporary` | 0/1 | add daily-rotating IPv6 privacy addresses beside the stable one | 0 |
+| | `OnExpiry` | `Drop` / `Keep` | an offered address the network stops renewing | `Drop` |
+| `Route` | `Offered` | 0/1 | take the way out, and extra routes, the network offers | 0 |
+| | `Gateway` | list | pinned way out, either family | none |
+| | `Metric` | number | rank of this interface's way out | 100 wired, 600 wireless |
+| `Dns` | `Offered` | 0/1 | take the servers and search domains the network offers, after our own | 0 |
+| | `Servers` | list | own servers, in order | none |
+| | `Domains` | list | domains these servers answer for | none |
+| | `Default` | 0/1/absent | take names no domain claims; absent follows the default route | absent |
+| | `Exclusive` | 0/1 | take all queries while at least `addressed` and supplying a DNS server | 0 |
+| `Hostname` | `Offered` | 0/1 | adopt the network's name for us if `Hostname` is unset | 0 |
+| | `Announce` | 0/1 | tell the network our name | 0 |
+| `Mtu` | `Offered` | 0/1 | take the packet size limit the network offers | 0 |
+| | `Value` | number, 68+ | pin it | leave alone |
+
+The `Dns` bundle is provisional. Verify the effective scope with `resolv status`; see [name resolution](~peios/networking/name-resolution#verify-which-interface-gets-a-name) for exclusivity and fallback conditions.
+
+**The laws of `JOIN`**, whatever the profile says: the executor owns
+every IPv4 and non-link-local IPv6 address on a joined interface, and only
+routes carrying its own protocol tag; the kernel's IPv6 link-local address
+is left alone;
+exactly one place decides what a router advertisement means (the
+executor; the kernel's own handling is off); a link-local address is
+dropped the moment a real lease arrives; IPv6 lifetimes follow the RFCs
+with the two-hour floor; `Route.Metric` defaults by kind; the network's
+`RequestedAddress` is asked for first; a manual change to a joined
+interface lasts until the next reconcile; the executor re-derives state on restart.
+
+> [!WARNING]
+> Do not rely on a restart being invisible. The
+> [netd startup chapter](~peios/advanced-peios/netd/the-daemon/startup)
+> documents leased addresses and routes disappearing until DHCP answers,
+> and IPv6 settings needing fresh advertisements. Profile writes apply live
+> and restart the affected clients; use a recovery path before changing
+> the profile carrying your remote session.
 
 ## Registry layout
 
@@ -135,7 +210,7 @@ an address, `Has` on a port) refuses the generation.
 | `Network.Id` | string | the network record's key name under `Networks\` | every layer: a network has been identified on the interface the packet crossed (see [the network context](#the-network-context)) |
 | `Network.Name` | string | the operator's `Name` on the record | every layer; the record has one |
 | `Network.Trust` | string | the operator's `Trust` on the record | every layer; the record has one |
-| `Network.Kind` | string | the `Interface.Kind` the network was seen on | as `Network.Id` |
+| `Network.Kind` | string | the `Interface.Kind` the network was seen on | `Interface` layer; a network has been identified |
 | `Tag.<name>` | integer | the flow tag's value | the flow carries the tag (`Packet` and `Flow` layers; never `RawPacket`) |
 | `Counter.<name>[(...)]` | integer | a counter view, see below | the packet has the view's key facts and a cell exists |
 
@@ -146,10 +221,12 @@ A `Flow` fact is one that is identical for every packet of the flow. The
 per-packet facts marked "not a `Flow` fact" are legal in a `Flow` rule
 but never present there, so the condition never holds; the viewer flags
 it. `Related`, `Start.*` and the identity facts are the reverse: never
-present outside `Flow`. The `Interface.*` and `Network.*` families exist
-only at the `Interface` layer, where `Interface` (the name) is the one
-packet fact shared with them; a packet fact in an `Interface` rule is
-likewise dead. `Tag.*` and `Counter.*` do not exist at the `Interface`
+present outside `Flow`. `Interface.*` facts are for the `Interface` layer.
+`Network.Id`, `Network.Name` and `Network.Trust` are also available in the
+packet layers, as the table above and [network context](#the-network-context)
+describe. A packet-only fact in an `Interface` rule cannot match.
+For the kinds netd currently reports, see its
+[interface classification](~peios/advanced-peios/netd/interfaces/identity-and-carrier). `Tag.*` and `Counter.*` do not exist at the `Interface`
 layer at all — there is no store behind them — and refuse the generation.
 
 ### Who is at this end
@@ -293,8 +370,10 @@ The collation laws are the packet layers': highest priority wins, ties
 go to the strictest verdict, a subkey is an exception, an abstaining rule
 hands up its parentage. One case has no packet-layer analogue: two rules
 tied on priority naming *different* profiles for one interface. That is a
-conflict, not a choice, and it refuses the generation; `net status` names
-both rules.
+conflict, not a choice. On a runtime reload, a tie affecting an existing
+interface refuses the generation; `net status` names both rules. At startup,
+or when a new interface appears, that interface is ignored with a tie
+warning instead. See [netd's conflict handling](~peios/advanced-peios/netd/the-interface-layer/judging-an-interface).
 
 **Executor independence.** A generation is one registry state read by
 two executors. Each validates and refuses its own layers on its own: a
@@ -311,26 +390,18 @@ viewer); `net status` reports an unanswered request as a warning.
 
 ### Sentences
 
-The `Flow` layer's verdict for a flow is cached on the flow with the
-policy generation that judged it and an expiry. A packet of a flow whose
-sentence is current is not evaluated (and emits no event). A sentence is
-stale, and the flow re-judged on its next packet, when:
+A sentence caches the Flow verdict. Later packets use it without a new
+evaluation event until the policy generation changes or a consulted
+`Time.*` condition changes. A fresh judgment runs the effects again.
+`Start.*` stays fixed and does not expire the sentence. Loopback has one
+sentence per local endpoint and must pass both.
 
-- the policy generation has changed since the judgment, or
-- a live-time condition (`Time.*`) the judgment consulted — true or
-  false — would have flipped by now. Hour, minute, second and day-of-week
-  conditions flip exactly when their value would next change the
-  condition's answer; day-of-month, month and year conditions
-  re-judge daily at midnight UTC.
-
-A re-judgment is a full evaluation: effects run again. A flow that
-conntrack could not give an extension (allocation failure at creation)
-holds no sentence and is evaluated on every packet, counted.
-
-A loopback flow has two local endpoints and two sentences: judged as
-`out` at the outbound seat and as `in` at the inbound seat, and every
-packet of it answers to the stricter of the two. Each judgment sees its
-own end as `Local` and the other as `Remote`.
+For exact expiry rules (including daily reevaluation of calendar fields),
+cache-allocation failure and event behavior, see
+[The Flow layer](~peios/advanced-peios/peios-kernel/ntfe/the-flow-layer) and
+[Evaluation](~peios/advanced-peios/peios-kernel/ntfe/evaluation). Those chapters
+retain the implementation detail; use this section to choose live-time
+versus connection-start conditions.
 
 ### The network context
 
@@ -378,60 +449,12 @@ read is an interface without a context.
 `Trust` is the operator's word, exactly as written, with no vocabulary
 yet: `home`, `corporate`, `untrusted` are conventions, and a rule that
 conditions on it is stating that the operator accepts the
-identification. The trust pass gives it evidence later; the rules will
-not change.
-
-## Profiles
-
-`Profiles\<path>` is how an interface stands on a network, named by a
-`JOIN`. A profile is a key with flat dotted values and no match block.
-
-**Inheritance.** A subkey inherits every value of its ancestors and
-overrides those it names — per value name, wholesale: a list replaces a
-list, never appends. A present-but-empty value means *none*; an absent
-value means *inherit*. This is the same law as in `Rules\`: a subkey
-specialises its parent. A locally written profile may nest under one
-pushed by policy. `Enabled` = `0` makes a key and its subtree invisible.
-
-**Vocabulary.** Bundles are the claims a network can make; each has an
-`Offered` that says whether to believe it. Every compiled default is
-"believe nothing, do nothing": a bare profile brings the link up and
-nothing else. Unknown value names refuse the generation.
-
-| Bundle | Value | Type | Meaning | Default |
-|---|---|---|---|---|
-| `Address` | `Offered` | 0/1 | take the address the network offers (DHCPv4, IPv6 autoconfiguration) | 0 |
-| | `Families` | list | `ipv4`, `ipv6`: which families the bundle deals in at all; filters `Static` too | both |
-| | `Static` | list | CIDR addresses, either family | none |
-| | `LinkLocal` | 0/1 | self-assign 169.254/16 while nobody answers; dropped when a lease arrives | 0 |
-| | `Temporary` | 0/1 | add daily-rotating IPv6 privacy addresses beside the stable one | 0 |
-| | `OnExpiry` | `Drop` / `Keep` | an offered address the network stops renewing | `Drop` |
-| `Route` | `Offered` | 0/1 | take the way out, and extra routes, the network offers | 0 |
-| | `Gateway` | list | pinned way out, either family | none |
-| | `Metric` | number | rank of this interface's way out | 100 wired, 600 wireless |
-| `Dns` | `Offered` | 0/1 | take the servers and search domains the network offers, after our own | 0 |
-| | `Servers` | list | own servers, in order | none |
-| | `Domains` | list | domains these servers answer for | none |
-| | `Default` | 0/1/absent | take names no domain claims; absent follows the default route | absent |
-| | `Exclusive` | 0/1 | while up, nobody else's servers are consulted | 0 |
-| `Hostname` | `Offered` | 0/1 | adopt the network's name for us if `Hostname` is unset | 0 |
-| | `Announce` | 0/1 | tell the network our name | 0 |
-| `Mtu` | `Offered` | 0/1 | take the packet size limit the network offers | 0 |
-| | `Value` | number, 68+ | pin it | leave alone |
-
-The `Dns` bundle is provisional until the name-resolution pass of PNP.
-
-**The laws of `JOIN`**, whatever the profile says: the executor owns
-every address on a joined interface and only the routes it added itself;
-exactly one place decides what a router advertisement means (the
-executor; the kernel's own handling is off); a link-local address is
-dropped the moment a real lease arrives; IPv6 lifetimes follow the RFCs
-with the two-hour floor; `Route.Metric` defaults by kind; the network's
-`RequestedAddress` is asked for first; a manual change to a joined
-interface lasts until the next reconcile; restarting the executor
-changes nothing visible.
+identification. It is not evidence that the network has been authenticated.
 
 ## Limits
+
+These kernel limits can cause a refused generation or a counted refusal.
+netd has its own [registry-read depth limit](~peios/advanced-peios/netd/the-daemon/reading-the-registry); do not assume a packet-layer limit describes every executor.
 
 | Limit | Value | When exceeded |
 |---|---|---|
@@ -492,6 +515,13 @@ Wireless is not in the baseline until a supplicant exists. An interface
 no rule speaks for meets the `Interface` backstop, `IGNORE`.
 
 ## Worked examples
+
+These blocks describe registry layouts, not shell commands or complete
+replacement policies. Adapt the addresses, ports, names, priorities and
+profile paths to your machine. A `JOIN` target must already exist; examples
+are evaluated alongside every existing rule, so inspect the baseline and
+competing priorities before applying them. Preserve a recovery path, then
+verify accepted policy and an actual connection afterwards.
 
 **An exception under a broad rule** — drop all inbound except SSH from
 the LAN, and tell other SSH sources that policy said no:
@@ -570,11 +600,14 @@ Rules\Interface\wired\db1        Interface.Path.Equal = pci-0000:00:03.0
                                  Actions = JOIN(default/db1)
 ```
 
-`default/db1` still takes the network's name servers: `Dns.Offered` is
-inherited.
+`default/db1` still inherits `Dns.Offered`, but that does not prove a
+server is available after offered address acquisition stops. Check
+`resolv status` and pin `Dns.Servers` if this configuration needs it.
 
-**The laptop** — one radio, three configurations, chosen by the network
-on the other side:
+**The laptop** — a network-dependent selection example, not a working
+Wi-Fi association procedure. A supplicant and wireless network-name
+identification are unfinished; the baseline leaves wireless unmanaged.
+Once the link and identity exist, rules can choose among three profiles:
 
 ```text
 Rules\Interface\radio            Interface.Kind.Equal = wireless
@@ -601,7 +634,8 @@ Rules\Flow\no-inbound\at-home   Network.Trust.Equal = home
 
 Walk into the cafe and the record on the other side of the radio is a
 different one, with no `Trust` written: the exception is false, the
-parent drops, and the SSH session from home is reset on its next packet.
+parent drops the SSH traffic on its next packet. `DROP` is silent; the
+reset behavior described for `REJECT` does not apply to this example.
 
 **A card that stays dark, and one another program owns:**
 

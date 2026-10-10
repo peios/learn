@@ -1,7 +1,7 @@
 ---
 title: Network Manager
 type: how-to
-description: See and change this machine's interfaces, networks, profiles, name resolution and firewall on the desktop with Network Manager — what each section shows, how a change that could cut you off is checked and kept, and what you may see and change.
+description: Check networking on the desktop, preview and apply profile or firewall changes, verify the result, and use keep/undo with clear access and example-data limits.
 related:
   - peios/networking/overview
   - peios/networking/configuring-profiles
@@ -13,9 +13,10 @@ related:
   - peios/logs-and-events/event-viewer
 ---
 
-**Network Manager** is the desktop's window on this machine's networking
-and its firewall. Open it from the launcher (type `network`). Down the side
-are three groups:
+**Network Manager** lets you inspect and change this machine's networking
+and firewall. Open the launcher and type `network`. Start in **Overview**
+to find the affected interface and the profile it uses. Down the side are
+three groups:
 
 - **Network:** Overview, Networks, Profiles, Profile rules and DNS.
 - **Firewall:** Exposure, Rules and Activity.
@@ -28,16 +29,79 @@ settings: see [Networking](~peios/networking/overview) for how they become
 real.
 
 > [!NOTE]
-> Some of the firewall's live state is example data today. Which services
-> are listening, the connections open now, the firewall's counters and its
-> recent audit events can't yet be read by programs: only the kernel can
-> read them. Until they can, Network Manager makes up an example from this
-> machine (its own addresses, and the desktop connections really open now)
-> and judges it by your real rules. Every section that shows it says
-> **Example data**, and the status line says **Example**. The rules
-> themselves, and everything outside the firewall, are real. On an
-> Experimental image, [the PNP viewer](~peios/the-pnp-viewer) shows the
-> engine's own verdicts and live flows.
+> Some firewall displays use example data today. This version of Network
+> Manager does not yet read the live listeners, open connections, counters
+> and recent audit events for those displays. It builds examples using
+> this machine's addresses and the desktop connections really open now,
+> then judges them against your real rules. Every affected section says
+> **Example data**, and the status line says **Example**. The rules and
+> everything outside the firewall are real. On Experimental, use
+> [the PNP viewer](~peios/networking/the-pnp-viewer) for the engine's own
+> verdicts and live flows, subject to its access warning.
+
+## Choose a task
+
+| Task | Use | Verify afterwards |
+|---|---|---|
+| Find why the machine is offline | **Overview**, then the affected interface | Carrier, address, gateway, selected rule/profile and any refusal. |
+| Set an address, gateway or DNS server | **Profiles**; **Profile rules** if selecting a different profile | The profile's **Result**, affected interfaces, then live Overview and DNS. |
+| Treat a recognized network differently | **Networks** | **What this changes** before saving; profile and firewall results after. |
+| Diagnose a name | **DNS → Look up a name** | Actual answer, source, interface and server, not just the saved setting. |
+| Allow or block a service | **Rules → Test a connection**, then the rule | Accepted generation and an actual connection test. Exposure and Activity contain example data. |
+| Let a program listen on a port | **Port reservations** | The bind permission and the service's listener; firewall access is separate. |
+
+Read the change and access rules below before applying a change, especially
+through a remote desktop connection. A **Connected** summary reports a
+route; it does not prove the Internet or a particular service is reachable.
+
+## Making a change
+
+Every change is checked before it is written. If the machine would refuse
+it, nothing is written, and the status line says why.
+
+A change that would block a connection to this desktop that is open now,
+yours or anyone else's, asks first: **This change would disconnect you**,
+with the connections it would cut. **Cancel** is the safe answer. **Apply
+anyway** makes it.
+
+Some changes are kept only when you say so. A bar across the top asks
+**Keep this change?**, with **Keep** and **Undo**, and undoes the change
+by itself after 30 seconds unless you keep it. The countdown runs on the
+machine, not in your browser, so if the change did cut you off, you need
+do nothing: the previous settings come back when it ends. The bar follows:
+
+- saving or deleting a firewall rule or a profile rule;
+- changing a cell on Exposure;
+- applying a profile that an interface carrying a desktop connection uses;
+- renaming a network, or changing its trust level, while a desktop
+  connection is on it;
+- any change made with **Apply anyway**.
+
+Making another of these while the bar is up keeps the change before it.
+Other changes, such as DNS settings, static names, port reservations, the
+audit level and new profiles, are made at once, and there is no **Undo**.
+Record their previous values before editing if you may need to restore them.
+These changes are live; no reboot is needed.
+
+After applying, read Overview for the actual interface result and test the
+name or connection you intended to use. The status line along the bottom
+says what the last change did, and that the firewall's policy is in force,
+with its generation. If the kernel refused the newest rules, it says so, and that the previous generation
+still stands.
+
+## What you may see and change
+
+What you may change is what the registry lets you write, key by key, so
+it is asked of the machine, not guessed from your groups. Where you may
+not, a section is shown read-only, with the reason said once at the top:
+**You can see these settings. Changing them needs an administrator.**
+Exposure and Activity are for administrators only, and say so instead.
+
+**Permissions…** opens the permissions editor. It shows the same things
+read-only to anyone who may not change them.
+
+Network Manager reads the machine again every two seconds, and its
+settings whenever something else changes them in the registry.
 
 ## Overview
 
@@ -122,7 +186,10 @@ comes from, or **built in** when none sets it. Choose **Inherit** (or
 
 Changes wait in a bar, **1 change not applied**, with **Discard** and
 **Apply**. The bar says which interfaces the change will apply to at once,
-or why the machine would refuse it.
+or why the machine would refuse it. Review that list before **Apply**.
+Changing an active profile's resolved settings restarts its interfaces'
+address clients, so a change can interrupt connectivity even when the
+setting edited is DNS. Check live Overview afterwards.
 
 ## Profile rules
 
@@ -146,13 +213,14 @@ and shows the way the question went: the static names, the cache, the
 interface it was routed to and why, the server that answered, and the
 answer, or **No such name** or **No answer**.
 
-**Where names go** shows which interface's servers each name is sent to:
-names ending in an interface's search domain go to that interface, and all
-others to the default route. **Since resolvd started** counts the
+**Where names go** shows which interface's servers each name is sent to.
+Check exclusive scopes, matching search domains and the default route;
+use the actual lookup result to confirm the choice. An exclusive scope
+needs an address and at least one server to take all queries. **Since resolvd started** counts the
 questions asked, how many the cache answered, and how many went to servers
 and failed. **Flush cache** empties the cache.
 
-Under **Settings** are the **Fallback servers**, used only when no
+Under **Settings** are the **Fallback servers**, used only when no up
 interface has DNS servers, and extra **Search domains**, tried after each
 interface's own. **Static names** are answered before DNS is asked. See
 [Name resolution](~peios/networking/name-resolution) for how resolvd
@@ -269,49 +337,3 @@ empty. A client ID is written as bytes in hex, such as
 **Access** says who may look at and who may change netd's and resolvd's
 settings. **Permissions…** beside each opens it in the permissions editor.
 The hostname is shown here, and changed in System Settings.
-
-## Making a change
-
-Every change is checked before it is written. If the machine would refuse
-it, nothing is written, and the status line says why.
-
-A change that would block a connection to this desktop that is open now,
-yours or anyone else's, asks first: **This change would disconnect you**,
-with the connections it would cut. **Cancel** is the safe answer. **Apply
-anyway** makes it.
-
-Some changes are kept only when you say so. A bar across the top asks
-**Keep this change?**, with **Keep** and **Undo**, and undoes the change
-by itself after 30 seconds unless you keep it. The countdown runs on the
-machine, not in your browser, so if the change did cut you off, you need
-do nothing: the previous settings come back when it ends. The bar follows:
-
-- saving or deleting a firewall rule or a profile rule;
-- changing a cell on Exposure;
-- applying a profile that an interface carrying a desktop connection uses;
-- renaming a network, or changing its trust level, while a desktop
-  connection is on it;
-- any change made with **Apply anyway**.
-
-Making another of these while the bar is up keeps the change before it.
-Other changes, such as DNS settings, static names, port reservations, the
-audit level and new profiles, are made at once, and there is no **Undo**.
-
-The status line along the bottom says what the last change did, and that
-the firewall's policy is in force, with its generation. If the kernel
-refused the newest rules, it says so, and that the previous generation
-still stands.
-
-## What you may see and change
-
-What you may change is what the registry lets you write, key by key, so
-it is asked of the machine, not guessed from your groups. Where you may
-not, a section is shown read-only, with the reason said once at the top:
-**You can see these settings. Changing them needs an administrator.**
-Exposure and Activity are for administrators only, and say so instead.
-
-**Permissions…** opens the permissions editor. It shows the same things
-read-only to anyone who may not change them.
-
-Network Manager reads the machine again every two seconds, and its
-settings whenever something else changes them in the registry.

@@ -1,13 +1,47 @@
 ---
 title: Network diagnostic tools
 type: guide
-description: Inspect connectivity, query DNS, transfer files and inspect sockets with the command-line tools included in Experimental.
+description: Work from a connectivity, DNS, listener or TLS symptom to the next check, then choose an Experimental diagnostic tool within Peios access and file-security restrictions.
 related:
   - peios/networking/the-net-command
   - peios/networking/name-resolution
   - peios/networking/network-policy
   - peios/networking/rsync-and-openssl
 ---
+
+Start with the symptom below. Run read-only checks before changing profiles,
+firewall rules or service state, and keep the output that explains the
+failure. The tools retain your native identity and access restrictions;
+installing a tool does not grant network or capture privileges.
+
+## Start with the symptom
+
+| Symptom | Check | What to do with the result |
+|---|---|---|
+| No connectivity | `net status` | Find the affected interface's carrier, verdict, profile and readiness. `IGNORE` or `DOWN` is a profile-rule question; no carrier is a link question. |
+| Carrier, but no DHCP address | `net status`, then `net profiles` and `net rules` | Check `Address.Offered`, `Address.Families` and the selected rule. An unanswered-discovery warning can mean no server or blocked DHCP traffic. |
+| Only a `169.254…` address | `net status` | This is link-local fallback, not a routed lease. DHCP discovery continues. Check server reachability and the baseline DHCP rules. |
+| Address present, no gateway | `net status` | Check `Route.Offered` or your pinned `Route.Gateway`. An unreachable pinned gateway is logged as a failed route addition. |
+| IP connection works, names fail | `resolv status`, `resolv query <name>` | Check servers, domains, netd connection, and `notfound` versus `unavailable`; use [DNS troubleshooting](~peios/networking/name-resolution#not-found-versus-unavailable). |
+| One TCP service fails | `ss -lnt` on the receiving machine; `nc -vz 192.0.2.1 443` from the caller | Confirm the listener and intended address/port, then check native port authority and PNP. Replace the example address and port. |
+| Settings were written but behavior did not change | `net status`; as administrator, `net policy wait` and `net policy` | Check interface and firewall acceptance separately. A refused generation leaves the previous one active. |
+| TLS certificate errors | [Strict OpenSSL check](~peios/networking/rsync-and-openssl#tls-diagnostics-and-network-policy) | Check both trust and the expected peer identity. SNI alone is not hostname verification. |
+
+For daemon errors, use the service logs:
+
+```sh
+evctl 'LOGS FROM netd SINCE 1h ago TAKE 40'
+evctl 'LOGS FROM resolvd SINCE 1h ago TAKE 40'
+```
+
+If a profile or rule is wrong, follow [the safe change checklist](~peios/networking/configuring-profiles#before-you-change-anything)
+and verify it afterwards. Restarting netd can remove offered addresses and
+routes while it acquires them again; it is not the first connectivity test.
+The [netd failure modes](~peios/advanced-peios/netd/failure-modes/failure-modes)
+and [resolvd failure modes](~peios/advanced-peios/resolvd/failure-modes/names-do-not-resolve)
+give the detailed failure paths.
+
+## Choose a tool
 
 Experimental includes these tools alongside `net`, `resolv` and `trust`:
 
@@ -31,7 +65,7 @@ Experimental includes these tools alongside `net`, `resolv` and `trust`:
 | `arping` | Send ARP probes on a local IPv4 link | `arping -I eth0 -c 3 192.0.2.1` |
 | `nmap` | Discover hosts and inspect listening services | `nmap -sT -Pn -n -p 443 192.0.2.1` |
 
-The documentation addresses above are examples; replace them with the host you want to test. `net` remains the interface to netd for network configuration and status. The iproute2 package supplies `ss`; it does not add `ip` or `tc` as alternative configuration tools.
+These are command examples, not an instruction to scan or capture an unrelated network. Test hosts and traffic you are authorized to inspect. The documentation addresses above are examples; replace them with the host you want to test. `net` remains the interface to netd for network configuration and status. The iproute2 package supplies `ss`; it does not add `ip` or `tc` as alternative configuration tools.
 
 ## Echo and network policy
 

@@ -1,7 +1,7 @@
 ---
 title: Networking
-type: concept
-description: How a Peios machine gets onto a network — PNP's interface layer says which interfaces join and which profile they stand in, and netd reconciles links, addresses, routes and DHCP to it; nothing else configures the network.
+type: guide
+description: Check network status, configure an interface safely, verify addresses and routes, and choose the next connectivity, DNS or firewall check.
 related:
   - peios/networking/configuring-profiles
   - peios/networking/network-policy
@@ -12,67 +12,172 @@ related:
   - peios/registry-administration/regman
 ---
 
-A Peios machine's network is described in the registry and made real by one service, **netd**. There is no `ifconfig` step, no interface file, no daemon-specific configuration format: what the network should be is written under `Machine\System\Network`, in the vocabulary of [Peios Network Policy](~peios/networking/network-policy), and netd keeps the kernel matching it.
+Start with `net status` to see whether an interface has joined a network,
+which profile it uses, and whether it has an address and a default route.
+On the desktop, open **Network Manager** from the launcher by typing
+`network`.
 
-This page explains the model. [Configuring profiles](~peios/networking/configuring-profiles) covers writing the configuration; [The net command](~peios/networking/the-net-command) covers looking at the result.
+```sh
+net status
+resolv status
+```
+
+`net` reports interface configuration; `resolv` reports the name servers
+actually in use. For a firewall change, an administrator also checks
+`net policy`. A route, a DNS answer and permission to reach a service are
+separate checks.
+
+## Choose the next check
+
+| What you see | Next step |
+|---|---|
+| No carrier, or readiness `absent` | Check the cable or link and the interface's verdict in `net status`. |
+| `IGNORE`, `DOWN`, or no profile | Inspect `net rules` and [choose a profile safely](~peios/networking/configuring-profiles). |
+| Carrier, but no address or only `169.254…` | Check the profile and DHCP warning; follow [connectivity troubleshooting](~peios/networking/diagnostic-tools#start-with-the-symptom). |
+| An address, but no default route | Check `Route.Offered` or the pinned `Route.Gateway`, then read back the result. |
+| An address works but a name does not | Use [name-resolution checks](~peios/networking/name-resolution#check-a-name-first). |
+| A particular service is unreachable | Check its listener, port reservation and [firewall decision](~peios/networking/network-policy#check-and-change-policy-safely). |
+| `policy REFUSED` | The last good interface configuration still applies. Fix the named rule or profile and check again. |
+
+The [net command reference](~peios/networking/the-net-command) explains
+its output and access rights. The [diagnostic tools](~peios/networking/diagnostic-tools)
+guide covers probes available in Experimental.
 
 ## The registry is the truth
 
-netd is a **reconciler**. It reads the desired state — the interface layer's rules and the profiles from the registry, plus whatever leases its DHCP clients currently hold — compares it with what the kernel reports over rtnetlink, and applies the difference. It does this on start, whenever the kernel reports a change (a cable plugged in, an interface appearing), whenever the registry changes, and whenever a DHCP lease arrives or expires.
+Network settings live under `Machine\System\Network`. Change them through
+[Network Manager](~peios/networking/network-manager) or the
+[profile and rule keys](~peios/networking/configuring-profiles). netd reads
+those settings and applies them live; there is no interface configuration
+file or reload command.
 
-Two consequences follow, and both are deliberate:
+Do not add an address by hand to a joined interface: netd removes addresses
+that its profile does not request. Routes added by another program are
+left alone unless they carry netd's own routing-protocol tag. The kernel's
+IPv6 link-local address is left alone too. The exact ownership and apply
+order are in [Reconciliation](~peios/advanced-peios/netd/interfaces/reconciliation).
 
-- **A manual change to a joined interface is reverted.** Adding an address by hand lasts until the next reconcile. The way to change the network is to change the registry.
-- **Restarting netd changes nothing visible.** It re-derives the same desired state, finds the kernel already matches, and does nothing. Interfaces do not flap.
+> [!WARNING]
+> A live change can interrupt the connection you are using. Profile edits
+> restart the affected interfaces' address clients. Do not use a daemon
+> restart as a harmless reload: the netd manual documents leased addresses
+> and routes being removed until DHCP answers, and advertised IPv6
+> settings waiting for a new advertisement. Keep a local recovery path and
+> follow [the change checklist](~peios/networking/configuring-profiles#before-you-change-anything).
 
-netd owns what it configured and nothing else. Addresses on a joined interface are all netd's; routes are netd's only when they carry its routing-protocol tag, so a route another program adds for itself is left alone.
+The [netd loop](~peios/advanced-peios/netd/the-daemon/the-loop) and
+[startup and restart](~peios/advanced-peios/netd/the-daemon/startup)
+chapters describe how registry, kernel, lease and timer changes are
+reconciled.
 
 ## Rules say which, profiles say how
 
-An **interface** is a place a network can be attached: an Ethernet socket, a radio, later a tunnel. It exists from the moment the hardware is found, cable or no cable. Plugging in gives it a link, and then there is a **network** on the other side, which makes an **offer**: an address for you, a way out, name servers, sometimes a name for you. The offer is claims; nothing checks them.
+A rule under `Rules\Interface` selects an interface and gives it one of
+three outcomes:
 
-For each interface the machine decides one thing — join the network found there, or do not, and if joining, what to take from the offer — and that decision is written in two places:
+- `JOIN(profile)` uses a profile under `Profiles\`.
+- `IGNORE` leaves the interface as it is, including existing settings.
+- `DOWN` keeps the interface administratively down.
 
-- **A rule in the interface layer**, `Rules\Interface`, says *which* interfaces. It is an ordinary PNP rule: conditions over facts about the interface (`Interface.Kind`, `Interface.Path`, the stable `Interface.Id`) and, once a network has been identified on it, about the network (`Network.Name`, `Network.Trust`). Its verdict is `JOIN(profile)`, `IGNORE` (never touch it) or `DOWN` (keep it dark). Exceptions are subkeys, the most specific rule speaks, priority collates, and an interface no rule speaks for meets the backstop, `IGNORE`, and is left exactly as the kernel left it.
-- **A profile** under `Profiles\` says *how* to stand there: `Address.Offered`, `Dns.Servers`, `Route.Gateway`, and so on. Nothing the network offers is taken unless a bundle's `Offered` says so, so a profile's trust posture is visible by counting its Offereds. A subkey is a derived profile that inherits everything above it and overrides only what it names.
+A profile supplies settings such as `Address.Static`, `Route.Gateway` and
+`Dns.Servers`. Each `Offered` value decides whether to accept that part
+of the network's offer. An offer is a claim from the network, not proof
+that it is trustworthy. A child profile inherits its parents' settings
+and replaces only the values it names.
 
-Nothing is "activated". A rule that matches two interfaces puts both in its profile; the same profile serves any number of interfaces; and the same radio can stand in a different profile at home, in the office and in a cafe, because the rule can condition on the network. A default profile and a rule shipped with the image put every wired interface on whatever it is plugged into, at a priority anything you write outranks.
+A profile can serve several interfaces at once; there is no separate
+activation step. Rules can match stable interface identity or the network's
+name and trust label. A shipped `wired` rule at priority 10 assigns all
+wired interfaces to `default`, which accepts offered addresses, routes
+and DNS and enables link-local fallback. A bare profile accepts none of
+those offers. No matching rule means `IGNORE`.
+
+See [Configuring profiles](~peios/networking/configuring-profiles) for
+examples and [Network policy](~peios/networking/network-policy) for
+exceptions, priorities and conflicts.
 
 ## The inventory and the networks
 
-netd writes what it finds under `Machine\System\Network\Interfaces\<id>\Status`: the kernel name, kind, MAC, bus path, driver, and its verdict — which rule spoke, which profile it stands in, and its readiness. The **interface id** is derived from the bus path and MAC, so the same card in the same slot keeps the same key across boots however the kernel names it. Only netd may write a `Status` key; a hand edit is refused rather than silently reverted.
+Use `net status` for the current link, address, lease and network. The
+interface id remains stable for the same card in the same slot even if its
+kernel name changes across boots.
 
-Every network the machine has stood on gets a record under `Networks\<id>`, identified for now by the DHCP server that answered and the subnet it handed out (or the advertising router and its prefix). Two values on it are yours: `Name`, a label, and `Trust`, your word on it. Those are the `Network.*` facts rules condition on — in the interface layer to choose how to stand there, and in the packet layers to decide what may flow there, so `Network.Trust.Equal = home` means the same network in both. What the network showed is under its own `Status`.
+The registry also keeps records under `Interfaces\<id>` and
+`Networks\<id>`. netd's findings are in their protected `Status` subkeys;
+hand edits there are refused. On a network record, you can set `Name` and
+`Trust`. Rules for both profiles and the firewall use those labels, so
+changing one can change connectivity.
 
-Nothing transient is stored in the registry — not leases, not link state, not what a network offered. `net status` shows those.
+Network identification currently uses the DHCP server and subnet, or an
+advertising router and prefix. It does not prove a network's identity.
+The [inventory](~peios/advanced-peios/netd/what-netd-publishes/the-inventory)
+and [network records](~peios/advanced-peios/netd/networks/records) chapters
+list the persisted fields; lease timers and current offered configuration
+are live daemon state, not a lease to restore from the registry.
 
 ## Addresses
 
-A profile gets its addresses three ways, and they combine:
+Choose these in a profile, then check the result in `net status`:
 
-- **Offered**, with `Address.Offered`: netd runs its own DHCPv4 client once the interface has carrier, and solicits IPv6 routers and acts on their advertisements itself — the kernel's own RA handling is switched off everywhere, so there is exactly one place deciding what an advertisement means. Each advertised prefix yields a **stable-privacy address** (RFC 7217): a keyed digest of the prefix and the interface's identity, so the same machine on the same network keeps its address across boots without ever deriving it from the MAC. When a router asks for it (the M or O flag), netd also asks over stateless DHCPv6 for DNS servers and search domains. `Address.Temporary` adds daily-rotating addresses (RFC 8981) beside the stable one. `Address.Families` limits the bundle to one family.
-- **Static** addresses in `Address.Static`, CIDR form, either family. The way out is a separate claim: `Route.Offered` takes the network's, `Route.Gateway` pins your own.
-- **Link-local** (169.254/16), with `Address.LinkLocal`: self-assigned when DHCP discovery goes unanswered, so two machines on a cable with no server can still talk. Discovery continues, and the link-local address is dropped when a lease arrives.
+| Need | Setting and effect |
+|---|---|
+| Accept the network's address | `Address.Offered`: DHCPv4 and IPv6 router discovery, limited by `Address.Families`. IPv6 uses stable-privacy addresses; DHCPv6 supplies DNS information, not addresses. |
+| Set an address yourself | `Address.Static`: CIDR addresses of either family. Set the gateway separately with `Route.Gateway`, or accept it with `Route.Offered`. |
+| Reach another machine on a cable without DHCP | `Address.LinkLocal`: a `169.254/16` fallback while DHCP discovery continues; removed when a lease arrives. |
+| Add rotating IPv6 addresses | `Address.Temporary`: daily-rotating addresses alongside the stable address. |
 
-When a lease expires and cannot be renewed the address is dropped by default: the server may have given it to someone else, and an address conflict is worse than no address. A profile can say `Address.OnExpiry = Keep` instead. IPv6 lifetimes behave as the RFCs say: an address past its preferred lifetime is kept for standing connections but chosen for nothing new, and one past its valid lifetime is removed — with the two-hour floor that stops a spoofed advertisement from killing an address outright.
+An expired DHCP lease is dropped by default. `Address.OnExpiry = Keep`
+trades address-conflict risk for continuity. A network's `RequestedAddress`
+is only the address to ask for first next time; the server can refuse it.
 
-The address a network last leased is remembered on its record as `RequestedAddress`, and asked for first next time. You may write it yourself as a soft reservation.
+A deprecated IPv6 address remains for existing connections but is not
+chosen for new ones; it is removed when its valid lifetime ends. Stable
+address derivation, temporary-address rotation and the protective two-hour
+lifetime rule are documented in [IPv6 addresses](~peios/advanced-peios/netd/ipv6/addresses).
+See [DHCPv4](~peios/advanced-peios/netd/dhcpv4/the-client) for acquisition,
+renewal and fallback details.
 
 ## Readiness is a level, not a boolean
 
-"The network is up" means different things to different services. netd reports each joined interface at one of four **levels** — `absent`, `link` (up with carrier), `addressed` (has an address), `routed` (has a default route) — and the machine's readiness is the highest among them. Both are written to the registry as `Readiness`, on `Machine\System\Network` and on each interface's `Status`, for services and scripts to watch; `net wait routed` blocks until there is a default route. A service that needs the network says so in its definition, `Requires = ["network:routed"]`: `network` is the role netd fills, so the dependency names PNP's vocabulary rather than the daemon, and peinit holds the start until the level is published.
+| Level | What it tells you |
+|---|---|
+| `absent` | The joined interface is down or has no carrier. |
+| `link` | It is up with carrier, but has no usable address. |
+| `addressed` | It has a usable address, but no default route. A `169.254…` address counts. |
+| `routed` | It has a usable address and a default route. This does not test Internet or DNS reachability. |
+
+The machine reports the highest level among joined interfaces. Readiness
+is also published on `Machine\System\Network` and each joined interface's
+`Status` for scripts and services.
+
+`net wait routed` waits for a default route. A service may declare
+`Requires = ["network:routed"]`. These waits differ: `net wait` accepts
+at least the requested level, while peinit matches the published service
+level exactly. See [Readiness](~peios/advanced-peios/netd/what-netd-publishes/readiness)
+before depending on `network:addressed`.
 
 ## What netd does not do
 
-- **Names.** netd never answers a DNS query. It tells resolvd, live, what each interface contributes — servers, search domains, addresses — and resolvd routes every name to one interface's servers. Nothing is written to `/etc/resolv.conf` or `/etc/hosts`; see [name resolution](~peios/networking/name-resolution).
-- **Firewalling.** The packet layers of PNP are the kernel's; netd reads only the interface layer. Joining needs netd's own DHCP and router-discovery traffic to pass them, and the shipped baseline permits it with visible, deletable rules.
-- **Port ownership.** Who may bind a port is a kernel decision under `Machine\System\Network\TcpIp\PortReservations`.
-- **WiFi association.** A wireless supplicant brings the link up; netd treats the result like any other interface. Wireless networks are not yet identified by name.
+- **Answer DNS.** resolvd receives netd's live server and domain information;
+  use [name resolution](~peios/networking/name-resolution) to configure and
+  diagnose it. netd writes neither `/etc/resolv.conf` nor `/etc/hosts`.
+- **Filter traffic.** The kernel enforces PNP's packet layers. DHCP and
+  router-discovery traffic need the baseline's visible, deletable rules.
+- **Grant port ownership.** [Port reservations](~peios/network-objects/port-reservations)
+  decide who may bind a port; the firewall decides who may reach it.
+- **Associate Wi-Fi.** A supplicant must bring up a wireless link before
+  netd can configure it. Wi-Fi is unfinished: wireless is absent from the
+  baseline, Network Manager shows it as **Not managed**, and wireless
+  networks are not yet identified by name.
 
 ## Where to start
 
-- [Configuring profiles](~peios/networking/configuring-profiles) — write a profile and a rule, static or offered, and see it take effect.
-- [Network policy](~peios/networking/network-policy) — the model behind rules, and the [reference](~peios/networking/network-policy-reference) with every fact, verdict and profile value.
-- [The net command](~peios/networking/the-net-command) — status, readiness, renewals.
-- `regman Machine\System\Network` on a Peios machine documents every key netd reads and writes.
-- The [netd technical reference manual](~peios/advanced-peios/netd/introduction/overview) — netd exactly as built: every timer, retry, state and message, for when you need to know precisely what it will do.
+- [Configure a profile](~peios/networking/configuring-profiles), apply it
+  through a matching rule, and read back the accepted settings.
+- [Use Network Manager](~peios/networking/network-manager) for desktop
+  configuration, change previews and its documented rollback flow.
+- [Troubleshoot a symptom](~peios/networking/diagnostic-tools).
+- Look up exact settings in `regman Machine\System\Network` or the
+  [network policy reference](~peios/networking/network-policy-reference).
+- Use the [netd technical reference manual](~peios/advanced-peios/netd/introduction/overview)
+  for daemon algorithms, protocol exchanges, timers and limits.

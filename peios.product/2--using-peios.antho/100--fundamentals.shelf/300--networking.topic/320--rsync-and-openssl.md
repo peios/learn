@@ -1,16 +1,26 @@
 ---
 title: rsync and OpenSSL
 type: guide
-description: Synchronize file contents and inspect TLS using native Peios file-security rules.
+description: Choose a content-copy or TLS diagnostic command, understand destination security and interruption risks, and verify the result without relying on Unix permissions.
 related:
   - peios/networking/diagnostic-tools
   - peios/networking/network-policy
   - peios/trust/the-compat-files
 ---
 
+Use `rsync -rlt` for content synchronization and an explicit verification
+mode for TLS diagnostics. Before either, choose a destination you control
+and confirm the identity and access the command will use.
+
+| Task | Start here | Check afterwards |
+|---|---|---|
+| Copy directory contents locally or over SSH | [Synchronizing contents](#synchronizing-contents-with-rsync) | Check the destination contents and native access policy. rsync is not a security-descriptor backup. |
+| Create private key or other secret output | [Private outputs](#openssl-and-private-outputs) | Use the tool's named-output option and a private directory; shell redirection has different protection. |
+| Diagnose a TLS server | [TLS diagnostics](#tls-diagnostics-and-network-policy) | Require successful certificate verification for the intended DNS name or IP identity. |
+
 ## Synchronizing contents with rsync
 
-The Peios rsync port synchronizes contents between local directories or over SSH:
+The Peios rsync port synchronizes contents between local directories or over SSH. Replace the example paths, account and server; an existing destination file may be replaced:
 
 ```sh
 rsync -rlt source/ destination/
@@ -35,6 +45,12 @@ This initial port rejects alternate staging/partial/backup modes, delayed update
 
 Rsync daemon serving is disabled, including daemon mode invoked over a remote shell. Ordinary SSH `--server` transfers remain supported. The receiving process uses the identity supplied by SSH; installing rsync creates no service and grants no extra authority. Security-sensitive symlink ownership checks use native SIDs rather than cosmetic Unix UID zero. A client password file must have a protected owner-only native DACL.
 
+After a transfer, check that the intended contents arrived and that the
+destination's native security is still the policy you intended. If staged
+replacement is refused for insufficient security rights, read that failure
+before considering `--inplace`; it is a different interruption and hardlink
+tradeoff, not an equivalent retry.
+
 ## OpenSSL and private outputs
 
 OpenSSL uses trustd's generated `/etc/ssl/cert.pem` and hashed `/etc/ssl/certs` by default. Use `trust` to manage machine trust. Explicit CA-file, CA-directory and environment overrides select trust for that invocation; they do not modify the machine's trust store. `openssl rehash` is for directories you manage yourself, not trustd's generated directory.
@@ -55,3 +71,8 @@ openssl s_client -connect example.org:443 -servername example.org \
 ```
 
 Use `-verify_ip` for an IP identity. SNI (`-servername`) alone is not hostname verification. Explicitly selected TLS diagnostic behavior never bypasses PNP: connections and listeners remain subject to native network policy and port reservations.
+
+A successful TLS check establishes the requested certificate checks for
+that peer. It does not change system trust or grant access through PNP.
+If verification fails, inspect the reported certificate, peer name and
+trust anchors rather than disabling the check to declare success.
