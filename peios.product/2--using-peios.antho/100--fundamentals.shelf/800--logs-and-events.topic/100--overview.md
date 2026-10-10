@@ -4,13 +4,17 @@ type: concept
 description: eventd keeps three records of what happens on a Peios machine — logs, events and metrics — and shows each person only what they may read.
 related:
   - peios/logs-and-events/event-viewer
+  - peios/logs-and-events/find-missing-records
   - peios/services-and-jobs/output-and-logging
   - peios/auditing/overview
 ---
 
-A Peios machine keeps a record of what happens on it. One service,
-**eventd**, receives that record, stores it and answers questions about it.
-Nothing else on the machine stores logs, so there is one place to look.
+Start with [Event Viewer](~peios/logs-and-events/event-viewer) to inspect a
+machine's logs, events and metrics. **eventd** receives these records,
+stores them and answers queries about the stored history you may read.
+If the records you expect are missing, follow
+[Find missing records](~peios/logs-and-events/find-missing-records) before
+changing settings or removing stored data.
 
 ## Three kinds of record
 
@@ -19,7 +23,7 @@ answer different questions.
 
 | Kind | What it is | Where it comes from |
 |---|---|---|
-| **Logs** | Lines of text that services and jobs write | The service manager, peinit, which reads every service's output and passes each line on |
+| **Logs** | Lines of text that services and jobs write | The service manager, peinit, which captures stdout and stderr except for services attached to a terminal with `TTYPath` |
 | **Events** | Structured records of something that happened, such as a service started or an access refused | The kernel and system programs |
 | **Metrics** | Numbers measured over time, such as how many requests a server has answered | Programs that publish them |
 
@@ -95,9 +99,13 @@ origin, an event type or a metric name.
 
 What a person may not read is **left out without comment**. eventd never
 says that something was withheld, because saying so would itself tell
-them something. So an empty answer can mean "nothing happened" or "nothing
-you may see happened". Event Viewer reads the policy too, and says which
-of the two it is.
+them something. An empty answer therefore does not prove that nothing
+happened. Event Viewer also tries to read the policy and reports which
+names it permits, restricts, or cannot determine. A restriction notice
+does not prove that any hidden record exists; even unrestricted results
+cover only stored, queryable records. See
+[what you may not see](~peios/logs-and-events/event-viewer#what-you-may-not-see)
+and the [missing-record checks](~peios/logs-and-events/find-missing-records).
 
 ## Where to look
 

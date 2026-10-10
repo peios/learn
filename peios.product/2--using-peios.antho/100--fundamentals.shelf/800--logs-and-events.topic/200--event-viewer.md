@@ -4,6 +4,7 @@ type: how-to
 description: Read a machine's events, metrics and logs from the desktop — records newest first and live, metrics charted on dashboards of your own, and a word on anything you may not see.
 related:
   - peios/logs-and-events/overview
+  - peios/logs-and-events/find-missing-records
   - peios/services-and-jobs/controlling-services
   - peios/evctl/using-evctl
 ---
@@ -14,8 +15,9 @@ its services. It shows events and logs newest first, adds new ones at the
 top as they are recorded, and shows any record in full. It charts metrics
 on dashboards you arrange.
 
-It asks eventd as you, so it shows exactly what you may read, and it says
-when something is kept from you.
+It asks eventd as you, so results include only records you may read. It
+also tries to read the policy to explain restrictions on which names
+you may see; those notices do not establish that hidden records exist.
 
 ## Opening it
 
@@ -143,8 +145,11 @@ behind a burst of records, Event Viewer says so above the list. Select
 ## Older records
 
 The list starts with the newest 200 records. **Show older**, at the
-bottom of the list, adds the 200 before them. When there are no more in
-the time range, it says so.
+bottom of the list, adds the 200 before them. When there are no more
+matching, readable records in the queryable stores for the time range,
+it says so. Even **any time** cannot retrieve records removed by retention
+or held in a store excluded from queries. See
+[Find missing records](~peios/logs-and-events/find-missing-records).
 
 A window holds at most 1,000 records. Past that, the newest are let go to
 make room and the window stops following. It says so at the top, with
@@ -170,8 +175,8 @@ reads it again from the newest.
 ## What you may not see
 
 eventd leaves out what you may not read without saying so. Event Viewer
-reads eventd's read policy as you and says what it keeps from you, at the
-bottom right of the window:
+tries to read eventd's read policy as you and reports the permissions on
+names, at the bottom right of the window:
 
 | It says | Which means |
 |---|---|
