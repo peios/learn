@@ -8,6 +8,11 @@ related:
   - peios/process-mitigations/overview
 ---
 
+When Task Manager hides details or refuses **End process**, inspect the
+process's **Protection** and **Mitigations**. In a terminal,
+[`logonse psb --pid PID`](~peios/system-and-processes/logonse) shows its protection,
+hardening and Process GUID without changing them.
+
 A process's identity — who it is acting as — is carried on its token, and can
 change moment to moment, since a thread can impersonate another principal. A
 process has a second aspect that is independent of identity: **what it is**.
@@ -58,6 +63,39 @@ protected and nothing else about it can be seen. That is what lets a tool say
   shows them for the process you pick.
 - From a program, read `/proc/<pid>/psb`, or call `peios_process_psb` in the
   SDK.
+
+## When an action is refused
+
+Being able to see a process's name or PSB does not grant control of it. Its
+security descriptor determines which actions your identity may perform.
+Signals also have to pass **Process Integrity Protection** (PIP): the program
+sending the signal must have enough trust to act on the target.
+
+| Action | Process right |
+|---|---|
+| Read the PSB | `PROCESS_QUERY_LIMITED` |
+| Read detailed process information | `PROCESS_QUERY_INFORMATION` |
+| Send terminating signals, including `TERM` and `KILL` | `PROCESS_TERMINATE` |
+| Suspend or resume with `STOP` or `CONT` | `PROCESS_SUSPEND_RESUME` |
+
+The PSB inspection surface does not require PIP dominance, which is why a
+tool can explain that a process is protected even when its other details are
+closed. Detailed inspection and signalling still require it. Even
+`SeDebugPrivilege` does not bypass PIP, and impersonating a different identity
+does not change the calling program's trust.
+
+For a managed service, use **Stop service** or `svctl stop NAME` when permitted.
+That asks peinit to perform the managed action under the service's own
+permissions, instead of trying to signal its protected process directly.
+See [Who can manage a service](~peios/services-and-jobs/who-can-manage-a-service).
+
+## Before changing mitigations
+
+`logonse psb --pid PID` is an inspection command. Adding `--mitigations MASK`
+changes hardening: those flags can only be turned on, never cleared during the
+process's lifetime. Check the [mitigation rules](~peios/process-mitigations/overview)
+and the [`logonse` reference](~peios/system-and-processes/logonse) before using
+that option. It is not a way to gain permission to inspect or end the process.
 
 ## Where to go next
 

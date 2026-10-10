@@ -1,7 +1,7 @@
 ---
 title: Task Manager
 type: how-to
-description: See what is running on the machine from the desktop — every process, which service or job it belongs to, who it runs as, its CPU and memory, its protection and mitigations; how busy the processors, memory, disks and network are; the jobs; and who is signed in — end a process, stop its service or job, sign someone out, and see what you may not, and why.
+description: Find a running process, check its CPU, memory and owner, choose whether to end the process or stop its service or job, and understand access refusals.
 related:
   - peios/threads-and-processes/overview
   - peios/threads-and-processes/the-process-security-block
@@ -23,6 +23,25 @@ something only where you may.
 
 **Processes**, **Performance**, **Jobs** and **Signed in**, in the bar,
 switch between its four views.
+
+## Find the right process before acting
+
+1. Open **Processes**. Use **Find** for a name, PID, person or service, or sort
+   **CPU** or **Memory** to investigate resource use.
+2. Select the process. Check its command, who it runs as, what started it, and
+   the service or job it belongs to. Some details may be hidden by permissions.
+3. Choose the scope of the action. To stop a service and everything it started,
+   use **Stop service**; to stop a submitted job, use **Stop job**. Use **End
+   process** when you intend to end only that process.
+4. Read the confirmation and refresh the view to check the result. Ending a
+   service's main process may cause peinit to restart it.
+
+A **process** is one running program. A **service** is a persistent definition
+managed by peinit, and can start a new process after the old one ends. A
+**submitted job** is work someone asked peinit to run and watch. For those
+managed lifetimes, see [Services and jobs](~peios/services-and-jobs/overview).
+For process states and terminal signals, see
+[Process lifecycle](~peios/threads-and-processes/process-lifecycle).
 
 ## The processes
 
@@ -179,9 +198,24 @@ so.
 
 ## In a terminal
 
-There is no `ps` yet. [`logonse psb --pid PID`](~peios/system-and-processes/logonse)
-shows a process's protection and mitigations, `logonse list` the
-signed-in sessions and their processes, `svctl status NAME` a service's
-main process, `svctl stop NAME` stops a service, `svctl job list` lists
-the jobs and `svctl job stop ID` stops one, `logonse end ID` signs a
-session out, and `kill PID` ends a process.
+The toolset documented here does not yet include `ps`; use Task Manager for
+the process list. The documented terminal tools cover these narrower tasks; replace `PID`, `NAME` and `ID` with
+the process, service or job/session you have checked.
+
+| Task | Command |
+|---|---|
+| Read a process's protection, mitigations and GUID | [`logonse psb --pid PID`](~peios/system-and-processes/logonse) |
+| List signed-in sessions and their visible processes | `logonse list` |
+| Read a service's status and main process | `svctl status NAME` |
+| Stop a service | `svctl stop NAME` |
+| List submitted jobs | `svctl job list` |
+| Read a submitted job's status | `svctl job status ID` |
+| Stop a submitted job | `svctl job stop ID` |
+| Sign a session out | `logonse end ID` |
+| Ask one process to terminate | [`kill PID`](~peios/system-and-processes/kill) |
+
+The same access restrictions apply to terminal tools. `logonse list` can show
+only a partial view; a missing entry is not proof that nothing is running.
+Read [Controlling services](~peios/services-and-jobs/controlling-services) for
+service and job commands, and [End, suspend, or resume a process](~peios/threads-and-processes/process-lifecycle#end-suspend-or-resume-a-process)
+before sending signals.

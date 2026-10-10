@@ -1,74 +1,83 @@
 ---
 title: Threads and processes
 type: concept
-description: A process is a running program; a thread is a single line of execution inside it. Every action the system takes happens on some thread.
+description: Find what is running, distinguish a process from its service or job, interpret its state and identity, and choose a safe way to stop it.
 related:
+  - peios/threads-and-processes/task-manager
+  - peios/threads-and-processes/process-lifecycle
+  - peios/services-and-jobs/overview
   - peios/identity/overview
   - peios/tokens/overview
   - peios/confinement/overview
 ---
 
-A **process** is a program that is running. When a program starts, the system
-gives it a block of private memory that only it can see, a table of the files
-and other resources it holds open, and a name the system tracks it by. That
-running program, plus everything the system keeps for it, is a process. When
-the program finishes, its process goes away.
+To see what is running, open **Task Manager** from the launcher. Find a
+process by name or PID, check its CPU and memory, and select it to see who it
+runs as and which service or job it belongs to. Start with the
+[Task Manager guide](~peios/threads-and-processes/task-manager) for the controls
+and the limits on what you can see.
 
-A process can also do several things at once by running more than one
-**thread**. A thread is a single line of execution — one sequence of steps the
-system is working through. A process always has at least one thread (its
-initial execution is its first thread), and it can start more. Every thread in
-a process shares the same private memory and the same open resources. What
-each thread keeps to itself is its own place in its sequence: each runs its
-own steps, at its own pace, possibly in parallel with the others.
+A **process** is a running program, together with its memory, open resources,
+and the state the system keeps for it. A **thread** is one line of execution
+inside that process. Every process starts with one thread and can create
+more; its threads share memory and open resources while each makes progress
+through its own work.
 
 ## The actors of the system
 
-Processes and threads are what carry out work on the system. Every action —
-opening a file, sending data over a network, starting another program — is
-performed by some thread. When the system decides whether an action is
-allowed, the question it answers is "is this thread allowed?" When it records
-that something happened, it records which thread did it.
+Every action, such as opening a file or sending data, is performed by a
+thread. The system checks whether that thread is allowed and records which
+thread acted. Each thread acts as a person, a service, or the system itself;
+there is no "nobody" state. Its [token](~peios/tokens/overview) carries that
+identity, and a new child process begins with its parent's identity.
 
-A thread always acts as someone — a person, a service, or the system itself.
-Peios carries that identity along with the thread on an object called a
-**token** (see [Tokens](~peios/tokens/overview)). Two facts matter here:
+The thing to stop depends on what you want to achieve:
 
-- Every thread is always acting as someone. There is no "nobody" state.
-- When one process starts another, the new process begins acting as the same
-  identity as the process that started it.
+| You want to stop | Use | Why |
+|---|---|---|
+| One running process | Task Manager's **End process**, or `kill PID` | Asks that process to end; unsaved work may be lost. |
+| A managed service and its processes | **Stop service**, or `svctl stop NAME` | Ending only its main process can look like a crash and cause a restart. |
+| A submitted job | **Stop job**, or `svctl job stop ID` | Asks peinit to stop the managed job. |
+
+A service is a persistent definition; a process is one thing running now.
+A submitted job is work someone asked peinit to run and watch. A terminal's
+job-control group is another use of "job", described in
+[Process relationships and job control](~peios/threads-and-processes/relationships-and-job-control).
 
 ## What a process has
 
-The things the system keeps for every process:
-
-| A process has | What that means |
+| A process has | What to look for |
 |---|---|
-| Private memory | working space only this process can see; other processes cannot read it |
-| Open resources | the files, connections, and other things it currently holds open |
-| An identity | who it is acting as (carried on its token) |
-| A place in a family tree | every process was started by another, so processes form a tree |
-| A lifecycle | it is created, it runs, and it ends — and its end is always observed |
-| One or more threads | the lines of execution doing its work |
+| Private memory | Its working space, shared by its own threads and separate from other processes. |
+| Open resources | Files, connections, and other resources it holds open. |
+| An identity | Who it runs as; its token controls what it may reach. |
+| A place in a family tree | Its parent, shown by a parent PID (PPID). |
+| A lifecycle | Whether it is running, sleeping, stopped, or has finished. |
+| One or more threads | The lines of execution doing its work. |
 
-This is not the full list — a process also carries other per-process state,
-such as its
-[Process Security Block](~peios/threads-and-processes/the-process-security-block)
-(PSB), which holds its security-related settings.
+The **PID** identifies a process while it exists and can be reused afterwards.
+The **Process GUID** identifies that one process permanently. Neither tells you
+who it runs as. For a lasting event record, use the GUID; before acting on a
+PID, check the current process again.
+
+The [Process Security Block](~peios/threads-and-processes/the-process-security-block)
+(PSB) holds the GUID, protection, hardening and the process's own permissions.
+Being able to see a process does not mean you may stop or inspect all of it.
 
 ## Where to start
 
-Continue with [The process and thread model](~peios/threads-and-processes/the-process-and-thread-model)
-for how a thread and a process relate, and why the thread — not the process —
-is the more basic unit, with a "process" being one particular way of using
-them.
+- [Task Manager](~peios/threads-and-processes/task-manager): find a process,
+  investigate resource use, and choose a process, service, or job action.
+- [Process lifecycle](~peios/threads-and-processes/process-lifecycle): interpret
+  states and safely end, suspend, or resume a process.
+- [The process and thread model](~peios/threads-and-processes/the-process-and-thread-model):
+  understand threads, PIDs, GUIDs, and identity.
+- [Creating processes](~peios/threads-and-processes/creating-processes): understand
+  why starting a program adds a process, and why a process can change programs.
+- [Process relationships and job control](~peios/threads-and-processes/relationships-and-job-control):
+  understand parents, terminal process groups, and sessions.
+- [The Process Security Block](~peios/threads-and-processes/the-process-security-block):
+  understand protection and access refusals.
 
-This topic also covers:
-
-- [Creating processes](~peios/threads-and-processes/creating-processes) — how a
-  process starts another, and what the new one begins with.
-- [Process lifecycle](~peios/threads-and-processes/process-lifecycle) — how a
-  process ends, and how the system cleans up after it.
-- [Process relationships and job control](~peios/threads-and-processes/relationships-and-job-control)
-  — the process tree, process groups, and sessions (distinct from the logon
-  sessions in [Logon sessions](~peios/logon-sessions/overview)).
+The syscall and threading-library contracts are in the developer
+[Process runtime reference](~peios/developing-for-peios/process-runtime-reference/overview).

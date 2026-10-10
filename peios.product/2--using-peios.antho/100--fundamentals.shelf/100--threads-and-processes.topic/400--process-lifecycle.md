@@ -1,16 +1,17 @@
 ---
 title: Process lifecycle
 type: concept
-description: How a process ends, how its result is collected, what happens when its parent ends first, and how the system cleans up after it.
+description: Interpret process states, choose a safe way to end or pause a process, check the result, and understand zombies and orphaned children.
 related:
   - peios/threads-and-processes/creating-processes
   - peios/threads-and-processes/relationships-and-job-control
   - peios/security-fundamentals/tokens/lifecycle
 ---
 
-Every process eventually ends. A process's life has three parts — it is
-created, it runs, and it finishes — and the system ensures that when it
-finishes, its result is collected and its resources are reclaimed.
+Read a process's state before deciding what to do. A sleeping process can be
+healthy, a stopped process is paused rather than finished, and a zombie has
+already ended. Use [Task Manager](~peios/threads-and-processes/task-manager) to
+check the process, its parent, and whether a service or job manages it.
 
 ## The states it passes through
 
@@ -37,6 +38,62 @@ A few states are worth knowing by name:
 Once its result has been collected the process is gone, removed from the system
 entirely.
 
+## End, suspend, or resume a process
+
+First check the scope. **Stop service** or `svctl stop NAME` asks peinit to stop
+a service and its processes; **Stop job** or `svctl job stop ID` stops a
+submitted job. Ending a service's main process directly can count as a crash
+and trigger a restart. See
+[Controlling services](~peios/services-and-jobs/controlling-services).
+
+For one process, Task Manager's **End process** asks it to end, then offers
+**End it now** after five seconds if it is still there. The immediate option
+does not let the program finish its work. Task Manager holds the process so a
+reused PID cannot redirect that action.
+
+From a terminal, use [`kill`](~peios/system-and-processes/kill). Replace `4821`
+in these examples with the PID you have just checked:
+
+```
+$ kill 4821                 # send TERM: ask the process to terminate
+```
+
+Give it time to finish, then refresh Task Manager and check the result. Only
+if `TERM` has failed, and losing unfinished work is acceptable, consider:
+
+```
+$ kill -KILL 4821           # force termination without application cleanup
+```
+
+> [!WARNING]
+> `KILL` gives a program no chance to save work or run its cleanup. Recheck
+> the current process before acting on the PID again: an exited process's
+> number can be reused. A process in uninterruptible sleep cannot finish
+> terminating until the operation it is waiting on finishes.
+
+To **pause** a process and later let it continue, use the documented stop and
+continue signals:
+
+```
+$ kill -STOP 4821           # suspend
+$ kill -CONT 4821           # resume
+```
+
+Suspension is not completion: the process does no work until resumed. Check
+that pausing it will not interrupt work other programs or people depend on.
+This targets one process, not a whole service or terminal pipeline.
+
+`TERM` and `KILL` require permission to terminate the process; `STOP` and `CONT`
+require permission to suspend or resume it. Protected processes also require
+sufficient program trust. Being an administrator or sharing a terminal
+session does not bypass protection. See
+[Process permissions](~peios/threads-and-processes/the-process-security-block#when-an-action-is-refused).
+
+A successful `kill` exit status means the signal was **sent**, not that the
+process has finished. Exit status `1` means a signal could not be sent, for
+example because the process no longer exists or you may not signal it. Check
+the refreshed process or managed-service/job status before declaring it stopped.
+
 ## Two ways a process ends
 
 A process ends in one of two ways.
@@ -46,11 +103,9 @@ that ends this way leaves behind an **exit status** — a small record of how it
 went, usually just "succeeded" or "failed" (and, on failure, a number giving a
 rough reason). The act of a process ending itself is called **exit**.
 
-The other way is that a process is **stopped from outside** — something tells
-it to stop, and it ends whether or not its work was done. (The messages that
-do this are **signals**, a subject of their own.) A process ended this way
-also leaves an exit status, marked to show it was stopped rather than
-finishing on its own.
+The other way is that a process is **ended by a signal** from outside. Its
+exit status records the terminating signal. This is different from the
+**stopped** state above, which means suspended and able to resume.
 
 Either way, a record of the process remains until its result is collected.
 
@@ -70,33 +125,30 @@ is gone for good.
 
 If a parent never collects, zombies accumulate — finished processes whose
 results no one read. That is a fault in the parent, not normal behaviour.
+Inspect the parent and its service or job; a zombie has already finished,
+so sending it another termination signal does not make the parent collect it.
 
 A parent holding a [pidfd](~peios/threads-and-processes/creating-processes) for its
 child can wait on it directly — the dependable way to be told the exact moment the
 child ends.
 
 The exact calls — every `wait` variant, and how an exit status is read — are in the
-[process lifecycle reference](~peios/threads-and-processes/process-lifecycle-reference).
+[developer process lifecycle reference](~peios/developing-for-peios/process-runtime-reference/process-lifecycle-reference).
 
 ## When the parent ends first
 
 A parent does not always outlive its children. If a parent ends while one of
 its children is still running, that child becomes an **orphan**.
 
-Orphans are not lost. The system's first process — PID 1, which on Peios is
-**peinit** — adopts every orphan and stands in as its parent from then on:
-when the orphan eventually ends, peinit collects its result, so no finished
-process is ever left uncollected. Adoption is automatic; the orphan keeps
-running unaffected, only with a new parent.
+Orphans are adopted automatically, and keep running with a new parent. The
+system's first process — PID 1, which on Peios is **peinit** — is the final
+adopter when no nearer subreaper takes responsibility. When the adopted child
+ends, its new parent collects the result.
 
-PID 1 is the catch-all, but a process can arrange to catch orphans within its
-own subtree. By marking itself a **subreaper** (with
-`prctl(PR_SET_CHILD_SUBREAPER)`), a process becomes the one that adopts any
-orphan descended from it — its grandchildren and below — instead of letting
-them reparent all the way up to PID 1. Service managers and container managers
-use this to keep responsibility for everything they launched: when something
-deep in their subtree loses its immediate parent, it reparents to the manager,
-which still learns when it finally ends.
+PID 1 is the catch-all. A **subreaper** can instead adopt orphaned descendants
+within its own subtree; service and container managers use this to retain
+responsibility for the work they launched. For the programmatic contract, see
+[Orphan adoption and subreapers](~peios/developing-for-peios/process-runtime-reference/process-lifecycle-reference#orphan-adoption-and-subreapers).
 
 ## What the system cleans up
 

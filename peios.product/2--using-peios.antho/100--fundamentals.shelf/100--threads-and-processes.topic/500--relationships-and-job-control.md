@@ -8,9 +8,14 @@ related:
   - peios/logon-sessions/overview
 ---
 
-Every process is related to others in two different ways: by **descent** — who
-started whom — and by **grouping** — which processes are handled together when
-they are controlled at a terminal.
+Use a process's **parent** to trace what started it. Use its **service or
+submitted job** to choose a managed stop. At a terminal, use the **process
+group** to understand which commands receive keyboard signals together.
+These are different relationships; stopping one PID need not stop all the
+work it belongs to.
+
+Processes are related by **descent**, forming a family tree, and by
+**grouping**, which lets terminal job control handle several together.
 
 ## The family tree
 
@@ -47,6 +52,11 @@ A process group is a set of processes treated as a unit, so that an action — m
 often a signal, like the one that stops a job — can be delivered to all of them
 together instead of one by one.
 
+A terminal job, such as a pipeline, is not the same thing as a **submitted
+job** watched by peinit. Task Manager's **Jobs** view and `svctl job` operate on
+submitted jobs; terminal job control operates on process groups. See
+[Jobs and operations](~peios/services-and-jobs/jobs-and-operations).
+
 ## Sessions and the terminal
 
 Process groups are themselves collected into a larger unit: a **session**, tied
@@ -58,6 +68,13 @@ one typing reaches, the one a stop-or-interrupt keystroke acts on. Any other
 groups are in the **background**, running without holding the keyboard. Moving a
 job between foreground and background — and starting, stopping, and resuming jobs
 — is **job control**.
+
+**Ctrl-C** sends the terminal's interrupt signal to the foreground process
+group; **Ctrl-Z** sends its stop signal. A command such as `kill -STOP PID`
+targets the named process instead. Resume that process with `kill -CONT PID`
+when permitted; see [suspending and resuming](~peios/threads-and-processes/process-lifecycle#end-suspend-or-resume-a-process).
+Keyboard signals and explicit `kill` commands take different permission paths,
+as explained in [Signals in detail](~peios/process-integrity-protection/the-two-check-rule#signals-in-detail).
 
 ## A different kind of "session"
 

@@ -9,6 +9,11 @@ related:
   - peios/impersonation/overview
 ---
 
+A process row in [Task Manager](~peios/threads-and-processes/task-manager)
+represents a running program; its thread count tells you how many lines of
+execution it contains. Use the PID to find it now, the Process GUID to match
+historical records, and its token identity to understand who it runs as.
+
 A running program has two separable parts: the threads, which run, and the
 process, which contains them.
 
@@ -76,7 +81,7 @@ The system gives each process a number called its **process ID**, or **PID**,
 so that people and other programs can refer to it — to inspect it, signal it,
 or wait for it to finish. Threads are individually identifiable too, by a
 thread ID — see
-[thread operations](~peios/threads-and-processes/thread-operations-reference).
+[the developer thread operations reference](~peios/developing-for-peios/process-runtime-reference/thread-operations-reference).
 
 A PID is short and convenient, but it only names a process while that process
 exists. Once a process ends, its PID can later be reused for a completely
@@ -99,5 +104,7 @@ by any number or name.
 
 ## Where to go next
 
-To see how a process or a thread is created — and what a new one starts out
-with — read [Creating processes](~peios/threads-and-processes/creating-processes).
+For interpreting a state or safely sending a signal, continue with
+[Process lifecycle](~peios/threads-and-processes/process-lifecycle). To understand
+what a new program starts with, read
+[Creating processes](~peios/threads-and-processes/creating-processes).
