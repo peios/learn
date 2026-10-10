@@ -3,7 +3,7 @@ title: ACE types and flags
 type: reference
 description: Where the ACE type and flag catalogues live — PCDS §5.4 — including the AceType constant table and the MIC policy bits.
 related:
-  - peios/constants-and-catalogs/overview
+  - peios/advanced-peios/constants-and-catalogs/overview
   - peios/security-descriptors/acls-and-aces
   - peios/access-decisions/mandatory-integrity-control
 ---

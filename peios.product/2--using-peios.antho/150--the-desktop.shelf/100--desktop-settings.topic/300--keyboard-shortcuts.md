@@ -5,7 +5,7 @@ description: Change the desktop's keyboard shortcuts by pressing the keys you wa
 related:
   - peios/desktop-settings/overview
   - peios/desktop-settings/for-all-users
-  - peios/desktop-apps/settings-apps
+  - peios/developing-for-peios/desktop-apps/settings-apps
 ---
 
 The desktop's keyboard shortcuts work wherever the keyboard is, in any

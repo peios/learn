@@ -57,7 +57,7 @@ A `desired_access` of zero is rejected — the kernel does not grant a fd with n
 
 ### create_disposition
 
-Defines what to do depending on whether the file exists (numeric constant values: [Other constants](~peios/constants-and-catalogs/other-constants)):
+Defines what to do depending on whether the file exists (numeric constant values: [Other constants](~peios/advanced-peios/constants-and-catalogs/other-constants)):
 
 | Value | If file exists | If file does not exist |
 |---|---|---|

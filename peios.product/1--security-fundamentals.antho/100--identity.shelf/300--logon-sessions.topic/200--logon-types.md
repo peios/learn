@@ -14,7 +14,7 @@ There are seven types in v0.20.
 
 ## The seven types
 
-The numeric values are also catalogued in [Other constants](~peios/constants-and-catalogs/other-constants).
+The numeric values are also catalogued in [Other constants](~peios/advanced-peios/constants-and-catalogs/other-constants).
 
 | Value | Name | What it means |
 |---|---|---|

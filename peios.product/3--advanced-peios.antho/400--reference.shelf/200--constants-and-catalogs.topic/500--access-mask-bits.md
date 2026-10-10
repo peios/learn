@@ -3,8 +3,8 @@ title: Access mask bits
 type: reference
 description: The per-object-type access rights — file, process, token, registry key, service — plus the standard, special and generic rights, the GenericMapping tables, and the aggregate *_ALL_ACCESS constants.
 related:
-  - peios/constants-and-catalogs/overview
-  - peios/constants-and-catalogs/ace-types-and-flags
+  - peios/advanced-peios/constants-and-catalogs/overview
+  - peios/advanced-peios/constants-and-catalogs/ace-types-and-flags
   - peios/security-descriptors/acls-and-aces
 ---
 

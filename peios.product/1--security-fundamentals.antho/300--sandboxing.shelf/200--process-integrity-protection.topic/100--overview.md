@@ -40,7 +40,7 @@ PIP's trust is encoded as two numbers, deliberately not collapsed into a single 
 
 The 2D model exists because trust is not a single line. A signed application from a third-party developer is trusted *for what it is* — its publisher attested to it — but is not at the same trust as a Peios TCB binary that has been signed by the OS itself. They have different *types* of trust, and within each type, there can be tiers.
 
-In v0.20 the catalog is small — the full list of `S-1-19-T-L` label SIDs is in [Well-known SIDs](~peios/constants-and-catalogs/well-known-sids). The shape of the ladder, by example:
+In v0.20 the catalog is small — the full list of `S-1-19-T-L` label SIDs is in [Well-known SIDs](~peios/advanced-peios/constants-and-catalogs/well-known-sids). The shape of the ladder, by example:
 
 | SID | type | trust | What it represents |
 |---|---|---|---|

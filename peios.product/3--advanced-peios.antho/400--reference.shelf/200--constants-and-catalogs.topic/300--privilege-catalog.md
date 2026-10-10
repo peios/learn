@@ -3,7 +3,7 @@ title: Privilege catalog
 type: reference
 description: Where the per-privilege catalogue lives — the Peios Kernel TRM — and the two privileges that are enforced but unnamed.
 related:
-  - peios/constants-and-catalogs/overview
+  - peios/advanced-peios/constants-and-catalogs/overview
   - peios/privileges/overview
   - peios/privileges/categories
 ---

@@ -3,9 +3,9 @@ title: Kernel ABI reference
 type: reference
 description: Where the KACS, LCS and NTFE kernel ABIs are documented — syscall numbers, ioctls, structure layouts, and constants, generated from uapi.
 related:
-  - peios/wire-formats-reference/overview
+  - peios/advanced-peios/wire-formats-reference/overview
   - peios/debugging-the-kernel/overview
-  - peios/constants-and-catalogs/overview
+  - peios/advanced-peios/constants-and-catalogs/overview
 ---
 
 The kernel ABI is documented in the **Peios Kernel TRM**, in two appendices generated from `uapi/pkm/`:
@@ -24,6 +24,6 @@ Those appendices use the names `uapi/pkm/` declares. A reader arriving with the 
 
 ## Related
 
-- Byte-level layouts by structure: [Wire formats reference](~peios/wire-formats-reference/overview).
-- Numeric constants by kind: [Constants and catalogs](~peios/constants-and-catalogs/overview).
+- Byte-level layouts by structure: [Wire formats reference](~peios/advanced-peios/wire-formats-reference/overview).
+- Numeric constants by kind: [Constants and catalogs](~peios/advanced-peios/constants-and-catalogs/overview).
 - The tracepoints the kernel exposes: [Kernel tracepoints](~peios/debugging-the-kernel/kernel-tracepoints).

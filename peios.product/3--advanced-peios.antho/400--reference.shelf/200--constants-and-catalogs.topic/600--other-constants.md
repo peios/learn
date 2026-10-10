@@ -3,13 +3,13 @@ title: Other constants
 type: reference
 description: Enumerated values that are not access rights — impersonation levels, integrity levels, logon types, PIP tiers, token audit policy, create dispositions, SECURITY_INFORMATION flags, mitigation flags, and the kernel's size limits.
 related:
-  - peios/constants-and-catalogs/overview
-  - peios/constants-and-catalogs/access-mask-bits
+  - peios/advanced-peios/constants-and-catalogs/overview
+  - peios/advanced-peios/constants-and-catalogs/access-mask-bits
   - peios/impersonation/impersonation-levels
   - peios/logon-sessions/logon-types
 ---
 
-Enumerated values that are not access rights. Access rights are catalogued separately in [Access mask bits](~peios/constants-and-catalogs/access-mask-bits).
+Enumerated values that are not access rights. Access rights are catalogued separately in [Access mask bits](~peios/advanced-peios/constants-and-catalogs/access-mask-bits).
 
 > [!NOTE]
 > Names here are the ones `uapi/pkm/` declares, because that is where a reader meets them. Several were published under different spellings in older design documents; where that is so, this page says which. The Peios Kernel TRM §3.A carries the full mapping.

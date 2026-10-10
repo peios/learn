@@ -96,7 +96,7 @@ There are 24 defined query classes. Each returns a structured payload defined fo
 
 The remaining classes are `TokenDeviceGroups` (the device group SIDs), `TokenUserClaims` and `TokenDeviceClaims` (the claim arrays evaluated by conditional ACEs), and `TokenProjectedSupplementaryGids` (the token's projected Linux supplementary GIDs). Note there is no query class for the partner of a linked token pair — that goes through a separate ioctl, `KACS_IOC_GET_LINKED_TOKEN`, with its own access rules.
 
-Each class's exact byte-level payload format is in the [Wire formats reference](~peios/wire-formats-reference/overview); this page covers what each class is for.
+Each class's exact byte-level payload format is in the [Wire formats reference](~peios/advanced-peios/wire-formats-reference/overview); this page covers what each class is for.
 
 ## Patterns by use case
 
@@ -136,4 +136,4 @@ The pseudo-file approach — `/proc/<pid>/token`, `/sys/kernel/security/kacs/sel
 - [Inspecting security state](~peios/inspecting/overview) — the topic overview and the shared access rules.
 - [The token command](~peios/tokens/token-command) — the shell wrapper around this ioctl.
 - [Tokens](~peios/tokens/overview) — what the queried fields mean.
-- [Wire formats reference](~peios/wire-formats-reference/overview) — byte-level payload formats for each query class.
+- [Wire formats reference](~peios/advanced-peios/wire-formats-reference/overview) — byte-level payload formats for each query class.

@@ -3,7 +3,7 @@ title: Well-known SIDs
 type: reference
 description: Where the well-known SID catalogue lives — PCDS §4.4 — and the PIP trust label ladder.
 related:
-  - peios/constants-and-catalogs/overview
+  - peios/advanced-peios/constants-and-catalogs/overview
   - peios/identity/well-known-principals
   - peios/process-integrity-protection/overview
 ---
@@ -24,4 +24,4 @@ An older revision of this reference tabulated them. That table was removed on pu
 
 The `S-1-19-T-L` ladder encodes two dimensions: `T` is the PIP type axis, `L` the trust axis. Dominance requires both to be greater than or equal.
 
-The numeric tiers are in [Other constants](~peios/constants-and-catalogs/other-constants), and the full SID list is in PCDS §4.4. The mechanism is [Process integrity protection](~peios/process-integrity-protection/overview).
+The numeric tiers are in [Other constants](~peios/advanced-peios/constants-and-catalogs/other-constants), and the full SID list is in PCDS §4.4. The mechanism is [Process integrity protection](~peios/process-integrity-protection/overview).

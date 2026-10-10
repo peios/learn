@@ -6,7 +6,7 @@ related:
   - peios/debugging-the-kernel/kernel-tracepoints
   - peios/access-decisions/debugging-a-denial
   - peios/inspecting/overview
-  - peios/kernel-abi-reference/overview
+  - peios/advanced-peios/kernel-abi-reference/overview
 ---
 
 Most questions about *why* the Peios kernel did something — why an access was denied, why an event never reached userspace, why a registry lookup stalled — are answered from inside the kernel, before any userspace tool can see the state involved. Peios makes that interior observable through the same tracing infrastructure the rest of the Linux kernel uses: **static tracepoints**.
