@@ -8,9 +8,9 @@ operator guide. For the kernel contract, use [File Descriptor
 Storage](~peios/advanced-peios/peios-kernel/kacs/facs/descriptor-storage).
 
 > [!WARNING]
-> The sources disagree. These notes say `SeTcbPrivilege` is required; the
-> kernel contract permits enabled `SeManageVolumePrivilege` or `SeTcbPrivilege`.
-> The kernel contract also allows templates only with synthesising classes,
+> The privilege gate has been source-verified below, but other descriptions
+> retained from the operator guide still differ. The kernel contract allows
+> templates only with synthesising classes,
 > caps them at 65,535 bytes, and rejects non-empty templates for deny-missing.
 > The [SDK wrapper](~peios/developing-for-peios/sdk-reference/sdk-files/mount-policy)
 > documents different small-buffer handling from the raw
@@ -39,7 +39,7 @@ The kernel:
 1. Validates the fd and identifies the superblock.
 2. Validates the policy value. Attempts to set `KACS_MOUNT_POLICY_UNMANAGED` (which is not settable via this ABI) are rejected with `-EINVAL`.
 3. Validates the template SD if provided — must parse, must be within size limits.
-4. Checks the caller's privileges. `SeTcbPrivilege` is required.
+4. Checks the caller's privileges. Enabled `SeManageVolumePrivilege` or `SeTcbPrivilege` is required, and marking the privilege as used must succeed.
 5. Atomically updates the superblock's policy class, the template SD, and increments the generation counter.
 6. Writes the new generation to `args.generation`.
 7. Returns 0.
@@ -49,9 +49,22 @@ The change is **atomic at the superblock level** — every future access against
 ### Privilege requirement
 
 > [!IMPORTANT]
-> `SeTcbPrivilege` is the privilege gating this call. The privilege is held by peinit and a handful of other TCB components; not by ordinary services or administrators. In practice this means mount policy is configured at boot (by peinit, applying mount-time configuration) or by a privileged management daemon. Ad-hoc policy changes are rare.
+> In kernel source `8e0e22de3a59cad506bbbf8873de456e16ad272d`, both policy reads and writes use the [volume-management gate](https://github.com/peios/pkm/blob/8e0e22de3a59cad506bbbf8873de456e16ad272d/kacs/capability.c#L613-L637): enabled `SeManageVolumePrivilege` or `SeTcbPrivilege`, with successful privilege-use marking. Administrator membership alone is insufficient. The [write gate](https://github.com/peios/pkm/blob/8e0e22de3a59cad506bbbf8873de456e16ad272d/kacs/mount_policy.c#L369-L380) and [read gate](https://github.com/peios/pkm/blob/8e0e22de3a59cad506bbbf8873de456e16ad272d/kacs/mount_policy.c#L479-L496) establish this for the pinned source, not a deployed build or a historical release boundary.
 
-The reasoning: changing a mount's policy is an administrative decision that affects the entire filesystem's access semantics. It belongs in the TCB tier, not in the regular-administrator tier. An ordinary administrator who wants to change a mount's policy goes through a tool that itself has the privilege.
+Changing a mount's policy affects the entire filesystem's access semantics.
+`SeManageVolumePrivilege` can author synthesised policy and shadow existing
+paths; see its [authority warning](~peios/privileges/categories#what-semanagevolumeprivilege-is-actually-worth).
+The [SDK wrappers](https://github.com/peios/libpeios/blob/de0018bdcaed14abb796aeccec9c8387fd30e452/src/file.rs#L451-L575) at libpeios
+`de0018bdcaed14abb796aeccec9c8387fd30e452` add no TCB-only gate despite their
+comments. The [command diagnostic](~peios/mount-policies/mount#kacs-mount-policy)
+also retains a TCB-only hint. Do not automatically grant TCB or globally remap
+`CAP_SYS_ADMIN`. A ready-to-use operator interface for changing an existing
+policy is [not established here](~peios/mount-policies/managing-mounts#before-changing-an-already-mounted-policy).
+
+The generated [KACS ABI trace table](~peios/advanced-peios/peios-kernel/kacs/kacs-abi)
+retains the `KACS_MP_TCB_DENIED` name and TCB-only descriptions. Those labels
+do not override the source-verified gate; this clarification leaves the
+generated table unchanged.
 
 ### The template SD
 
@@ -81,11 +94,11 @@ Same `fd` and `args` semantics, returning the current policy class, current temp
 The kernel:
 
 1. Validates the fd, identifies the superblock.
-2. Checks the caller's privileges. `SeTcbPrivilege` is required to read.
+2. Checks the caller's privileges. Enabled `SeManageVolumePrivilege` or `SeTcbPrivilege` is required, with successful privilege-use marking.
 3. Writes the policy class, generation, and template to `args` (template only if a buffer was provided).
 4. Returns 0.
 
-Like the write syscall, this is `SeTcbPrivilege`-gated. The mount policy is system-level state, exposed only to TCB-tier callers.
+Like the write syscall, this uses the pinned-source [volume-management gate](#privilege-requirement). A successful policy query does not grant authority to bypass any other mount or file-access checks.
 
 This is the kernel's read-back-the-current-policy interface. A management tool reads the policy, perhaps applies a transformation, and writes the new value back. The read-modify-write pattern is what most policy management code uses.
 
@@ -105,7 +118,7 @@ Possible failures from `kacs_set_mount_policy`:
 | Error | Cause |
 |---|---|
 | `-EBADF` | The fd is invalid. |
-| `-EPERM` | The caller does not hold `SeTcbPrivilege`. |
+| `-EPERM` | Neither accepted privilege is enabled, or privilege-use marking failed. |
 | `-EINVAL` | Setting an `unmanaged` policy via the public ABI; setting an unknown policy value; non-zero reserved flags; malformed template SD; template size exceeded. |
 
 Possible failures from `kacs_get_mount_policy`:
@@ -113,7 +126,7 @@ Possible failures from `kacs_get_mount_policy`:
 | Error | Cause |
 |---|---|
 | `-EBADF` | The fd is invalid. |
-| `-EPERM` | The caller does not hold `SeTcbPrivilege`. |
+| `-EPERM` | Neither accepted privilege is enabled, or privilege-use marking failed. |
 | `-ERANGE` | A template buffer was provided but is smaller than the template. The required size is written to the output. |
 
 In normal operation both calls succeed. Failures are typically privilege issues or malformed inputs.

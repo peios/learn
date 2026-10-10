@@ -3,8 +3,13 @@ title: The Commit Procedure
 description: The five steps that take a transaction from uncommitted to committed, and what each one guarantees.
 ---
 
-Commit transitions a transaction from uncommitted to committed, in five
-steps.
+The sequence below explains **one root's** package-database durability
+boundary. It is not the whole cross-root execution sequence. In the
+[reviewed coordinated executor](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/install/execute.go#L230-L348),
+all participants are prepared before the per-root commit loop. Files can
+already be visible, and another root can already be committed when one
+root's commit fails. See [Scope](~peios/peipkg/transactions/scope#cross-root-transactions)
+and [Atomicity](~peios/peipkg/transactions/atomicity) for the pinned boundaries.
 
 ## 1. Record intent
 
@@ -32,8 +37,9 @@ In a single database transaction, write the new installed state — the
 package rows, the owned-file rows, the claim holder and link rows — and
 mark the journal's pending transaction committed.
 
-**This database commit is the durability boundary.** It is atomic, so
-the transaction is either fully committed or not committed at all.
+**This database commit is that root's durability boundary.** Its package
+metadata and journal closure are committed together; this does not make
+filesystem visibility or other roots' commits atomic with it.
 
 ## 4. Invoke side effects
 
@@ -52,6 +58,9 @@ A crash before step 3 leaves the journal's transaction pending, and
 recovery rolls it back from the backup map. A crash after step 3 leaves
 it committed, and recovery has only step 5 to finish.
 
-Because step 3 is a single atomic database commit, and because it
-carries both the new state and the journal's closure, there is no
-intermediate state to discover.
+That describes a single-root recovery boundary, not coordinated recovery.
+A pending cross-root participant can instead need roll-forward after a
+sibling committed; rollback can also fail and remain pending. Follow the
+[source-scoped recovery path](~peios/peipkg/transactions/crash-recovery#cross-root-the-exception).
+The atomic database commit does not establish that there is no observable
+intermediate filesystem or multi-root state.

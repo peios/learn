@@ -11,7 +11,7 @@ related:
 An edition package ships `/usr/share/peios/release.toml`. It states what the release asks of a system beyond its packages. peipkg never reads it; two tools do:
 
 - **peiso**, when composing an image, to stage the seeds into the medium.
-- **`upgrade-peios`**, after moving an installed system to a new release, to stage and apply the new release's seeds.
+- **`upgrade-peios`**, to stage and apply the installed release's `autoapply` seeds, including when an ordinary CLI package request is a no-op or declined. Read the [upgrade warning and preview procedure](~peios/peiso/editions-and-upgrades/upgrading-peios) before invoking it.
 
 Both act as the operator, deliberately; the package manager acts as neither.
 

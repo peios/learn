@@ -92,13 +92,13 @@ the following changes will be made:
 proceed? [y/N]
 ```
 
-No package payload has been downloaded or installed by this plan. peipkg waits for an answer. Anything other than `y` or `yes` — including pressing Enter, or end-of-input — is a refusal, and the command exits having done nothing.
+For repository packages, presenting this plan does not download or install their payloads. peipkg waits for an answer. Anything other than `y` or `yes` — including pressing Enter, or end-of-input — is a refusal, and the package plan is not applied. This is the package command's outcome; a wrapper such as [plain `upgrade-peios`](~peios/peiso/editions-and-upgrades/upgrading-peios) can still continue with its own registry-seed work.
 
 Answer `y` and peipkg carries the plan out as a single [transaction](~peios/package-management/transactions-and-recovery): it downloads and verifies every package, then applies the change. Read the outcome and any warnings; after an interruption, follow the recovery procedure.
 
 | Option | Effect |
 |---|---|
-| `--dry-run` | Produce and print the plan, then stop — never prompt, never change anything. |
+| `--dry-run` | Produce and print the plan, then stop before its approval questions and package application. Planning can still refresh repository metadata for trust-freshness checks. |
 | `--yes`, `-y` | Skip the `proceed?` prompt and apply the plan. |
 | `--no-claim` | Install a provider without taking any claim it offers. |
 | `--allow-stale` | Proceed although a repository's trust state exceeds its maximum trusted age. See [Repositories and trust](~peios/package-management/repositories-and-trust). |
@@ -106,7 +106,15 @@ Answer `y` and peipkg carries the plan out as a single [transaction](~peios/pack
 | `--claim-all` | Force-claim every claim the installed packages provide, overriding incumbents. |
 | `--dangerously-bypass-path-restrictions` | Permit packages that declare `special_system_package` to install outside the payload layout rules. Exempts nothing that has not declared itself special. The technical sources disagree on whether `/lcl/policy` remains protected under the bypass; do not rely on that exclusion (see the warning below). Needed only for the handful of packages whose job is to lay down the filesystem structure those rules protect. |
 
-`--dry-run` is the safe way to see what a command would do. `--yes` is for scripts and unattended runs — but note that it skips only the routine prompt. A plan that contains an action needing deliberate authorisation will still stop and ask; `--yes` does not override that. See [Elevated authorisation](~peios/package-management/dependency-resolution) for which actions those are and why.
+`--dry-run` previews the package plan without applying it. In
+[peipkg `8b588ae8`](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/cli/lifecycle.go#L23-L86),
+trust-freshness checks precede planning, and the
+[dry-run return](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/cli/lifecycle.go#L373-L444)
+is before plan authorisation and execution. Do not treat it as a guarantee
+that cached metadata or all filesystem state is untouched. Check the source
+scope against the version in your image.
+
+`--yes` is for scripts and unattended runs — but note that it skips only the routine prompt. A plan that contains an action needing deliberate authorisation will still stop and ask; `--yes` does not override that. See [Elevated authorisation](~peios/package-management/dependency-resolution) for which actions those are and why.
 
 > [!WARNING]
 > The [installation validation reference](~peios/peipkg/installation/validation#destinations-are-checked-here)

@@ -4,7 +4,7 @@ description: Opening a file by naming every right up front — the required data
 ---
 
 > [!IMPORTANT]
-> The open-interface references contain [unresolved documentation differences](~peios/advanced-peios/peios-kernel/kacs/kacs-abi-notes#open-interface-documentation-discrepancies). Read that note alongside this page; no runtime behavior or release boundary has been established for those differences.
+> The [open-interface comparison](~peios/advanced-peios/peios-kernel/kacs/kacs-abi-notes#open-interface-documentation-discrepancies) records unresolved differences and the [limited pinned-source findings](~peios/advanced-peios/peios-kernel/kacs/kacs-abi-notes#pinned-source-findings) applied here. Creator-SD rejection, the accepted create-option bits, and native-open versus SD-query no-follow behavior were checked in source; the other differences remain unresolved. No runtime test or historical release boundary is established.
 
 `kacs_open` takes an explicit desired access mask. The caller names
 every right it will need — `FILE_READ_DATA`, `FILE_WRITE_DATA`,

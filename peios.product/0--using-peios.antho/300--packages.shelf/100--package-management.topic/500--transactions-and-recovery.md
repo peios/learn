@@ -23,14 +23,15 @@ Use `undo` or `downgrade` only when you mean to reverse a **committed** change.
 | An interrupted feature script | Use [feat recovery](~peios/features/using-feat#recover-an-interrupted-feature); package recovery does not reverse feature setup |
 
 > [!WARNING]
-> The transaction model describes all-or-nothing changes, but the
-> [failed-rollback reference](~peios/peipkg/failure-modes/a-failed-rollback)
-> documents a case where rollback errors are discarded and history is marked
-> `rolled-back` even though files were not restored. The
-> [visibility reference](~peios/peipkg/transactions/visibility) also documents
-> transient missing paths during file replacement. Do not interpret the
-> transaction model as a guarantee that a running application cannot observe
-> an intermediate file state, or that every failed operation recovered.
+> The [failed-rollback reference](~peios/peipkg/failure-modes/a-failed-rollback)
+> retains an earlier closed-journal failure description: history could say
+> `rolled-back` even though files were not restored. The source-verified
+> [cross-root path below](#across-more-than-one-root) instead reports failed
+> preparation rollback and retains the affected pending journal. Inspect
+> the actual state rather than applying either description to every version.
+> [Filesystem visibility](~peios/peipkg/transactions/visibility) also differs
+> from database durability: files can change before package state commits.
+> Do not assume a failed operation left the system unchanged or restored.
 
 ## Recovering an interrupted transaction
 
@@ -62,24 +63,57 @@ wait for that operation to finish before trying another change.
 
 ### Across more than one root
 
-A pending cross-root operation needs its participating roots to be reachable.
-An ordinary single-root operation refuses a pending cross-root transaction;
-run `peipkg recover` explicitly. Recovery can roll forward roots still pending
-when a sibling has already committed, rather than rolling everything back.
-A root missing the persisted completion data can be refused instead of
-recovered. Do not assume a successful check of one root establishes the state
-of every other root.
+A multi-root upgrade has one combined plan and coordinated execution; it
+is not a series of independent per-root upgrades. See
+[Named roots](~peios/package-management/named-roots#cascading-upgrade) for the
+preparation and sequential-commit boundaries. Preparation rollback can fail;
+in the reviewed source that path retains a pending journal. Do not treat it
+as the older closed-journal failure described elsewhere on this page.
 
-The [cross-root recovery reference](~peios/peipkg/transactions/crash-recovery#cross-root-the-exception)
-describes these limits. See [Named roots](~peios/package-management/named-roots#cross-root-undo-and-recovery)
-for checking the targets.
+For recovery:
+
+1. Retain the original named-root topology and make every participating
+   root present and reachable. Run `peipkg recover` explicitly from the same
+   system anchor, using the original `--root TARGET` if one was selected.
+   An ordinary single-root operation refuses pending cross-root work in
+   isolation. Recovery discovers reachable roots; it does not prove that a
+   missing or unregistered participant has been found.
+2. Read the outcome. If no participant committed, pending participants are
+   rolled back. If a participant committed, pending participants are rolled
+   forward using persisted completion data. Missing or malformed data causes
+   refusal; a later recovery step can fail after another root was reconciled.
+3. Inspect history and verify files in **every** participant. In this source,
+   the CLI's **rolled back cross-root transaction** line is printed after
+   either backward or forward reconciliation. It is not proof of rollback;
+   the forward path records `rolled forward: cross-root recovery` in the
+   transaction. Keep the diagnostics and treat any refused or unreachable
+   root as unresolved.
+4. Review maintenance separately. Roll-forward recovery applies persisted
+   package metadata and attempts backup cleanup, but does not invoke the
+   normal post-commit side-effect runner. Do not assume it re-ran `depmod`
+   or `man-db`. Use the [invocation reference](~peios/peipkg/side-effects/invocation)
+   to identify the affected root and kernel release, and verify the needed
+   maintenance before relying on that system.
+
+This follows peipkg `8b588ae8`'s
+[CLI root discovery and report](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/cli/recover.go#L12-L119),
+[coordinated recovery decision](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/install/execute.go#L805-L917),
+and [roll-forward implementation](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/install/execute.go#L773-L802).
+It is a source-level contract, not evidence that recovery or maintenance
+succeeded on a particular machine. Check the revision supplied by the image.
+The [technical recovery chapter](~peios/peipkg/transactions/crash-recovery#cross-root-the-exception)
+keeps the implementation context.
 
 ## When recovery does not restore the files
 
 The [failure reference](~peios/peipkg/rollback-and-recovery/completeness#when-rollback-itself-fails)
-documents rollback failure after I/O errors, a filesystem becoming read-only,
-or permissions changing during the operation. In that case the journal may
-already have been closed, so another `recover` can find nothing to retry.
+retains an earlier description of a **closed-journal** failure after I/O
+errors, a filesystem becoming read-only, or permissions changing. If that
+is the state you actually find, another `recover` can find nothing to retry.
+Do not assume all failed rollbacks have that outcome: the reviewed
+[cross-root preparation rollback](#across-more-than-one-root) reports errors
+and retains the affected pending journal. Inspect the transaction and tool
+version before choosing the recovery path.
 
 - Use `peipkg verify` to identify recorded files that differ or are missing.
 - Inspect the affected paths for staged or backup siblings, and keep the
@@ -92,11 +126,13 @@ already have been closed, so another `recover` can find nothing to retry.
 - Verify again after repair. A clean file check does not test services,
   feature scripts, registry state or user data.
 
-There is no implemented indeterminate-state mode, forensic report command,
-or `recover` option to accept the current filesystem as authoritative. Further
-writes are not automatically blocked after every failed rollback. See
-[Indeterminate state](~peios/peipkg/rollback-and-recovery/indeterminate-state)
-for the distinction between intended handling and available tools.
+The [indeterminate-state reference](~peios/peipkg/rollback-and-recovery/indeterminate-state)
+describes proposed handling beyond the available history, recovery and file
+verification tools; it does not establish a forensic-report command or a
+`recover` option to accept the current filesystem as authoritative. Its older
+blanket recovery wording must not override the coordinated cross-root path
+above. A closed journal and a pending cross-root journal require different
+responses.
 
 ## The transaction log
 

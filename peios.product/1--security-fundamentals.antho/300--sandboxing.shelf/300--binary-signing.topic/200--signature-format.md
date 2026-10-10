@@ -59,7 +59,7 @@ For ELF binaries, the signature lives in a section of the binary's own ELF struc
 
 The section is part of the ELF file. It travels with the binary through every operation a normal ELF travels through: filesystem copy, network transfer, package archive, image-build, anything. As long as the ELF is intact, the signature is part of it.
 
-This is why the ELF section is preferred for ELF binaries. An xattr is filesystem metadata; it can be lost in a copy that does not preserve xattrs (a `cp` without `--preserve=xattr`, an archiver that does not understand the namespace, a network transfer that strips them). An ELF section is part of the file itself; nothing short of editing the ELF strips it.
+This is why the ELF section is preferred for ELF binaries. An xattr is filesystem metadata; it can be lost in a copy that does not preserve its namespace (a plain `cp`, an archiver that does not understand the namespace, a network transfer that strips it). In native [`cp`](~peios/files-and-directories/cp), `security.peios.sig` falls under the `security` preservation selection; `xattr`/`xattrs` selects only attributes outside `security.*`. An ELF section is part of the file itself; nothing short of editing the ELF strips it.
 
 ### The `security.peios.sig` xattr
 

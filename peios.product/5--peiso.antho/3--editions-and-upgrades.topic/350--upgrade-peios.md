@@ -10,12 +10,15 @@ related:
 **Upgrade Peios** is the desktop's window on
 [`upgrade-peios`](~peios/peiso/editions-and-upgrades/upgrading-peios).
 Open it from the launcher (type `upgrade`). It has no authority of its
-own: it runs `upgrade-peios` as you, so the upgrade is exactly the one the
-command makes, with the same packages, settings and records.
+own: it runs `upgrade-peios --driven` as you, with the same package and
+seed operations. Driven mode handles an explicit cancellation separately:
+a `cancelled` result stops before release seeds are staged or applied.
+Do not apply the [ordinary CLI's declined-prompt warning](~peios/peiso/editions-and-upgrades/upgrading-peios)
+to that driven cancellation result.
 
 ## The release
 
-At the top is the release this machine runs, as its name (Peios 2026.8
+At the top is the release installed on this machine, as its name (Peios 2026.8
 Experimental) and its edition package with that package's version. Beside
 it, once Upgrade Peios has looked: **Up to Date**, a newer release
 **Available**, or **Not Checked** when the look was refused.
@@ -23,8 +26,9 @@ it, once Upgrade Peios has looked: **Up to Date**, a newer release
 ## Looking for a newer release
 
 Upgrade Peios looks as it opens, and again with **Check Now** or **Check
-Again**. A look refreshes the repositories this machine trusts, then works
-out what upgrading would change, changing nothing.
+Again**. A look refreshes the repositories this machine trusts, updating
+cached metadata, then previews the package plan without applying it or
+staging or applying release seeds.
 
 It refreshes only repositories already trusted: a repository set up but
 never confirmed is confirmed in
@@ -54,8 +58,10 @@ the release in place, recording it, then gathering and applying the
 release's settings. Once the upgrade is approved it is made to the end even
 if you close the window, which stays, saying so, until it is done.
 
-The upgrade doesn't restart the machine. A new kernel, if the release has
-one, starts at the next restart.
+The upgrade doesn't restart the machine. Its displayed release and
+completed package/seed steps do not establish which kernel or service
+binaries are running. Follow the [outcome checks](~peios/peiso/editions-and-upgrades/upgrading-peios#check-the-outcome),
+and verify boot readiness separately before relying on a kernel update.
 
 ## When something stops it
 
@@ -85,3 +91,8 @@ reason said once, and nothing to press.
 
 Software other than Peios itself is updated in Package Manager, which holds
 the edition back and points here.
+
+The driven invocation is established by
+[gxwi-upgrade-peios `f40e8d8b`](https://github.com/peios/gxwi-upgrade-peios/blob/f40e8d8bdc7a5a1b40e3a83227dc70fdf53c6725/src/tool.rs#L162-L206).
+The [release updater's source scope](~peios/peiso/editions-and-upgrades/upgrading-peios#source-and-release-scope)
+also applies; a source revision is not proof of the version in an installed image.

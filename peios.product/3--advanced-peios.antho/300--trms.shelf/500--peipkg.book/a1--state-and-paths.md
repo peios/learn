@@ -39,11 +39,27 @@ fit.
 
 ## Side-effect tools
 
-| Identifier | Invoked |
-|---|---|
-| `ldconfig` | `/bin/ldconfig` |
-| `depmod` | `/libexec/depmod -a` |
-| `man-db` | `/bin/mandb -q` |
+| Identifier | Host root (`/`) | Alternate root |
+|---|---|---|
+| `depmod` | `/libexec/depmod -a <release>`, once per affected release | `/libexec/depmod -b <root> -m /usr/lib/modules -a <release>`, once per affected release |
+| `man-db` | `/bin/mandb -q` | Skipped with a warning; man-page lookup falls back to a filesystem scan |
+
+These are peipkg's invocations, not commands to copy as a manual recovery
+recipe. The release comes from the transaction's installed or removed
+module files, not the running kernel. If no affected release is found,
+`depmod` is skipped with a warning; peipkg does not fall back to bare
+`depmod -a`. `ldconfig` is not a recognised side effect.
+
+See [Invocation](~peios/peipkg/side-effects/invocation) for root and release
+selection and [Timing and Failure](~peios/peipkg/side-effects/timing-and-failure)
+for post-commit warnings: a side-effect failure does not roll back an
+already committed package transaction.
+
+The command forms follow
+[peipkg `8b588ae8`'s side-effect implementation](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/install/sideeffects.go#L23-L175).
+Its [execution path](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/install/sideeffects.go#L199-L215)
+returns warnings after commit. These source forms do not establish which
+revision an installed image contains.
 
 Each with a cleared environment of `LC_ALL=C` and `PATH=/bin`, and with
 input closed.

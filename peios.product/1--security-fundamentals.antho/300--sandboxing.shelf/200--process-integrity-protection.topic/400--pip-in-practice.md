@@ -73,7 +73,7 @@ The relationship between privileges and PIP comes up enough to be worth pinning.
 - **`SeBackupPrivilege` / `SeRestorePrivilege`**: grants read/write bits through AccessCheck. Bits granted by these privileges are subject to PIP — a non-dominant caller has them stripped during the PIP check for PIP-protected objects. (The grant happens at step 4 of AccessCheck; the PIP strip happens at step 5.)
 - **`SeImpersonatePrivilege`**: lets a service impersonate clients. Does not affect PIP; the PSB stays the same. The impersonated token may carry MIC at a higher level (capped by the integrity ceiling), but PIP does not move.
 - **`SeTakeOwnershipPrivilege`**: grants `WRITE_OWNER` regardless of DACL. Subject to PIP — a non-dominant caller cannot take ownership of a PIP-protected object even with the privilege.
-- **`SeTcbPrivilege`**: gates TCB operations (token creation, mount-policy administration). Held only by TCB processes anyway, which are PIP-dominant by virtue of their signing. The privilege does not extend PIP authority.
+- **`SeTcbPrivilege`**: gates TCB operations (token creation). Mount-policy administration also accepts enabled `SeManageVolumePrivilege` at the [verified kernel revision](~peios/mount-policies/managing-mounts#check-policy-access). `SeTcbPrivilege` is held only by TCB processes anyway, which are PIP-dominant by virtue of their signing. The privilege does not extend PIP authority.
 
 In short: every privilege the catalog defines operates within PIP, not above it. There is no privilege that bypasses PIP. The trust ceiling is absolute from the privilege model's perspective.
 

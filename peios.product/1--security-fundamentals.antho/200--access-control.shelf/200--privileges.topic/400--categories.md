@@ -35,9 +35,9 @@ Representative members:
 | `SeCreateTokenPrivilege` | `kacs_create_token`. Token minting. Held only by authd and peinit. |
 | `SeAssignPrimaryTokenPrivilege` | Installing a token as another process's primary. Used by peinit. |
 | `SeImpersonatePrivilege` | Impersonating any user (when not running as the same user). Held by every service that handles user requests. |
-| `SeTcbPrivilege` | "Act as part of the TCB" — a catch-all for operations that should only happen in trusted code. Required for `KACS_IOC_LINK_TOKENS`, `kacs_set_caap`, **mount-policy changes** (`policy=synth-*`, which author security descriptors), and a handful of other system operations. It also satisfies every check `SeManageVolumePrivilege` satisfies, since the TCB may do anything a volume manager may. |
+| `SeTcbPrivilege` | "Act as part of the TCB" — a catch-all for operations that should only happen in trusted code. Required for `KACS_IOC_LINK_TOKENS`, `kacs_set_caap`, and a handful of other system operations. Mount-policy reads and changes also accept enabled `SeManageVolumePrivilege`; see the pinned-source qualification below. It also satisfies every check `SeManageVolumePrivilege` satisfies, since the TCB may do anything a volume manager may. |
 | `SeLoadDriverPrivilege` | Loading and unloading kernel modules. Held only by peinit on its primary token; explicitly stripped via FilterToken from every other service. |
-| `SeManageVolumePrivilege` | Mounting, unmounting and reshaping the mount tree, including mount policy (`policy=synth-*`). Granted to Administrators. **The most powerful privilege routinely granted outside the TCB** — see the warning below. |
+| `SeManageVolumePrivilege` | Mounting, unmounting and reshaping the mount tree, including mount-policy reads and changes (`policy=synth-*` can author descriptors). The gate requires an enabled privilege and successful privilege-use marking; administrator membership alone is not enough. Granted to Administrators by policy. **The most powerful privilege routinely granted outside the TCB** — see the warning below. |
 | `SeShutdownPrivilege` | Local shutdown and reboot. |
 | `SeRemoteShutdownPrivilege` | Shutdown from a remote connection. Requires SeShutdown as well. |
 | `SeDebugPrivilege` | Inspecting another process regardless of its SD. Crucially, it does not bypass PIP dominance — a SeDebug holder can bypass an unrelated process's SD but still cannot cross a PIP boundary. |
@@ -94,6 +94,16 @@ From the kernel's point of view, these are token attributes that no kernel path 
 The kernel still enforces the present/enabled/removed/used state machine for these privileges as it does for others — AdjustPrivileges treats them identically. The application-level distinction is about *who consumes them*, not how they are stored or transitioned.
 
 ### What SeManageVolumePrivilege is actually worth
+
+In kernel source `8e0e22de3a59cad506bbbf8873de456e16ad272d`, the [volume-management
+gate](https://github.com/peios/pkm/blob/8e0e22de3a59cad506bbbf8873de456e16ad272d/kacs/capability.c#L613-L637) accepts enabled
+`SeManageVolumePrivilege` or `SeTcbPrivilege` and must successfully mark the
+privilege as used. Both mount-policy [writes](https://github.com/peios/pkm/blob/8e0e22de3a59cad506bbbf8873de456e16ad272d/kacs/mount_policy.c#L369-L380)
+and [reads](https://github.com/peios/pkm/blob/8e0e22de3a59cad506bbbf8873de456e16ad272d/kacs/mount_policy.c#L479-L496) use it. This resolves the
+TCB-only descriptions for that source revision; it does not identify a historical
+release boundary or test the deployed kernel. The [`mount` diagnostic](~peios/mount-policies/mount#kacs-mount-policy)
+can still name only TCB. Do not automatically grant TCB or globally remap
+`CAP_SYS_ADMIN` in response.
 
 Mounting is an administrative act rather than a TCB one, which is why this
 privilege exists separately: without it no administrator could mount anything,

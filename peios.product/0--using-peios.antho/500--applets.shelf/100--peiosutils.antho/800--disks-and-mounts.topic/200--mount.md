@@ -159,7 +159,10 @@ This is the genuinely Peios-specific part of `mount`. A mount policy is a per-su
 
 `policy=unmanaged` is **not** user-settable; only the kernel sets the unmanaged class, for its own pseudo-filesystems. `policy=` is valid only on a **new mount** of a real filesystem — combining it with bind/move/remount/propagation, or with list mode, is a usage error. See [Policy classes](~peios/mount-policies/policy-classes) for what each class does and [SD storage by filesystem](~peios/mount-policies/sd-storage-by-filesystem) for how the SD is physically stored.
 
-The policy is applied to the *detached* filesystem before it is attached: if setting it fails, nothing is ever published with an unintended policy (no rollback needed). Because setting a mount policy is a `SeTcbPrivilege`-gated operation (see [Managing mounts](~peios/mount-policies/managing-mounts)), a caller without that privilege gets a clean `EPERM` (exit 1) and no mount. `--synth-sddl` is validated client-side first — it must be well-formed SDDL and must include an owner.
+The policy is applied to the *detached* filesystem before it is attached: if setting it fails, nothing is ever published with an unintended policy (no rollback needed). In kernel source `8e0e22de3a59cad506bbbf8873de456e16ad272d`, the policy gate accepts enabled `SeManageVolumePrivilege` or `SeTcbPrivilege` and requires successful privilege-use marking. Failure of that gate gives `EPERM` (exit 1) and no attachment. `--synth-sddl` is validated client-side first — it must be well-formed SDDL and must include an owner.
+
+> [!WARNING]
+> The [peiosutils 0.8.18 diagnostic](https://github.com/peios/peiosutils/blob/3344d4690476fd66bfaec99b1ae92190bbcba06f/src/uu/mount/src/policy.rs#L84-L99) still says the policy operation requires `SeTcbPrivilege`. That is not the full gate in the pinned kernel. See [Check policy access](~peios/mount-policies/managing-mounts#check-policy-access) before interpreting this as a need to grant TCB; administrator membership alone is not enough, and automatic escalation or a global `CAP_SYS_ADMIN` remap is not a remedy.
 
 Peios applies no coarse `uid==0` check anywhere: the `mount` applet is not installed set-user-ID, and every privileged action is authorised per-operation by KACS.
 

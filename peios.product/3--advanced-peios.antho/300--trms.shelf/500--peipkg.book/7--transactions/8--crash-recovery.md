@@ -37,14 +37,26 @@ A cross-root operation commits one root at a time. Once a root has
 committed, its transaction is done and cannot be undone by rolling back
 a sibling.
 
-Recovery of a cross-root operation therefore does roll forward. Each
-root's transaction persists the state a completion would need, and a
-root found pending after a sibling has committed is completed from that
-record rather than reversed.
+In [peipkg `8b588ae8`'s coordinated recovery](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/install/execute.go#L805-L917),
+pending participants roll back if none committed. If a sibling has committed,
+recovery completes pending participants from persisted completion data
+instead. Missing or malformed data needed for roll-forward causes refusal.
+Recovery can itself fail after another participant has been reconciled.
 
-A root found pending with no persisted payload cannot be completed and
-cannot safely be reversed, and recovery refuses it, leaving the
-operation for an operator.
+Keep the named-root topology intact and make every participant reachable
+from the same anchor used for the operation. The
+[CLI's reachable-root scan](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/cli/recover.go#L12-L119)
+does not establish that absent or unregistered participants are detected.
+Its `rolled back cross-root transaction` message also covers successful
+roll-forward; inspect per-root history instead of treating that phrase as
+the recovery direction.
+
+The [roll-forward path](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/install/execute.go#L773-L802)
+applies persisted database metadata and attempts backup cleanup. It does not
+invoke the normal post-commit side-effect runner. The
+[operator recovery checks](~peios/package-management/transactions-and-recovery#across-more-than-one-root)
+cover verification and the remaining maintenance work. These statements are
+pinned to source, not a runtime test or a guarantee about every released image.
 
 ## When it runs
 

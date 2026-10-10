@@ -34,9 +34,11 @@ Read the resolved path and status before applying changes. A `dangling` root
 has a binding but no target tree; repeating an install does not make that a
 valid target. An unregistered name or a resolution cycle is an error.
 
-An upgrade normally visits nested roots too, with independent per-root
-results. Use `--no-recurse` when you intend to update only the selected root,
-and use the same root for history, verification and recovery afterwards.
+An upgrade normally resolves the selected root and its reachable named
+roots together. Review every target in its combined plan. Use `--no-recurse`
+when you intend to update only the selected root. After a cross-root failure,
+preserve all participating roots and recover from the same system anchor;
+check history and files in each participant afterwards.
 
 ## What a named root is
 
@@ -166,11 +168,41 @@ Two rules keep this predictable:
 
 ## Cascading upgrade
 
-By default `peipkg upgrade` reconciles the current root and every named root nested under it, recursively — the whole tree of roots, in one command. Run it against `/` on a dynamic-initramfs system and both `/` and `boot/initramfs` are brought current together.
+By default `peipkg upgrade` resolves one combined plan over the current
+root and its reachable named roots. With no package names, it considers the
+installed packages in that combined world; a named upgrade considers that
+name in every reachable root where it is installed. On a dynamic-initramfs
+system, this lets `/` and `boot/initramfs` participate in the same plan.
+Review the whole plan before approving it.
 
-Each root is upgraded as an independent transaction that continues on error: peipkg walks the tree, upgrades each root on its own, and prints a per-root summary. One root's failure does not abort the others — a broken upgrade in `initramfs` leaves `/`'s upgrade to complete and report normally, and vice versa. You get one summary per root and a clear picture of which succeeded.
+If the plan changes more than one root, peipkg uses a coordinated cross-root
+transaction. A plan changing only one root uses the single-root executor.
+The multi-root sequence is:
 
-The cascade is not one all-roots transaction. Check every per-root summary: success in one root does not mean another succeeded. Apply the [transaction recovery checks](~peios/package-management/transactions-and-recovery) to any root whose operation failed or was interrupted.
+1. Lock the participating roots and check pending recovery, then fetch and
+   verify the packages for **all** participants before extracting any.
+2. Prepare each root. If preparation fails, stop and attempt to roll back
+   prepared changes. Rollback can itself fail; the affected journal remains
+   pending and the installation must not be treated as restored.
+3. Commit package state root by root. A commit failure does not begin an
+   independent upgrade in the next root: peipkg continues the coordinated
+   commit attempts and reports a partial-commit error. Roots already committed
+   remain committed; use [cross-root recovery](#cross-root-undo-and-recovery)
+   for the remaining work.
+
+This is not an instantaneous all-files/all-roots switch or a whole-system
+snapshot. Files can become visible during preparation, and one root's
+post-commit maintenance can run before another root's commit is attempted.
+An error is not proof that every participant stayed unchanged.
+
+This sequence follows
+[peipkg `8b588ae8`'s upgrade scope](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/cli/lifecycle.go#L188-L223),
+[reachable-root planning](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/cli/lifecycle.go#L467-L678),
+and [coordinated executor](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/install/execute.go#L230-L348).
+The [prepare/commit boundary](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/install/execute.go#L554-L655)
+and [rollback-failure handling](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/install/execute.go#L668-L724)
+set its limits. These are source-backed behaviours, not a runtime test or
+proof that a particular released image contains that revision.
 
 | Option | Effect |
 |---|---|
@@ -181,15 +213,16 @@ Use `--no-recurse` when you deliberately want to move just one root — for exam
 ## Cross-root dependencies
 
 Installing a package can pull dependencies into another registered root.
-`install` is the verb that honours that routing. Review every target before
-approving: the operation can affect more than the root you selected.
+The default upgrade also resolves across reachable roots, as described
+above. Review every target before approving: the operation can affect more
+than the root you selected.
 
 The [cross-root dependency reference](~peios/peipkg/installation-roots/cross-root-dependencies)
-keeps the manifest syntax and routing details. It also documents two limits:
-upgrade, downgrade, removal and undo use single-root resolution for dependency
-fields, and removing the last dependent does not automatically remove a
-cross-root dependency. Inspect the relevant roots rather than assuming later
-operations repeat the install's routing or clean up another tree.
+keeps the manifest syntax and routing details, including the separately
+documented limits for other verbs and cross-root autoremoval. Removing the
+last dependent does not automatically remove its dependency from another
+root. Inspect the relevant roots rather than assuming every later operation
+repeats the install's routing or cleans up another tree.
 
 A plan that reaches beyond the current root announces it before you approve:
 
@@ -205,24 +238,31 @@ reversing all participating roots together; there is no supported partial-root
 undo of that transaction. Check the history and preview the inverse plan
 before applying it.
 
-For an interrupted operation, make all participants reachable and run
-`peipkg recover`. The [crash-recovery reference](~peios/peipkg/transactions/crash-recovery#cross-root-the-exception)
-describes sequential per-root commits: after one sibling commits, a pending
-sibling can be rolled forward using its persisted completion data. Missing
-completion data causes refusal rather than a safe automatic reversal. An
-ordinary single-root operation refuses pending cross-root work.
+For an interrupted operation, retain the named-root topology, make every
+participant present and reachable, and run `peipkg recover` from the same
+anchor, using the original `--root TARGET` if one was selected. The command
+discovers reachable roots; it does not establish that missing or unregistered
+participants have been found. An ordinary single-root operation refuses
+pending cross-root work in isolation.
 
-Earlier operator guidance described a two-phase, all-roots commit with no
-partial outcome. The technical recovery description is narrower. Do not rely
-on an interruption leaving every root at the same version; inspect history
-and verify each reachable participant after recovery, and treat a refused
-root as unresolved. See [Transactions and recovery](~peios/package-management/transactions-and-recovery)
-for the available checks and failed-rollback limits.
+Recovery rolls pending participants back if none committed. If a participant
+has committed, it rolls pending participants forward using their persisted
+completion data. Missing or malformed data causes refusal; further recovery
+can also fail after another participant has been reconciled. Do not rely on
+an interruption leaving all roots at the same version.
+
+In the reviewed source, the CLI can print **rolled back cross-root
+transaction** for either recovery direction. That wording is not proof of
+rollback. Inspect per-root history and verify files, and treat refused or
+unreachable roots as unresolved. Roll-forward recovery also does not invoke
+the normal post-commit side-effect runner: do not assume `depmod` or `man-db`
+was retried. Follow [Transactions and recovery](~peios/package-management/transactions-and-recovery#across-more-than-one-root)
+for the pinned recovery sources, outcome checks and maintenance limits.
 
 ## Exit status
 
 | Code | Meaning |
 |---|---|
 | `0` | Success. |
-| `1` | Failure — an unregistered name, a dangling or otherwise invalid reference, a resolution cycle, a per-root transaction that failed, or a cross-root commit failure. |
+| `1` | Failure — an unregistered name, a dangling or otherwise invalid reference, a resolution cycle, a failed preparation or rollback, or a cross-root commit or recovery failure. |
 | `2` | Usage error — a missing or unknown `root` subcommand, a malformed option, or the wrong number of positional arguments. |

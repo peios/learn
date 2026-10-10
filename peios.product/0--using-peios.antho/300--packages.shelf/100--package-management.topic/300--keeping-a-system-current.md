@@ -13,7 +13,7 @@ related:
 For routine maintenance, refresh, review the upgrade plan, apply it, then
 check the outcome. First choose the intended [root](~peios/package-management/named-roots)
 and preserve important local changes. `upgrade` can also update nested roots,
-so review every root's result.
+so review the whole plan and check every participating root afterwards.
 
 ```
 peipkg refresh
@@ -38,6 +38,12 @@ establish that a service or feature is working.
 
 Version reversal changes package payloads. It does not reverse registry
 state, runtime or user data, or setup performed by feature scripts.
+
+For the Peios edition itself, use [Upgrading Peios](~peios/peiso/editions-and-upgrades/upgrading-peios).
+Its plain CLI also reconciles release seeds after a no-op or declined
+package request; `peipkg`'s exit 0 is not a cancellation signal to that
+wrapper. Use `upgrade-peios --check` to preview without staging or applying
+seeds.
 
 ## Refreshing repository metadata
 
@@ -70,7 +76,11 @@ Skip it for long enough and peipkg stops waiting for you: an install, upgrade, o
 peipkg upgrade [package]...
 ```
 
-With no arguments, `upgrade` considers every installed package for an available newer version that satisfies resolution. With one or more package names, it upgrades only those — and still pulls in any new dependencies they need.
+With no arguments, `upgrade` considers every installed package in the
+current root and its reachable named roots for a newer version that satisfies
+resolution. With package names, it considers those packages in each reachable
+root where they are installed, including any new dependencies they need.
+`--no-recurse` confines resolution and execution to the current root.
 
 ```
 $ peipkg refresh && peipkg upgrade
@@ -89,7 +99,17 @@ proceed? [y/N]
 | `--no-recurse` | Confine the upgrade to the current root only — disable the cascade into nested named roots. |
 | `--allow-stale` | Proceed although a repository's trust state exceeds its maximum trusted age. Warned and audited. |
 
-By default, when named roots are configured, `upgrade` **cascades**: it reconciles the current root and every named root nested under it, each as an independent continue-on-error transaction with its own summary. `--no-recurse` disables that and upgrades the current root alone. See [Named roots](~peios/package-management/named-roots) for the named-roots model.
+By default, `upgrade` resolves **one combined plan** over the current root
+and its reachable named roots. One approval covers that plan. If it changes
+more than one root, peipkg coordinates the participants as a cross-root
+transaction, not independent per-root upgrades. Preparation failure attempts
+rollback; a later commit failure can leave some roots committed and others
+pending. Read [the named-root transaction boundaries](~peios/package-management/named-roots#cascading-upgrade)
+and [cross-root recovery](~peios/package-management/transactions-and-recovery#across-more-than-one-root)
+before treating a failed operation as unchanged. This describes
+[peipkg `8b588ae8`'s upgrade entry](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/cli/lifecycle.go#L188-L223)
+and [single approval/executor selection](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/cli/lifecycle.go#L338-L383);
+check the revision supplied by your image.
 
 If the plan contains no updates, peipkg says so and exits. That is a result against the available metadata and constraints, not proof that every upstream release is installed.
 
@@ -165,5 +185,5 @@ $ peipkg upgrade        # apply it
 | Code | Meaning |
 |---|---|
 | `0` | The operation succeeded — including a dry run, a plan with nothing to do, and a declined prompt or authorisation (nothing failed). |
-| `1` | The operation failed — a repository could not be refreshed, a repository's trust state exceeded its maximum age and a forced refresh could not clear it, resolution or a download or verification failed, a root in an upgrade cascade failed, there is no committed transaction to undo, or a command's arguments were wrong (`downgrade` without a package and version, an unparsable version, a malformed option). |
+| `1` | The operation failed — a repository could not be refreshed, a repository's trust state exceeded its maximum age and a forced refresh could not clear it, resolution or a download or verification failed, cross-root preparation, commit or recovery failed, there is no committed transaction to undo, or a command's arguments were wrong (`downgrade` without a package and version, an unparsable version, a malformed option). |
 | `2` | A usage error before any command ran — no command, an unknown command, or a malformed global option (including a `--root` reference that does not resolve). |

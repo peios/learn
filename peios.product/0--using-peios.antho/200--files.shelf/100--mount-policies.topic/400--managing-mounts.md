@@ -48,11 +48,19 @@ show](~peios/disks-and-filesystems/disk-manager#what-you-may-see-and-change).
 ### Check policy access
 
 > [!WARNING]
-> Published privilege requirements disagree: command and SDK descriptions say
-> `SeTcbPrivilege`; the kernel contract permits enabled `SeManageVolumePrivilege`
-> or `SeTcbPrivilege`; Disk Manager describes Manage Volumes. This affects
-> policy reads and changes. Confirm the deployed contract; administrator
-> membership alone is not proof that either operation will work.
+> In kernel source `8e0e22de3a59cad506bbbf8873de456e16ad272d`, both policy
+> reads and writes accept enabled `SeManageVolumePrivilege` or `SeTcbPrivilege`;
+> recording the privilege as used must also succeed. Administrator membership
+> alone does not satisfy this gate. This is a [pinned source finding](https://github.com/peios/pkm/blob/8e0e22de3a59cad506bbbf8873de456e16ad272d/kacs/capability.c#L613-L637),
+> not a test of the kernel deployed on your machine or a historical release boundary.
+
+The `mount` diagnostic in peiosutils 0.8.18 still [names only
+`SeTcbPrivilege`](https://github.com/peios/peiosutils/blob/3344d4690476fd66bfaec99b1ae92190bbcba06f/src/uu/mount/src/policy.rs#L84-L99).
+That hint is misleading for the pinned kernel. Check the deployed kernel and
+caller's effective token before changing privileges; do not automatically grant
+TCB or globally remap `CAP_SYS_ADMIN` to make the operation succeed.
+`SeManageVolumePrivilege` is narrower than TCB but still permits substantial
+[authority over paths and synthesised policy](~peios/privileges/categories#what-semanagevolumeprivilege-is-actually-worth).
 
 ## Attach a filesystem
 
@@ -108,7 +116,8 @@ contract](~peios/advanced-peios/peios-kernel/kacs/facs/descriptor-storage#admini
 [SDK wrappers](~peios/developing-for-peios/sdk-reference/sdk-files/mount-policy)
 and [syscall notes](~peios/advanced-peios/peios-kernel/kacs/facs/mount-policy-syscalls)
 cover arguments, template validation, buffer handling, errors and generation
-semantics. The references retain their unresolved contract differences.
+semantics. The privilege disagreement is resolved for the pinned source above;
+other differences retained in the syscall notes are not resolved by that finding.
 A rejected policy change leaves the current class and template unchanged.
 
 A second mount of the same device does not establish an independent policy

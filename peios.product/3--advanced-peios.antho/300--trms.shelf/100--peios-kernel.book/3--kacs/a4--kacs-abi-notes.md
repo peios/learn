@@ -176,10 +176,12 @@ first with `KACS_IOC_IMPERSONATE` that now lives in libpeios as
 
 ## Open-interface documentation discrepancies
 
-The sources below disagree or leave details uncorroborated. This records
-**documentation differences, not a reconciled contract**. No runtime behavior
-or version boundary was determined. The generated ABI supplies layouts and
-constants; it does not settle these behavioral questions.
+The comparison below records historical documentation differences. The
+[pinned source findings](#pinned-source-findings) resolve specific creator-SD,
+create-option and no-follow questions; they do **not** reconcile every group
+below. No runtime behavior or historical release boundary was tested or
+established. The generated ABI supplies layouts and constants; it does not
+settle these behavioral questions.
 
 Source labels and line numbers refer to the `learn` snapshot
 `4b119864d7f51c569ae1ac1932e4430f06731cf2`:
@@ -221,7 +223,9 @@ comparison snapshot above.
    N:82–89 also permits a caller-supplied SD on replacement by
    `FILE_SUPERSEDE`. D:36–46 and G:19–36 show `OPEN_IF` with a non-null
    creator SD and imply that the existing-file branch succeeds, despite
-   O and N rejecting it. Those examples do not resolve the disagreement.
+   O and N rejecting it. The SDK examples have now been changed to create-only.
+   The pinned source findings below settle these existing-object rejections;
+   this pass does not settle the separate `SUPERSEDE` comparison.
 
 4. **Replacement and status.** O:71 says `SUPERSEDE` removes the inode
    and recommends it for atomic-replace patterns. N:82–89 replaces the
@@ -259,7 +263,46 @@ comparison snapshot above.
    others, and says the ABI has no share-mode field. D:26 calls the native
    result a “granted subset,” while N:6–19 distinguishes strict requests
    from maximum-allowed requests. The SDK reference is a programming
-   entry point, not evidence that these differences have been reconciled.
+   entry point, not evidence that every difference has been reconciled. The
+   current SDK page no longer advertises share mode or unsupported create
+   options; the pinned source below verifies the accepted option bits and
+   their SDK field mapping. The granted-subset wording versus strict/maximum
+   semantics remains part of the unresolved comparison.
+
+### Pinned source findings
+
+A bounded source check used kernel
+`8e0e22de3a59cad506bbbf8873de456e16ad272d` and libpeios 0.5.8
+`de0018bdcaed14abb796aeccec9c8387fd30e452`. These are implementation findings
+for those commits, not proof about a deployed kernel or the release where a
+behavior began. Referenced KUnit tests are definitions; they were not executed.
+
+- **Creator SDs (part of group 3).** [Argument validation](https://github.com/peios/pkm/blob/8e0e22de3a59cad506bbbf8873de456e16ad272d/kacs/native_open.c#L192-L202)
+  rejects `OPEN` plus creator SD with `EOPNOTSUPP` and `OVERWRITE` plus creator
+  SD with `EINVAL`. [Existing-path handling](https://github.com/peios/pkm/blob/8e0e22de3a59cad506bbbf8873de456e16ad272d/kacs/native_open.c#L1443-L1451)
+  rejects `OPEN_IF` and `OVERWRITE_IF` plus creator SD with `EINVAL` when the
+  object exists. The [OPEN_IF test](https://github.com/peios/pkm/blob/8e0e22de3a59cad506bbbf8873de456e16ad272d/kacs/kunit_file.c#L6020-L6053)
+  records that expectation. [SDK marshalling](https://github.com/peios/libpeios/blob/de0018bdcaed14abb796aeccec9c8387fd30e452/src/file.rs#L131-L196)
+  forwards the disposition and SD, rather than stripping the SD on an existing
+  path. Use create-only with an explicit SD or open-existing with `NULL` SD;
+  an `EEXIST` retry is a separate operation, not an atomic transaction.
+- **Create options (part of group 7).** The [accepted-bit mask](https://github.com/peios/pkm/blob/8e0e22de3a59cad506bbbf8873de456e16ad272d/kacs/native_open.c#L165-L170)
+  contains only `DIRECTORY` and `DELETE_ON_CLOSE`; unsupported bits return
+  `EINVAL`. The same SDK marshalling copies `options` to `create_options` and
+  `flags` to `flags`, so `AT_SYMLINK_NOFOLLOW` belongs in the latter.
+- **No-follow is operation-specific.** [Native open](https://github.com/peios/pkm/blob/8e0e22de3a59cad506bbbf8873de456e16ad272d/kacs/native_open.c#L1334-L1349)
+  rejects a terminal symlink with `ELOOP`. The by-path SD query instead selects
+  the link itself through its [lookup flags](https://github.com/peios/pkm/blob/8e0e22de3a59cad506bbbf8873de456e16ad272d/kacs/sd_access.c#L312-L327)
+  and [path resolver](https://github.com/peios/pkm/blob/8e0e22de3a59cad506bbbf8873de456e16ad272d/kacs/sd_access.c#L506-L536), as recorded by a
+  [link-query test](https://github.com/peios/pkm/blob/8e0e22de3a59cad506bbbf8873de456e16ad272d/kacs/kunit_file.c#L7586-L7625).
+  The [SDK query path](https://github.com/peios/libpeios/blob/de0018bdcaed14abb796aeccec9c8387fd30e452/src/file.rs#L220-L312) forwards the flags; its
+  buffer-size adaptation does not impose a terminal-link rejection. This
+  query finding does not verify a successful link-SD write or remove the
+  set-security component and storage checks.
+
+Groups 1, 2, 4, 5 and 6 remain unresolved by this check, as do the other
+behavioral claims in groups 3 and 7. Do not treat the TRM, SDK or generated
+ABI as a blanket resolution of those differences.
 
 ## What is not here
 

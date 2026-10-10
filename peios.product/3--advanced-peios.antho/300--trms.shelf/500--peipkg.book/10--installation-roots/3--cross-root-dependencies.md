@@ -29,13 +29,20 @@ reverse-dependency check that decides what a removal breaks.
 
 ## Which verbs route
 
-`install` resolves cross-root. `upgrade`, `downgrade`, `uninstall`, and
-`undo` resolve single-root, where a dependency's `root` field is inert
-and the dependency is evaluated in the depending package's root instead.
+`install` resolves cross-root. In
+[peipkg `8b588ae8`](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/cli/lifecycle.go#L188-L223),
+`upgrade` also resolves one combined plan across the current root and its
+reachable named roots by default. `--no-recurse` confines upgrade resolution
+and execution to the current root. The
+[resolver setup](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/cli/lifecycle.go#L467-L587)
+honours the root named by a cross-root dependency during that default upgrade.
+See [Named roots](~peios/package-management/named-roots#cascading-upgrade) for
+the operator flow, transaction boundaries and source/release qualification.
 
-So a cross-root dependency is placed correctly when the depending
-package is installed, and is evaluated in the wrong root on every later
-operation.
+The remaining verbs, `downgrade`, `uninstall`, and `undo`, were described
+here as single-root resolution, where a dependency's `root` field is inert.
+The pinned upgrade correction above does not verify those other paths;
+do not infer that every verb has the same cross-root routing.
 
 ## Satisfier identity
 

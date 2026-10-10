@@ -17,26 +17,36 @@ To keep the fragments readable, most error checks are elided here — every call
 [`peios_file_open`](~peios/sdk-files/opening-a-file) is shaped like `NtCreateFile`: you state the access you want, what to do about existence (the *disposition*), any create options, and — when creating — the security descriptor to stamp on the new file. It returns an ordinary Linux fd whose **granted access is fixed for the fd's lifetime**, which means you can safely hand it to another process by `SCM_RIGHTS`, `dup`, or across `exec`: the fd carries exactly the access it was opened with.
 
 > [!IMPORTANT]
-> This creator-SD example conflicts with the kernel reference on the existing-file branch. See [Open-interface documentation discrepancies](~peios/advanced-peios/peios-kernel/kacs/kacs-abi-notes#open-interface-documentation-discrepancies); the example does not establish that this branch succeeds.
+> At kernel `8e0e22de3a59cad506bbbf8873de456e16ad272d`, `OPEN_IF` or `OVERWRITE_IF` with a creator SD fails with `EINVAL` for an existing path. Plain `OPEN` with a creator SD fails with `EOPNOTSUPP`, and `OVERWRITE` with one fails with `EINVAL`. The [pinned source findings](~peios/advanced-peios/peios-kernel/kacs/kacs-abi-notes#pinned-source-findings) resolve these cases, not every [open-interface discrepancy](~peios/advanced-peios/peios-kernel/kacs/kacs-abi-notes#open-interface-documentation-discrepancies). No deployed build was tested.
 
-Open-or-create a file, readable and writable, stamping a creator SD if it's new:
+Create a new file, readable and writable, with a creator SD. An existing path is
+an error:
 
 ```c
 struct peios_open_params p = {
     .desired_access = KACS_FILE_READ_DATA | KACS_FILE_WRITE_DATA,
-    .disposition    = KACS_DISPOSITION_OPEN_IF,   /* open existing, else create */
-    .sd             = creator_sd, .sd_len = creator_sd_len,   /* used only on create */
+    .disposition    = KACS_DISPOSITION_CREATE,    /* fail if the path exists */
+    .sd             = creator_sd, .sd_len = creator_sd_len,
 };
 
 uint32_t status = 0;
 int fd = peios_file_open(AT_FDCWD, "state.db", &p, &status);
 if (fd < 0) { perror("open"); return -1; }
 
-if (status == KACS_STATUS_CREATED) { /* we made it */ }
-else                               { /* it already existed */ }
+/* On success, status == KACS_STATUS_CREATED. */
 ```
 
-`status_out` tells you *what happened* — created versus opened versus overwritten — without a separate `stat` and its attendant race. If you're only ever opening existing files, use a plain open disposition and pass `sd = NULL`.
+To open an existing file, use `KACS_DISPOSITION_OPEN` with `sd = NULL` and
+`sd_len = 0`. If the create-only call returns `EEXIST`, decide whether accepting
+the existing object is appropriate before making that separate open call.
+The two calls are not an atomic create-or-open transaction; checking `stat`
+first does not remove the race either.
+
+If parent inheritance is appropriate for a newly created file, `OPEN_IF` with
+`sd = NULL` and `sd_len = 0` can report created versus opened in `status_out`
+without a separate `stat`. Only `DIRECTORY` and `DELETE_ON_CLOSE` create-option
+bits are accepted by the pinned kernel; put no-follow in `flags`. See the
+[opening reference](~peios/sdk-files/opening-a-file) for the SDK fields.
 
 ## Reading a file's security descriptor
 
@@ -239,7 +249,7 @@ These are raw kernel error names; the SDK wrappers return `-1` and set `errno`.
 The [Kernel TRM raw-call contract](~peios/advanced-peios/peios-kernel/kacs/facs/native-open#special-nodes-and-symlinks) says `AT_SYMLINK_NOFOLLOW` on `kacs_get_sd` and `kacs_set_sd` selects the symlink object, unlike native open, which fails with `ELOOP` in that case. The flag descriptions above follow that kernel contract.
 
 > [!IMPORTANT]
-> The [SDK wrapper reference](~peios/sdk-files/reading-and-writing-a-file-s-security-descriptor#by-path) still lists `ELOOP` for a no-follow symlink for both wrappers, in conflict with the kernel description. These sources do not establish how the wrappers behave on a particular deployed build. Confirm that behavior before relying on a program to inspect or change the link inode; this guide does not claim an implementation or release was tested.
+> The [SDK query reference](~peios/sdk-files/reading-and-writing-a-file-s-security-descriptor#by-path) now records the pinned-source result: `AT_SYMLINK_NOFOLLOW` queries the terminal link's own SD, whereas native open rejects that link with `ELOOP`. libpeios forwards the query's flags. This resolves the former blanket no-follow query error; it does not establish that a link-SD write succeeds. The set-security description above retains its separate rights and storage requirements. No runtime test or historical release boundary was established.
 
 For live-check versus cached-fd restore behavior, mandatory SACL attributes and full-SACL label constraints, see [The Set-Security Interface](~peios/advanced-peios/peios-kernel/kacs/facs/set-security). A full SACL write replaces the entire SACL. A label-only write preserves non-label ACEs; its input is either no SACL, to remove the explicit label, or a SACL containing exactly one non-inherit-only mandatory-label ACE.
 

@@ -7,18 +7,48 @@ related:
   - peios/peiso/editions-and-upgrades/release-toml
 ---
 
+Use `upgrade-peios` to move the edition package and reconcile the release's
+registry seeds. First inspect the installed release and preview the package
+plan:
+
+```sh
+upgrade-peios --status
+upgrade-peios --check
+```
+
+`--check` does not apply the package plan or stage or apply registry seeds.
+Planning can still refresh repository metadata for peipkg's trust-freshness
+checks. It is a preview against the inputs available then, not a reserved
+plan for a later invocation.
+
+> [!WARNING]
+> **Plain `upgrade-peios` can reapply policy even when no package changes.**
+> In the [source versions described below](#source-and-release-scope), a
+> package plan with nothing to do, or a package prompt you decline, returns
+> success to the updater. It then stages the installed release's seeds and,
+> on the live root without `--on-reboot`, applies the seed queue. Do not run
+> the plain command just to look for updates, or rely on declining its
+> package prompt to leave registry policy alone.
+
+When you intend both the package update and seed reconciliation, run:
+
 ```sh
 upgrade-peios
 ```
 
-That is the whole procedure. It is safe to run again at any time: an interrupted upgrade is completed, and a system that is already current is left alone.
+Re-running can finish seed work left by an interruption, but it also copies
+the installed release's seed masters into the queue again. Review the
+release's policy changes and preserve important local configuration before
+reapplying them. A failed package transaction needs the
+[package recovery procedure](~peios/package-management/transactions-and-recovery),
+not an assumption that every interrupted step completed.
 
 ## What happens
 
 1. **Find the edition.** `upgrade-peios` reads `ID` and `VARIANT_ID` from `/usr/lib/os-release` — the file the edition package itself wrote — and derives the edition package's name from them: `VARIANT_ID=experimental` is `dev.peios.peios-experimental`. A system whose `ID` is not `peios`, or that has no variant, is refused (exit 2).
-2. **Move the edition package.** It runs `peipkg upgrade dev.peios.peios-experimental --bypass-alternate-upgrade`, passing `--yes` and `--allow-stale` through when given. The upgrade pulls the release closure with it. A peipkg failure is exit 3, and nothing further runs.
-3. **Stage the release's seeds.** The new [`release.toml`](~peios/peiso/editions-and-upgrades/release-toml) is read; each seed it names is copied from `/usr/share/regim/` into `/lcl/policy/autoapply.d/`, and the drain script is placed in `/lcl/policy/autorun.d/` if it is missing. A seed the release names that nothing ships is exit 4.
-4. **Apply them.** `reg apply --dir /lcl/policy/autoapply.d --once-delete --yes` applies each seed and removes it from the queue. Services the seeds define start now. Failure is exit 5.
+2. **Move the edition package.** It runs `peipkg upgrade dev.peios.peios-experimental --bypass-alternate-upgrade`, passing `--yes` and `--allow-stale` through when given. The upgrade pulls the release closure with it. A peipkg failure is exit 3, and the updater stops before its seed steps. In ordinary CLI mode, peipkg exit 0 also includes a no-op or a declined prompt; those outcomes still reach the next step.
+3. **Stage the installed release's seeds.** The installed [`release.toml`](~peios/peiso/editions-and-upgrades/release-toml) is read, whether or not the package version changed; each seed it names is copied from `/usr/share/regim/` into `/lcl/policy/autoapply.d/`, and the drain script is placed in `/lcl/policy/autorun.d/` if it is missing. A seed the release names that nothing ships is exit 4.
+4. **Apply the queue.** Unless staging for boot, `reg apply --dir /lcl/policy/autoapply.d --once-delete --yes` applies the queued seeds and removes successfully applied files. This command is run when the release names seeds and targets the whole directory, including other seeds already queued there. Registry policy and service definitions can change; verify their intended effects separately. Failure is exit 5, and is not a rollback of package changes or already-applied seeds.
 
 `upgrade-peios` never elevates. peipkg and `reg` run with the caller's token, exactly as they would if you typed the two commands yourself; KACS decides what each may do.
 
@@ -35,15 +65,46 @@ rather than leaving two edition identities behind.
 
 | | |
 |---|---|
-| `--on-reboot` | Stop after staging. The seeds apply on the next boot, when peinit runs the drain script before planning its services. Use this when a seed changes something you would rather not change under a running session — the console login, say. |
+| `--on-reboot` | Stop after staging. This still writes the seed queue, including after a plain-CLI no-op or declined package prompt. The seeds apply on the next boot, when peinit runs the drain script before planning its services. Use this when a seed changes something you would rather not change under a running session — the console login, say. |
 | `--seeds-only` | Skip the package upgrade and only reconcile the installed release's seeds. This is the re-run: after an interrupted upgrade, or to re-apply a release's policy. |
 | `--yes`, `-y` | Pass `--yes` to peipkg. |
 | `--allow-stale` | Pass `--allow-stale` to peipkg: carry on with a repository's out-of-date information when refreshing it brought nothing newer. |
-| `--check` | Show what upgrading would change — peipkg's `--dry-run` — and change nothing. |
+| `--check` | Preview peipkg's package plan with `--dry-run`; do not apply that plan or stage or apply seeds. Trust-freshness checks can still refresh repository metadata. |
 | `--status` | Show the installed release, the edition package's version, the seeds waiting for the next boot, and whether you may upgrade. |
-| `--root DIR` | Operate on the Peios rooted at `DIR` rather than `/`. Implies `--on-reboot`, since `reg` acts on the live registry only; peipkg is run with `--root DIR`. |
+| `--root DIR` | Operate on the Peios rooted at `DIR` rather than `/`. A non-live root implies `--on-reboot`: seeds are still staged there, but `reg` is not run against the live registry. peipkg is run with `--root DIR`. |
 
 To do it on the desktop, use [Upgrade Peios](~peios/peiso/editions-and-upgrades/upgrade-peios).
+It uses driven mode: a `cancelled` result stops before seed staging and
+application. This cancellation handling differs from the ordinary CLI's
+exit-status check. A driven `done` result with no package operations is not
+`cancelled`; without `--check`, it can still reach seed reconciliation.
+
+## Check the outcome
+
+Separate the package result, the seed result, and the running system:
+
+1. Read the package result and warnings. [peipkg exit 0](~peios/package-management/keeping-a-system-current#exit-status)
+   alone does not establish that an upgrade was performed or approved.
+2. Run `upgrade-peios --status` again, using the same `--root DIR` for an
+   alternate root. Compare the installed edition version and queued seeds.
+   An unreadable queue is unknown, not empty. After `--on-reboot`, staged
+   seeds are expected to remain until boot applies them.
+3. If staging or application failed, read the failed step before retrying.
+   Earlier seeds may already be staged or applied. `--seeds-only` stages
+   the installed release's complete `autoapply` list again; it is not a
+   read-only check or a reversal of the failed attempt.
+4. Verify affected registry policy and the software that uses it. An empty
+   queue does not by itself prove every intended service or policy is
+   working. Package `undo` does not restore registry state or undo a
+   feature's setup; see [recovery limits](~peios/package-management/transactions-and-recovery).
+
+`--status` reads installed release/package metadata and the queue. It does
+not identify the currently running kernel or mapped service binaries. This
+updater invokes peipkg and `reg`; that path does not itself run a reboot or
+boot-image regeneration command. Do not use its successful exit or status
+as proof that all installed code is active or that every kernel update's
+boot artifacts are ready. [Upgrading from the medium](#from-the-medium) is
+a separate path with explicit boot-file regeneration.
 
 ## For a program
 
@@ -69,7 +130,7 @@ passed on except its terminal one. Then upgrade-peios adds:
 | `progress` | `phase`, `step`, `steps` | `phase` is `release-stage` (the seeds are copied into the queue) or `release-apply` (they are applied). |
 | `message` | `text` | What upgrade-peios is doing, or a line `reg` wrote. |
 | `done` | `summary`, `edition`, `seeds_queued` | Finished; `seeds_queued` is true when the seeds were left for the next boot. |
-| `cancelled` | `reason` | peipkg's plan wasn't approved; nothing was changed. |
+| `cancelled` | `reason` | peipkg's plan wasn't approved; the updater stops before staging or applying seeds. |
 | `error` | `code`, `message` | Failed. The code is peipkg's own for its part (`stale`, `busy`, `denied`, `unresolvable`, `untrusted`, `failed`…), or `usage`, `no-release`, `seeds` or `apply`. |
 
 Exactly one `done`, `cancelled` or `error` ends the run. `--yes` is refused
@@ -107,4 +168,17 @@ Once editions pin their dependencies exactly, this becomes the only way a releas
 
 - It does not upgrade packages outside the edition's closure that the edition merely floors. With `>=` floors, `peipkg upgrade` afterwards brings the rest current; with pins there is no "rest".
 - It does not un-apply seeds the new release dropped. See [`release.toml`](~peios/peiso/editions-and-upgrades/release-toml).
-- It does not reboot. Whether the new kernel is running is your call, as it is after any upgrade.
+- It does not reboot or verify runtime activation. Check the running system separately from the installed package version.
+
+## Source and release scope
+
+The CLI/driven distinction above follows
+[peiosutils `3344d469`'s upgrade path](https://github.com/peios/peiosutils/blob/3344d4690476fd66bfaec99b1ae92190bbcba06f/src/uu/upgrade-peios/src/upgrade_peios.rs#L243-L344),
+its [seed-copying step](https://github.com/peios/peiosutils/blob/3344d4690476fd66bfaec99b1ae92190bbcba06f/src/uu/upgrade-peios/src/upgrade_peios.rs#L515-L566),
+and [peipkg `8b588ae8`'s plan/approval return path](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/cli/lifecycle.go#L373-L444).
+Peipkg performs [trust-freshness checks before its dry-run boundary](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/cli/lifecycle.go#L192-L223).
+The [status implementation](https://github.com/peios/peiosutils/blob/3344d4690476fd66bfaec99b1ae92190bbcba06f/src/uu/upgrade-peios/src/status.rs#L19-L108)
+establishes the limits of the inspection command. These are source-backed
+behaviours, not a live cancellation/upgrade test or proof that a particular
+released image includes these revisions. Check the tool versions supplied
+by the image you operate.
