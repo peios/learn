@@ -37,7 +37,7 @@ A SACL is an ACL — same on-wire structure as a DACL, the same `AceCount`/`AclS
 | `SYSTEM_SCOPED_POLICY_ID` | A reference to a central access policy (CAAP). |
 | `SYSTEM_PROCESS_TRUST_LABEL` | The object's PIP trust label and the explicit allowed mask for non-dominant callers. |
 
-The numeric type values are in the canonical catalog, [ACE types and flags](~peios/constants-and-catalogs/ace-types-and-flags).
+The numeric type values are in the canonical catalog, [ACE types and flags](~peios/advanced-peios/constants-and-catalogs/ace-types-and-flags).
 
 A SACL can mix these in any combination. Most SACLs in practice are small — a few audit ACEs, perhaps a mandatory label, sometimes a resource attribute or two. SACLs with every type populated are rare and exist only on the most highly-protected objects.
 
@@ -148,4 +148,4 @@ For the events audit and alarm ACEs produce, and where they go, read [Auditing](
 
 For how the SACL's labels and policies fit into the full check pipeline, read [Access decisions](~peios/access-decisions/overview).
 
-To read and edit a SACL from a shell, read [The sd command](~peios/security-descriptors/sd-command).
+To read and edit a SACL from a shell, read [The sd command](~peios/files-and-directories/sd).

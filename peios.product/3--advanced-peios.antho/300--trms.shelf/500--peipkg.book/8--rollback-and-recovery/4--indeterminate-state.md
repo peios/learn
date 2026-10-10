@@ -26,19 +26,19 @@ A recovery mode with five properties:
 
 ## What exists
 
-None of the five.
+The list above is proposed handling, not a supported recovery interface.
+Earlier wording here said recovery only rolls back and writes are never
+refused after failure. Do not apply those blanket statements to the
+[source-verified cross-root path](~peios/peipkg/transactions/crash-recovery#cross-root-the-exception):
+rollback errors retain pending work, an ordinary single-root operation
+refuses to recover it in isolation, and coordinated recovery can roll
+forward after a sibling commits.
 
-There is no indeterminate state as a concept: a transaction is pending
-or it is not. Writes are not refused after a failure; reads carry no
-warning; there is no forensic report; `peipkg recover` offers only
-rollback, with no way to accept the current state and discard the
-journal; and recovery runs automatically at the head of every operation,
-with no prompt.
-
-The last point is the sharpest. Automatic rollback of a *pending*
-transaction is correct and is what §7.8 describes. But because nothing
-distinguishes a cleanly pending transaction from an indeterminate one,
-automatic resolution is the only behaviour available for both.
+That correction does not establish the five proposed facilities or verify
+every single-root failure path. Inspect the actual journal, diagnostics and
+installed revision, and use the
+[operator recovery checks](~peios/package-management/transactions-and-recovery)
+rather than assuming a universal recovery direction or write policy.
 
 ## What an operator can do today
 
@@ -47,8 +47,10 @@ and reports the differences. That is the closest available thing to the
 forensic report, and it is the tool for establishing what a failed
 operation actually left behind.
 
-`peipkg recover` rolls back a pending transaction explicitly, and emits
-an audit event where the automatic path does not.
+`peipkg recover` explicitly attempts recovery and emits an audit event
+where the automatic path does not. Coordinated cross-root recovery chooses
+rollback or roll-forward from participant state; its console message alone
+does not establish that direction.
 
 Beyond that, reconciling the database with the filesystem is manual:
 identifying files sitting at backup paths, deciding whether the old or

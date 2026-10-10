@@ -58,7 +58,7 @@ default router has expired. [*rdisc.solicit-again-when-routers-gone]
 ## Which advertisements count [*rdisc.acceptance]
 
 An advertisement is dropped unless it arrived with hop limit 255 and from
-a link-local source (RFC 4861 §6.1.2). A lower hop limit has crossed a
+a link-local source ([RFC 4861 §6.1.2](https://datatracker.ietf.org/doc/html/rfc4861#section-6.1.2)). A lower hop limit has crossed a
 router, and a non-link-local source is not a router on this link.
 [*rdisc.hop-limit-and-source-checks]
 

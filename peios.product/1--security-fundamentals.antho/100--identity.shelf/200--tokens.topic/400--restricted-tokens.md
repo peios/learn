@@ -130,4 +130,4 @@ For the linked Full/Limited token pair — the other derived-token pattern this 
 
 For the policy-driven counterpart to restricted tokens, read [Confinement](~peios/confinement/overview).
 
-To build a restricted token from a shell, read [The token command](~peios/tokens/token-command).
+To build a restricted token from a shell, read [The token command](~peios/system-and-processes/token).

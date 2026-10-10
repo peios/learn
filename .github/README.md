@@ -27,6 +27,62 @@ writes it to `dist/` instead. Both need a `trail` binary — `cargo build --rele
 in [peios/trail](https://github.com/peios/trail), or the prebuilt Linux binary
 from that repository's latest release.
 
+## Pull-request validation
+
+`.github/workflows/validate-docs.yml` strictly builds the proposed merge and the
+exact base commit recorded in the pull-request event, using the same
+checksum-pinned Trail binary. It then checks rendered HTML navigation links.
+The proposed merge and base are separate, shallow checkouts; their outputs and
+the binary stay outside both site roots. This read-only workflow does not deploy.
+
+The rendered-link check fails when a source-page/href pair is broken in the
+proposed merge but was not broken in the event base. It reports baseline,
+candidate, newly broken, inherited, and resolved-or-removed pair counts, along
+with duplicate occurrence counts. Existing generated print-view fragment defects
+remain visible without blocking unrelated documentation fixes. There is no saved
+allowlist: every PR compares fresh builds of its exact event base and proposed
+merge. Increasing occurrences of an already-broken pair does not create a new
+pair; the same broken href on another source page does.
+
+Run the standard-library tests with Python 3.9 or newer:
+
+```console
+$ python3 -B -m unittest discover -s .github/scripts -p 'test_*.py' -v
+```
+
+To compare two already-built output directories locally:
+
+```console
+$ python3 -B .github/scripts/check_rendered_links.py /tmp/trail-base-site /tmp/trail-site
+```
+
+Build both revisions with the same verified Trail binary and `trail build
+--strict --out <output-directory>`. Use separate source checkouts and output
+directories outside the site roots. Do not compare a candidate against itself or
+against a moving branch if you want the same regression boundary as CI.
+
+The checker reads `a` and `area` hrefs from HTML, including generated print pages.
+It resolves relative and root-relative paths, directory `index.html` pages, and
+percent-encoded HTML IDs or named anchors. Query strings are ignored. Non-HTML
+file links are checked for existence; their fragments are not interpreted.
+External/protocol-relative URLs and every explicit scheme, including same-origin
+absolute HTTPS URLs, are not fetched or checked. Resource `src` attributes,
+JavaScript-generated links, and text-fragment content matches are outside its
+scope. HTML `base` URLs are rejected rather than silently misresolved.
+
+The exit status is 0 for no new broken pairs, 1 for regressions, or 2 if inputs
+cannot be safely checked. Symlinks, special files, empty/nonexistent output,
+invalid UTF-8 HTML, and exceeded scan limits are input errors. Malformed local
+URLs and paths escaping the output root are broken links. Percent-encoded path
+separators (`%2F` and `%5C`, case-insensitive) are also rejected as broken links:
+server-dependent decoding makes their target ambiguous. Encoded separators in
+fragment IDs are supported. Hrefs never cause the checker to read outside its
+inventoried output. Keep output trees unchanged
+while checking them. Default limits per tree are 100,000 entries, 128 directory
+levels, 20,000 HTML pages, 32 MiB per page, 512 MiB of HTML, 2 million navigation
+link occurrences, and 16,384 characters per href. `--max-details 0` prints counts
+only; the default prints up to 20 pairs per category (maximum 1,000).
+
 ## Deployment
 
 Every push to `main` builds the site and deploys it to GitHub Pages. The

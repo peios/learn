@@ -1,0 +1,474 @@
+---
+title: The lps command
+type: reference
+description: The lps command administers the local principal store — principals, passwords, credential policies and SSH keys, groups and memberships, profiles, and claims.
+related:
+  - peios/managing-local-principals/overview
+  - peios/managing-local-principals/creating-accounts
+  - peios/local-principal-interfaces/the-admin-socket
+  - peios/system-and-processes/logonse
+---
+
+`lps` administers the **local principal store** — this machine's own accounts and groups, held by `lpsd`.
+
+```
+lps subcommand [arguments]
+```
+
+It is a client and nothing more. It holds no state, opens no store, and has no privilege of its own: every command is a request over `/run/lpsd/admin.sock` that `lpsd` decides whether to honour. `lpsd` must be running.
+
+You must be a member of `BUILTIN\Administrators` — enabled, not deny-only — or be `LocalSystem`.
+
+## Naming a group
+
+Anywhere `lps` takes a group, you may write it three ways:
+
+```
+lps group add jack Administrators              # a well-known name
+lps group add jack BUILTIN\\Administrators      # the same, qualified
+lps group add jack developers                  # a local group
+lps group add jack S-1-5-32-544                # a literal SID
+```
+
+Names are matched case-insensitively, and **`lpsd` resolves them, not `lps`**. The tool carries no copy of the well-known table and does not know this machine's domain — a second copy of the machine's identity scheme would be free to disagree with the first.
+
+A well-known name always wins over a local group of the same name, which is why you cannot create a local group called `Administrators`.
+
+## Inspecting
+
+### `lps list`
+
+Every principal, with RID, uid, state, and how many groups each is in.
+
+```
+$ lps list
+NAME     RID       UID  STATE     GROUPS
+jack    1000   1001000  enabled   1
+guest   1001   1001001  disabled  0
+```
+
+A `-` in the UID column means nothing numbers that principal — `authd` has assigned this machine no identifier range, and they will sign in as `nobody`. See [the local store](~peios/authentication/the-local-store).
+
+### `lps show <name>`
+
+One principal in full.
+
+```
+$ lps show jack
+name           jack
+display name   Jack Palfrey
+rid            1000
+sid            S-1-5-21-2847362817-1094533892-3310298447-1000
+uid            1001000
+state          enabled
+primary group  Authenticated Users [S-1-5-11]
+home           /home/jack
+shell          /bin/sh
+logon types    default (interactive, remote-interactive, network, network-cleartext, batch, new-credentials)
+credential     password
+groups         Administrators [S-1-5-32-544]
+               developers [S-1-5-21-2847362817-1094533892-3310298447-1001] (gid 1001001)
+claims         Department (string) = "Engineering"
+```
+
+`logon types` are the kinds of sign-in the principal may be used for (see `lps logon-types` below); `default` means none were chosen, and the machine's default applies. `credential` is what it signs in with: `password`, `key` (an SSH key), `either`, `none` (nothing is asked for), or `denied`.
+
+Groups show a name where this machine knows one, and always show the SID. The two are kept side by side deliberately: the name is what you recognise, the SID is what a security descriptor actually holds, and the moment they disagree is exactly when you need to see both.
+
+Only *local* groups show a gid. `lpsd` numbers the groups it owns and nothing else — `Administrators` and `Authenticated Users` are numbered by `authd`, from a table below every source's range, so `lpsd` genuinely does not know their gid and does not guess. To see the numbers a running session actually holds, read `Groups:` in `/proc/self/status`.
+
+### `lps domain`
+
+This machine's domain SID — the namespace every local principal and local group is numbered under.
+
+```
+$ lps domain
+S-1-5-21-2847362817-1094533892-3310298447
+```
+
+Generated at first boot and unique to this machine.
+
+## Creating and removing principals
+
+### `lps add [name] [options]`
+
+Creates a principal. Run with no arguments, it asks for what it needs:
+
+```
+$ lps add
+Name: alice
+Full name [optional]: Alice Chen
+Additional groups [comma-separated, optional]: Administrators, developers
+Primary group [the daemon's default]:
+Home directory [the daemon's default]:
+Shell [the daemon's default]:
+Password for alice:
+Again:
+
+  name           alice
+  full name      Alice Chen
+  primary group  (the daemon's default)
+  home           (the daemon's default)
+  shell          (the daemon's default)
+  groups         Administrators, developers
+
+Create this principal? [Y/n]:
+created alice with RID 1002
+```
+
+Any option you supply is not asked for, so scripted invocations keep working unchanged:
+
+| Option | Effect |
+|---|---|
+| `--group <group>` | A membership. Repeatable. |
+| `--primary-group <group>` | The group that becomes the POSIX gid. |
+| `--home <path>` | Home directory. Must be absolute. |
+| `--shell <path>` | Login shell. Must be absolute. |
+| `--display-name <text>` | A human's name for a human to read. |
+| `--disabled` | Create it unable to sign in. |
+| `--no-password` | Create a principal that authenticates with no credential at all. See below. |
+| `--service` | Create a principal that exists to run a service, and can do nothing else. See below. |
+| `--no-prompt` | Fail rather than ask for anything missing. |
+
+Nothing is sent until you confirm, so answering `n` creates nothing. Everything is sent in one request, so a principal is created whole or not at all: if `lpsd` refuses the shell, say, no principal is made.
+
+**`lps` never prompts when standard input is not a terminal.** A prompt down a pipe would consume the next line of whatever is driving the tool. See *From a script* below.
+
+The RID is allocated by `lpsd` and reported back. You do not choose it, and the uid follows from it.
+
+#### `--service`
+
+Creates a principal that may be used **only** to run a service, and for
+nothing else. It cannot sign in at a console, over the network, or as a
+batch job — a sign-on of any other kind is refused even with the correct
+credential.
+
+Most services do not need one. A service already gets an identity
+without an account: it runs as `LocalService` and carries a per-service
+SID derived from its name, which you can name in a security descriptor
+like any other principal. Reach for `--service` when a service needs
+something a bare SID cannot be — membership of a group, a home
+directory, or a profile.
+
+A service principal has no credential and cannot be given one. The
+authority mints its token on the service manager's attestation instead,
+and only the service manager may ask: nothing else on the system can
+obtain a token for it, with or without a password.
+
+The restriction is a property of the account rather than of this
+machine, so it travels with the principal. It is also the reason the
+flag exists at all: without it, an ordinary account could be named as a
+service's identity, and the machine would then be able to obtain a token
+for that account with no credential.
+
+Every principal created without this flag permits every kind of sign-on
+a person uses and never a service logon, so an existing account cannot
+become a service identity by accident.
+
+#### `--no-password`
+
+Creates a principal with credential policy `none`, which signs in without being asked for anything where the client and authority permit credential-free sign-in. No password is collected at creation, including in the interactive flow — an operator who has said the account needs no credential is not then asked to invent one.
+
+```
+$ lps add kiosk --group Administrators --no-password --no-prompt
+created kiosk with RID 1003
+```
+
+**This is a property of the account, not of a terminal.** Nothing scopes it to one console: any client that permits credential-free sign-in can use it, subject to logon-type and originator policy. [SSH](~peios/signing-in/signing-in-over-ssh) requires an actual password or an enrolled key and a policy allowing that credential; it refuses `none`. Credential-free sign-in is the right posture for a live image, where the medium is unauthenticated anyway and anyone holding it can read everything on it. It is the wrong posture for almost anything else.
+
+An empty password is **not** a way to spell this, and `lps` refuses one:
+
+```
+$ lps add alice
+...
+Password for alice:
+Again:
+lps: an empty password is not a password: pass --no-password to create a
+principal that authenticates without one
+```
+
+The two produce accounts that behave differently — an empty password is still collected, still prompted for, and still has to be answered — so having both spellings would mean two things that look identical at creation and diverge at every sign-in. `lpsd` refuses an empty password too, so the rule holds however the request arrives.
+
+### `lps remove <name>`
+
+Deletes a principal.
+
+The RID is **not** reclaimed. Files the principal owned keep naming a SID that now resolves to nobody, and nothing will ever hold that SID again. `lps disable` is usually what you wanted — see [creating accounts](~peios/managing-local-principals/creating-accounts).
+
+### `lps rename <name> <new-name>`
+
+Renames a principal.
+
+```
+$ lps rename erin erin.k
+renamed erin to erin.k
+```
+
+Its SID stays, so every file, permission and group membership that names it still does, and it signs in by the new name from now on. Its **home directory stays** where it was. `lps set --home` changes the recorded path only; it does not move the directory or its files.
+
+A name held by another principal or by a local group is refused. Changing only the case, `erin` to `Erin`, is allowed.
+
+## Enabling and disabling
+
+### `lps enable <name>` / `lps disable <name>`
+
+A disabled principal keeps everything except the ability to start a new sign-in. It does not revoke already issued tokens; [ending existing sessions](~peios/logon-sessions/lifecycle) is a separate operation.
+
+Both are refused if they would leave the machine with no enabled administrator.
+
+### `lps logon-types <name> <type>...`
+
+Sets the kinds of sign-in a principal may be used for. Any other kind is refused, even with the right credential.
+
+```
+$ lps logon-types backup network batch
+set the logon types for backup
+$ lps logon-types backup default
+set the logon types for backup
+```
+
+| Type | Signing in |
+|---|---|
+| `interactive` | at this machine: its console or desktop |
+| `remote-interactive` | to a remote desktop or over SSH, including commands without a PTY and SFTP |
+| `network` | to a network resource, such as a file share |
+| `network-cleartext` | over the network, with the password sent to this machine |
+| `batch` | as a scheduled job |
+| `new-credentials` | as a second identity for outgoing connections |
+| `service` | as a service, started by the service manager |
+
+The SSH mapping here follows the current [PGSS SSH implementation contract](~peios/logon/ssh-public-key-authentication), including its release-qualification and compatible-build limits.
+
+`default` returns the principal to the machine's default: every kind a person uses, and never `service`. There is no setting for "no sign-in at all"; `lps disable` is that.
+
+The last enabled administrator must keep `interactive`, `remote-interactive` or `network`. This is an [account-store guard](~peios/managing-local-principals/creating-accounts#the-last-administrator-guard); it does not check whether the corresponding console, service or network path is reachable.
+
+## Passwords
+
+### `lps password <name>`
+
+Sets a principal's password, prompting twice.
+
+```
+$ lps password jack
+New password for jack:
+Again:
+set the password for jack
+```
+
+This is an administrator resetting somebody else's password. A principal changes their own with [`passwd`](~peios/signing-in/the-passwd-command), which goes over PGSS Logon instead, so that it works identically whichever source holds the account.
+
+An empty password is refused here for the same reason it is refused at creation. A password doesn't change what a principal signs in with: one created with `--no-password` keeps signing in with nothing until `lps policy <name> password` says otherwise (see [credentials](#credentials-and-ssh-keys) below). There is no command that deletes a password; `lps policy` decides whether it is used.
+
+**From a script**, `lps` reads a single line from standard input when it is not attached to a terminal, and does not ask for confirmation:
+
+```
+printf '%s\n' "$password" | lps add alice --group Administrators --no-prompt
+```
+
+## Credentials and SSH keys
+
+A principal's **credential policy** says what it signs in with. Its **SSH keys** are the public keys it may sign in with over SSH. The two are kept apart: adding a key, or setting a password, never changes the policy, and changing the policy never adds or removes either. Enrolling a key and letting it be used are two decisions.
+
+### `lps policy <name> <policy>`
+
+```
+$ lps policy erin either
+credential policy updated
+```
+
+| Policy | Signs in with |
+|---|---|
+| `password` | their password |
+| `key` | one of their SSH keys |
+| `either` | their password or one of their SSH keys |
+| `none` | nothing, where credential-free sign-in is permitted; SSH refuses this policy |
+| `denied` | nothing: every sign-in is refused, whatever is offered |
+
+`none` is what `lps add --no-password` gives, and carries the same warning. `denied` stops a principal signing in and keeps everything else, as `lps disable` does, but nothing shows it as disabled, so `lps disable` is usually clearer.
+
+It applies from their next sign-in. `lps show` and `lps key list` both say what it is now.
+
+It is refused if it would leave the last enabled administrator nothing to sign in with: `denied`, `key` when they have no key, or `password` when they have no password.
+
+### `lps key list <name>`
+
+```
+$ lps key list erin
+credential  key
+ID                                FINGERPRINT                                         ADDED       LABEL
+893dab4342ba215def78c4036b598b65  SHA256:QDzrP/cBqV7YSxqoCgCJQqKJlo6ijyJ8U05BIEKmYnI  2026-10-04  laptop
+```
+
+The first line is the credential policy. `ID` is what `lps key remove` takes, `FINGERPRINT` is as `ssh-keygen -l` prints it, and `ADDED` is the day the key was added, in UTC.
+
+### `lps key add <name> <file> [label]`
+
+```
+$ lps key add erin erin.pub laptop
+key enrolled; credential policy unchanged
+```
+
+The file is one line of an OpenSSH public key file, such as `~/.ssh/id_ed25519.pub`. Ed25519 keys are accepted, and RSA keys of 3072 to 8192 bits; nothing else is. Without a label, the key's own comment is its label.
+
+A key the principal already has is refused, as is a 33rd.
+
+### `lps key remove <name> <id>`
+
+```
+$ lps key remove erin 893dab4342ba215def78c4036b598b65
+key removed
+```
+
+Removing the last key of the last enabled administrator, when a key is all they may sign in with, is refused.
+
+### Changing your own keys
+
+`lps` is for administrators, but a principal does not need one to manage their own SSH keys. Anyone signed in to an account this machine holds can add a key to it or remove one, through a program that asks on their behalf, such as a desktop settings app. Nothing is changed for anybody else's account: the account is always the one the program's token belongs to.
+
+Three things differ from `lps key`:
+
+- **The current password is asked for, every time.** Being signed in shows that someone signed in as you, not that you are at the keyboard now, and a key added from an unattended session would be a way back into the account. A wrong password changes nothing and says `Authentication failed.`
+- **An account with no password cannot do it.** That is an account whose policy is `key` or `none`, or one whose policy is `password` but that has no password set. There is nothing to prove who you are with, so the change is refused and you are told to ask an administrator, who can make it with `lps key`.
+- **A key is removed by its fingerprint**, the `SHA256:` value `ssh-keygen -l` prints for your `.pub` file, rather than by `lps key list`'s `ID`.
+
+Everything else is as `lps key add` and `lps key remove`: the same key types and sizes, a key you already have or a 33rd refused, the key's comment as its label. Adding a key does not let you sign in with it unless your credential policy is `key` or `either`, which only an administrator can set.
+
+Each change, and each refusal once the account is known, is recorded as an `lpsd.credential.changed` event, as a change of your own password is. `operation.name` is `ssh-key-added` or `ssh-key-removed`, and `outcome.reason` says what stopped a refused one, such as `wrong-credential`. A change an administrator makes with `lps key` is recorded as `lpsd.account.modified` instead: see [what is recorded](~peios/local-principal-interfaces/the-admin-socket#what-is-recorded).
+
+The same programs can show you your own account as `lpsd` holds it — your name, display name, credential policy, whether you have a password, and your keys — and set your **display name**, the human name shown beside your account name. Setting a display name asks for no password, since it is not something you sign in with. Both are served on `/run/lpsd/self.sock`; see [the administrative socket](~peios/local-principal-interfaces/the-admin-socket#the-self-socket).
+
+On the desktop, the program is **My Settings**, the app for your own account; type `my` in the launcher to open it. Its **SSH Keys** section lists your keys by label, fingerprint, type and the day each was added. **Add Key…** opens a form under the list for the one line of your `.pub` file and your password. **Remove** asks for your password under the key before it is taken away, and asks again if it was wrong. An account with no password sees why its keys are an administrator's to change, in place of these forms. In **Account**, **Display Name** sets your display name, with **Apply** once it is changed. The desktop reads it when you sign in, so it shows from your next session.
+
+Your password is changed with [`passwd`](~peios/signing-in/the-passwd-command), or in My Settings.
+
+## Profiles
+
+### `lps set <name> [options]`
+
+Changes part of a profile, leaving the rest alone.
+
+```
+$ lps set jack --shell /bin/bash --display-name "Jack Palfrey"
+updated jack
+```
+
+| Option | Effect |
+|---|---|
+| `--home <path>` | Home directory. Absolute. |
+| `--shell <path>` | Login shell. Absolute. |
+| `--display-name <text>` | Empty clears it. |
+| `--primary-group <group>` | Which group projects to the POSIX gid. |
+
+None of this is identity — no security descriptor names a home directory, and the token carries none of it. It is what `login` needs in order to start a session, and it reaches `login` on the logon reply itself.
+
+**`lps` does not create the home directory.** It records the path. A principal whose home does not exist still signs in, starting in `/`, and `login` says so.
+
+The primary group need not be a membership: `authd` adds it to the token if it is missing, so the order of two commands does not matter.
+
+## Groups
+
+Local groups are objects with a name, a RID, a gid and a description — unlike well-known groups, which exist on every Peios machine and are not stored here.
+
+### `lps group list`
+
+```
+$ lps group list
+NAME          RID       GID  MEMBERS  SID                                             DESCRIPTION
+developers   1001   1001001        2  S-1-5-21-2847362817-1094533892-3310298447-1001  Builds the software
+```
+
+`MEMBERS` counts principals in *this* store, which is the only count `lpsd` can answer for. `DESCRIPTION` appears when any group has one.
+
+### `lps group create <name> [description]` / `lps group delete <name>`
+
+```
+$ lps group create developers "Builds the software"
+created the group developers with RID 1001
+```
+
+A group's description says what it is for. Anyone may read it — `getent` doesn't show it, but Principals Manager does, to everyone.
+
+Deleting is refused while anyone is still a member, or while the group is anybody's primary group. Either would leave a record pointing at something that no longer exists.
+
+### `lps group rename <name> <new-name>`
+
+```
+$ lps group rename developers engineers
+renamed the group developers to engineers
+```
+
+It keeps its SID, so its members, and every permission that names it, stay as they are. A name held by a principal or another group is refused.
+
+### `lps group describe <name> <description>`
+
+```
+$ lps group describe engineers "Builds and ships the software"
+set the description of the group engineers
+```
+
+An empty description, `lps group describe engineers ""`, clears it.
+
+### `lps group add <name> <group>` / `lps group remove <name> <group>`
+
+```
+$ lps group add alice Administrators
+added alice to Administrators
+```
+
+Removing `BUILTIN\Administrators` is refused if it would leave no enabled administrator.
+
+## Claims
+
+Claims are named, typed attributes carried on the token and read by conditional ACEs. They are how a security descriptor can say *anyone in Engineering* rather than naming principals one by one.
+
+### `lps claim set <name> <claim> <type> [value]...`
+
+```
+$ lps claim set jack Department string Engineering
+set the claim Department on jack
+$ lps claim set jack Level int64 7
+set the claim Level on jack
+```
+
+| Type | Values |
+|---|---|
+| `int64` | Signed integers |
+| `uint64` | Unsigned integers |
+| `boolean` | `true`/`yes`/`1` or `false`/`no`/`0` |
+| `string` | Text |
+| `sid` | SIDs, in `S-1-…` form |
+| `octet` | Hexadecimal, even length |
+
+A claim may hold several values, and may hold none — `lps claim set jack Department string` empties it, which is different from removing it.
+
+Claim names are matched case-insensitively, so setting `department` replaces `Department`.
+
+### `lps claim remove <name> <claim>`
+
+```
+$ lps claim remove jack Department
+removed the claim Department from jack
+```
+
+**A claim reaches a principal at their next sign-in.** A token's claims are fixed when it is minted, so setting one changes nothing for a session already running.
+
+## Exit status
+
+| Code | Meaning |
+|---|---|
+| 0 | Succeeded |
+| 1 | `lpsd` refused the request, or could not be reached |
+| 2 | The command line was wrong |
+
+The split lets a script distinguish "I called this incorrectly" from "it was refused".
+
+## Common failures
+
+**`cannot reach lpsd … it does not appear to be running`** — `lpsd` is not up. It exits if it cannot reach `authd`, or if the store will not read; check its logs before restarting it.
+
+**`permission denied`** — you are not an administrator, or the socket's descriptor does not admit you. See [the administrative socket](~peios/local-principal-interfaces/the-admin-socket).
+
+**`there is no principal named …`** — names are case-insensitive, so this means the account genuinely is not there. `lps list` will show what is.
+
+**`there is no group named … and it is not a SID`** — the name matched no well-known group and no local one, and does not parse as a SID. `lps group list` shows the local ones.

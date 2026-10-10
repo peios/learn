@@ -86,7 +86,7 @@ If you need a different identity, you need a different token. Either authd mints
 
 ## Fields by purpose
 
-The token's fields, grouped by what they do. None of this is a low-level binary layout — that lives in the [Kernel ABI reference](~peios/kernel-abi-reference/overview) topic. This is the conceptual field list.
+The token's fields, grouped by what they do. None of this is a low-level binary layout — that lives in the [Kernel ABI reference](~peios/advanced-peios/kernel-abi-reference/overview) topic. This is the conceptual field list.
 
 ### Identity
 
@@ -201,4 +201,4 @@ For how these fields are set, shared, adjusted, and destroyed over a token's lif
 
 For the full rules around impersonation tokens and their levels, read [Impersonation](~peios/impersonation/overview).
 
-To read these fields off a live token from a shell, read [The token command](~peios/tokens/token-command).
+To read these fields off a live token from a shell, read [The token command](~peios/system-and-processes/token).

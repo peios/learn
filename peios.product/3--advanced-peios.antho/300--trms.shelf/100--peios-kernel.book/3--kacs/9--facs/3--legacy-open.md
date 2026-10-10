@@ -3,6 +3,9 @@ title: Legacy Open Compatibility
 description: Linux open flags cannot express WRITE_DAC or READ_CONTROL — how FACS maps them to core and compat rights, and what O_PATH does.
 ---
 
+> [!IMPORTANT]
+> The open-interface references contain [unresolved documentation differences](~peios/advanced-peios/peios-kernel/kacs/kacs-abi-notes#open-interface-documentation-discrepancies). Read that note alongside this page; no runtime behavior or release boundary has been established for those differences.
+
 Linux's `open()` and `openat()` cannot express rights like `WRITE_DAC`
 or `READ_CONTROL`. FACS maps the open flags to a **core** set of
 required rights plus a **compat** set of POSIX-expected ones, and

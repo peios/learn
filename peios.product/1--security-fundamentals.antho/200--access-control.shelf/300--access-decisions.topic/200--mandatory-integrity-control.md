@@ -18,7 +18,7 @@ MIC fires in step 5 of the access check pipeline — pre-DACL. Its decisions are
 
 ## The integrity levels
 
-In practice there are five standard integrity levels, strictly ordered — treat integrity as an enum even though, technically, it is not one (see below). These five are the levels anyone normally works with (canonical value catalog: [Other constants](~peios/constants-and-catalogs/other-constants)):
+In practice there are five standard integrity levels, strictly ordered — treat integrity as an enum even though, technically, it is not one (see below). These five are the levels anyone normally works with (canonical value catalog: [Other constants](~peios/advanced-peios/constants-and-catalogs/other-constants)):
 
 | Level | SID | RID | Typical use |
 |---|---|---|---|
@@ -47,7 +47,7 @@ The SACL ACE also lives there for a reason: changing the integrity label is a pr
 
 ## The MIC policy bits
 
-The mask of a `SYSTEM_MANDATORY_LABEL_ACE` contains MIC policy bits that say what non-dominant callers cannot do (canonical values: [ACE types and flags](~peios/constants-and-catalogs/ace-types-and-flags)):
+The mask of a `SYSTEM_MANDATORY_LABEL_ACE` contains MIC policy bits that say what non-dominant callers cannot do (canonical values: [ACE types and flags](~peios/advanced-peios/constants-and-catalogs/ace-types-and-flags)):
 
 | Bit | Value | Effect on non-dominant callers |
 |---|---|---|
@@ -100,7 +100,7 @@ Both flags are set at token creation and **cannot be changed at runtime**. A pro
 
 The object's label comes from its SACL, as above. The **token's** level is decided once, when the token is minted, and never changes afterwards.
 
-For a logon token that is **local policy** — a per-principal record in the registry that `authd` reads at every sign-in, keyed on the SIDs the token ends up carrying. A principal source has no way to influence it, deliberately: how much a machine trusts someone is not a fact about them that a directory could know. A principal no record names gets Medium. See [assigning privileges](~peios/privileges/assigning-privileges) for the record format.
+For a logon token that is **local policy** — a per-principal record in the registry that `authd` reads at every sign-in, keyed on the SIDs the token ends up carrying. A principal source has no way to influence it, deliberately: how much a machine trusts someone is not a fact about them that a directory could know. A principal no record names gets Medium. See [assigning privileges](~peios/managing-local-principals/assigning-privileges) for the record format.
 
 For service tokens, peinit decides. For the SYSTEM token, the kernel does.
 

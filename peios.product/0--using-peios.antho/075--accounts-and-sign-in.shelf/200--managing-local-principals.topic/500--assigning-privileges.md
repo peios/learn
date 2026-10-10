@@ -1,0 +1,237 @@
+---
+title: Assigning privileges
+type: reference
+description: The policy records under Machine\Generic\Authn\Policy that authd reads at every logon — which privileges a principal gets, and at what integrity level.
+related:
+  - peios/privileges/overview
+  - peios/privileges/categories
+  - peios/managing-local-principals/overview
+  - peios/tokens/overview
+  - peios/process-integrity-protection/overview
+  - peios/managing-local-principals/principals-manager
+---
+
+A principal source says **who someone is** — their SID, their memberships, their POSIX identifiers. It never says how much this machine trusts them. Privileges and integrity are **local policy**: `authd`'s alone, decided here, and there is no message with which a source could ask for one.
+
+That policy lives in the registry:
+
+```
+Machine\Generic\Authn\Policy
+```
+
+`authd` reads it at **every logon**, not once at startup. A policy change takes effect the next time someone signs in, rather than the next time you restart the one daemon on the system that is most disruptive to restart.
+
+[Principals Manager](~peios/managing-local-principals/principals-manager) shows and edits it from the desktop. Its **Privileges** list is the records on this page, and each user's page says what they would get in all, worked out by the same code `authd` mints from.
+
+## One record per principal
+
+Each subkey is a principal, and holds everything this machine grants them:
+
+```
+Machine\Generic\Authn\Policy
+  DeniedPrivileges  REG_MULTI_SZ  ["SeDebugPrivilege"]
+  \Everyone
+      Privileges    REG_MULTI_SZ  ["SeChangeNotifyPrivilege"]
+      DefaultDacl   REG_SZ        "D:(A;;GA;;;S-1-3-4)(A;;GA;;;SY)(A;;GA;;;BA)"
+  \Administrators
+      Privileges    REG_MULTI_SZ  ["SeBackupPrivilege", "SeRestorePrivilege"]
+      Integrity     REG_SZ        "High"
+      Owner         REG_SZ        "Administrators"
+```
+
+Keyed by principal rather than by privilege on purpose. One key shows the totality of a principal's authority — `reg ls` on `\Administrators` answers "what can an administrator do on this machine?" completely. Authority scattered across twenty per-privilege values is authority nobody audits: a right granted somewhere unexpected does not surface when you look at the principal, and you would have to know to check every other place.
+
+It is also the only shape that holds more than privileges. Integrity, the default owner, the default DACL and the logon types a peer may originate all live on the same record.
+
+### Naming a principal
+
+A subkey's name is either a **well-known name** or a **literal SID**:
+
+```
+\Administrators
+\S-1-5-21-2847362817-1094533892-3310298447-1000
+```
+
+Names are matched case-insensitively. The recognised ones are `SYSTEM`, `Everyone`, `Authenticated Users`, `Administrators`, `Users`, `Guests`, `Local Service`, `Network Service`, `Local` (everyone signed in on this machine), and the logon types `Interactive`, `Remote Interactive`, `Network`, `Batch`, `Service` and `Anonymous`.
+
+Two limits are worth knowing before you hit them:
+
+**`BUILTIN\Administrators` cannot be a subkey name.** A backslash is the registry's path separator, so the qualified spelling is unrepresentable. Write the bare name.
+
+**A local group's name does not resolve.** `authd` cannot know what `developers` means without asking `lpsd`, and policy must never depend on a principal source being up — that would make "what may this principal do" unanswerable exactly when a source is broken. Name local groups by SID, which `lps group list` will show you.
+
+A subkey that is neither a known name nor a parseable SID is **ignored with a warning**. It is worth checking for that warning after editing: a record naming nobody sits in the key looking authoritative and applying to no one.
+
+Two subkeys naming one principal, such as `\Administrators` and `\S-1-5-32-544`, **both apply**, and `authd` warns about them. Their privileges add up like any two records', but for integrity, `Owner` and `DefaultDacl` whichever is read first wins, which is an order nobody chose. Merge them into one. Principals Manager shows the warning above its Privileges list.
+
+## If the key exists, the key is the whole policy
+
+This is the most important behaviour on the page.
+
+`authd` carries a compiled-in floor, but it applies **only when the key is absent entirely**. It is not merged in value by value. So a policy you write is the complete policy: anything not granted below is not granted.
+
+| State | What a principal gets |
+|---|---|
+| Key absent | The compiled floor — `Everyone` gets `SeChangeNotifyPrivilege`, and nothing else |
+| Key present | Exactly what the records say |
+| Key present but unreadable | Nothing, and a loud log line |
+
+The alternative — a compiled default that each record replaces — fails in the wrong direction. An administrator who writes one record believing they have locked the machine down would still be handing out whatever a compiled table said for every principal they did not mention, from a table they cannot read. That is a security failure, and a silent one. Failing towards less privilege makes things stop working, which is far easier to diagnose than authority you did not know you were granting.
+
+An unreadable key is treated as granting nothing rather than as absent, for the same reason: reading it as absent would silently restore every privilege an administrator may have deliberately removed, at the one moment nobody can check.
+
+## What a machine ships with
+
+The defaults are **registry data, not compiled in** — `authd-policy.reg`, shipped to `/usr/share/regim/` and applied if the image opts in. So they can be read, edited, and replaced wholesale by an image that wants a different policy, rather than being invisible inside a binary.
+
+A stock machine grants:
+
+| Principal | Privileges | Integrity |
+|---|---|---|
+| `Everyone` | `SeChangeNotifyPrivilege`, `SeCreateSymbolicLinkPrivilege` | (Medium, by default) |
+| `Administrators` | the operational set below, plus both of the above | High |
+
+The operational set is `SeBackupPrivilege`, `SeRestorePrivilege`, `SeShutdownPrivilege`, `SeRemoteShutdownPrivilege`, `SeSystemtimePrivilege`, `SeSecurityPrivilege`, `SeLoadDriverPrivilege`, `SeImpersonatePrivilege`, `SeIncreaseQuotaPrivilege`, `SeIncreaseBasePriorityPrivilege` and `SeProfileSingleProcessPrivilege`.
+
+**`SeDebugPrivilege` is deliberately not granted.** It writes to any process regardless of integrity label, so it is the single privilege that most directly defeats the integrity boundary, and ordinary administration does not need it. Add it when a machine genuinely does.
+
+Three privileges are never granted by the shipped policy and should not be added: `SeCreateTokenPrivilege` mints any identity without going near `authd`, which would make every other control here decorative; `SeTcbPrivilege` and `SeAssignPrimaryTokenPrivilege` belong to the trusted computing base.
+
+Note that `Administrators` is granted `SeChangeNotifyPrivilege` **directly**, not only through `Everyone`. Privileges accumulate across every SID on a token, so that repetition is insurance: if someone edits the key and drops the `Everyone` record, ordinary users lose the ability to traverse a directory — but administrators keep working and can repair it.
+
+## How the values compose
+
+**Privileges accumulate.** A token holds the union of every record naming a SID it carries — the principal's own, and each of their groups. A group marked `USE_FOR_DENY_ONLY` contributes nothing.
+
+**`DeniedPrivileges` wins.** Listed on the `Policy` key itself rather than on a record, it is applied *after* the union, so no record you have not read can defeat it. It is on the parent key so it cannot collide with a principal who happens to be called `Denied`.
+
+**Integrity, `Owner` and `DefaultDacl` are single values**, so they cannot accumulate. The principal's own record wins outright; otherwise the groups decide:
+
+- **Integrity** takes the **maximum** across the groups that name one.
+- **`Owner`** and **`DefaultDacl`** have no ordering to compare, so two groups naming *different* values is a misconfiguration: it logs a warning and falls back to the default rather than picking by whichever the registry enumerated first. Two groups naming the same value is not a conflict.
+
+The user's record winning outright is what makes a principal possible to **lower**. Under a plain maximum, a guest whose own record said `Low` would still come out Medium the moment any group they belonged to named Medium. The consequence is worth stating plainly: a group cannot impose an integrity floor on a member. If `Administrators` names High and a member's own record names Low, that member gets Low.
+
+## Writing each value
+
+### `Privileges` — `REG_MULTI_SZ`
+
+Full ABI names, `SeBackupPrivilege` rather than `SeBackup`, matched **case-sensitively**. A name this build does not recognise is dropped with a warning and the rest of the list still applies — a policy written for a newer Peios should not lose the privileges it spelled correctly.
+
+An empty list is meaningful: it grants nothing, and is different from the value being absent.
+
+### `Integrity` — `REG_SZ` or `REG_DWORD`
+
+A tier name, matched case-insensitively:
+
+| Name | Value |
+|---|---|
+| `Untrusted` | 0 |
+| `Low` | 4096 |
+| `Medium` | 8192 |
+| `High` | 12288 |
+| `System` | 16384 |
+
+Or a raw `REG_DWORD`. The kernel compares integrity numerically and any value is legal, so the numeric form reaches levels between the tiers — `8193` sits just above Medium. Use the name unless you need that.
+
+A principal no record names gets **Medium**. That default is compiled in and is not affected by the key existing, because unlike a privilege it is not a grant: every token must carry some level to be valid at all.
+
+### `Owner` — `REG_SZ`
+
+Which principal owns objects this token creates. Names a principal, exactly like a subkey name does; `authd` converts it to the index the token actually carries, which is a number meaningful only within one token and different on the next logon.
+
+Absent — the ordinary case — means objects are owned by their creator.
+
+The case this exists for is a shared administrative estate: objects an administrator creates being owned by `Administrators` rather than by the individual, so they remain manageable when that person's account goes away.
+
+### `DefaultDacl` — `REG_SZ`
+
+The DACL an object gets when this token creates it with no parent to inherit from, written as **SDDL**. The shipped policy names it on the `Everyone` record:
+
+```
+D:(A;;GA;;;S-1-3-4)(A;;GA;;;SY)(A;;GA;;;BA)
+```
+
+That is the owner, `LocalSystem` and `BUILTIN\Administrators`, full control, and nobody else — the same shape `authd` stamps on a home directory. `S-1-3-4` is `OWNER RIGHTS`, which the access check resolves against the object's owner at the time of the check. You can also write it as the alias `OW`. It has to be `OWNER RIGHTS` rather than `CREATOR OWNER`: the kernel copies a default DACL onto a new file verbatim and substitutes no placeholders, so a `CREATOR OWNER` ACE would name nobody.
+
+The value is a fallback and is reached rarely. Whenever the parent has inheritable ACEs the child takes those and the default DACL is not consulted (see [Inheritance](~peios/security-descriptors/inheritance)), and every filesystem root on Peios carries inheritable ACEs. What reaches it is an object with no parent, such as an abstract socket, or a child of a container whose descriptor was written without inheritable ACEs. There is no kernel fallback beneath it: a token with no default DACL leaves such an object with a null DACL, which grants every caller everything.
+
+SDDL rather than raw bytes because the whole argument for policy living in the registry is that an operator can read it. Conditional ACEs are preserved, so `D:(XA;;GA;;;WD;(@USER.Department == "Engineering"))` works and keeps its condition.
+
+A value that does not parse is dropped with a warning and the token is minted with no default DACL — a typo costs the customisation, not the session, but it does leave the null-DACL case open until it is corrected.
+
+### `LogonTypes` — `REG_MULTI_SZ`
+
+The logon types this principal may **originate** — request of `authd` over `/run/logon.sock` on somebody else's behalf. This is a statement about the asker, not about the account being signed in: `login` originates `Interactive` logons for whoever is at the console, a graphical greeter would too, and a web console would originate `Network` ones.
+
+```
+\S-1-5-80-…-…   (a greeter's service SID)
+    LogonTypes  REG_MULTI_SZ  ["Interactive"]
+```
+
+The names are `Interactive`, `Network`, `Batch`, `Service`, `NetworkCleartext`, `NewCredentials` and `RemoteInteractive`, matched case-sensitively; an unrecognised name is dropped with a warning and the rest still applies.
+
+The proposed logon type is not cosmetic. It selects the group SIDs the minted token carries — `Interactive` puts `S-1-5-4` on it, `RemoteInteractive` puts `S-1-5-4` *and* `S-1-5-14` — and policy records can key on those SIDs, so the type must be what the *peer* is permitted, never merely what it proposed. A greeter granted `["Interactive"]` cannot mint itself a network-shaped token, nor the reverse.
+
+A principal with no `LogonTypes` originates nothing. `SYSTEM` is the exception and is permitted every type unconditionally — it administers this very key, so a registry constraint on it would enforce nothing, and `authd` does not pretend otherwise.
+
+An empty list revokes: it is "may originate nothing", distinct from the value being absent only in that it says so on the record.
+
+### `LogonSocketDescriptor` — `REG_SZ`, on the `Policy` key itself
+
+The security descriptor `/run/logon.sock` carries, as SDDL, read once at `authd` startup. The built-in value gives `SYSTEM` and `Administrators` full access, and gives every authenticated principal connect access alone, so that anyone signed in can [change their own password](~peios/signing-in/the-passwd-command) and [sign themselves out](~peios/logon-sessions/lifecycle):
+
+```
+O:SYG:SYD:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;0x100082;;;AU)
+```
+
+Connect access is `FILE_WRITE_DATA`; `0x100082` grants it with stat and sync. Reaching the socket does not let a peer originate a logon: that is the `LogonTypes` record above, and a peer without one originates nothing however it connected. So admitting a new originator that is not already an authenticated principal takes both edits, and one that is takes only the record.
+
+A replacement descriptor that leaves out the `AU` entry turns off self-service password change, and signing yourself out, for every principal it leaves out.
+
+### `SessionEndSecurity` — `REG_SZ`, on the `Policy` key itself
+
+Who may sign somebody **else** out: end a logon session that is not their own. `authd` does the work when asked over `/run/logon.sock` ([Session lifecycle](~peios/logon-sessions/lifecycle)); this value, as SDDL, is the security descriptor it access-checks the caller's token against, for the one right `0x1` (every generic right maps to it). It is read on every request, so an edit applies to the next one. With the value absent, the descriptor is:
+
+```
+O:SYG:SYD:(A;;0x1;;;SY)(A;;0x1;;;BA)
+```
+
+— `SYSTEM` and `Administrators`. Granting `0x1` to a group lets its members sign anybody out.
+
+Signing yourself out needs nothing here: a person may always end their own session. And nothing here lets anyone end `SYSTEM`'s session, `Anonymous`'s, or a service's — a service is stopped through the service manager.
+
+A value that is present but unusable — not a `REG_SZ`, empty, or not valid SDDL — lets **nobody** sign anybody else out until it is fixed or removed, and `authd` logs why on each request. It does not fall back to the default, which might grant more than the site meant.
+
+## Locking a machine down
+
+To forbid a privilege regardless of what any record says:
+
+```
+Machine\Generic\Authn\Policy
+  DeniedPrivileges  REG_MULTI_SZ  ["SeDebugPrivilege", "SeLoadDriverPrivilege"]
+```
+
+That is one edit, in one place, that a record you have not read cannot defeat. Removing the privilege from each record individually relies on having found them all.
+
+## What this cannot express yet
+
+**Account sign-in restrictions are a separate control.** These privilege records decide what a session gets. The account store also supports [`lps logon-types`](~peios/managing-local-principals/lps-command#lps-logon-types-name-type) to limit which kinds of sign-in an account may use, and `lps disable` to prevent new sign-ins altogether. `LogonTypes` above constrains what the asking service may request; it does not replace the account restriction. Follow the account command reference for supported types and the last-administrator guard.
+
+**Privilege constants do not establish assignment support.** Earlier privilege guidance described `SeTakeOwnershipPrivilege`, `SeRelabelPrivilege` and `SeSystemProfilePrivilege` as absent from the ABI and therefore impossible to assign. The current [generated KACS ABI](~peios/advanced-peios/peios-kernel/kacs/kacs-abi) defines constants for all three. That contradicts the ABI-absence claim, but does not by itself establish the accepted privilege-name table in `authd` or a service configuration, or a release in which assignment became available. Confirm support for the deployed build and inspect the actual token rather than relying on either blanket claim. Even when take-ownership is available, [changing the owner does not guarantee DACL repair](~peios/security-descriptors/ownership#recovery-patterns).
+
+## Seeing what a token actually got
+
+```
+$ token show --all
+```
+
+`[privileges]` lists what the token holds and `integrity` shows the label. A privilege the tool cannot name appears as `<privilege bit N>` rather than being omitted, so the list is always complete even when the name table is not.
+
+To see what a sign-in *would* get before anyone signs in, open the user in Principals Manager: it works the policy out for them, for each kind of sign-in, and says which records it came from.
+
+## See also
+
+- [Privileges](~peios/privileges/overview) — the model these records feed.
+- [The token command](~peios/system-and-processes/token) — reading the privileges and integrity a live token actually carries.
+- [Authorities and principal sources](~peios/authentication/principal-sources) — the accounts these records apply to.

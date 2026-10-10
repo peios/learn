@@ -5,8 +5,7 @@ description: The edges of FACS — O_PATH, the exec dual gate, append-only handl
 related:
   - peios/file-access/overview
   - peios/file-access/the-handle-model
-  - peios/file-access/opening-files
-  - peios/file-access/managing-file-security
+  - peios/file-permissions/managing-file-security
   - peios/mount-policies/overview
 ---
 
@@ -99,7 +98,7 @@ The legacy `fchown` syscall changes a file's owner UID/GID. Under FACS, the fami
 - `fchown()` succeeds only if the fd's granted mask includes `WRITE_OWNER`; otherwise `-EACCES`.
 - `chown()` and `lchown()` run a fresh access check requiring `WRITE_OWNER` on the file's SD.
 
-The Linux uid/gid change does not alter the SD's owner SID. Changing the *real* owner goes through `kacs_set_sd` with `OWNER_SECURITY_INFORMATION` — the KACS semantics for ownership (covered in [Managing file security](~peios/file-access/managing-file-security)) replace the legacy mode-and-owner duo.
+The Linux uid/gid change does not alter the SD's owner SID. Changing the *real* owner goes through `kacs_set_sd` with `OWNER_SECURITY_INFORMATION` — the KACS semantics for ownership (covered in [Managing file security](~peios/file-permissions/managing-file-security)) replace the legacy mode-and-owner duo.
 
 The kernel surfaces the file's owner SID's projected UID as the result of `stat`-style queries, so `ls -l` shows a UID. But the UID is derived from the owner SID; setting it via `fchown` is not the way.
 
@@ -172,4 +171,4 @@ For the model these cases are edges of, read [The handle model](~peios/file-acce
 
 For how a mount's policy decides whether FACS applies at all, read [Mount policies](~peios/mount-policies/overview).
 
-For the SD read/write syscalls referenced throughout, read [Managing file security](~peios/file-access/managing-file-security).
+For the SD read/write syscalls referenced throughout, read [Managing file security](~peios/file-permissions/managing-file-security).

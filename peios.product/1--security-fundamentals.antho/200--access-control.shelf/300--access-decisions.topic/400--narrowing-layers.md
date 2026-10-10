@@ -129,6 +129,6 @@ The privilege-bypass split is the most consequential difference. Restricted toke
 
 ## Where to go next
 
-For the systematic walk when an access comes back denied and you need to know which layer did it, read [Debugging a denial](~peios/access-decisions/debugging-a-denial).
+For the systematic walk when an access comes back denied and you need to know which layer did it, read [Debugging a denial](~peios/inspecting/debugging-a-denial).
 
 For the token-side mechanics of the restricted pass, read [Restricted and write-restricted tokens](~peios/tokens/restricted-tokens).

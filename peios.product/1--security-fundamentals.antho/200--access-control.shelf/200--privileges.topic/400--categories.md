@@ -6,12 +6,12 @@ related:
   - peios/privileges/overview
   - peios/privileges/lifecycle
   - peios/privileges/intent-gated
-  - peios/constants-and-catalogs/overview
+  - peios/advanced-peios/constants-and-catalogs/overview
 ---
 
 The privileges in Peios fall into four functional categories. Each category has a different relationship to the kernel and to the access check. Knowing which category a privilege is in tells you what it does, where it fires, and whether to expect it to participate in the DACL walk.
 
-This page is organised around the four categories. The full per-privilege catalog — name, LUID bit, one-line description for every privilege — is in [Constants and catalogs](~peios/constants-and-catalogs/overview).
+This page is organised around the four categories. The full per-privilege catalog — name, LUID bit, one-line description for every privilege — is in [Constants and catalogs](~peios/advanced-peios/constants-and-catalogs/overview).
 
 ## The four categories
 
@@ -35,9 +35,9 @@ Representative members:
 | `SeCreateTokenPrivilege` | `kacs_create_token`. Token minting. Held only by authd and peinit. |
 | `SeAssignPrimaryTokenPrivilege` | Installing a token as another process's primary. Used by peinit. |
 | `SeImpersonatePrivilege` | Impersonating any user (when not running as the same user). Held by every service that handles user requests. |
-| `SeTcbPrivilege` | "Act as part of the TCB" — a catch-all for operations that should only happen in trusted code. Required for `KACS_IOC_LINK_TOKENS`, `kacs_set_caap`, **mount-policy changes** (`policy=synth-*`, which author security descriptors), and a handful of other system operations. It also satisfies every check `SeManageVolumePrivilege` satisfies, since the TCB may do anything a volume manager may. |
+| `SeTcbPrivilege` | "Act as part of the TCB" — a catch-all for operations that should only happen in trusted code. Required for `KACS_IOC_LINK_TOKENS`, `kacs_set_caap`, and a handful of other system operations. Mount-policy reads and changes also accept enabled `SeManageVolumePrivilege`; see the pinned-source qualification below. It also satisfies every check `SeManageVolumePrivilege` satisfies, since the TCB may do anything a volume manager may. |
 | `SeLoadDriverPrivilege` | Loading and unloading kernel modules. Held only by peinit on its primary token; explicitly stripped via FilterToken from every other service. |
-| `SeManageVolumePrivilege` | Mounting, unmounting and reshaping the mount tree, including mount policy (`policy=synth-*`). Granted to Administrators. **The most powerful privilege routinely granted outside the TCB** — see the warning below. |
+| `SeManageVolumePrivilege` | Mounting, unmounting and reshaping the mount tree, including mount-policy reads and changes (`policy=synth-*` can author descriptors). The gate requires an enabled privilege and successful privilege-use marking; administrator membership alone is not enough. Granted to Administrators by policy. **The most powerful privilege routinely granted outside the TCB** — see the warning below. |
 | `SeShutdownPrivilege` | Local shutdown and reboot. |
 | `SeRemoteShutdownPrivilege` | Shutdown from a remote connection. Requires SeShutdown as well. |
 | `SeDebugPrivilege` | Inspecting another process regardless of its SD. Crucially, it does not bypass PIP dominance — a SeDebug holder can bypass an unrelated process's SD but still cannot cross a PIP boundary. |
@@ -95,6 +95,16 @@ The kernel still enforces the present/enabled/removed/used state machine for the
 
 ### What SeManageVolumePrivilege is actually worth
 
+In kernel source `8e0e22de3a59cad506bbbf8873de456e16ad272d`, the [volume-management
+gate](https://github.com/peios/pkm/blob/8e0e22de3a59cad506bbbf8873de456e16ad272d/kacs/capability.c#L613-L637) accepts enabled
+`SeManageVolumePrivilege` or `SeTcbPrivilege` and must successfully mark the
+privilege as used. Both mount-policy [writes](https://github.com/peios/pkm/blob/8e0e22de3a59cad506bbbf8873de456e16ad272d/kacs/mount_policy.c#L369-L380)
+and [reads](https://github.com/peios/pkm/blob/8e0e22de3a59cad506bbbf8873de456e16ad272d/kacs/mount_policy.c#L479-L496) use it. This resolves the
+TCB-only descriptions for that source revision; it does not identify a historical
+release boundary or test the deployed kernel. The [`mount` diagnostic](~peios/mount-policies/mount#kacs-mount-policy)
+can still name only TCB. Do not automatically grant TCB or globally remap
+`CAP_SYS_ADMIN` in response.
+
 Mounting is an administrative act rather than a TCB one, which is why this
 privilege exists separately: without it no administrator could mount anything,
 and `peios-install` could not run outside a SYSTEM shell.
@@ -146,7 +156,7 @@ A reserved privilege's LUID position in the bitmask is allocated, but no kernel 
 
 Two privileges deserve a special note: `SeChangeNotifyPrivilege` and `SeCreateSymbolicLinkPrivilege` are **granted to every principal on a stock machine**. The reason is that they are needed for almost every program to function normally — without `SeChangeNotifyPrivilege`, a process cannot traverse a directory to reach a file, so a token lacking it cannot so much as start a shell; without `SeCreateSymbolicLinkPrivilege`, a process cannot create the symlinks that build systems and packaging tools depend on.
 
-They are granted by the shipped policy — a record for `Everyone` — rather than being built into authd, so both are visible and both can be taken away. See [assigning privileges](~peios/privileges/assigning-privileges). `SeChangeNotifyPrivilege` alone is additionally authd's compiled floor, applied when a machine has no policy key at all, because a machine that cannot start a shell cannot be repaired from a console.
+They are granted by the shipped policy — a record for `Everyone` — rather than being built into authd, so both are visible and both can be taken away. See [assigning privileges](~peios/managing-local-principals/assigning-privileges). `SeChangeNotifyPrivilege` alone is additionally authd's compiled floor, applied when a machine has no policy key at all, because a machine that cannot start a shell cannot be repaired from a console.
 
 Their effect is broad-but-uninteresting: on a stock machine every token has them, so any reasoning about access that does not explicitly involve their absence can ignore them. They are mentioned here for completeness; they will rarely be the answer to a question about who can do what.
 
@@ -154,12 +164,12 @@ A token can have these stripped by FilterToken if a sandbox wants to operate wit
 
 ## How to find the catalog
 
-The four-category model on this page is the conceptual structure. The byte-level catalog — every privilege name, its LUID bit position, its one-line effect — lives in [Constants and catalogs](~peios/constants-and-catalogs/overview). Cross-reference between the two when you need to look up a specific privilege.
+The four-category model on this page is the conceptual structure. The byte-level catalog — every privilege name, its LUID bit position, its one-line effect — lives in [Constants and catalogs](~peios/advanced-peios/constants-and-catalogs/overview). Cross-reference between the two when you need to look up a specific privilege.
 
 The naming convention is uniform: every privilege starts with `Se` and ends with `Privilege`. The middle is descriptive: `SeLoadDriver`, `SeBackup`, `SeChangeNotify`. There are no privileges outside this convention.
 
 ## Where to go next
 
-For the per-privilege reference — every name, LUID bit position, and one-line effect — see the [Privilege catalog](~peios/constants-and-catalogs/privilege-catalog).
+For the per-privilege reference — every name, LUID bit position, and one-line effect — see the [Privilege catalog](~peios/advanced-peios/constants-and-catalogs/privilege-catalog).
 
 For how the AccessCheck-influencing category actually participates in a check, read [Access decisions](~peios/access-decisions/overview).

@@ -158,4 +158,4 @@ For what FilterToken's restricted variants actually do at access-check time, rea
 
 For the session a token belongs to and what happens when the last token of a session is released, read [Logon sessions](~peios/logon-sessions/overview).
 
-To drive these transitions from a shell — duplicate, restrict, adjust, install — read [The token command](~peios/tokens/token-command).
+To drive these transitions from a shell — duplicate, restrict, adjust, install — read [The token command](~peios/system-and-processes/token).

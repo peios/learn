@@ -1,6 +1,6 @@
 ---
 title: The Recognised Set
-description: A package cannot ship install-time code; it declares one of three standard maintenance operations, and peipkg runs it.
+description: A package cannot ship install-time code; it declares one of two standard maintenance operations, and peipkg runs it.
 ---
 
 A package cannot ship code that runs at install time. It can declare

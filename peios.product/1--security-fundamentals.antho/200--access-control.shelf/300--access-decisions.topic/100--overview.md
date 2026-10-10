@@ -6,7 +6,7 @@ related:
   - peios/access-decisions/mandatory-integrity-control
   - peios/access-decisions/privileges-in-the-pipeline
   - peios/access-decisions/narrowing-layers
-  - peios/access-decisions/debugging-a-denial
+  - peios/inspecting/debugging-a-denial
   - peios/security-descriptors/overview
   - peios/tokens/overview
 ---
@@ -144,4 +144,4 @@ If you want to know exactly which bits each AccessCheck-influencing privilege gr
 
 If you want the narrowing layers — restricted-token pass, confinement pass, CAAP — in detail, read [Narrowing layers](~peios/access-decisions/narrowing-layers).
 
-If you are debugging an unexpected denial right now, read [Debugging a denial](~peios/access-decisions/debugging-a-denial).
+If you are debugging an unexpected denial right now, read [Debugging a denial](~peios/inspecting/debugging-a-denial).

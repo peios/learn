@@ -1,0 +1,151 @@
+---
+title: The login command
+type: reference
+description: login is the terminal client for PGSS Logon — it collects an identifier and whatever credentials the authority asks for, and starts your shell.
+related:
+  - peios/signing-in/overview
+  - peios/logon-sessions/overview
+  - peios/managing-local-principals/creating-accounts
+  - peios/managing-local-principals/lps-command
+  - peios/services-and-jobs/controlling-services
+---
+
+`login` is the terminal client for [signing in](~peios/authentication/overview). It collects an identifier, renders whatever credential prompts the authority sends, installs the token it is granted, and replaces itself with your shell.
+
+```
+login [name] [options]
+login --try <name> [options]
+login --try-no-password <name> [options]
+```
+
+It does not know what a password is. It renders the prompts it is asked to render and returns the answers, so adding a new credential type — a one-time code, a smartcard — changes the authority and leaves `login` alone.
+
+## Naming a principal, or not
+
+With no name, `login` asks for one:
+
+```
+Username: alice
+Logging in as alice
+Password:
+```
+
+With a name, the first prompt is skipped. The `Logging in as` line comes from the authority rather than from `login`, so it will gain a realm once authorities have them.
+
+A principal who needs no credential is signed in immediately, with no prompt at all — see [passwordless accounts](~peios/managing-local-principals/creating-accounts).
+
+## `--try` and `--try-no-password`
+
+Both attempt a named principal and fall back to an ordinary prompt rather than failing. They differ in what they offer to collect.
+
+**`--try <name>`** attempts the principal with `login`'s full capabilities. A principal whose policy requires no credential is signed in immediately; one whose policy calls for a password is prompted for it.
+
+**`--try-no-password <name>`** attempts the principal while declaring that it can collect nothing, so only a principal who needs no credential can succeed. This is what a console autologon uses.
+
+Neither flag asserts that anyone is authenticated. The authority still decides, and understating what you can collect only denies you prompts you could have rendered — so running either by hand gains you nothing you did not already have.
+
+The first two columns below describe credential policy, not just whether a password is stored. They assume an enabled account with console logon permitted and, for password sign-in, a password set.
+
+| | No credential required | Password required | No such principal |
+|---|---|---|---|
+| `login alice` | signed in | prompts | `user alice does not exist` |
+| `login --try alice` | signed in | prompts, then falls back if wrong | falls back silently |
+| `login --try-no-password alice` | signed in | falls back silently | falls back silently |
+
+A fallback restarts the sign-in from `Username:`, so you are never locked to the principal that was attempted.
+
+### When a fallback explains itself
+
+`login` says why it fell back only if something was already on your terminal.
+
+A `--try` that reached a password prompt has interrupted you, and dropping to `Username:` without a word would read as a fault — you typed a password and got asked for a name. So it reports first:
+
+```
+$ login --try alice
+Logging in as alice
+Password:
+login: Password incorrect
+Username:
+```
+
+A `--try-no-password` that was refused before anything was rendered has interrupted nobody, and stays quiet. That is what keeps a line about a failed autologon off the console of every machine where the principal requires a credential.
+
+Falling back is limited to denials another principal could survive. A failure of the authority itself is reported and `login` exits, because offering a prompt that cannot work either would spin a console.
+
+### Where existence is checked
+
+`login` asks `/run/ident.sock` whether a principal exists, not the logon socket. The logon socket will not tell it — an authority never distinguishes an unknown principal from a bad credential — while the identity socket answers plainly, which is what it is for.
+
+If that lookup cannot be answered, `login` attempts the sign-in anyway rather than reporting an absence. An unreachable source reported as "no such user" would turn an outage into a fact.
+
+## Autologon on a console
+
+A console that signs in on its own is a passwordless principal plus `--try-no-password`. On a live image, `peinit` starts:
+
+```
+/bin/login --console --try-no-password peios
+```
+
+The same service definition suits an image where `peios` requires a password: the attempt is refused before anything is rendered, and an ordinary prompt appears. No second seed, and no conditional configuration.
+
+To require a password instead of autologon, first set the principal's password with [`lps password`](~peios/managing-local-principals/lps-command), then select `lps policy <name> password`. Setting the password alone leaves the `none` credential policy and autologon unchanged.
+
+Taking `--try-no-password` out of the `login-console` service's `Arguments` stops the automatic attempt, but does not change the account's credential policy: a principal whose policy is still `none` can still sign in at that prompt without a credential. To move the prompt to another terminal, change the service's `TTYPath` — see [controlling services](~peios/services-and-jobs/controlling-services).
+
+**System Settings** chooses it in its **Startup & Shutdown** section, under **Console Sign-In**: **Automatic Sign-In** is **Off**, or one of the local accounts. The choice is written the moment it is made, as `Arguments`: `--console`, followed by `--try-no-password` and the account if one is chosen. It applies the next time `login-console` starts, at the latest the next boot. Changing it needs write access to `Machine\System\Services\login-console`, which as shipped only Administrators have.
+
+## Options
+
+| Option | Effect |
+|---|---|
+| `--try <name>` | Attempt `name`, falling back to a full prompt. |
+| `--try-no-password <name>` | Attempt `name` collecting nothing, falling back to a full prompt. |
+| `--console` | Reset terminal input and wait for first-boot setup to finish before collecting credentials. Serial speed is preserved; registry errors prevent logon. |
+| `-p` | Keep the inherited environment instead of building a fresh one. |
+| `-h <host>` | Record the remote peer for a sign-in originated on its behalf. Unverified. |
+| `-H` | Accepted and ignored. Suppresses the hostname banner on other systems. |
+| `--` | Treat everything after as a name, not an option. |
+
+`-f` is **not** implemented. On Linux it means "trust me, they are already authenticated", gated only by the caller being root. On Peios that decision belongs to the authority, taken from the verified peer, so accepting a flag here would put an authentication bypass in an unprivileged process.
+
+## The environment your shell starts in
+
+Without `-p`, `login` builds a fresh environment: `HOME`, `SHELL`, `USER`, `LOGNAME`, `PATH=/bin`, and `TERM`. The shell's `argv[0]` gets a leading dash, which every shell reads as "this is a login shell, run the profile files".
+
+`TERM` is carried through if `login` was started with one. Otherwise `login` decides it from the terminal it is on, the way a getty does elsewhere: `linux` on a virtual console (`/dev/tty1` and its siblings, the display), `vt220` on anything else (a serial line, a hypervisor's paravirtual console). `/dev/console` is whichever of those the kernel chose, and `login` resolves it through the kernel's own record of the active console rather than guessing, so one service definition on `/dev/console` gets the right answer on a machine with a display and on one without.
+
+The home directory comes from the profile the authority sent, and **a missing one is not fatal**. `login` reports it and starts you in `/`. Refusing to proceed over an absent directory would turn a cosmetic problem into being locked out.
+
+`login` does not create it. Two reasons, and either would be enough. It has already made your token its own by the time it changes directory, so it is you rather than the system — and `/home` lets you walk through it but not create in it. And directory provisioning has no business inside the one program that has to keep working when everything else is broken. The authority creates the directory when it grants the logon, before `login` is handed anything; reaching this fallback means the authority named no home, or could not make one.
+
+## Exit status
+
+`login` does not return on success — it replaces itself with your shell, so what you see afterwards is the shell's exit status.
+
+| Code | Meaning |
+|---|---|
+| `1` | A usage error, a denied sign-in, or the shell could not be started. |
+
+## Multiple local consoles
+
+The Experimental edition provides independent login sessions on `tty1`, `tty2`
+and `tty3`. Switch between them with Alt+F1, Alt+F2 and Alt+F3 at a text console,
+or use `chvt 1`, `chvt 2` and `chvt 3` with the required console authority.
+Switching does **not** lock or log out the session you leave.
+
+`login-console` follows the kernel's primary console: peinit resolves a display
+console to the fixed `tty1`, or uses the selected serial/paravirtual terminal.
+It retains the live-medium passwordless `peios` attempt. Additional services
+`login-tty1`, `login-tty2` and `login-tty3` show ordinary username prompts. On a
+display-primary machine, the duplicate `login-tty1` service is skipped because
+`login-console` already owns that terminal. On a serial-primary machine all
+three local prompts can run alongside the serial session. Missing terminals
+are skipped.
+
+First-boot setup retains the primary console. Additional terminals wait until
+both setup service definitions have been removed; they collect no credentials
+while setup is pending. Logging out terminates that terminal service's remaining
+processes and produces a fresh prompt with canonical input and echo restored.
+A normal logout does not consume the crash-restart budget. This resets terminal
+input settings; it does not implement a session lock or promise to erase all
+screen history.

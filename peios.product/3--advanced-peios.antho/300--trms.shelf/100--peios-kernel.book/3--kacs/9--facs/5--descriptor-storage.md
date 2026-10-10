@@ -189,15 +189,21 @@ artifact, or to adopt the superblock under a synthesise class.
 
 ## Administration [*facs.storage.set-mount-policy]
 
+The privilege gate below is verified in kernel source
+[`8e0e22de3a59cad506bbbf8873de456e16ad272d`](https://github.com/peios/pkm/blob/8e0e22de3a59cad506bbbf8873de456e16ad272d/kacs/capability.c#L613-L637),
+including its use by both [set](https://github.com/peios/pkm/blob/8e0e22de3a59cad506bbbf8873de456e16ad272d/kacs/mount_policy.c#L369-L380)
+and [get](https://github.com/peios/pkm/blob/8e0e22de3a59cad506bbbf8873de456e16ad272d/kacs/mount_policy.c#L479-L496). This is source-level
+verification, not a deployed-kernel test or a historical release boundary.
+
 Trusted userspace adopts a mounted filesystem by calling
 `kacs_set_mount_policy` on a descriptor naming any object on the
 target superblock; `O_PATH` descriptors are valid targets. The change
 applies to the superblock, not the pathname used to reach it.
 
 Setting a policy is volume management: the call requires
-`SeManageVolumePrivilege` or `SeTcbPrivilege`, enabled, and marks the
-one it found used; `kacs_get_mount_policy` is gated the same
-way. [*facs.storage.set-mount-policy-privilege] Every change writes a
+`SeManageVolumePrivilege` or `SeTcbPrivilege`, enabled, and must
+successfully mark the enabled privilege as used; `kacs_get_mount_policy`
+is gated the same way. [*facs.storage.set-mount-policy-privilege] Every change writes a
 `kacs.mount.policy.changed` record (§3.C), whose subject is the caller
 and which names the filesystem's type, the policy set
 (`object.mount.policy`), the one it replaced

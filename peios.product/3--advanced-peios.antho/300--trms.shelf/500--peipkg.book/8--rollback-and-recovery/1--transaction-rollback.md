@@ -7,6 +7,16 @@ A transaction can be rolled back at any point before the database commit
 (§7.4 step 3). After that commit the transaction is committed, and what
 remains is cleanup rather than rollback.
 
+> [!IMPORTANT]
+> The procedure below retains an earlier **single-root** description; it is
+> not a newly verified implementation contract or a manual recovery recipe.
+> In the reviewed cross-root path, a pending participant cannot be rolled
+> back in isolation after a sibling commits. Coordinated recovery may need
+> roll-forward, and [rollback errors retain a pending journal](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/install/execute.go#L668-L724),
+> rather than unconditionally closing it before restoration. Start with
+> [operator recovery](~peios/package-management/transactions-and-recovery#across-more-than-one-root)
+> for that path and its source/release scope.
+
 ## When it happens
 
 1. Any step of any operation fails — a hash does not verify, disk space

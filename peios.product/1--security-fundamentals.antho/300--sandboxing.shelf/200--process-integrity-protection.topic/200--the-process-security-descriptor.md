@@ -19,7 +19,7 @@ This page covers what the process SD contains, the access rights it uses, how it
 
 The process SD has the same shape as any other SD — owner, primary group, DACL, optional SACL. The fields mean the same things they mean elsewhere (see [Security descriptors](~peios/security-descriptors/overview)). What differs is the **access rights** the DACL grants.
 
-The DACL on a process SD uses the **process access rights** — a set of 16-bit object-specific rights tailored to what one might do to a process. The full catalog with bit values is in [Access mask bits](~peios/constants-and-catalogs/access-mask-bits); in summary:
+The DACL on a process SD uses the **process access rights** — a set of 16-bit object-specific rights tailored to what one might do to a process. The full catalog with bit values is in [Access mask bits](~peios/advanced-peios/constants-and-catalogs/access-mask-bits); in summary:
 
 | Right | What it gates |
 |---|---|
@@ -39,7 +39,7 @@ Plus the standard rights — `DELETE`, `READ_CONTROL`, `WRITE_DAC`, `WRITE_OWNER
 
 ## Generic mapping
 
-The standard generic rights (`GENERIC_READ`, `GENERIC_WRITE`, `GENERIC_EXECUTE`, `GENERIC_ALL`) map to combinations of process-specific rights via the process GenericMapping table, cataloged in [Access mask bits](~peios/constants-and-catalogs/access-mask-bits).
+The standard generic rights (`GENERIC_READ`, `GENERIC_WRITE`, `GENERIC_EXECUTE`, `GENERIC_ALL`) map to combinations of process-specific rights via the process GenericMapping table, cataloged in [Access mask bits](~peios/advanced-peios/constants-and-catalogs/access-mask-bits).
 
 A DACL ACE that grants `GENERIC_READ` to some principal effectively grants them the right to read the process's memory, query its detailed information, and read the SD itself. A DACL granting `GENERIC_EXECUTE` lets them terminate or suspend the process. These are the abstractions tools use when they say "grant read access to this process" without enumerating every specific right.
 

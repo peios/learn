@@ -112,7 +112,7 @@ along with every other kind of progress.
 
 The format is shared by **specification**, not by shared code. peinit,
 [prelude](~peios/boot-and-trust-establishment/initramfs-stage) and the
-[hook scripts](~peios/boot-and-trust-establishment/boot-hooks) each
+[hook scripts](~peios/developing-for-peios/writing-boot-hooks/writing-a-boot-hook) each
 implement it separately, because prelude is a size-critical initramfs PID 1
 with no dependencies and the hooks are shell. Changing a tag word or a
 width means changing it in all three.

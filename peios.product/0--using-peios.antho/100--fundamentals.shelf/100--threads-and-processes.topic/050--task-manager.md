@@ -1,0 +1,221 @@
+---
+title: Task Manager
+type: how-to
+description: Find a running process, check its CPU, memory and owner, choose whether to end the process or stop its service or job, and understand access refusals.
+related:
+  - peios/threads-and-processes/overview
+  - peios/threads-and-processes/the-process-security-block
+  - peios/services-and-jobs/overview
+  - peios/security-diagnostics/processes
+---
+
+**Task Manager** shows what is running on the machine now: every
+**process**, which is a program that is running, with how much of the
+processor and memory it is using, what it belongs to, and who it runs as.
+What is defined to run, rather than what is running, is Services
+Manager's.
+
+Start it from the launcher: **Task Manager**.
+
+It looks at the machine as you, so it shows exactly what you may see of
+each process, and says what you may not, and why. It offers to change
+something only where you may.
+
+**Processes**, **Performance**, **Jobs** and **Signed in**, in the bar,
+switch between its four views.
+
+## Find the right process before acting
+
+1. Open **Processes**. Use **Find** for a name, PID, person or service, or sort
+   **CPU** or **Memory** to investigate resource use.
+2. Select the process. Check its command, who it runs as, what started it, and
+   the service or job it belongs to. Some details may be hidden by permissions.
+3. Choose the scope of the action. To stop a service and everything it started,
+   use **Stop service**; to stop a submitted job, use **Stop job**. Use **End
+   process** when you intend to end only that process.
+4. Read the confirmation and refresh the view to check the result. Ending a
+   service's main process may cause peinit to restart it.
+
+A **process** is one running program. A **service** is a persistent definition
+managed by peinit, and can start a new process after the old one ends. A
+**submitted job** is work someone asked peinit to run and watch. For those
+managed lifetimes, see [Services and jobs](~peios/services-and-jobs/overview).
+For process states and terminal signals, see
+[Process lifecycle](~peios/threads-and-processes/process-lifecycle).
+
+## The processes
+
+Each process is listed with its name, its **PID** (the number the system
+knows it by while it runs), who it runs as, and its share of the processor
+(**CPU**) and the memory it holds. The CPU share is of the whole machine,
+since the last look, and is filled in from the second look on. The bar at
+the bottom gives the totals.
+
+**Group by** chooses how they are arranged:
+
+- **None**, which it opens with, lists them all together.
+- **Service** puts each process under the service or job it belongs to,
+  as peinit, the service manager, started it. A service's heading says
+  its state; a **job**, which is a program someone asked peinit to run and
+  watch, such as a person's desktop session, says who it runs as.
+  **Not in a service** holds peinit itself.
+- **Person** puts each under the person or service it runs as.
+
+**Name**, **PID**, **CPU** and **Memory**, at the top of the list, sort
+by that. **Find** narrows the list to processes whose name, PID, person or
+service contains what you type.
+
+The kernel's own threads, which no person runs, are left out; tick
+**Kernel threads** to show them.
+
+The list is read again every two seconds. **Refresh**, or **F5**, reads
+it at once.
+
+## A process in full
+
+Select a process to see it in full on the right: what it is doing, how
+long it has run, its CPU, memory and threads, what started it (select it
+to go to it), the command it was started with, the service or job it
+belongs to and which part of it this is, who it runs as, the signed-in
+session it is part of, and its integrity.
+
+**Protection** says whether the process is protected: signed as part of
+Peios, which closes it to every process not signed at its level, however
+much authority that process has. **Mitigations** are the hardening the
+process runs with, such as no memory being both writable and executable,
+each with what it does. See
+[The process security block](~peios/threads-and-processes/the-process-security-block).
+
+## Ending a process, or stopping its service or job
+
+Below a process's details are what you may do to it:
+
+- **End process** asks first, then asks the process to end. One that
+  hasn't ended after five seconds is offered **End it now**, which ends
+  it at once, without its finishing what it is doing. The process is
+  held onto from the moment you ask, so another process given the same
+  PID later can't be ended by mistake.
+- **Stop service**, for a process that belongs to a service, asks peinit
+  to stop the service, and everything it started. It stays stopped until
+  it is started again. Ending a service's **main process** instead
+  counts, to peinit, as the service crashing, and it may start it again;
+  the window says so before you do.
+- **Stop job**, for a process in a job, asks peinit to stop the job.
+
+Each is there only where you may do it: End process where the process's
+permissions let you end it, and Stop where peinit says you may stop that
+service or job. Where you may not, the pane says why instead. A protected
+process can't be ended by any program not signed at its level.
+
+## Performance
+
+**Performance** shows the machine as a whole: how busy its processors
+are, how much of its memory is in use, and how fast each disk and network
+interface is moving data. Each is listed down the side with a small graph;
+select one to see it in full, with a graph of the last two minutes, newest
+at the right.
+
+- **CPU** graphs how much of the processors' time is in use, and how much
+  of that is the kernel's own work. **Each processor** gives each logical
+  processor a graph of its own. Below are the processor's model and
+  speed, the number of processes and threads, how long the machine has
+  been up, and the **load average**: how many threads were running or
+  waiting to, on average over the last 1, 5 and 15 minutes.
+- **Memory** graphs how much is in use, and shows what all of it is made
+  of: in use, cache the kernel gives back when programs need it, and
+  free. **Available** is what programs could be given now. **Committed**
+  is what programs have been promised, against how much may be.
+- **Each disk** graphs how much of the time it was busy (its **active
+  time**), and how fast it read and wrote. Its capacity, and what it has
+  read and written since the machine started, are below.
+- **Each network interface** graphs how fast it is receiving and sending,
+  in bits a second as networks are measured. Its state, link speed and
+  hardware address are below; its addresses and settings are Network
+  Manager's.
+
+The figures are the kernel's own, which anyone may read, so everyone sees
+the same view. Speeds are worked out between one look and the next, every
+two seconds. Nothing is kept once the window closes.
+
+## Jobs
+
+A **job** is a program someone asked peinit to run and watch, outside any
+service: a person's desktop session is one. **Jobs** lists them: what
+each is, its state, who it runs as, and how far it says it has got. A job
+in full shows what it last said of itself, its progress, its program and
+process, who it runs as and who asked for it, when it started and ended,
+and how it ended. **Stop job** is there where you may stop it.
+
+peinit lists a job only to those who may see it: by default, whoever
+asked for it, and Administrators. The others are left out, and the
+window says so. A job that has ended stays in the list for a minute.
+
+## Who is signed in
+
+**Signed in** lists each **session**, which is one sign-in: who, how
+(at the machine, on the desktop, over SSH, or over the network), since
+when, and how many of its processes you can see. A session in full lists
+its processes, each of which leads to it, and its desktop session, if it
+has one. Services sign in too, each in a session of its own; tick
+**Services' sessions** to show them.
+
+The full list is the kernel's, which only Administrators may read.
+Anyone else sees the sessions their own processes are in, and the window
+says so.
+
+### Signing someone out
+
+**Sign out**, in a session's details, ends the session: authd ends every
+process running in it, asking each to end and, after a few seconds,
+ending any that haven't. The window asks first, and says so when the
+session is its own. What came of it is said afterwards, including any
+process authd couldn't end, which keeps the session open.
+
+You may sign out your own sessions, and anyone's the machine's
+permissions allow, which as shipped is Administrators. Where you may not,
+the window says why. A service's session ends when its service is
+stopped, and the kernel's own sessions never end. See
+[Ending a session](~peios/logon-sessions/lifecycle).
+
+## What you may see
+
+What you may see of a process is its own permissions' to say:
+
+- **Its name, CPU, memory and what it belongs to** are visible to everyone,
+  by default.
+- **Who it runs as, and the command it was started with**, are visible to
+  the person it runs as and to Administrators. Anyone else sees the
+  process without them, and a note above the list says how many processes
+  that is.
+- **A protected process**, such as peinit or authd, is closed to
+  everyone, Administrators included: only processes signed at its level
+  may look into it. It is still listed, with its protection, and a note
+  above the list says how many there are. Where peinit can say which
+  service a protected process is, it is listed under that service.
+
+A process in a job you may not see is listed under **A job**, and says
+so.
+
+## In a terminal
+
+The toolset documented here does not yet include `ps`; use Task Manager for
+the process list. The documented terminal tools cover these narrower tasks; replace `PID`, `NAME` and `ID` with
+the process, service or job/session you have checked.
+
+| Task | Command |
+|---|---|
+| Read a process's protection, mitigations and GUID | [`logonse psb --pid PID`](~peios/system-and-processes/logonse) |
+| List signed-in sessions and their visible processes | `logonse list` |
+| Read a service's status and main process | `svctl status NAME` |
+| Stop a service | `svctl stop NAME` |
+| List submitted jobs | `svctl job list` |
+| Read a submitted job's status | `svctl job status ID` |
+| Stop a submitted job | `svctl job stop ID` |
+| Sign a session out | `logonse end ID` |
+| Ask one process to terminate | [`kill PID`](~peios/system-and-processes/kill) |
+
+The same access restrictions apply to terminal tools. `logonse list` can show
+only a partial view; a missing entry is not proof that nothing is running.
+Read [Controlling services](~peios/services-and-jobs/controlling-services) for
+service and job commands, and [End, suspend, or resume a process](~peios/threads-and-processes/process-lifecycle#end-suspend-or-resume-a-process)
+before sending signals.
