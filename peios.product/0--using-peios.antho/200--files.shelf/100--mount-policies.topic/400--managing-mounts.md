@@ -38,6 +38,14 @@ classes](~peios/mount-policies/policy-classes). `--synth-sddl SDDL` supplies a
 well-formed template with an owner, and is valid only with a `synth-*` policy.
 Use a verified [stable source name](~peios/disks-and-filesystems/stable-device-names).
 
+> [!WARNING]
+> Ephemeral synthesis avoids writing back synthesised security descriptors;
+> it does not guarantee an unchanged disk. Even a read-only ext4 mount can
+> replay its journal. If preservation requires no disk writes, use a supported
+> inspection procedure for that filesystem. [How the installer's disk scan
+> stays read-only](~peios/disks-and-filesystems/installing-to-disk#how-the-disk-scan-stays-read-only)
+> explains its additional safeguards; a policy choice alone is not that procedure.
+
 `policy=` works only on a new filesystem mount. Bind, move, remount,
 propagation and list mode reject it; `mount -o remount` is not a policy-change
 interface. The policy is set on the detached filesystem before publication. If
@@ -140,13 +148,43 @@ open handles retain their masks. No file tree is rewritten or reorganised.
 - Other superblocks are unaffected, even when reached beneath this mount.
   Bind paths sharing this superblock are affected.
 
+## Mount non-root storage at startup
+
+The root filesystem is mounted by the initramfs before peinit takes over.
+A non-root data partition is mounted by an ordinary **Oneshot service**;
+peinit does not mount it directly. See [Where peinit takes
+over](~peios/services-and-jobs/boot-and-boot-modes#where-peinit-takes-over).
+
+Use [Defining a service](~peios/services-and-jobs/defining-a-service) for the
+definition, validation and boot-trigger fields, and [Oneshot
+services](~peios/services-and-jobs/service-types#oneshot-services) for the
+completion contract. A service using a [stable device
+name](~peios/disks-and-filesystems/stable-device-names#who-creates-them) needs a
+`Requires` dependency on the device manager so the boot-time device replay
+finishes before it opens that name.
+
+These pages establish the service mechanism, but do not yet give a complete
+storage-specific recipe: the service identity, required privileges and mount
+arguments must be confirmed for the deployed system before creating a
+definition. There is no dedicated mount-registry schema established here, and
+[Disk Manager](~peios/disks-and-filesystems/disk-manager#at-startup) cannot
+currently save startup mounts.
+
+After the service runs, inspect its [status and
+logs](~peios/services-and-jobs/defining-a-service#change-and-verify). A successful
+Oneshot reports successful command completion and can then return to
+**Inactive**; its status alone does not establish the current mount or policy.
+Separately [inspect the live mount](#inspect-and-attach-a-filesystem), checking
+source, target and filesystem, and [read the policy](#kacs-get-mount-policy) to
+confirm both class and template.
+
 ## Use patterns
 
 | Task | Apply and verify |
 |---|---|
-| Boot-time policy | peinit applies the configured class and template; the original guide describes registry-based configuration. Verify the resulting mount rather than assuming a configuration was applied. |
+| Boot-time policy | For non-root storage, follow the [startup service handoff](#mount-non-root-storage-at-startup), then verify the live mount, class and template separately. |
 | Adopt a non-Peios filesystem | Use persistent synthesis only when you intend to write SDs. Check stored descriptors, including rarely accessed files, before changing to deny-missing. |
-| Attach removable media | Use ephemeral synthesis when metadata must remain unchanged. Select read-only separately if file-data writes must also be prevented. |
+| Attach removable media | Use ephemeral synthesis to avoid SD write-back. Select read-only separately if file-data writes must also be prevented, and heed the [inspection warning](#inspect-and-attach-a-filesystem) about other disk writes. |
 | Harden an existing deployment | Review templates, move from ephemeral to persistent if adoption is intended, then validate preservation before deny-missing. Each transition is per superblock; it does not convert the tree in one pass. |
 
 ## Errors

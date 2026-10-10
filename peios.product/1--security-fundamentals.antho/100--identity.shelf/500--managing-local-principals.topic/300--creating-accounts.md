@@ -96,7 +96,13 @@ A machine with no store provisions one at first boot, and it is **empty** — `l
 
 So something has to create the first one, and there is a chicken-and-egg problem: `lps` talks to `lpsd`, so `lpsd` must already be running, which means this cannot be done by an early-boot script. Autorun scripts run before any service has started.
 
-The answer is a **oneshot service**, ordered after `lpsd`, that runs `lps` like anything else would. On a development image that service exists and creates a known account. On a production image it does not, and an administrator creates the first account themselves.
+The provisioning path depends on the edition. An installed edition can enable first-boot setup; a development image can instead ship a **oneshot service**, ordered after `lpsd`, that runs `lps` to create a known account. An image with no first-account provisioning path needs an already-authorised way to create the first account.
+
+### On an installed edition with first-boot setup
+
+[Complete first-boot setup](~peios/disks-and-filesystems/first-boot-setup) creates the first administrator after installation. Use the console form, or the browser form when the image includes `oobe-gxwi`, then verify sign-in with the new account. Use `lps add` as that administrator for further accounts.
+
+This path is enabled only when the edition includes `dev.peios.oobe` and opts into its `oobe-service` seed through `install_autoapply`. The `oobed` service runs as SYSTEM to create the account; the user-facing form does not need an existing administrator sign-in. Do not assume every custom image includes or enables it. The development-account seed below is a separate provisioning choice.
 
 ### On a development image
 
@@ -119,11 +125,11 @@ credential policy updated
 
 The password alone changes nothing: until `lps policy` says otherwise, the account still signs in with nothing. Set the password first, since a policy of `password` is refused for the last administrator while they have none.
 
-Better still, build an image without the seed. See *On an image without one* below.
+Better still, build an image without the development-account seed, with first-boot setup or another deliberate account-provisioning path. Omitting the development seed alone does not create an account; see *On an image with no account provisioning* below.
 
-### On an image without one
+### On an image with no account provisioning
 
-`lpsd` starts, provisions an empty store, and logs that no principals exist and no logon can succeed until one is created. The login prompt will appear and nothing will satisfy it.
+On a fresh image with no accounts, no enabled first-boot setup and no account-provisioning seed, `lpsd` starts, provisions an empty store, and logs that no principals exist and no logon can succeed until one is created. The login prompt will appear and nothing will satisfy it.
 
 That is the correct behaviour rather than a fault, but it does mean you need a way in. Create the first account from a console session that is already `SYSTEM` — `lps` accepts `LocalSystem` as well as administrators, precisely for this case.
 

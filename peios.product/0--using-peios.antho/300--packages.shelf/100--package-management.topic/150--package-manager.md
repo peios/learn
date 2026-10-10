@@ -29,6 +29,18 @@ the same history and audit record.
 
 ## Making a change
 
+Before removing a package that supplies a configured feature, inspect the
+feature in [Feature Manager](~peios/features/feature-manager) and use its
+**Remove…** action while the definition and scripts are still installed.
+Check that the feature reaches **Not Installed**, then return to Package
+Manager and review the package-removal plan below.
+
+If teardown fails or is interrupted, keep the package installed, retain the
+script output and follow [Recover an interrupted
+feature](~peios/features/using-feat#recover-an-interrupted-feature). If the
+feature's definition is already missing, follow [When its package is
+removed](~peios/features/overview#when-its-package-is-removed) first.
+
 Every change goes the same way, on one page:
 
 1. **The plan.** What will be installed, updated, moved back or removed,

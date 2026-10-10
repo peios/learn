@@ -40,8 +40,10 @@ error**, the two streams every program writes text to. Each line carries:
   to standard error, but many write everything there.
 - **when** it was written, and which run of the service (its *job*) wrote it.
 
-Logs are best effort. Under heavy load some lines can be dropped, by
-design, so that logging never slows the machine down. See
+Log delivery to eventd is best effort: under load, downstream buffering
+and forwarding can drop lines. A service can still slow down when it
+writes output faster than peinit reads it, because writes to its output
+pipe can block. See
 [Service output and logging](~peios/services-and-jobs/output-and-logging).
 
 ### Events

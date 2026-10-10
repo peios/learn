@@ -119,5 +119,5 @@ autoconfiguration waiting for advertisements again.
 
 - [Networking](~peios/networking/overview)
 - [Configuring profiles](~peios/networking/configuring-profiles)
-- `regman Machine\System\Network` on the machine, for every key netd reads and writes.
+- `regman 'Machine\System\Network'` on the machine, for every key netd reads and writes.
 - [netd's control socket](~peios/advanced-peios/netd/the-control-socket/requests), in the netd technical reference manual: the requests behind every `net` command, and their replies.

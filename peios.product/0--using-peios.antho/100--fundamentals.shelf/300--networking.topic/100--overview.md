@@ -177,7 +177,7 @@ before depending on `network:addressed`.
 - [Use Network Manager](~peios/networking/network-manager) for desktop
   configuration, change previews and its documented rollback flow.
 - [Troubleshoot a symptom](~peios/networking/diagnostic-tools).
-- Look up exact settings in `regman Machine\System\Network` or the
+- Look up exact settings in `regman 'Machine\System\Network'` or the
   [network policy reference](~peios/networking/network-policy-reference).
 - Use the [netd technical reference manual](~peios/advanced-peios/netd/introduction/overview)
   for daemon algorithms, protocol exchanges, timers and limits.

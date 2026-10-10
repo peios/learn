@@ -126,8 +126,8 @@ applies: restart
 Absolute path to the service binary.
 ```
 
-`regman Machine\System\Services\sshd ImagePath` now answers with that card, and
-`regman Machine\System\Services\sshd` renders the family's key doc with its
+`regman 'Machine\System\Services\sshd' ImagePath` now answers with that card, and
+`regman 'Machine\System\Services\sshd'` renders the family's key doc with its
 whole `Values` index. The heading still shows the canonical — the reader can
 see they've been handed the generic page, which is the honest thing to show.
 
@@ -258,7 +258,7 @@ The queue is preallocated, so the change takes effect at the next service
 restart rather than live.
 ```
 
-That renders, for `regman Machine\System\Exampled MaxQueueDepth`, as:
+That renders, for `regman 'Machine\System\Exampled' MaxQueueDepth`, as:
 
 ```
 Machine\System\Exampled MaxQueueDepth                 documented by exampled
@@ -276,7 +276,7 @@ The queue is preallocated, so the change takes effect at the next service
 restart rather than live.
 ```
 
-— and the bare `regman Machine\System\Exampled` renders the key body plus the index:
+— and the bare `regman 'Machine\System\Exampled'` renders the key body plus the index:
 
 ```
 Machine\System\Exampled                               documented by exampled

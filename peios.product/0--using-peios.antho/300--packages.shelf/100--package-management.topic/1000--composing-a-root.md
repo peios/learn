@@ -85,26 +85,17 @@ The manifest is strict TOML: unknown keys, an empty package set, undeclared
 repository or root references, and duplicate `(root, name)` requests are errors.
 The complete schema and sample are in the [manifest reference](~peios/peipkg/installation-roots/compose-commands-and-manifest#the-manifest).
 
-### Top-level fields
+When preparing the manifest:
 
-See [top-level fields](~peios/peipkg/installation-roots/compose-commands-and-manifest#top-level-fields) for `schema`, `arch`, `source_date`,
-local packages, repositories, roots and package requests.
-
-### `[[repository]]`
-
-See [repository fields](~peios/peipkg/installation-roots/compose-commands-and-manifest#repository) for sources, priorities and trust policy.
-These settings are also written into the composed system as `.repo` files.
-
-### `[[package]]`
-
-See [package fields](~peios/peipkg/installation-roots/compose-commands-and-manifest#package) for names, version constraints, source pins
-and target roots. There is no manifest-level `default_root` key; packages can
-carry their own default placement.
-
-### `[[root]]`
-
-See [root fields](~peios/peipkg/installation-roots/compose-commands-and-manifest#root) for names and relative paths. A root path cannot
-be absolute, escape through `..`, or be `.`.
+- Check the [top-level fields](~peios/peipkg/installation-roots/compose-commands-and-manifest#top-level-fields)
+  for architecture, timestamp and the requested package set.
+- [Repository entries](~peios/peipkg/installation-roots/compose-commands-and-manifest#repository)
+  also become `.repo` files in the image; those files do not establish trust.
+- [Package entries](~peios/peipkg/installation-roots/compose-commands-and-manifest#package)
+  choose versions, sources and target roots. There is no manifest-level
+  `default_root`; packages can carry their own default placement.
+- [Named-root paths](~peios/peipkg/installation-roots/compose-commands-and-manifest#root)
+  must be relative, must not escape through `..`, and cannot be `.`.
 
 ## The lock file
 

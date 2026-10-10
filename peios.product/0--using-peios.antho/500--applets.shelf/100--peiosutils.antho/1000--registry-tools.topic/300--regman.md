@@ -26,7 +26,7 @@ That last clause is the one to hold onto; there is a section on it below.
 Give `regman` a key path and a value name and it prints a **knob-card** — an identity line, an aligned block of facts, and a description:
 
 ```
-$ regman Machine\System\KMES BufferCapacity
+$ regman 'Machine\System\KMES' BufferCapacity
 
 Machine\System\KMES BufferCapacity                    documented by kmes
 
@@ -55,7 +55,7 @@ The **Applies** field is the one operators reach for most: it is the difference 
 Give `regman` just a key — no value — and it does double duty as an *index*: the key's own description, then a list of every value documented under it, one summary line each.
 
 ```
-$ regman Machine\System\KMES
+$ regman 'Machine\System\KMES'
 
 Machine\System\KMES                                   documented by kmes
 
@@ -78,7 +78,7 @@ Much of the registry is not at a fixed path. Every service has a key under `Mach
 `regman` resolves that for you. Ask about the concrete path and you get the family's page:
 
 ```
-$ regman Machine\System\Services\sshd ImagePath
+$ regman 'Machine\System\Services\sshd' ImagePath
 
 Machine\System\Services\<name> ImagePath              documented by peinit
 

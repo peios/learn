@@ -37,7 +37,7 @@ preserved before choosing a strict policy.
 | Your task | Class | Result when an SD is missing |
 |---|---|---|
 | Use a provisioned system or application filesystem | `facs_deny_missing` | Deny SD-based access. Root, `/home` and `/var` are described as strict system mounts. |
-| Read removable media, FAT/exFAT, or a volume whose metadata should remain unchanged | `facs_synthesize_ephemeral` | Derive an SD in memory; do not write it back. A cold inode needs synthesis again. |
+| Read removable media, FAT/exFAT, or a volume without writing back synthesised SDs | `facs_synthesize_ephemeral` | Derive an SD in memory; do not write it back. A cold inode needs synthesis again. |
 | Adopt a filesystem into Peios and store descriptors as files are accessed | `facs_synthesize_persistent` | Derive an SD and schedule write-back. Verify stored SDs before switching to deny-missing. |
 | Use kernel pseudo-filesystems such as `/proc` and `/sys` | `unmanaged` | FACS does not apply; the kernel's per-operation checks still do. |
 
@@ -82,8 +82,10 @@ The class applies to the whole superblock; it is not a per-file permission.
   cached access masks. Future access checks use the new policy.
 - A policy change does not propagate into another mounted filesystem below the
   same directory tree.
-- Ephemeral SD synthesis does not make the filesystem read-only. Select the
-  read-only mount option separately when that is required.
+- Ephemeral SD synthesis prevents synthesis write-back, not other disk writes.
+  Select read-only separately when required, and read the [inspection
+  warning](~peios/mount-policies/managing-mounts#inspect-and-attach-a-filesystem):
+  a read-only filesystem mount alone can still replay an ext4 journal.
 
 ## Where to start
 

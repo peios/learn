@@ -51,9 +51,13 @@ The service flaps — up, down, up, down. This is [restart policy](~peios/servic
 
 ## The machine keeps rebooting
 
-A reboot loop almost always means a **Critical service is failing**. A [`ErrorControl=Critical`](~peios/services-and-jobs/supervision) service that exhausts its budget makes peinit sync and reboot; if it fails the same way every boot, you loop.
+Preserve the last console error and any service records before attributing repeated reboots to a service. **If peinit reports a Critical service exhausting its restart budget**, its [`ErrorControl=Critical`](~peios/services-and-jobs/supervision) policy makes peinit sync and reboot. Repeating that failure can produce a reboot loop; the symptom alone does not establish this cause.
 
-The [boot-attempt counter](~peios/services-and-jobs/boot-and-boot-modes) breaks a sequence of boots that never become confirmed: after N attempts (default 3), peinit enters [Recovery mode](#booted-into-recovery-mode). If each boot reaches the success grace before the Critical failure, its counter is reset and the reboot loop can continue without automatic Recovery. Check `svctl boot` where possible; do not assume every reboot loop will stop after three attempts. From the Recovery shell, find the failing Critical service (look for records already stored by [eventd](~peios/auditing/overview), and preserve the console error if no record was stored), repair its failure or restore known-good configuration before rebooting. Disabling a required platform service can leave its dependents unable to start. If you need to intervene before the counter trips, boot with `peios.recovery=1` on the kernel command line.
+The [boot-attempt counter](~peios/services-and-jobs/boot-and-boot-modes) can break a sequence of boots that reach peinit's counter increment but never become confirmed: after N attempts (default 3), peinit enters [Recovery mode](#booted-into-recovery-mode). If each boot reaches the success grace before the Critical failure, its counter is reset and the reboot loop can continue without automatic Recovery. Check `svctl boot` while the normal control interface is available; it is unavailable in Recovery. Do not assume every reboot loop will stop after three attempts, or that peinit can deliver Recovery if it cannot start.
+
+In Recovery, start with the failure reason on the console. Phase 2 services are skipped, so stored eventd history is not automatically queryable from that shell. Where a supported running eventd query service is available, use [Find service logs](~peios/services-and-jobs/output-and-logging) and [Find missing records](~peios/logs-and-events/find-missing-records) to investigate earlier attempts. `evctl` queries that service; it does not open stored databases offline. Otherwise, retain the console evidence for the administrator or provider's recovery procedure.
+
+Once the evidence identifies a Critical service failure, repair its cause or restore known-good configuration through a supported recovery path before rebooting. Disabling a required platform service can leave its dependents unable to start. If you need to intervene before the counter trips, boot with `peios.recovery=1` on the kernel command line.
 
 ## A service is Abandoned
 
@@ -114,7 +118,7 @@ The GUID is unknown or its retention has elapsed. A submitted job is retained fo
 You started (or booted) a service, but something that depends on it never came up:
 
 - A **`Requires`/`BindsTo` dependent stays blocked** until its target reaches a [satisfying state](~peios/services-and-jobs/the-service-lifecycle) (Active, Reloading, Completed, or Skipped). If the target is stuck in Starting or Failed, so is the dependent — fix the target.
-- A dependent that connected to its target on boot and got *connection refused* usually means the target uses **`Readiness=Alive`** — peinit only waited for the process to exist, not to be serving. Switch the target to `Readiness=Notify` so it signals `READY=1` when actually ready. (peinit logs this as a validation warning at boot.)
+- If a dependent got *connection refused* on boot, check the target's readiness setting and startup logs. With **`Readiness=Alive`**, peinit waited only for the process to exist, not to be serving. Use `Readiness=Notify` only if the program supports sending `READY=1` from its tracked main process when ready; changing the setting does not add that support and can cause `ReadinessTimeout`. See the [notification contract](~peios/services-and-jobs/service-types#the-sd-notify-contract). If the program cannot signal readiness, have its service or package owner resolve the startup race. peinit's boot validation warning can identify an Alive-readiness dependency; it does not prove the cause of a refused connection.
 - A **`Wants` dependent waits for the optional target’s startup attempt to resolve**, but starts even if the target failed. Use `Requires` when successful readiness is necessary.
 
 ## Booted into Safe mode
@@ -127,17 +131,16 @@ Fix the graph: the logs name the cycle path (`A → B → C → A`) or the confl
 
 [Recovery mode](~peios/services-and-jobs/boot-and-boot-modes) gives you a SYSTEM shell on the console and skips Phase 2 services. It starts registryd only if the boot has not already attempted that start. You reach it when the boot counter hits N, when `peios.recovery=1` is set, or when **registryd failed in Phase 1** (Recovery is immediate; this boot attempt has already incremented the counter).
 
-If the registry itself is the problem, use the offline tools that bypass it — they talk to the [loregd implementation](~peios/services-and-jobs/boot-and-boot-modes) directly:
+If the registry itself is failing:
 
-```
-$ loregd --inspector               # read the storage directly to diagnose
-$ loregd --recover-from-backup     # restore the backup taken each registryd start
-```
+1. Preserve peinit's console failure reason and the source's startup diagnostics. A failed registry operation does not prove the source process has exited.
+2. Identify the installed `registryd` provider and version, its hive declarations and actual database paths. [LCS and sources](~peios/registry-administration/lcs-and-sources) explains the default `loregd` provider and its diagnostics.
+3. Establish whether the source is already active before any storage work. Recovery may retain a registryd started or attempted earlier in the boot. **Do not launch a second source against the same hive files.**
+4. Obtain the installed provider's supported recovery procedure before attempting offline inspection or repair. The [loregd command-line reference](~peios/loregd/startup/command-line) documents hive declarations, not offline repair switches; its [startup sequence](~peios/loregd/startup/startup-sequence) does not establish an automatic backup on every start. Verify what recovery copy actually exists and what it contains before planning a replacement.
 
-> [!WARNING]
-> `loregd --dangerously-clear-database` is a destructive last resort, not the next diagnostic command. It wipes the registry. Roles can re-supply service configuration but do not restore every registry value. Inspect first and use a verified backup where possible.
+When the source is serving the required registry operations, [Backup and restore](~peios/registry-administration/backup-and-restore) describes the supported privileged subtree workflow. That workflow depends on a working source; it does not repair an unavailable source. Restore replaces the target contents and descendants, including security descriptors, so review the target and backup before using it. Role definitions can re-supply service configuration but do not restore every registry value.
 
-Recovery has **no TCB protections** — it is a SYSTEM shell, full stop. Treat it accordingly, and remember it needs console access (physical, IPMI, or serial); there is no remote recovery yet.
+Recovery offers **no TCB guarantee**. Treat the unrestricted SYSTEM shell accordingly, and remember it needs console access (physical, IPMI, or serial); there is no remote recovery yet.
 
 ## Where to start
 

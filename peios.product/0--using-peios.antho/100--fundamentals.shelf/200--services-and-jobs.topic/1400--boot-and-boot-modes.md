@@ -89,23 +89,18 @@ In Recovery, peinit completes the Phase 1 basics and starts registryd only if th
 - the kernel command line says `peios.recovery=1`, or
 - **registryd fails during Phase 1** — entered immediately, without rebooting, because there is no Phase 2 to attempt. The counter has already been incremented for this attempt.
 
-Because the registry itself may be what broke, recovery provides tools that work without it — talking to the [loregd implementation](#registryd-and-loregd) directly:
+Preserve the console failure reason and any source startup diagnostics first. Identify the installed [registryd provider](#registryd-and-loregd), its version, hive declarations and database paths. Recovery does not establish that the registry source is stopped: a source started or attempted earlier in the boot may still be active. **Do not start a second source against the same hive files.**
 
-| Tool | Does |
-|---|---|
-| `loregd --inspector` | Read the storage database directly for diagnosis. |
-| `loregd --recover-from-backup` | Restore from an automatic backup taken on every registryd startup. |
-| `loregd --dangerously-clear-database` | Last resort: wipe the registry entirely. Role definitions can re-supply service configuration; this is not restoration of all registry data. |
+Offline inspection or repair needs a procedure supported by that provider and version. The loregd manual documents [hive-declaration arguments](~peios/loregd/startup/command-line), not an offline repair command, and its [startup sequence](~peios/loregd/startup/startup-sequence) does not establish an automatic backup at each start. Verify the existence and coverage of any recovery copy before planning to replace data.
 
-> [!WARNING]
-> Start with the inspector and a verified backup. `--dangerously-clear-database` destroys the registry database; do not run it as a routine diagnostic step or assume it restores data not supplied by roles.
+Follow [Recovery troubleshooting](~peios/services-and-jobs/troubleshooting#booted-into-recovery-mode) for the evidence to collect and the point to involve the administrator or provider. If the source can serve the required operations, the supported [Backup and restore](~peios/registry-administration/backup-and-restore) workflow can recover a subtree; it depends on that working source and is not offline source repair. Restore replaces data and permissions. Role definitions can re-supply service configuration but do not restore all registry data.
 
 > [!IMPORTANT]
 > Recovery mode requires console access — physical, IPMI, or serial. There is no remote recovery in the current design (emergency SSH and registry historical reversion are noted as post-v1 work). Plan console access for any machine you need to be able to recover.
 
 ## The boot-attempt counter
 
-The counter is what turns a crash-looping Critical service into an eventual Recovery shell instead of an infinite reboot loop. It is a plain integer in a file at `/.peinit/boot-attempts` — *not* in the registry, because the registry may be the very thing that is broken.
+The counter can escalate repeated unconfirmed boots to Recovery when peinit reaches the increment and can persist it. It is a plain integer in a file at `/.peinit/boot-attempts` — *not* in the registry, because the registry may be the very thing that is broken. A confirmed boot resets the count; the counter does not guarantee that every reboot loop ends in Recovery.
 
 - peinit **reads** it at startup, before choosing a mode. The Recovery threshold (`counter ≥ N`) is checked against this pre-increment value, so the default N of 3 admits exactly three attempts before Recovery. A missing file counts as 0; a corrupt or unreadable one → Recovery. Override N with `peios.bootattempts=N` on the kernel command line, or set it to `0` to disable the check when the counter is itself the fault.
 - peinit **increments** it once per boot after the root, mount, seed, machine-ID and clock steps, before registryd starts. A registryd startup failure therefore still consumes an attempt. An earlier failure that enters Recovery before this point does not increment it.
@@ -205,7 +200,7 @@ Most Phase 1 failures are fatal to a normal boot, because none of the later mach
 
 `registryd` is an **interface**, not a specific program. It is the path peinit execs to get a registry source daemon — the component that implements the registry's persistent storage and answers peinit's reads. The *implementation* behind that interface can vary; by default it is **loregd**.
 
-This split matters in exactly one place: **Recovery mode**. In normal operation you only ever deal with the `registryd` abstraction — peinit starts it, treats it as opaque, and reads the registry through it. But when the registry *itself* is what broke, you need tools that work *without* a running registry, and those tools talk to the implementation directly. That is why the recovery tooling is named `loregd` (`loregd --inspector`, `--recover-from-backup`, …): in recovery you are working with the storage implementation, not the registry abstraction. It is the one context where the distinction is visible to an administrator.
+The distinction matters when diagnosing source failures: peinit's `registryd` role does not define a storage-repair interface. Check which provider and version the installation uses before choosing recovery instructions. The default provider's database paths come from its startup hive declarations, not registry settings. See [LCS and sources](~peios/registry-administration/lcs-and-sources) for source availability checks and the [Recovery-mode limits](#recovery-mode) before direct storage work.
 
 ## Phase 2: the registry-driven boot
 

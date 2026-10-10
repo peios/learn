@@ -17,7 +17,7 @@ it with a rule, then read back the accepted state. For desktop changes, use
 [Network Manager](~peios/networking/network-manager), whose profile editor
 shows inherited values and the interfaces a change affects.
 
-Every value is documented on the machine, `regman Machine\System\Network`,
+Every value is documented on the machine, `regman 'Machine\System\Network'`,
 and in the [reference](~peios/networking/network-policy-reference).
 
 ## Before you change anything

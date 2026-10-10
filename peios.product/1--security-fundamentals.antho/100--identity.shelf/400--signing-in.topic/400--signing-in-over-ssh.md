@@ -1,7 +1,7 @@
 ---
 title: Signing in over SSH
 type: how-to
-description: The SSH server — turning it on and off, moving its port, refusing passwords so only keys sign in, and checking its host key — with the ssh-settings command or SSH Settings on the desktop.
+description: Verify a first SSH connection, preserve administrator access when disabling SSH passwords, and manage the server, port and host key with ssh-settings or SSH Settings.
 related:
   - peios/signing-in/overview
   - peios/managing-local-principals/lps-command
@@ -39,6 +39,28 @@ host key     SHA256:Wm3…
 
 Anyone may look, except at the host key, which only SYSTEM and Administrators may read; others see why instead.
 
+## Connect from another computer
+
+1. From a trusted administrator session on the Peios console, or a [certificate-verified GXWI session](~peios/signing-in-from-a-browser/the-certificate) as an administrator, read the machine's address, SSH service state, port and host fingerprint:
+
+   ```
+   net status
+   ssh-settings
+   ssh-settings fingerprint
+   ```
+
+   Check that the server is running. Choose an address on an interface reachable from the other computer; [Reading `net status`](~peios/networking/the-net-command#reading-net-status) explains the interface blocks. For a direct connection, use the port shown by `ssh-settings`, which is 22 as shipped. The QEMU Makefile's host-forwarded port 2222 is a separate route described in the [build quick start](~peios/peiso/building-images/quick-start#open-the-web-desktop).
+
+2. On the other computer, use your account name, the machine's address and that observed port:
+
+   ```
+   ssh -p <observed-port> <name>@<machine-address>
+   ```
+
+   Before accepting a first-connection prompt, compare its SSH host fingerprint with the trusted reading from step 1. This is the SSH host key, not GXWI's TLS certificate fingerprint. If they differ, stop and investigate; do not accept the key or discard a remembered key just to suppress a warning.
+
+3. Sign in with the intended password or enrolled key and check that a **new shell opens**. A running service or an already-open session alone does not prove that a new sign-in works.
+
 ## Turning it on and off
 
 ```
@@ -66,11 +88,23 @@ A port another program has reserved is refused: a reservation naming that one po
 
 ## Keys only
 
+`ssh-settings passwords off` disables password authentication **for SSH**. It does not require an account-wide policy of `key`. Keep the account policy `either` when its password must also work through GXWI: [GXWI does not currently offer SSH-key authentication](~peios/peiso/building-images/quick-start#open-the-web-desktop), so a `key`-only account cannot use that sign-in path.
+
+With SSH passwords off, an account whose policy is `password` cannot sign in over SSH, though it can still use its password at the console and on the desktop, subject to its other sign-in restrictions.
+
+Before changing the server:
+
+1. Enroll a key for each person who needs SSH. They can use My Settings where permitted, or an administrator can use [`lps key add <name> <public-key-file> [label]`](~peios/managing-local-principals/lps-command#credentials-and-ssh-keys). Adding a key does not change credential policy. For a password-enabled account that will also use keys, an administrator sets `lps policy <name> either`; retain that policy if GXWI password access is needed.
+2. Inspect `lps show <name>` and `lps key list <name>` to check the enabled account, enrolled key, credential policy and permitted `remote-interactive` logon type. While SSH passwords are still available, make a **fresh SSH connection that actually authenticates with the enrolled key**, following the host-key check above. A connection that falls back to a password does not count as a key test. If the key test fails, stop before disabling passwords and check those account settings and the service state.
+3. Verify a fresh administrator sign-in through a separate **non-SSH** route, such as the local console or certificate-verified GXWI, and keep that route available. The [last-administrator guard](~peios/managing-local-principals/creating-accounts#the-last-administrator-guard) does not prove that a usable route exists. Keeping another SSH session open is insufficient: this change restarts `sshd` and ends **every SSH session**.
+
+Only after both access paths work, disable SSH passwords:
+
 ```
 ssh-settings passwords off
 ```
 
-With passwords off, only keys sign in over SSH. An account whose credential policy is `password` then cannot sign in over SSH at all, though it still signs in at the console and on the desktop. Before turning passwords off, make sure the people who need SSH have a key and a policy of `key` or `either`: each person adds their own keys in My Settings, or an administrator adds them with [`lps key add`](~peios/managing-local-principals/lps-command) and sets the policy with `lps policy`. `ssh-settings passwords on` lets passwords in again. Either restarts `sshd`.
+Then make another new key-authenticated SSH connection and verify that its shell opens. If it fails, use the surviving console or GXWI administrator route to inspect the settings and restore SSH password acceptance with `ssh-settings passwords on`. This reversal also restarts `sshd`; it does not change account credential policy. Keep the separate administration route until fresh SSH access has been verified again.
 
 ## The host key
 
