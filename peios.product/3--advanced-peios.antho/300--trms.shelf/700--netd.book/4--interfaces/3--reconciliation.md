@@ -53,7 +53,10 @@ address the interface already holds.
 
 Routes compare on everything: destination, prefix length, gateway, metric
 and protocol. A change of metric or gateway is a deletion and an
-addition.
+addition. For IPv6 routes, configured metric zero uses the kernel default
+of 1024: netd sends and compares that effective value, so an unchanged
+route converges. IPv4 metric zero and all nonzero metrics are unchanged.
+The configured `Route.Metric` still controls DNS scope ordering.
 
 An interface whose desired state the kernel already matches gets an empty
 plan, and nothing is sent. [*reconcile.converged-plan-is-empty]
