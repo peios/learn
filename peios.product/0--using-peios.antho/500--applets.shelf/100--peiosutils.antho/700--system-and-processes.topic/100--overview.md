@@ -56,6 +56,13 @@ This topic gathers the commands that deal with the **running system** rather tha
 
 These report the **projection** of a token onto POSIX user and group numbers, which is what Linux programs see. The numbers grant nothing on their own — [`id`](~peios/system-and-processes/id) explains what they can and cannot say, and [`token`](~peios/system-and-processes/token) shows the identity underneath them.
 
+**Tokens and logon sessions**
+
+| Command | Purpose |
+|---|---|
+| [`token`](~peios/system-and-processes/token) | Inspect and manage a process's token. |
+| [`logonse`](~peios/system-and-processes/logonse) | Inspect and manage logon sessions and their processes. |
+
 **Storage and terminal**
 
 | Command | Purpose |

@@ -16,11 +16,11 @@ cksum [options] [file...]
 ```
 $ cksum installer.iso
 3915528286 372736000 installer.iso
-$ cksum -a sha256 installer.iso
+$ cksum -a sha256 --untagged installer.iso
 9f86d0818884...b1a5  installer.iso
 ```
 
-With no `-a`, `cksum` computes a CRC checksum and prints the CRC value, the file's byte count, and the name. With `-a`, it behaves like the corresponding dedicated command.
+With no `-a`, `cksum` computes a CRC checksum and prints the CRC value, the file's byte count, and the name. With `-a`, it uses the selected algorithm. The SHA-256 example adds `--untagged` to request the plain `hash  file` output; without it, SHA-256 output is tagged by default.
 
 ## Choosing the algorithm
 
