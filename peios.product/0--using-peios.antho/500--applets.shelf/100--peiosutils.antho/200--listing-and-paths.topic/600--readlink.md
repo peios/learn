@@ -43,6 +43,10 @@ With any of these, `readlink` succeeds on an ordinary (non-link) file too — it
 | `-q`, `--quiet` / `-s`, `--silent` | Suppress most error messages. This is the default. |
 | `-v`, `--verbose` | Report error messages that the quiet default would suppress. |
 
+When `POSIXLY_CORRECT` is set, `readlink` reports errors even with `-q` or `-s`.
+
+With several operands, the current implementation stops at the first failure. Output already printed is retained, but later operands are not examined. Treat a failed invocation as incomplete.
+
 ## Exit status
 
 | Code | Meaning |

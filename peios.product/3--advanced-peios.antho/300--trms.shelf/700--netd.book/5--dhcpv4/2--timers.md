@@ -29,10 +29,21 @@ records the interface warning `asked for an address; nobody answered` and,
 when the profile wants it, falls back to a link-local address (§5.5). The
 client keeps discovering.
 
-The report is made at most once in a client's life: the flag is reset only
-when a client is started. A client that reported it, then got a lease,
+In [source `23af1f6`](https://github.com/peios/netd/blob/23af1f6b84f3764d9327eb009ced56b2a16b7aa8/dhcp4/src/client.rs),
+the report is made at most once between client starts: the flag is reset
+only when a client is started. A client that reported it, then got a lease,
 then lost it, does not report it again, so it does not fall back to a
 link-local address a second time.
+
+The [proposed source correction](https://github.com/peios/netd/blob/13d593fdf64b58b08edf901b6f5edb8535f6fe75/dhcp4/src/client.rs)
+resets the flag after a valid ACK produces a lease. If that lease is later
+lost, unanswered discovery can report again at the same fourth-DISCOVER
+threshold, allowing the profile's link-local fallback to be requested
+again. An uninterrupted unanswered acquisition still reports only once:
+a malformed ACK, a NAK while Requesting, or a Requesting timeout does not
+rearm it. This describes the proposed source behavior, not a released
+package or an installed image; check the installed build before relying
+on repeat fallback.
 
 ## Lease boundaries [*dhcp4-timers.lease-boundaries]
 

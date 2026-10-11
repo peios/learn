@@ -167,6 +167,12 @@ released start's lifetime runs from the release. Queue time behind
 another operation is not a hold and still counts.
 [*op.a-held-start-has-no-lifetime]
 
+For a transitive hold, the required release point can precede the
+dependent's own dispatch: when its dependency becomes clocked, the
+dependent must receive its full lifetime even if it is still Pending,
+waiting for that dependency to finish. Its later dispatch must not
+restart that lifetime again.
+
 **The clock starts at creation, including queue time** — except across
 a hold (§7.5), during which it does not run. From the caller's point of
 view they have been waiting since they sent the command, not since

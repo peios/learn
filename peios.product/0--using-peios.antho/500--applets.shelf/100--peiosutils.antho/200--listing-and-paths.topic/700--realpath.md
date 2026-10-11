@@ -26,7 +26,7 @@ By default `realpath` requires every component of the path *except the last* to 
 
 | Option | Existence requirement |
 |---|---|
-| (default) | Every component except the last must exist. |
+| `-E`, `--canonicalize` (default) | Every component except the last must exist. |
 | `-e`, `--canonicalize-existing` | Every component must exist — including the final one. |
 | `-m`, `--canonicalize-missing` | No component need exist. The path is canonicalised purely as text where it cannot be walked. |
 
@@ -45,7 +45,7 @@ By default `realpath` requires every component of the path *except the last* to 
 | `--relative-to=DIR` | Print the result as a path relative to `DIR` instead of as an absolute path. |
 | `--relative-base=DIR` | Print an absolute path, unless the result lies inside `DIR`, in which case print it relative to `DIR`. |
 | `-z`, `--zero` | End each output line with a NUL character instead of a newline. |
-| `-q`, `--quiet` | Do not print a warning when a path is invalid. The exit status still reports the failure. |
+| `-q`, `--quiet` | Do not print a warning when a path is invalid. The exit status still reports the failure; see the compatibility warning below. |
 
 ## `realpath` and `readlink`
 
@@ -56,4 +56,6 @@ By default `realpath` requires every component of the path *except the last* to 
 | Code | Meaning |
 |---|---|
 | `0` | Every path was resolved and printed. |
-| `1` | A path could not be resolved under the chosen options. |
+| `1` | A path could not be resolved under the chosen options or its output could not be written. |
+
+**Compatibility warning:** builds using the [uncorrected implementation](https://github.com/peios/peiosutils/blob/3344d4690476fd66bfaec99b1ae92190bbcba06f/src/uu/realpath/src/realpath.rs#L108-L129) can return `0` for invalid operands when `-q` is used. Until your build includes the quiet-status correction, omit `-q` when a script must detect those failures. Successful operands are still printed, so nonempty output alone does not show that every operand succeeded.

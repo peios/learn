@@ -68,8 +68,14 @@ Domains, in this order:
 3. with `Dns.Offered`: the routers' DNSSL domains;
 4. with `Dns.Offered`: the DHCPv6 reply's domains.
 
-Each list then has **adjacent** duplicates removed. A server that appears
-twice with something between the two keeps both entries.
+In the `netd` 0.1.8 source snapshot (`23af1f6`), each list has only
+**adjacent** duplicates removed. A server or domain that appears twice
+with something between the two keeps both entries. The [proposed source
+correction](https://github.com/peios/netd/pull/3) removes duplicates across
+each entire list while retaining the first occurrence and the source order
+above; it does not sort the list or change which offered data is admitted.
+Check whether that correction is included in the installed build before
+relying on globally unique lists.
 [*snapshot.adjacent-duplicates-only]
 
 Link-local IPv6 servers are withheld because a resolver addresses a server

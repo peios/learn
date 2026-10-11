@@ -112,5 +112,30 @@ as it is.
 
 ### A reply after its scope was flushed [*engine-cache.late-reply-stored-after-flush]
 
-A reply that arrives after its scope was flushed is still stored, under
+In [source `b4f7085`](https://github.com/peios/resolvd/blob/b4f70857729069952762f8e2a2b56357b15d4760/resolvd/src/engine.rs),
+a reply that arrives after its scope was flushed is still stored, under
 the same scope key.
+
+### Proposed admission rule for invalidated tasks [*engine-cache.invalidated-task-does-not-store]
+
+The [proposed source correction](https://github.com/peios/resolvd/blob/bc4efa36dd72a942169e4d5ad849f5806a4fd7f1/resolvd/src/engine.rs)
+also invalidates pending tasks' permission to store answers. A global
+`flush` affects every pending task. Removing an interface scope or
+changing its server list affects tasks currently associated with that
+scope; changing the fallback-server list affects tasks associated with
+the fallback scope.
+
+An invalidated task still completes its original requester normally,
+but cannot store any further answers. This restriction persists through
+UDP-to-TCP fallback, timeout retries and later search candidates, even
+if a later attempt uses a new server list. Removing and re-adding a
+scope does not restore the task's permission. Fresh requests can cache
+normally.
+
+Changes only to metrics, search domains or other scope properties with
+unchanged server lists do not invalidate admission; unrelated scopes'
+pending tasks are unaffected. This changes cache admission, not request
+cancellation or routing. Cache keys, TTLs and eviction policy are
+unchanged. It describes proposed source behavior, not a released package
+or an installed resolver; check the installed source revision before
+relying on it.
