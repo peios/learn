@@ -88,13 +88,14 @@ The rows are tried in that order.
 
 ### An address shared by static names [*engine-synthetic.shared-static-address-reverse-per-configuration]
 
-When several static names list the same address, the name returned is
-whichever of them comes first in the iteration order of resolvd's
-static-name table. That order is fixed while one configuration is in
-use, so every reverse question for the address gets the same name until
-the configuration next changes. A configuration change (§2.3) — to any
-value, not only `Hosts\` — or a restart builds the table afresh, and can
-then return another of them.
+When several static names list the same address, resolvd returns one PTR:
+the name whose ASCII-lowercased presentation form sorts first in byte order.
+For example, `alpha.home` wins over `beta.home`. The answer is independent
+of registry insertion order, hash-table order, reloads and restarts while
+the set of matching names stays the same. It changes when that set changes
+and another name sorts first. The selected name retains its configured
+spelling in the reply. This rule applies to IPv4 and IPv6, for both `PTR`
+and `ANY` questions.
 
 ### Other reverse questions [*engine-synthetic.other-reverse-questions-go-to-network]
 
