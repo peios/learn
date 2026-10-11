@@ -106,3 +106,16 @@ certificate file is not a substitute.
 `trust reload` is a service-control request, not a registry write. Its
 permission is separate from permission to change trust decisions; Security
 Policy exposes trustd's `ControlSecurity` under **Settings → Trust Service**.
+
+## Reloading through the service manager
+
+`svctl --wait reload trustd` and the service manager's Reload action send
+SIGHUP to trustd. The daemon consumes it in its normal event loop and uses
+the same recomposition path as `trust reload`, without replacing its main
+process. Repeated pending signals may be coalesced into one refresh.
+
+Check `trust status` for the resulting health. A service reload completing
+does not prove that recomposition succeeded; on failure, trustd retains its
+last rendered store and reports degraded health. Older daemon versions that
+do not handle SIGHUP can terminate on service reload; use `trust reload`
+directly until the updated daemon is installed.
