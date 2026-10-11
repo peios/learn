@@ -24,7 +24,9 @@ The default line packs in three things:
 - how long the system has been **up**;
 - the **load average** — a rough measure of how busy the system has been over the last 1, 5, and 15 minutes.
 
-If you know `uptime` from other systems you may be expecting a count of logged-in users between the uptime and the load average. Peios does not print one. That count comes from a login database (`utmp`) that Peios does not keep — logon sessions are a [KACS](~peios/access-decisions/overview) concept, and the tooling to report them is not built yet. Rather than print a figure that would always read `0 users`, the field is left out until it can be answered honestly.
+If you know `uptime` from other systems you may be expecting a count of logged-in users between the uptime and the load average. Peios does not print one. That count comes from a login database (`utmp`) that Peios does not keep, so the field is left out rather than always reporting `0 users`.
+
+To inspect Peios logon sessions and their processes, use [`logonse`](~peios/system-and-processes/logonse). Logon sessions record authentication events, including service and batch logons; their count is not a count of logged-in users.
 
 ## Options
 

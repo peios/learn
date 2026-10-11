@@ -83,8 +83,12 @@ switches consoles. Switching to a console does not create a login session.
 Installation does not select a keymap or font, or start additional login
 prompts. The package ships the `console-keymap` service as a registry seed,
 which does nothing until an image applies it; the Experimental edition
-does. Persistent console fonts and multi-console logins require separate
-system configuration.
+does. Persistent console fonts require separate system configuration.
+
+kbd does not create login prompts. The Experimental edition provides
+independent sessions on `tty1`, `tty2` and `tty3`; see
+[multiple local consoles](~peios/signing-in/the-login-command#multiple-local-consoles)
+for the login services and how to switch between them.
 
 The PAM-based `vlock` screen locker and optional XKB-to-console conversion
 are disabled. Native kbd keymaps remain available. `openvt` is a process

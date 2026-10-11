@@ -1,6 +1,5 @@
 ---
 title: Kernel invariants
-type: concept
 description: The kernel-level invariants the boot chain depends on — the LSM stack rule, forced module signing, strict /dev/mem — and what fails without them.
 related:
   - peios/boot-and-trust-establishment/overview

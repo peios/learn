@@ -226,6 +226,7 @@ clock as synchronised, the kernel writes it back to the RTC every eleven
 minutes on its own.
 
 **It does not decide how the time is shown.** The clock runs in UTC.
-The time zone, `Machine\System\Time TimeZone`, only changes how programs
-show it; timed copies the chosen zone into `/etc/localtime`, which every
-program reads.
+The time zone, `Machine\System\Time TimeZone`, sets the machine's default
+local zone; timed copies the chosen zone into `/etc/localtime` as the
+default local-zone data. For command-specific UTC or `TZ` choices, see
+[the time-zone guide](~peios/time/time-zone-and-setting-the-clock).

@@ -20,6 +20,7 @@ This page names every command in the topic. The companion topic, [Transforming t
 | [`cat`](~peios/viewing-and-joining-text/cat) | Print one or more files straight through — and join several into one. |
 | [`tac`](~peios/viewing-and-joining-text/tac) | Print a file with its lines in reverse — last line first. |
 | [`more`](~peios/viewing-and-joining-text/more) | Show a file one screen at a time, pausing between screens. |
+| [`nl`](~peios/viewing-and-joining-text/nl) | Print a file with its lines numbered. |
 | [`od`](~peios/viewing-and-joining-text/od) | Dump a file's raw bytes in octal, hex, decimal, or character form. |
 
 **Viewing part of a file**
@@ -28,7 +29,6 @@ This page names every command in the topic. The companion topic, [Transforming t
 |---|---|
 | [`head`](~peios/viewing-and-joining-text/head) | Print the first lines (or bytes) of a file. |
 | [`tail`](~peios/viewing-and-joining-text/tail) | Print the last lines of a file — and, with `-f`, keep printing as the file grows. |
-| [`nl`](~peios/viewing-and-joining-text/nl) | Print a file with its lines numbered. |
 
 **Cutting and combining**
 

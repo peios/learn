@@ -71,6 +71,8 @@ collects the account tasks and access precautions in one place.
   and [Configuring profiles](~peios/networking/configuring-profiles) to
   change configuration. Read the confirmation and rollback behavior before
   changing the network through a remote desktop.
+- **Allow or block a network service:**
+  [Check and change network policy safely](~peios/networking/network-policy#check-and-change-policy-safely).
 - **Set the time zone or clock:**
   [Time zone and setting the clock](~peios/time/time-zone-and-setting-the-clock).
 - **Find software, configuration or service data on disk:**
@@ -93,6 +95,8 @@ Use [Registry Editor](~peios/registry-administration/registry-editor) or
 registry change. Consult [`regman`](~peios/registry-administration/regman)
 first: it explains what a key means, accepted values and when changes
 apply. A value being stored does not by itself prove the service accepted it.
+Follow [Change a setting and verify it](~peios/registry-concepts/configuration-and-meaning)
+for the complete workflow.
 
 For configuration backup and recovery, read
 [Backup and restore](~peios/registry-administration/backup-and-restore)

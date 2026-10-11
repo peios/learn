@@ -45,11 +45,16 @@ Desktop Settings calls the second and third together the **System
 Default**: choosing System Default for yourself removes your choice, so
 the machine's (or the built-in) applies to you again.
 
-## Changes apply at once
+## When changes take effect
 
-A switch or a choice from a list applies the moment it is made; a typed
-value applies with the **Apply** button that appears beside it once it
-has changed. What a change did is said along the bottom of the window.
+For your personal settings, a switch or a choice from a list applies the
+moment it is made; a typed value applies with the **Apply** button that
+appears beside it once it has changed. What a change did is said along
+the bottom of the window.
+
+Some [settings for all users](~peios/desktop-settings/for-all-users) take
+effect later: sign-in-screen settings and a new listen address apply when
+GXWI next starts, and icon themes apply to new desktop sessions.
 Changes that could cut people off, such as the address GXWI listens on,
 ask first, under their row.
 

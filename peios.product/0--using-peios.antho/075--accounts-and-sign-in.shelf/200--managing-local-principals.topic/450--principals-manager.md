@@ -120,7 +120,10 @@ Select a local user, and their buttons are below their details:
   **Disable instead** is offered, and is usually what you want.
 
 Changes to how a user signs in, to their keys, to the groups they are in
-and to their claims apply from their next sign-in.
+and to their claims apply from their next sign-in. Disabling an account does
+not end existing sessions. Use [Task Manager’s sign-out action](~peios/threads-and-processes/task-manager#signing-someone-out)
+when those must end; it can lose unsaved work. [Session lifecycle](~peios/logon-sessions/lifecycle)
+explains the permissions and limits.
 
 ## Groups
 

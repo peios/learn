@@ -26,7 +26,7 @@ It is the counterpart of [`head`](~peios/viewing-and-joining-text/head): the qui
 | `-n`, `--lines=NUM` | Print the last `NUM` lines instead of 10. |
 | `-c`, `--bytes=NUM` | Print the last `NUM` bytes instead of counting lines. |
 
-If `NUM` is given a leading `+`, the meaning flips: `tail` prints **everything from line `NUM` onward**.
+With `-n`, if `NUM` is given a leading `+`, the meaning flips: `tail` prints **everything from line `NUM` onward**.
 
 ```
 $ tail -n +20 report.txt    # from line 20 to the end

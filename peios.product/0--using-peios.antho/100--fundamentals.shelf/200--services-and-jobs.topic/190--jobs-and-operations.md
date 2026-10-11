@@ -79,7 +79,7 @@ A job record carries the things you would want for forensics: the resolved ident
 
 For service executions, peinit keeps only *active* job records in memory. When a job reaches a terminal state it **emits a structured event** (through KMES) carrying the full record, then drops the job. Submitted jobs retain a terminal view for 60 seconds, as described below; peinit keeps **no durable** job history — [eventd](~peios/auditing/overview) is the historian, consuming those events from the kernel ring buffer. The lifecycle events are `peinit.job.created`, `peinit.job.started`, and `peinit.job.ended`; a submitted job also emits `peinit.job.status.reported` as its progress changes. `peinit.job.created` and `peinit.job.status.reported` are *verbose* events, off unless the event emission policy (`Machine\Generic\Events`, PGSS §6.9) turns them on.
 
-Separately, all of a job's `stdout`/`stderr` is [forwarded to eventd](~peios/services-and-jobs/output-and-logging) tagged with the job's GUID. That is what lets a query like "show me the logs for job X" return exactly that execution's output — not interleaved with the run before or after it.
+Separately, captured job `stdout`/`stderr` is [forwarded to eventd](~peios/services-and-jobs/output-and-logging) tagged with the job's GUID. A service with `TTYPath` writes to its terminal instead; see the [terminal-attached service exception](~peios/services-and-jobs/output-and-logging#capturing-output). The GUID lets a query like "show me the logs for job X" distinguish that execution's records from the run before or after it.
 
 ## Operations: what was requested
 

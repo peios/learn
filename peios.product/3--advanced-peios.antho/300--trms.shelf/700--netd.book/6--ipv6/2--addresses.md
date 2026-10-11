@@ -53,8 +53,9 @@ advertisement arrived.
 When an advertisement updates a prefix already held:
 
 - the on-link flag and the preferred lifetime are taken as advertised;
-- the valid lifetime follows [RFC 4862 §5.5.3](https://datatracker.ietf.org/doc/html/rfc4862#section-5.5.3)(e), so that an
-  unauthenticated advertisement cannot cut a live address short:
+- the valid lifetime uses the two-hour rule from
+  [RFC 4862 §5.5.3(e)](https://www.rfc-editor.org/rfc/rfc4862.html#section-5.5.3),
+  with the infinite-lifetime exception described below:
 
 | Advertised valid lifetime | Remaining valid lifetime | Result |
 |---|---|---|
@@ -65,6 +66,18 @@ When an advertisement updates a prefix already held:
 | two hours or less | forever | forever |
 
 [*slaac.two-hour-rule]
+
+The table records the 0.1.7 behaviour this manual describes; it is also
+present in [netd 0.1.8 source](https://github.com/peios/netd/blob/23af1f6b84f3764d9327eb009ced56b2a16b7aa8/ndp/src/engine.rs#L220-L237).
+The final row is a known deviation: infinity is above two hours, so
+[RFC 4862 §5.5.3(e)(3)](https://www.rfc-editor.org/rfc/rfc4862.html#section-5.5.3)
+requires **two hours from the
+new advertisement**, including when the advertised lifetime is zero.
+A source build containing the proposed source correction uses that deadline;
+it still accepts advertised lifetimes above two hours, including
+infinity, and takes the preferred lifetime as advertised. This source
+correction does not establish that an installed package or image has
+changed.
 
 When a prefix's preferred lifetime runs out, its addresses are
 **deprecated**: kept on the interface for standing connections, with a

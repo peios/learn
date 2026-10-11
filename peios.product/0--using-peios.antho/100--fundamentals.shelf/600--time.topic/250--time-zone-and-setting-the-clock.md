@@ -10,12 +10,20 @@ related:
 
 The clock always runs in UTC. The **time zone** is how the time is shown:
 the offset from UTC, and when summer time starts and ends, for one place.
-There is one time zone for the whole machine. Before changing it, inspect
-`clock status` and `clock sources`: a wrong zone changes the display, while
+The machine has a default time zone. Programs can show time in another
+zone: use [`date -u`](~peios/system-and-processes/date#displaying-a-different-moment)
+for UTC, or [`env`](~peios/output-and-evaluation/env#how-it-works) for a
+one-command `TZ` override in programs that honor it.
+
+Before changing the machine's default, inspect `clock status` and
+`clock sources`: a wrong zone changes the display, while
 an unsynchronised clock needs a source or manual-time correction. Inspect
 the reported zone and any timed errors rather than assuming a saved choice
 took effect. An unexpected UTC report can also mean that timed could not
 identify the existing file; see [the terminal checks](#in-a-terminal).
+
+To choose a 12- or 24-hour display for your own top-bar clock, use
+[Desktop Settings' Time Format](~peios/desktop-settings/wallpaper-clock-and-dock#clock).
 
 ## In System Settings
 
@@ -26,9 +34,9 @@ bottom of the window says why.
 
 - At the top is the time here, the zone and how far it is from UTC, and
   whether the clock is synchronised, and with which time server.
-- **Time Zone** lists the zones by region. Every program shows the chosen
-  zone from the next time it looks, which for the desktop's clock is the
-  next minute. **UTC** takes it away.
+- **Time Zone** lists the zones by region and chooses the machine's
+  default. The desktop's clock shows the chosen zone from the next
+  minute. **UTC** takes it away.
 - **Set Time Automatically** is on until you turn it off. Then a date and
   a time open under it, in the zone chosen, with **Set Clock**. Turning the
   switch on again goes back to the time servers. **It starts them afresh

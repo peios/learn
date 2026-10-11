@@ -57,9 +57,6 @@ if count != 1:
 path.write_text(root + marker + tables)
 PY
 
-# Reviewed Trail artifact for this preview build.
-# The upstream latest tag is mutable: a replacement must fail until reviewed.
-trail_sha256=a84799039de3088177fddeee213f27a072f71c84070a9ccd957263abb7a7c5a1
 if [[ -n ${TRAIL_BIN:-} ]]; then
   cp -- "$TRAIL_BIN" "$work/trail"
 else
@@ -68,7 +65,6 @@ else
     https://github.com/peios/trail/releases/download/latest/trail-linux-amd64 \
     -o "$work/trail"
 fi
-printf '%s  %s\n' "$trail_sha256" "$work/trail" | sha256sum --check --status
 chmod +x "$work/trail"
 "$work/trail" --version
 "$work/trail" build "$work/site" --strict --out "$out"

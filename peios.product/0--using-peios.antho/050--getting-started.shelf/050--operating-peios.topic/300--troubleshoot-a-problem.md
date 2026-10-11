@@ -13,6 +13,8 @@ Start with what failed and when. Keep the error text and the name of the
 service, package, account or interface involved. Read the current state
 and relevant records before restarting a service, changing permissions or
 repeating an operation that changes the machine.
+For a reviewable event capture, follow
+[Save incident event evidence](~peios/logs-and-events/save-incident-evidence).
 
 ## The browser cannot reach the desktop
 
@@ -74,6 +76,8 @@ Make lasting changes through the supported network settings or registry
 profiles. Manual changes to a managed interface can be reverted by netd.
 Network Manager labels some firewall displays **Example data**; do not use
 those displays as evidence of live traffic.
+For the next check for your symptom, follow
+[Network diagnostic tools](~peios/networking/diagnostic-tools#start-with-the-symptom).
 
 ## The clock or displayed time is wrong
 

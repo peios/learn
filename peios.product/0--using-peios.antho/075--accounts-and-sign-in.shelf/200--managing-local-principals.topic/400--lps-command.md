@@ -212,7 +212,7 @@ A name held by another principal or by a local group is refused. Changing only t
 
 ### `lps enable <name>` / `lps disable <name>`
 
-A disabled principal keeps everything except the ability to start a new sign-in. It does not revoke already issued tokens; [ending existing sessions](~peios/logon-sessions/lifecycle) is a separate operation.
+A disabled principal keeps everything except the ability to start a new sign-in. It does not revoke already issued tokens or end existing sessions. Use [Task Manager’s sign-out action](~peios/threads-and-processes/task-manager#signing-someone-out) when existing sessions must end. Signing out can lose unsaved work; [session lifecycle](~peios/logon-sessions/lifecycle) explains its permissions and limits, including token references held outside the session's processes.
 
 Both are refused if they would leave the machine with no enabled administrator.
 
@@ -336,11 +336,15 @@ Everything else is as `lps key add` and `lps key remove`: the same key types and
 
 Each change, and each refusal once the account is known, is recorded as an `lpsd.credential.changed` event, as a change of your own password is. `operation.name` is `ssh-key-added` or `ssh-key-removed`, and `outcome.reason` says what stopped a refused one, such as `wrong-credential`. A change an administrator makes with `lps key` is recorded as `lpsd.account.modified` instead: see [what is recorded](~peios/local-principal-interfaces/the-admin-socket#what-is-recorded).
 
-The same programs can show you your own account as `lpsd` holds it — your name, display name, credential policy, whether you have a password, and your keys — and set your **display name**, the human name shown beside your account name. Setting a display name asks for no password, since it is not something you sign in with. Both are served on `/run/lpsd/self.sock`; see [the administrative socket](~peios/local-principal-interfaces/the-admin-socket#the-self-socket).
-
-On the desktop, the program is **My Settings**, the app for your own account; type `my` in the launcher to open it. Its **SSH Keys** section lists your keys by label, fingerprint, type and the day each was added. **Add Key…** opens a form under the list for the one line of your `.pub` file and your password. **Remove** asks for your password under the key before it is taken away, and asks again if it was wrong. An account with no password sees why its keys are an administrator's to change, in place of these forms. In **Account**, **Display Name** sets your display name, with **Apply** once it is changed. The desktop reads it when you sign in, so it shows from your next session.
+On the desktop, the program is **My Settings**, the app for your own account; type `my` in the launcher to open it. Its **SSH Keys** section lists your keys by label, fingerprint, type and the day each was added. **Add Key…** opens a form under the list for the one line of your `.pub` file and your password. **Remove** asks for your password under the key before it is taken away, and asks again if it was wrong. An account with no password sees why its keys are an administrator's to change, in place of these forms.
 
 Your password is changed with [`passwd`](~peios/signing-in/the-passwd-command), or in My Settings.
+
+### Changing your own display name
+
+Programs acting on your behalf can show you your own account as `lpsd` holds it — your name, display name, credential policy, whether you have a password, and your keys — and set your **display name**, the human name shown beside your account name. Setting a display name asks for no password, since it is not something you sign in with. Both are served on `/run/lpsd/self.sock`; see [the administrative socket](~peios/local-principal-interfaces/the-admin-socket#the-self-socket).
+
+Open **My Settings** (type `my` in the launcher). In **Account**, **Display Name** sets your display name, with **Apply** once it is changed. The desktop reads it when you sign in, so it shows from your next session.
 
 ## Profiles
 

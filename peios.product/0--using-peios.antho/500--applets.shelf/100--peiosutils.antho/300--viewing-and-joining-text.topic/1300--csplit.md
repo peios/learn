@@ -17,7 +17,7 @@ csplit [options] file pattern...
 $ csplit report.txt '/^Chapter/' '{*}'
 ```
 
-That splits `report.txt` into one piece per chapter, cutting at every line beginning with `Chapter`. The pieces are written to `xx00`, `xx01`, `xx02`, … and `csplit` prints the byte size of each.
+That cuts `report.txt` at every line beginning with `Chapter`, including an initial piece before the first match. That initial piece is empty if the first line matches. The pieces are written to `xx00`, `xx01`, `xx02`, … and `csplit` prints the byte size of each.
 
 Each piece is a newly created file, and a new file needs a [security descriptor](~peios/security-descriptors/overview); each piece inherits one from the directory it is created in.
 

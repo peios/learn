@@ -12,6 +12,8 @@ Before you can do anything with a file you usually have to *find* it — see wha
 
 This page names every command in the topic, says in one line what each is for, and points you at the page that covers it in full.
 
+For a worked example of choosing what must exist, start with [Choose how to resolve a path](~peios/listing-and-paths/choose-how-to-resolve-a-path).
+
 ## The commands
 
 | Command | Purpose |
@@ -29,9 +31,9 @@ This page names every command in the topic, says in one line what each is for, a
 
 ## These commands and file security
 
-Most commands in this topic work purely on path strings — they never touch the file the path names. `basename`, `dirname`, `realpath`, and `pathchk` are all string operations.
+`basename` and `dirname` split path strings without consulting the file system. `realpath` normally resolves links through the file system, with options for missing components or text-only handling. `pathchk` checks names; its default checks include file-system length limits and whether leading directories can be searched.
 
-Two report on real files, and they relate to file security differently:
+`ls` and `stat` report on real files, and they relate to file security differently:
 
 - **`ls -l` surfaces security-descriptor information directly.** On Peios a file's access is governed by its **security descriptor** — the record of who owns the file and who may do what to it. The long listing shows the owner and the parts of the descriptor that fit in a one-line-per-file format.
 - **`stat` is a low-level diagnostic.** It dumps the raw contents of a file's inode. The inode carries some numeric fields — an owner id, a group id, a mode value — that the Peios access model does **not** consult. `stat` reports them because it reports the inode verbatim, but they are not the file's access policy.
@@ -44,4 +46,4 @@ If you want the everyday "what's in this directory" command and the meaning of e
 
 If you need the full detail of one specific file, read [`stat`](~peios/listing-and-paths/stat).
 
-If you are writing a script and need to take a path apart or canonicalise it, the string commands — [`basename`](~peios/listing-and-paths/basename), [`dirname`](~peios/listing-and-paths/dirname), [`realpath`](~peios/listing-and-paths/realpath) — are what you want.
+If you are writing a script, use [`basename`](~peios/listing-and-paths/basename) or [`dirname`](~peios/listing-and-paths/dirname) to split a path as text. Use [`realpath`](~peios/listing-and-paths/realpath) to resolve it with the existence and link-handling options your task needs.

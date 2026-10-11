@@ -78,3 +78,5 @@ implemented, and the behaviour on this side of the boundary.
 Constants, ABI tables, and catalogues are collected in appendices at
 the end of the chapter they belong to, so that a chapter's reference
 material sits beside the prose that explains it.
+
+For kernel build-time and initialization requirements, see [Kernel invariants](~peios/advanced-peios/peios-kernel/introduction/kernel-invariants).
