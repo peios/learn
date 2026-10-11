@@ -49,10 +49,11 @@ formatter emits the sections in the order above regardless of the order you
 wrote them. A section may appear only once; a repeat is an error rather than an
 override.
 
-One case is easy to write by accident. A bare `D:` with no ACEs after it is a
-**NULL DACL**, which grants everyone everything — not an empty DACL, which
-grants nobody anything. `D:` and `D:(A;;GA;;;WD)` are close together on the
-keyboard and very far apart in effect.
+A bare `D:` is an **empty DACL**: it contains no grants. A **NULL DACL** is
+written `D:NO_ACCESS_CONTROL` and imposes no discretionary access restrictions.
+These are different from omitting the `D:` section, which leaves the DACL absent.
+The parser and formatter preserve all three states. `NO_ACCESS_CONTROL` may
+accompany ACL flags, such as `D:PAINO_ACCESS_CONTROL`, but cannot accompany ACEs.
 
 ## ACL flags
 
