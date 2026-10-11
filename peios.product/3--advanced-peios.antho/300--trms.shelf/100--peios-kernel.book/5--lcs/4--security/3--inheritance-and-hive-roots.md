@@ -25,14 +25,34 @@ security objects and have no descriptors of their own; they inherit
 their key's access control. [*inherit.values-have-no-descriptor-of-their-own]
 
 `OBJECT_INHERIT_ACE` is never used to
-select an ACE for inheritance. [*inherit.object-inherit-ace-never-selects] It is only cleared on the child copy
-when `NO_PROPAGATE_INHERIT_ACE` applies. [*inherit.no-propagate-clears-object-inherit]
+select an ACE for inheritance. [*inherit.object-inherit-ace-never-selects] The child copy clears `OBJECT_INHERIT_ACE`,
+`CONTAINER_INHERIT_ACE` and `NO_PROPAGATE_INHERIT_ACE` when
+`NO_PROPAGATE_INHERIT_ACE` applies. [*inherit.no-propagate-clears-object-inherit]
 
 **A parent with no inheritable ACEs falls back to the creating token's
 default DACL.** [*inherit.no-inheritable-aces-uses-token-default-dacl]
 
 That fallback covers the DACL only; there is no default
 SACL. [*inherit.no-default-sacl]
+
+### Creator SIDs and generic rights survive to the next generation
+
+An inheritable ACE naming `CREATOR OWNER` or `CREATOR GROUP`, or carrying
+generic rights, is resolved for each new key. When it also propagates to
+further subkeys, the child receives two ACEs:
+
+- An effective copy with the child's owner/group substituted and generic
+  rights mapped to registry rights. It has `INHERITED_ACE` and no propagation
+  flags.
+- An inherit-only copy retaining the original SID and generic mask, with
+  `INHERITED_ACE` and its propagation flags. This copy resolves afresh when
+  the next subkey is created.
+
+This applies to both DACL and SACL entries. An ordinary concrete ACE remains
+one copy. `NO_PROPAGATE_INHERIT_ACE` ends the rule at the immediate child,
+so it receives only the effective copy. Existing stored descriptors are not
+rewritten by upgrading the kernel; an explicit propagation operation is
+needed to repair an already-created subtree.
 
 ## Hive roots
 
