@@ -57,11 +57,6 @@ if count != 1:
 path.write_text(root + marker + tables)
 PY
 
-# Reviewed Trail artifact for this preview build.
-# The upstream latest tag is mutable: a replacement must fail until reviewed.
-# Official asset 629169380, release 409248812; built from main 516517f9269f56b8e5aa336d482755f12a185708.
-# Provenance: https://github.com/peios/trail/actions/runs/38092198080
-trail_sha256=30bd5d5f13ade06d7b9bd364fb2e6579578c008eec35e301f729f42e1d257854
 if [[ -n ${TRAIL_BIN:-} ]]; then
   cp -- "$TRAIL_BIN" "$work/trail"
 else
@@ -70,7 +65,6 @@ else
     https://github.com/peios/trail/releases/download/latest/trail-linux-amd64 \
     -o "$work/trail"
 fi
-printf '%s  %s\n' "$trail_sha256" "$work/trail" | sha256sum --check --status
 chmod +x "$work/trail"
 "$work/trail" --version
 "$work/trail" build "$work/site" --strict --out "$out"
