@@ -46,11 +46,18 @@ to the transaction because it is the connection that wrote them.
 is nothing uncommitted to see.
 [*txn.a-read-issued-before-binding-goes-to-the-read-pool]
 
-Because the connection has both the hive database and the volatile
-database attached, a single SQLite transaction spans both. Persistent and
-volatile mutations made inside one transaction commit together and roll
-back together, with no separate mechanism reconciling them.
-[*txn.persistent-and-volatile-mutations-commit-and-roll-back-together]
+One SQLite transaction spans both databases. A per-hive publication gate
+excludes readers while a commit publishes, so readers cannot observe one
+store before the commit and the other after it. Non-transactional mutations
+use the same gate for their whole operation. The gate is released between
+transaction requests, allowing ordinary readers to see committed data while
+a write transaction remains open.
+[*txn.publication-is-coordinated-across-both-stores]
+
+SQLite WAL does not provide crash-atomic commit across attached database
+files. After a crash, the persistent hive is recovered by SQLite and the
+volatile store is discarded, never replayed (§3.3).
+[*txn.crash-recovery-never-replays-the-volatile-side]
 
 An operation whose GUID belongs to a different hive than the transaction
 is bound to is rejected with `RSI_STORAGE_ERROR`.
@@ -71,11 +78,11 @@ same transaction id reuses the connection and observes the same point in
 time.
 [*txn.every-read-in-a-read-only-transaction-observes-the-same-snapshot]
 
-The snapshot is exact for persistent data.
-[*txn.the-snapshot-is-exact-for-persistent-data] Volatile data has no
-snapshot mechanism: a volatile read inside a read-only transaction
-observes the live store.
-[*txn.a-volatile-read-inside-a-read-only-transaction-sees-the-live-store]
+Before the first request proceeds, loregd reads both schemas while holding
+the hive gate, pinning both WAL snapshots at the same published state.
+Later reads, including the first access to a volatile key, retain that
+state. The snapshot does not block volatile writes.
+[*txn.the-snapshot-covers-both-persistent-and-volatile-data]
 
 A mutating operation carrying a read-only transaction id is rejected with
 `RSI_INVALID` before any state changes.
@@ -105,10 +112,19 @@ any snapshot, runs the transaction's abort hooks,
 always returns `RSI_OK` — including for a transaction id it has never
 seen.
 [*txn.abort-always-returns-rsi-ok-including-for-an-unknown-transaction-id]
-Rollback errors are logged and not reported. This is how the kernel
+A connection with an uncertain rollback is discarded rather than returned
+to the pool. This is how the kernel
 releases a read-only snapshot after a `REG_IOC_BACKUP` finishes or fails.
 
-A transaction that is neither committed nor aborted is never cleaned up:
-there is no timeout and no reaper.
-[*txn.an-uncommitted-transaction-is-never-reclaimed] It holds its hive's
-write connection until the process exits — see §4.4.
+LCS sends aborts when a client transaction expires or its last handle
+closes. loregd also rolls back every remaining transaction during shutdown.
+A renewable cleanup lease also reclaims state when an abort is lost. Its
+authority comes from the live kernel owner, for both read-write transactions
+and read-only snapshots; it is not an inactivity timeout (§4.4).
+[*txn.lcs-owns-transaction-expiry-and-shutdown-releases-remaining-transactions]
+
+If a request interrupts a bound SQLite transaction, loregd marks that ID
+failed. Reads, writes and commits on it return a storage error until LCS
+aborts it; it is never silently rebound. This handles SQLite's possible
+automatic rollback after interruption.
+[*txn.interrupted-transactions-require-abort]

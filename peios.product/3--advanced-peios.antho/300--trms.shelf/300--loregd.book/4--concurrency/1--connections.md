@@ -18,12 +18,11 @@ configuration (§2.1).
 
 ## One connection per handle [*conn.every-handle-is-limited-to-one-underlying-connection]
 
-Every one of these is a Go `database/sql` handle limited to a **single
-underlying connection**. That single limit is what serialises writes:
-there is no separate executor or lock arbitrating the write path, only
-the fact that the hive's write handle can hand out one connection at a
-time, so a second writer waits for the first to release it.
-[*conn.a-second-writer-to-a-hive-waits-for-the-write-connection]
+Each Go `database/sql` handle has one physical connection. The write
+handle is reserved by a bound read-write transaction. Other mutations
+return busy rather than waiting for that reservation; per-hive gates
+coordinate admission and publication (§4.4).
+[*conn.a-second-writer-declines-while-a-transaction-holds-the-write-connection]
 
 It also means the snapshot connections are genuinely separate handles
 rather than borrowed pool entries, which is what keeps a long-running
@@ -32,27 +31,18 @@ read-only transaction from consuming a pool slot.
 
 ## What every connection carries [*conn.connection-state-is-established-once-when-the-connection-is-opened]
 
-Connection state is established once, when the connection is opened
-(§2.2):
+Connection state is established on **every physical connection**, including
+one that replaces a connection discarded after cancellation:
 
-- `journal_mode=wal` on the hive database, verified after being set.
+- `journal_mode=wal` on both databases, verified after being set.
 - `foreign_keys=ON`.
-- `busy_timeout=25000` — 25 seconds (§4.4).
-- The volatile database attached as schema `volatile` (§3.3).
+- `busy_timeout=0` — SQL lock conflicts return busy immediately (§4.4).
+- The hive's tmpfs database attached as `volatile` (§3.3).
 
-The volatile database's own journal mode is `memory`, not WAL.
-[*conn.the-volatile-database-uses-journal-mode-memory-not-wal] The
-persistent side therefore has multi-version concurrency — readers see a
-consistent snapshot and do not block writers — and the volatile side does
-not.
-[*conn.persistent-readers-see-a-consistent-snapshot-and-do-not-block-writers]
-§4.4 covers what follows from that.
-
-The volatile *tables* are created only on the write connection.
-[*conn.volatile-tables-are-created-only-on-the-write-connection] Read and
-snapshot connections attach the same shared-cache URI and see the tables
-through it.
-[*conn.read-and-snapshot-connections-see-volatile-tables-through-the-shared-cache-uri]
+Both stores have private-cache WAL readers. The volatile tables are created
+on the write connection; other connections attach the same file. A read-only
+transaction pins a snapshot of both stores before a commit can publish.
+[*conn.both-stores-use-wal-and-snapshots-pin-both-together]
 
 ## Which connection an operation uses
 

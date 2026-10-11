@@ -57,7 +57,7 @@ Three consequences run through the whole design:
 ## What this manual covers
 
 The command line and startup sequence; the SQLite schema backing a hive
-and the in-memory store backing volatile keys; the connection model,
+and the tmpfs-backed store backing volatile keys; the connection model,
 write serialisation, and how requests are dispatched; and the handling of
 each RSI operation, including transactions and enumeration ordering.
 

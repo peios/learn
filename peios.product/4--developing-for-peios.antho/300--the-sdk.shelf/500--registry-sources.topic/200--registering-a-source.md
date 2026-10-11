@@ -48,6 +48,29 @@ Two things to get right:
 
 You can register several hives in one call by passing an array and a `count` greater than one; the kernel enforces its configured `MaxHivesPerSource` limit (`ENOSPC` if you exceed it).
 
+## Optional transaction lifetime control
+
+The kernel also supports lifetime extension version 1. A source using it opens
+`/dev/pkm_registry`, calls `REG_SRC_NEGOTIATE` with version 1 and zero flags,
+retains the returned session identifier, and then calls `REG_SRC_REGISTER`.
+The current `rsi_register` convenience function uses the legacy registration
+sequence; negotiate through the explicit device/ioctl sequence when adopting
+this extension.
+
+After reading each request, query `REG_SRC_REQUEST_CONTEXT` with its request id
+and the negotiated session. It returns the original request deadline and any
+transaction lifetime and cleanup-lease deadlines, all in `CLOCK_MONOTONIC`
+nanoseconds. Renew live transactions using `REG_SRC_RENEW`, independently of the
+normal request queue. Renewal cannot extend the transaction lifetime or revive
+an expired lease. Both read-write transactions and read-only snapshots use the
+same ownership rules. Serialize expiry cleanup with transaction operations and
+wait for an admitted commit's actual result before reclaiming its state.
+
+The data-frame layout is unchanged. Sources without negotiation retain the
+legacy protocol. Current loregd requires the extension and must be deployed
+with a kernel that implements it. The PKM TRM, §5.8.3, specifies the control
+ioctls and their error and lifetime rules.
+
 ## After registration
 
 The returned fd *is* your serve endpoint — you `read(2)` requests and `write(2)` responses on it directly (via the [request](~peios/sdk-rsi-request/rsi-request-h-decoding-requests) and [response](~peios/sdk-rsi-response/rsi-response-h-building-responses) helpers). Closing it deregisters the source and signals EOF to the kernel. Keep it open for the life of the source, and move on to the [serve loop](~peios/registry-sources/serving-requests).

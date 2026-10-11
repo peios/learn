@@ -1,88 +1,71 @@
 ---
 title: Waiting and Contention
-description: The busy timeout is set deliberately shorter than the kernel's request timeout — waiting for the write connection, and abandoned transactions.
+description: Bounded request waits, nonblocking transaction admission, and independent WAL readers.
 ---
 
-Every connection is opened with `busy_timeout` set to 25 seconds,
-deliberately shorter than the kernel's 30-second request timeout so that
-loregd can answer `RSI_TXN_BUSY` before the caller is timed out from
-above. [*contend.the-busy-timeout-is-shorter-than-the-kernels-request-timeout]
+## Request deadlines
 
-That bound governs one kind of waiting: contention for SQLite's own write
-lock on the hive database. Two other kinds arise, and neither is bounded
-by it. [*contend.the-busy-timeout-bounds-only-sqlite-write-lock-contention]
-loregd issues no database operation with a deadline attached.
-[*contend.no-database-operation-carries-a-deadline]
+Each RSI operation uses the absolute `CLOCK_MONOTONIC` deadline supplied by
+LCS through `REG_SRC_REQUEST_CONTEXT`. The budget includes kernel admission,
+queue time, connection-pool waits, publication-gate waits and SQL statements;
+receiving the request does not restart it. A contended wait that expires
+returns `RSI_TXN_BUSY`; successful operations retain their success status.
+SQLite's busy timeout is zero because its native busy wait can outlast a
+canceled Go context. Busy classification uses SQLite and Go error codes.
+[*contend.request-waits-have-a-bounded-context]
 
-## Waiting for the write connection
+The lifetime extension is negotiated before hive registration. loregd requires
+version 1 and fails startup on a kernel without it. The 25-second local budget
+is only a fallback for direct, unnegotiated test clients.
+[*contend.request-deadlines-come-from-the-negotiated-kernel-context]
 
-Each hive's write handle owns exactly one connection (§4.1). When a
-read-write transaction binds, it holds that connection until it commits or
-aborts, so any other write to the same hive waits — and it waits inside
-Go's connection pool, before SQLite is ever reached.
-[*contend.a-bound-transaction-holds-the-write-connection-until-it-commits-or-aborts]
-`busy_timeout` is not consulted, because there is no SQLite lock in
-contention; the second writer simply has no connection to run on.
-[*contend.a-second-writer-waits-in-the-connection-pool-unbounded-by-busy-timeout]
+## A transaction holding the writer
 
-`RSI_FLUSH` is the one operation that refuses to join this queue. It
-checks whether any transaction is bound to the hive and returns
-`RSI_TXN_BUSY` immediately if one is, because a checkpoint on a connection
-already held by a transaction would deadlock.
-[*contend.flush-returns-rsi-txn-busy-rather-than-queueing-behind-a-transaction]
-The check is racy — a transaction can bind between the check and the
-checkpoint. [*contend.the-flush-bound-transaction-check-is-racy] Note also
-that it does not distinguish a read-only snapshot, which lives on its own
-connection, from a write binding, so a flush during a backup returns
-`RSI_TXN_BUSY` even though the checkpoint could have proceeded.
-[*contend.flush-does-not-distinguish-a-read-only-snapshot-from-a-write-binding]
+A competing mutation returns `RSI_TXN_BUSY` immediately while a read-write
+transaction owns the hive's write connection. This includes non-transactional
+key drops, conditional value writes, flushes and layer deletion. Admission
+and binding are coordinated under the hive gate, so the check cannot race a
+new binding. A read-only snapshot is not counted as a writer.
+[*contend.competing-writes-decline-while-a-transaction-owns-the-writer]
 
-`RSI_DELETE_LAYER`, a non-transactional `RSI_DROP_KEY`, and the
-conditional-write path of a non-transactional `RSI_SET_VALUE` all take the
-write connection without that guard, and queue behind a bound transaction.
-[*contend.delete-layer-drop-key-and-conditional-set-value-queue-behind-a-bound-transaction]
+Both stores use WAL with private caches. Ordinary reads see committed data
+while a writer remains open; backup snapshots do not hold volatile table
+locks that block writers. A short per-hive gate excludes reads from commit
+publication and non-transactional mutations, not from an entire transaction's
+lifetime. Different hives have separate gates.
+[*contend.readers-and-backups-do-not-wait-for-open-write-transactions]
 
-## Waiting on the volatile store
+## Cancellation and cleanup
 
-The volatile database is in shared-cache mode with journal mode `memory`
-(§4.1). It therefore has no multi-version concurrency: readers and writers
-contend for table locks rather than passing each other.
-[*contend.the-volatile-store-has-no-multi-version-concurrency]
+Operations on the same transaction are serialized, including commit and
+abort. Rollback uses a fresh cleanup context, and an uncertain connection
+is discarded rather than returned to the pool with a live transaction.
+Every replacement physical connection receives its WAL, foreign-key and
+volatile-attachment setup again.
+[*contend.cancellation-does-not-return-live-transactions-to-the-pool]
 
-> [!IMPORTANT]
-> A transaction that has written any `volatile.*` table holds a write-table
-> lock on it for the transaction's whole lifetime.
-> [*contend.a-volatile-write-holds-a-table-lock-for-the-transactions-lifetime]
-> A volatile read on any other connection waits for that lock, and the wait
-> is not bounded by `busy_timeout`.
-> [*contend.a-volatile-read-waits-unbounded-for-a-volatile-write-lock]
->
-> This reaches **every** read operation, not only ones a caller thinks of
-> as volatile. All four read operations query `main` and `volatile` in one
-> `UNION ALL` statement (§5.1), and hive resolution probes
-> `volatile.keys` as well (§4.2). So while a transaction that has touched
-> volatile data is open, ordinary reads against the same hive block in
-> their serving goroutine rather than returning a status.
-> [*contend.an-open-volatile-writing-transaction-blocks-ordinary-reads-in-their-goroutine]
->
-> The relationship is symmetric. A read-only snapshot that has read a
-> volatile table holds a read-table lock for as long as the snapshot
-> lives, and volatile writes wait for it.
-> [*contend.a-read-only-snapshot-holds-a-volatile-read-table-lock-for-its-lifetime]
-> Read-only snapshots are what serve the kernel's `REG_IOC_BACKUP`, which
-> is expected to be long-lived.
+SQLite may automatically roll back an interrupted write. Such a bound
+transaction is marked failed and subsequent use returns a storage error;
+LCS must abort it. It is never silently rebound or allowed to autocommit.
+[*contend.interrupted-bound-transactions-cannot-silently-autocommit]
 
-Contention confined to the persistent side behaves as WAL promises: a
-transaction writing only the hive database does not block reads of it,
-[*contend.a-write-to-the-hive-database-does-not-block-reads-of-it] and a
-transaction writing only volatile tables does not block reads of the hive
-database.
-[*contend.a-volatile-only-write-does-not-block-reads-of-the-hive-database]
+LCS owns transaction lifetime. A live transaction file object (including all
+duplicated handles) or an in-kernel operation owns the shared kernel transaction
+record. A source can renew its five-second cleanup lease only while that owner
+and source session remain valid. SQL activity neither creates ownership nor
+extends a transaction's lifetime deadline. An internal operation may have no
+separate lifetime limit; its live operation scope is still required.
+[*contend.transaction-expiry-is-owned-by-lcs]
 
-## Abandoned transactions [*contend.nothing-reclaims-an-abandoned-transaction]
-
-Nothing reclaims a transaction that is never committed or aborted. There
-is no timeout, and no sweep at any point in the daemon's life. Such a
-transaction holds its hive's write connection — and, if it wrote volatile
-data, its volatile table locks — until the process exits.
-[*contend.an-abandoned-transaction-holds-its-connection-and-locks-until-the-process-exits]
+A separate control loop renews leases with three seconds or less remaining,
+checks expiration every 100 milliseconds, and reclaims expired transactions.
+Control ioctls consume no ordinary RSI request slots. Final owner release,
+abort, timeout or a lost source session prevents renewal even if an abort
+message cannot be delivered. Expired transactions reject new operations;
+late renewals cannot revive them. Cleanup serializes on the transaction's
+operation gate and waits for an already-admitted commit to resolve. A request
+timeout is not evidence that a commit failed. The request deadline gates
+commit admission; once admitted, SQL COMMIT runs without caller cancellation
+and its actual result is reported, including through normal late-response
+recovery. Shutdown drains requests and cleanup before closing databases.
+[*contend.leases-reclaim-abandoned-state-without-reviving-expired-transactions]
