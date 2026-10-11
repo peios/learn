@@ -107,13 +107,13 @@ and priority, and whether a name is a concrete package or a virtual
 capability. For upgrades, the installed version is the starting point; a
 plan with no update may reflect its constraints and available sources.
 
-> [!NOTE]
-> Existing descriptions differ on whether version or repository priority
-> wins first. The detailed [candidate-selection reference](~peios/peipkg/resolution/candidate-selection)
-> places architecture and source preferences before version, while earlier
-> operator guidance described highest version first. Inspect the actual plan;
-> this guide does not promise that the newest version across all repositories
-> will win. The reference keeps the ordered rules and virtual-version handling.
+Repository preferences apply before version within one package name. An
+architecture change from `x86_64` to `noarch` does not by itself keep a
+package on an older release: architecture only breaks a remaining version
+tie within that name. Between distinct providers of a capability, the
+primary architecture remains preferred. The detailed
+[candidate-selection reference](~peios/peipkg/resolution/candidate-selection)
+sets out the ordering and virtual-version handling.
 
 ## Resolution is a pure calculation
 
