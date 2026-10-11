@@ -1,7 +1,7 @@
 ---
 title: The trust store
 type: concept
-description: What a Peios machine trusts when it validates a certificate — Mozilla's roots as package data, additions and distrusts as registry decisions, composed by trustd and rendered to /etc/ssl.
+description: Inspect machine trust, find the guide for adding or distrusting a certificate authority, verify the effective result, and diagnose degraded trust-store health.
 related:
   - peios/trust/the-trust-command
   - peios/trust/adding-and-distrusting
@@ -9,9 +9,64 @@ related:
   - peios/registry-administration/regman
 ---
 
+Start with `trust status` to inspect the machine's trust store before changing it.
+
 Programs that use the machine's TLS trust get their certificate authorities
 from **trustd**, the trust store. A program with its own private trust store
 is separate; see [packages and private trust stores](~peios/trust/adding-and-distrusting#packages-may-offer-trust-never-take-it).
+
+## Choose your task
+
+| What you need to do | Start here |
+|---|---|
+| Check store health or inspect a certificate authority | [Seeing what is in force](#seeing-what-is-in-force), then the [trust command reference](~peios/trust/the-trust-command) |
+| Add or distrust a certificate authority | Check [who may change it](#who-may-change-it), then follow [Adding and distrusting certificates](~peios/trust/adding-and-distrusting) |
+| Check that a change took effect | [Verify the change](~peios/trust/adding-and-distrusting#verify-the-change); a recorded registry decision alone is not proof that consumers use it |
+| Investigate degraded health | [When the store is degraded](~peios/trust/adding-and-distrusting#when-the-store-is-degraded) |
+
+## Seeing what is in force
+
+Start with `trust status` to check the store's health and whether the
+compatibility files are enabled:
+
+```
+$ trust status
+generation   7
+health       ok
+roots        121 in force
+  shipped    121
+  added      0
+  distrusted 0
+compat       GenerateLinuxTrustFiles = 1
+  rendered   /system/retc/ssl/certs/ca-certificates.crt
+  rendered   /system/retc/ssl/cert.pem
+```
+
+`generation` increases every time the store changes, so a program holding
+a copy can tell whether it is current without fetching it again.
+`health` is `degraded` when composition or compatibility-file rendering
+failed — see
+[when the store is degraded](~peios/trust/adding-and-distrusting#when-the-store-is-degraded).
+
+Use `trust list` for the roots in force and `trust show <fingerprint>` for
+one root's full fingerprint, source and purposes. `trust list --distrusted`
+shows the registry's distrust decisions; it does not by itself prove that
+trustd has applied them. After a change, [verify the effective
+store](~peios/trust/adding-and-distrusting#verify-the-change).
+
+## Who may change it
+
+`Machine\System\Trust\Certificates` and its subkeys, like any registry
+key, are governed by their own security descriptor. By default SYSTEM and
+Administrators may write; everybody may read. That descriptor is the
+*only* gate: [`trust`](~peios/trust/the-trust-command) and `reg` write the
+same values through the same check, so there is no second permission model
+to keep in step with the first.
+
+Reading is open to everyone, because the root set is public — in the
+default configuration it is sitting in a world-readable file.
+
+## Where trust policy comes from
 
 trustd composes that set from two inputs and serves the result.
 
@@ -64,36 +119,6 @@ daemon's presence alone.
 > check against a key's descriptor rather than a question of who can write
 > to a directory.
 
-## Seeing what is in force
-
-Start with `trust status` to check the store's health and whether the
-compatibility files are enabled:
-
-```
-$ trust status
-generation   7
-health       ok
-roots        121 in force
-  shipped    121
-  added      0
-  distrusted 0
-compat       GenerateLinuxTrustFiles = 1
-  rendered   /system/retc/ssl/certs/ca-certificates.crt
-  rendered   /system/retc/ssl/cert.pem
-```
-
-`generation` increases every time the store changes, so a program holding
-a copy can tell whether it is current without fetching it again.
-`health` is `degraded` when composition or compatibility-file rendering
-failed — see
-[when the store is degraded](~peios/trust/adding-and-distrusting#when-the-store-is-degraded).
-
-Use `trust list` for the roots in force and `trust show <fingerprint>` for
-one root's full fingerprint, source and purposes. `trust list --distrusted`
-shows the registry's distrust decisions; it does not by itself prove that
-trustd has applied them. After a change, [verify the effective
-store](~peios/trust/adding-and-distrusting#verify-the-change).
-
 ## Composition is all or nothing
 
 If the shipped bundle cannot be read, yields implausibly few roots, or
@@ -116,18 +141,6 @@ A single bad *entry* is different. An addition that is not a certificate,
 is not a CA, or has expired is skipped with a warning and everything else
 proceeds — one administrator's typo does not take the machine's trust
 down.
-
-## Who may change it
-
-`Machine\System\Trust\Certificates` and its subkeys, like any registry
-key, are governed by their own security descriptor. By default SYSTEM and
-Administrators may write; everybody may read. That descriptor is the
-*only* gate: [`trust`](~peios/trust/the-trust-command) and `reg` write the
-same values through the same check, so there is no second permission model
-to keep in step with the first.
-
-Reading is open to everyone, because the root set is public — in the
-default configuration it is sitting in a world-readable file.
 
 ## What is recorded
 
