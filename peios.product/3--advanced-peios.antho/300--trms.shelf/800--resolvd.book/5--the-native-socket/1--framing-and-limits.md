@@ -134,5 +134,8 @@ After an error reply the connection is closed.
   then the MessagePack map — and written blocking, with a one-second
   timeout on each write call (§2.5). A failed write is logged as
   `control: reply failed: <error>`. The connection is then closed. [*native-framing.reply-written-then-closed]
-- The size of a reply is not checked against the 65 536-byte ceiling
-  before it is written. [*native-framing.reply-size-not-checked]
+- An encoded reply payload may be at most 65 536 bytes, excluding its
+  four-byte length prefix. A larger reply is replaced by the error
+  `reply too large`; no partial answer is sent. This applies to every native
+  reply kind. Exactly 65 536 bytes is allowed.
+  [*native-framing.reply-size-not-checked]
