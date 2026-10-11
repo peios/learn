@@ -25,7 +25,7 @@ values in one place.
 | Classic UDP reply limit, no `OPT` | 512 bytes | §6.2 |
 | EDNS0 payload size advertised, upstream and stub | 1 232 bytes | §4.7, §6.2 |
 | Transaction timeout | 2 s | §4.6 |
-| Attempts per candidate | 3 | §4.6 |
+| Attempts per question (all candidates and transports) | 3 | §4.6 |
 | Demotion period | 30 s | §4.6 |
 | Upstream transactions in flight | 4 096 | §4.6 |
 | Upstream UDP read buffer | 4 096 bytes | §4.7 |
