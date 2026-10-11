@@ -69,6 +69,8 @@ That claim takes either of two forms, and UD watches for both: an up-to-dateness
 
 On detection the node latches. It re-mints its invocation, re-certifies its holdings into the new stream so nothing it wrote gets swallowed by dampening — with [persistence](~universal-directory/concepts/persistence), publishing the salvage as a live-store snapshot — suspends originating writes, and alarms. One clean pull then heals it.
 
+Detection does not increase the node's up-to-dateness claim for its old invocation. Its counter may already have advanced through writes or applied chunks after the restore, so the counter cannot prove which old records it holds. The completed healing pull supplies that coverage; this lets the original stream's records still arrive even when the restored node has reused their USNs.
+
 Detection is strongest at first contact, and first contact is why the protocol has **probes**: a zero-record hello carrying only status. Applying chunks consumes local USNs, and every consumed USN burns a unit of evidence margin, so a restored node probes every reachable peer *before* applying or originating anything.
 
 ## Watching it happen
