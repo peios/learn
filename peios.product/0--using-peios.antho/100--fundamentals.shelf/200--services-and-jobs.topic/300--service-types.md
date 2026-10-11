@@ -88,7 +88,7 @@ If a legacy binary insists on daemonising, the fix lives at the [packaging](~pek
 
 ## The sd_notify contract
 
-A Notify-readiness service signals readiness by sending `READY=1` over the [sd_notify](~peios/services-and-jobs/output-and-logging) protocol — a datagram to the socket named in the `NOTIFY_SOCKET` environment variable, which peinit sets for *every* service. `READY=1` is only the most visible message; the same channel carries watchdog keepalives (`WATCHDOG=1`), graceful-stop notice (`STOPPING=1`), timeout extensions (`EXTEND_TIMEOUT_USEC`), status strings (`STATUS=`), and the fd store. These are covered where they belong — readiness here, the rest in [Keeping services running](~peios/services-and-jobs/supervision) and [Controlling services](~peios/services-and-jobs/controlling-services).
+A Notify-readiness service signals readiness by sending `READY=1` over the sd_notify protocol — a datagram to the socket named in the `NOTIFY_SOCKET` environment variable, which peinit sets for *every* service. `READY=1` is only the most visible message; the same channel carries watchdog keepalives (`WATCHDOG=1`), graceful-stop notice (`STOPPING=1`), timeout extensions (`EXTEND_TIMEOUT_USEC`), status strings (`STATUS=`), and the fd store. These are covered where they belong — readiness here, the rest in [Keeping services running](~peios/services-and-jobs/supervision) and [Controlling services](~peios/services-and-jobs/controlling-services).
 
 Readiness is always **per start generation**. A `READY=1` left over from a previous incarnation of the process is never valid for the current start — peinit ties every notify message to the specific process it is currently supervising, verified by [pidfd](#no-forking-daemons).
 

@@ -98,7 +98,7 @@ A health check stuck in D-state is handled like any other stuck helper: its sub-
 
 ## The watchdog
 
-The watchdog inverts the health check: instead of peinit asking the service if it is alive, the service must periodically tell peinit. Set `WatchdogTimeout` (seconds; 0 disables) and the service must send `WATCHDOG=1` via [sd_notify](~peios/services-and-jobs/output-and-logging) at least that often. Miss the deadline and peinit treats it as a failure (cause `WatchdogTimeout`) and applies the restart policy.
+The watchdog inverts the health check: instead of peinit asking the service if it is alive, the service must periodically tell peinit. Set `WatchdogTimeout` (seconds; 0 disables) and the service must send `WATCHDOG=1` via [sd_notify](~peios/services-and-jobs/service-types#the-sd-notify-contract) at least that often. Miss the deadline and peinit treats it as a failure (cause `WatchdogTimeout`) and applies the restart policy.
 
 Like health checks, the watchdog is a **Simple**-only supervision mechanism. peinit arms the watchdog timer only once a Simple service becomes Active; on a [Oneshot](~peios/services-and-jobs/service-types) `WatchdogTimeout` is inert — no timer is started, and setting it changes nothing.
 
@@ -148,7 +148,7 @@ A few consequences worth holding onto:
 - **A runtime Critical crash does not enter Safe mode** — it follows the reboot path. Safe mode is only for boot-time *configuration* errors (a cycle or conflict involving a Critical service). The escalation between reboots, the boot-attempt counter, and Recovery mode are covered in [Boot and boot modes](~peios/services-and-jobs/boot-and-boot-modes).
 
 > [!WARNING]
-> A Critical service that fails the same way on every boot becomes a **reboot loop**, which the boot-attempt counter is designed to break by escalating to Recovery mode after a few attempts. If you see a machine rebooting repeatedly, a crashing Critical service is the first suspect. See [Troubleshooting peinit](~peios/services-and-jobs/troubleshooting).
+> A Critical service that exhausts its restart budget on every boot can cause a **reboot loop**. The [boot-attempt counter](~peios/services-and-jobs/boot-and-boot-modes#the-boot-attempt-counter) can escalate repeated unconfirmed boots to Recovery, provided peinit reaches and persists its increment. A confirmed boot resets the counter, so repeated failures after confirmation may never reach the Recovery threshold. See [Troubleshooting peinit](~peios/services-and-jobs/troubleshooting).
 
 ## Where to start
 
