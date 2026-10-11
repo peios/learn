@@ -12,6 +12,9 @@ date formatting; it does not select a console keyboard layout or font,
 which [console keyboards and fonts](~peios/console-tools/keyboard-and-fonts)
 cover.
 
+To choose a 12- or 24-hour display for your own top-bar clock, use
+[Desktop Settings' Time Format](~peios/desktop-settings/wallpaper-clock-and-dock#clock).
+
 Regional locales are precompiled in optional `org.gnu.glibc-langpack-*`
 packages. For example, install `org.gnu.glibc-langpack-en` for British
 English or `org.gnu.glibc-langpack-de` for German. Installing a pack does

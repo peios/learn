@@ -24,8 +24,17 @@ part of the initramfs tool set.
 | Create ZIP archives | `zip` | `net.sourceforge.infozip.zip` |
 | Inspect and extract ZIP archives | `unzip`, `zipinfo` | `net.sourceforge.infozip.unzip` |
 
-Peiosutils supplies the other basic text commands, including `cat`, `head`,
-`tail`, `sort`, `uniq`, `cut`, `paste`, `join`, `tr` and `wc`.
+Peiosutils supplies the other basic text commands, including
+[`cat`](~peios/viewing-and-joining-text/cat),
+[`head`](~peios/viewing-and-joining-text/head),
+[`tail`](~peios/viewing-and-joining-text/tail),
+[`sort`](~peios/transforming-text/sort),
+[`uniq`](~peios/transforming-text/uniq),
+[`cut`](~peios/viewing-and-joining-text/cut),
+[`paste`](~peios/viewing-and-joining-text/paste),
+[`join`](~peios/viewing-and-joining-text/join),
+[`tr`](~peios/transforming-text/tr) and
+[`wc`](~peios/transforming-text/wc).
 
 ## Inspecting text
 
