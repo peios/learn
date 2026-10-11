@@ -60,12 +60,12 @@ big-endian length and that many bytes.
   error reply, has been written. [*stub-receive.tcp-one-query-per-connection]
 - A connection that closes, or fails to read, before its message is
   whole is closed without a reply.
-- A client that sends its query and then shuts down its writing side
-  gets no reply when the end of file is already waiting behind the
-  query: the read that finds the query also finds the end of file, and
-  the connection is closed without the query being checked. A query
-  whose end of file arrives after resolvd has read it is answered as
-  usual. [*stub-receive.tcp-query-then-half-close-dropped]
+- A client that sends a complete query and then shuts down its writing
+  side is still answered. This also applies when the read finds end of
+  file immediately after the buffered query. The connection closes
+  after its one reply. A partial frame followed by end of file is dropped
+  immediately, without waiting for the delivery timeout.
+  [*stub-receive.tcp-query-then-half-close-dropped]
 - A connection that has not delivered a whole message ten seconds after
   it was accepted is closed without a reply. [*stub-receive.tcp-ten-second-delivery-bound]
 - Once its query has arrived the ten-second bound no longer applies; the
