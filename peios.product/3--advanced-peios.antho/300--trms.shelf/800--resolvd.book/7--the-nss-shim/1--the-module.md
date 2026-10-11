@@ -71,8 +71,21 @@ timeout, which is reported as the table below shows.
 > [NSS buffer-retry fix](https://github.com/peios/resolvd/pull/1).
 > Check the installed module's source revision before relying on it.
 
-A found name with no address of the family asked is reported exactly as
-a name that does not exist.
+The missing-family row above describes
+[source `b4f7085`](https://github.com/peios/resolvd/blob/b4f70857729069952762f8e2a2b56357b15d4760/nss/src/lib.rs):
+a found name with no address of the family asked is reported exactly as
+a name that does not exist. This does not meet PSPU §6.10's requirement
+that `found` without an address of that family return `NO_DATA`.
+
+The [proposed source correction](https://github.com/peios/resolvd/blob/6d23bf920c60e3695781fc960e292a139d77b044/nss/src/lib.rs) preserves
+`NOTFOUND` and `ENOENT`, but sets `h_errno` to `NO_DATA` when a `found`
+reply has no usable address of the requested family. A `found` reverse
+reply with no `PTR` record has the same result. Explicit `notfound`
+still returns `HOST_NOT_FOUND`; `unavailable` and transport failures keep
+their distinct results in the table. This describes proposed source
+behavior, not a released package or an installed module. Check the
+installed module's source revision before relying on this distinction.
+[*nss-module.found-without-family-is-no-data]
 
 ### `AF_UNSPEC` [*nss-module.af-unspec-only-via-gethostbyname4]
 
