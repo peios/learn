@@ -56,10 +56,15 @@ half entirely: one input, one answer.
 | `sml` | **Speculation Mitigation Lock.** Speculation mitigations are locked on and cannot be disabled by the process. [*psb.sml.speculation-locked] |
 
 Mitigations are inherited from the parent at fork and can be set by
-syscall, typically by peinit between fork and exec. They are one-way:
+syscall. They are one-way:
 once set they are never cleared, and exec does not reset them — a
 mitigation set by the launcher persists regardless of which binary is
 loaded. [*psb.mitigations.one-way]
+
+Do not infer an additional service policy from peinit launch: the
+[source-checked peinit 0.0.12 path](~peios/boot-and-trust-establishment/peinit-pid-1#service-mitigation-limits)
+does not make a per-service PSB mitigation request. Inherited and self-applied
+flags are separate from that launcher behavior.
 
 Setting a bit is **activation-backed**. Before a mitigation bit moves
 from clear to set, KACS either activates the underlying protection for

@@ -1,158 +1,137 @@
 ---
 title: Applying and lifecycle
 type: concept
-description: Mitigations are set via kacs_set_psb — free on your own process, privileged on another — and persist one-way through fork and exec.
+description: Read committed mitigation state, distinguish requests from active protection, and understand the one-way lifecycle and activation failures.
 related:
   - peios/process-mitigations/overview
   - peios/process-mitigations/catalog
   - peios/process-integrity-protection/overview
   - peios/process-integrity-protection/the-two-check-rule
   - peios/tokens/overview
+  - peios/peiosutils/system-and-processes/logonse
+  - peios/sdk-processes/process-h
 ---
 
-Setting mitigations is a small kernel operation — call a syscall, pass a bitmask, the kernel sets the bits on the PSB. The complications are not in the call itself; they are in who can make the call, when in a process's life it can be made, and how the resulting state propagates through fork and exec.
+A requested mitigation mask is not evidence that the process is protected. Check the application's or launcher's result, then read the **committed mitigation state** of the process that is actually running. A service's intended policy, a flag's presence in the catalog, and a successful activation are different things.
 
-This page covers the operational mechanics: the `kacs_set_psb` syscall, the privilege rules for setting mitigations on another process, and the lifecycle of a mitigation flag from initial set through process exit.
+For an operator investigating hardening:
 
-## kacs_set_psb
+1. Identify the process and read it with `logonse psb --pid PID`, replacing `PID` with the target's process ID. With only `--pid`, this is a read-only inspection; see the [logonse reference](~peios/peiosutils/system-and-processes/logonse#logonse-psb).
+2. Record the reported mitigations and process GUID alongside the service's required policy and any application error. The GUID distinguishes a replacement process from an earlier process with the same PID.
+3. Compare the committed flags with the required set and the [activation limits](~peios/advanced-peios/peios-kernel/kacs/process-security-block/fields#process-mitigations-one-way). If a required flag is absent, or the report is refused or unavailable, do not treat the intended protection as verified.
+4. After an authorised launch or hardening change, check the result and read the same process again. Verify a new process separately after a restart; do not carry an old process's result forward.
 
-The kernel exposes one syscall for setting mitigations:
+This page explains the lifecycle and the limits of that evidence. Application code belongs in the [SDK hardening guide](~peios/sdk-access-control/hardening-a-process) and [`process.h` reference](~peios/sdk-processes/process-h); command syntax belongs in [logonse](~peios/peiosutils/system-and-processes/logonse). The Kernel TRM describes activation-backed behaviour and current implementation limits below. Use the documentation for the deployed release when checking support; this page does not establish when those implementation limits changed between releases.
 
-```
-kacs_set_psb(target_pidfd, flags)
-```
+## Requests and committed protection
 
-`target_pidfd` is a pidfd for the process whose PSB is to be modified. The caller's own process is acceptable; another process is also acceptable (subject to privilege rules below).
+`kacs_set_psb` is the kernel operation behind a mitigation request. It targets a process by pidfd and takes a mask of `KACS_MIT_*` flags. The [SDK reference](~peios/sdk-processes/process-h#setting-mitigations) documents the callable wrapper, including `-1` for the calling process; the [kernel ABI](~peios/advanced-peios/peios-kernel/kacs/kacs-abi#process-mitigation-bits) holds the complete numeric flag table and syscall declaration.
 
-`flags` is a bitmask combining the values from the catalog:
+A request is **additive and one-way**. It cannot clear an existing flag. Requesting an already-set flag or a subset of the committed set does not remove or weaken earlier protections. `CFI` is a legacy request alias for `CFIF | CFIB`; the alias itself is not retained in the committed bitfield. `UI_ACCESS` is reserved. `ALL` is the valid-bit mask, not a recommended policy or a promise that every defined flag can be activated.
 
-| Flag | Bit |
-|---|---|
-| WXP | 0x001 |
-| TLP | 0x002 |
-| LSV | 0x004 |
-| CFI (legacy alias) | 0x008 |
-| UI_ACCESS | 0x010 |
-| NO_CHILD | 0x020 |
-| CFIF | 0x040 |
-| CFIB | 0x080 |
-| PIE | 0x100 |
-| SML | 0x200 |
-| ALL | 0x3FF |
+The [Kernel TRM](~peios/advanced-peios/peios-kernel/kacs/process-security-block/fields#process-mitigations-one-way) specifies **activation-backed, all-or-nothing** application: before committing a new flag, the kernel activates its protection or verifies the required invariant. If any requested mitigation cannot be activated or verified, no bits from that request are changed. Bits committed by earlier successful requests remain set.
 
-The kernel ORs the flags into the target's existing mitigation bitfield. There is no "clear" — bits cannot be removed. Calling `kacs_set_psb` with a subset of currently-set bits leaves the previously-set bits intact; you can never use this call to disable a mitigation.
-
-The kernel rejects:
-
-- A pidfd pointing at a process the caller does not have authority to modify (see below).
-- Unknown flag bits (anything outside the defined set is `-EINVAL`).
-
-The kernel does **not** reject:
-
-- A call setting bits that are already set. The OR is idempotent.
-- A call setting `UI_ACCESS` (which is reserved). It sets the bit; the bit has no effect.
-- A call setting flags incompatible with the current binary's capabilities. Setting WXP on a process running a JIT is allowed; the JIT will fail the next time it tries to flip a page, but the `kacs_set_psb` call itself succeeds.
+Unknown bits and an invalid or unauthorised target can be refused. Valid bits can also be refused because of existing mappings, platform support, or the activation route. A request made by the process itself is subject to these checks too.
 
 ## Self versus another process
 
-The privilege required depends on whose PSB is being modified:
+**Self-application** needs neither `PROCESS_SET_INFORMATION` on another process nor PIP dominance over one. A thread can request hardening for its own process. This is permission to tighten its constraints, not an unconditional promise of success: activation and input validation still have to succeed.
 
-**Setting mitigations on your own process** requires no privilege. Any process can call `kacs_set_psb` with its own pidfd (or, more commonly, with no pidfd to mean "self"). The call always succeeds for self-targeted invocations, regardless of identity, integrity, or anything else.
+**Applying mitigations to another process** requires both:
 
-The reasoning: a process can only ever *tighten* its own constraints. There is no risk in letting a process restrict itself further. The model assumes that any code running in the process is, by definition, code the process has chosen to run; that code wanting to add a mitigation is fine.
+- `PROCESS_SET_INFORMATION` on the target's process security descriptor.
+- PIP dominance over the target, under the [two-check rule](~peios/process-integrity-protection/the-two-check-rule).
 
-**Setting mitigations on another process** requires:
+Satisfying both gates does not make every mitigation available remotely. The Kernel TRM documents `CFIB` activation as **self-only**: enabling it on a task other than the caller fails. It also documents `CFIF` activation against a live task as unconditionally returning `ENODEV`, because there is no userspace IBT/BTI control surface. A supervisor cannot overcome these activation limits merely by having authority over the target.
 
-- `PROCESS_SET_INFORMATION` on the target process — granted by the target's process SD.
-- PIP dominance over the target (per the [two-check rule](~peios/process-integrity-protection/the-two-check-rule)).
+For a launcher using this pattern, distinguish the parent's code **running in the freshly forked child** from a parent targeting another process's pidfd. Both are possible application contexts, but only the former is self-application. Do not infer that a requested service policy was applied from the launcher's identity alone.
 
-This is the standard cross-process operation pattern. The caller's PSB must dominate the target's, and the target's SD must grant the appropriate right to the caller. Both must be satisfied.
-
-In practice this means the only common caller for cross-process `kacs_set_psb` is **peinit** (when launching a service that needs mitigations applied at exec). peinit has TCB-level PIP and is granted `PROCESS_SET_INFORMATION` on the services it launches; it sets the desired mitigations on the child's PSB after fork and before exec.
-
-A self-applied mitigation does not require the caller to be the process itself in the strict sense — it just requires the pidfd to point at the caller's own process. A thread within a process can set mitigations on the process's PSB regardless of which thread does the call.
+In the [source-checked peinit 0.0.12 launch path](~peios/boot-and-trust-establishment/peinit-pid-1#service-mitigation-limits), no additional per-service mitigation mask is applied. This does not imply that a service has no mitigations: inherited flags and application self-hardening are separate. Verify the running service's committed state, including after the process is replaced; a generic launcher pattern is not evidence that peinit applies it.
 
 ## Where in the process lifecycle
 
-A mitigation can be set at any moment during a process's life. The kernel does not require it to happen at startup, before exec, or before any specific event. Practical patterns:
+A process can request additional mitigations during its life, but when it requests them changes what must be validated and what events they can constrain:
 
-- **At process creation, before exec.** peinit forks, calls `kacs_set_psb` on the child's pidfd, then execs the service binary. The mitigations are in place when the binary starts running. This is the standard.
-- **At the entry point of the binary.** The binary itself, immediately on startup, sets its desired mitigations on its own PSB. Suitable for binaries that are self-aware about their hardening posture.
-- **After early-stage initialisation.** A process that has work to do during early startup that needs to relax some constraints (loading executable libraries from non-approved paths, for example) waits until after that work is done, then sets the mitigation.
+- **After fork, before exec.** The launcher's code running in the child can request hardening before loading the service binary. The launcher must handle a failed request rather than assume the child is hardened.
+- **At the binary's entry point.** The program can request compatible protections early, before processing untrusted input, and check the result.
+- **After early-stage initialisation.** This works only if the protection can be activated over the state already present. Finishing incompatible work first does not exempt its remaining mappings from validation.
 
-A mitigation set late in a process's life closes off only future operations. Operations that have already happened — pages already mapped, libraries already loaded — are not retroactively checked. WXP set after the process has already mmap'd a writable-executable region does not unmap that region; it only refuses *future* such operations.
+The Kernel TRM specifically requires checks of **existing state** for runtime memory mitigations:
 
-This is sometimes a useful pattern: a process needs WXP-incompatible behaviour during startup (say, runtime code generation for initialisation) and then transitions to a steady state where WXP is appropriate. The pattern is "do the WXP-incompatible work first, then `kacs_set_psb(self, WXP)`". From that point forward, WXP is enforced.
+| Newly requested protection | Existing state that prevents activation |
+|---|---|
+| WXP | A writable-and-executable mapping, or another observable violation of the invariant. |
+| TLP | A file-backed executable mapping with a missing or unresolvable path, a path outside the approved cache, or another TLP denial. |
+| LSV | A file-backed executable mapping with missing, invalid, or insufficiently trusted signing material. |
+
+Anonymous executable mappings are governed by WXP; TLP and LSV apply to file-backed mappings. Architecture-backed CFIF, CFIB and SML must also be made effective for the target or the request fails closed. SML can instead be satisfied when the platform reports speculation as unconditionally not affected.
+
+Do not treat late WXP application as leaving an existing writable-executable region exempt, or late TLP/LSV application as approving libraries already loaded from disallowed paths or without acceptable signatures. The documented response is refusal of the request, not automatic repair of the process. A JIT or startup code generator needs compatibility review; there is no general “generate code first, then set WXP” recipe.
+
+Two restrictions are **event-gated**: PIE governs subsequent exec, and NO_CHILD governs subsequent process creation. Set them before the event they must constrain. Neither retrospectively changes the running binary or removes children that already exist.
 
 ## Fork: inheritance
 
-When a process forks, the child inherits the parent's mitigation flags exactly. Every bit set on the parent is set on the child. The child cannot un-set them at fork time; the one-way rule applies.
+At fork, the child inherits the parent's committed mitigation flags. It cannot remove them. It receives its own process GUID, so inspect the child as a distinct process instance.
 
-This is the natural extension of one-way: a process that has chosen to lock down its execution cannot give its children more authority than it has itself. If WXP is set, every child also has WXP. If `NO_CHILD` is set... well, the parent cannot fork in the first place, so the question does not arise.
+If WXP is set, it is inherited. If NO_CHILD is set, the process cannot fork a child in the first place. Creating a thread with `CLONE_THREAD` shares the process's PSB rather than copying it; the same committed mitigation state applies to threads in that process. See [PSB Lifecycle](~peios/advanced-peios/peios-kernel/kacs/process-security-block/lifecycle).
 
-Threads (CLONE_THREAD-style clones) share the parent's PSB rather than copying it. A new thread in the same process is bound by the same mitigations; setting a mitigation in one thread is visible to all threads immediately.
+## Exec: preserved flags and compatibility
 
-## Exec: preservation, with one wrinkle
+Exec replaces the binary and address space, but it does not provide an escape from committed mitigations:
 
-When a process execs, all of:
+- Exec normally keeps the primary identity token, but `NEW_PROCESS_MIN` can replace it with a lower-integrity copy when the executable has an explicit lower integrity label. Thread impersonation is reverted at exec. See [Token lifecycle](~peios/security-fundamentals/tokens/lifecycle#fork-exec-and-the-primary-token).
+- PIP fields are recomputed from the new binary's signature.
+- The process security descriptor is preserved by exec; explicit descriptor or primary-token changes have their own rules.
+- Mitigation flags and the process GUID are **preserved**.
 
-- The process identity (token) — preserved.
-- The PIP fields — re-computed from the new binary's signature.
-- The process SD — typically preserved, may be re-defaulted if the user identity changed.
-- The mitigation flags — **preserved**.
+The important exec-specific restriction is **PIE**. If PIE is set and the new binary is not position-independent, exec is refused with `EACCES`. Updating a service to a non-PIE build can therefore prevent its next start. Treat an emergency rebuild that lost PIE support as a compatibility failure to investigate, not a reason to assume the old policy has disappeared.
 
-The new binary runs with whatever mitigations were on the PSB before exec. There is no way for exec to relax mitigations.
-
-The one wrinkle: PIE.
-
-PIE is the mitigation that fires *at* exec, not at runtime. With PIE set, the kernel checks the new binary's ELF flags during exec; if the binary is not PIE-built, the exec fails with `-EACCES`. The process attempting the exec sees its `execve` return with an error and continues running its current binary.
-
-For other mitigations, the exec succeeds and the new binary inherits the mitigation. PIE is the one that can cause exec itself to fail.
-
-This means setting PIE before launching a service is a way of saying "this service binary must be PIE, or it cannot run". If the operator updates the service to a binary that is not PIE, the next exec attempt will fail and the service will not start. This is sometimes desired (a hard constraint that the binary be PIE); sometimes inconvenient (an emergency rebuild that lost the PIE flag).
+Preservation does not guarantee that another binary will start or work correctly under the remaining mitigations. A JIT or self-modifying program may need operations WXP refuses; executable library mappings may fail TLP or LSV checks. Do not diagnose every launch failure as PIE merely because it is the explicit exec-gated flag. Review the failing operation and the [catalog](~peios/process-mitigations/catalog).
 
 ## NO_CHILD and the lifecycle interaction
 
-`NO_CHILD` (bit 0x020) is also stored on the PSB and follows the same one-way rules as the other mitigations. Once set, the process cannot fork or clone-with-new-process.
+Once NO_CHILD is committed, the process cannot fork or clone a new process. A service that needs startup workers must create them before it successfully commits this restriction. Those existing workers have their own inherited state; applying NO_CHILD later to the parent does not retroactively apply it to them.
 
-The lifecycle interaction worth knowing: a process that wants to set up children and then lock itself down should do the forks *first*, then call `kacs_set_psb(self, NO_CHILD)`. After that call, the process cannot create more processes.
-
-If a process needs to be able to fork on demand (a server that handles each connection in a new process), `NO_CHILD` is not appropriate. The fork capability and `NO_CHILD` are mutually exclusive in steady state.
-
-A process with `NO_CHILD` set can still call `exec` (replacing itself with a new binary in the same process) and create threads via `CLONE_THREAD`. The mitigation specifically blocks the spawning of *new* processes.
+A server that forks on demand cannot use NO_CHILD during that phase. The flag still permits exec, which replaces the binary in the same process, and `CLONE_THREAD`, which adds a thread rather than a process. See the [NO_CHILD catalog entry](~peios/process-mitigations/catalog#no-child-forbid-fork-and-clone).
 
 ## Querying mitigations
 
-A process can read its own mitigation flags via the PSB query. The interface — typically through `kacs_open_self_token` and a query on the PSB — returns the current flag bitfield.
+Use the read-only `logonse psb --pid PID` form above, or the documented text surface `/proc/<pid>/psb`. A PSB report contains `pip_type`, `pip_trust`, the committed `mitigations` bitfield, and `process_guid`. It does not contain the process security descriptor or the token; those are separate inspection surfaces.
 
-For reading another process's flags, the same `PROCESS_QUERY_INFORMATION` + PIP dominance rules apply as for setting them. Typically only peinit or a debug tool would read another process's mitigation flags.
+A process can read its own PSB without an access check. Reading another process's PSB needs `PROCESS_QUERY_LIMITED` on its descriptor, **not PIP dominance**. The Kernel TRM also documents `SeDebugPrivilege` rescuing a descriptor denial; acquiring or enabling privileges is not a required diagnostic step. A refused report is incomplete evidence, not proof that the target has no mitigations.
 
-Note that the flags are independent of the PSB's other fields. Querying the mitigation flags does not reveal anything about the process's PIP level or its SD — those are separate queries. It *does* include `NO_CHILD`, which is bit `0x020` of the same bitfield.
+Readback shows what is committed, not the mask a caller merely requested. The CFI alias is not retained; NO_CHILD is part of the same bitfield and UI_ACCESS remains reserved. PIE in that report constrains subsequent exec; it does not prove that the already-running binary was checked at a prior exec. Likewise NO_CHILD does not establish that the process has never created children.
+
+For the format, access rules and software reader, see [Reading the PSB](~peios/advanced-peios/peios-kernel/kacs/process-security-block/fields#reading-the-psb) and [`process.h`](~peios/sdk-processes/process-h#reading-a-psb). Record the process GUID when comparing reports across restarts or correlating events, since PIDs can be reused.
 
 ## What happens at process exit
 
-A process's PSB is destroyed when the process exits. The mitigation flags vanish with it. There is no persistence; the next time the same binary is exec'd in a fresh process, the mitigations have to be re-applied.
+The process's PSB and its flags disappear at exit. A new process starts with what it inherits from its parent, plus whatever its launch path or its own code successfully adds. The binary's filename does not carry a saved mitigation policy.
 
-This is why launchers (peinit) apply mitigations on every launch. There is no cached "this binary always gets these mitigations" — every fresh process starts from the inherited PSB, which is whatever the launcher's PSB had plus whatever the launcher chose to add.
-
-The corollary: a process whose launcher does not apply mitigations runs without them, regardless of the binary's intent. A binary that wants to be hardened should also call `kacs_set_psb` at its own entry point so the mitigations are guaranteed regardless of who launched it. Defence in depth: both the launcher and the binary should set the mitigations they need.
+Launchers therefore need to handle the required policy on every launch, and a self-hardening binary needs to check its own requests regardless of who launched it. Neither arrangement guarantees success simply by making a request. If a required protection is unavailable, the launch or application must treat that as a hardening failure rather than continue under a false assumption. Recheck the replacement process instead of reusing the old process's report.
 
 ## Errors
 
-`kacs_set_psb` can fail with:
+Keep the application's exact error and target context. Distinguish input and authority failures from activation failures; a valid request by an authorised caller can still fail.
 
-| Error | Cause |
+| Error reported for a request | What to investigate |
 |---|---|
-| `-EBADF` | Invalid pidfd. |
-| `-ESRCH` | The target process has exited. |
-| `-EACCES` | The caller does not have `PROCESS_SET_INFORMATION` on the target. |
-| `-EPERM` | The caller does not PIP-dominate the target (when modifying another process). |
-| `-EINVAL` | Unknown flag bits in `flags`. |
+| `EBADF` | Invalid pidfd. |
+| `ESRCH` | The target process has exited. |
+| `EACCES` | A denied `PROCESS_SET_INFORMATION` check when targeting another process; inspect the reported failure rather than assuming all denials have this cause. |
+| `EPERM` | Missing PIP dominance when targeting another process. |
+| `EINVAL` | Unknown flag bits in the requested mask. |
+| `ENODEV` | The Kernel TRM specifies this unconditionally for CFIF activation against a live task. |
 
-In normal operation, the call succeeds. Failures are typically programming errors (wrong pidfd) or insufficient authority (a low-trust caller trying to modify a high-trust target).
+This is not an exhaustive activation-error catalog. Existing mapping incompatibilities, unavailable architecture support and CFIB's self-only restriction must also be considered. The [SDK reference](~peios/sdk-processes/process-h#setting-mitigations) returns `-1` with `errno`; raw kernel errors use the negative error form.
+
+Under the documented all-or-nothing rule, a failed request commits none of that request's bits. Earlier successful commitments remain. Preserve the failure evidence, check the target's committed state, and review the required policy and supported launch path before trying a different request. Do not silently drop a required mitigation or use ALL as a recovery step.
 
 ## Where to go next
 
-For what each flag actually enforces once set, read the [Catalog](~peios/process-mitigations/catalog).
-
-For the SD-plus-dominance rules that gate setting mitigations on another process, read [The two-check rule](~peios/process-integrity-protection/the-two-check-rule).
+- [Catalog](~peios/process-mitigations/catalog): what each flag protects and where support or compatibility limits matter.
+- [logonse](~peios/peiosutils/system-and-processes/logonse#logonse-psb): existing command reference for PSB inspection and requests.
+- [Hardening a process](~peios/sdk-access-control/hardening-a-process): application-side startup and failure handling.
+- [PSB Fields](~peios/advanced-peios/peios-kernel/kacs/process-security-block/fields): activation, current implementation limits and readback contract.
+- [The two-check rule](~peios/process-integrity-protection/the-two-check-rule): authority required for changes to another process.

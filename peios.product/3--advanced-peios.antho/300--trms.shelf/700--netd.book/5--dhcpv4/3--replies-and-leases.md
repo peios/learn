@@ -58,11 +58,23 @@ a first octet up to 127, /16 up to 191, /24 above.
 
 Classless static routes (option 121, RFC 3442) are read as a sequence of
 prefix length, the significant destination octets, and a 4-byte gateway.
-**A prefix length above 32, or an entry running past the end of the
-option, makes the whole ACK fail to read as a lease**: it is ignored like
+In [source `23af1f6`](https://github.com/peios/netd/blob/23af1f6b84f3764d9327eb009ced56b2a16b7aa8/dhcp4/src/packet.rs),
+a prefix length above 32, or an entry running past the end of the
+option, makes the whole ACK fail to read as a lease: it is ignored like
 any other unusable ACK.
 
-When classless routes are present, the router option (3) is ignored. The
+The [proposed source correction](https://github.com/peios/netd/blob/98f46343f6cdff62b1d9fcb886baf383c3943ac5/dhcp4/src/packet.rs) instead
+discards the entire malformed optional route list, including any valid
+entries before the malformed one, and keeps an otherwise-valid lease.
+The existing router-option (3) fallback then applies; without that
+option, the lease has no routes or gateway. This recovery does not relax
+whole-message or option framing, the mandatory lease requirements above,
+or the client and server-identity checks. It describes the proposed
+source policy, not a released package or installed image, and does not
+assert an RFC requirement to recover malformed route lists.
+
+When the decoded classless route list is nonempty, the router option (3)
+is ignored. The
 lease's gateway is the first router of option 3, or, when classless
 routes are present, the gateway of the classless route with prefix 0.
 

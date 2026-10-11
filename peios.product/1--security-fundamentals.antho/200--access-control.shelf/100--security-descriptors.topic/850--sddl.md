@@ -351,14 +351,19 @@ Compatible Access, `S-1-5-32-554`, and resolves like any other BUILTIN group.
 
 ## Reading a descriptor
 
-`sd show` renders a descriptor for a person to read, not as SDDL, and its
+`sd show` normally renders its selected view for a person to read. Its
 rights column uses a shorthand of its own — a lone `f` is all file access
-(`0x001F01FF`), not the single bit `0xF`. When you want the descriptor as a
-string you can compare, store or feed back in, ask for it:
+(`0x001F01FF`), not the single bit `0xF`. To format the queried owner, group,
+DACL and integrity-label subset as SDDL:
 
 ```
 sd show --sddl /usr/bin/login
 ```
+
+The command does not query the full SACL. Formatting cannot recover audit
+ACEs or other components absent from the query: matching strings are not
+proof of full descriptor equality, and this output is not a complete backup
+to replay with `sd set`. See [`sd show` inspection limits](~peios/files-and-directories/sd#sd-show).
 
 ## Where to go next
 

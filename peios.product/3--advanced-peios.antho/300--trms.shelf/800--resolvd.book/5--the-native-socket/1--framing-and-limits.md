@@ -54,7 +54,9 @@ within the ceiling and the excess is bytes after the payload.
 
 ## Decoding
 
-The payload is a MessagePack map, decoded as follows:
+The payload is a MessagePack map. The following describes the decoder
+in resolvd 0.1.6 at source `b4f7085`, before the proposed source
+correction described below:
 
 - Every key is a string, and a key repeated in the request's top-level
   map is an error. Keys inside a skipped value are not checked for
@@ -86,10 +88,28 @@ The payload is a MessagePack map, decoded as follows:
 The map is read in order, and the first error met is the one reported.
 A missing field is looked for only after the whole map has been read.
 
+### Proposed unknown-field correction [*native-framing.proposed-unknown-field-correction]
+
+The proposed source correction makes `libresolv` skip floating-point
+values, fixed and variable-length extension values (including their
+type byte), and the entire unsigned 64-bit range in unknown fields.
+This applies to requests and replies, including unknown `status`
+counter keys and values nested inside skipped arrays and maps. It does
+not change the 0.1.6 source behavior described above.
+
+Skipped strings must still be UTF-8, skipped containers retain the
+32-level nesting limit, and truncated values still fail. The reserved
+MessagePack marker `0xc1` still produces `unsupported value type`.
+Known fields retain their existing type and range checks; in particular,
+this does not extend the range accepted by a known integer field.
+
 ## Error replies
 
 Every error reply is `ok: false` with an `error` string and nothing
-else:
+else. The causes below describe the same source version before the
+proposed correction;
+after that change, unknown float, extension and large unsigned integer
+values no longer produce the two type errors:
 
 | `error` | Cause |
 |---|---|

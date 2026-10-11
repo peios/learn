@@ -7,8 +7,8 @@ related:
   - peios/networking/name-resolution
   - peios/linux-compatibility/credential-projection
   - peios/linux-compatibility/setuid-and-uid0
-  - peios/managing-local-principals/resolving-names
-  - peios/managing-local-principals/overview
+  - peios/authentication/resolving-names
+  - peios/authentication/principal-sources
 ---
 
 A Linux program calls `getpwuid` and has never heard of a token. Between that call and the authority sits one shared object:
@@ -25,7 +25,7 @@ On other systems `/etc/nsswitch.conf` decides where identity comes from. On Peio
 
 That is not tidiness. **A second search order the authority cannot see is a second answer to the question *who is `jack`***, and a program acting on one principal's behalf while its access is checked against another is a confused-deputy bug rather than a cosmetic inconsistency. The authority resolves a name across the principal sources it is configured to have, in a configured order, applying domain and numeric confinement — none of which `nsswitch.conf` can express, and all of which a line in it would bypass.
 
-It also closes an extension point Peios does not want. Naming a module in `nsswitch.conf` injects a shared object into **every address space on the system**. That is the in-process-plugin pattern this design rejects everywhere else it appears. Adding a source of identity to a Peios machine means [writing a principal source](~peios/managing-local-principals/overview) — a separate process the authority confines, which cannot mint.
+It also closes an extension point Peios does not want. Naming a module in `nsswitch.conf` injects a shared object into **every address space on the system**. That is the in-process-plugin pattern this design rejects everywhere else it appears. Adding a source of identity to a Peios machine means [writing a principal source](~peios/authentication/principal-sources) — a separate process the authority confines, which cannot mint.
 
 `hosts` is fixed the same way, for the same reason, to a different module: `libnss_peios_net.so.2`, which forwards to `resolvd`, the stub resolver. A `files dns` line would be a second resolver with none of resolvd's routing — and a second answer to *which address is `git.corp`*. There is no `/etc/hosts`; static names live in the registry and resolvd answers them at every door. See [name resolution](~peios/networking/name-resolution). `services`, `networks` and the rest are untouched.
 
@@ -94,7 +94,7 @@ The rendering is one-directional and lossy, and each loss is a property of `stru
 
 **No domain.** A `uid_t` is a number. Which source and which domain it came from is recoverable — the ranges are laid out so it is — but nothing in the record carries it.
 
-**Empty member lists.** `gr_mem` for `Everyone` is empty, because nothing records who is in `Everyone`; the authority adds it to every token it mints. Inventing a list of this machine's principals would be a wrong answer rather than a partial one. See [resolving names](~peios/managing-local-principals/resolving-names) for the three kinds of membership and which of them can be listed.
+**Empty member lists.** `gr_mem` for `Everyone` is empty, because nothing records who is in `Everyone`; the authority adds it to every token it mints. Inventing a list of this machine's principals would be a wrong answer rather than a partial one. See [resolving names](~peios/authentication/resolving-names) for the three kinds of membership and which of them can be listed.
 
 **Unnumbered groups are skipped.** `Interactive` and its siblings have no POSIX group id, because membership in them is a property of a session rather than of an account. They are omitted from a supplementary group list rather than rendered as `nobody`, which would grant whatever `nobody` can reach.
 

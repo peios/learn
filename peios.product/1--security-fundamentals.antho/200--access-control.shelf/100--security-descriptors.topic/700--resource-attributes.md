@@ -43,7 +43,7 @@ A resource attribute lives in a `SYSTEM_RESOURCE_ATTRIBUTE_ACE` (type `0x12`). T
 | SID | Always `S-1-1-0` (Everyone). |
 | ApplicationData | One claim entry: name, type, flags, value(s). |
 
-A single SACL can hold many resource attribute ACEs — one per attribute. The full ABI layout of the claim entry is in the [Wire formats reference](~peios/wire-formats-reference/overview).
+A single SACL can hold many resource attribute ACEs — one per attribute. The full ABI layout of the claim entry is in the [Wire formats reference](~peios/advanced-peios/wire-formats-reference/overview).
 
 Two structural notes:
 

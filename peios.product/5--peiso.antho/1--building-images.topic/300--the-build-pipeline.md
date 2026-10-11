@@ -6,8 +6,8 @@ related:
   - peios/peiso/building-images/overview
   - peios/peiso/reference/the-build-directory
   - peios/package-management/composing-a-root
-  - peios/boot-and-trust-establishment/mkirf
-  - peios/boot-and-trust-establishment/mkuki
+  - peios/boot-images/mkirf
+  - peios/boot-images/mkuki
 ---
 
 `peiso iso` runs seven stages. `peiso root` runs only the first. Each stage consumes what earlier ones produced, and everything lands in one build directory, `dist/peios-<edition>-<version>[-dwe]/` — [The build directory](~peios/peiso/reference/the-build-directory) lists its contents.
@@ -55,7 +55,7 @@ A seed the spec names that no package in the root ships is an error, not a warni
 
 ## 4. Pack the initramfs
 
-[`mkirf`](~peios/boot-and-trust-establishment/mkirf) packs `root/boot/initramfs/` into `root/system/boot/initramfs.cpio.zst` — inside the root, where an installed system keeps its own, so the squashfs carries it. Two subtrees are excluded: `var/state/peipkg` (the initramfs root's package database) and `lcl/conf/peipkg` (its repository configuration). Both belong to the real root.
+[`mkirf`](~peios/boot-images/mkirf) packs `root/boot/initramfs/` into `root/system/boot/initramfs.cpio.zst` — inside the root, where an installed system keeps its own, so the squashfs carries it. Two subtrees are excluded: `var/state/peipkg` (the initramfs root's package database) and `lcl/conf/peipkg` (its repository configuration). Both belong to the real root.
 
 mkirf is the copy in the root being built, run on the host under the root's own dynamic loader (`usr/lib/<triplet>/ld-linux-*.so.2 --library-path … --argv0 mkirf …/usr/bin/peiosutils`). No chroot, no privilege, and no second implementation of the tool the running system uses.
 
@@ -71,7 +71,7 @@ A recorded signature whose file is not in the root is an error: a stale record m
 
 ## 6. Build the UKI
 
-[`mkuki`](~peios/boot-and-trust-establishment/mkuki) — again the shipped copy, run the same way — bundles the kernel from `root/usr/lib/modules/<release>/`, the cpio from stage 4, and the command line `live-boot` ships (`root/usr/share/live-boot/cmdline`) into one EFI binary at `root/boot/efi/EFI/BOOT/BOOTX64.EFI`. It runs after the squashfs so the image does not carry the ESP tree.
+[`mkuki`](~peios/boot-images/mkuki) — again the shipped copy, run the same way — bundles the kernel from `root/usr/lib/modules/<release>/`, the cpio from stage 4, and the command line `live-boot` ships (`root/usr/share/live-boot/cmdline`) into one EFI binary at `root/boot/efi/EFI/BOOT/BOOTX64.EFI`. It runs after the squashfs so the image does not carry the ESP tree.
 
 That command line names no `console=`. As on any distribution, the kernel chooses: the display's virtual terminal on a machine that has one, the serial port otherwise, and `/dev/console` follows the choice, so the login prompt appears wherever the kernel put its messages. A boot that wants the serial line regardless says so at boot time through the UKI stub's SMBIOS channel, which is what the `dist/release` targets do.
 

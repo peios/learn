@@ -14,9 +14,11 @@ A **mitigation** is a per-process kernel-enforced hardening rule. Where the DACL
 
 Mitigations are stored on the process's PSB (Process Security Block) as a set of boolean flags. The PSB is the same per-process structure that holds the PIP fields and the process SD — covered in [Process integrity protection](~peios/process-integrity-protection/overview). Each mitigation has its own flag; each flag controls one specific kernel-enforced behaviour.
 
-The mitigation model is **one-way**: each flag can be turned on but never turned off. Once a process has enabled WXP (write-XOR-execute), it cannot disable WXP. The flag survives `exec`, so a child binary launched into a process that had enabled the mitigation inherits the constraint.
+The mitigation model is **one-way**: each flag can be turned on but never turned off. Once a process has enabled WXP (write-XOR-execute), it cannot disable WXP. The flag survives `exec`, so a replacement binary runs under the process's existing constraints. Children inherit committed flags at fork.
 
-This page covers the model — what mitigations are, how they fit in alongside the other access-control layers, what the one-way and exec-preservation rules mean, and who sets them.
+This page covers the model: what mitigations are, how they fit alongside access control, and why lifecycle boundaries matter. For an operational check, start with [Applying and lifecycle](~peios/process-mitigations/applying-and-lifecycle): inspect the running process, compare its committed flags with the required policy, and keep a failed request separate from verified protection.
+
+A flag in a catalog or launch configuration is not proof it is active. The [Kernel TRM](~peios/advanced-peios/peios-kernel/kacs/process-security-block/fields#process-mitigations-one-way) describes activation-backed, all-or-nothing application and current implementation limits. In particular, it documents CFIF as unavailable and CFIB activation as self-only. Check those limits before interpreting a requested hardening set.
 
 ## What mitigations protect against
 
@@ -31,7 +33,7 @@ The motivating scenario for most mitigations is the same: a process has a memory
 
 Each mitigation closes one or more of these doors. The mechanism is uniform: the kernel refuses the request that would enable the exploit, even though the syscall or memory operation looks legitimate. A process that has enabled WXP cannot mmap a writable-and-executable page; the kernel returns an error. A process with TLP enabled cannot mmap-as-executable a file outside the approved-paths cache; the kernel refuses.
 
-The result is not "the bug is fixed" — the bug is still there, and the exploit may still be able to corrupt memory. What changes is what the exploit can *do* with the corrupted memory. A successful exploit on a process without mitigations gives the attacker arbitrary code execution; the same exploit on a process with mitigations gives the attacker a crashed process (the kernel refused the operation and the process aborts).
+The result is not "the bug is fixed" — the bug is still there, and the exploit may still be able to corrupt memory. What changes is what the exploit can *do* with the corrupted memory. An exploit may be stopped at a refused operation or cause a process fault instead of achieving code execution. That is a defence against particular exploitation paths, not a guarantee that every exploit is stopped or that every refusal crashes the process.
 
 ## How mitigations differ from access control
 
@@ -43,12 +45,12 @@ The two layers solve different problems:
 | **Driven by** | Identity and policy (token, SD, privileges) | Hardening posture chosen at process startup |
 | **Granularity** | Per-object | Per-process |
 | **Adjustability** | Identity can adjust within rules (AdjustPrivileges) | One-way; only ever tightened |
-| **Who sets it** | authd (token), object owner / administrator (SD) | The launching process (typically peinit) or the process itself |
+| **Who sets it** | authd (token), object owner / administrator (SD) | The launching process or the process itself |
 | **Threat model** | Untrusted callers reaching trusted objects | Code-execution exploits in the process's own memory |
 
-A process can be subject to both layers simultaneously. A TCB daemon has restrictive access control (only TCB-level callers can interact with it) and a strict set of mitigations (WXP, LSV, TLP, CFI, PIE, SML). The two layers reinforce each other: access control keeps untrusted callers out, mitigations keep the process from being exploited even if untrusted input does reach it.
+A process can be subject to both layers simultaneously. A TCB daemon can have restrictive access control and a required hardening policy covering memory, libraries, control flow, address layout and speculation. Its actual mitigation set still depends on successful activation; neither its signing level nor the desired policy proves those flags are on. The two layers reinforce each other: access control keeps untrusted callers out, mitigations keep the process from being exploited even if untrusted input does reach it.
 
-A process can also be subject to one without the other. An unprotected user-mode binary has no PIP, an open DACL, and no mitigations — it depends on the access control of objects it touches but has no internal hardening. The opposite — strict mitigations with permissive access — is less common in practice but legal.
+PIP, the process descriptor and mitigations are independent dimensions. A process without PIP can still have a restrictive descriptor and committed mitigations. For example, exec of an unsigned binary can remove PIP while preserving the process descriptor and mitigation flags. Inspect each relevant surface rather than inferring an open DACL or absent hardening from the lack of PIP.
 
 ## The PSB storage and the one-way rule
 
@@ -68,11 +70,13 @@ The mitigations live in a small bitfield on the PSB:
 | SML | 0x200 |
 | ALL | 0x3FF |
 
-Each bit is independent. Setting a bit enables the mitigation; the bit can be set but never cleared. The kernel rejects any operation that would clear a previously-set bit.
+The table identifies the request bits, not a set that every platform can enable. CFI expands to CFIF and CFIB and is not stored as a separate active flag; UI_ACCESS is reserved; ALL is the accepted-request mask. The [ABI catalog](~peios/advanced-peios/peios-kernel/kacs/kacs-abi#process-mitigation-bits) is the numeric reference.
+
+Before committing a new mitigation, the kernel must activate or verify its protection. If any requested protection fails, the request changes no bits. Previously committed flags cannot be cleared or weakened; requesting only a subset does not remove the rest.
 
 The one-way rule is what makes mitigations trustworthy. A process that has WXP enabled cannot be tricked or coerced into disabling it. There is no syscall to clear a mitigation; there is no privilege that bypasses the rule. Once on, on for the lifetime of the process (and beyond — see below).
 
-The same applies to `NO_CHILD` — bit `0x020` in the same bitfield. Once set, the process can never fork or clone again. There is no way to undo it.
+The same applies to `NO_CHILD` — bit `0x020` in the same bitfield. Once set, the process cannot fork or clone a new process. Creating threads with `CLONE_THREAD` remains possible. There is no way to clear the restriction.
 
 ## Exec preservation
 
@@ -80,38 +84,40 @@ When a process execs a new binary, almost everything about the process resets. T
 
 This is the rule that makes the one-way model genuinely one-way. Without exec preservation, an attacker who could control what binary the process execs could trivially "unset" the mitigations by exec'ing a binary in a fresh address space — but the kernel does not give the attacker that escape. The flags travel with the process, not with the binary.
 
-The corollary: a binary that fundamentally cannot operate under a given mitigation (a JIT compiler under WXP, say) cannot be exec'd into a process that has that mitigation set. The exec will succeed (the kernel does not gate exec on mitigations), but the binary's first attempt to do the thing it needs (mmap PROT_EXEC of newly-written code) will fail with the appropriate error. The result is a process that runs the binary's startup code and then crashes when it tries to do its job.
+Preservation is not a promise that the new binary will work. PIE explicitly rejects a non-PIE binary at exec. Other constraints may reject operations the new program needs, such as a JIT attempting to make writable code executable under WXP, or a library load failing LSV or TLP. Check the actual failing operation rather than assuming exec always succeeds and only later operations can fail.
 
-Practical implication: deciding which mitigations to enable is a per-process decision made at startup, based on knowledge of what binary will run there. peinit knows that authd cannot tolerate WXP-incompatible operations because authd was compiled to be WXP-compatible. So peinit sets WXP on the authd process. A process launching arbitrary user binaries cannot make the same assumption; setting WXP on a user shell would break any JIT or self-modifying binary the user happened to run.
+Practical implication: choose the policy with knowledge of the program and its launch path. A service launcher can request the protections its service requires and check the result. A launcher of arbitrary user binaries cannot assume every program is compatible: applying WXP to a shell's process lineage can prevent JIT or self-modifying programs from working.
 
 ## Who sets mitigations
 
 Three patterns for setting mitigations:
 
-- **peinit, before exec.** When peinit launches a service, it forks, sets the desired mitigations on the child's PSB via `kacs_set_psb`, then execs the service binary. The service comes up with the mitigations already in place. This is the standard pattern for system services.
-- **The process itself, after startup.** A process can set mitigations on its own PSB. The typical pattern is "after the early-startup work (which may need to relax some constraints), set the mitigations and continue with the constrained code". Self-application of mitigations is a hardening best practice for binaries that have a clear startup-then-steady-state split.
-- **A privileged supervisor.** A process with `PROCESS_SET_INFORMATION` on the target and the appropriate PIP dominance can set mitigations on another process. Rare in practice — most mitigation-setting is either at exec time (peinit) or by the process itself.
+- **The launcher, before exec.** The launcher's code running in the newly forked child can request compatible mitigations before exec and check the result. This is the between-fork-and-exec pattern described by the Kernel TRM. It is self-application in the child, distinct from the parent modifying another task.
+- **The process itself, during startup.** A program can request protections for its own PSB, preferably before untrusted input. Late application must validate existing state; it cannot exempt incompatible startup mappings simply because they were created before the request.
+- **An authorised supervisor.** A caller with `PROCESS_SET_INFORMATION` and PIP dominance can request changes to another process. Authority does not bypass activation limits: the Kernel TRM documents CFIB as self-only and CFIF as unavailable.
 
-In all three cases, the call is `kacs_set_psb`. The full mechanics — what fields can be set, what fails, who needs what privilege — are in [Applying and lifecycle](~peios/process-mitigations/applying-and-lifecycle).
+These are application patterns, not evidence of the service launcher's behavior. The [source-checked peinit 0.0.12 launch path](~peios/boot-and-trust-establishment/peinit-pid-1#service-mitigation-limits) does not apply an additional per-service mitigation mask. Inherited or self-applied flags may still be present; inspect the running process rather than inferring protection from its launcher's identity.
+
+In each case, success must be checked and committed state verified. [Applying and lifecycle](~peios/process-mitigations/applying-and-lifecycle) explains that evidence; the existing [SDK reference](~peios/sdk-processes/process-h#setting-mitigations) holds the programming interface.
 
 ## What the kernel actually does when a mitigation fires
 
-Each mitigation has its own enforcement points. The pattern is the same: a syscall the process is about to make is checked against the relevant mitigation; if the operation would violate the mitigation, the kernel returns an error (typically `-EACCES` or `-EPERM`) rather than performing the operation.
+Each mitigation has its own enforcement points. Memory and process-operation checks can refuse a syscall with an error such as `EACCES` or `EPERM`. Architecture-backed protections operate through hardware and kernel support; a control-flow violation can fault rather than return a syscall error.
 
 The process can then handle the error. In most cases, encountering a mitigation-blocked operation is unexpected — the process did not anticipate it could happen — and the result is a crash. In some cases, the process handles the error gracefully by falling back to a different code path. The kernel does not decide which; it just refuses the operation.
 
-This is uniform across mitigations:
+The protections address different operations:
 
 - WXP refuses `mprotect` calls that would transition pages W→X.
 - LSV refuses `mmap(PROT_EXEC)` of unsigned or insufficiently-trusted files.
 - TLP refuses `mprotect(PROT_EXEC)` of pages backing files outside approved paths.
-- CFIF refuses indirect branches that land outside ENDBR (or equivalent) target instructions.
+- Forward CFI is intended to reject indirect branches outside designated targets such as ENDBR instructions. The Kernel TRM currently documents CFIF activation as unavailable; do not count it as active merely because it was requested.
 - PIE refuses exec of non-PIE binaries (this one fires at exec, not at runtime).
 
-Each is enforced by the kernel at the syscall layer. There is no userspace component. The process cannot bypass them by avoiding libc; the syscalls themselves carry the check.
+These protections depend on kernel enforcement and, where applicable, architecture support rather than cooperation from libc. Avoiding libc does not bypass kernel checks. A named protection still has to be supported and successfully committed before it can be relied on.
 
 ## Where to start
 
 If you want the catalog — what each individual mitigation does, when it fires, what kernel surfaces it covers — read [Catalog](~peios/process-mitigations/catalog).
 
-If you want the operational mechanics — `kacs_set_psb`, the right syscall and privilege requirements, the lifecycle of a mitigation flag from initial set through fork and exec — read [Applying and lifecycle](~peios/process-mitigations/applying-and-lifecycle).
+To inspect actual hardening, understand a refused request, or check what survives fork and exec, read [Applying and lifecycle](~peios/process-mitigations/applying-and-lifecycle). Use its links to the command, SDK and Kernel TRM references for the corresponding interfaces.

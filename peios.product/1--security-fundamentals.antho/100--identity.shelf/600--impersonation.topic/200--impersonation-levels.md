@@ -14,7 +14,7 @@ There is one rule worth pinning before the catalog: **the level is set by the cl
 
 ## The four levels
 
-The numeric values are also catalogued in [Other constants](~peios/constants-and-catalogs/other-constants).
+The numeric values are also catalogued in [Other constants](~peios/advanced-peios/constants-and-catalogs/other-constants).
 
 | Value | Name | What a server may do |
 |---|---|---|

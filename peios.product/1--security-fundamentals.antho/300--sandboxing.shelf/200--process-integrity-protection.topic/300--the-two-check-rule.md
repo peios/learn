@@ -86,7 +86,7 @@ Tools that need to debug TCB processes need a different mechanism — typically 
 
 A few other privileges are worth noting:
 
-- **`SeTcbPrivilege`** does not bypass PIP either. The privilege grants a lot — token creation, mount-policy administration, central-policy distribution — but it operates within the PIP boundary. A TCB caller (holding `SeTcbPrivilege`) is typically also a TCB-trust-level process anyway, so the dominance is satisfied by virtue of the binary, not the privilege.
+- **`SeTcbPrivilege`** does not bypass PIP either. The privilege grants a lot — token creation, mount-policy administration, central-policy distribution — but it operates within the PIP boundary. Mount-policy administration also accepts enabled `SeManageVolumePrivilege` at the [verified kernel revision](~peios/mount-policies/managing-mounts#check-policy-access). A TCB caller (holding `SeTcbPrivilege`) is typically also a TCB-trust-level process anyway, so the dominance is satisfied by virtue of the binary, not the privilege.
 - **`SeBackupPrivilege` and `SeRestorePrivilege`** do not bypass PIP. A backup tool granted access to read another process's memory via the SD check still needs to dominate PIP.
 - **`SeImpersonatePrivilege`** does not bypass PIP. Impersonation changes the effective token; it does not change the PSB. A high-trust client's impersonation token does not promote the impersonating server's PIP level.
 

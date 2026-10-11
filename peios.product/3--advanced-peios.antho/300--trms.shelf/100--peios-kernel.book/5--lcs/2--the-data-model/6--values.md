@@ -96,3 +96,21 @@ the separator.
 
 Value data is opaque bytes and is not subject to the UTF-8 validation
 that applies to every string in the interface. [*value.data.opaque-and-not-utf8-validated]
+
+## Tool value encodings
+
+`reg`, Registry Editor and the `peios` Rust crate use these representations:
+
+- `REG_SZ` and `REG_EXPAND_SZ`: UTF-8 ending in one null byte, rather than
+  Windows' UTF-16 representation.
+- `REG_LINK`: the absolute target path in UTF-8, with no null byte. Its
+  length determines its end; a target containing a null is not followed.
+- `REG_MULTI_SZ`: each string followed by a null byte, with one additional
+  null byte ending the list.
+- Integers: little-endian, except for `REG_DWORD_BIG_ENDIAN`.
+
+These are data conventions shared by tools. LCS still treats ordinary
+value payloads as opaque bytes; its special handling of a link key's
+`REG_LINK` default value is described in §5.2.4. For choosing and entering
+a type as an operator, see
+[Keys, values, and types](~peios/registry-concepts/keys-values-and-types).

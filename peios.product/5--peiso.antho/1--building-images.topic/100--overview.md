@@ -53,7 +53,7 @@ flowchart LR
     M --> O
 ```
 
-The root is composed by peipkg's compose library — the same code as [`peipkg-compose`](~peios/package-management/composing-a-root), driven in-process. The initramfs and the UKI are packed by [`mkirf`](~peios/boot-and-trust-establishment/mkirf) and [`mkuki`](~peios/boot-and-trust-establishment/mkuki), the applets *shipped inside the root*, so the tools that build the boot artifacts are the ones the running system carries. [The build pipeline](~peios/peiso/building-images/the-build-pipeline) walks every stage.
+The root is composed by peipkg's compose library — the same code as [`peipkg-compose`](~peios/package-management/composing-a-root), driven in-process. The initramfs and the UKI are packed by [`mkirf`](~peios/boot-images/mkirf) and [`mkuki`](~peios/boot-images/mkuki), the applets *shipped inside the root*, so the tools that build the boot artifacts are the ones the running system carries. [The build pipeline](~peios/peiso/building-images/the-build-pipeline) walks every stage.
 
 ## No privilege
 

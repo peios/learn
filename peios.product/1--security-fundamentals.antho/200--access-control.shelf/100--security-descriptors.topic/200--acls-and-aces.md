@@ -14,7 +14,7 @@ A DACL and a SACL are both **Access Control Lists** — sequences of **Access Co
 
 ## ACL structure
 
-An ACL is, conceptually, an ordered array of ACEs. The binary form is a short header — a revision byte, the total `AclSize`, and the `AceCount` — followed by the ACEs back-to-back; the byte-level layout is owned by the [Security descriptors wire format](~peios/wire-formats-reference/security-descriptors).
+An ACL is, conceptually, an ordered array of ACEs. The binary form is a short header — a revision byte, the total `AclSize`, and the `AceCount` — followed by the ACEs back-to-back; the byte-level layout is owned by the [Security descriptors wire format](~peios/advanced-peios/wire-formats-reference/security-descriptors).
 
 The maximum ACL size is 64 KB — the AclSize field is a 16-bit value. An ACL is self-delimiting: a parser walks exactly `AceCount` ACEs starting after the header and stops when it has consumed `AclSize` bytes.
 
@@ -28,11 +28,11 @@ Every ACE has a 4-byte header — a one-byte `AceType`, a one-byte `AceFlags`, a
 - **Object ACE body** — `Mask (4) | Flags (4) | optional ObjectType GUID (16) | optional InheritedObjectType GUID (16) | SID (variable)`. The flags field controls whether each GUID is present.
 - **Callback (conditional) body** — same as the corresponding non-callback type, plus a trailing ApplicationData block holding the conditional expression bytecode. See [Conditional ACEs](~peios/security-descriptors/conditional-aces).
 
-The detailed byte-level layouts live in the [Wire formats reference](~peios/wire-formats-reference/overview). For this page, what matters is that every ACE is self-describing — the parser reads the header, dispatches by type, and consumes exactly `AceSize` bytes.
+The detailed byte-level layouts live in the [Wire formats reference](~peios/advanced-peios/wire-formats-reference/overview). For this page, what matters is that every ACE is self-describing — the parser reads the header, dispatches by type, and consumes exactly `AceSize` bytes.
 
 ## The ACE type catalog
 
-There are twenty-one ACE types, split into three families: access-control, audit/alarm, and system-policy. Most SDs you will look at use only a small subset of these — typically `ACCESS_ALLOWED`, `ACCESS_DENIED`, `SYSTEM_AUDIT`, and `SYSTEM_MANDATORY_LABEL`. The numeric type values are catalogued in [ACE types and flags](~peios/constants-and-catalogs/ace-types-and-flags); the tables here describe what each type is for.
+There are twenty-one ACE types, split into three families: access-control, audit/alarm, and system-policy. Most SDs you will look at use only a small subset of these — typically `ACCESS_ALLOWED`, `ACCESS_DENIED`, `SYSTEM_AUDIT`, and `SYSTEM_MANDATORY_LABEL`. The numeric type values are catalogued in [ACE types and flags](~peios/advanced-peios/constants-and-catalogs/ace-types-and-flags); the tables here describe what each type is for.
 
 ### Access-control ACE family
 
@@ -84,7 +84,7 @@ These four are how the SACL extends the access decision beyond what the DACL alo
 
 ## ACE flags
 
-The `AceFlags` field is a bitmask. Most flags control inheritance — whether and how an ACE on a parent object propagates to children. Two flags control audit firing on SYSTEM_AUDIT and SYSTEM_ALARM ACEs. (Bit values: [ACE types and flags](~peios/constants-and-catalogs/ace-types-and-flags).)
+The `AceFlags` field is a bitmask. Most flags control inheritance — whether and how an ACE on a parent object propagates to children. Two flags control audit firing on SYSTEM_AUDIT and SYSTEM_ALARM ACEs. (Bit values: [ACE types and flags](~peios/advanced-peios/constants-and-catalogs/ace-types-and-flags).)
 
 | Flag | Effect |
 |---|---|
@@ -121,7 +121,7 @@ Every ACE that participates in the DACL walk, and every audit/alarm ACE, carries
 | Reserved | 26–27 | Must be zero. |
 | Generic rights | 28–31 | `GENERIC_ALL`, `GENERIC_EXECUTE`, `GENERIC_WRITE`, `GENERIC_READ`. Abstract — mapped to object-specific rights at evaluation time. |
 
-The numeric values for every right live in [Access mask bits](~peios/constants-and-catalogs/access-mask-bits); the mask's byte layout is in the [SD wire format](~peios/wire-formats-reference/security-descriptors). A few things worth noting about the layout:
+The numeric values for every right live in [Access mask bits](~peios/advanced-peios/constants-and-catalogs/access-mask-bits); the mask's byte layout is in the [SD wire format](~peios/advanced-peios/wire-formats-reference/security-descriptors). A few things worth noting about the layout:
 
 - **The same bit means different things on different object types.** Bit 0 is `FILE_READ_DATA` on a file but `KEY_QUERY_VALUE` on a registry key. The object-specific portion of the mask is reusable across types because the object manager knows what kind of object it is.
 - **Standard rights are uniform.** `DELETE` always means delete the object; `READ_CONTROL` always means read the SD; `WRITE_DAC` always means modify the DACL; `WRITE_OWNER` always means change the owner. These bits work identically regardless of object type.
@@ -137,7 +137,7 @@ When an access check sees a generic right in either an ACE mask or a requested m
 | Token | `TOKEN_QUERY \| READ_CONTROL` |
 | Process | `PROCESS_QUERY_INFORMATION \| PROCESS_VM_READ \| READ_CONTROL` |
 
-The full GenericMapping tables live in the [Constants and catalogs](~peios/constants-and-catalogs/overview) reference. The key idea for now is: generic rights let an ACE author say "give the read permission for this thing" without knowing exactly which bits "read" means for this object type. The access check fills in the concrete bits at evaluation time.
+The full GenericMapping tables live in the [Constants and catalogs](~peios/advanced-peios/constants-and-catalogs/overview) reference. The key idea for now is: generic rights let an ACE author say "give the read permission for this thing" without knowing exactly which bits "read" means for this object type. The access check fills in the concrete bits at evaluation time.
 
 This is also why an ACE that grants `GENERIC_READ` to a principal will produce different concrete grants depending on which object the ACE is on. The bit pattern in the ACE is the same; the meaning depends on where it lives.
 
@@ -149,12 +149,12 @@ This is also why an ACE that grants `GENERIC_READ` to a principal will produce d
 
 ## Sizes and limits
 
-The size limits (maximum SD size, maximum ACL size, and the rest) are catalogued in [Other constants](~peios/constants-and-catalogs/other-constants). A practical SD on a typical object is far below all of them — a few hundred bytes at most. The limits exist for the pathological cases.
+The size limits (maximum SD size, maximum ACL size, and the rest) are catalogued in [Other constants](~peios/advanced-peios/constants-and-catalogs/other-constants). A practical SD on a typical object is far below all of them — a few hundred bytes at most. The limits exist for the pathological cases.
 
 ## Where to go next
 
 For how the ACEs in a DACL actually decide "allowed" or "denied" — first-writer-wins, ordering, the null/empty distinction — read [DACL evaluation](~peios/security-descriptors/dacl-evaluation).
 
-For the full numeric catalog of ACE types, flags, and access-mask bits, see [ACE types and flags](~peios/constants-and-catalogs/ace-types-and-flags).
+For the full numeric catalog of ACE types, flags, and access-mask bits, see [ACE types and flags](~peios/advanced-peios/constants-and-catalogs/ace-types-and-flags).
 
-To read and edit ACLs from a shell, read [The sd command](~peios/security-descriptors/sd-command).
+To read and edit ACLs from a shell, read [The sd command](~peios/files-and-directories/sd).

@@ -192,4 +192,4 @@ The remaining well-known SIDs — service SIDs, capability SIDs, integrity label
 
 For the attributes a token carries beyond fixed identity — the other input to attribute-based access rules — read [Claims on a token](~peios/identity/claims).
 
-For the exact numeric values in machine-readable form, see the [Well-known SIDs](~peios/constants-and-catalogs/well-known-sids) reference.
+For the exact numeric values in machine-readable form, see the [Well-known SIDs](~peios/advanced-peios/constants-and-catalogs/well-known-sids) reference.

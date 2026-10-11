@@ -1,6 +1,6 @@
 ---
 title: Recovery Mode
-description: The last resort — no TCB guarantee, an administrator shell, offline registry access, and what remote recovery there is.
+description: The last resort — no TCB guarantee, an administrator shell, registry recovery limits, and console access.
 ---
 
 Recovery mode is the last resort. There is no TCB guarantee and no
@@ -91,21 +91,43 @@ Where recovery does start one, it uses the settings this boot parsed, so
 > There are no security protections beyond what the kernel provides. The
 > administrator has a SYSTEM shell and the corresponding responsibility.
 
-## Offline registry access
+## Registry diagnosis and recovery limits
 
-If registryd is what caused the recovery, the administrator needs tools
-that work without it. Three paths exist:
+Recovery provides a console maintenance shell when one is available as
+described above; it does not define an offline storage-repair interface
+for the registryd provider. Preserve the console failure reason
+and source startup output, then identify the deployed provider and version,
+its hive declarations, and the actual database paths. See
+[LCS and sources](~peios/registry-administration/lcs-and-sources).
 
-| Path | What it does |
-|---|---|
-| `loregd --inspector` | Reads the storage database directly, bypassing LCS, for diagnosis. |
-| `loregd --recover-from-backup` | Restores from the automatic backup taken on every registryd startup. |
-| `loregd --dangerously-clear-database` | Wipes the registry. Role definitions are the source of truth for service configuration, so a cleared registry is recoverable. |
+Entering Recovery does not establish that the source is stopped. As
+explained above, a registryd started or attempted earlier in the boot can
+remain active. The loregd [exit contract](~peios/loregd/startup/exit-and-shutdown)
+also permits a source to keep running after storage-operation failures.
+Do not launch a second source against the same hive files.
 
-These name loregd rather than registryd because in recovery the
-administrator is interacting with the storage implementation, not with
-the registry abstraction. It is the one context where that distinction
-is visible.
+The [source-checked loregd implementation](~peios/loregd/startup/command-line#unsupported-recovery-switches)
+takes one or more `HiveName=DatabasePath` declarations and rejects arguments
+without `=`. It has no offline inspection, backup-recovery or database-clearing
+switches and [does not create an automatic startup backup](~peios/loregd/startup/startup-sequence#backup-and-repair-limits).
+Startup WAL recovery and orphan cleanup are not backup restoration or a
+database-corruption repair facility. The linked references pin these findings
+to the implementation revision checked; identify the installed provider and
+revision before choosing a recovery procedure.
+
+Offline inspection, repair or database replacement therefore needs a
+procedure supported by the installed provider and version. Establish the
+source's state and verify the existence and coverage of a recovery copy
+before planning a replacement. This manual supplies no offline stop,
+repair or replacement sequence. Role definitions can re-supply service
+configuration; they do not constitute a backup of every registry value.
+
+The ordinary [Backup and restore](~peios/registry-administration/backup-and-restore)
+workflow is separate: LCS coordinates operations through a working source.
+[Backup](~peios/lcs/backup-and-restore/backup) requires a read-only snapshot
+transaction; [restore](~peios/lcs/backup-and-restore/restore) replaces a target
+subtree, including descriptors, in a read-write transaction. Neither is a
+way to repair a source that cannot serve those operations.
 
 > [!NOTE]
 > `/bin/recsh` exists so a system can ship a purpose-built recovery

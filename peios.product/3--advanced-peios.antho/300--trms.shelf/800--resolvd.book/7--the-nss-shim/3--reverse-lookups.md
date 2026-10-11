@@ -13,8 +13,15 @@ aliases and TTL 0.
 
 - Any other address is sent as a `reverse` (§4.9). A `found` reply with
   no records is `NOTFOUND` (§7.1). [*nss-reverse.found-without-records-is-notfound]
-- A reply whose records include no `PTR` record — only `CNAME`s, for
+- In [source `b4f7085`](https://github.com/peios/resolvd/blob/b4f70857729069952762f8e2a2b56357b15d4760/nss/src/lib.rs),
+  a reply whose records include no `PTR` record — only `CNAME`s, for
   instance — is `NOTFOUND` with `HOST_NOT_FOUND`. [*nss-reverse.no-ptr-record-is-notfound]
+
+The [proposed source correction](https://github.com/peios/resolvd/blob/6d23bf920c60e3695781fc960e292a139d77b044/nss/src/lib.rs) returns
+`NOTFOUND` / `ENOENT` / `NO_DATA` for a `found` reply with no records or
+no `PTR` record. Explicit `notfound` remains `HOST_NOT_FOUND`; this does
+not turn transient failures into negative answers. The source and
+installed-module qualification in §7.1 applies here too.
 
 ## The reverse `hostent` [*nss-reverse.hostent-layout]
 

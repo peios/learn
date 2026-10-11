@@ -15,8 +15,8 @@ half-written.
 
 ## What happens next
 
-The next install, upgrade, or uninstall acquires the lock, finds the
-pending transaction, and rolls it back: every displaced original renamed
+For an ordinary single-root transaction, the next install, upgrade, or
+uninstall acquires the lock, finds the pending transaction, and rolls it back: every displaced original renamed
 from its backup path back into place, every directory the transaction
 created removed, every staged file discarded, and the transaction
 cleared.
@@ -34,16 +34,19 @@ whenever it next runs.
 
 ## If the transaction spanned several roots
 
-Recovery rolls forward instead. A root found pending after a sibling
-committed is completed from the state its journal persisted, because a
-committed sibling cannot be undone.
+The [pinned cross-root recovery path](~peios/peipkg/transactions/crash-recovery#cross-root-the-exception)
+rolls pending participants back if none committed. If a sibling committed,
+it rolls pending participants forward from persisted completion data;
+missing or malformed data needed for completion causes refusal. Recovery
+can itself fail and must not be treated as a whole-system rollback.
 
-A pending root carrying no persisted state can be neither completed nor
-safely reversed, and recovery refuses it — blocking further work in that
-root until `peipkg recover` is run.
-
-A pending cross-root transaction found by an ordinary single-root
-operation is refused rather than recovered, for the same reason.
+A pending cross-root transaction found by an ordinary single-root operation
+is refused in isolation. Run `peipkg recover` explicitly from the original
+anchor with the named-root topology intact and every participant reachable.
+Its console wording is not proof of recovery direction, and roll-forward
+does not retry normal post-commit maintenance. Follow the
+[operator checks](~peios/package-management/transactions-and-recovery#across-more-than-one-root)
+before treating the system as ready.
 
 ## If peipkg was upgraded in between
 

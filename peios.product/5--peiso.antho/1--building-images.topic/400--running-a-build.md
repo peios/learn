@@ -1,7 +1,7 @@
 ---
 title: Running a build
 type: how-to
-description: The peiso commands, the Makefile that wraps them, booting and driving the result under QEMU, and the install test from a development medium.
+description: The peiso commands, the Makefile that wraps them, booting and driving the result under QEMU, and the legacy peios-install test from a development medium.
 related:
   - peios/peiso/building-images/quick-start
   - peios/peiso/reference/the-build-directory
@@ -34,7 +34,7 @@ There is no `--version`, `--edition` or `--dwe` flag. Everything that shapes an 
 | `make iso` | build peiso from the tree, then `peiso iso experimental.toml` |
 | `make iso-dev` | the same with the `dev.toml` layer: a low squashfs level, so the squash stage takes a fraction of the time and the image is somewhat larger — the edit-boot loop's target, never a release. It writes the same build directory as `iso`. |
 | `make iso-dwe` | the same from `experimental-dwe.toml` |
-| `make boot` | boot the newest plain build: UEFI, serial console (the Makefile appends `console=ttyS0` through the stub's SMBIOS channel; the image itself names none), atriumd forwarded to `localhost:8080` |
+| `make boot` | boot the newest plain build: UEFI, serial console (the Makefile appends `console=ttyS0` through the stub's SMBIOS channel; the image itself names none), GXWI available at `https://127.0.0.1:7780/` on the host |
 | `make boot-cd` | boot the newest plain build with the medium attached as an optical drive, the way a hypervisor attaches an ISO |
 | `make boot-dwe` | boot the newest DWE build with a vsock device (`DWE_CID`, default 3) |
 | `make boot-quiet` / `boot-break` | add `peios.quiet=2` / `rd.break` to the command line via SMBIOS |
@@ -44,6 +44,8 @@ There is no `--version`, `--edition` or `--dwe` flag. Everything that shapes an 
 | `make clean-disk` / `make clean` | start the install test over / remove every build directory |
 
 The build directory a target uses is the newest `../peios-experimental-<version>[-dwe]/`; only peiso knows a build's resolved version, so the Makefile looks rather than guesses.
+
+Before signing in to GXWI, follow the [Quick start's certificate check](~peios/peiso/building-images/quick-start#open-the-web-desktop).
 
 ## Driving the running system
 
@@ -57,9 +59,11 @@ The build directory a target uses is the newest `../peios-experimental-<version>
 
 It talks to the ordinary autologin session — an administrator, not SYSTEM. For anything that needs SYSTEM, use a DWE build and [`dwe exec`](~peios/dwe/driving-a-machine).
 
-## The install test
+## The legacy peios-install test
 
-An installation medium is only proven by installing from it and booting what it produced. That takes a development build, because the installer must open the raw disk and the console account cannot (PEI-549):
+An installation medium is only proven by installing from it and booting what it produced. The test below exercises the older **`peios-install` script** through DWE. For ordinary console or browser installation, follow [Install Peios on a PC](~peios/installing-peios/on-a-pc) and [Installing to disk](~peios/disks-and-filesystems/installing-to-disk): the current `installerd` daemon performs privileged disk operations as SYSTEM for its unprivileged surfaces and does not require this DWE test path.
+
+This legacy script test takes a development build because the script must open the raw disk and the console account cannot (PEI-549). DWE provides the SYSTEM session used below:
 
 ```sh
 make iso-dwe
@@ -72,7 +76,7 @@ then, from another terminal:
 DWE_TARGET=vsock:3 dwe exec -- peios-install --yes --whole-disk /dev/vdb
 ```
 
-The installer partitions and formats the disk, copies the live root, establishes trust in the medium repository on the target, replaces `live-boot` with `disk-boot` in both the root and its initramfs, writes a command line with the root filesystem's UUID, and rebuilds the target's initramfs and UKI. Then:
+The script partitions and formats the disk, copies the live root, establishes trust in the medium repository on the target, replaces `live-boot` with `disk-boot` in both the root and its initramfs, writes a command line with the root filesystem's UUID, and rebuilds the target's initramfs and UKI. Then:
 
 ```sh
 make boot-installed
@@ -81,7 +85,7 @@ make boot-installed
 boots the disk with nothing else attached. The initramfs hook is now `disk-boot`'s (`mount-root-disk.sh`); the login prompt on the serial console is the installed system. An installed system moves to the next release with [`upgrade-peios`](~peios/peiso/editions-and-upgrades/upgrading-peios).
 
 > [!NOTE]
-> A system installed from a DWE medium keeps `dwed` (PEI-550). Install from a plain medium once that path can be driven without SYSTEM.
+> A system installed by this test from a DWE medium keeps `dwed` (PEI-550). For this legacy script test, install from a plain medium once that path can be driven without SYSTEM. This is not a DWE requirement for ordinary `installerd` installation.
 
 ## Variants
 

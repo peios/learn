@@ -1,36 +1,45 @@
 ---
 title: Atomicity
-description: A transaction is the atomic unit of package work, with one durability boundary that everything commits across.
+description: Distinguish each root's package-database durability boundary from filesystem visibility and coordinated cross-root recovery.
 ---
 
-A transaction is the atomic unit of package work. Every install,
-upgrade, uninstall, grant, and revoke executes within one, even when it
-contains a single operation.
+Package transactions coordinate recorded package state and changes to files.
+That does not make all filesystem changes, every root's database, and
+post-commit maintenance one instantaneous switch.
 
-A transaction is atomic in the sense that either all of its operations
-succeed and become visible, or none of them visibly take effect. That
-holds under two kinds of failure:
+For the cross-root path reviewed in peipkg `8b588ae8`:
 
-- **Logical failure** — a step fails, an error is reported, or a
-  cancellation is requested.
-- **System failure** — power loss, kernel panic, hardware fault, at any
-  point.
+- Packages for all participants are fetched and verified before extraction.
+- Preparing roots persists recovery data and moves files into place. Those
+  files can become visible before a root's package-state commit.
+- Package state commits separately in each root. A commit failure can leave
+  some roots committed and others pending; already committed roots are not
+  undone by rolling back a sibling.
+- A preparation rollback can itself fail, leaving a pending journal and
+  files that must not be treated as restored.
 
-An **uncommitted** transaction is invisible to anything else on the
-system: the database does not show its operations, staged files have not
-replaced their targets, and no side effect has run. A transaction that
-completes its commit step is **committed**, and its operations are
-visible to everything afterwards.
+These boundaries follow the
+[coordinated execution sequence](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/install/execute.go#L230-L348),
+[preparation and per-root commit](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/install/execute.go#L554-L655),
+and [rollback-error handling](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/install/execute.go#L668-L724).
+Logical errors, power loss or other system faults therefore require checking
+the actual journal and files. The older blanket promises that uncommitted
+work is invisible and partial effects never occur do not describe this path.
 
 ## The single durability boundary
 
-Atomicity rests on one fact: the package database is a transactional
-store, and **the database's own commit is the transaction's durability
-boundary**. No separate commit protocol is layered on top of it.
+Within **one root**, updating package metadata and closing that root's
+journal transaction share a single database transaction. Its database commit
+is that root's durability boundary. It is not a global cross-root commit.
 
-A crash before that commit leaves the journal's transaction pending, and
-recovery rolls it back. A crash after it leaves the transaction
-committed, and recovery has only cleanup to finish.
+A pending cross-root journal does not by itself determine recovery direction:
+if none of the participants committed, recovery rolls pending work back;
+after a participant commits, recovery rolls pending siblings forward using
+persisted completion data. Missing data or another failure can prevent
+completion. See [Crash recovery](~peios/peipkg/transactions/crash-recovery#cross-root-the-exception).
 
-The transaction is never found partly committed, which is why recovery
-never has to complete a half-finished commit.
+The source qualification here does not verify every single-root failure
+path or the revision shipped in an installed image. Use the
+[operator recovery checks](~peios/package-management/transactions-and-recovery)
+and [visibility limits](~peios/peipkg/transactions/visibility) before treating
+a failed or interrupted operation as unchanged, restored or ready to use.

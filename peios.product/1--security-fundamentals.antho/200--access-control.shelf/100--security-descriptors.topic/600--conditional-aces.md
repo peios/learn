@@ -61,13 +61,13 @@ So an expression like `@User.Department == "Engineering"` refers to a claim on t
 
 Two of the namespaces are token-side (caller properties), one is object-side (resource properties), and one is per-call context. They cover the three "where can an attribute come from?" possibilities cleanly.
 
-User and device claims are covered on [Claims on a token](~peios/identity/claims). Resource attributes are covered on [Resource attributes](~peios/security-descriptors/resource-attributes). Local claims are passed by the caller; the API surface lives in the [Kernel ABI reference](~peios/kernel-abi-reference/overview).
+User and device claims are covered on [Claims on a token](~peios/identity/claims). Resource attributes are covered on [Resource attributes](~peios/security-descriptors/resource-attributes). Local claims are passed by the caller; the API surface lives in the [Kernel ABI reference](~peios/advanced-peios/kernel-abi-reference/overview).
 
 ## The expression language
 
 The expression bytecode is **postfix** (reverse Polish notation), evaluated by a stack machine. Literal tokens push values onto the stack; operator tokens pop operands, do their work, and push a result. The final stack must contain exactly one tri-state value, which is the expression's result.
 
-On the wire an expression is bytecode; the textual form, which [`sd --if`](~peios/security-descriptors/sd-command) accepts, looks like:
+On the wire an expression is bytecode; the textual form, which [`sd --if`](~peios/files-and-directories/sd) accepts, looks like:
 
 ```
 @User.Department == "Engineering"
@@ -92,7 +92,7 @@ The operators fall into four families:
 
 The membership operators reference SID sets — `Member_of({S-1-5-21-...})` evaluates TRUE if the caller's token has that SID in its groups. `Any_of` evaluates TRUE if any value in a multi-valued attribute appears in a literal set. `Contains` and `Exists` test for presence rather than equality.
 
-The full operator catalog with bytecode values lives in [Wire formats reference](~peios/wire-formats-reference/overview).
+The full operator catalog with bytecode values lives in [Wire formats reference](~peios/advanced-peios/wire-formats-reference/overview).
 
 ### Value types and comparisons
 

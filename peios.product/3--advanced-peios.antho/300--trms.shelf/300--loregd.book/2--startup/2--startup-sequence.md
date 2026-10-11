@@ -126,3 +126,26 @@ never private ones.
 
 Send readiness to `NOTIFY_SOCKET` if it is set (§2.1), install the
 termination signal handler (§2.3), and enter the request loop (§4.2).
+
+## Backup and repair limits
+
+The source-checked implementation at `3cb9768` (1 October 2026) does **not**
+create an automatic backup at startup. The [startup caller](https://github.com/peios/loregd/blob/3cb9768b0586ab6563f3b3c50623998624926a8d/main.go#L67-L106)
+opens each hive; [hive initialization](https://github.com/peios/loregd/blob/3cb9768b0586ab6563f3b3c50623998624926a8d/internal/hivedb/hivedb.go#L50-L109)
+prepares its database, schema, root, orphan cleanup and reader pool.
+The [orphan cleanup](https://github.com/peios/loregd/blob/3cb9768b0586ab6563f3b3c50623998624926a8d/internal/hivedb/hivedb.go#L320-L365)
+is a transaction deleting unreferenced persistent records, not backup
+restoration or a database-corruption repair facility.
+
+WAL recovery and [RSI_FLUSH checkpointing](https://github.com/peios/loregd/blob/3cb9768b0586ab6563f3b3c50623998624926a8d/internal/handler/txn_handlers.go#L117-L154)
+do not create a backup copy. Separately, loregd supports
+[read-only RSI snapshot transactions](https://github.com/peios/loregd/blob/3cb9768b0586ab6563f3b3c50623998624926a8d/internal/handler/txn.go#L201-L274)
+used by higher-level backup operations. A transaction snapshot is not an
+automatically saved startup backup. See the [LCS backup contract](~peios/lcs/backup-and-restore/backup)
+for that separate operation; this startup behavior does not establish an
+end-to-end offline repair or restore procedure.
+
+Verify the existence and coverage of a recovery copy rather than assuming
+startup made one. The [command-line limits](~peios/loregd/startup/command-line#unsupported-recovery-switches)
+also rule out the previously described loregd repair switches for this
+implementation.

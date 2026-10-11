@@ -64,10 +64,21 @@ Each record is a msgpack map [*eventd.the-record-fields]:
 | `is_error` | bool | True for stderr. |
 | `message` | string | The line. |
 | `timestamp` | uint | Nanoseconds, wall clock. |
-| `job_id` | bin | The job's 16-byte GUID. Omitted when absent. |
+| `job_id` | bin | The job's 16-byte GUID in PCDS binary layout. Omitted when absent. |
 
 The map has four or five entries depending on whether a job identifier
 applies. [*eventd.the-job-id-is-omitted-when-there-is-none]
+
+[PSPU §3.7](~peios/advanced-peios/pspu/observability-interfaces/log-records)
+requires [PCDS GUID layout](~peios/advanced-peios/pcds/guid/binary-format):
+Data1, Data2 and Data3 are little-endian; the final eight bytes (Data4)
+retain their byte order. The payload is still exactly 16 bytes.
+
+> [!NOTE]
+> [peinit 0.0.12 source](https://github.com/peios/peinit/blob/0e20fef16f3c170d8fba0e3a169b617e7b4da3aa/src/logging/msgpack.rs#L69-L82)
+> sends RFC-order UUID bytes instead. The PCDS layout above requires the
+> [log job-ID encoding fix](https://github.com/peios/peinit/pull/1); check the
+> installed peinit revision before relying on that encoding.
 
 ## Lossy delivery [*eventd.the-log-socket-is-a-non-blocking-datagram-socket]
 

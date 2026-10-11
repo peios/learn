@@ -180,7 +180,7 @@ This is one of the reasons creators usually pass **no** explicit DACL (relying o
 
 For ACEs whose effect is gated by an expression rather than fixed at write time, read [Conditional ACEs](~peios/security-descriptors/conditional-aces).
 
-To sweep a tree and propagate inheritable ACEs from a shell, read [The sd command](~peios/security-descriptors/sd-command).
+To sweep a tree and propagate inheritable ACEs from a shell, read [The sd command](~peios/files-and-directories/sd).
 
 ## Private state and data defaults
 

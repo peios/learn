@@ -172,4 +172,4 @@ A few patterns that bite first-time service authors:
 
 For what the impersonated identity is checked against once the server starts acting as the client, read [Security descriptors](~peios/security-descriptors/overview).
 
-To drive impersonation from a shell — impersonate a peer, revert, inspect the effective token — read [The token command](~peios/tokens/token-command).
+To drive impersonation from a shell — impersonate a peer, revert, inspect the effective token — read [The token command](~peios/system-and-processes/token).

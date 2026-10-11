@@ -18,7 +18,7 @@ daemon, its `dhcp4`, `dhcp6` and `ndp` state-machine crates, the
 | What a resolver does with the snapshots | PSPU book 6 and the resolvd manual |
 | The query-channel framing the control socket uses | PSPU book 3 |
 | How peinit holds a service until a readiness level is published | The peinit manual |
-| Every registry value netd reads or writes, one entry each | `regman Machine\System\Network` on a Peios machine |
+| Every registry value netd reads or writes, one entry each | `regman 'Machine\System\Network'` on a Peios machine |
 
 Where this manual and the network policy reference both mention a
 profile value, the reference owns the meaning and this manual owns what

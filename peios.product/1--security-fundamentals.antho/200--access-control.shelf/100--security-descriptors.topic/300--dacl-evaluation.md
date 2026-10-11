@@ -140,4 +140,4 @@ For the implicit rights the owner gets before the walk starts — and how to sup
 
 For the full pipeline the walk sits inside — MIC, PIP, privileges, narrowing layers — read [Access decisions](~peios/access-decisions/overview).
 
-To test what a DACL would grant from a shell, read [The sd command](~peios/security-descriptors/sd-command).
+To test what a DACL would grant from a shell, read [The sd command](~peios/files-and-directories/sd).

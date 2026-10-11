@@ -39,4 +39,4 @@ For the compatibility model that decides what survives and how, read [Linux comp
 
 For the native event pipeline that replaces process accounting, read [Events and transport](~peios/auditing/events-and-transport).
 
-For following that event stream from the command line, read [The event stream](~peios/inspecting/the-event-stream).
+For following that event stream from the command line, read [The event stream](~peios/security-diagnostics/the-event-stream).

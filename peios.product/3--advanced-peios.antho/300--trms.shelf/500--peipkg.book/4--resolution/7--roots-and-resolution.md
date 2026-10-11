@@ -20,13 +20,13 @@ operations are grouped by root.
 root. A dependency carrying a `root` field is placed in the depending
 package's root instead, and the field has no effect.
 
-`install` resolves cross-root. `upgrade`, `downgrade`, `uninstall`, and
-`undo` resolve single-root.
-
-The consequence is that a dependency declaring a root resolves into that
-root when the depending package is first installed, and is evaluated
-against — and if missing, installed into — the depending package's root
-on any later upgrade or removal.
+`install` resolves cross-root. Default `upgrade` also uses cross-root
+resolution in [peipkg `8b588ae8`](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/cli/lifecycle.go#L188-L223);
+`--no-recurse` confines upgrade resolution and execution to the current
+root. The [cross-root dependency chapter](~peios/peipkg/installation-roots/cross-root-dependencies#which-verbs-route)
+keeps that source-backed distinction separate from the earlier descriptions
+of `downgrade`, `uninstall`, and `undo`, whose paths are not verified by
+this upgrade correction.
 
 ## Top-level placement
 
@@ -37,7 +37,16 @@ by the depending package's root and the dependency's `root` field.
 
 ## Cascading across roots
 
-Upgrading a package that is installed in several roots produces one
-transaction per root. Those transactions are applied in sequence and
-continue past a failure: a root whose upgrade fails is reported, and the
-remaining roots are still attempted.
+Default upgrade resolves the current root and its reachable named roots
+into one plan, with one approval. A named package is considered in each
+reachable root where it is installed. If the plan changes multiple roots,
+the [coordinated executor](https://github.com/peios/peipkg/blob/8b588ae81ebe08a567843767f3c21d9c24675e49/internal/install/execute.go#L230-L348)
+verifies all packages, prepares the participants, then attempts commits
+root by root. Preparation failure attempts rollback; a commit failure can
+leave partially committed work needing recovery. These are not independent
+continue-on-error upgrade transactions.
+
+See [Named roots](~peios/package-management/named-roots#cascading-upgrade)
+for operator checks and the pinned source/release scope, and
+[transaction scope](~peios/peipkg/transactions/scope#cross-root-transactions)
+for the execution boundaries.

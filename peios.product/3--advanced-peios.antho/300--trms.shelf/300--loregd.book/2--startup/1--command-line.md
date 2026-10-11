@@ -47,6 +47,19 @@ on the command line is preserved and is what loregd presents to the
 kernel when it registers.
 [*cmdline.hive-name-comparison-is-case-insensitive-but-the-case-is-preserved]
 
+## Unsupported recovery switches
+
+In the source-checked implementation at `3cb9768` (1 October 2026),
+`--inspector`, `--recover-from-backup` and `--dangerously-clear-database`
+are not implemented switches. The [argument parser](https://github.com/peios/loregd/blob/3cb9768b0586ab6563f3b3c50623998624926a8d/internal/config/config.go#L18-L33)
+accepts hive declarations only; each of these spellings lacks `=` and is
+rejected as a malformed declaration. They are not offline inspection,
+restoration or clearing commands.
+
+See [startup backup and repair limits](~peios/loregd/startup/startup-sequence#backup-and-repair-limits)
+before treating startup recovery as a way to repair a database. Identify the
+installed provider and revision before choosing any recovery procedure.
+
 ## Configuration
 
 loregd has no configuration file and reads no configuration from the

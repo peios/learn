@@ -12,19 +12,21 @@ Every logon session carries a `logon_type` — a single number, set by authd at 
 
 There are seven types in v0.20.
 
+The SSH assignments below follow the current [PGSS SSH implementation contract](~peios/logon/ssh-public-key-authentication), whose release qualification is tracked by PEI-67. They do not establish the behavior of older builds; the contract's coordinated-rebuild requirements still apply.
+
 ## The seven types
 
-The numeric values are also catalogued in [Other constants](~peios/constants-and-catalogs/other-constants).
+The numeric values are also catalogued in [Other constants](~peios/advanced-peios/constants-and-catalogs/other-constants).
 
 | Value | Name | What it means |
 |---|---|---|
-| 2 | **Interactive** | The user signed in at the console, an SSH session, or some other interactive channel. The most common type for human users. |
+| 2 | **Interactive** | The user signed in at this machine's console or local desktop. |
 | 3 | **Network** | The user authenticated to access network resources without an interactive sign-in. Typical for SMB, RPC, federated services. |
 | 4 | **Batch** | A scheduled job. The principal is logged in to run a task at a specific time, not by a user actively present. |
 | 5 | **Service** | A service started under a specific principal. Used for the long-lived service-account model. |
 | 8 | **NetworkCleartext** | A network logon where the credential was transmitted in cleartext over the wire. The session is otherwise a Network session; the type distinction exists for audit. |
 | 9 | **NewCredentials** | A session created to use different credentials when reaching out to remote resources, while keeping the local identity unchanged. The local thread continues to act as its primary token; outbound network requests carry the alternative credentials. |
-| 10 | **RemoteInteractive** | The user signed in to a graphical desktop on this machine from somewhere else. Interactive in every sense that matters to an access check, but reached over a wire rather than at hardware this machine owns. |
+| 10 | **RemoteInteractive** | The user signed in to a remote desktop or over SSH, including commands without a PTY and SFTP. The session is reached remotely rather than at hardware this machine owns. |
 
 Values 1, 6, 7, and 11 onward are reserved and not used in v0.20.
 
@@ -32,9 +34,9 @@ Values 1, 6, 7, and 11 onward are reserved and not used in v0.20.
 
 ### Interactive
 
-The default for any sign-in where a human is at the keyboard. Console logins, SSH connections, terminal services, the lock-screen unlock — all Interactive.
+The type for local console and desktop sign-ins. SSH connections and remote desktop sessions use RemoteInteractive.
 
-You will see Interactive in audit logs whenever a real user begins a session. If your audit policy distinguishes "human did something" from "automation did something", the Interactive type is the marker for the human side.
+In audit logs, Interactive distinguishes a local interactive sign-in from a remote one. It is not a marker for all human activity: a person using SSH or a remote desktop has a RemoteInteractive session.
 
 ### Network
 
@@ -68,7 +70,7 @@ The pattern matters in environments where a user has local rights on one machine
 
 ### RemoteInteractive
 
-A desktop session driven from somewhere else — the user has a screen, a keyboard and a full graphical session, but none of the hardware is here.
+A remote desktop or SSH session. [Every SSH logon](~peios/signing-in/signing-in-over-ssh) uses this type, including commands without a PTY and SFTP; it does not become Network or Batch when no terminal is requested.
 
 GXWI requests this type when logging on through authd. The kernel and authd
 must both support value 10; an older authd refuses the request rather than
@@ -78,7 +80,7 @@ retains that session's original token and logon type.
 
 It is a separate type from Interactive rather than a flavour of it because the two differ in exactly one respect that an administrator may want to act on: whether the person is physically at the machine. Everything else about the session is the same, which is why a RemoteInteractive token carries the Interactive group SID as well as its own — see [Well-known principals](~peios/identity/well-known-principals) for what that pair lets you write.
 
-Rebooting from a RemoteInteractive session needs `SeRemoteShutdownPrivilege` on top of `SeShutdownPrivilege`, as it does from a Network, NetworkCleartext or NewCredentials session. The screen being remote is what counts, not the session being graphical.
+Rebooting from a RemoteInteractive session needs `SeRemoteShutdownPrivilege` on top of `SeShutdownPrivilege`, as it does from a Network, NetworkCleartext or NewCredentials session. The session being remote is what counts, not whether it is graphical.
 
 ## Where the type appears
 
@@ -106,4 +108,4 @@ For how a session is created, destroyed, and forcibly revoked, read [Session lif
 
 For the well-known group SIDs (`S-1-5-4` Interactive, `S-1-5-2` Network, and the rest) that authd derives from the logon type, read [Well-known principals](~peios/identity/well-known-principals).
 
-To see the logon type of each active session from a shell, read [The logonse command](~peios/logon-sessions/logonse-command).
+To see the logon type of each active session from a shell, read [The logonse command](~peios/system-and-processes/logonse).

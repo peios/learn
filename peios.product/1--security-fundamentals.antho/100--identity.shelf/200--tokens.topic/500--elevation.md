@@ -130,4 +130,4 @@ For the Limited token this happens naturally when the user logs out. For the Ful
 
 For the session object that holds the pair together — and what happens to the pair when it dies — read [Logon sessions](~peios/logon-sessions/overview).
 
-To inspect a token's elevation type and its partner from a shell, read [The token command](~peios/tokens/token-command).
+To inspect a token's elevation type and its partner from a shell, read [The token command](~peios/system-and-processes/token).

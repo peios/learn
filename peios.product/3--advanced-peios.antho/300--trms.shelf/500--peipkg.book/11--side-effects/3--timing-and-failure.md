@@ -15,8 +15,8 @@ unspecified order, which is safe because the recognised set is chosen so
 that order between them does not matter.
 
 Running once, at the end, is what keeps the system consistent during a
-multi-package install: the library cache is rebuilt after every
-package's libraries are in place, not after each package individually
+multi-package install: the man-page index is rebuilt after every
+package's pages are in place, not after each package individually
 against a partial state.
 
 ## Failure
@@ -34,7 +34,7 @@ declares it — reaches the correct state.
 
 > [!NOTE]
 > Rolling a committed transaction back because a cache rebuild exited
-> non-zero would be disproportionate. The three recognised tools are
+> non-zero would be disproportionate. The two recognised tools are
 > stable with few failure modes outside system-level corruption, and
 > every one of those failure modes is recoverable by running the tool
 > again.

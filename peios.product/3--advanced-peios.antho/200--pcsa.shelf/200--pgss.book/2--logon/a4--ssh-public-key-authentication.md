@@ -396,8 +396,7 @@ NoCredential account cannot log in through SSH. TCP, Unix-socket, agent,
 X11 and tunnel forwarding are disabled in this first port.
 
 The `sshd-service.reg` and `sshd-network.reg` vendor seeds are separate image
-opt-ins. The Experimental edition enables both and replaces its deprecated
-Atrium entry with this package. `make boot` in `dist/release` forwards
+opt-ins. The Experimental edition enables both. `make boot` in `dist/release` forwards
 localhost TCP 2222 to the guest's TCP 22. The service runs as SYSTEM with only SeChangeNotifyPrivilege,
 SeAssignPrimaryTokenPrivilege and SeTcbPrivilege. The network seed permits
 inbound TCP 22 and reserves that port for the sshd service SID. The network

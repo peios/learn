@@ -23,10 +23,19 @@ its own deadline.
 Every UDP transaction is an attempt; the TCP transaction that follows a
 truncated reply is not (§4.6).
 
-**Routable scope.** A scope that is up — at level `link` or better, in
+**Routable scope.** In [source `b4f7085`](https://github.com/peios/resolvd/blob/b4f70857729069952762f8e2a2b56357b15d4760/resolvd/src/engine.rs),
+a scope that is up — at level `link` or better, in
 the sense of PSPU §6.2 — and has at least one server. Only routable
 scopes take part in routing and contribute search domains (§4.3, §4.4);
 an up scope with no servers takes part in neither.
+
+The [proposed source correction](https://github.com/peios/resolvd/blob/f5190f8bd47ae74da73e0c1ffa405f86eb782acf/resolvd/src/engine.rs) separates
+being up from having DNS servers, as PSPU §6.2 requires. All up scopes
+participate in search expansion and routing steps 1–4, with step 1 still
+requiring `addressed` or better and the exclusive flag. Only the ordinary
+lowest-metric choice in step 5 requires servers (§4.4). This is proposed
+source behavior, not a released package or an installed resolver; check
+the installed source revision before relying on it.
 
 **Scope key.** The string that identifies a scope in the cache and in
 routing: the interface's `ifid` from netd, or `fallback` for the

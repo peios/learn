@@ -58,13 +58,34 @@ timeout, which is reported as the table below shows.
 | resolvd cannot be connected to | `UNAVAIL` | `ENOENT` | `NO_RECOVERY` [*nss-module.unreachable-is-unavail] |
 | An error reply, including `access denied` | `UNAVAIL` | `ENOENT` | `NO_RECOVERY` [*nss-module.error-reply-is-unavail] |
 | A reply of the wrong kind, a reply that does not decode, or any other I/O error | `UNAVAIL` | `ENOENT` | `NO_RECOVERY` [*nss-module.other-failures-are-unavail] |
-| The caller's buffer is too small | `TRYAGAIN` | `ERANGE` | `0` [*nss-module.small-buffer-is-erange] |
+| The caller's buffer is too small | `TRYAGAIN` | `ERANGE` | `NETDB_INTERNAL` (`-1`), required for retry; see version note below [*nss-module.small-buffer-is-erange] |
 | `gethostbyname3_r` or `2_r` with an `af` other than `AF_INET` or `AF_INET6` | `UNAVAIL` | `EAFNOSUPPORT` | `NO_DATA` [*nss-module.unsupported-family-forward] |
 | `gethostbyaddr2_r` or `_r` with an `af` and length other than `AF_INET`/4 or `AF_INET6`/16 | `UNAVAIL` | `EAFNOSUPPORT` | `NO_RECOVERY` [*nss-module.unsupported-family-reverse] |
 | A null name, a name that is not UTF-8, or a null address | `NOTFOUND` | `ENOENT` | `HOST_NOT_FOUND` [*nss-module.null-or-non-utf8-input-is-notfound] |
 
-A found name with no address of the family asked is reported exactly as
-a name that does not exist.
+> [!NOTE]
+> The buffer-exhaustion row specifies the glibc-compatible retry contract.
+> [resolvd 0.1.6 source](https://github.com/peios/resolvd/blob/9c96d693c9672e635cc40ee1e2ea8122e64f017e/nss/src/lib.rs)
+> instead sets `h_errno` to `0`; that implementation does not satisfy the
+> retry contract. The corrected behavior requires the
+> [NSS buffer-retry fix](https://github.com/peios/resolvd/pull/1).
+> Check the installed module's source revision before relying on it.
+
+The missing-family row above describes
+[source `b4f7085`](https://github.com/peios/resolvd/blob/b4f70857729069952762f8e2a2b56357b15d4760/nss/src/lib.rs):
+a found name with no address of the family asked is reported exactly as
+a name that does not exist. This does not meet PSPU §6.10's requirement
+that `found` without an address of that family return `NO_DATA`.
+
+The [proposed source correction](https://github.com/peios/resolvd/blob/6d23bf920c60e3695781fc960e292a139d77b044/nss/src/lib.rs) preserves
+`NOTFOUND` and `ENOENT`, but sets `h_errno` to `NO_DATA` when a `found`
+reply has no usable address of the requested family. A `found` reverse
+reply with no `PTR` record has the same result. Explicit `notfound`
+still returns `HOST_NOT_FOUND`; `unavailable` and transport failures keep
+their distinct results in the table. This describes proposed source
+behavior, not a released package or an installed module. Check the
+installed module's source revision before relying on this distinction.
+[*nss-module.found-without-family-is-no-data]
 
 ### `AF_UNSPEC` [*nss-module.af-unspec-only-via-gethostbyname4]
 

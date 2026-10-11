@@ -6,7 +6,7 @@ related:
   - peios/dwe/driving-a-machine
   - peios/dwe/protocol
   - peios/debugging-the-kernel/overview
-  - peios/access-decisions/debugging-a-denial
+  - peios/inspecting/debugging-a-denial
 ---
 
 **Developer Workflow Embeddings** are dedicated development paths built into core Peios software: the tools carry first-class support for developing against them, rather than being poked at from the outside by whatever a developer can improvise.

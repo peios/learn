@@ -38,7 +38,7 @@ SIDs and ACEs appear as **bin** (binary blob) values in the msgpack — the same
 
 Consumers are expected to **ignore unknown keys**. Future kernel versions may add fields to event records without changing the existing ones. A consumer that processes only the fields it knows about and ignores the rest will continue to work across kernel upgrades.
 
-The exact byte-level layout of the SIDs and ACEs is documented in [Wire formats reference](~peios/wire-formats-reference/overview); this page covers the logical structure.
+The exact byte-level layout of the SIDs and ACEs is documented in [Wire formats reference](~peios/advanced-peios/wire-formats-reference/overview); this page covers the logical structure.
 
 ## The subject
 
@@ -207,4 +207,4 @@ The model is built for performance and simplicity over absolute guarantees. For 
 - [Auditing](~peios/auditing/overview) — the model these events come from.
 - [Audit ACEs](~peios/auditing/audit-aces) — the SACL mechanisms behind access-check and handle-use events.
 - [Policy-forced auditing](~peios/auditing/policy-forced-auditing) — the token policy behind privilege-use and forced object-access events.
-- [Wire formats reference](~peios/wire-formats-reference/overview) — byte-level encoding of the SIDs and ACEs carried in events.
+- [Wire formats reference](~peios/advanced-peios/wire-formats-reference/overview) — byte-level encoding of the SIDs and ACEs carried in events.

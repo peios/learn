@@ -7,6 +7,11 @@ PSPU §6.7 gives the routing order. resolvd applies it to each candidate
 separately, when the candidate is first asked, and the candidate's
 retries stay with the scope it chose.
 
+The server-availability exclusions below describe
+[source `b4f7085`](https://github.com/peios/resolvd/blob/b4f70857729069952762f8e2a2b56357b15d4760/resolvd/src/engine.rs).
+They differ from PSPU's definition of up. The proposed correction is
+summarised after the historical exclusive-scope case.
+
 ## Which scopes take part [*engine-routing.only-routable-scopes-take-part]
 
 Only **routable scopes** (§1.3) take part: those that are up — at level
@@ -48,6 +53,32 @@ An exclusive scope at level `link`, or one with no servers, is not
 exclusive for routing, and routing continues with step 2. The first
 takes part in the later steps as an ordinary scope; the second, not
 being routable, in none of them.
+
+### Proposed serverless-scope correction [*engine-routing.serverless-scope-keeps-selection]
+
+The [proposed source correction](https://github.com/peios/resolvd/blob/f5190f8bd47ae74da73e0c1ffa405f86eb782acf/resolvd/src/engine.rs) treats
+level `link` or better as up, independently of DNS servers:
+
+- Steps 1–4 consider up scopes even when their server lists are empty.
+  Exclusive selection still requires `addressed` or better. Domain,
+  subnet, metric and snapshot-order rules are unchanged.
+- When one of those steps selects a scope without servers and upstream
+  work is needed, the candidate is `unavailable` without a query. It
+  does not fall through to another interface or the fallback scope.
+- Step 5 is reached only when earlier steps select no scope. This
+  ordinary lowest-metric choice still requires an up scope with servers.
+  A serverless default-route claimant therefore blocks step 5, while a
+  serverless scope that matches no earlier rule does not block it.
+- Fallback is considered only if no earlier step selects a scope and
+  no up scope has servers. A serverless winner at an earlier step blocks
+  fallback too.
+
+An exclusive scope at `link` alone still does not qualify for step 1;
+it can participate in later steps as an ordinary up scope. Synthetic
+answers and the selected scope's cache retain their existing precedence;
+this correction does not change cache invalidation or retry policy.
+These are proposed source semantics, not a released-package or
+installed-resolver guarantee. Check the installed source revision.
 
 ### Ties between search domains [*engine-routing.search-domain-tie-break]
 

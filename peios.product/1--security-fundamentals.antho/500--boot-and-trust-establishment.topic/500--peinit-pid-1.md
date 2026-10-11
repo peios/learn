@@ -74,6 +74,23 @@ For each service, the pattern is **fork-install-exec**:
 > [!NOTE]
 > Four jobs are sometimes attributed to peinit that it does not do. It does not populate the machine-wide TLP cache from the registry, and it does not apply per-service mitigation flags via `kacs_set_psb` between fork and exec. Mount-policy application (`kacs_set_mount_policy`) is likewise not a peinit responsibility, and neither is boot-time CAAP distribution — that one belongs to authd, and is currently deferred.
 
+#### Service mitigation limits
+
+In the source-checked peinit **0.0.12**, commit `0e20fef`, the
+[service-field catalog](https://github.com/peios/peinit/blob/0e20fef16f3c170d8fba0e3a169b617e7b4da3aa/src/registry/fields.rs#L153-L205)
+has no per-service mitigation-policy field. The [child dispatch](https://github.com/peios/peinit/blob/0e20fef16f3c170d8fba0e3a169b617e7b4da3aa/src/boundary/linux_launch/process.rs#L116-L141)
+and [child setup through exec](https://github.com/peios/peinit/blob/0e20fef16f3c170d8fba0e3a169b617e7b4da3aa/src/boundary/linux_launch/process/child.rs#L47-L193)
+install the prepared token, set up the working directory and file descriptors,
+and execute the service without an extra PSB mitigation request.
+
+This reviewed launch path therefore does **not** apply an additional
+per-service mitigation mask. It does not establish that the resulting process
+has no mitigations: inherited flags and application self-hardening are separate.
+[Inspect committed mitigations](~peios/process-mitigations/applying-and-lifecycle#querying-mitigations)
+on the actual process and re-check replacements. This source finding does not
+verify the deployed release, kernel activation behavior or a running service's
+committed state.
+
 ### Steady state
 
 After the graph is started, peinit transitions to its steady-state role: the lifecycle manager. It watches for service crashes (a child process dies; peinit receives SIGCHLD), restarts them per policy, handles shutdown signals (an administrator calling `shutdown`), and otherwise runs as a long-lived daemon.
@@ -90,7 +107,7 @@ The pattern is the most important thing peinit does, and it's worth pinning. The
 
 The reason for this order: the service's token needs to be in place before the service's startup code runs — the service should be able to assume from its first instruction that it's running as the right identity. exec comes last because that is the moment the new program takes over; by then the identity has been decided.
 
-The pattern is what every service is launched through. Variations are minor — the specific token differs per service — but the structural sequence is the same. (When per-service mitigations land in peinit — see the note above — they will slot in between install and exec, since mitigation flags must be on the PSB before the new binary runs.)
+The pattern is what every service is launched through. Variations are minor — the specific token differs per service — but the structural sequence is the same.
 
 ## What peinit does not do
 
@@ -111,4 +128,4 @@ If peinit cannot complete a startup step (a service won't launch, authd won't st
 - For a critical failure (authd won't start), boot fails. The system enters a recovery state — typically a console login as SYSTEM, with limited services running, enough for an administrator to diagnose and fix.
 - For a non-critical failure (a single service won't start), peinit logs the failure, leaves the service unstarted, and continues with the rest of boot.
 
-The failure-mode behaviour is configurable but conservative by default. peinit doesn't try to "work around" failures by relaxing security; if the configured set of mitigations can't be applied, the service doesn't start rather than starting unhardened.
+The failure-mode behaviour is configurable but conservative by default. Successful service launch is not evidence that peinit applied an additional mitigation policy: the [reviewed launch path](#service-mitigation-limits) has no such setting. Inspect the running process's committed protection instead.

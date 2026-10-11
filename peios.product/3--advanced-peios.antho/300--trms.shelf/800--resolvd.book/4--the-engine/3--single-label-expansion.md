@@ -18,6 +18,9 @@ builds and asks the list of candidates.
 
 ## The applicable domains
 
+The table and serverless exclusion below describe
+[source `b4f7085`](https://github.com/peios/resolvd/blob/b4f70857729069952762f8e2a2b56357b15d4760/resolvd/src/engine.rs).
+
 | When | Domains, in order |
 |---|---|
 | Routing's step 1 applies: a routable exclusive scope is at `addressed` or better (§4.4) | That scope's search domains, and nothing else [*engine-expansion.exclusive-scope-domains-only] |
@@ -30,6 +33,26 @@ The exclusive scope is the one routing would choose (§4.4).
 - Scopes with equal metrics keep their snapshot order, and each scope's
   domains keep their own order.
 - `ExtraSearchDomains` is not applied while routing's step 1 applies. [*engine-expansion.extra-domains-ignored-under-exclusive]
+
+### Proposed serverless-scope correction [*engine-expansion.up-scope-domains]
+
+The [proposed source correction](https://github.com/peios/resolvd/blob/f5190f8bd47ae74da73e0c1ffa405f86eb782acf/resolvd/src/engine.rs) uses all
+scopes at `link` or better, including scopes with no DNS servers. Without
+a qualifying exclusive scope, their domains are ordered by metric and
+then followed by `ExtraSearchDomains`; equal metrics retain snapshot
+order and each scope keeps its domain order.
+
+An exclusive scope at `addressed` or better supplies only its own domains,
+even without servers: other scopes' domains and `ExtraSearchDomains` are
+not used. For a name not already answered synthetically, if that scope
+has no domains, a bare single-label name has no candidates and remains
+`notfound` without a query. If expansion produces a candidate
+that selects a serverless scope and needs upstream work, it is
+`unavailable`; later candidates are not tried. Synthetic-answer and
+cache handling remain unchanged.
+
+This describes proposed source behavior, not a released package or an
+installed resolver. The source-revision qualification in §4.4 applies.
 
 ## Building the candidates
 

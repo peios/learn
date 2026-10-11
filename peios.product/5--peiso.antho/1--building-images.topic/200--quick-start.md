@@ -93,10 +93,12 @@ browser warns before the first sign-in. Before going past the warning, check
 the certificate's SHA-256 fingerprint against the machine's own: sign in at the
 VM's console (the live image's `peios` account has no password) and run
 `cat /var/state/gxwi/certificate.sha256`. A live medium makes a new key
-every boot, so the warning comes back each time; installing carries the
-medium's key into the installed system, which keeps it from then on. Plain
-`http://` is answered with a redirect to `https://` and nothing else. See
-[the machine's certificate](~peios/signing-in-from-a-browser/the-certificate).
+every boot, so the warning comes back each time. `installerd` attempts to carry
+the key into the installed system, but a skipped or failed transfer does not
+fail the installation. Verify any changed fingerprint through the installed
+machine's trusted console before entering credentials. See
+[certificate carry-over](~peios/signing-in-from-a-browser/the-certificate#installation-and-first-boot).
+Plain `http://` is answered with a redirect to `https://` and nothing else.
 
 The Experimental edition enables TCP 7780 on all guest interfaces and admits it
 through the guest packet policy. The Makefile's host port forwards bind to
