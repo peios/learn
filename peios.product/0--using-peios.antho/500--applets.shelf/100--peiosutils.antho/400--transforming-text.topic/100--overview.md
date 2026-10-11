@@ -53,7 +53,7 @@ This topic covers the commands that **reshape** text: putting lines in order, dr
 | [`ptx`](~peios/transforming-text/ptx) | Produce a permuted index of the words in a file. |
 | [`wc`](~peios/transforming-text/wc) | Count the lines, words, and bytes in a file. |
 
-## Two commands that need sorted input
+## Grouping duplicates with sort and uniq
 
 A theme worth knowing before you start: [`uniq`](~peios/transforming-text/uniq) only collapses *adjacent* duplicate lines, so duplicates scattered through a file are not caught unless the file is sorted first. `sort` and `uniq` are almost always used together — and `sort -u` does both jobs in one step.
 

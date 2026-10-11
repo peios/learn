@@ -8,7 +8,7 @@ related:
   - peios/security-descriptors/overview
 ---
 
-This topic covers the commands that *change* the file system: creating files and directories, copying and moving them, removing them, and adjusting their size. If a command brings a file into existence, takes one out of it, or duplicates one, it is here.
+This topic covers commands for creating, copying, moving, removing, and resizing files and directories, as well as reporting disk usage. Commands in other topics can also write output files.
 
 This page names every command, and then explains the one theme that runs through the whole topic on Peios: what happens to a file's **security descriptor** when the file is created or copied.
 
