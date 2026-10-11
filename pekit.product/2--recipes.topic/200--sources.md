@@ -529,10 +529,21 @@ then any recipe patch series is applied. Provenance is
    lands in a fresh extraction.
 6. Write a `source.pekit.json` manifest.
 
-The **downloaded artifact** is cached regardless. The **extracted tree** is
-re-materialised from that cached artifact on each run when a checksum is set
-(the pinned content is deterministic anyway); without a checksum the tree is
-reused as long as the recorded manifest still matches.
+The **downloaded artifact** is cached regardless. The **materialised tree**
+is reused, including for checksum-pinned sources, while its manifest's source
+identity matches: source kind, rendered URL, checksum, extraction settings,
+root, provenance and patches. Checksum and lock verification still run on
+every resolve. An identity change invalidates the materialised scope and its
+staged outputs.
+
+The source timestamp is metadata, not part of that identity. Tar downloads
+use their newest member's timestamp; anchored downloads without an archive
+date fall back to the recipe directory's last commit time. A commit changing
+that fallback date refreshes `source.pekit.json` without replacing or retiming
+source files or discarding completed builds. Thus `--no-build` can reuse a
+staged build across a notes or lockfile commit. New target executions receive
+the current timestamp in their environment; reused build outputs are not
+rebuilt just to change it. Package provenance checks still apply separately.
 
 **PyPI** (`pypi`). Pekit first selects the one eligible sdist for the chosen
 version as described above, then uses the URL materialisation path: the
