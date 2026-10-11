@@ -29,10 +29,11 @@ explains those distinctions.
   Verify the host fingerprint and read the access precautions before changing
   the SSH service or credential policy.
 
-## Manage your own credentials
+## Manage your own account
 
 Use [passwd](~peios/signing-in/the-passwd-command) to change your own password.
 For your SSH keys, follow [Changing your own keys](~peios/managing-local-principals/lps-command#changing-your-own-keys).
+To change the name shown beside your account name, follow [Changing your own display name](~peios/managing-local-principals/lps-command#changing-your-own-display-name).
 Changing another account's credentials is an administration task; start with
 [Manage local accounts and groups](~peios/managing-local-principals/overview).
 

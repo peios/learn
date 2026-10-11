@@ -30,7 +30,7 @@ your own account from administrator operations.
 - **Inspect or change privileges and integrity policy:** [Assigning privileges](~peios/managing-local-principals/assigning-privileges).
   This is the machine's local policy, separate from the account's identity.
   A policy change affects newly minted sign-in tokens, not existing tokens.
-- **Change your own password or SSH keys:** [Sign in](~peios/signing-in/overview#manage-your-own-credentials)
+- **Change your own password, SSH keys or display name:** [Sign in](~peios/signing-in/overview#manage-your-own-account)
   links the self-service procedures.
 
 ## Keep a usable administrator route

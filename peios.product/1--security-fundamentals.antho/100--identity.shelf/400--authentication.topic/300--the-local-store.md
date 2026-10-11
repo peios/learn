@@ -15,7 +15,7 @@ related:
 /var/state/lpsd/principals
 ```
 
-It is read once at startup and held in memory. It changes only when an administrator changes it.
+It is read once at startup and held in memory. It changes when an authorised account or group change is made, including [self-service account changes](~peios/signing-in/overview#manage-your-own-account).
 
 ## What is in it
 
@@ -54,7 +54,7 @@ At lookup time, `getpwuid` asks `authd` about the effective number; `authd` quer
 
 ## Profiles and claims
 
-The **profile** — home directory, shell, display name — is not identity. No security descriptor names a home directory and no token carries one. It is stored here because this is where an administrator sets it, and it travels to `login` on the logon reply so a session can start without a second lookup.
+The **profile** — home directory, shell, display name — is not identity. No security descriptor names a home directory and no token carries one. It is stored here alongside the account, and it travels to `login` on the logon reply so a session can start without a second lookup.
 
 **Claims** are named, typed attributes that conditional ACEs read: a descriptor can grant access to *anyone whose Department is Engineering* without naming principals individually. They are fixed on a token when it is minted, so a claim set now takes effect at the principal's next sign-in.
 
@@ -88,7 +88,7 @@ At startup lpsd establishes a protected SYSTEM-only inheritable descriptor on
 its state directory before loading or provisioning the store. The final file
 has the same SYSTEM-only access policy, independent of parent inheritance.
 
-A few hundred principals, rewritten when an administrator changes an account, is not a workload that needs a write-ahead log. And because the swap is a rename, a reader sees the old file or the new one and there is no third outcome — which means there is no recovery code, and code that does not exist cannot be wrong.
+A few hundred principals, rewritten when an authorised account or group change is made, is not a workload that needs a write-ahead log. And because the swap is a rename, a reader sees the old file or the new one and there is no third outcome — which means there is no recovery code, and code that does not exist cannot be wrong.
 
 The file carries a checksum. Not to catch a half-written file, which atomic replacement makes impossible, but because a corrupted store that decoded *short* would present as an account quietly no longer existing.
 
