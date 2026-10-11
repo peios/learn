@@ -52,6 +52,11 @@ A `fallocate` mode outside the supported set fails closed, and
 | `access` / `faccessat` `W_OK` | `FILE_WRITE_DATA` |
 | `access` / `faccessat` `X_OK` | `FILE_EXECUTE` |
 
+Descriptor-based `file_getattr` and `file_setattr` with `AT_EMPTY_PATH`
+retain the open file through the operation and metadata cleanup. A concurrent
+close cannot invalidate an operation that has already acquired its file
+reference. This also covers unsupported-operation and other error paths.
+
 Reads and writes of the canonical descriptor xattr are denied
 unconditionally through the xattr hooks — `security.peios.sd`, or
 `system.ntfs_security` on NTFS. All descriptor access goes through
