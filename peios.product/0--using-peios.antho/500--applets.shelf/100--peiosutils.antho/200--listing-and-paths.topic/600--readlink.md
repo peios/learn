@@ -52,4 +52,4 @@ With several operands, the current implementation stops at the first failure. Ou
 | Code | Meaning |
 |---|---|
 | `0` | Every named file was resolved and printed. |
-| `1` | A file was not a symbolic link, or a path could not be resolved under the chosen strictness. |
+| `1` | In default mode, a file was not a symbolic link; in canonicalising mode, a path could not be resolved under the chosen strictness. |

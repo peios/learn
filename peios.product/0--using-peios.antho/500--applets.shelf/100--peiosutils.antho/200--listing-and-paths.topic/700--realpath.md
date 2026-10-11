@@ -7,7 +7,7 @@ related:
   - peios/listing-and-paths/overview
 ---
 
-`realpath` resolves a path to its **canonical** form: absolute, with every symbolic link followed and every `.` and `..` component removed. Given any path, it tells you the one true location it refers to.
+By default, `realpath` prints an absolute path with symbolic links resolved and `.` and `..` components removed. Options below change which components must exist, how links are handled, and whether output is absolute or relative.
 
 ```
 realpath [options] file...
@@ -18,7 +18,7 @@ $ realpath ../work/./notes.txt
 /data/projects/jack/notes.txt
 ```
 
-A single file can be named many ways — through links, through relative paths, with redundant components. `realpath` reduces all of them to the single canonical path, which makes it the right tool for comparing two paths, or for turning a path a user typed into one a script can rely on.
+Use `realpath` in scripts to turn a relative path into an absolute path or remove redundant components. Choose the existence and link-handling options for the job, and check the exit status before using the result.
 
 ## How much must exist
 
@@ -45,7 +45,7 @@ By default `realpath` requires every component of the path *except the last* to 
 | `--relative-to=DIR` | Print the result as a path relative to `DIR` instead of as an absolute path. |
 | `--relative-base=DIR` | Print an absolute path, unless the result lies inside `DIR`, in which case print it relative to `DIR`. |
 | `-z`, `--zero` | End each output line with a NUL character instead of a newline. |
-| `-q`, `--quiet` | Do not print a warning when a path is invalid. The exit status still reports the failure; see the compatibility warning below. |
+| `-q`, `--quiet` | Do not print a warning when a path is invalid. See Exit status below for the quiet-mode compatibility warning and script workaround. |
 
 ## `realpath` and `readlink`
 
