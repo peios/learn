@@ -63,7 +63,7 @@ It talks to the ordinary autologin session — an administrator, not SYSTEM. For
 
 An installation medium is only proven by installing from it and booting what it produced. The test below exercises the older **`peios-install` script** through DWE. For ordinary console or browser installation, follow [Install Peios on a PC](~peios/installing-peios/on-a-pc) and [Installing to disk](~peios/disks-and-filesystems/installing-to-disk): the current `installerd` daemon performs privileged disk operations as SYSTEM for its unprivileged surfaces and does not require this DWE test path.
 
-This legacy script test takes a development build because the script must open the raw disk and the console account cannot (PEI-549). DWE provides the SYSTEM session used below:
+The legacy script is supported only from a SYSTEM session. Its ordinary `cp -ax` must read SYSTEM-only source files such as `/boot/initramfs/var/state/secrets`; direct installation from an administrator session is unsupported. The console administrator can open the raw disk, and the PEI-549 kernel change separately allows partition maintenance through `SeManageVolumePrivilege`. DWE provides the SYSTEM session used below:
 
 ```sh
 make iso-dwe
@@ -85,7 +85,7 @@ make boot-installed
 boots the disk with nothing else attached. The initramfs hook is now `disk-boot`'s (`mount-root-disk.sh`); the login prompt on the serial console is the installed system. An installed system moves to the next release with [`upgrade-peios`](~peios/peiso/editions-and-upgrades/upgrading-peios).
 
 > [!NOTE]
-> A system installed by this test from a DWE medium keeps `dwed` (PEI-550). For this legacy script test, install from a plain medium once that path can be driven without SYSTEM. This is not a DWE requirement for ordinary `installerd` installation.
+> A system installed by this test from a DWE medium keeps `dwed` (PEI-550). Use the current `installerd` path for ordinary installation from a plain medium; its console and browser surfaces do not require DWE.
 
 ## Variants
 
