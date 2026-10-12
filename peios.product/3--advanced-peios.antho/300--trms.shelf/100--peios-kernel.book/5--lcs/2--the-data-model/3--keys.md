@@ -10,7 +10,7 @@ properties; naming lives in path entries (§5.2.5).
 | Field | Mutable | Layered | Description |
 |---|---|---|---|
 | GUID | No | No | Identity, assigned by LCS at creation, persisted by the source. |
-| Name | No | No | The key's own name component. Informational; the authoritative name is in the path entry. [*key.field.name-is-informational] |
+| Name | No | No | The key's own name component. Informational; the path entry resolves the identity. `QUERY_KEY_INFO` preserves this spelling only when it folds to that resolved leaf, and audits and refuses a mismatch with `EIO`. [*key.field.name-is-informational] |
 | Parent GUID | No | No | The parent key. Nil for a hive root. [*key.field.parent-guid-nil-for-hive-root] |
 | Security Descriptor | Yes | No | Computed from the parent at creation; changed at runtime with `WRITE_DAC` / `WRITE_OWNER`. [*key.field.security-descriptor-computed-from-parent] |
 | Last write time | Yes | No | Updated when a value is written or deleted or the descriptor changes. [*key.field.last-write-time-updates] |

@@ -71,7 +71,10 @@ For a non-root key, the name is the stored key record's informational name,
 with its original spelling, rather than the spelling used to open the fd.
 The required buffer length is that stored name's UTF-8 byte length, including
 when the opening spelling folds to it but has a different byte length.
-Hive roots have no child name and retain the fd's hive-name spelling.
+The source name must fold to the leaf the fd resolved; an unrelated name
+is malformed key metadata, audited and refused with `EIO`, including on
+a buffer-length probe. Hive roots have no child name and instead report
+the preserved hive name from source registration, with its own byte length.
 [*ioctl.query-key-info.stored-name]
 
 It is declared `_IOWR`, which is what it does: it reads the caller's
