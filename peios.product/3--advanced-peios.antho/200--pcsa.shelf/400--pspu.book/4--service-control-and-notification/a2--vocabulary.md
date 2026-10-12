@@ -4,10 +4,11 @@ description: Every enumerated value on the control channel — response status, 
 ---
 
 Every enumerated value that appears on the control channel. All are
-lower snake case. A manager MUST NOT emit a value outside these sets
+lower snake case. Except for status warning types and granted rights,
+these sets are closed: a manager MUST NOT emit a value outside them
 without the version negotiation in §4.21, and a client MUST treat one it
 does not recognise as an error for that request rather than mapping it
-onto a value it knows.
+onto a value it knows. The open sets state their handling rules below.
 
 These sets are the control channel's. The same words appear in the
 manager's structured events in kebab-case, as every event value is
@@ -47,7 +48,7 @@ on this service could be running MUST use that set and no other.
 `pre_hook_failure`, `parent_setup_failure`, `pre_exec_failure`,
 `dependency_failure`, `restart_budget_exhausted`, `cycle_detected`,
 `validation_error`, `assertion_error`, `condition_skipped`,
-`process_unkillable`
+`tty_unavailable`, `process_unkillable`, `internal_error`
 
 A `cause` may also be `null`, for a service that has not transitioned.
 
@@ -87,7 +88,7 @@ in a job view (§7.7); a job's state and cause vocabularies are §7.B's.
 
 `admin`, `boot`, `shutdown`, `dependency_propagation`, `restart_policy`,
 `timer`, `binds_to_recovery`, `binds_to_propagation`,
-`conflict_resolution`, `on_failure`
+`conflict_resolution`, `on_failure`, `tty_release`
 
 `admin` is the only source a client's own command produces. The rest
 describe operations the manager created for its own reasons, and a
@@ -100,7 +101,7 @@ doing rather than about anything it asked for.
 
 ## Status warning type
 
-`service_tree`, `health`, `hooks`
+`service_tree`, `health`, `hooks`, `helper`
 
 These name what part of a service's process containment could not be
 reclaimed, `service_tree` being the whole of it and therefore the most
