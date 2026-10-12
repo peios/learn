@@ -24,8 +24,10 @@ The warning is the browser saying it cannot tell this certificate from one
 someone between you and the machine made up. You can: every certificate has a
 SHA-256 fingerprint, and the machine shows you its own.
 
-Sign in at the machine's own console — on a live medium, as `peios`, which
-needs no password — and print the fingerprint, which any account may read:
+The managed console login banner shows the fingerprint before sign-in when
+GXWI has made its certificate. Read it on the machine's own trusted console.
+If the banner says it is unavailable, or to read the current fingerprint after
+renewal, sign in locally and print the public file, which any account may read:
 
 ```
 $ cat /var/state/gxwi/certificate.sha256
