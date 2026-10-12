@@ -11,9 +11,11 @@ resolvd's source tree builds.
 - `libnss_peios_net.so.2` is installed by `dev.peios.resolvd-nss` at
   `/usr/lib/x86_64-linux-peios/libnss_peios_net.so.2`. [*nss-module.installed-path]
 - It is built from the `nss` crate, with the native channel codec
-  compiled in. Its shared-object dependencies are `libgcc_s.so.1`,
-  `libc.so.6` and the dynamic loader, `ld-linux-x86-64.so.2`; it does
-  not link libpeios. [*nss-module.link-dependencies]
+  compiled in. Its only shared-object dependencies are `libc.so.6` and
+  the dynamic loader, `ld-linux-x86-64.so.2`. The GCC unwinder required by
+  Rust is linked statically, with its symbols private to the module; name
+  lookups do not load `libgcc_s.so.1`. The identity shim, `libnss_peios.so.2`,
+  uses the same static-unwinder arrangement. Neither shim links libpeios. [*nss-module.link-dependencies]
 
 ### The entry points [*nss-module.entry-points]
 
