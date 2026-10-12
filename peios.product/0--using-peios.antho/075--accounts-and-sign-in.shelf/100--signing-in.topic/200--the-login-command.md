@@ -94,13 +94,31 @@ Taking `--try-no-password` out of the `login-console` service's `Arguments` stop
 
 **System Settings** chooses it in its **Startup & Shutdown** section, under **Console Sign-In**: **Automatic Sign-In** is **Off**, or one of the local accounts. The choice is written the moment it is made, as `Arguments`: `--console`, followed by `--try-no-password` and the account if one is chosen. It applies the next time `login-console` starts, at the latest the next boot. Changing it needs write access to `Machine\System\Services\login-console`, which as shipped only Administrators have.
 
+## GXWI information on the console
+
+Managed `login --console` sessions show GXWI's browser address and certificate
+SHA-256 fingerprint before authentication when GXWI is installed. Compare the
+fingerprint on this trusted local console with the browser's certificate
+details before accepting its warning. See [the machine's certificate](~peios/signing-in-from-a-browser/the-certificate).
+
+The banner reads `/var/state/gxwi/certificate.sha256` and the configured
+`Machine\Software\GXWI\Listen` address and port. With the default IPv4 wildcard
+listener, it lists the machine's active non-loopback IPv4 addresses. An IPv6
+wildcard lists IPv6 addresses; link-local addresses that need an interface zone
+are omitted. A specific listen address is displayed as configured. This is
+connection information, not a check that GXWI is currently running.
+
+Information is read once each time login starts. Missing or malformed
+fingerprints and unavailable addresses are reported without preventing login.
+Ordinary `login` invocations without `--console` do not show this banner.
+
 ## Options
 
 | Option | Effect |
 |---|---|
 | `--try <name>` | Attempt `name`, falling back to a full prompt. |
 | `--try-no-password <name>` | Attempt `name` collecting nothing, falling back to a full prompt. |
-| `--console` | Reset terminal input and wait for first-boot setup to finish before collecting credentials. Serial speed is preserved; registry errors prevent logon. |
+| `--console` | Reset terminal input, wait for first-boot setup to finish, and show available GXWI connection information before collecting credentials. Serial speed is preserved; setup-registry errors prevent logon. |
 | `-p` | Keep the inherited environment instead of building a fresh one. |
 | `-h <host>` | Record the remote peer for a sign-in originated on its behalf. Unverified. |
 | `-H` | Accepted and ignored. Suppresses the hostname banner on other systems. |
