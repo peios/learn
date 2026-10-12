@@ -25,11 +25,11 @@ accepted, `NF_ACCEPT`: inbound the Packet verdict stands, outbound the
 Packet layer judges it next at egress. [*ntfe-flow.untracked-packet-keeps-packet-verdict] A
 tracked packet reads its flow's **sentence**:
 
-- a *current* sentence — the policy generation that wrote it is the
-  active one, and its expiry (if any) has not passed — is applied
+- a *current* sentence — its policy object and policy/context invalidation
+  generation are both current, and its expiry (if any) has not passed — is applied
   without evaluation (`flow_cached`); [*ntfe-flow.current-sentence-applied-without-evaluation]
 - otherwise the Flow forest is evaluated against the snapshot
-  (`peios_ntfe_policy_eval(PEIOS_NTFE_LAYER_FLOW)`, counted in `judged`
+  (`peios_ntfe_policy_snapshot_eval()`, counted in `judged`
   and `flow_judged`), the outcome is written as the new sentence, an
   event is emitted (with `REJUDGED` when a stale sentence was replaced,
   `flow_rejudged` or `flow_expired` saying why), and the verdict is
@@ -38,6 +38,15 @@ tracked packet reads its flow's **sentence**:
 
 No Flow forest at all (generation 0, or no `Flow` key) is permissive,
 counted, and caches nothing. [*ntfe-flow.no-forest-permissive-uncached]
+
+Flow dispatch holds one RCU policy snapshot while checking layer
+presence, preparing identity facts and evaluating. The sentence retains
+that policy object's generation as an internal stamp alongside the
+existing invalidation generation, which also changes when network
+context changes. Both must match before either endpoint's cached verdict
+can be reused. A packet already evaluating an old policy may finish;
+its old verdict cannot remain current after a new policy is published.
+The extra policy stamp does not change the flow-dump ABI.
 
 What the Flow forest judges is the **flow view**, not the packet's
 snapshot: a Flow fact is one identical for every packet of the flow, so
