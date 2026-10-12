@@ -33,6 +33,13 @@ applied configuration change (§8.3) and every `INDEX` command, and once
 more at shutdown; it is the only writer to the desired set.
 [*index.the-policy-runs-every-policy-interval-and-is-the-only-desired-set-writer]
 
+Each run reads the current thresholds and WAL checkpoint setting after
+its wait ends, including the final run on shutdown. An applied
+threshold change is therefore judged using the new configuration;
+it does not require a second change to take effect. Pending wakes may
+coalesce, so this is not a promise of one run per registry update.
+[*index.a-policy-run-reads-current-configuration-after-waking]
+
 **Shard convergence.** Writer threads read the desired set and move
 their material indexes toward it.
 [*index.writer-threads-move-their-material-indexes-toward-the-desired-set]
