@@ -40,8 +40,8 @@ Each of the following ends the transaction, adds one to
 
 - no matching reply within 2 seconds of the transaction being sent; [*engine-servers.timeout-fails-attempt]
 - an error opening, binding, connecting or sending on the transaction's
-  socket — an unreachable network is known at once, not after the
-  timeout; [*engine-servers.send-error-fails-attempt-at-once]
+  socket, except the local resource and permission errors below — an
+  unreachable network is known at once, not after the timeout; [*engine-servers.send-error-fails-attempt-at-once]
 - an error receiving on a UDP socket, such as the refusal that follows
   an ICMP port-unreachable; [*engine-servers.udp-receive-error-fails-attempt]
 - for TCP, the connection failing to complete: an error or hang-up
@@ -53,6 +53,14 @@ Each of the following ends the transaction, adds one to
 - a matching reply whose response code is neither `NOERROR` nor
   `NXDOMAIN` — `SERVFAIL`, `REFUSED`, `FORMERR`, `NOTIMP`, and every
   other code, including EDNS extended codes. [*engine-servers.failure-rcodes-fail-attempt]
+
+A synchronous failure to open or send a transaction caused by exhausted
+local descriptors (`EMFILE`, `ENFILE`), memory or buffers (`ENOMEM`,
+`ENOBUFS`), local address allocation (`EADDRNOTAVAIL`, `EADDRINUSE`), or
+permission (`EACCES`, `EPERM`) still adds one `upstream_failed` and advances
+the bounded retry sequence, but does not demote the server. A different
+configured address or address family may still be usable. If all attempts
+fail, the result is `unavailable` and is not cached.
 
 A reply that does not match the transaction is ignored while the socket
 remains open for a matching reply until the original deadline (§4.8).

@@ -48,7 +48,7 @@ Every line resolvd writes, with the level it is written at:
 | `upstream <server>: <error>` | warn | A transaction could not be sent (§4.7) |
 | `control: no peer token: <error>` | warn | A native request was denied because its token could not be read (§5.2) |
 | `control: reply failed: <error>` | warn | A native reply could not be written (§5.1) |
-| `stub udp: <error>`, `stub tcp accept: <error>`, `native accept: <error>` | warn | A read or accept on a listening socket failed; the loop goes on [*failure-signals.listener-errors-logged-and-survived] |
+| `stub udp: <error>`, `stub tcp accept: <error>`, `native accept: <error>` | warn | A listener read or accept failed. Accept errors pause that listener for 250 ms before retrying; other descriptors continue to be serviced [*failure-signals.listener-errors-logged-and-survived] |
 | `listening on /run/resolvd/resolv.sock and 127.0.0.53:53` | info | Startup reached readiness (§2.2) |
 | `subscribed to netd` | info | §3.1 |
 | `netd: <summary>` | info | A snapshot was applied (§3.3) |

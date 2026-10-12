@@ -13,9 +13,9 @@ instant.
 
 Each iteration builds the poll set afresh:
 
-1. the native listener;
+1. the native listener, except during its accept-error backoff;
 2. the stub UDP socket;
-3. the stub TCP listener;
+3. the stub TCP listener, except during its accept-error backoff;
 4. the netd channel, while connected;
 5. the registry watch, while armed;
 6. every native connection still sending its request;
@@ -29,8 +29,9 @@ Each iteration builds the poll set afresh:
 The poll timeout is the earliest of: the next upstream transaction
 deadline, the next netd reconnection time while disconnected, the
 moment the oldest stub TCP connection reaches its 10-second bound, and
-the moment the oldest native connection reaches its 5-second bound. With
-none of these pending, the loop sleeps until a descriptor is ready.
+the moment the oldest native connection reaches its 5-second bound, or
+the end of either listener's 250 ms accept-error backoff. With none of
+these pending, the loop sleeps until a descriptor is ready.
 
 The timeout is the time to that moment in whole milliseconds, rounded
 down. A moment less than a millisecond away gives a timeout of zero, so

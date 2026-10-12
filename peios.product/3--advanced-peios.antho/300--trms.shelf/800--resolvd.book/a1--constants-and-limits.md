@@ -27,6 +27,8 @@ values in one place.
 | Transaction timeout | 2 s | §4.6 |
 | Attempts per question (all candidates and transports) | 3 | §4.6 |
 | Demotion period | 30 s | §4.6 |
+| Service descriptor limit | 16 384 | §2.1 |
+| Listener retry delay after accept error | 250 ms | §2.5, §9.1 |
 | Upstream transactions in flight | 4 096 | §4.6 |
 | Upstream UDP read buffer | 4 096 bytes | §4.7 |
 | Cache entries | 8 192 | §4.5 |
