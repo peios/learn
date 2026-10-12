@@ -21,9 +21,10 @@ description: What resolvd does between exec and READY=1, in order, which steps a
    `Machine\System\Network` (§2.3). If it cannot be armed, resolvd logs
    `registry watch unavailable (<error>); configuration is read once`
    and runs on the configuration it read in step 3 until it restarts. [*startup.watch-failure-reads-configuration-once]
-5. **The generator.** The engine's random generator is seeded from eight
-   bytes of `/dev/urandom`, or from the wall clock in nanoseconds when
-   `/dev/urandom` cannot be read. [*startup.generator-seeded-from-urandom]
+5. **Query entropy.** The engine is given a kernel-randomness provider.
+   Every upstream transaction obtains fresh bytes through nonblocking
+   `getrandom`; startup does not seed a userspace generator or read
+   `/dev/urandom`. There is no clock fallback. [*startup.entropy-from-kernel-per-query]
 6. **The engine's inputs.** The engine is given the kernel's hostname,
    the fallback servers and search domains, and the static names. A
    kernel hostname that is empty or `(none)` counts as no hostname. [*startup.kernel-hostname-none-is-no-hostname]

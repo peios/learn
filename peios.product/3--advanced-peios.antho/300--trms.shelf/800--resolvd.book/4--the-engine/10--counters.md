@@ -16,7 +16,7 @@ unsigned 64-bit count.
 | `upstream_sent` | Every transaction started, UDP or TCP, including TCP retries. It is counted before the socket is opened, so a transaction whose socket cannot be opened, connected or sent on (§4.7) counts here as well as in `upstream_failed`, though nothing reached the wire [*engine-counters.upstream-sent] |
 | `upstream_answered` | Every matching reply (§4.8), whatever its response code, including a truncated one [*engine-counters.upstream-answered] |
 | `upstream_failed` | Every failed transaction (§4.6): a timeout, a transport failure, or a reply with a response code other than `NOERROR` and `NXDOMAIN` [*engine-counters.upstream-failed] |
-| `refused` | Every question refused at the in-flight ceiling (§4.6) [*engine-counters.refused] |
+| `refused` | Every question refused at the in-flight ceiling (§4.6) or because fresh query entropy is unavailable (§4.7) [*engine-counters.refused] |
 
 ## What is not counted [*engine-counters.status-flush-and-netd-not-counted]
 
