@@ -4,7 +4,8 @@ description: Writing a subtree to a stream under SeBackupPrivilege with no per-k
 ---
 
 `REG_IOC_BACKUP` exports the key on the fd and its entire subtree to
-another fd. [*backup.exports-the-key-and-its-subtree]
+another fd, preserving parent/child relationships even when traversal
+must grow its internal storage. [*backup.exports-the-key-and-its-subtree]
 
 It requires `SeBackupPrivilege` and performs **no per-key AccessCheck**
 whatsoever. [*backup.requires-sebackupprivilege-and-checks-no-key] The privilege is the whole authorisation, which is
@@ -73,3 +74,7 @@ A layer definition is backed up only when
 `Machine\System\Registry\Layers\<Name>\` is itself inside the subtree
 being exported, in which case it is ordinary key and value data like
 anything else. [*backup.layer-definition-backed-up-only-if-inside-the-subtree]
+
+This includes definitions for unused layers in a whole-hive export.
+Their metadata remains ordinary registry data; an unused definition
+does not by itself require an entry in the layer manifest.
