@@ -21,6 +21,13 @@ same way synthetic events never touch KMES (§2.6).
 An interval of 0 turns them off.
 [*health.a-zero-interval-turns-health-metrics-off]
 
+Health samples obey `MetricMaxBatchSize` (§5.1). They fill any pending
+batch up to the size cap captured when it opened; further transactions
+use the current configured cap (§8.3). The final partial batch is
+committed immediately. Splitting an interval's samples does not drop or
+reorder them.
+[*health.health-samples-respect-the-metric-transaction-size-cap]
+
 Each sample carries eventd's clock and the current boot ID, like a
 metric record that omits its timestamp (PSPU §3.11).
 
