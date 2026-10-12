@@ -15,6 +15,11 @@ Every ACE begins with a 4-byte header:
 | 1 | 1 | AceFlags | Inheritance and audit flags. |
 | 2 | 2 | AceSize | Total size of the ACE in bytes, including the header. MUST be a multiple of 4. |
 
+The size includes trailing padding. Builders zero-pad a variable-length raw
+body to the next four-byte boundary, including resource-attribute claims
+whose final octet value has an arbitrary length. This padding belongs to the
+ACE; it does not increase the claim's declared octet-value length.
+
 ## ACE body layouts
 
 The ACE header is followed by a type-specific body. Every multibyte integer in
