@@ -94,6 +94,13 @@ manuals. Its library's linker name and static archive are separately available
 in `org.gnu.binutils-gprofng-devel`, which also installs the matching profiler
 runtime. Ordinary compiler builds do not need the profiler.
 
+Binutils supports Zstandard-compressed DWARF debug sections through
+`objcopy --compress-debug-sections=zstd` and
+`ld --compress-debug-sections=zstd`. The runtime package brings in
+`com.facebook.zstd-libs`; applications do not need the development package
+merely to use these commands. `objcopy --decompress-debug-sections` restores
+uncompressed debug sections when another consumer needs them.
+
 The Flex scanner generator is `io.github.westes.flex`; its `flex++` frontend
 is included with the command. The independently usable libfl runtime is
 `io.github.westes.flex-libs`, while `io.github.westes.flex-devel` adds the C++
@@ -126,7 +133,8 @@ well-formedness checker in `io.github.libexpat.expat-tools`.
 
 DWZ, the DWARF duplicate-removal tool, is installed as `org.sourceware.dwz`.
 Catalogue packages are built with it, so their `-debuginfo` payloads are
-already deduplicated per file. Debugedit's tools are `org.sourceware.debugedit`;
+already deduplicated per file. It can also optimise zstd-compressed DWARF
+while retaining Zstandard compression. Debugedit's tools are `org.sourceware.debugedit`;
 its RPM-style `find-debuginfo` driver is the separate
 `org.sourceware.debugedit-find-debuginfo`, which brings in GDB and DWZ.
 
