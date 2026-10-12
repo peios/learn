@@ -46,6 +46,20 @@ page appears. The mmap handler exposes only the shared page. The field
 offsets on the page are part of the consumer contract, defined in the
 PSPK event stream chapter.
 
+## Consumer mapping permissions [*consumer.mapping-permissions]
+
+The producer metadata page and both aliases of the data region are read-only
+to consumers. The consumer metadata page is read-write: ordinary stores and
+authorised `process_vm_writev` writes can set `need_wake`. A consumer can remove
+write permission from that page with `mprotect` and restore it later.
+
+A write-enabling `mprotect` covering any producer or data byte fails with
+`EACCES`, including requests spanning the consumer page and a protected region.
+Write faults and writable page pins must not upgrade the protected pages.
+These boundaries follow the original mapping offsets when `mprotect` splits a
+VMA; a new VMA start does not move the consumer page. Process access gates for
+remote writes still apply.
+
 ## Wrap handling [*ring.consumer-sees-contiguous-wrap]
 
 The consumer's data region is double virtual mapped — the same
