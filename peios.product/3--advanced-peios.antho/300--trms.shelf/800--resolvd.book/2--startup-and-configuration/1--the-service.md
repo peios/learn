@@ -20,6 +20,7 @@ names it in its `[registry] autoapply` list.
 | `Readiness` | `REG_DWORD` | `0` | Notify: ready when resolvd says so. [*service.readiness-is-notify] |
 | `RuntimeDirectories` | `REG_MULTI_SZ` | `resolvd` | peinit creates `/run/resolvd`. [*service.runtime-directory] |
 | `RestartPolicy` | `REG_DWORD` | `2` | Always restarted. [*service.restart-policy-always] |
+| `LimitNOFILE` | `REG_DWORD` | `16384` | Descriptor headroom for 4 096 upstream transactions, their client waiters, 512 pending clients and daemon descriptors. |
 | `ErrorControl` | `REG_DWORD` | `0` | |
 | `DisplayName` | `REG_SZ` | `Stub resolver` | |
 | `Description` | `REG_SZ` | (one sentence) | |
