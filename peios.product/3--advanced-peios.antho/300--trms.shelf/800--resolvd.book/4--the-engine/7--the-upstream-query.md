@@ -43,17 +43,27 @@ attempt at once (§4.6) and is logged at warn level as
 connection is under way, is not logged, and neither is a timeout or a
 UDP receive error.
 
-## Link-local servers
+## Link-local servers [*engine-query.link-local-server-uses-scope]
 
-- An address with a zone, such as `fe80::1%eth0`, is not an IP address
-  to resolvd: from netd it is dropped silently (§3.3), and in
-  `FallbackServers` it is skipped and logged (§2.3). A server cannot be
-  given the interface it is reached through. [*engine-query.zoned-server-address-dropped]
-- A bare link-local address such as `fe80::1` is accepted, and every
-  transaction to it is opened with no scope identifier. The connect then
-  fails at once, so every attempt to that server fails: `upstream
-  fe80::1: <error>` is logged, the server is demoted, and `upstream_sent`
-  and `upstream_failed` both rise. [*engine-query.link-local-server-sent-unscoped]
+A link-local IPv6 server from netd is reached through the interface named
+by its DNS scope. Both UDP and TCP upstream sockets carry that interface’s
+index in `sin6_scope_id`; a truncated UDP answer keeps it on the TCP retry.
+An address such as `fe80::1` can therefore be advertised in RDNSS without a
+zone suffix. Failures of that address on one scope do not demote the same
+address on another scope.
+
+A snapshot may also spell it `fe80::1%eth0` or use a numeric interface
+index. An explicit zone must match the containing scope’s interface;
+invalid or mismatched zones are logged and ignored. Global addresses
+continue to use ordinary unscoped sockets.
+[*engine-query.snapshot-zone-matches-interface]
+
+`FallbackServers` has no containing interface scope and continues to accept
+plain IP addresses only: a `%zone` value is logged and skipped. Configure
+link-local DNS on the interface profile instead. A bare link-local
+fallback cannot be sent; it fails as a local address error, without
+marking a remote server unhealthy.
+[*engine-query.fallback-zone-unsupported]
 
 ## The message
 
