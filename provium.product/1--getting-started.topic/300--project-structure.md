@@ -97,7 +97,7 @@ end)
 When the test runs, Provium:
 
 1. Locates `<root>/booted-base.fixture.lua` (under any `roots` directory).
-2. Hashes the file's source bytes plus every transitive dependency (other fixtures it references via `vm_fixture`/`lab_fixture`, every helper it `require`s, and any host file declared with `depends_on_file`) plus every profile's kernel and initrd identity and the wire-protocol version into a cache key.
+2. Hashes the file's source bytes plus every transitive dependency (other fixtures it references via `vm_fixture`/`lab_fixture`, every helper it `require`s, and any host file declared with `depends_on_file`) plus every profile's kernel and initrd identity and the wire-protocol version and QEMU snapshot-layout epoch into a cache key.
 3. Looks up `<cache_dir>/<key>.snap`. If present, restores it and hands the test a fresh VM.
 4. If absent, builds the fixture by running its chunk under a build-time Lua state, takes the resulting snapshot, sparse-zstd-compresses it, and installs it into the cache.
 
