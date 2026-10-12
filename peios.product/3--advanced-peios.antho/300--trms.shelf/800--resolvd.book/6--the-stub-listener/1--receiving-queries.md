@@ -80,6 +80,7 @@ big-endian length and that many bytes.
 | Has `QR` set | Dropped without a reply [*stub-receive.response-dropped] |
 | Has an opcode other than `QUERY` | `NOTIMP` [*stub-receive.non-query-opcode-notimp] |
 | Has no question, or more than one | `FORMERR` [*stub-receive.question-count-formerr] |
+| Has a question class other than `IN` | `NOTIMP`; the question is echoed unchanged and no upstream query is made [*stub-receive.unsupported-class-notimp] |
 | Otherwise | Accepted |
 
 ### The `NOTIMP` and question-count `FORMERR` replies
@@ -95,23 +96,27 @@ These two replies are built from the query:
 
 ## What an accepted query contributes
 
-- Only the question's name and type reach the engine. The question's
-  class is not looked at: a query of any class is answered as if it were
-  `IN`. [*stub-receive.class-ignored]
+- Only `IN` questions are accepted. Their decoded name and type reach the
+  engine; unsupported classes are rejected at the stub door over both
+  UDP and TCP.
 - `RD`, `CD`, the `DO` bit and any EDNS options are not looked at. [*stub-receive.flags-and-edns-options-ignored]
 - Stub queries always consult the cache (§4.5).
 
-### Names with escaped labels
+### Wire names
 
-The name is handed to the engine in presentation form and parsed again
-(§4.1), and the parse does not interpret escapes (§5.3).
+The decoded name reaches the engine directly, without conversion to
+presentation text and reparsing. Label boundaries and bytes, including
+embedded dots, backslashes, NUL and other binary bytes, are preserved.
+The usual upstream ASCII case randomization still applies (§4.3).
+[*stub-receive.wire-labels-preserved]
 
-- A label holding a dot, a backslash, or a byte outside `!` to `~` is
-  printed with an escape, so such a name is asked as a different name: a
-  dot inside a label becomes a label boundary, and the escapes' bytes
-  become part of the labels. [*stub-receive.escaped-labels-asked-as-different-name]
-- When the escapes take a label past 63 bytes, or the name past 255
-  bytes on the wire, the question is answered `notfound`. [*stub-receive.escaped-label-overlong-is-notfound]
+Names are subject to DNS wire limits, not the length of a displayed escape
+sequence. A valid 63-byte binary label or a valid name whose display form
+would exceed 255 bytes can therefore be resolved normally.
+[*stub-receive.wire-lengths-preserved]
+
+Search expansion (§4.1) uses the number of wire labels: a single label
+containing a literal dot remains a single-label name.
 
 ## Which stub queries are counted [*stub-receive.refused-queries-not-counted]
 
