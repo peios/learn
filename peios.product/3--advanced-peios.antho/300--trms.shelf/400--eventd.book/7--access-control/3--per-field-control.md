@@ -248,3 +248,22 @@ and no access identity of their own, and are visible when the caller is
 authorized for the records and source fields they were computed from
 (PSPU §3.28).
 [*fieldaccess.an-aggregate-is-visible-when-its-source-records-and-fields-are-authorized]
+
+
+## Metric aggregate headers
+
+A metric aggregate or window result does not restore `timestamp`, `name`
+or `type` if source-field authorization removed that header. The private
+time used for window placement and ordering is independent of the
+returned record, so hiding `timestamp` does not change the numeric result
+or move samples into another window.
+[*fieldaccess.metric-aggregates-do-not-restore-denied-source-headers]
+
+When an output combines several contributing series or metric identifiers,
+each returned header must be visible in every contributing source. A
+first contributor with broader access cannot restore a header denied by
+another. Per-series output retains each series' own visibility. This also
+applies to latest-value aggregates, transformed windows, and cached rollup
+results: a cached value does not bypass the current source-field check.
+Explicit references to a denied field still filter the source records as
+specified by PSPU §3.28.
