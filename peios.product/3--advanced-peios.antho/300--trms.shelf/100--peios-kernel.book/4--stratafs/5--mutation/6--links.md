@@ -54,8 +54,10 @@ the name must not be held by any participating stratum, parent
 directories are materialised in the create stratum, and a create
 stratum that is absent or does not exist fails with `EROFS`.
 
+### Unnamed files cannot cross mounts [*link.unnamed-cross-mount-exdev]
+
 Linking an unnamed file into a different mount fails with `EXDEV`,
-checked both by superblock and by mount, and by the VFS as well. [*link.unnamed-cross-mount-exdev]
+checked both by superblock and by mount, and by the VFS as well.
 
 ## Symbolic links [*link.symlink-target-verbatim]
 

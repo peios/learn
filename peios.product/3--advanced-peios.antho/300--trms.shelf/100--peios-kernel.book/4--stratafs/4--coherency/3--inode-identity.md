@@ -68,15 +68,17 @@ provider's — the highest-precedence participating directory — taken
 straight from a `getattr` on the provider path, so what is reported is
 a real directory's attributes rather than a composite.
 
-Its link count is forced to 1, both in the cached inode and in the
-reported `stat`. The true count of subdirectories spans strata and [*inode.merged-dir.nlink-forced-to-1]
-cannot be maintained, so the value carries no meaning beyond indicating
-that the object is a directory. Nothing should infer a subdirectory
-count from it.
-
 The security descriptor of a merged directory is not a single
 descriptor; §4.6.2 defines which participating directory's descriptor
 governs each operation.
+
+### The synthetic link count [*inode.merged-dir.nlink-forced-to-1]
+
+Its link count is forced to 1, both in the cached inode and in the
+reported `stat`. The true count of subdirectories spans strata and
+cannot be maintained, so the value carries no meaning beyond indicating
+that the object is a directory. Nothing should infer a subdirectory
+count from it.
 
 ## Provider change [*inode.never-rebound-by-resolution]
 

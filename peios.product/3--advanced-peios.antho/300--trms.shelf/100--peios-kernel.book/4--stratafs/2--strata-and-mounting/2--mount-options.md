@@ -79,9 +79,11 @@ therefore refuses every mutation with `EROFS` regardless of the stratum
 stack, and is both independent of and stricter than a stack with no
 create stratum.
 
+### Locking and synchronising a read-only mount [*mount.locking-unaffected-by-read-only]
+
 Locking and synchronising are unaffected. Neither modifies an object,
 neither consults the superblock's read-only state, and a reader of a
-merged tree may need both. [*mount.locking-unaffected-by-read-only]
+merged tree may need both.
 
 ## Remount [*mount.remount-rejects-a-changed-stack]
 

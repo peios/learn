@@ -49,6 +49,8 @@ no participating stratum holds any entry within it, so a directory that
 is empty in the provider but not in another participant fails with
 `ENOTEMPTY`.
 
+### Access checks precede the emptiness scan [*remove.access-before-emptiness]
+
 Because determining this reads the contents of every participating
 stratum, the caller must hold traverse and list rights on each of them.
 That check completes over all participants before any of them is

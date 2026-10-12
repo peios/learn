@@ -74,14 +74,20 @@ reclassified as a modification of a newly-surfaced provider and never
 copies one up: the caller asked for a new object, and its descriptor is
 derived as above.
 
+### Implementation restrictions
+
 Three restrictions are implementation choices rather than consequences
-of the model. Supersede applies to regular files only, and anything
-else is refused with `EOPNOTSUPP`. The source must be in the create
-stratum, and source and destination must share a parent. And the two
-halves are **not** atomic: the lower entry is unlinked first and the
-staged file renamed into place afterwards, so a failure in between
-leaves the name having lost its old provider. The caller receives the
-error; the window itself is recorded only in the audit trail.
+of the model:
+
+1. Supersede applies to regular files only, and anything else is refused
+   with `EOPNOTSUPP`. [*create.supersede-regular-files-only]
+2. The source must be in the create stratum, and source and destination
+   must share a parent. [*create.supersede-source-and-parent-restrictions]
+3. The two halves are **not** atomic: the lower entry is unlinked first
+   and the staged file renamed into place afterwards, so a failure in
+   between leaves the name having lost its old provider. The caller
+   receives the error; the window itself is recorded only in the audit
+   trail. [*create.supersede-is-not-atomic]
 
 ## Deferred deletion [*create.deferred-delete-targets-resolved-object]
 
@@ -91,6 +97,8 @@ provides that name at close time. Because removal (§4.5.4) is defined
 over the current provider of a name, the deferred case has its own
 path.
 
+### An entry already gone [*create.deferred-delete-already-gone-succeeds]
+
 When the deletion is attempted, stratafs locates the entry at the path
 the descriptor was opened against, in the stratum that provided it at
 that time — the descriptor's private dentry carries both — and resolves
@@ -99,20 +107,26 @@ quietly, reporting success because the deletion is already complete:
 the parent is gone, the name is gone, the name now identifies a
 different inode, or the unlink raced.
 
+### The original stratum must accept removal [*create.deferred-delete-requires-writable-stratum]
+
 That stratum must accept modification, or the deletion fails with
 `EROFS`. Then the entry is removed, and no other. In particular, where
 another caller's copy-up has published a new object at that name in a
 higher stratum, that object is not the one being deleted and is left
 alone.
 
+### Failures are audited [*create.deferred-delete-audits-failure]
+
 Because the attempt has no caller to report to, any failure is audited
 — and for a deferred deletion, *every* non-zero result is audited, not
 only the arrangement errors §4.6.5 covers for ordinary refusals. The
 object is left in place.
 
+### Authority at deletion time [*create.deferred-delete-checked-against-the-providing-stratum]
+
 The right to delete the entry is checked against the directory of the
 **stratum where the entry lives**, not against the merged parent, and
-it is checked at deletion time rather than only at arm. [*create.deferred-delete-checked-against-the-providing-stratum]
+it is checked at deletion time rather than only at arm.
 
 Arm time could not do it. The authorizer there holds a `struct file`,
 and which stratum provides the entry is stratafs-internal — the
@@ -120,12 +134,16 @@ provider index and the parent's relative path are not visible to KACS.
 stratafs computes that directory before removing anything, so the check
 happens there, where the answer exists.
 
+### The requesting token outlives the arm [*create.deferred-delete-token-outlives-the-arm]
+
 The token is the one that requested the deferred deletion, not the
 credentials of whoever closes the descriptor. That requires it to
 outlive the arm: the file's blob takes a reference when armed and
 releases it in `->file_release`, on both the armed and unarmed exits.
 The file is the thing that was armed, so its lifetime is the right
-one — arm and close may be far apart and in different tasks. [*create.deferred-delete-token-outlives-the-arm]
+one — arm and close may be far apart and in different tasks.
+
+### Supported object types [*create.deferred-delete-non-directories]
 
 Deferred deletion is restricted to non-directories, and at arm time to
 regular files on a managed mount.
