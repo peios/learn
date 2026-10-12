@@ -93,6 +93,7 @@ query without EDNS0: a server that answers an EDNS0 query with
 
 - A matching UDP reply with `TC` set is not used. The same candidate is
   sent to the same server over TCP as a new transaction, with a new ID,
-  a new case pattern and its own two-second deadline. It does not count
-  as an attempt (§4.6). [*engine-query.truncated-udp-retried-over-tcp-same-server]
+  a new case pattern and its own two-second deadline, if an attempt
+  remains in the question budget. The TCP transaction spends one attempt
+  (§4.6); without budget the question is `unavailable`. [*engine-query.truncated-udp-retried-over-tcp-same-server]
 - A TCP reply with `TC` set is used as it is. [*engine-query.truncated-tcp-reply-used-as-is]
