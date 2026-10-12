@@ -11,7 +11,7 @@ values in one place.
 | Bound | Value | Described in |
 |---|---|---|
 | Native request size ceiling (payload) | 65 536 bytes | §5.1 |
-| Native bytes buffered before `request too large` | 65 540 bytes | §5.1 |
+| Maximum buffered native frame | 65 540 bytes | §5.1 |
 | Native connection read chunk | 4 096 bytes | §5.1 |
 | Native request delivery bound | 5 s | §5.1 |
 | Native connections still sending a request | 256 | §5.1 |
