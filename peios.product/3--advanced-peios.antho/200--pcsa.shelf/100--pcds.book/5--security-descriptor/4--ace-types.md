@@ -3,7 +3,9 @@ title: ACE Types
 description: Every ACE type and body layout — the single-SID, object, callback and resource-attribute families, the AceType constants, and the ACL revision rules.
 ---
 
-An Access Control Entry (ACE) is a single rule in an ACL. Each ACE has a header, an access mask, and a principal SID, with optional extensions for object-type and conditional ACEs.
+An Access Control Entry (ACE) is a single rule in an ACL. Each ACE has a
+header, an access mask, and a principal SID, with optional extensions for
+object-type and conditional ACEs.
 
 ## ACE header
 
@@ -79,10 +81,13 @@ Object ACE flags:
 
 Parsing rules:
 
-- `AceSize` MUST be large enough to contain the header, mask, flags, all GUIDs selected by `Flags`, and a complete SID.
+- `AceSize` MUST be large enough to contain the header, mask, flags, all GUIDs
+  selected by `Flags`, and a complete SID.
 - Unknown bits in `Flags` MUST be ignored.
-- If neither GUID-presence bit is set, the ACE has no GUID fields and behaves like the corresponding basic ACE.
-- GUID fields are opaque 16-byte values at this layer. Their interpretation is described in the Peios Kernel TRM §3.8.5.
+- If neither GUID-presence bit is set, the ACE has no GUID fields and behaves
+  like the corresponding basic ACE.
+- GUID fields are opaque 16-byte values at this layer. Their interpretation is
+  described in the Peios Kernel TRM §3.8.5.
 
 ### Callback ACE family
 
@@ -121,9 +126,12 @@ For callback object ACEs, the body layout is:
 
 Parsing rules:
 
-- The SID begins after the fixed fields and any optional GUIDs, exactly as in the corresponding non-callback ACE family.
-- `ApplicationData` MAY be empty. Semantics for empty or malformed callback payloads are defined by the relevant subsystem.
-- For conditional ACEs, `ApplicationData` carries the conditional expression bytecode defined in the Conditional ACE Bytecode Reference.
+- The SID begins after the fixed fields and any optional GUIDs, exactly as in
+  the corresponding non-callback ACE family.
+- `ApplicationData` MAY be empty. Semantics for empty or malformed callback
+  payloads are defined by the relevant subsystem.
+- For conditional ACEs, `ApplicationData` carries the conditional expression
+  bytecode defined in the Conditional ACE Bytecode Reference.
 
 ### Resource attribute ACE
 
@@ -153,18 +161,24 @@ Parsing rules:
 
 ### Object-type ACEs
 
-Extend basic ACEs with one or two GUIDs that scope the rule to a specific property or object class. Used for Active Directory access control.
+Extend basic ACEs with one or two GUIDs that scope the rule to a specific
+property or object class. Used for Active Directory access control.
 
 | Structure | Value | Effect |
 |---|---|---|
 | ACCESS_ALLOWED_OBJECT_ACE | 0x05 | Grants rights scoped to a property/class GUID. |
 | ACCESS_DENIED_OBJECT_ACE | 0x06 | Denies rights scoped to a property/class GUID. |
 
-The ObjectType GUID identifies the property or property set the ACE applies to. The InheritedObjectType GUID restricts inheritance to child objects of a specific class. Either or both GUIDs MAY be absent (indicated by a flags field), in which case the ACE behaves like a basic ACE for that dimension.
+The ObjectType GUID identifies the property or property set the ACE applies
+to. The InheritedObjectType GUID restricts inheritance to child objects of a
+specific class. Either or both GUIDs MAY be absent (indicated by a flags
+field), in which case the ACE behaves like a basic ACE for that dimension.
 
 ### Conditional ACEs
 
-Extend basic and object-type ACEs with a conditional expression. The ACE only takes effect if the expression evaluates to TRUE against the caller's token attributes and the object's resource attributes.
+Extend basic and object-type ACEs with a conditional expression. The ACE only
+takes effect if the expression evaluates to TRUE against the caller's token
+attributes and the object's resource attributes.
 
 | Structure | Value | Effect |
 |---|---|---|
@@ -174,13 +188,18 @@ Extend basic and object-type ACEs with a conditional expression. The ACE only ta
 | ACCESS_DENIED_CALLBACK_OBJECT_ACE | 0x0C | Conditional deny, scoped to GUID. |
 
 > [!NOTE]
-> The term "callback" is historical. KACS evaluates conditional expressions inline during AccessCheck. The name is preserved for binary format compatibility. UI and UX layers MAY refer to callback ACEs exclusively as "conditional ACEs" for simplicity.
+> The term "callback" is historical. KACS evaluates conditional expressions
+  inline during AccessCheck. The name is preserved for binary format
+  compatibility. UI and UX layers MAY refer to callback ACEs exclusively as
+  "conditional ACEs" for simplicity.
 
 ## SACL ACE types
 
 ### Audit ACEs
 
-Trigger audit log entries when matching access attempts occur. The AceFlags field carries SUCCESSFUL_ACCESS_ACE_FLAG (0x40) and/or FAILED_ACCESS_ACE_FLAG (0x80).
+Trigger audit log entries when matching access attempts occur. The AceFlags
+field carries SUCCESSFUL_ACCESS_ACE_FLAG (0x40) and/or FAILED_ACCESS_ACE_FLAG
+(0x80).
 
 | Structure | Value | Effect |
 |---|---|---|
@@ -192,7 +211,11 @@ Trigger audit log entries when matching access attempts occur. The AceFlags fiel
 ### Alarm ACEs (continuous auditing)
 
 > [!NOTE]
-> These ACE types are reserved but unimplemented in the reference model. KACS repurposes them for continuous per-operation auditing: unlike standard audit ACEs (which emit a single event at handle creation), alarm ACEs configure per-operation audit masks that persist on the open handle. This creates no interoperability conflict because external sources never contain alarm ACEs.
+> These ACE types are reserved but unimplemented in the reference model. KACS
+  repurposes them for continuous per-operation auditing: unlike standard audit
+  ACEs (which emit a single event at handle creation), alarm ACEs configure
+  per-operation audit masks that persist on the open handle. This creates no
+  interoperability conflict because external sources never contain alarm ACEs.
 
 | Structure | Value | Effect |
 |---|---|---|
@@ -204,13 +227,12 @@ Trigger audit log entries when matching access attempts occur. The AceFlags fiel
 ### Mandatory label ACE
 
 Defines the object's integrity level for MIC. Conforming producers SHOULD emit
-at most one non-inherit-only mandatory-label ACE per SACL. Imported or existing
-SACLs MAY contain multiple mandatory-label ACEs; MIC uses the first
+at most one non-inherit-only mandatory-label ACE per SACL. Imported or
+existing SACLs MAY contain multiple mandatory-label ACEs; MIC uses the first
 non-inherit-only mandatory-label ACE as described in the Peios Kernel TRM
-§3.8.3. Inherit-only
-mandatory-label ACEs do not apply to the current object. The SID encodes the
-integrity level. The access mask encodes the MIC policy (which operations are
-blocked for non-dominant callers).
+§3.8.3. Inherit-only mandatory-label ACEs do not apply to the current object.
+The SID encodes the integrity level. The access mask encodes the MIC policy
+(which operations are blocked for non-dominant callers).
 
 | Structure | Value | Effect |
 |---|---|---|
@@ -218,7 +240,8 @@ blocked for non-dominant callers).
 
 ### Resource attribute ACE
 
-Attaches name-value attributes to the object for conditional ACE evaluation. The ACE's SID is always Everyone (`S-1-1-0`).
+Attaches name-value attributes to the object for conditional ACE evaluation.
+The ACE's SID is always Everyone (`S-1-1-0`).
 
 | Structure | Value | Effect |
 |---|---|---|
@@ -226,7 +249,8 @@ Attaches name-value attributes to the object for conditional ACE evaluation. The
 
 ### Scoped policy ID ACE
 
-References a central access policy by SID. During AccessCheck, the referenced policy's rules are evaluated in addition to the object's own DACL.
+References a central access policy by SID. During AccessCheck, the referenced
+policy's rules are evaluated in addition to the object's own DACL.
 
 | Structure | Value | Effect |
 |---|---|---|
@@ -234,7 +258,9 @@ References a central access policy by SID. During AccessCheck, the referenced po
 
 ### Process trust label ACE
 
-Defines the object's PIP trust level. The SID encodes the PIP type and trust level. The access mask specifies the exact rights that non-dominant callers are allowed.
+Defines the object's PIP trust level. The SID encodes the PIP type and trust
+level. The access mask specifies the exact rights that non-dominant callers
+are allowed.
 
 | Structure | Value | Effect |
 |---|---|---|
@@ -252,14 +278,14 @@ Two values in the range have a name but no KACS behaviour.
 `ACCESS_ALLOWED_COMPOUND_ACE` was specified and then abandoned before any
 conforming system implemented it. Nothing produces it.
 
-`SYSTEM_ACCESS_FILTER_ACE` is different: it is a live MS-DTYP ACE type
-that KACS has not implemented. The kernel ABI defines a constant for it
-(`KACS_ACE_TYPE_SYSTEM_ACCESS_FILTER`) so that a decoder can put a name
-to the byte, but no section of this specification assigns it meaning. A 0x15 ACE therefore takes the
-unrecognised-ACE path described at the end of this section: skipped
-during evaluation, preserved byte-for-byte on round-trip. An
-implementation MUST NOT grant, deny, audit, or filter access on the
-basis of a 0x15 ACE.
+`SYSTEM_ACCESS_FILTER_ACE` is different: it is a live MS-DTYP ACE type that
+KACS has not implemented. The kernel ABI defines a constant for it
+(`KACS_ACE_TYPE_SYSTEM_ACCESS_FILTER`) so that a decoder can put a name to the
+byte, but no section of this specification assigns it meaning. A 0x15 ACE
+therefore takes the unrecognised-ACE path described at the end of this
+section: skipped during evaluation, preserved byte-for-byte on round-trip. An
+implementation MUST NOT grant, deny, audit, or filter access on the basis of a
+0x15 ACE.
 
 Values above 0x15 are unallocated.
 
@@ -298,20 +324,31 @@ descriptor by hand will be holding. Both spellings, in value order:
 
 ACLs carry a revision number that constrains which ACE types MAY appear:
 
-- **ACL_REVISION (0x02)** — basic ACE types (0x00, 0x01, 0x02, 0x03), mandatory label (0x11), resource attribute (0x12), scoped policy (0x13), and process trust label (0x14).
-- **ACL_REVISION_DS (0x04)** — additionally permits object-type ACEs (0x05–0x08), callback ACEs (0x09–0x0C, 0x0D–0x10). Required for Active Directory access control.
+- **ACL_REVISION (0x02)** — basic ACE types (0x00, 0x01, 0x02, 0x03),
+  mandatory label (0x11), resource attribute (0x12), scoped policy (0x13), and
+  process trust label (0x14).
+- **ACL_REVISION_DS (0x04)** — additionally permits object-type ACEs
+  (0x05–0x08), callback ACEs (0x09–0x0C, 0x0D–0x10). Required for Active
+  Directory access control.
 
 When creating new ACLs containing only recognised ACE types, the revision MUST
 be set to the minimum required by the ACE types present. When rewriting an
-existing ACL while preserving one or more unrecognised ACE types, KACS MUST set
-the revision to the greater of the minimum required by recognised ACE types
-present and the source ACL revision. When parsing ACLs, KACS MUST NOT reject an
-ACL based on revision-vs-ACE-type mismatch — accept permissively, write
-correctly.
+existing ACL while preserving one or more unrecognised ACE types, KACS MUST
+set the revision to the greater of the minimum required by recognised ACE
+types present and the source ACL revision. When parsing ACLs, KACS MUST NOT
+reject an ACL based on revision-vs-ACE-type mismatch — accept permissively,
+write correctly.
 
 > [!NOTE]
-> This diverges from strict MS-DTYP interpretation, where ACL_REVISION (0x02) does not permit SACL types 0x11-0x14. KACS accepts them under either revision to handle SDs that may have been constructed with a less strict tool. The evaluator handles all ACE types correctly regardless of ACL revision.
+> This diverges from strict MS-DTYP interpretation, where ACL_REVISION (0x02)
+  does not permit SACL types 0x11-0x14. KACS accepts them under either
+  revision to handle SDs that may have been constructed with a less strict
+  tool. The evaluator handles all ACE types correctly regardless of ACL
+  revision.
 
-Unrecognised ACE types — every value not given semantics above, which
-today means 0x04, 0x15, and everything from 0x16 up — MUST be silently
-skipped during evaluation and preserved byte-for-byte during round-trip serialisation. The ACE's raw bytes (from `AceType` through `AceType + AceSize`) are stored opaquely and written back unchanged. ACEs with `AceSize` not a multiple of 4 MUST be rejected (the containing ACL is malformed).
+Unrecognised ACE types — every value not given semantics above, which today
+means 0x04, 0x15, and everything from 0x16 up — MUST be silently skipped
+during evaluation and preserved byte-for-byte during round-trip serialisation.
+The ACE's raw bytes (from `AceType` through `AceType + AceSize`) are stored
+opaquely and written back unchanged. ACEs with `AceSize` not a multiple of 4
+MUST be rejected (the containing ACL is malformed).

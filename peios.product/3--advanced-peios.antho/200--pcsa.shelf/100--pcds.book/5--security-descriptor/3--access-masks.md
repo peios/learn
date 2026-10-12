@@ -3,7 +3,10 @@ title: Access Masks
 description: The 32-bit access mask — its object-specific, standard, special and generic right regions, the reserved bits, and generic mapping.
 ---
 
-Every ACE carries an access mask — a 32-bit integer where each bit represents a specific right. The same 32-bit layout is used in three contexts: the ACE's mask (what the rule grants or denies), the requested access (what the caller asks for), and the granted access (what AccessCheck returns).
+Every ACE carries an access mask — a 32-bit integer where each bit represents
+a specific right. The same 32-bit layout is used in three contexts: the ACE's
+mask (what the rule grants or denies), the requested access (what the caller
+asks for), and the granted access (what AccessCheck returns).
 
 ## Bit layout
 
@@ -11,7 +14,10 @@ The 32 bits are divided into four regions:
 
 ### Object-specific rights (bits 0–15)
 
-Defined by the object type. Different object types assign different meanings to these bits. A file uses bits for read, write, append, execute; a registry key uses bits for query value, set value, create subkey; a token uses bits for query, duplicate, impersonate. Each subsystem defines its own mapping.
+Defined by the object type. Different object types assign different meanings
+to these bits. A file uses bits for read, write, append, execute; a registry
+key uses bits for query value, set value, create subkey; a token uses bits for
+query, duplicate, impersonate. Each subsystem defines its own mapping.
 
 ### Standard rights (bits 16–20)
 
@@ -52,7 +58,9 @@ unparseable.
 
 ## Generic mapping
 
-Generic rights exist because SDs need to be portable across object types. A central access policy might say "allow GENERIC_READ on all objects" — and GENERIC_READ means different specific bits for files versus registry keys.
+Generic rights exist because SDs need to be portable across object types. A
+central access policy might say "allow GENERIC_READ on all objects" — and
+GENERIC_READ means different specific bits for files versus registry keys.
 
 Each object type defines a **GenericMapping** table:
 
@@ -63,7 +71,18 @@ Each object type defines a **GenericMapping** table:
 | `execute` | Specific + standard bits that GENERIC_EXECUTE maps to. |
 | `all` | Specific + standard bits that GENERIC_ALL maps to. |
 
-Generic mapping happens once, at request time. AccessCheck MUST map any generic bits in the desired mask to object-specific bits using the object type's GenericMapping table, then clear the generic bits. The DACL walk operates exclusively on specific and standard bits.
+Generic mapping happens once, at request time. AccessCheck MUST map any
+generic bits in the desired mask to object-specific bits using the object
+type's GenericMapping table, then clear the generic bits. The DACL walk
+operates exclusively on specific and standard bits.
 
 > [!NOTE]
-> KACS maps ACE masks via GenericMapping at evaluation time (using a local variable — the ACE itself is never mutated). This is an intentional divergence: the reference model expects ACE masks to be pre-mapped at SD construction time. Defensive mapping at evaluation time handles two cases: (1) imported/external SDs that may contain unresolved generic bits, and (2) central access policy recovery ACEs that use GENERIC_ALL. Note: SD inheritance also maps generic bits on all ACEs when computing a child SD (see §5.6), so newly created SDs will not contain generic bits. The evaluation-time mapping is defense-in-depth for SDs from other sources.
+> KACS maps ACE masks via GenericMapping at evaluation time (using a local
+  variable — the ACE itself is never mutated). This is an intentional
+  divergence: the reference model expects ACE masks to be pre-mapped at SD
+  construction time. Defensive mapping at evaluation time handles two cases:
+  (1) imported/external SDs that may contain unresolved generic bits, and (2)
+  central access policy recovery ACEs that use GENERIC_ALL. Note: SD
+  inheritance also maps generic bits on all ACEs when computing a child SD
+  (see §5.6), so newly created SDs will not contain generic bits. The
+  evaluation-time mapping is defense-in-depth for SDs from other sources.

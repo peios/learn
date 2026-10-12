@@ -11,10 +11,11 @@ entry format for:
 - token `device_claims`
 - `local_claims` passed to AccessCheck
 
-The claim entry format itself is shared across all four surfaces. When multiple
-entries are carried in one buffer (token claims or `local_claims`), KACS wraps
-the Windows-compatible entry format in a simple length-prefixed sequence so the
-buffer can be parsed deterministically without external metadata.
+The claim entry format itself is shared across all four surfaces. When
+multiple entries are carried in one buffer (token claims or `local_claims`),
+KACS wraps the Windows-compatible entry format in a simple length-prefixed
+sequence so the buffer can be parsed deterministically without external
+metadata.
 
 ## Supported types
 
@@ -34,8 +35,8 @@ claim type makes the containing claim entry invalid.
 
 ## Entry layout
 
-All multibyte integers are little-endian. All offsets are relative to the start
-of the claim entry.
+All multibyte integers are little-endian. All offsets are relative to the
+start of the claim entry.
 
 | Offset | Size | Field | Description |
 |---|---|---|---|
@@ -61,8 +62,8 @@ Unknown flag bits are preserved but have no defined semantics.
 
 ### INT64 / UINT64 / BOOLEAN
 
-For `INT64`, `UINT64`, and `BOOLEAN`, each `ValueOffsets[i]` points directly to
-an 8-byte scalar:
+For `INT64`, `UINT64`, and `BOOLEAN`, each `ValueOffsets[i]` points directly
+to an 8-byte scalar:
 
 - `INT64`: signed 64-bit integer
 - `UINT64`: unsigned 64-bit integer
@@ -115,8 +116,8 @@ Rules:
 - `entry_len` MUST be non-zero.
 - `entry_len` MUST fit entirely within the containing buffer.
 - `entry_bytes` is one complete claim entry using the layout above.
-- The parser consumes entries sequentially until the containing buffer length is
-  exhausted exactly.
+- The parser consumes entries sequentially until the containing buffer length
+  is exhausted exactly.
 
 ## Validation rules
 
