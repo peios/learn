@@ -30,8 +30,9 @@ one is scheduled by the backoff of §3.2.
 ### A successful attempt [*netd-subscribe.success-logged]
 
 On success resolvd logs `subscribed to netd` at info level, discards
-anything buffered from an earlier connection, and resets its backoff
-(§3.2). The first snapshot arrives as an ordinary read on the channel.
+anything buffered from an earlier connection, and waits for the first
+snapshot as an ordinary read on the channel. Only a successfully decoded
+snapshot resets its backoff (§3.2); connection success alone does not.
 
 ### Nothing else is written to netd [*netd-subscribe.writes-only-the-request]
 

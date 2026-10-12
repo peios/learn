@@ -30,7 +30,7 @@ This topic covers two related jobs. **Hashing** reduces a file to a short fixed-
 
 It is worth being clear up front, because both jobs are easy to mistake for something they are not.
 
-**A hash is not encryption.** Hashing is one-way: a checksum tells you *whether* data has changed, but the original cannot be recovered from it. It protects against corruption and detects tampering — it does not keep anything secret.
+**A hash is not encryption.** Hashing is one-way: a checksum tells you *whether* data has changed, but the original cannot be recovered from it. Comparing it with a trusted expected hash can detect corruption or tampering; a hash supplied alongside an untrusted file does not establish who published that file. Hashing does not keep anything secret.
 
 **Encoding is not encryption either.** `base64` rewrites data into a text-safe form, but anyone can decode it straight back — it is a change of *representation*, not of secrecy. Encoding something does not protect it.
 

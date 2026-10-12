@@ -59,27 +59,34 @@ UDP receive error.
 
 | Field | Value |
 |---|---|
-| ID | 16 bits from the engine's generator, fresh for every transaction [*engine-query.id-fresh-per-transaction] |
+| ID | 16 bits from the kernel CSPRNG, fresh for every transaction [*engine-query.id-fresh-per-transaction] |
 | Flags | `RD` set; `CD` clear; everything else clear [*engine-query.rd-set-other-flags-clear] |
 | Question | The candidate, case-randomised; the record type asked; class `IN` [*engine-query.question-is-randomised-candidate-in-class-in] |
 | Additional | One `OPT` record: payload size 1 232, `DO` clear, extended response code 0, version 0, no options [*engine-query.opt-record-advertises-1232] |
 
 Authority and answer sections are empty.
 
-### The generator [*engine-query.generator-is-xorshift64-star]
+### Query entropy [*engine-query.cryptographic-entropy-per-transaction]
 
-The ID and the case pattern come from a xorshift64\* generator seeded
-once at startup from eight bytes of `/dev/urandom` (§2.2). It is not a
-cryptographic generator. The ID is the low 16 bits of the first output
-drawn for a transaction; the case bits start with the second.
+Every transaction obtains 34 fresh bytes through `getrandom` with
+`GRND_NONBLOCK`: two bytes for the message ID, interpreted little-endian,
+and 32 bytes of case bits, enough for every letter in a DNS name. This
+uses the kernel CSPRNG without a predictable userspace generator or a
+clock fallback.
+
+If entropy is unavailable, including before the kernel CSPRNG is ready,
+resolvd logs the error, increments `refused`, and settles the affected
+question as `unavailable` without sending it. The event loop does not wait
+for entropy readiness; later requests can try again. Synthetic and cached
+answers do not need upstream entropy. [*engine-query.entropy-failure-is-unavailable]
 
 ### Case randomisation
 
 - Every ASCII letter in the candidate is flipped between upper and lower
-  case when its bit of the generator's output is 1. Digits, hyphens and
+  case when its random bit is 1. Digits, hyphens and
   other bytes are unchanged. [*engine-query.letters-flipped-on-generator-bits]
-- Bits are taken from one output, lowest first, until 64 have been used,
-  and then from the next output. A bit is used only for a letter. [*engine-query.case-bits-consumed-per-letter]
+- Case bytes follow the ID bytes. Bits are taken lowest first from each
+  byte in order. A bit is used only for a letter. [*engine-query.case-bits-consumed-per-letter]
 - Each transaction — a retry to the same server, and the TCP retry after
   truncation, included — gets a new pattern and a new ID. [*engine-query.new-pattern-every-transaction]
 
@@ -93,6 +100,7 @@ query without EDNS0: a server that answers an EDNS0 query with
 
 - A matching UDP reply with `TC` set is not used. The same candidate is
   sent to the same server over TCP as a new transaction, with a new ID,
-  a new case pattern and its own two-second deadline. It does not count
-  as an attempt (§4.6). [*engine-query.truncated-udp-retried-over-tcp-same-server]
+  a new case pattern and its own two-second deadline, if an attempt
+  remains in the question budget. The TCP transaction spends one attempt
+  (§4.6); without budget the question is `unavailable`. [*engine-query.truncated-udp-retried-over-tcp-same-server]
 - A TCP reply with `TC` set is used as it is. [*engine-query.truncated-tcp-reply-used-as-is]

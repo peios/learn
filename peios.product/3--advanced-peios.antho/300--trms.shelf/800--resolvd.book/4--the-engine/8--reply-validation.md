@@ -24,24 +24,28 @@ by it, nothing is counted, and the server is not demoted for it.
 
 ### A non-matching datagram on UDP [*engine-reply.non-matching-udp-datagram-becomes-timeout]
 
-A UDP transaction's socket is closed as soon as one datagram has been
-read from it, before the datagram is matched. A datagram that does not
-match therefore leaves its transaction with no socket: no later
-datagram, including the server's real reply, can reach it. The
-transaction then ends at its two-second deadline as a timeout, which
-fails the attempt and demotes the server (§4.6).
+A datagram that does not match is discarded while the transaction's
+socket stays open. A later matching datagram can answer the same
+transaction. Ignoring a datagram does not extend the original two-second
+deadline: if no matching reply arrives, the attempt times out and the
+server is demoted (§4.6).
 
 ### An undecodable or cut-short datagram [*engine-reply.undecodable-or-cut-short-datagram-becomes-timeout]
 
 The same holds for a datagram that does not decode. A datagram longer
-than the 4 096-byte read buffer arrives cut short, and when the cut
-falls inside the DNS message it no longer decodes, so it too ends in a
-timeout.
+than the 4 096-byte read buffer arrives cut short. If the cut falls
+inside the DNS message, it cannot decode and is discarded; the socket
+remains available for another reply until the original deadline.
 
 ### A non-matching TCP reply [*engine-reply.non-matching-tcp-reply-becomes-timeout]
 
-A TCP transaction's connection is likewise closed after its first
-message, so a non-matching TCP reply also ends in a timeout.
+An undecodable or non-matching TCP message is discarded while the
+connection remains open. Later complete frames on that connection are
+checked, including frames already buffered and a matching frame followed
+by EOF. Partial frames remain buffered for the next read. Ignoring a
+frame does not extend the original deadline. If the peer closes before a
+matching frame completes, the attempt fails; if it stays open without a
+matching reply, the attempt times out (§4.6).
 
 ## A matching reply
 
@@ -68,12 +72,18 @@ mistaken for `NOERROR` or `NXDOMAIN`.
 
 ### Records
 
-- The answer section's records of class `IN`, in the order the server
+- Relevant answer records of class `IN`, in the order the server
   sent them. [*engine-reply.answer-records-of-class-in]
 - For `NXDOMAIN` none are taken, even if the server sent some. [*engine-reply.nxdomain-records-discarded]
-- Records are not checked against the question: an `IN` record at any
-  name, of any type, in the answer section is returned to the client
-  and cached with the answer. [*engine-reply.records-not-checked-against-question]
+- Start at the candidate. Keep records of the requested type at that
+  owner; otherwise follow the first `IN` CNAME there, retaining it, and
+  repeat at its target. Stop after sixteen aliases, on a repeated name,
+  or when no matching record remains. Records unrelated to that path or
+  of an unrequested type are discarded before rendering or caching.
+  Their TTLs cannot shorten the cache lifetime. [*engine-reply.records-match-question]
+- An explicit CNAME question returns CNAME records at the queried owner.
+  ANY accepts all `IN` types at that owner and does not follow aliases.
+  Owner comparisons are case-insensitive and use DNS label boundaries.
 - The authority and additional sections are not returned. [*engine-reply.authority-and-additional-not-returned]
 
 ### The case of returned records [*engine-reply.candidate-case-restored]
@@ -94,7 +104,7 @@ carried into any answer.
 
 ### An empty `NOERROR` [*engine-reply.empty-noerror-is-nodata]
 
-A `NOERROR` reply with no answer records of class `IN` — including a
+A `NOERROR` reply with no relevant answer records of class `IN` — including a
 referral from a server that does not recurse — is `found` with no
 records.
 

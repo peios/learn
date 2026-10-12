@@ -73,12 +73,23 @@ user (§8.4).
 A denied request is answered `{ok: false, error: "access denied"}`, and
 nothing else happens.
 
-## One connection at a time [*control.serial-and-blocking]
+## Nonblocking client I/O [*control.serial-and-blocking]
 
-The control socket is served on netd's one thread (§2.2). When the
-listener is readable, netd accepts and serves connections one after
-another until no more are waiting. Each accepted connection gets a read
-timeout and a write timeout of 2 s. A peer that connects and sends
-nothing therefore holds netd's whole loop for 2 s, and one that keeps
-connections arriving keeps netd serving them. No DHCP or router-discovery
-timer fires and no kernel event is read in the meantime.
+The control socket is served on netd's one thread (§2.2). Accepted
+connections are nonblocking and polled alongside network and registry
+inputs. An idle client, partial request, or client that does not read its
+reply does not hold the loop in a socket read or write.
+
+At most 64 requests or replies are pending at once. While full, netd
+stops polling the listener until a slot becomes free; connections still
+waiting in the kernel backlog have not been accepted. Each iteration
+accepts at most 16 connections and reads or writes at most 4 096 bytes
+per ready pending connection. The 65 536-byte message ceiling is checked
+from the header before reading a request payload (§9.2).
+
+A request must complete within two seconds of acceptance. A normal reply
+must be written within two seconds of being queued. Partial progress does
+not extend either deadline. Expiry closes the connection without a
+timeout reply. These deadlines participate in the same poll timeout as
+network-client timers. Completed subscriptions leave this pending-client
+set and use the existing nonblocking snapshot publisher (§8.3).

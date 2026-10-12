@@ -9,7 +9,7 @@ the contract's mainline values are in PSPU §6.B. resolvd's values are:
 | Bound | Value |
 |---|---|
 | Transaction timeout | 2 s [*engine-servers.transaction-timeout] |
-| Attempts per candidate | 3 [*engine-servers.attempts-per-candidate] |
+| Attempts per question (all candidates and transports) | 3 [*engine-servers.attempts-per-candidate] |
 | Demotion period | 30 s [*engine-servers.demotion-period] |
 | Upstream transactions in flight | 4 096 [*engine-servers.in-flight-ceiling-value] |
 
@@ -40,22 +40,30 @@ Each of the following ends the transaction, adds one to
 
 - no matching reply within 2 seconds of the transaction being sent; [*engine-servers.timeout-fails-attempt]
 - an error opening, binding, connecting or sending on the transaction's
-  socket — an unreachable network is known at once, not after the
-  timeout; [*engine-servers.send-error-fails-attempt-at-once]
+  socket, except the local resource and permission errors below — an
+  unreachable network is known at once, not after the timeout; [*engine-servers.send-error-fails-attempt-at-once]
 - an error receiving on a UDP socket, such as the refusal that follows
   an ICMP port-unreachable; [*engine-servers.udp-receive-error-fails-attempt]
 - for TCP, the connection failing to complete: an error or hang-up
   while it is being established; [*engine-servers.tcp-connect-failure-fails-attempt]
 - for TCP, an error, a hang-up or a failed write before the whole query
   has been sent; [*engine-servers.tcp-error-before-query-sent-fails-attempt]
-- for TCP, the connection closing, or a read error, before a whole reply
+- for TCP, the connection closing, or a read error, before a whole matching reply
   has arrived; [*engine-servers.tcp-incomplete-reply-fails-attempt]
 - a matching reply whose response code is neither `NOERROR` nor
   `NXDOMAIN` — `SERVFAIL`, `REFUSED`, `FORMERR`, `NOTIMP`, and every
   other code, including EDNS extended codes. [*engine-servers.failure-rcodes-fail-attempt]
 
-A reply that does not match the transaction is not itself a failure,
-but on UDP it ends the transaction's chance of a reply (§4.8).
+A synchronous failure to open or send a transaction caused by exhausted
+local descriptors (`EMFILE`, `ENFILE`), memory or buffers (`ENOMEM`,
+`ENOBUFS`), local address allocation (`EADDRNOTAVAIL`, `EADDRINUSE`), or
+permission (`EACCES`, `EPERM`) still adds one `upstream_failed` and advances
+the bounded retry sequence, but does not demote the server. A different
+configured address or address family may still be usable. If all attempts
+fail, the result is `unavailable` and is not cached.
+
+A reply that does not match the transaction is ignored while the socket
+remains open for a matching reply until the original deadline (§4.8).
 
 ## Demotion
 
@@ -73,28 +81,31 @@ but on UDP it ends the transaction's chance of a reply (§4.8).
 
 ## The attempt limit
 
-- A candidate gets three attempts. When the third fails, the question
-  is `unavailable` (§4.1), and later candidates are not asked. [*engine-servers.third-failure-is-unavailable]
-- The limit counts per candidate, not per question: a single label with
-  *N* candidates can make up to 3*N* attempts. [*engine-servers.limit-is-per-candidate]
-- The TCP retry that follows a truncated reply (§4.7) is a transaction
-  with its own two-second deadline but is not an attempt, and does not
-  use one of the three. [*engine-servers.tcp-retry-not-an-attempt]
+- A question gets three upstream attempts across all search candidates and
+  transports. Failures spend them: a timeout, a failure response code, or
+  a transport failure. When its last attempt fails, the question is
+  `unavailable` (§4.1). [*engine-servers.third-failure-is-unavailable]
+- The budget is not reset when the question moves to another candidate,
+  but a candidate's `NXDOMAIN` that moves it on is an answer, not a
+  failure, and does not spend an attempt. Every search candidate is
+  therefore asked, however many there are. Cached answers spend no
+  attempt. [*engine-servers.limit-is-per-candidate]
+- The TCP retry following a truncated UDP reply (§4.7) spends one attempt
+  and gets its own two-second deadline. A truncated reply on the final
+  attempt cannot start TCP: the question is `unavailable`.
+  [*engine-servers.tcp-retry-not-an-attempt]
 
-Worst cases, from the first transaction to the answer:
-
-| Question | Longest time |
-|---|---|
-| A multi-label name, every attempt timing out | 6 s |
-| The same, with every reply truncated just before its deadline and every TCP retry timing out | 12 s |
-| A single label with *N* candidates, every attempt timing out | 6 s on the first; later candidates are reached only after a `notfound` |
-| A single label whose first *N* − 1 candidates are `notfound` and whose last times out | (*N* − 1) round trips plus 6 s |
+The three attempts allow at most six seconds of upstream timeout waiting
+in total, including TCP and search-domain expansion. Each `NXDOMAIN` that
+moves to another candidate adds one round trip. Loop scheduling and local
+I/O can add elapsed time; the attempt limit does not give those
+operations a separate deadline.
 
 ## The in-flight ceiling
 
-- When 4 096 or more transactions are outstanding, a candidate about to
-  make its first attempt is answered `unavailable` at once, and the
-  `refused` counter goes up by one. A candidate whose scope has no
+- When 4 096 or more transactions are outstanding, a question about to
+  make its first upstream attempt is answered `unavailable` at once, and the
+  `refused` counter goes up by one. A question whose scope has no
   servers left is answered `unavailable` before the ceiling is looked
   at, and is not counted as refused. [*engine-servers.in-flight-ceiling-refuses-first-attempts]
 - Later attempts and TCP retries are not checked against the ceiling.

@@ -1,7 +1,7 @@
 ---
 title: authd handoff
 type: concept
-description: When authd comes online the system moves from SYSTEM-everywhere to real identities — token minting, session management, and CAAP distribution.
+description: When authd comes online the system moves from SYSTEM-everywhere to real identities — token minting, session management, and the current CAAP distribution limitation.
 related:
   - peios/boot-and-trust-establishment/overview
   - peios/boot-and-trust-establishment/peinit-pid-1
@@ -21,7 +21,7 @@ This page covers what authd does at startup, how the handoff from SYSTEM-everywh
 - **Authenticate principals.** When a user signs in, authd verifies their credentials against the directory (locally for standalone systems, against the domain's directory for domain-joined ones).
 - **Mint tokens.** Once a principal is authenticated, authd produces a token reflecting their identity, group memberships, privileges, integrity level, claims. The token is what the principal's processes run on.
 - **Manage logon sessions.** authd creates a session per authentication event and attaches the minted tokens to it. The kernel destroys the session when its last token goes; authd keeps no per-session state, so it has nothing to clean up then. On request, it ends a session early by ending its processes.
-- **Distribute CAAP.** authd reads central access policies from its source (registry or the domain's directory) and pushes them into the kernel's policy cache via `kacs_set_caap`.
+- **CAAP distribution is not implemented.** authd does not load, update or replicate the kernel's central access policies. See [Distribution and recovery](~peios/central-access-policies/distribution-and-recovery).
 - **Resolve identity-related queries.** authd is the answer to "what privileges does this user have?", "what claims should be on this token?", "is this user a member of this group?". These queries go to authd, which consults the directory.
 
 authd is signed at TCB level, runs at `pip_type = Protected, pip_trust = 8192`, and is one of the PIP-protected processes. It is launched by peinit early in boot and runs continuously until shutdown.
@@ -41,17 +41,17 @@ authd opens its connection to the directory. The connection mechanism depends on
 - **Standalone systems** use loregd (the registry daemon). authd communicates with loregd over a Unix socket and reads policy from registry keys.
 - **Domain-joined systems** use Samba 4. authd talks to a Samba 4 instance (locally or on another machine in the domain) for domain identity and policy resolution.
 
-The directory is the source of truth for everything authd needs to know — principals, groups, privileges, CAAP, claims. authd's connection to the directory is established early because everything else depends on it.
+The directory is the source of truth for everything authd needs to know — principals, groups, privileges, claims. authd's connection to the directory is established early because everything else depends on it.
 
 If the directory connection fails (loregd not running, AD unreachable), authd cannot mint real tokens. The system continues on bootstrap tokens (everything as SYSTEM) until the directory becomes available. authd retries with exponential backoff; in the meantime peinit may proceed with whatever services don't need authd.
 
 ### 3. Populate the CAAP cache
 
-For each central access policy in the directory, authd parses it and pushes it via `kacs_set_caap`. The kernel's policy cache fills up with the deployment's CAAP.
-
-This step matters for the recovery policy: until this step completes, every CAAP-referencing object resolves to the recovery policy (administrators and SYSTEM only). After this step, the object's actual policy applies.
-
-CAAP population happens before authd advertises itself as ready. This is what makes the boot ordering safe — services that depend on CAAP being live can wait for authd to signal readiness; by then, CAAP is in place.
+This step is **not implemented**. authd does not call `kacs_set_caap` or
+load central access policies from a registry or directory. The kernel cache
+starts empty; references to missing policies use the recovery policy.
+authd's readiness signal does not certify policy loading. See
+[Distribution and recovery](~peios/central-access-policies/distribution-and-recovery).
 
 ### 4. Begin serving authentication requests
 
@@ -88,7 +88,6 @@ After startup, authd's day-to-day work is:
 
 - **Authenticate users when they sign in.** Each login produces a session and a token (or a pair of tokens for UAC-style elevation).
 - **Mint tokens for new service starts.** When peinit needs a token for a service it's about to launch, authd produces one.
-- **Distribute CAAP updates.** When a policy in the directory changes, authd re-pushes it via `kacs_set_caap`. The kernel's cache is kept in sync with the directory.
 - **End sessions on request.** When a person signs themselves out everywhere, or an administrator signs somebody out, a program asks authd over `/run/logon.sock`. authd checks the caller may, finds every process whose primary token belongs to the session, and sends each `SIGTERM`, then `SIGKILL` after a grace period, looking again for anything forked meanwhile. The kernel destroys the session when the last token goes. See [Session lifecycle](~peios/logon-sessions/lifecycle) and [PGSS §2.22](~peios/logon/ending-a-session).
 
 authd is a long-running daemon. It is not periodically restarted. Its uptime equals the system's uptime (modulo any administrative restarts in response to configuration changes).
@@ -98,7 +97,7 @@ authd is a long-running daemon. It is not periodically restarted. Its uptime equ
 A few clarifications:
 
 - **authd does not make access decisions.** AccessCheck is in the kernel. authd produces inputs to it (tokens) but does not decide whether any specific access is granted.
-- **authd does not enforce CAAP.** AccessCheck enforces CAAP; authd just distributes the policies into the kernel cache.
+- **authd does not enforce or distribute CAAP.** AccessCheck enforces policies installed in the kernel cache. Automatic distribution is not implemented.
 - **authd does not authenticate every operation.** Authentication is a sign-in event. Operations done after sign-in run against the token, not against authd. authd does not see most of the per-operation traffic.
 - **authd does not store passwords.** Credential verification goes against the directory; authd is an intermediary. The directory (loregd's registry, or the domain's directory) is where the credentials live.
 - **authd does not implement the directory.** authd consumes a directory; it doesn't *be* one. For standalone systems, loregd is the directory; for domain-joined, the domain's directory via Samba 4. authd talks to whichever is appropriate.
@@ -111,9 +110,9 @@ authd is signed at TCB level, runs hardened, and is operationally critical. If a
 
 - New authentication requests fail. Users cannot sign in, peinit cannot get new tokens for new services.
 - Existing tokens continue to be valid. Processes running on tokens authd already minted are unaffected.
-- The kernel's policy cache continues to hold whatever CAAP authd had pushed. Updates to CAAP in the directory will not be reflected until authd is restarted.
+- Any CAAP entries explicitly installed in the kernel cache remain there. authd does not populate or update that cache.
 
-peinit detects authd's exit (it's a child of peinit) and typically restarts it per policy. The restart goes through the same fork-install-exec pattern as the initial launch; the new authd instance reads the directory fresh and re-establishes the CAAP cache.
+peinit detects authd's exit (it's a child of peinit) and typically restarts it per policy. The restart goes through the same fork-install-exec pattern as the initial launch; restarting authd does not populate the CAAP cache.
 
 Sessions that authd had been managing are still associated with the old authd's auth_id values; the new authd doesn't "inherit" them but doesn't need to — the existing sessions continue running on the tokens already minted; the kernel knows they exist.
 
@@ -123,7 +122,7 @@ A failure that exceeds the restart policy's retry budget is treated as a critica
 
 Knowing what authd does has implications for boot ordering:
 
-- **Services that need CAAP** must start after authd has populated the cache. peinit enforces this by waiting for authd's readiness signal before launching such services.
+- **Services that need CAAP** cannot use authd readiness as proof that policies are loaded. Automatic distribution and a policy-readiness barrier are not implemented.
 - **Services that need real tokens** must start after authd is up. Similarly waited for.
 - **Services that are happy with SYSTEM** can start before authd. This is mostly registry, observability, and other infrastructure services.
 - **Login frontends** must start after authd is up. They can't authenticate users otherwise.
@@ -134,7 +133,7 @@ The exact graph of dependencies is part of peinit's configuration. peinit knows 
 
 A subtle but important property: the handoff from kernel-direct tokens to authd-managed tokens is **one-way**. Once authd is running and has taken over identity creation, the system does not revert to "kernel-direct only" without a full restart.
 
-If authd crashes and restarts, it picks up where it left off (re-reading the directory, re-populating CAAP). It doesn't reset the system to SYSTEM-everywhere; that initial transition happens only once per boot.
+If authd crashes and restarts, it resumes its authentication responsibilities. It does not populate CAAP. It doesn't reset the system to SYSTEM-everywhere; that initial transition happens only once per boot.
 
 The reason: the running services have already been assigned real tokens. Going back to SYSTEM would require reassigning every service's token, which would mean restarting every service. That's a system-wide reboot, not a recovery.
 

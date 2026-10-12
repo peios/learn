@@ -62,7 +62,7 @@ peipkg detects three such actions and, for each one in a plan, asks a separate q
 ```
 this operation requires elevated authorisation:
   nginx would move backward from 1.27.5 to 1.27.4
-authorise this specific action? [y/N]
+type "authorise downgrade nginx" to authorise this action (anything else refuses):
 ```
 
 The three actions that trigger it:
@@ -76,7 +76,7 @@ The three actions that trigger it:
 Two things make this prompt different from the routine one:
 
 - **`--yes` does not satisfy it.** `--yes` skips the routine `proceed?` prompt; it has no effect on an elevated-authorisation question.
-- **End-of-input refuses it.** A closed input cancels the action. This is not a separate authentication channel: the [authorisation reference](~peios/peipkg/security/operator-authorisation#the-channel-is-not-distinguished) documents that piped affirmatives can answer the same questions. Do not pipe blanket approvals as a substitute for reviewing elevated actions.
+- **Name the action and package.** The text prompt requires its displayed phrase, such as `authorise downgrade widget`, followed by a newline. Generic `y` or `yes`, closed input, and an unterminated phrase refuse the action. Scripts can supply the specific phrase; see the [authorisation reference](~peios/peipkg/security/operator-authorisation#confirming-a-specific-action) for the text and structured interface contracts.
 
 Each elevated action is presented and authorised on its own; approving one does not approve the next. And the authorising act is itself written to the [audit stream](~peios/auditing/overview) — the record shows not just what was done, but that it was specifically authorised and what was authorised.
 
@@ -107,13 +107,13 @@ and priority, and whether a name is a concrete package or a virtual
 capability. For upgrades, the installed version is the starting point; a
 plan with no update may reflect its constraints and available sources.
 
-> [!NOTE]
-> Existing descriptions differ on whether version or repository priority
-> wins first. The detailed [candidate-selection reference](~peios/peipkg/resolution/candidate-selection)
-> places architecture and source preferences before version, while earlier
-> operator guidance described highest version first. Inspect the actual plan;
-> this guide does not promise that the newest version across all repositories
-> will win. The reference keeps the ordered rules and virtual-version handling.
+Repository preferences apply before version within one package name. An
+architecture change from `x86_64` to `noarch` does not by itself keep a
+package on an older release: architecture only breaks a remaining version
+tie within that name. Between distinct providers of a capability, the
+primary architecture remains preferred. The detailed
+[candidate-selection reference](~peios/peipkg/resolution/candidate-selection)
+sets out the ordering and virtual-version handling.
 
 ## Resolution is a pure calculation
 

@@ -48,12 +48,19 @@ The check also constrains targets by destination for free. A target that
 must be a payload path inherits the payload path rules, because those
 are enforced on the same entries.
 
-## What peipkg does not check
+## Existing content at a claim path
 
 `/lcl/policy` is unreachable as a claim path or target whatever else
 permits it (§5.14), and the destination set keeps a claim link inside
-the managed tree. Within that tree, materialising a link does not apply
-the unowned-file rule that a payload entry gets (§5.7): a file at the
-claim path that no package owns is displaced into the backup the
-transaction keeps for rollback, and the commit then discards that
-backup. Only a path owned by an installed package is refused (§9.6).
+the managed tree. A newly materialised link also follows the unowned-file
+rule (§5.7): an identical relative symlink is adopted without replacing
+its inode; differing content is refused unless overwrite was explicitly
+authorised. An authorised replacement retains the displaced content at
+the transaction's backup path and reports that path in a warning.
+
+This applies both during package installation and during a standalone
+claim grant. The standalone `claim` command has no overwrite flag, so
+conflicting unowned content must be moved aside deliberately before a
+grant. Package installation can use its existing `--overwrite-unowned`
+option. Repointing a recorded claim link remains an atomic replacement.
+A path owned by a package that will remain installed is refused (§9.6).

@@ -112,3 +112,38 @@ request id, an operation code that does not match the request, a
 response for another connection — returns `EINVAL` **and tears the
 connection down**. [*source.dispatch.rejected-write-is-einval-and-tears-down] A source that cannot speak the protocol correctly is
 not one whose other answers are worth believing.
+
+## Negotiated lifetime control
+
+Sources may negotiate lifetime extension version 1 with `REG_SRC_NEGOTIATE`
+before `REG_SRC_REGISTER`. Pass version 1, zero flags and zero session; the
+kernel returns a nonzero session identifier unique to the open source file.
+The RSI request and response frame layouts are unchanged. Sources that do not
+negotiate retain the legacy protocol; current loregd requires this extension.
+[*source.dispatch.lifetime-extension-is-negotiated-before-registration]
+
+After reading a request and before responding, `REG_SRC_REQUEST_CONTEXT` takes
+that session and request id and returns three absolute `CLOCK_MONOTONIC`
+nanosecond timestamps: the request deadline, transaction lifetime deadline and
+cleanup lease deadline. Zero lifetime means an operation-owned transaction
+with no separate lifetime ceiling. Zero lease means there is no live transaction
+owner. Request metadata remains queryable after caller detachment until the
+response is accepted, so cleanup and late-response handling still work.
+[*source.dispatch.context-preserves-the-original-request-deadline]
+
+`REG_SRC_RENEW` takes the session and transaction id and returns the original
+lifetime deadline plus a renewed cleanup deadline, at most five seconds from
+now and never beyond the lifetime deadline. It succeeds only for an existing,
+nonterminal transaction owned by a live file object or kernel operation on
+this source session. Unknown, released, expired and foreign-session identities
+return `ESTALE`. Once a lease expires, renewal cannot resurrect it. These
+control ioctls consume no ordinary request slots, so request-queue saturation
+does not starve renewal.
+[*source.dispatch.lease-renewal-requires-a-live-owner-and-session]
+
+Final owner release and abort prevent renewal before abort-message delivery.
+Client lifetime expiration also prevents renewal. Sources must reject new
+operations after expiry and serialize rollback with operations and commit;
+an already-admitted commit must resolve its actual outcome. Lease cleanup
+does not change the kernel's treatment of late commit responses (§5.8.5).
+[*source.dispatch.lease-expiry-does-not-infer-a-commit-outcome]

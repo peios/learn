@@ -4,7 +4,8 @@ description: Writing a subtree to a stream under SeBackupPrivilege with no per-k
 ---
 
 `REG_IOC_BACKUP` exports the key on the fd and its entire subtree to
-another fd. [*backup.exports-the-key-and-its-subtree]
+another fd, preserving parent/child relationships even when traversal
+must grow its internal storage. [*backup.exports-the-key-and-its-subtree]
 
 It requires `SeBackupPrivilege` and performs **no per-key AccessCheck**
 whatsoever. [*backup.requires-sebackupprivilege-and-checks-no-key] The privilege is the whole authorisation, which is
@@ -37,6 +38,12 @@ subtree root (§5.2.9). [*backup.orphaned-key-is-enoent]
 
 `lcs.audit.backup.started` is emitted **before any subtree data is read**, and
 if it cannot be emitted the backup returns `EIO` and does not start. [*backup.start-event-precedes-any-data-or-eio]
+
+After privilege, output-fd and key validation, START precedes the request for
+the read-only snapshot. A refused or failed snapshot therefore emits both
+START and END, with END carrying the failure errno; no subtree is exported
+and no unopened snapshot is released. A START emission failure prevents the
+snapshot request itself. [*backup.snapshot-refusal-is-audited]
 
 `lcs.audit.backup.ended` is emitted afterwards, carrying the result, and a
 failure to emit it cannot change a result that has already happened. [*backup.complete-event-cannot-change-the-result]
@@ -73,3 +80,7 @@ A layer definition is backed up only when
 `Machine\System\Registry\Layers\<Name>\` is itself inside the subtree
 being exported, in which case it is ordinary key and value data like
 anything else. [*backup.layer-definition-backed-up-only-if-inside-the-subtree]
+
+This includes definitions for unused layers in a whole-hive export.
+Their metadata remains ordinary registry data; an unused definition
+does not by itself require an entry in the layer manifest.

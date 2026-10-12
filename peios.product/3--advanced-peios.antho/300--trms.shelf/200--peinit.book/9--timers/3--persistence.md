@@ -75,9 +75,18 @@ A service that crashes
 mid-run is not re-triggered on the next boot: the run was attempted, not
 missed.
 
-A configuration reload re-arms every timer from the current time with no
-catch-up, whatever `TimerPersistent` says. History is consulted at boot
-only. [*persist.a-reload-re-arms-from-now-with-no-catch-up]
+A configuration reload keeps an already-armed timer when its service name,
+schedule string, `TimerPersistent`, `TimerJitter`, and timestamp storage
+layout are unchanged. Its scheduled occurrence, jittered firing time,
+and last firing are retained, even if the occurrence has passed while
+its jitter is still pending. Unrelated configuration edits and a timer's
+own `LastTimerRun` writes therefore cannot postpone that firing.
+[*persist.unchanged-timers-keep-their-armed-firing]
+
+New or changed timers are armed from the current time with no catch-up,
+whatever `TimerPersistent` says. Removed or disabled triggers are
+unregistered. History is consulted at boot only.
+[*persist.a-reload-re-arms-from-now-with-no-catch-up]
 
 > [!NOTE]
 > Timestamps for a multi-trigger service are keyed by schedule string,

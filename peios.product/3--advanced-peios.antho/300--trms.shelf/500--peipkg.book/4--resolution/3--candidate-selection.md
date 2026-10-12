@@ -3,13 +3,28 @@ title: Candidate Selection
 description: The ordered rules peipkg applies when several packages satisfy one dependency, and what happens when the rules run out.
 ---
 
-When several available packages satisfy one dependency or goal, peipkg
-chooses between them by applying the following rules in order. The first
-rule that distinguishes two candidates decides.
+After filtering by the requested constraint and installable architectures,
+peipkg first selects one revision of each concrete package name. Within one
+name, repository preferences come first (rules 2 and 3 below), then the
+role version (rule 4), then the package's own version. An exact architecture
+match breaks a remaining version tie before repository-name ordering.
+
+This allows a newer `noarch` release to replace an older `x86_64` release
+of the same package without making an older revision win merely because
+of its architecture. An explicit version constraint or higher-priority
+repository can still select the older release.
+
+When distinct providers remain, peipkg compares their selected revisions
+using rules 1 to 4 and 6 below. Rule 5 applies only to the first stage,
+within one concrete package name. The first rule that distinguishes
+two candidates decides.
+
+Selecting the revision first also makes the result independent of catalogue
+order when a package's architecture changes.
 
 1. **An exact architecture match beats `noarch`.** A candidate whose
    architecture equals the system's primary architecture is preferred
-   over a `noarch` candidate of the same name.
+   over a `noarch` candidate from a different provider.
 
 2. **The depending package's own repository is preferred, bounded.**
    When resolving a dependency for a package D, a candidate from D's
@@ -48,23 +63,18 @@ rule that distinguishes two candidates decides.
    > Comparing those as *package* versions would decide the role by
    > which project numbers its releases higher.
 
-5. **A higher package revision is preferred** — already implied by rule
-   4, retained for clarity.
+5. **Within one package name, a higher package version is preferred.**
+   This includes the package revision and breaks equal role-version ties
+   during the first stage. An exact architecture match then breaks an
+   equal package-version tie. This rule does not compare distinct providers.
 
 6. **Ties break on the candidate's package name**, by byte order, and
    then on its repository name.
 
 ## Two versions of one package
 
-Rules 1 to 6 as stated do not order two *different versions of the same
-package* matched through an unversioned `provides`: they carry no role
-version to compare at rule 4 — a `provides` entry states the role's
-version, not the package's — and they agree on name and on repository at
-rule 6.
-
-peipkg breaks that tie on the candidate's own package version, newest
-first, applied between rule 4 and rule 6 and only between candidates of
-the same name. Distinct providers still separate by name, so it does not
-override rule 6; what it removes is a case where the winner was the
-candidate the index happened to list first, and the same index served in
-a different order installed a different version.
+When two revisions provide the same role version, including an unversioned
+`provides`, the package's own version decides which revision represents that
+package. This comparison is only within one concrete package name: distinct
+providers have unrelated package version scales and continue to use the
+role version and name ordering above.

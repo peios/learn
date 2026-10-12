@@ -27,9 +27,9 @@ By the time boot is complete, the system has:
 
 - Two kernel-direct bootstrap tokens (SYSTEM and Anonymous) that exist for the lifetime of the running kernel.
 - A peinit process running as PID 1, signed at TCB level, holding the SYSTEM token's privileges plus knowledge of which services to launch.
-- An authd process running (started by peinit), populated with the deployment's policy (privileges, claims, CAAP), ready to authenticate users and services.
+- An authd process running (started by peinit), populated with the deployment's policy (privileges and claims), ready to authenticate users and services.
 - A set of service processes running under tokens authd minted, each with their own identity and authority.
-- A populated CAAP cache in the kernel (pushed by authd).
+- An initially empty CAAP cache in the kernel. Automatic policy loading is not implemented; authd readiness does not populate it.
 - Mount policies applied (set by peinit at boot).
 - The handle model in steady state — services have opened the files they need; their fds have cached masks.
 
@@ -42,7 +42,7 @@ The interesting question is what happens *during* boot, when each of those piece
 3. After prelude has run the initramfs, the system's real root filesystem is mounted. prelude switches `/` to it and execs the real init.
 4. After peinit takes over at PID 1 of the real root, the kernel has a userspace component that can launch other userspace components. peinit can fork-and-exec services.
 5. After authd starts, the system has a way to mint *real* identities for users and services. Until now, every process was running on SYSTEM (inherited from init); from this point on, services can run as their own identities, and users can sign in.
-6. After authd has populated the CAAP cache, central access policies actually apply. Objects referencing CAAP get evaluated against the policy rather than the recovery policy.
+6. The kernel can enforce central access policies explicitly installed through `kacs_set_caap`. This is not an automatic boot step: distribution is unimplemented, and references to absent policies use the recovery policy.
 7. After mount policies have been applied, FACS knows what to do on each filesystem.
 
 Each transition is the "next thing that has to happen for the system to be coherent". They roughly correspond to the pages in this topic.
@@ -85,7 +85,7 @@ If you want the initramfs stage — prelude, the in-memory startup environment, 
 
 If you want peinit's role — what makes it the right thing to be PID 1, the service-launching pattern, the lifecycle-manager role that falls out of PIP — read [peinit at PID 1](~peios/boot-and-trust-establishment/peinit-pid-1).
 
-If you want the authd transition — what authd does at startup, the CAAP cache population, the SYSTEM-everywhere-handoff — read [authd handoff](~peios/boot-and-trust-establishment/authd-handoff).
+If you want the authd transition — what authd does at startup, the CAAP distribution limitation, the SYSTEM-everywhere-handoff — read [authd handoff](~peios/boot-and-trust-establishment/authd-handoff).
 
 ## Optional implementation references
 

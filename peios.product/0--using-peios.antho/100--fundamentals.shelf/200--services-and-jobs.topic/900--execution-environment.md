@@ -109,7 +109,7 @@ Conditions are checked first; only if all pass are asserts checked. All entries 
 
 Two constraints follow from peinit being single-threaded PID 1, which [must never block](~peios/services-and-jobs/overview):
 
-- **`registry:` checks are cache-only.** A `registry:` check may only name a key peinit already caches (under `Machine\System\Services\` or `Machine\System\Init\`); it is evaluated against the in-memory model, never a live read. Naming any other key is a validation error.
+- **`registry:` checks are cache-only.** Accepted paths are exactly `Machine\System\Services`, `Machine\System\Init`, and `Machine\System\Services\<name>` with one nonempty service-name component. The roots resolve as present; the last form checks whether the service exists in the in-memory model. Init descendants, deeper Services paths, trailing separators, and other keys are load-time decode errors. No live registry read is made.
 - **Filesystem checks run off the main loop.** `path:`/`file:`/`directory:` checks are performed by a short-lived forked helper, not a `stat()` on the event loop, because `stat()` can wedge on a hung mount.
 
 That timeout is the `PreStartCheckTimeout` field, which defaults to **5 seconds**. A filesystem check that does not finish within it — say a `stat()` wedged on a hung mount — is treated as **not satisfied**, fail-safe: peinit kills the helper and treats the check as unmet, so a Condition skips the service and an Assert fails it, rather than letting the event loop hang.

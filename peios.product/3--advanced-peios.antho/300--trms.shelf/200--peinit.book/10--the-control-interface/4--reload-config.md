@@ -63,8 +63,9 @@ name`. Repairing the key restores the service on the next reload.
   [*control.reload-config.a-changed-definition-takes-effect-at-the-next-start]
 - New services become available for `start` immediately.
   [*control.reload-config.a-new-service-is-startable-at-once]
-- Timer triggers are re-evaluated and every calendar timer is re-armed,
-  from the current time and with no catch-up.
+- Timer triggers are re-evaluated. Unchanged calendar timers retain their
+  armed occurrence and jittered deadline (§9.3); new or changed timers
+  are armed from the current time with no catch-up.
   [*control.reload-config.calendar-timers-are-re-armed-without-catch-up]
 
 A reload also refreshes things that are not service definitions: the

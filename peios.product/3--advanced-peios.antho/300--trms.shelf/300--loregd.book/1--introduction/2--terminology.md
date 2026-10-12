@@ -14,11 +14,10 @@ registered by loregd has its own file, whose path is given on the command
 line (§2.1). Referred to in SQL as the `main` schema.
 [*term.each-hive-has-its-own-database-file]
 
-**Volatile database.** The in-memory SQLite database backing one hive's
-volatile keys, attached to that hive's connections under the schema name
-`volatile` (§3.3). It mirrors the hive database's tables, holds no data at
-startup, and is destroyed with the process.
-[*term.the-volatile-database-is-in-memory-and-destroyed-with-the-process]
+**Volatile database.** The tmpfs-backed SQLite WAL database for one hive's
+volatile keys, attached as `volatile`. It mirrors the persistent tables,
+starts empty, and is never reused across daemon instances (§3.3).
+[*term.the-volatile-database-is-transient-tmpfs-storage]
 
 **Folded name.** The case-folded form of a key name, value name, or child
 name, stored in a `_folded` column beside the canonical case-preserving

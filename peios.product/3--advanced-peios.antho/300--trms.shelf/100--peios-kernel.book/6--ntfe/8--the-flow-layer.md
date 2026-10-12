@@ -25,11 +25,11 @@ accepted, `NF_ACCEPT`: inbound the Packet verdict stands, outbound the
 Packet layer judges it next at egress. [*ntfe-flow.untracked-packet-keeps-packet-verdict] A
 tracked packet reads its flow's **sentence**:
 
-- a *current* sentence — the policy generation that wrote it is the
-  active one, and its expiry (if any) has not passed — is applied
+- a *current* sentence — its policy object and policy/context invalidation
+  generation are both current, and its expiry (if any) has not passed — is applied
   without evaluation (`flow_cached`); [*ntfe-flow.current-sentence-applied-without-evaluation]
 - otherwise the Flow forest is evaluated against the snapshot
-  (`peios_ntfe_policy_eval(PEIOS_NTFE_LAYER_FLOW)`, counted in `judged`
+  (`peios_ntfe_policy_snapshot_eval()`, counted in `judged`
   and `flow_judged`), the outcome is written as the new sentence, an
   event is emitted (with `REJUDGED` when a stale sentence was replaced,
   `flow_rejudged` or `flow_expired` saying why), and the verdict is
@@ -38,6 +38,15 @@ tracked packet reads its flow's **sentence**:
 
 No Flow forest at all (generation 0, or no `Flow` key) is permissive,
 counted, and caches nothing. [*ntfe-flow.no-forest-permissive-uncached]
+
+Flow dispatch holds one RCU policy snapshot while checking layer
+presence, preparing identity facts and evaluating. The sentence retains
+that policy object's generation as an internal stamp alongside the
+existing invalidation generation, which also changes when network
+context changes. Both must match before either endpoint's cached verdict
+can be reused. A packet already evaluating an old policy may finish;
+its old verdict cannot remain current after a new policy is published.
+The extra policy stamp does not change the flow-dump ABI.
 
 What the Flow forest judges is the **flow view**, not the packet's
 snapshot: a Flow fact is one identical for every packet of the flow, so
@@ -69,8 +78,9 @@ not applied — it is that seat's to refresh when it next sees the flow. [*ntfe-
 ## The sentence
 
 `struct peios_ntfe_sentence` lives in NTFE's conntrack extension
-(`include/linux/peios_ntfe.h`), two per flow: the generation that judged
-(0 = empty), `expires_at` (epoch seconds, 0 = never), the FNV-1a-64 hash
+(`include/linux/peios_ntfe.h`), two per flow: the invalidation generation
+that judged (0 = empty), the generation of the policy object that judged,
+`expires_at` (epoch seconds, 0 = never), the FNV-1a-64 hash
 of the attributing rule's whole path (the outcome's `attributed_hash`:
 the event's `attributed` text is cut short, the hash never is; the same
 identity the tag and counter stores use for names, so the viewer
@@ -79,12 +89,24 @@ conntrack created the entry (`peios_ntfe_ct_ext_add()`) — the `Start.*`
 facts — [*ntfe-flow.start-secs-stamped-at-ct-creation] and, from the first judgment, the interface, the direction and
 whether the flow is loopback, for the dump. [*ntfe-flow.extension-records-first-judgment-facts]
 
+NTFE shares conntrack extension storage with accounting and other
+kernel features. Its allocation sizes and offsets use 16-bit fields;
+the build-time capacity guard includes the NTFE payload and alignment
+padding for every allocation order. Adding another extension must not
+wrap the total length or overwrite an existing extension. These fields
+are kernel-internal and do not change the flow-dump ABI.
+
 Writes take the flow's lock (`ct->lock`, `_bh`), zero the generation
 first, write the fields, and publish the generation last with a release
-store. [*ntfe-flow.sentence-write-publishes-generation-last] Reads are lock-free on the hook path: an acquire load of the
-generation, the fields, then a re-check of the generation — a torn
-sentence (a writer in between) reads as absent and the flow is simply
-evaluated. [*ntfe-flow.torn-sentence-reads-absent] Two packets of a new flow racing on two CPUs may both
+store. [*ntfe-flow.sentence-write-publishes-generation-last] Each slot also has a modification
+sequence, advanced at the start and end of every write, including a
+refresh under the same policy generation. The policy generation
+identifies the policy; it cannot detect every cache update.
+
+Reads are lock-free on the hook path and in the flow dump. They make
+one attempt: an active writer or a changed modification sequence makes
+the sentence read as absent. Readers neither spin nor acquire the
+flow's lock. On a cache miss the flow is evaluated as usual. [*ntfe-flow.torn-sentence-reads-absent] Two packets of a new flow racing on two CPUs may both
 evaluate; the second sentence write wins (both judged the identities
 the first resolution recorded, §6.9), and the effects ran twice — the only
 place NTFE tolerates that, because the alternative is a lock on the fast
@@ -110,10 +132,10 @@ a sentence and is evaluated on every packet (`flow_uncached`). [*ntfe-flow.no-ex
 
 ## Staleness
 
-A sentence is stale when its generation is not the current one (a
-policy published, or a network context published — §6.5 — both advance
-the one counter) or
-`t_secs >= expires_at`. [*ntfe-flow.stale-by-generation-or-expiry] Both are checked lazily, on the flow's next
+A sentence is stale when its invalidation generation is not the current
+one (a policy published, or a network context published — §6.5 — both
+advance the one counter), when the policy object that judged it is not
+the current policy object, or when `t_secs >= expires_at`. [*ntfe-flow.stale-by-generation-or-expiry] Both are checked lazily, on the flow's next
 packet — an idle flow past a policy change is killed when it next
 speaks, or conntrack times it out; there are no timers and no walk of
 the table at publication. [*ntfe-flow.staleness-checked-lazily] Grandfathering was rejected: the registry must

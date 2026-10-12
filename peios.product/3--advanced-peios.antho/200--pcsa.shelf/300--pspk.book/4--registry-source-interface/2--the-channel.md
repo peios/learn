@@ -1,6 +1,6 @@
 ---
 title: The Channel
-description: Attaching to /dev/pkm_registry — the privileges the open handler demands, registration, source slots, and resuming a Down slot.
+description: Attaching to /dev/pkm_registry — the privileges the open handler demands, registration, source slots, resuming a Down slot, and the optional lifetime extension.
 ---
 
 ## The device
@@ -124,3 +124,87 @@ record for each hive it backs, generating a GUID for each and giving it
 an appropriate default Security Descriptor, and MUST persist them. The
 root GUIDs it then reports in registration are those. Subsequent
 startups reuse the persisted ones.
+
+## The lifetime extension
+
+A source MAY negotiate the lifetime extension. It tells the source how
+long each request and transaction may live, and gives it a lease that
+proves a transaction still has a live kernel-side owner. The RSI request
+and response frames are unchanged by it. A source that does not
+negotiate it gets the protocol described in the rest of this book.
+
+All three ioctls are issued on the device fd. Every timestamp is an
+absolute `CLOCK_MONOTONIC` time in nanoseconds.
+
+### Negotiation
+
+To use the extension, a source MUST issue `REG_SRC_NEGOTIATE` before
+`REG_SRC_REGISTER`. The argument is a `reg_src_negotiate_args` (16
+bytes):
+
+| Field | Type | Description |
+|---|---|---|
+| `version` | `u32` | `REG_SRC_LIFETIME_VERSION`, which is 1. |
+| `flags` | `u32` | Reserved. MUST be zero. |
+| `session` | `u64` | MUST be zero on input. On success, the kernel writes a nonzero session identifier, unique to this open fd and never reused by a later fd. |
+
+Any other version, nonzero flags or a nonzero input session fails
+`EINVAL`. Negotiating after registration, or on a connection that is
+closing, fails `EBUSY`.
+
+### Request context
+
+After reading a request and before responding to it, a negotiated source
+MAY issue `REG_SRC_REQUEST_CONTEXT` with its session and the request's
+id. The argument is a `reg_src_request_context_args` (40 bytes):
+
+| Field | Type | Description |
+|---|---|---|
+| `session` | `u64` | The session returned by negotiation. |
+| `request_id` | `u64` | The id of a request the source has read and not yet answered. |
+| `request_deadline_ns` | `u64` | Output. When the kernel-side caller stops waiting, counting from when the request was queued. |
+| `lifetime_deadline_ns` | `u64` | Output. The transaction's lifetime ceiling; zero for a transaction owned by one kernel operation, which has no separate ceiling. |
+| `lease_deadline_ns` | `u64` | Output. The current cleanup lease; zero when the request has no live transaction owner. |
+
+The context stays available after the kernel-side caller has given up,
+until the source's response is accepted, so a source can still clean up
+and answer a request it read late. A request the source has not read, or
+has already answered, fails `ENOENT`.
+
+### Renewing a lease
+
+`REG_SRC_RENEW` takes a `reg_src_renew_args` (32 bytes): `session` and
+`transaction_id` as inputs, and `lifetime_deadline_ns` and
+`lease_deadline_ns` as outputs. On success the lease is extended to at
+most five seconds from now, and never past the lifetime ceiling.
+
+Renewal succeeds only for an existing transaction that has not ended,
+whose kernel-side owner (a transaction fd, or a kernel operation) is
+still live, on this source's own session. An unknown, released, expired
+or foreign transaction fails `ESTALE`. A lease that has expired cannot
+be renewed back to life. Releasing the last owner, or aborting the
+transaction, ends renewal before the abort message is delivered.
+
+None of the three ioctls uses an in-flight request slot, so a saturated
+request queue cannot prevent renewal. On a connection that has not
+negotiated, is not Active, or names another session, request context and
+renewal fail `ESTALE`.
+
+### What a negotiated source does with it
+
+A source that negotiated:
+
+- MUST stop holding transaction state (locks, an open storage
+  transaction, a read snapshot) once that transaction's lease has
+  expired or renewal has failed, and MUST treat the transaction as
+  aborted from then on;
+- MUST reject new operations on a transaction after its lifetime
+  ceiling, and MUST serialise its rollback with the transaction's other
+  operations and its commit;
+- MUST report the true outcome of a commit it had already admitted when
+  the lease or lifetime ran out, rather than inferring one from the
+  expiry.
+
+A lease is evidence that the kernel-side owner is alive. It is not an
+inactivity timeout, and lease expiry does not change how the kernel
+treats a commit response that arrives after its caller stopped waiting.

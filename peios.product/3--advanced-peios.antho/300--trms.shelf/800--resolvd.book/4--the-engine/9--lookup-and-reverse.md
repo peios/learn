@@ -57,17 +57,21 @@ ends with no addresses, and no further question is asked.
 - `addresses` lists each finished task's addresses in turn, in the order
   the tasks finished, so whether IPv4 or IPv6 addresses come first
   depends on which family was answered first. [*engine-lookup.address-order-follows-completion]
-- `canonical` is the name asked, as parsed, in presentation form without
-  a trailing dot (the root is `.`), unless a task produced addresses:
-  then it is the name that task's chase ended at, and when both
-  families produced addresses, the later-finishing one's. [*engine-lookup.canonical-name-rule]
-- A `found` with no addresses leaves `canonical` as the name asked, even
-  when the answer came from an expanded name. [*engine-lookup.canonical-unexpanded-without-addresses]
+- `canonical` and `source` come from the same selected `found` task.
+  Prefer a task that produced addresses; when both or neither did, prefer
+  `A` over `AAAA`. Completion order does not affect this choice.
+  `canonical` is the name that task's CNAME chase ended at, after search
+  expansion. Without a `found` task it is the name asked, as parsed, in
+  presentation form without a trailing dot (the root is `.`).
+  [*engine-lookup.canonical-name-rule]
+- A `found` with no addresses still reports the expanded or chased name.
+  [*engine-lookup.canonical-expanded-without-addresses]
 - A name that does not parse is answered at once with `outcome`
   `notfound`, `canonical` `.`, no addresses and `source` `local`; no
   task is started. [*engine-lookup.unparseable-name-canonical-root]
-- `source` is the source of the last `found` task to finish, and `local`
-  when no task was `found`. [*engine-lookup.source-of-last-found-task]
+- `source` is the source of the selected task, and `local` when no task
+  was `found`. It describes that task; the other family's records can
+  have a different source. [*engine-lookup.deterministic-source]
 - `validation` is `unvalidated`.
 - A `lookup` adds one to `queries` however many tasks it makes. [*engine-lookup.counts-one-query]
 

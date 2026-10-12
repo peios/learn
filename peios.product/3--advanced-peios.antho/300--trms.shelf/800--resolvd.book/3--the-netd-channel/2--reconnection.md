@@ -31,28 +31,32 @@ the warning is written at most once in the life of the process: for the
 first failure, when that failure comes before the first successful
 connection. A resolvd whose first attempt succeeds never writes it.
 
-## A successful connection resets the backoff [*netd-reconnect.success-resets-backoff]
+## A good snapshot resets the backoff [*netd-reconnect.success-resets-backoff]
 
-A successful connection resets the backoff to 0.5 seconds.
+A successfully decoded snapshot resets the backoff to 0.5 seconds.
+Connecting, writing the subscription, or receiving another reply kind
+does not reset it. A partial snapshot does not reset it until complete.
 
 ## After a loss
 
 When an established channel is dropped (§3.1):
 
-- the next attempt is due 0.5 seconds later and the backoff is reset to
-  0.5 seconds; if that attempt fails, the following ones come 0.5, 1, 2,
-  4, 8 and then every 10 seconds after it; [*netd-reconnect.sequence-after-loss]
+- the next attempt is due after the current backoff, then the delay
+  doubles up to 10 seconds. After a channel that delivered a snapshot,
+  successive gaps are 0.5, 1, 2, 4, 8, then 10 seconds. A connection
+  lost before its first snapshot continues the existing sequence; [*netd-reconnect.sequence-after-loss]
 - the `netd not reachable` warning is not logged for the failures that
   follow, however many there are; the `lost the netd channel;
   reconnecting` line that preceded them is the record. [*netd-reconnect.no-unreachable-warning-after-loss]
 
-### A refused subscription loops every half second [*netd-reconnect.refusal-reconnects-every-half-second]
+### A refused subscription also backs off [*netd-reconnect.refusal-reconnects-every-half-second]
 
 A netd that accepts the connection and then answers the subscription
-with an error is a connection that succeeds and is then lost, so the
-backoff never grows: resolvd reconnects about every half second, logging
-`subscribed to netd` at info level and then two warnings each time
-(§9.4).
+with an error has not delivered a snapshot. Its retries follow the same
+growing delay, up to ten seconds, as other failures. Each connection
+still logs `subscribed to netd` at info level and two warnings (§9.4).
+An accept-then-close or malformed reply likewise preserves the growing
+delay until a good snapshot arrives.
 
 ## Disconnected from netd [*netd-reconnect.state-kept-while-disconnected]
 

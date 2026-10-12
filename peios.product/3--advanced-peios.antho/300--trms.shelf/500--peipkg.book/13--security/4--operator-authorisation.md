@@ -34,15 +34,25 @@ With input closed, an authorization prompt reads end-of-input and
 returns a refusal, so a non-interactive invocation of an elevated action
 cancels rather than proceeding. That is the right direction to fail.
 
-## The channel is not distinguished
+## Confirming a specific action
 
-An authorization prompt and the routine prompt read from the same input
-stream and accept the same affirmative. The distinctness the model calls
-for is a property of what is *displayed*, not of what is *accepted*.
+The text interface displays the action's detail and requires a phrase
+naming both the action and package. For example, downgrading `widget`
+requires `authorise downgrade widget`, followed by a newline. The other
+action names are `low-trust-provides` and `foreign-replaces`. Use the
+phrase printed by the prompt; matching is case-sensitive, with surrounding
+whitespace ignored.
 
-A script piping affirmatives satisfies every elevated gate in a plan
-along with the routine one. The property survives for a person at a
-terminal and does not survive automation.
+A generic `y` or `yes` refuses an elevated action. The first refusal
+cancels the plan, and each answer given is audited. End-of-input,
+including an unterminated phrase, also refuses. `--yes` still skips only
+the routine proceed prompt.
+
+Scripts may supply these specific phrases through standard input; a
+terminal is not required. This prevents a generic stream of affirmatives
+from approving every gate, but is not proof of a human's presence or a
+cryptographic authorisation. The structured driven interface continues to
+accept a separate `yes` answer tied to each authorisation question's ID.
 
 ## Flags outside the frame
 

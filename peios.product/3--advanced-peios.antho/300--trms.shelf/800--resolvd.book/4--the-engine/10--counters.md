@@ -16,15 +16,16 @@ unsigned 64-bit count.
 | `upstream_sent` | Every transaction started, UDP or TCP, including TCP retries. It is counted before the socket is opened, so a transaction whose socket cannot be opened, connected or sent on (§4.7) counts here as well as in `upstream_failed`, though nothing reached the wire [*engine-counters.upstream-sent] |
 | `upstream_answered` | Every matching reply (§4.8), whatever its response code, including a truncated one [*engine-counters.upstream-answered] |
 | `upstream_failed` | Every failed transaction (§4.6): a timeout, a transport failure, or a reply with a response code other than `NOERROR` and `NXDOMAIN` [*engine-counters.upstream-failed] |
-| `refused` | Every question refused at the in-flight ceiling (§4.6) [*engine-counters.refused] |
+| `refused` | Every question refused at the in-flight ceiling (§4.6) or because fresh query entropy is unavailable (§4.7) [*engine-counters.refused] |
 
 ## What is not counted [*engine-counters.status-flush-and-netd-not-counted]
 
 `status` and `flush` requests are not counted, and nothing on the netd
 channel is.
 
-Because a non-matching UDP datagram leaves its transaction to time out
-(§4.8), it shows up as one `upstream_failed` and no `upstream_answered`.
+An unmatched reply changes neither upstream counter (§4.8). A later
+matching reply adds one `upstream_answered`; if the original deadline
+expires without one, the timeout adds one `upstream_failed` instead.
 A reply with `SERVFAIL` shows up in both. A transaction that could not
 be sent shows up in `upstream_sent` and `upstream_failed`, and never in
 `upstream_answered`.

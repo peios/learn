@@ -21,12 +21,18 @@ and `AD` are PSPU §6.8. This article is how resolvd builds each reply.
 - The response code is `NOERROR`, and the answer section holds the
   engine's records in the order the engine has them (§4.8). [*stub-render.found-records-in-engine-order]
 - When the answer was found at a candidate other than the question's
-  name — compared case-insensitively — and there is at least one
-  record, the section begins with a `CNAME` from the question's name, in
+  name — compared case-insensitively — the section begins with a
+  `CNAME` from the question's name, in
   the query's case, to the candidate. Its TTL is the least TTL among the
-  records. [*stub-render.expansion-cname]
-- A `found` with no records at an expanded name is an empty `NOERROR`,
-  with no `CNAME`. [*stub-render.expanded-nodata-has-no-cname]
+  records when any are present. [*stub-render.expansion-cname]
+- A `found` with no records at an expanded name is `NOERROR` with only
+  that leading `CNAME`. Its TTL is the negative cache lifetime: the lesser
+  of the enclosing upstream `SOA` record's TTL and minimum field, capped at
+  300 seconds and at the TTL of any `CNAME` path the reply followed (§4.5).
+  A cache hit uses the remaining lifetime, rounded down to whole seconds.
+  With no enclosing `SOA`, the TTL is zero; no lifetime is invented. The
+  authority section remains empty. An unexpanded empty `found` has no
+  `CNAME`. [*stub-render.expanded-nodata-has-no-cname]
 
 ### `notfound` replies [*stub-render.nxdomain-without-soa]
 
@@ -55,6 +61,6 @@ options. A query without `OPT` gets a reply without one.
 - A reply that cannot be encoded at all is not sent. [*stub-render.unencodable-reply-not-sent]
 - Over TCP the whole reply is sent, whatever its size up to the 65 535
   bytes a DNS message can hold. [*stub-render.tcp-sends-whole-reply]
-- A TCP reply is written with its two-byte length, blocking, with a
-  one-second timeout on each write call (§2.5); a failed write is not
-  logged. [*stub-render.tcp-write-failure-not-logged]
+- A TCP reply is written with its two-byte length, without blocking.
+  Unfinished writes are queued with a fixed one-second deadline and a cap
+  of 256 queued TCP replies (§2.5); a failed or expired write is not logged. [*stub-render.tcp-write-failure-not-logged]

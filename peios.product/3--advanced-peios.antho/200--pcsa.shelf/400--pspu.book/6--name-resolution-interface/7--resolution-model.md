@@ -69,7 +69,9 @@ Before any network, a resolver MUST answer: [*nri-resolution.synthetic-before-ne
 - every name under `Machine\System\Network\Dns\Hosts`, exactly and
   case-insensitively: its addresses. [*nri-resolution.synthetic-static-names] A static name wins over DNS; [*nri-resolution.static-name-wins-over-dns]
 - the reverse of loopback (`localhost`), of a static name's address
-  (the name), and of the machine's own addresses (the hostname); [*nri-resolution.synthetic-reverses]
+  (the name whose ASCII-lowercased presentation form sorts first in byte
+  order when several names share it), and of the machine's own addresses
+  (the hostname); [*nri-resolution.synthetic-reverses]
 - any name under `.local`: `notfound`. [*nri-resolution.local-is-notfound] mDNS is a separate transport
   (RFC 6762) and a `.local` question MUST NOT reach a DNS server. [*nri-resolution.local-never-reaches-dns]
   LLMNR MUST NOT be spoken. [*nri-resolution.no-llmnr]

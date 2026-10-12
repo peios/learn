@@ -11,6 +11,14 @@ Detection is uniform: after sending the kill, arm a post-kill deadline
 (5 seconds by default) and check whether the cgroup still reports as
 populated when it fires.
 
+For a service stop, the post-kill deadline belongs to that stop operation,
+including the stop leg of a Restart. When the main exits and the stop ends,
+the deadline is cancelled. A retained obsolete deadline is ignored before
+probing or removing the cgroup: the same pathname may already belong to the
+next instance. A later stop that escalates to SIGKILL gets its own full
+`PostKillTimeout`; it cannot inherit the earlier instance's remaining grace.
+Re-recording a deadline for the same stop does not extend it.
+
 What follows depends on which cgroup it was:
 
 | Cgroup | Consequence |

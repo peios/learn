@@ -31,7 +31,7 @@ Every line resolvd writes, with the level it is written at:
 | `stub listener on 127.0.0.53:53: <error>` | error | Startup failed at port 53; resolvd exits (§2.2) |
 | `poll: <error>` | error | The loop failed; resolvd exits (§2.2) |
 | `could not set a descriptor on <path> (<error>); …` | error | The native socket is reachable only by SYSTEM and administrators (§2.4) |
-| `removed a stale /run/resolvd/resolv.sock` | warn | A previous instance left its socket behind, and this one could remove it: only when resolvd runs with rights over the file, not as the service (§2.4) |
+| `removed a stale /run/resolvd/resolv.sock` | warn | A previous instance left its socket behind and this one removed it; expected on every restart of the service (§2.4) |
 | `could not build a descriptor: <error>` | warn | As `could not set a descriptor …`, but before writing was attempted (§2.4) |
 | `registry watch unavailable (<error>); configuration is read once` | warn | Configuration changes will not be seen (§2.3) |
 | `registry watch: <error>; re-arming` | warn | The watch failed and is being replaced (§2.3) |
@@ -48,7 +48,7 @@ Every line resolvd writes, with the level it is written at:
 | `upstream <server>: <error>` | warn | A transaction could not be sent (§4.7) |
 | `control: no peer token: <error>` | warn | A native request was denied because its token could not be read (§5.2) |
 | `control: reply failed: <error>` | warn | A native reply could not be written (§5.1) |
-| `stub udp: <error>`, `stub tcp accept: <error>`, `native accept: <error>` | warn | A read or accept on a listening socket failed; the loop goes on [*failure-signals.listener-errors-logged-and-survived] |
+| `stub udp: <error>`, `stub tcp accept: <error>`, `native accept: <error>` | warn | A listener read or accept failed. Accept errors pause that listener for 250 ms before retrying; other descriptors continue to be serviced [*failure-signals.listener-errors-logged-and-survived] |
 | `listening on /run/resolvd/resolv.sock and 127.0.0.53:53` | info | Startup reached readiness (§2.2) |
 | `subscribed to netd` | info | §3.1 |
 | `netd: <summary>` | info | A snapshot was applied (§3.3) |

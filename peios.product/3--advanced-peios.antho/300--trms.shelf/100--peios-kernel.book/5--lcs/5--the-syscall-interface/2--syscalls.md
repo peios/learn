@@ -82,6 +82,15 @@ does not count, and the create makes the named layer's own entry, with
 its own GUID and `REG_CREATED_NEW` — which is how hide-and-replace is
 authored. [*reg-syscall.create-key.named-layer-creates-its-own-entry]
 
+The named-layer presence check is read-only and compares layer names without
+case sensitivity. If that layer already names a key, LCS opens the effective
+key using normal layer resolution and checks the requested rights on that
+key. It does not require `KEY_CREATE_SUB_KEY` on the parent, perform layer
+write authorization, or send `CREATE_ENTRY`/`CREATE_KEY` for an existing key.
+An unbound transaction remains unbound by this open; a bound transaction
+uses its own view, including entries it has created but not yet committed.
+The checks below still apply when the named layer has no key entry there.
+
 **If it does not:**
 
 1. Resolve the parent, which must exist. Check that the parent's depth

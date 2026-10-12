@@ -57,10 +57,12 @@ The mismatch does not record which events differed. The kernel compares the two 
 
 ## The rollout pattern
 
-The intended deployment flow for a CAAP change:
+The following is a conceptual rollout pattern. Kernel staging is available,
+but automatic distribution and the end-to-end administrative workflow are
+not implemented; see [Distribution and recovery](~peios/central-access-policies/distribution-and-recovery).
 
 1. **Author the staged change.** Take the existing policy. Add or modify the `staged_dacl` and/or `staged_sacl` to reflect the proposed change. Leave the effective versions unchanged.
-2. **Distribute the policy.** authd pushes the policy (with staged versions populated) to the kernel via `kacs_set_caap`. Other machines in the deployment get the same policy through their authd instances.
+2. **Install the policy in each kernel.** The kernel interface is `kacs_set_caap`, including the staged fields. A distribution service would have to perform this step on each machine; authd does not currently do it.
 3. **Run for a period.** The system runs normally. Every access check produces a granted mask; tokens behave as if the effective version is in force. The mismatch flag is set whenever the staged version would have produced different behaviour.
 4. **Collect mismatch reports.** A monitoring tool records mismatches and their contexts (which call, which token, which object, which requested rights). Administrators review the report.
 5. **Decide.** If the mismatches reflect intended behaviour changes (the change tightens access in exactly the cases the administrator expected to tighten), the change is good. If unexpected accesses are flagged, the change has unintended side effects and needs revision.

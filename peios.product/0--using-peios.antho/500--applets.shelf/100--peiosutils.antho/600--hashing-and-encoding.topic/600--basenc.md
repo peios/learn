@@ -44,6 +44,10 @@ By default `basenc` *encodes*. These options apply to whichever encoding you cho
 | `-i`, `--ignore-garbage` | When decoding, skip characters that are not part of the alphabet. |
 | `-w`, `--wrap=COLS` | When encoding, wrap output to lines of `COLS` characters. `-w 0` disables wrapping. |
 
+## Check decoding before using the output
+
+Select the same encoding used by the sender. Decoding can write a partial result before failing, so check the exit status before using the output. Follow the [separate-output example](~peios/hashing-and-encoding/base32-and-base64#decode-before-using-the-result), replacing `base64 --decode` with, for example, `basenc --base64url --decode` for URL-safe Base64 input. Do not use `--ignore-garbage` to guess your way past a damaged payload: it only discards characters outside the selected alphabet.
+
 ## `basenc` and the dedicated commands
 
 For plain base64 or base32, `base64` and `base32` are the shorter way to ask. Use `basenc` when you need an encoding the dedicated commands do not offer — hex, URL-safe base64, the bit-string forms, z85, or base58.

@@ -16,7 +16,7 @@ for restart after an unclean shutdown.
 
 Both halves of a hive are SQLite. Persistent data lives in the database
 file named on the command line; volatile data lives in a second,
-in-memory database attached to the same connections (§3.3). Using one
+tmpfs-backed WAL database attached to the same connections (§3.3). Using one
 engine for both is what makes a transaction spanning persistent and
 volatile data atomic without any additional machinery.
 

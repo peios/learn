@@ -11,11 +11,10 @@ description: What each door does when resolvd is not running, will not start, or
 | Stub listener | Nothing listens on `127.0.0.53`; UDP queries go unanswered or are refused by the kernel, TCP connections are refused |
 | `resolv` | Exit 1, `resolv: resolvd is not reachable at /run/resolvd/resolv.sock: <error>` |
 
-peinit restarts resolvd whenever it exits (§2.1). The new process cannot
-remove the socket the old one left, so it exits again, and peinit
-restarts it in a loop until the file is removed (§2.4). A resolvd that
-has exited once is therefore unreachable until someone removes
-`/run/resolvd/resolv.sock` as SYSTEM.
+peinit restarts resolvd whenever it exits (§2.1). The new process removes
+the socket the old one left and binds a fresh one (§2.4), so an outage
+after a crash lasts only until the restart completes. If resolvd keeps
+exiting, the cause is one of the startup failures below.
 
 ## resolvd will not start
 

@@ -16,7 +16,7 @@ LCS emits audit events through KMES. Fifteen events exist. [*lcs-audit.events-th
 | `lcs.audit.key.created` | A key create that made a key matched a SACL audit ACE on the parent. |
 | `lcs.audit.key.descriptor.changed` | A descriptor change included the SACL, or its right is covered by the handle's audit mask. |
 | `lcs.audit.transaction.committed` | A transaction that staged an audited write ended. |
-| `lcs.audit.backup.started` | Before `REG_IOC_BACKUP` reads any subtree data. [*lcs-audit.backup-start.before-any-read] |
+| `lcs.audit.backup.started` | After admission checks and before `REG_IOC_BACKUP` requests its read-only snapshot or reads any subtree data. [*lcs-audit.backup-start.before-any-read] |
 | `lcs.audit.backup.ended` | After a backup completes or fails after starting. [*lcs-audit.backup-complete.after-finish-or-failure] |
 | `lcs.audit.restore.started` | Before `REG_IOC_RESTORE` modifies any source state. [*lcs-audit.restore-start.before-any-mutation] |
 | `lcs.audit.restore.ended` | After a restore completes or fails after starting. [*lcs-audit.restore-complete.after-finish-or-failure] |

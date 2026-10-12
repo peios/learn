@@ -34,7 +34,7 @@ Four ACE flags control how an ACE propagates to children. They are the same four
 |---|---|
 | `OBJECT_INHERIT_ACE` (`OI`, 0x01) | The ACE inherits to children that are **non-containers** (files, not directories). |
 | `CONTAINER_INHERIT_ACE` (`CI`, 0x02) | The ACE inherits to children that are **containers** (directories). |
-| `NO_PROPAGATE_INHERIT_ACE` (`NP`, 0x04) | The ACE inherits to direct children but its `OI`/`CI` flags are **cleared** in the inherited copy, so it stops propagating after one level. |
+| `NO_PROPAGATE_INHERIT_ACE` (`NP`, 0x04) | The ACE inherits to direct children but its `OI`, `CI` and `NP` flags are **cleared** in the inherited copy, so it stops propagating after one level. |
 | `INHERIT_ONLY_ACE` (`IO`, 0x08) | The ACE is **not evaluated** on the object it sits on. It exists only to be inherited. |
 
 Common combinations:
@@ -68,28 +68,32 @@ The merge proceeds as follows:
 Each inherited ACE goes through a small transformation as it is copied:
 
 - The `INHERITED_ACE` flag (0x10) is **set** in the copy. This marks it as having come from inheritance, not from explicit assignment.
-- If `NO_PROPAGATE_INHERIT_ACE` was set, the `OI` and `CI` flags are **cleared** in the copy. (NP itself is also typically cleared.)
+- If `NO_PROPAGATE_INHERIT_ACE` was set, the `OI`, `CI` and `NP` flags are **cleared** in the copy.
 - If the ACE's SID is `CREATOR_OWNER` (`S-1-3-0`), the SID is **substituted** with the new child's owner SID.
 - If the ACE's SID is `CREATOR_GROUP` (`S-1-3-1`), the SID is **substituted** with the new child's primary group SID.
 
 The CREATOR substitution is the mechanism that makes inheritable ACEs portable. A directory's DACL containing `CI | OI ACCESS_ALLOWED CREATOR_OWNER GENERIC_ALL` means "every file or subdirectory created under here grants full access to whoever owns it". The owner of each child is different; the substitution at creation time fills in the right SID for each one.
 
-### A CREATOR ACE inherited by a directory produces two ACEs
+### Creator SIDs and generic rights can produce two ACEs
 
 Substitution alone would answer the question for one object and destroy the rule that asked it. A subdirectory would come away holding a *concrete* SID — its own creator's — with that access over everything beneath it, permanently, and nothing further down would ever resolve against its own creator again.
 
-So when a container inherits a CREATOR ACE it receives both halves:
+When a container inherits an ACE that names a creator SID or carries generic rights, and the ACE both applies to the child and propagates further, it receives both halves:
 
-| | SID | Flags |
+| | SID and rights | Flags |
 |---|---|---|
-| The rule's answer for this directory | substituted | `INHERITED`, no inheritance flags |
-| The rule, carried onward | left as `CREATOR_OWNER` | original inheritance flags, plus `IO` |
+| The rule's answer for this container | creator SID substituted, generic rights mapped | `INHERITED`, no inheritance flags |
+| The rule, carried onward | original SID and generic mask | original propagation flags, plus `IO` and `INHERITED` |
 
 The second is inherit-only, so it grants nothing on the directory itself; it exists to be inherited again further down, where it resolves against whoever creates the next object.
 
-An **object** receives the substituted ACE alone. A file has no children for the rule to reach, so the copy carries no inheritance flags either.
+This also applies to registry keys. A generic-rights ACE with an ordinary SID still needs both copies: its effective rights are mapped now, while its original generic mask is preserved for descendants. An ACE with a concrete SID and concrete rights is inherited as one copy.
 
-`NO_PROPAGATE_INHERIT_ACE` ends the rule as it ends any other: with `OI` and `CI` cleared there is nothing to carry, and only the substituted ACE is written.
+An ACE that targets files only (`OI` without `CI`) passes through a directory as one unresolved, inherit-only copy. Adding `NP` prevents that copy from reaching files below the directory, so the directory inherits no such ACE.
+
+A **non-container** receives the resolved ACE alone. A file has no children for the rule to reach, so the copy carries no inheritance flags either.
+
+`NO_PROPAGATE_INHERIT_ACE` ends the rule as it ends any other: with `OI`, `CI` and `NP` cleared there is nothing to carry, and only the substituted ACE is written.
 
 > [!NOTE]
 > The inheritance-flag detail matters more than it looks. The substituted ACE keeping `OI` or `CI` is exactly how a concrete SID escapes downward — which is why the resolved copy is stripped of them and the unresolved copy is the only thing that propagates.

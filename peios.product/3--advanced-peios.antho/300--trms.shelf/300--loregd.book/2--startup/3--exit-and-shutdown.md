@@ -24,8 +24,9 @@ loregd exits when any of the following happens:
   [*exit.a-startup-failure-is-fatal]
 
 On shutdown, in-flight requests are drained before the process exits
-(§4.2), and every hive's read connections and write connection are
-closed.
+(§4.2), then outstanding transactions are rolled back, every connection is closed,
+and the per-hive volatile directories are removed before the runtime lock
+is released.
 [*exit.in-flight-requests-are-drained-and-every-connection-closed-on-shutdown]
 
 ## What does not end the process [*exit.a-storage-failure-does-not-end-the-process]
@@ -50,10 +51,10 @@ Persistent data is durable at the point each transaction commits;
 SQLite finalises any outstanding WAL state as the connections close.
 [*exit.committed-data-is-durable-and-wal-state-is-finalised-at-close]
 
-Volatile data does not survive.
-[*exit.volatile-data-does-not-survive-the-process] The in-memory
-databases holding volatile keys are destroyed with the process (§3.3),
-which is the entire point of volatility.
+Volatile data is never recovered after process exit. Clean shutdown removes
+the tmpfs stores; startup removes crash residue and creates new stores
+before registering the hives (§3.3).
+[*exit.volatile-data-does-not-survive-the-process]
 
 When the kernel observes the source disconnect, it marks every hive
 loregd served as unavailable.

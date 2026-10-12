@@ -125,8 +125,9 @@ when it last fired; or, for a trigger that did not arm, why not (PSPU
 [*evalt.status-reports-each-trigger-as-armed]
 
 The figures are the armed ones, given to the supervisor whenever a
-trigger is armed: at boot, on a reload, after each firing and after a
-clock change. A client cannot compute them itself, because the jitter
+trigger is armed: at boot, on a reload that adds or changes the timer
+(an unchanged timer keeps its armed deadline), after each firing and
+after a clock change. A client cannot compute them itself, because the jitter
 is drawn at random when the trigger is armed.
 [*evalt.what-is-reported-is-what-is-armed]
 

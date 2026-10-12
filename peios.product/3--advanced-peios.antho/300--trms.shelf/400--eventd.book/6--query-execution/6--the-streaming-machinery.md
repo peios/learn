@@ -40,6 +40,27 @@ and operation continues.
 At any commit rate a machine can sustain,
 wraparound of a 64-bit counter is not reachable.
 
+## Record order within a watch batch
+
+The initial result set uses the query's usual sorting and pagination.
+During the watch phase, newly visible event records are delivered by
+shard ordinal ascending, then database record ID ascending; log records
+are delivered by database record ID ascending. `SORT`, `SKIP` and `TAKE`
+do not reorder or trim these watch records.
+[*stream.watch-records-follow-store-order]
+
+`DISTINCT` watches consider values in this same order. The first unseen
+value is emitted using its first record's representation; equivalent
+later values are suppressed by the stream's seen set. The initial
+distinct result retains its usual value ordering.
+
+Record IDs preserve insertion order within each store. Event shards
+commit independently, so there is no durable total chronological commit
+order across shards. Shard ordinal supplies a deterministic order within
+each observed batch; successive batches follow the stream cursor. A batch
+may include several commits observed together. Producer timestamps do
+not change delivery order, even when they arrive out of order.
+
 ## Latency
 
 Delivery latency is bounded below by the commit interval of the store

@@ -41,6 +41,9 @@ number and argument size.
 | Ioctl | Number | Direction | Argument | Arg size | Encoded |
 |---|---|---|---|---|---|
 | `REG_SRC_REGISTER` | 0 | _IOW | `struct reg_src_register_args` | 24 | `0x40185200` |
+| `REG_SRC_NEGOTIATE` | 1 | _IOWR | `struct reg_src_negotiate_args` | 16 | `0xC0105201` |
+| `REG_SRC_REQUEST_CONTEXT` | 2 | _IOWR | `struct reg_src_request_context_args` | 40 | `0xC0285202` |
+| `REG_SRC_RENEW` | 3 | _IOWR | `struct reg_src_renew_args` | 32 | `0xC0205203` |
 
 *Key fd.*
 
@@ -313,6 +316,39 @@ Total size 24 bytes.
 | 8 | 8 | `__u64` | `max_sequence` |
 | 16 | 8 | `__u64` | `hives_ptr` |
 
+### `struct reg_src_negotiate_args` [*lcs-abi.struct-reg-src-negotiate-args]
+
+Total size 16 bytes.
+
+| Offset | Size | Type | Field |
+|---|---|---|---|
+| 0 | 4 | `__u32` | `version` |
+| 4 | 4 | `__u32` | `flags` |
+| 8 | 8 | `__u64` | `session` |
+
+### `struct reg_src_request_context_args` [*lcs-abi.struct-reg-src-request-context-args]
+
+Total size 40 bytes.
+
+| Offset | Size | Type | Field |
+|---|---|---|---|
+| 0 | 8 | `__u64` | `session` |
+| 8 | 8 | `__u64` | `request_id` |
+| 16 | 8 | `__u64` | `request_deadline_ns` |
+| 24 | 8 | `__u64` | `lifetime_deadline_ns` |
+| 32 | 8 | `__u64` | `lease_deadline_ns` |
+
+### `struct reg_src_renew_args` [*lcs-abi.struct-reg-src-renew-args]
+
+Total size 32 bytes.
+
+| Offset | Size | Type | Field |
+|---|---|---|---|
+| 0 | 8 | `__u64` | `session` |
+| 8 | 8 | `__u64` | `transaction_id` |
+| 16 | 8 | `__u64` | `lifetime_deadline_ns` |
+| 24 | 8 | `__u64` | `lease_deadline_ns` |
+
 ### `struct reg_src_hive_entry` [*lcs-abi.struct-reg-src-hive-entry]
 
 Total size 56 bytes.
@@ -330,6 +366,12 @@ Total size 56 bytes.
 ## Constants
 
 Grouped as the header groups them.
+
+*Optional RSI lifetime extension, negotiated before REG_SRC_REGISTER. All timestamps use CLOCK_MONOTONIC nanoseconds. Zero lifetime means an operation-owned transaction with no independent lifetime limit. The session is unique to this open source fd, including across restarts.*
+
+| Constant | Value |
+|---|---|
+| `REG_SRC_LIFETIME_VERSION` | `1` |
 
 *Syscall and ioctl argument sizes.* [*lcs-abi.argument-sizes]
 
@@ -352,6 +394,9 @@ Grouped as the header groups them.
 | `REG_BACKUP_ARGS_SIZE` | `4` |
 | `REG_RESTORE_ARGS_SIZE` | `4` |
 | `REG_TXN_STATUS_ARGS_SIZE` | `8` |
+| `REG_SRC_NEGOTIATE_ARGS_SIZE` | `16` |
+| `REG_SRC_REQUEST_CONTEXT_ARGS_SIZE` | `40` |
+| `REG_SRC_RENEW_ARGS_SIZE` | `32` |
 | `REG_SRC_REGISTER_ARGS_SIZE` | `24` |
 | `REG_SRC_HIVE_ENTRY_SIZE` | `56` |
 

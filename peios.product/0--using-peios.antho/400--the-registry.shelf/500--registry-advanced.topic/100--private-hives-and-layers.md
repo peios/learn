@@ -50,11 +50,13 @@ GUIDs and private-layer names entering credentials at token creation,
 gated by `SeCreateTokenPrivilege`. That is a broad token-creation gate,
 not per-scope ownership authorization.
 
-> [!WARNING]
-> Do not assume attaching a disabled high-precedence layer performs a
-> separate `SeTcbPrivilege` check. The current TRM explicitly documents
-> that this precedence check is absent on the attachment path. Review
-> the token-creation boundary before relying on private views for isolation.
+With the PEI-268 kernel fix, attaching a layer above precedence zero also
+requires enabled `SeTcbPrivilege` on the token's creator. That authorization
+stays with the attachment, so an ordinary process can use a view deliberately
+delegated by a trusted service. An attachment made without that authorization
+cannot gain high-precedence access through a later layer promotion: registry
+operations using that attachment fail with `EPERM` while the layer is above
+zero. Older kernels lack this check.
 
 Use the [private-hive](~peios/lcs/the-data-model/private-hives) and
 [private-layer](~peios/lcs/layers/private-layers) TRM sections for the

@@ -25,7 +25,7 @@ The problem CAAP exists for: organisations whose access rules span many objects 
 - "Database records belonging to the EU customer base require GDPR-compliant access rules, applied uniformly."
 - "Engineering documents must be readable only on devices with up-to-date security software."
 
-In each case, the rule is defined once at the organisational level. Each object that the rule applies to does not need to know the rule itself; it just needs to reference the policy by SID. The policy's content is stored centrally (in the directory or registry, distributed by authd) and applied at access-check time.
+In each case, the rule is defined once at the organisational level. Each object that the rule applies to does not need to know the rule itself; it just needs to reference the policy by SID. The kernel applies a policy's content at access-check time once it has been installed in the local policy cache. Central storage and automatic distribution are not implemented.
 
 If you tried to express these rules directly in object DACLs, you would have to update every covered object whenever the rule changed. With CAAP, the policy is updated once and the next access check on any referencing object sees the new version.
 
@@ -78,9 +78,9 @@ The implication for policy rollout: updating a CAAP does not immediately revoke 
 
 ## The CAAP catalog lives in the kernel
 
-The kernel maintains a **policy cache** keyed by policy SID. The cache is populated by authd at startup, and updated by `kacs_set_caap` calls when policies change. At access-check time, looking up a referenced policy is a constant-time lookup against this cache.
+The kernel maintains a **policy cache** keyed by policy SID. Policies are installed or replaced by `kacs_set_caap` calls. authd does not populate it at startup; automatic distribution is not implemented.
 
-The cache is empty at boot. Until authd populates it, every CAAP reference resolves to "policy not found" and the recovery policy fires (covered in [Distribution and recovery](~peios/central-access-policies/distribution-and-recovery)). This is why authd populates the cache early in boot, before user-facing services start.
+The cache is empty at boot and the current boot sequence leaves it empty. An access check referencing an absent policy uses the recovery policy (covered in [Distribution and recovery](~peios/central-access-policies/distribution-and-recovery)). Waiting for authd readiness does not load policies.
 
 ## Where to start
 

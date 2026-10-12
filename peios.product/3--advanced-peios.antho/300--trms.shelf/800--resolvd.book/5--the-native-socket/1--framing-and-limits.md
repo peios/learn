@@ -17,38 +17,38 @@ not count towards the 256 (§2.4).
 
 ## Reading the request
 
-Each connection is read in 4 096-byte chunks, everything available each
-time it is ready, and the bytes are buffered.
+Each connection is read without blocking. Partial headers and payloads
+are retained until more bytes arrive or the delivery bound expires.
 
-1. While reading, as soon as more than 65 540 bytes are buffered — the
-   four-byte length and a 65 536-byte payload — resolvd replies
-   `request too large` and closes the connection. [*native-framing.buffered-bytes-ceiling]
-2. After the read, when at least four bytes are buffered, they are the
-   payload length, little-endian. A length above 65 536 gets the reply
-   `request too large` and the connection is closed. [*native-framing.length-ceiling]
-3. When the whole payload is buffered, it is decoded. Bytes after it are
-   ignored, as long as the buffered total stayed within the first
-   check. [*native-framing.trailing-bytes-ignored]
+1. Read exactly the four-byte little-endian payload length. A length
+   above 65 536 gets the reply `request too large` and the connection
+   closes, without reading any payload bytes. [*native-framing.length-ceiling]
+2. Read only that many payload bytes, in chunks of at most 4 096 bytes.
+   The buffered frame never exceeds 65 540 bytes, including its header. [*native-framing.buffered-bytes-ceiling]
+3. Decode the complete payload immediately. Bytes after this first frame
+   remain unread and do not count against its size ceiling; they cannot
+   make a legal request too large. [*native-framing.trailing-bytes-ignored]
 
-### Which size check fires [*native-framing.payload-read-before-length-check]
+### The length check precedes the payload [*native-framing.payload-read-before-length-check]
 
-Both size checks are made on what has already been read. resolvd reads
-whatever the client has sent before it looks at the length, so the
-first bytes of an oversized payload are read before it is refused. A
-client that sends more than 65 540 bytes in one burst is refused by the
-first check before the length is looked at — even when the length is
-within the ceiling and the excess is bytes after the payload.
+The declared length is checked before any payload is read, even when the
+client queues the header and a large payload together. A legal request
+followed by additional bytes is still answered once. This is one request
+per connection; extra frames are not processed. When extra bytes remain
+unread, the client may observe a connection reset after its framed reply
+instead of a clean end of file.
 
 ## A connection that ends early
 
 - A connection that closes, or fails to read, before its request is
   complete is dropped without a reply. [*native-framing.early-close-dropped]
 - A client that sends its whole request and then shuts down its writing
-  side gets no reply when the end of file is already waiting behind the
-  request: the read that finds the request also finds the end of file,
-  and the connection is dropped without the request being decoded. A
-  request whose end of file arrives after resolvd has read it is
-  answered as usual. [*native-framing.request-then-half-close-dropped]
+  side is answered as usual, whether the end of file is already waiting
+  behind the request or arrives later. The complete frame is decoded
+  without reading beyond it, and the connection closes after its one
+  reply. A partial frame followed by end of file is dropped immediately,
+  without waiting for the delivery timeout.
+  [*native-framing.request-then-half-close-dropped]
 - A connection that has not delivered a complete request five seconds
   after it was accepted is closed without a reply. [*native-framing.five-second-delivery-bound]
 
@@ -123,6 +123,7 @@ values no longer produce the two type errors:
 | `duplicate field <name>` | A repeated key [*native-framing.error-duplicate-field] |
 | `unknown query "<name>"` | A `query` resolvd does not know [*native-framing.error-unknown-query] |
 | `access denied` | The access check (§5.2) |
+| `reply too large` | The encoded reply would exceed the 65 536-byte payload ceiling; it is replaced by this error |
 
 ### The connection after an error reply [*native-framing.connection-closed-after-error-reply]
 
@@ -131,8 +132,12 @@ After an error reply the connection is closed.
 ## Writing the reply
 
 - The reply is framed the same way — four-byte little-endian length,
-  then the MessagePack map — and written blocking, with a one-second
-  timeout on each write call (§2.5). A failed write is logged as
+  then the MessagePack map — and written without blocking. An unfinished
+  write is queued with a fixed one-second deadline and a cap of 256 queued
+  native replies (§2.5). A failed or expired write is logged as
   `control: reply failed: <error>`. The connection is then closed. [*native-framing.reply-written-then-closed]
-- The size of a reply is not checked against the 65 536-byte ceiling
-  before it is written. [*native-framing.reply-size-not-checked]
+- An encoded reply payload may be at most 65 536 bytes, excluding its
+  four-byte length prefix. A larger reply is replaced by the error
+  `reply too large`; no partial answer is sent. This applies to every native
+  reply kind. Exactly 65 536 bytes is allowed.
+  [*native-framing.reply-size-not-checked]

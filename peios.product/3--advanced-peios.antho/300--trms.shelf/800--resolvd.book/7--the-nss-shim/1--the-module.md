@@ -11,9 +11,11 @@ resolvd's source tree builds.
 - `libnss_peios_net.so.2` is installed by `dev.peios.resolvd-nss` at
   `/usr/lib/x86_64-linux-peios/libnss_peios_net.so.2`. [*nss-module.installed-path]
 - It is built from the `nss` crate, with the native channel codec
-  compiled in. Its shared-object dependencies are `libgcc_s.so.1`,
-  `libc.so.6` and the dynamic loader, `ld-linux-x86-64.so.2`; it does
-  not link libpeios. [*nss-module.link-dependencies]
+  compiled in. Its only shared-object dependencies are `libc.so.6` and
+  the dynamic loader, `ld-linux-x86-64.so.2`. The GCC unwinder required by
+  Rust is linked statically, with its symbols private to the module; name
+  lookups do not load `libgcc_s.so.1`. The identity shim, `libnss_peios.so.2`,
+  uses the same static-unwinder arrangement. Neither shim links libpeios. [*nss-module.link-dependencies]
 
 ### The entry points [*nss-module.entry-points]
 
@@ -40,11 +42,12 @@ The module exports six entry points:
 
 Each connection is given ten-second read and write timeouts, which
 apply to each read and write on the socket. Ten seconds is longer than
-the six seconds three timed-out attempts take in resolvd (§4.6), so a
-slow upstream normally reaches the caller as `unavailable` from resolvd
-rather than as a timeout here. A question that takes longer — several
-expansions in turn, or truncated replies retried over TCP — reaches the
-timeout, which is reported as the table below shows.
+the six seconds a question's three timed-out attempts take in resolvd,
+TCP retries included (§4.6), so a slow upstream normally reaches the
+caller as `unavailable` from resolvd rather than as a timeout here. A
+question can still reach the timeout when many search candidates each
+answer `NXDOMAIN` slowly, since those answers do not spend the attempt
+budget; that is reported as the table below shows.
 
 ## Results
 

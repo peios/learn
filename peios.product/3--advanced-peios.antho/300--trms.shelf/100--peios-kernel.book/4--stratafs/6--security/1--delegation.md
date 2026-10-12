@@ -64,24 +64,20 @@ and the open-time grant is frozen into the file's KACS state — the
 check-at-open principle applies unchanged, and copy-up transfers that
 immutable snapshot to the new backing file rather than deciding again.
 
-Two caching seams are worth recording precisely, because the
-specification requires the value evaluated to be the provider's
-*current* descriptor.
+For merged-directory checks, stratafs reads each participant's descriptor
+attribute on every check. KACS also refreshes an outer stratafs inode's
+parsed descriptor whenever a check or descriptor query needs it. A writer
+using the stratum directly therefore needs no invalidation protocol with
+the merged view. Missing and corrupt descriptors are re-read too, so a
+subsequent repair can take effect.
 
-For the merged-directory checks stratafs performs itself, it is exact:
-the provider's attribute is re-read on every call, with no cache.
+This refresh applies to retained handles as well as new pathname operations.
+An `O_PATH` handle performs its live access check against the refreshed
+descriptor. An ordinary file handle retains its granted access, but a
+permitted descriptor query returns the provider's current descriptor, not
+the one present when the file opened.
 
-For file opens it is not. KACS caches the resolved descriptor against
-the **outer stratafs inode**, and a cache entry sourced from an
-attribute read is never revalidated — the only things that replace it
-are an explicit descriptor set on that inode and a copy-up install. A
-later open of the same outer inode therefore evaluates the descriptor
-read at the first open rather than the provider's current one. This is
-tracked as a defect.
-
-The second seam is narrower. When copy-up rebinds a descriptor's inode
-to the copy (§4.4.3), nothing invalidates that cached descriptor, so
-the value retained was literally read from the old provider. No wrong
-decision follows, because copy-up preserves the descriptor exactly
-(§4.6.3) and the two are equal — but the invariant is held by that
-coincidence rather than by the mechanism.
+When copy-up rebinds a file's inode to the copy (§4.4.3), stratafs explicitly
+invalidates the parsed descriptor. Subsequent descriptor queries follow the
+new provider. The file's frozen grant remains unchanged; invalidating the
+inode cache does not authorise or revoke access on an already-open file.

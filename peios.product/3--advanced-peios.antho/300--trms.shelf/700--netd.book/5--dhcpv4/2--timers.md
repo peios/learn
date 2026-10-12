@@ -27,7 +27,11 @@ On the third retransmission of a DISCOVER — the fourth DISCOVER, about
 28 s after the first — the client reports that no offer came. netd then
 records the interface warning `asked for an address; nobody answered` and,
 when the profile wants it, falls back to a link-local address (§5.5). The
-client keeps discovering.
+client keeps discovering. The warning survives full reconciliation passes,
+including the pass triggered by adding the link-local fallback. It clears
+when a lease binds or that DHCP client stops (for example, on carrier loss
+or a profile change). A rule-conflict warning takes display precedence;
+rejudging an unchanged client does not erase its discovery warning.
 
 In [source `23af1f6`](https://github.com/peios/netd/blob/23af1f6b84f3764d9327eb009ced56b2a16b7aa8/dhcp4/src/client.rs),
 the report is made at most once between client starts: the flag is reset

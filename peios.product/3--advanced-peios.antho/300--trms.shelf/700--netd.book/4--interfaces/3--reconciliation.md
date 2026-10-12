@@ -53,7 +53,10 @@ address the interface already holds.
 
 Routes compare on everything: destination, prefix length, gateway, metric
 and protocol. A change of metric or gateway is a deletion and an
-addition.
+addition. For IPv6 routes, configured metric zero uses the kernel default
+of 1024: netd sends and compares that effective value, so an unchanged
+route converges. IPv4 metric zero and all nonzero metrics are unchanged.
+The configured `Route.Metric` still controls DNS scope ordering.
 
 An interface whose desired state the kernel already matches gets an empty
 plan, and nothing is sent. [*reconcile.converged-plan-is-empty]
@@ -69,8 +72,17 @@ an acknowledgement:
 | MTU | `RTM_SETLINK` with `IFLA_MTU` |
 | address add | `RTM_NEWADDR` with `NLM_F_CREATE` and `NLM_F_REPLACE` |
 | address delete | `RTM_DELADDR` |
-| route add | `RTM_NEWROUTE` with `NLM_F_CREATE` and `NLM_F_EXCL`, main table, protocol 200 |
+| IPv4 route add | `RTM_NEWROUTE` with `NLM_F_CREATE` and `NLM_F_APPEND`, main table, protocol 200 |
+| IPv6 route add | `RTM_NEWROUTE` with `NLM_F_CREATE` and `NLM_F_EXCL`, main table, protocol 200 |
 | route delete | `RTM_DELROUTE` |
+
+IPv4 route additions append a distinct gateway/interface at the configured
+metric. Two joined interfaces may therefore both hold default routes at the
+same metric; adding one preserves the other, and withdrawing one removes
+only its own route. Exact duplicates remain `EEXIST`. Equal-metric route
+selection follows the kernel's routing behavior; set distinct metrics when
+one interface should have a defined preference.
+[*reconcile.equal-metric-ipv4-routes]
 
 How addresses are phrased:
 

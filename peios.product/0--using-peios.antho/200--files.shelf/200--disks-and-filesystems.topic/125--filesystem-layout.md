@@ -32,7 +32,7 @@ assuming its layout or storage lifetime matches.
 | Operator-managed bulk data | `/data`. Its name does not imply a separate disk or a backup policy. |
 | Content served by this host | `/srv`: the host's served-content namespace. Check the service configuration for the actual path. |
 | Software with its own directory layout | `/opt`. |
-| Runtime sockets and service directories | `/run`, including `/run/services`. Sockets and PID files are runtime resources, not saved service data. |
+| Runtime sockets and service directories | `/run`, including `/run/services` and the `/run/lock` directory recreated by peinit at boot. Sockets and PID files are runtime resources, not saved service data. |
 | Temporary working files | `/tmp` and `/var/tmp`; read the lifetime caveat below. |
 | Boot inputs and generated artifacts | `/boot` holds the initramfs source tree and EFI-partition mount location; `/system/boot` holds generated initramfs output. Check that the intended EFI partition is mounted. |
 | Additional mounted storage | `/mnt` and `/media` are available mount locations. Their existence does not attach a device. |
