@@ -52,8 +52,9 @@ one GUID, which would be a hard link. No API exposes it. [*path-entry.no-hard-li
 
 Every key has exactly one canonical parent and name, and LCS validates
 that a source is not reporting otherwise: the key record's parent must
-be the parent the key was reached through, and a record that says
-otherwise is malformed key metadata — `REG_IOC_QUERY_KEY_INFO` answers
+be the parent the key was reached through, and its name must fold to the
+component the key was reached by. A record that says otherwise is
+malformed key metadata — `REG_IOC_QUERY_KEY_INFO` answers
 `EIO` and the source-data validation failure is audited. [*path-entry.no-hard-links.one-canonical-parent-and-name]
 
 Aliasing has an explicit, visible mechanism, and it is symlinks. Hard
