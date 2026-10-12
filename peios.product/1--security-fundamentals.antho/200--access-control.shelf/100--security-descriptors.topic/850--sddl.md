@@ -51,8 +51,14 @@ override.
 
 A bare `D:` is an **empty DACL**: it contains no grants. A **NULL DACL** is
 written `D:NO_ACCESS_CONTROL` and imposes no discretionary access restrictions.
-These are different from omitting the `D:` section, which leaves the DACL absent.
-The parser and formatter preserve all three states. `NO_ACCESS_CONTROL` may
+Omitting `D:` has the same binary meaning as `D:NO_ACCESS_CONTROL`: the
+`SE_DACL_PRESENT` bit is clear and the DACL offset is zero. A bare `D:` sets
+PRESENT and points to a real ACL containing zero ACEs. There are two states,
+not three.
+
+Both Rust and Go formatters explicitly emit `NO_ACCESS_CONTROL` for a
+PRESENT-clear ACL, even when its section was omitted on input. This also
+applies to `S:`; P/AR/AI flags are retained in either section. `NO_ACCESS_CONTROL` may
 accompany ACL flags, such as `D:PAINO_ACCESS_CONTROL`, but cannot accompany ACEs.
 
 ## ACL flags
