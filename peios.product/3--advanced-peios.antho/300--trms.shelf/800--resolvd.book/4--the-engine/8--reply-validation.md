@@ -72,12 +72,18 @@ mistaken for `NOERROR` or `NXDOMAIN`.
 
 ### Records
 
-- The answer section's records of class `IN`, in the order the server
+- Relevant answer records of class `IN`, in the order the server
   sent them. [*engine-reply.answer-records-of-class-in]
 - For `NXDOMAIN` none are taken, even if the server sent some. [*engine-reply.nxdomain-records-discarded]
-- Records are not checked against the question: an `IN` record at any
-  name, of any type, in the answer section is returned to the client
-  and cached with the answer. [*engine-reply.records-not-checked-against-question]
+- Start at the candidate. Keep records of the requested type at that
+  owner; otherwise follow the first `IN` CNAME there, retaining it, and
+  repeat at its target. Stop after sixteen aliases, on a repeated name,
+  or when no matching record remains. Records unrelated to that path or
+  of an unrequested type are discarded before rendering or caching.
+  Their TTLs cannot shorten the cache lifetime. [*engine-reply.records-match-question]
+- An explicit CNAME question returns CNAME records at the queried owner.
+  ANY accepts all `IN` types at that owner and does not follow aliases.
+  Owner comparisons are case-insensitive and use DNS label boundaries.
 - The authority and additional sections are not returned. [*engine-reply.authority-and-additional-not-returned]
 
 ### The case of returned records [*engine-reply.candidate-case-restored]
@@ -98,7 +104,7 @@ carried into any answer.
 
 ### An empty `NOERROR` [*engine-reply.empty-noerror-is-nodata]
 
-A `NOERROR` reply with no answer records of class `IN` — including a
+A `NOERROR` reply with no relevant answer records of class `IN` — including a
 referral from a server that does not recurse — is `found` with no
 records.
 

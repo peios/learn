@@ -22,16 +22,20 @@ to:
 
 | Reply | Stored as | Lifetime |
 |---|---|---|
-| `NOERROR` with answer records of class `IN` | `found` with those records | The least TTL among those records, capped at 86 400 s [*engine-cache.positive-lifetime] |
-| `NOERROR` with no answer records of class `IN` | `found` with none | Negative lifetime [*engine-cache.nodata-uses-negative-lifetime] |
+| `NOERROR` with relevant answer records of class `IN` (§4.8) | `found` with those records | The least TTL among those records, capped at 86 400 s [*engine-cache.positive-lifetime] |
+| `NOERROR` with no relevant answer records of class `IN` | `found` with none | Negative lifetime [*engine-cache.nodata-uses-negative-lifetime] |
 | `NXDOMAIN` | `notfound` | Negative lifetime [*engine-cache.nxdomain-uses-negative-lifetime] |
 
 ### The negative lifetime
 
-- The negative lifetime comes from the first `SOA` record in the reply's
-  authority section: the lesser of its `MINIMUM` field and its own TTL,
-  capped at 300 s. [*engine-cache.negative-lifetime-from-soa]
-- A reply with no `SOA` in its authority section has a negative
+- The negative lifetime comes from the first `IN` `SOA` record in the
+  reply's authority section whose owner is the effective name or an
+  enclosing domain. The effective name is the candidate after following
+  its relevant CNAME path (§4.8); suffix matching respects label boundaries.
+  Use the lesser of the SOA's `MINIMUM` field and its own TTL, capped at
+  300 s. When an alias leads to NXDOMAIN, also cap the lifetime at the
+  least TTL of that alias path. [*engine-cache.negative-lifetime-from-soa]
+- A reply with no qualifying `SOA` in its authority section has a negative
   lifetime of zero. [*engine-cache.no-soa-negative-lifetime-zero]
 
 ### A zero lifetime is not stored [*engine-cache.zero-lifetime-not-stored]
