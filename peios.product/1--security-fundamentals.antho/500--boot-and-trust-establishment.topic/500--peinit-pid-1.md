@@ -72,7 +72,7 @@ For each service, the pattern is **fork-install-exec**:
 4. The child execs the service binary. The kernel verifies the signature and sets the PIP fields.
 
 > [!NOTE]
-> Four jobs are sometimes attributed to peinit that it does not do. It does not populate the machine-wide TLP cache from the registry, and it does not apply per-service mitigation flags via `kacs_set_psb` between fork and exec. Mount-policy application (`kacs_set_mount_policy`) is likewise not a peinit responsibility, and neither is boot-time CAAP distribution — that one belongs to authd, and is currently deferred.
+> Four jobs are sometimes attributed to peinit that it does not do. It does not populate the machine-wide TLP cache from the registry, and it does not apply per-service mitigation flags via `kacs_set_psb` between fork and exec. Mount-policy application (`kacs_set_mount_policy`) is likewise not a peinit responsibility, and neither is boot-time CAAP distribution, which is not implemented in either peinit or authd.
 
 #### Service mitigation limits
 
