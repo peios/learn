@@ -1,38 +1,43 @@
 ---
 title: Pre-Existing Files
-description: A path that already exists without belonging to any package — what peipkg does about it, and what it is meant to do.
+description: How peipkg handles a path that already exists without belonging to any package.
 ---
 
 A path may already exist on the filesystem without belonging to any
 installed package — left by a manual copy, inherited from a non-Peios
 installation, or written by something outside the package manager.
 
-## What peipkg does
+## The unowned-file policy
 
-peipkg checks whether something exists at the install path. If it does,
-the existing entry is renamed aside as a backup and the staged file is
-renamed into place. If it does not, the staged file is renamed in.
+Before replacing a destination, peipkg checks its recorded owners. A
+path owned by the package being changed follows ordinary replacement;
+a path owned by another package is handled by collision checking. For
+an existing path with no recorded owner, `unownedPolicy` selects one of
+three outcomes:
 
-The check is on existence alone. Ownership is not consulted, the
-existing content is not compared against what is about to be installed,
-and the operator is not asked.
+- **Adopt** matching content. A regular file must have the payload's
+  content hash; a symlink must have the same target. A different entry
+  kind never matches. The operation may proceed and record ownership.
+- **Refuse** differing content unless overwriting was explicitly
+  authorised. The `unowned` error names the package and conflicting
+  path. The existing content is preserved.
+- **Displace** differing content when overwriting was authorised. The
+  existing entry is renamed aside, and its backup survives transaction
+  commit. A warning reports the displaced file and backup name.
 
-The backup is discarded when the transaction commits, along with every
-other backup (§8.2), so the displaced content does not survive the
-operation.
+These behaviours are implemented for payload installation and role
+claims. The comparison is about entry kind and content, not equality of
+all metadata. Matching content permits the normal file operation; it
+does not promise that the existing inode is retained.
 
-## The intended behaviour
+## Recovering from a refusal
 
-PSPU §5 leaves the handling of an unowned pre-existing file to the
-consumer, but the shape peipkg is designed for is three-way:
+Move the conflicting file aside and retry the operation. `install` also
+accepts `--overwrite-unowned`, which authorises displacement while
+keeping the previous content. Upgrade, downgrade, undo, remove and
+claim have no equivalent command-line flag; a driven client cannot
+retry those commands by adding it.
 
-- **Adopt** it when its content is byte-identical to what would be
-  installed. Recording the path as owned without rewriting it is safe,
-  because the disk already holds exactly the intended bytes.
-- **Fail** otherwise, naming the file, rather than overwriting something
-  nobody claimed.
-- **Displace** it when the operator explicitly authorises the overwrite,
-  keeping the backup rather than destroying it.
-
-None of the three is implemented. What happens today is the middle case
-without the failure: overwrite, then discard the evidence.
+Ordinary replacement backups are discarded on commit (§8.2). A backup
+kept because an unowned file was displaced is the exception and remains
+available to the operator.
