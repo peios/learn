@@ -41,6 +41,9 @@ number and argument size.
 | Ioctl | Number | Direction | Argument | Arg size | Encoded |
 |---|---|---|---|---|---|
 | `REG_SRC_REGISTER` | 0 | _IOW | `struct reg_src_register_args` | 24 | `0x40185200` |
+| `REG_SRC_NEGOTIATE` | 1 | _IOWR | `struct reg_src_negotiate_args` | 16 | `0xC0105201` |
+| `REG_SRC_REQUEST_CONTEXT` | 2 | _IOWR | `struct reg_src_request_context_args` | 40 | `0xC0285202` |
+| `REG_SRC_RENEW` | 3 | _IOWR | `struct reg_src_renew_args` | 32 | `0xC0205203` |
 
 *Key fd.*
 
