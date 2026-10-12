@@ -373,7 +373,7 @@ Grouped as the header groups them.
 |---|---|
 | `REG_SRC_LIFETIME_VERSION` | `1` |
 
-*Syscall and ioctl argument sizes.* [*lcs-abi.argument-sizes]
+*Syscall and ioctl argument sizes (Kernel TRM section 5.A, LCS ABI).* [*lcs-abi.argument-sizes]
 
 | Constant | Value |
 |---|---|

@@ -971,10 +971,11 @@ bitmask of these flags. Setting a bit is activation-backed: KACS either
 places the target process in the protected state (or verifies it already
 satisfies the invariant) before committing, and rejects later operations
 that would disable the protection. Each mitigation is enforced at its
-own enforcement point and persists across exec. Only the bits in
-KACS_MIT_ALL are valid; any other bit set in the request is rejected.
-KACS_MIT_CFI is a legacy alias: requesting it sets both KACS_MIT_CFIF
-and KACS_MIT_CFIB, and the alias bit itself is not retained.
+own enforcement point and persists across exec. See Kernel TRM section
+3.3 (Process Security Block). Only the bits in KACS_MIT_ALL are valid;
+any other bit set in the request is rejected. KACS_MIT_CFI is a legacy
+alias: requesting it sets both KACS_MIT_CFIF and KACS_MIT_CFIB, and the
+alias bit itself is not retained.
 
 | Constant | Value | Notes |
 |---|---|---|
