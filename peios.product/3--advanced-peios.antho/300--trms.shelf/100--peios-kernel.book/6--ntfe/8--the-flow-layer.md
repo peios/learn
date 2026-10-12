@@ -78,8 +78,9 @@ not applied — it is that seat's to refresh when it next sees the flow. [*ntfe-
 ## The sentence
 
 `struct peios_ntfe_sentence` lives in NTFE's conntrack extension
-(`include/linux/peios_ntfe.h`), two per flow: the generation that judged
-(0 = empty), `expires_at` (epoch seconds, 0 = never), the FNV-1a-64 hash
+(`include/linux/peios_ntfe.h`), two per flow: the invalidation generation
+that judged (0 = empty), the generation of the policy object that judged,
+`expires_at` (epoch seconds, 0 = never), the FNV-1a-64 hash
 of the attributing rule's whole path (the outcome's `attributed_hash`:
 the event's `attributed` text is cut short, the hash never is; the same
 identity the tag and counter stores use for names, so the viewer
@@ -131,10 +132,10 @@ a sentence and is evaluated on every packet (`flow_uncached`). [*ntfe-flow.no-ex
 
 ## Staleness
 
-A sentence is stale when its generation is not the current one (a
-policy published, or a network context published — §6.5 — both advance
-the one counter) or
-`t_secs >= expires_at`. [*ntfe-flow.stale-by-generation-or-expiry] Both are checked lazily, on the flow's next
+A sentence is stale when its invalidation generation is not the current
+one (a policy published, or a network context published — §6.5 — both
+advance the one counter), when the policy object that judged it is not
+the current policy object, or when `t_secs >= expires_at`. [*ntfe-flow.stale-by-generation-or-expiry] Both are checked lazily, on the flow's next
 packet — an idle flow past a policy change is killed when it next
 speaks, or conntrack times it out; there are no timers and no walk of
 the table at publication. [*ntfe-flow.staleness-checked-lazily] Grandfathering was rejected: the registry must

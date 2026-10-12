@@ -82,21 +82,23 @@ remains open for a matching reply until the original deadline (§4.8).
 ## The attempt limit
 
 - A question gets three upstream attempts across all search candidates and
-  transports. When its last attempt fails, it is `unavailable` (§4.1).
-  [*engine-servers.third-failure-is-unavailable]
-- Moving to another candidate after `notfound` does not reset the budget.
-  Cached answers spend no attempt. A successful or final `notfound` answer
-  on the third attempt is still returned; if another candidate needs the
-  network, the exhausted question is `unavailable`.
-  [*engine-servers.limit-is-per-candidate]
+  transports. Failures spend them: a timeout, a failure response code, or
+  a transport failure. When its last attempt fails, the question is
+  `unavailable` (§4.1). [*engine-servers.third-failure-is-unavailable]
+- The budget is not reset when the question moves to another candidate,
+  but a candidate's `NXDOMAIN` that moves it on is an answer, not a
+  failure, and does not spend an attempt. Every search candidate is
+  therefore asked, however many there are. Cached answers spend no
+  attempt. [*engine-servers.limit-is-per-candidate]
 - The TCP retry following a truncated UDP reply (§4.7) spends one attempt
   and gets its own two-second deadline. A truncated reply on the final
   attempt cannot start TCP: the question is `unavailable`.
   [*engine-servers.tcp-retry-not-an-attempt]
 
-The three transactions allow at most six seconds of upstream timeout
-waiting in total, including TCP and search-domain expansion. Loop scheduling
-and local I/O can add elapsed time; the attempt limit does not give those
+The three attempts allow at most six seconds of upstream timeout waiting
+in total, including TCP and search-domain expansion. Each `NXDOMAIN` that
+moves to another candidate adds one round trip. Loop scheduling and local
+I/O can add elapsed time; the attempt limit does not give those
 operations a separate deadline.
 
 ## The in-flight ceiling

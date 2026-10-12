@@ -27,9 +27,10 @@ and `AD` are PSPU §6.8. This article is how resolvd builds each reply.
   records when any are present. [*stub-render.expansion-cname]
 - A `found` with no records at an expanded name is `NOERROR` with only
   that leading `CNAME`. Its TTL is the negative cache lifetime: the lesser
-  of the upstream `SOA` record's TTL and minimum field, capped at 300 seconds
-  (§4.5). A cache hit uses the remaining lifetime, rounded down to whole
-  seconds. With no `SOA`, the TTL is zero; no lifetime is invented. The
+  of the enclosing upstream `SOA` record's TTL and minimum field, capped at
+  300 seconds and at the TTL of any `CNAME` path the reply followed (§4.5).
+  A cache hit uses the remaining lifetime, rounded down to whole seconds.
+  With no enclosing `SOA`, the TTL is zero; no lifetime is invented. The
   authority section remains empty. An unexpanded empty `found` has no
   `CNAME`. [*stub-render.expanded-nodata-has-no-cname]
 

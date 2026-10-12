@@ -62,7 +62,7 @@ peipkg detects three such actions and, for each one in a plan, asks a separate q
 ```
 this operation requires elevated authorisation:
   nginx would move backward from 1.27.5 to 1.27.4
-authorise this specific action? [y/N]
+type "authorise downgrade nginx" to authorise this action (anything else refuses):
 ```
 
 The three actions that trigger it:

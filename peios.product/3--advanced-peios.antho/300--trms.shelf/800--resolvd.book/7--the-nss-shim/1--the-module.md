@@ -42,11 +42,12 @@ The module exports six entry points:
 
 Each connection is given ten-second read and write timeouts, which
 apply to each read and write on the socket. Ten seconds is longer than
-the six seconds three timed-out attempts take in resolvd (§4.6), so a
-slow upstream normally reaches the caller as `unavailable` from resolvd
-rather than as a timeout here. A question that takes longer — several
-expansions in turn, or truncated replies retried over TCP — reaches the
-timeout, which is reported as the table below shows.
+the six seconds a question's three timed-out attempts take in resolvd,
+TCP retries included (§4.6), so a slow upstream normally reaches the
+caller as `unavailable` from resolvd rather than as a timeout here. A
+question can still reach the timeout when many search candidates each
+answer `NXDOMAIN` slowly, since those answers do not spend the attempt
+budget; that is reported as the table below shows.
 
 ## Results
 

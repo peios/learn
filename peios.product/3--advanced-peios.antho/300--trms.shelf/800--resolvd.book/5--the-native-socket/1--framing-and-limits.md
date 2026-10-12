@@ -123,6 +123,7 @@ values no longer produce the two type errors:
 | `duplicate field <name>` | A repeated key [*native-framing.error-duplicate-field] |
 | `unknown query "<name>"` | A `query` resolvd does not know [*native-framing.error-unknown-query] |
 | `access denied` | The access check (§5.2) |
+| `reply too large` | The encoded reply would exceed the 65 536-byte payload ceiling; it is replaced by this error |
 
 ### The connection after an error reply [*native-framing.connection-closed-after-error-reply]
 

@@ -102,8 +102,10 @@ fingerprint on this trusted local console with the browser's certificate
 details before accepting its warning. See [the machine's certificate](~peios/signing-in-from-a-browser/the-certificate).
 
 The banner reads `/var/state/gxwi/certificate.sha256` and the configured
-`Machine\Software\GXWI\Listen` address and port. With the default IPv4 wildcard
-listener, it lists the machine's active non-loopback IPv4 addresses. An IPv6
+`Machine\Software\GXWI\Listen` address and port. With the IPv4 wildcard
+listener Peios ships (`0.0.0.0:7780`), it lists the machine's active
+non-loopback IPv4 addresses. If the value is missing or unreadable, the
+banner shows GXWI's own fallback, the loopback address `127.0.0.1:7780`. An IPv6
 wildcard lists IPv6 addresses; link-local addresses that need an interface zone
 are omitted. A specific listen address is displayed as configured. This is
 connection information, not a check that GXWI is currently running.

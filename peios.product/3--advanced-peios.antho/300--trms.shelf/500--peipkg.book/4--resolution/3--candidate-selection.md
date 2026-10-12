@@ -18,6 +18,7 @@ When distinct providers remain, peipkg compares their selected revisions
 using rules 1 to 4 and 6 below. Rule 5 applies only to the first stage,
 within one concrete package name. The first rule that distinguishes
 two candidates decides.
+
 Selecting the revision first also makes the result independent of catalogue
 order when a package's architecture changes.
 
