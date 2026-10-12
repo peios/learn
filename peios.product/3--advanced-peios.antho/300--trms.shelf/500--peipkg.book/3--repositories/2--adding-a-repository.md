@@ -15,14 +15,17 @@ descriptor's signature against those anchor keys and only those. On
 success it records the descriptor's full key list, with statuses, as the
 repository's trust state.
 
-If no key matching an anchor verifies the descriptor, the add is
-refused. The error names the condition but not the fingerprints
-involved, which is the diagnostic a transcription error most needs.
+If none of the fetched keys matches a configured anchor, the add is
+refused. The error lists both the configured anchor fingerprints and the
+fetched key fingerprints in four-character groups. Fetched fingerprints
+are labelled **not yet trusted**: this diagnostic helps compare a
+transcription against an independently obtained anchor; it is not a reason
+to adopt a key supplied by the repository itself. No trust state or index
+cache is recorded on this mismatch.
 
-peipkg does not display the fetched fingerprint alongside the supplied
-one, and does not prompt for confirmation before recording trust. A
-mismatch is caught — an anchor that does not match cannot verify
-anything — but the operator is not shown the two side by side.
+A matching anchor must still verify the descriptor's signature. On the
+success path, peipkg does not yet display a fingerprint comparison or
+prompt for confirmation before recording trust.
 
 ## Two forms
 
