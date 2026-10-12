@@ -17,7 +17,7 @@ reply per connection, except `subscribe`.
 - A reply is a map with a boolean `ok`, and either the result's fields or
   a string `error`.
 
-A request that cannot be read or decoded is answered with an error reply
+An oversized, incomplete-at-EOF, or undecodable request is answered with an error reply
 and the connection ends:
 
 | Problem | `error` |
@@ -29,6 +29,10 @@ and the connection ends:
 | malformed MessagePack | `malformed message: …` |
 
 [*control-req.decode-errors]
+
+Expired client deadlines and failed socket I/O close the connection without
+a reply (§9.1). A normal reply that exceeds the message ceiling is replaced
+with an error reporting its size.
 
 ## The requests [*control-req.requests]
 
