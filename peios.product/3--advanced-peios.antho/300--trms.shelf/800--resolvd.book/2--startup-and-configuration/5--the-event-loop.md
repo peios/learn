@@ -22,16 +22,18 @@ Each iteration builds the poll set afresh:
 7. every stub TCP connection still sending its query;
 8. every upstream socket — for reading, or for writing while a TCP
    connection is still being established or its query is still being
-   sent.
+   sent;
+9. native and stub TCP replies waiting to write, for writability.
 
 ### The poll timeout [*loop.poll-timeout-is-earliest-deadline]
 
 The poll timeout is the earliest of: the next upstream transaction
 deadline, the next netd reconnection time while disconnected, the
-moment the oldest stub TCP connection reaches its 10-second bound, and
-the moment the oldest native connection reaches its 5-second bound, or
-the end of either listener's 250 ms accept-error backoff. With none of
-these pending, the loop sleeps until a descriptor is ready.
+moment the oldest stub TCP connection reaches its 10-second bound, the
+moment the oldest native connection reaches its 5-second bound, the
+earliest queued reply write deadline, and the end of either listener's
+250 ms accept-error backoff. With none of these pending, the loop sleeps
+until a descriptor is ready.
 
 The timeout is the time to that moment in whole milliseconds, rounded
 down. A moment less than a millisecond away gives a timeout of zero, so
@@ -43,47 +45,49 @@ After `poll` returns, ready descriptors are serviced in this order:
 
 1. upstream sockets — replies that have arrived are answers already
    owed;
-2. the stub UDP socket, reading every datagram waiting;
-3. the stub TCP listener, accepting every waiting connection;
-4. stub TCP connections;
-5. the native listener, accepting every waiting connection;
-6. native connections;
-7. the netd channel;
-8. the registry watch.
+2. queued native replies, then queued stub TCP replies, whose sockets are writable;
+3. the stub UDP socket, reading every datagram waiting;
+4. the stub TCP listener, accepting every waiting connection;
+5. stub TCP connections;
+6. the native listener, accepting every waiting connection;
+7. native connections;
+8. the netd channel;
+9. the registry watch.
 
 ## Timers after descriptors [*loop.timers-run-after-descriptors]
 
 Once the ready descriptors have been serviced, the timers run, in this
 order: transactions at or past their deadline fail over to their next
 attempt (§4.6), a due netd reconnection is attempted (§3.2), stub TCP
-connections 10 seconds old or older are closed, and native connections
-5 seconds old or older are closed.
+connections 10 seconds old or older are closed, expired reply writes are
+closed, and native connections 5 seconds old or older are closed.
 
 ## Answers within an iteration [*loop.local-answers-within-the-iteration]
 
 A question that can be answered without the network — synthetic, from
-the cache, or refused — is answered within the iteration that read it.
+the cache, or refused — has its answer prepared and its first write
+attempted within the iteration that read it.
 
 A question that needs the network sends its first transaction within
-that iteration too, and is answered in the iteration that sees its
-deciding reply or its last deadline.
+that iteration too, and has its answer prepared in the iteration that
+sees its deciding reply or its last deadline. Delivery may continue over
+later writable events for a slow native or TCP reader.
 
-## Writes are synchronous [*loop.replies-written-blocking]
+## Nonblocking reply writes [*loop.replies-written-blocking]
 
-Replies to native clients and to stub TCP clients are written from
-inside the loop, in blocking mode, with a one-second timeout on each
-write call. While a write is blocked, nothing else is serviced.
+Native and stub TCP replies get one nonblocking write attempt immediately.
+If the socket cannot accept the whole frame, the unwritten suffix is
+queued and resumed when that socket is writable. Each ready event makes
+one write attempt; partial progress is retained without duplicating bytes.
+The connection closes after the whole frame is written, on a write error,
+or when its fixed one-second write deadline expires. Progress does not
+extend that deadline. Other inputs and timers continue to be serviced.
 
-A reply that fits in the socket's buffer is written at once, in one
-call. A reply that does not is written in as many calls as it takes: a
-call that times out having sent part of the reply is followed by
-another for the rest, and the write ends when the whole reply is sent
-or a call fails, as one that times out having sent nothing does. Each
-call blocks for at most a second, so a large reply to a client that
-does not read holds the whole daemon for several seconds (§9.4): about
-two on the native socket, where the first call fills the socket's
-buffer and the second sends nothing, and about three on a stub TCP
-connection whose send buffer is small.
+At most 256 unfinished native replies and 256 unfinished stub TCP replies
+are queued. Each frame is bounded by its protocol ceiling (§5.1, §6.2).
+Even when a queue is full, a new reply gets its immediate write attempt;
+if it too needs queue space, that connection closes. Ready readers can
+therefore still receive replies while stalled readers occupy the queue.
 
 Stub UDP replies and upstream queries are not written this way. The
 netd subscription request is written with a two-second timeout when

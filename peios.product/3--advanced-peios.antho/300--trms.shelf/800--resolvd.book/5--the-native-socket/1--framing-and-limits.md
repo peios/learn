@@ -131,8 +131,9 @@ After an error reply the connection is closed.
 ## Writing the reply
 
 - The reply is framed the same way — four-byte little-endian length,
-  then the MessagePack map — and written blocking, with a one-second
-  timeout on each write call (§2.5). A failed write is logged as
+  then the MessagePack map — and written without blocking. An unfinished
+  write is queued with a fixed one-second deadline and a cap of 256 queued
+  native replies (§2.5). A failed or expired write is logged as
   `control: reply failed: <error>`. The connection is then closed. [*native-framing.reply-written-then-closed]
 - An encoded reply payload may be at most 65 536 bytes, excluding its
   four-byte length prefix. A larger reply is replaced by the error

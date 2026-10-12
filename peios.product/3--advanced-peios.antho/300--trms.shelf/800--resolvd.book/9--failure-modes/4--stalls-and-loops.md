@@ -1,18 +1,16 @@
 ---
 title: Stalls and Loops
-description: The failures that come from resolvd's single thread and its channel to netd — a reply that blocks the loop, a refused subscription, a lost registry watch, and a cache emptied by eviction.
+description: The failures that come from resolvd's single thread and its channel to netd — a stalled reply reader, a refused subscription, a lost registry watch, and a cache emptied by eviction.
 ---
 
 ## A client that does not read
 
-Native replies and stub TCP replies are written from the loop, blocking,
-for up to one second per write call, and a reply larger than the
-socket's buffer takes several calls (§2.5). A local client that sends a
-question whose reply is larger than its socket's buffer and then does
-not read holds every door for those seconds: about two on the native
-socket. Repeated, it slows every lookup on the machine. Nothing is
-logged for a stub TCP write that times out; a native one logs
-`control: reply failed`.
+Native and stub TCP replies are written without blocking (§2.5). A client
+that does not read can retain its own queued reply until the fixed
+one-second write deadline, then its connection closes. It does not stop
+other lookups. Each door holds at most 256 queued replies; if full, a
+new reply that cannot be written immediately is closed too. Stub TCP
+write failures are silent; native failures log `control: reply failed`.
 
 ## netd refuses the subscription
 
