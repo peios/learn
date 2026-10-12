@@ -107,6 +107,15 @@ quietly, reporting success because the deletion is already complete:
 the parent is gone, the name is gone, the name now identifies a
 different inode, or the unlink raced.
 
+The merged parent can disappear or become a non-directory before the
+VFS reaches stratafs’s unlink handler. An `ENOENT` or `ENOTDIR` from
+that earlier check is also a successful no-op, but only after a lookup
+in the descriptor’s original providing stratum confirms that its
+recorded name is absent or identifies a different inode. A higher
+stratum masking a still-live backing target does not satisfy that
+condition: the deletion still fails and is audited. Other errors keep
+their ordinary failure and audit behavior.
+
 ### The original stratum must accept removal [*create.deferred-delete-requires-writable-stratum]
 
 That stratum must accept modification, or the deletion fails with
