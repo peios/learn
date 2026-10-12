@@ -11,12 +11,24 @@ description: Where netd's hostname comes from — the registry or a lease — wh
    `Hostname.Offered` and whose lease carries a hostname;
 3. otherwise none.
 
-The name is passed to the kernel as written. netd does not check the
-registry value against the one-label rule (`libnetd::hostname`, which
-System Settings and first-boot setup apply before writing it), and it
-does not check a lease's name at all. A name the kernel refuses, such as
-one longer than 64 bytes, is logged as `sethostname(<name>): <error>`
-and tried again at the next pass. [*hostname.passed-as-written]
+The selected name is checked by `libnetd::hostname`, the same rule used
+by System Settings and first-boot setup: after trimming outer whitespace,
+it must be one nonempty label of at most 63 ASCII letters, digits or
+hyphens, with no leading or trailing hyphen, and must not be `localhost`
+(case-insensitive). This applies to registry and lease names alike.
+[*hostname.passed-as-written]
+
+An invalid selected name leaves the kernel's name and netd's last applied
+name unchanged. It is logged as `hostname <quoted name> refused: <quoted
+reason>`, with control characters escaped, once while the same rejected
+candidate remains selected. A different candidate, a valid name, or no
+name clears that suppression. A nonempty but invalid registry name still
+takes precedence: it does not silently fall through to a lease. Likewise,
+the first selected lease name is checked without searching later leases
+for a replacement.
+
+A valid name that the kernel nevertheless refuses is logged as
+`sethostname(<name>): <error>` and tried again at the next pass.
 
 ## When [*hostname.applied-after-each-pass]
 
@@ -56,6 +68,8 @@ who wrote the registry value is LCS's to record.
 
 ## Telling the network
 
-With `Hostname.Announce` in an interface's profile, its DHCPv4 client sends
-the registry's `Hostname` in option 12 (§5.1). A name adopted from a
-lease is never announced.
+With `Hostname.Announce` in an interface's profile, a newly started DHCPv4
+client sends the validated, trimmed registry `Hostname` in option 12
+(§5.1). An invalid registry name is omitted. An existing client's
+announcement configuration is unchanged until it restarts. A name
+adopted from a lease is never announced.
