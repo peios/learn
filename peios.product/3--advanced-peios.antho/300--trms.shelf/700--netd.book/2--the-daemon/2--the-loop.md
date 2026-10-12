@@ -19,11 +19,12 @@ up: no DHCP timer fires and no kernel event is read until it returns.
 | DHCPv4 replies | one packet socket per running client | the client's actions; a reconcile if the network changed |
 | Router advertisements | one ICMPv6 socket per interface doing router discovery | the engine's actions; a full pass if anything changed |
 | DHCPv6 replies | one UDP socket per running DHCPv6 client | the client's actions; a reconcile if the DNS facts changed |
-| Control requests | the control socket listener | the request (§9.2); `reconcile` runs a full pass |
+| Control requests | the listener and accepted client sockets | the request (§9.2); `reconcile` runs a full pass |
 | Time | the earliest deadline of any client | every client's timers, each acted on as above |
 
 The poll timeout is the earliest deadline any DHCPv4, router-discovery
-or DHCPv6 client holds; with none, netd waits indefinitely. A deadline
+or DHCPv6 client holds, or a pending control request or reply holds
+(§9.1); with none, netd waits indefinitely. A deadline
 already acted on is not held again: once an address is deprecated, its
 preferred lifetime is behind it, and its next deadline is the end of its
 valid lifetime. So netd sleeps while addresses sit deprecated, which on
