@@ -57,7 +57,7 @@ The `confinement_exempt` flag opts a specific token out of the confinement check
 
 ## CAAP evaluation
 
-Central access policies are the third narrowing layer. The mechanism: each `SYSTEM_SCOPED_POLICY_ID` ACE in the object's SACL references a policy by SID. The kernel looks up each policy in its policy cache (populated by authd) and evaluates the policy's rules.
+Central access policies are the third narrowing layer. The mechanism: each `SYSTEM_SCOPED_POLICY_ID` ACE in the object's SACL references a policy by SID. The kernel looks up each policy in its policy cache (populated through `kacs_set_caap`) and evaluates the policy's rules.
 
 A policy contains zero or more rules, each with:
 
@@ -74,7 +74,7 @@ For each applicable rule, AccessCheck recursively evaluates the effective DACL u
 
 **The recovery policy** is the kernel's fallback when a referenced policy SID is not in the cache. Rather than fail-open (grant everything as if the policy were absent) or fail-closed (deny everything), the kernel applies a hardcoded recovery policy that grants `GENERIC_ALL` to `BUILTIN\Administrators`, `SYSTEM`, and `OWNER_RIGHTS`. This way, administrative access survives a missing-policy condition; ordinary access does not.
 
-The full mechanism — applies-to expressions, staged vs effective semantics, distribution from authd — lives in [Central access policies](~peios/central-access-policies/overview). For this page, what matters is that CAAP is the last narrowing layer, that it is privilege-blind, and that it produces the staging-mismatch signal.
+The full mechanism — applies-to expressions, staged vs effective semantics, the current distribution limitation — lives in [Central access policies](~peios/central-access-policies/overview). For this page, what matters is that CAAP is the last narrowing layer, that it is privilege-blind, and that it produces the staging-mismatch signal.
 
 ## Composition
 

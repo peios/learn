@@ -1,7 +1,7 @@
 ---
 title: Distribution and recovery
 type: concept
-description: authd pushes policies into the kernel's cache via kacs_set_caap — empty at boot, a recovery policy for missing references, replication as authd's job.
+description: The kernel CAAP cache and missing-policy recovery exist; automatic distribution, boot-time loading and replication are not implemented.
 related:
   - peios/central-access-policies/overview
   - peios/central-access-policies/policies-and-rules
@@ -10,9 +10,20 @@ related:
   - peios/access-decisions/overview
 ---
 
-A central access policy that no one has loaded into the kernel does not affect access checks. The kernel maintains a **policy cache** — a map from policy SID to parsed policy — that AccessCheck consults at step 12. Distributing a policy means getting it into this cache. The mechanism is the `kacs_set_caap` syscall, called by authd.
+The kernel maintains a **policy cache** keyed by policy SID. Access checks
+consult it when an object references a central access policy. A missing
+entry invokes the recovery policy described below.
 
-This page covers how policies get into the kernel, what happens when a referenced policy is missing, and the boot-time sequence that makes the model usable.
+> [!IMPORTANT]
+> Automatic policy distribution is **not implemented**. Neither authd nor
+> peinit loads central access policies from the registry, populates this
+> cache at startup, or replicates policies between machines. authd readiness
+> does not mean that CAAP policies have been loaded.
+
+The kernel cache, `kacs_set_caap` syscall and access-check enforcement exist.
+The integration tests exercise them by calling the syscall directly. This
+page describes that kernel mechanism and its recovery behavior, not an
+available deployment workflow.
 
 ## kacs_set_caap
 
@@ -24,12 +35,14 @@ kacs_set_caap(policy_sid, sid_len, spec_or_null, spec_len)
 
 | Parameter | Meaning |
 |---|---|
-| `policy_sid` | The SID identifying the policy. A 4–68 byte binary SID. Establishes (or replaces) the cache entry. |
+| `policy_sid` | The SID identifying the policy. An 8–68 byte binary SID. Establishes (or replaces) the cache entry. |
 | `sid_len` | The length of the SID in bytes. |
 | `spec_or_null` | The wire-format spec to install at this SID. NULL means "remove the policy at this SID from the cache". |
 | `spec_len` | The length of the spec in bytes. Zero when removing. |
 
-The call requires `SeTcbPrivilege`. The only callers in a running system are authd and peinit; ordinary processes cannot push policies.
+The call requires enabled `SeTcbPrivilege` in the caller's effective token.
+The gate checks token authority, not an executable name. This requirement
+does not imply that authd or peinit currently calls it.
 
 The kernel:
 
@@ -44,22 +57,22 @@ To **remove** a policy, the caller passes NULL for the spec. The kernel deletes 
 
 ## Who calls kacs_set_caap
 
-**authd** is the primary caller. authd's job is the bridge between policy storage (the registry on a standalone machine, the domain's directory on a domain-joined one) and the kernel. On startup:
+There is currently no production distribution caller in authd or peinit.
+The test harness calls the syscall directly; there is no public C or Rust
+convenience wrapper, configured registry policy store, or cache-query
+syscall for management tools.
 
-- authd connects to its source of policy. Standalone: it reads from the registry. Domain-joined: it queries the domain's directory service.
-- For each policy in the source, authd parses the policy into the wire format and calls `kacs_set_caap` to install it.
-- After each policy change in the source (a registry write, a directory replication), authd re-pushes the affected policy via `kacs_set_caap`.
-
-**peinit** can also call `kacs_set_caap` for early-boot policies that need to be in place before authd starts. This is rare — most of the time, the kernel's CAAP cache is empty until authd takes over.
-
-There is no path for an ordinary application to push a CAAP. The privilege requirement (`SeTcbPrivilege`) and the architectural restriction (only authd and peinit hold it) mean policy authority is concentrated in one place.
+A future distribution service would need a policy source, update handling,
+boot readiness coordination and a recovery workflow. Those are outstanding
+implementation and design work, not services that an operator can enable
+today by changing a registry value.
 
 ## The policy cache and its lifetime
 
 The cache is an in-kernel data structure with the following properties:
 
 - **Empty at boot.** The kernel does not persist the cache across reboots. Every boot starts with an empty cache.
-- **Populated by call.** authd (or peinit) pushes policies one at a time via `kacs_set_caap`.
+- **Populated by call.** An authorised caller installs policies one at a time via `kacs_set_caap`; the shipped daemons do not do this automatically.
 - **Updated in place.** A subsequent push at the same SID replaces the existing entry.
 - **Removed by null spec.** A push with a NULL spec deletes the entry.
 - **Lives for the lifetime of the running kernel.** A reboot starts over.
@@ -86,29 +99,25 @@ The recovery policy is **not configurable**. It is hardcoded into the kernel. Th
 
 ## The boot sequence
 
-The kernel's CAAP cache is empty at boot. Until authd starts and populates the cache, every access check that touches a CAAP-referencing object will get the recovery policy.
+The kernel's CAAP cache starts empty. The current boot sequence does not
+populate it, and starting or restarting authd does not change that. An
+object referencing an absent policy continues to use the recovery policy.
 
-This is by design but it has a consequence: **security-sensitive services that depend on CAAP must not start before authd is running**. If a service that handles user requests starts before authd has loaded its policies, the service's access checks will use the recovery policy. For ordinary users accessing the service, that means denial of service. For administrators, that means working but not in the way the intended policies define.
-
-The standard boot order:
-
-1. Kernel initialises. SYSTEM token created. Anonymous token created.
-2. peinit starts. peinit may push early-boot policies via `kacs_set_caap` if any exist.
-3. authd starts. authd connects to its policy source and pushes every policy via `kacs_set_caap`.
-4. authd signals that policy distribution is complete (typically by reaching a steady state).
-5. Other services start, knowing the CAAP cache is now populated.
-
-The fourth and fifth steps require coordination — peinit, the service manager, and authd need to agree on when CAAP is ready. The exact mechanism is part of [Boot and trust establishment](~peios/boot-and-trust-establishment/overview).
-
-If your service-start ordering does not respect this, the symptoms are: access denied for ordinary users, mysterious "policy not found" recoveries in the audit log, services that work for administrators but not for anyone else.
+A dependency on authd readiness cannot establish that a central policy is
+loaded. Services must not treat that dependency as a CAAP distribution
+barrier. Boot-time policy loading and its readiness contract remain
+unimplemented.
 
 ## Updates and replication
 
-When a policy changes in the source (an administrator edits a registry value, or the directory replicates a new version), authd notices the change and re-pushes the affected policy via `kacs_set_caap`. The cache entry is updated atomically: subsequent access checks see the new version, ones already in progress see whichever version was current at the time they evaluated the relevant step.
+An explicit `kacs_set_caap` call can replace a local cache entry atomically.
+The kernel evaluates later accesses using the cache; existing handles keep
+their previously granted rights.
 
-There is no kernel notification mechanism for "this policy changed". Tools that want to react to a CAAP update need to subscribe to authd's events or watch the source directly. The kernel itself does not announce.
-
-Replication across machines is authd's job, not the kernel's. The kernel knows nothing about other machines; it sees only the policies authd has pushed locally. On a domain-joined system, each machine's authd reads from the directory independently and pushes to its local kernel. The directory's replication latency becomes the propagation delay for CAAP changes across the deployment.
+Automatic source watching, registry-to-cache updates and replication
+between machines are not implemented. There is no authd CAAP update stream
+for management tools to subscribe to. The kernel cache is local to one
+running kernel and does not provide persistence or replication itself.
 
 ## Cache eviction is administrative
 
@@ -129,10 +138,11 @@ A few things distribution does not handle, that are worth knowing:
 - **Audit propagation.** A policy's audit events fire as part of the access check; they go to KMES like any other audit event. The distribution mechanism does not bundle a separate audit pipeline.
 - **Per-user policies.** A policy that should apply only to specific users is one whose effective DACL or applies-to expression filters by user identity. Distribution does not target specific users; every policy in the cache applies to whoever accesses an object that references it.
 
-These are policy-author concerns, not distribution concerns. The distribution layer is simple: push policies, identified by SID, into a cache the kernel consults. Everything else is the policy author's responsibility.
+These are policy-author concerns, not distribution concerns. The available kernel interface installs policies by SID into the cache.
+An operational distribution layer still needs to be designed and implemented.
 
 ## Where to go next
 
 For what the kernel does with a cached policy on each access check, read [Evaluation](~peios/central-access-policies/evaluation).
 
-For the boot-time coordination that decides when the CAAP cache is ready, read [Boot and trust establishment](~peios/boot-and-trust-establishment/overview).
+For the existing boot and identity sequence, read [Boot and trust establishment](~peios/boot-and-trust-establishment/overview); it does not establish CAAP readiness.
