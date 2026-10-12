@@ -100,6 +100,17 @@ when a histogram percentile cannot be located below the series' highest
 boundary (§3.25); otherwise it is absent. Predicates and label selectors
 therefore see it as null, like any other output not yet computed.
 
+### Types belong to the query mode
+
+Header aliases and GUID literal forms apply only where a name is a
+header in that query mode. A metric label named `emitter.class` remains
+a string label: `"kacs"` is not the event-header class number. Likewise,
+a metric label named `job_id` or an event payload field named `boot_id`
+does not acquire the log header's GUID type. Ordinary string comparison
+rules apply, including to bracket selectors and cross-type metric
+selectors. The actual GUID headers still accept braced and unbraced
+input (§3.17).
+
 ## What a record contains
 
 **Event records** carry the header fields plus every non-suppressed
