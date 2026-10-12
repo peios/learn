@@ -126,3 +126,17 @@ and changes nothing.
 
 Both use the same event type deliberately: one consumer filter catches
 validation problems in either regime, and `phase` says which.
+
+## On-demand starts
+
+Before dispatch, peinit runs the shared definition validator over the
+services the start plan would activate. An unschedulable health check,
+an invalid health-check restart window or an invalid timer schedule
+rejects the plan with `INVALID_STATE`; no service from that plan is
+launched. This includes definitions reached through dependencies.
+
+Definitions outside the plan, and dependencies whose running state
+already satisfies the request, do not make it fail. Missing or disabled
+hard dependencies retain the ordinary blocked-plan handling; dependency
+cycles retain the existing cycle refusal. Conflicting boot triggers are
+not themselves a reason to reject an explicit start.
