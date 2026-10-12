@@ -43,12 +43,12 @@ within the ceiling and the excess is bytes after the payload.
 
 - A connection that closes, or fails to read, before its request is
   complete is dropped without a reply. [*native-framing.early-close-dropped]
-- A client that sends its whole request and then shuts down its writing
-  side gets no reply when the end of file is already waiting behind the
-  request: the read that finds the request also finds the end of file,
-  and the connection is dropped without the request being decoded. A
-  request whose end of file arrives after resolvd has read it is
-  answered as usual. [*native-framing.request-then-half-close-dropped]
+- A client that sends a complete request and then shuts down its writing
+  side is still answered. This also applies when the read finds end of
+  file immediately after the buffered request. The connection closes
+  after its one reply. A partial frame followed by end of file is dropped
+  immediately, without waiting for the delivery timeout.
+  [*native-framing.request-then-half-close-dropped]
 - A connection that has not delivered a complete request five seconds
   after it was accepted is closed without a reply. [*native-framing.five-second-delivery-bound]
 
