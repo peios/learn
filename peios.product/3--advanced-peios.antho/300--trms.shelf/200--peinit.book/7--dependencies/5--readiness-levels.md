@@ -1,6 +1,6 @@
 ---
 title: Readiness Levels
-description: How a service waits for a condition inside another service — Requires = ["netd:routed"] — and why a level is exact, per-publisher and never stale.
+description: How a service waits for a condition inside another service — Requires = ["netd:routed"] — and how publishers report a set of current conditions.
 ---
 
 `network-online.target` on systemd is famously meaningless, because
@@ -81,12 +81,21 @@ The service publishes it on the notification channel it already has, as
 `LEVEL=` beside `READY=1` and `STATUS=`:
 
 ```
+LEVEL=link
+LEVEL=addressed
 LEVEL=routed
 ```
 
-An empty value retracts it. [*ready.an-empty-level-retracts-it] peinit
-records the level against the sending service, and holds any dependent
-whose declaration does not match.
+All `LEVEL` lines in one datagram form one set: peinit atomically replaces
+the sender's previous set with the distinct nonempty values, before
+releasing any dependents, including when the same datagram carries
+`READY=1`. A datagram with no `LEVEL` lines leaves the set unchanged.
+[*ready.a-datagram-replaces-the-whole-level-set]
+
+`LEVEL=` on its own clears the set. Empty values mixed with nonempty
+ones add no member; they do not clear other lines in the same datagram.
+[*ready.an-empty-level-retracts-it] peinit records the set against the
+sending service, and holds any dependent whose requested level is absent.
 [*ready.a-level-is-recorded-against-the-sender-and-holds-a-mismatched-dependent]
 
 There is no subscription. peinit does not connect to netd's socket or
@@ -96,25 +105,23 @@ knowledge of their wire formats
 matters, because PID 1 is the one process on the machine that cannot
 afford to fail to start.
 
-## Levels are exact, not ordered
+## Levels match set membership
 
-`Requires = ["netd:addressed"]` is **not** satisfied by `netd:routed`.
-[*ready.a-level-is-matched-exactly-and-never-implied]
+`Requires = ["netd:addressed"]` is satisfied when the active publisher's
+set contains `addressed`. Every member is an opaque, case-sensitive name;
+commas do not split a name into several levels.
+[*ready.a-level-matches-membership-in-the-published-set]
 
-peinit has no ordering over another daemon's vocabulary and does not
-invent one. netd knows that `routed` implies `addressed`; peinit does
-not, and a central table of which levels imply which would recreate
-exactly the coupling that naming levels after their publisher avoids.
-
-A service that genuinely wants "addressed or better" should depend on the
-level it actually needs. If a publisher's levels are ordered in a way
-dependents keep needing to express, that is a sign the publisher should
-name the useful condition directly.
+peinit has no ordering over another daemon's vocabulary. A publisher
+that sends only `LEVEL=routed` does not satisfy an `addressed` dependent.
+netd knows which conditions imply others, so when routed it publishes
+`link`, `addressed` and `routed` together. A service should depend on the
+condition it needs, and the publisher reports every condition that holds.
 
 ## A level is never stale
 
-peinit clears a service's level whenever that service leaves a state that
-satisfies dependents.
+peinit clears a service's entire level set whenever that service leaves
+a state that satisfies dependents.
 [*ready.a-level-is-cleared-when-its-publisher-stops-satisfying-dependents]
 A level is a claim about a process that is
 currently making it, and one that outlived its process would hold a
@@ -142,10 +149,10 @@ what makes `Requires = ["netd:routed"]` hold when netd is up and merely
 not routed yet.
 [*ready.a-level-edge-is-kept-to-a-target-that-is-not-being-started]
 
-Two events re-open the question. A `LEVEL=` arriving from the publisher
-releases every dependent held on it — this is the only thing that can
-open a `Requires` or `BindsTo` gate, which take the exact level and
-nothing else. [*ready.only-the-level-itself-opens-a-hard-gate] And the
+Two events re-open the question. A level-set update arriving from the
+publisher releases every dependent whose requested level is now present
+— this is the only thing that can open a `Requires` or `BindsTo` gate,
+which take the exact level and nothing else. [*ready.only-the-level-itself-opens-a-hard-gate] And the
 publisher leaving a state that satisfies dependents
 releases `Wants` waiters: a soft dependency waits only while someone is
 running who could still publish the level, and proceeds once nobody is —
