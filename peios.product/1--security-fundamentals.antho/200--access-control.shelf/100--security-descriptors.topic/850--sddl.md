@@ -202,6 +202,12 @@ Mandatory-label policy bits, valid on an `ML` ACE:
 | `NR` | No read up |
 | `NX` | No execute up |
 
+An all-ASCII-digit rights field is an unsigned decimal mask. For example,
+`1179817` means `0x001200a9`, and `0` means no rights. Leading zeroes are
+accepted as decimal, not octal. The maximum is `4294967295` (`0xffffffff`);
+larger values, signs and non-ASCII digits are rejected. Decimal masks must
+occupy the whole rights field and cannot be appended to mnemonic codes.
+
 A rights field may also be a hexadecimal mask, written `0x` followed by the
 value. It consumes the rest of the field, so it can only come last — but it may
 follow letter codes rather than replacing them. `FRFX0x6` grants file read, file
