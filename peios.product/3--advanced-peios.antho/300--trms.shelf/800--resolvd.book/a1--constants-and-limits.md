@@ -15,13 +15,15 @@ values in one place.
 | Native connection read chunk | 4 096 bytes | §5.1 |
 | Native request delivery bound | 5 s | §5.1 |
 | Native connections still sending a request | 256 | §5.1 |
-| Native reply write timeout | 1 s | §5.1 |
+| Queued native replies | 256 | §2.5 |
+| Queued stub TCP replies | 256 | §2.5 |
+| Native reply write deadline | 1 s total | §5.1 |
 | Stub TCP connections still sending a query | 256 | §6.1 |
 | Stub TCP query delivery bound | 10 s | §6.1 |
 | Stub TCP message buffer | 65 537 bytes | §6.1 |
 | Stub TCP read chunk | 4 096 bytes | §6.1 |
 | Stub UDP read buffer | 4 096 bytes | §6.1 |
-| Stub TCP reply write timeout | 1 s | §6.2 |
+| Stub TCP reply write deadline | 1 s total | §6.2 |
 | Classic UDP reply limit, no `OPT` | 512 bytes | §6.2 |
 | EDNS0 payload size advertised, upstream and stub | 1 232 bytes | §4.7, §6.2 |
 | Transaction timeout | 2 s | §4.6 |
