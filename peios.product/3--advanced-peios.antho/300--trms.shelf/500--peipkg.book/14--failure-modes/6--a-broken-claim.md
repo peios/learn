@@ -31,11 +31,15 @@ time (§9.2) — or something removed it.
 
 A claim path cannot land outside the managed tree: the manifest decoder
 confines it to the permitted install destinations, `/run/` and `/init`
-(§9.2). Inside that tree it can still displace a file no package owned.
-The claim link is placed with the same replace-then-commit sequence as
-a repoint, and the displaced file went to a backup that the commit
-discarded; the unowned-file rule that would have refused a payload
-entry there (§5.7) is not applied to a claim link.
+(§9.2). A new claim refuses differing unowned content at that path by
+default. If package installation was explicitly authorised to overwrite
+unowned content, the displaced file is retained and the warning names its
+backup path. An identical relative symlink is adopted without replacement.
+
+For a link that is already recorded as manager-owned, a holder change
+still atomically repoints it. As described below, reconciliation compares
+database records rather than checking for manual changes to existing
+claim links.
 
 ## Repairing
 
