@@ -46,7 +46,10 @@ netd does these steps in this order:
 6. **Arms the registry watch** on `Machine\System\Network`. Failure is a
    warning, and the configuration is then read once, never again.
 7. **Dumps the kernel's state** (links, addresses and routes, both
-   families). Failure is fatal.
+   families). Failure is fatal. Discovers interface facts under the empty
+   policy, then checks the built generation for ties on present
+   non-loopback interfaces before adopting it. A tie refuses the entire
+   generation; the empty-policy backstop remains active.
 8. **Runs the first pass** (§2.2): every interface is judged, every
    static address applied, every client that is due started.
 9. **Sends `READY=1`** on the notify socket.
@@ -56,11 +59,13 @@ A lease is a network event, not a startup one. A service that needs an
 address waits on a readiness level (§8.2), not on netd being ready.
 [*startup.ready-after-first-pass-not-a-lease]
 
-A tie between two rules is not checked at startup: the startup build
-refuses a generation only for the build errors of §3.2. A tie present at
-startup is judged per interface as a conflict (§3.3), so the interfaces
-it covers are ignored with a warning rather than the generation being
-refused. [*startup.tie-at-startup-is-a-conflict-not-a-refusal]
+A tie between two rules at startup is checked against present interfaces
+using the same check as runtime adoption (§3.2). The reason is logged as
+`interface layer refused: rules <a> vs <b> tie on interface <name>; every
+interface is ignored` and reported in status. No DHCP/IPv6 clients or
+link reconciliation run under the refused generation. A later valid
+registry generation can be adopted normally.
+[*startup.tie-at-startup-refuses]
 
 If `Machine\System\Network` does not exist when netd starts, the
 configuration is empty and the watch cannot be armed, so a key created

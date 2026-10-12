@@ -72,13 +72,17 @@ a **lint**: logged as a warning, `rule <path>: <key> can never hold at
 the interface layer`, and the generation is taken.
 [*generation.never-at-layer-is-a-lint]
 
-## A tie refuses at runtime
+## A tie refuses adoption
 
-A generation built while netd is running is judged against every
+A generation is judged against every present
 non-loopback interface before it is taken. If any interface meets a
 **conflict** (two rules tied on priority naming different profiles,
 §3.3), the generation is refused with `rules <a> vs <b> tie on interface
 <name>`. [*generation.runtime-tie-refuses]
+
+At startup the same check runs after discovering interface facts and
+before starting clients or reconciling links. There is no previous good
+generation, so refusal leaves the empty policy in force (§2.1).
 
 ## Taken or refused
 

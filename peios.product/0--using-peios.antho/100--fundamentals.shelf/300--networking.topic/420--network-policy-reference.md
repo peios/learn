@@ -370,10 +370,13 @@ The collation laws are the packet layers': highest priority wins, ties
 go to the strictest verdict, a subkey is an exception, an abstaining rule
 hands up its parentage. One case has no packet-layer analogue: two rules
 tied on priority naming *different* profiles for one interface. That is a
-conflict, not a choice. On a runtime reload, a tie affecting an existing
-interface refuses the generation; `net status` names both rules. At startup,
-or when a new interface appears, that interface is ignored with a tie
-warning instead. See [netd's conflict handling](~peios/advanced-peios/netd/the-interface-layer/judging-an-interface).
+conflict, not a choice. At startup or on a runtime reload, a tie affecting
+an existing interface refuses the generation; `net status` names both
+rules. Runtime refusal keeps the last good generation; startup refusal
+leaves every interface ignored under an empty policy. If an interface
+appears or its facts change after adoption, a newly encountered conflict
+ignores that interface with a tie warning. See
+[netd's conflict handling](~peios/advanced-peios/netd/the-interface-layer/judging-an-interface).
 
 **Executor independence.** A generation is one registry state read by
 two executors. Each validates and refuses its own layers on its own: a

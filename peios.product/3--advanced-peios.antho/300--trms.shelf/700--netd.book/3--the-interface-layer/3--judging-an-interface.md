@@ -52,11 +52,11 @@ joined with ` vs `, and its warning is `rules <a> vs <b> tie; the
 interface is ignored`. The first time an interface meets a conflict, netd
 logs a warning.
 
-A conflict reaches an interface in two ways. A generation taken at
-startup is not checked for ties (§2.1), and an interface that appears
-after a generation was taken is judged against it with no check. A
-generation built at runtime that ties on an interface already present is
-refused instead (§3.2).
+A conflict can reach an interface when it appears, or its facts change,
+after a generation was accepted. The interface is judged against that
+existing generation; the generation is not retroactively refused.
+Startup and runtime adoption both check currently known interface facts
+and refuse a generation that already ties on a present interface (§3.2).
 
 ## A change of verdict [*judgment.change-restarts-clients]
 
