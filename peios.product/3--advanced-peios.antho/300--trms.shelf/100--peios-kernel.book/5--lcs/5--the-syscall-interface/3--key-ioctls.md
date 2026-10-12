@@ -67,6 +67,13 @@ name length and maximum value data size, the descriptor size, the
 volatile and symlink flags, and the hive generation number. [*ioctl.query-key-info.result-fields] It requires
 `READ_CONTROL`.
 
+For a non-root key, the name is the stored key record's informational name,
+with its original spelling, rather than the spelling used to open the fd.
+The required buffer length is that stored name's UTF-8 byte length, including
+when the opening spelling folds to it but has a different byte length.
+Hive roots have no child name and retain the fd's hive-name spelling.
+[*ioctl.query-key-info.stored-name]
+
 It is declared `_IOWR`, which is what it does: it reads the caller's
 output-buffer fields out of the argument structure before writing it
 back. [*ioctl.query-key-info.is-iowr]
