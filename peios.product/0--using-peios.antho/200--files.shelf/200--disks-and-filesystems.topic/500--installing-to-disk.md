@@ -143,7 +143,7 @@ Choose **Repair an existing system**, select the installed disk, and choose one 
 | **Check the filesystem** | Runs `e2fsck -pf` on the root: forced checking with automatic preen repairs. | Refuses if anything on the disk is mounted. Unfixed problems require a shell and manual `e2fsck`. |
 | **Reseed security descriptors** | Re-stamps the root directory's inheritable descriptor with the value used by the installer. | This is the root policy; it does not define a different policy for every subtree. |
 
-Boot repair uses the installed `disk-boot`, not a possibly older copy from the medium, and leaves the installed repository list alone. For a half-finished installation whose copy completed but boot setup failed, it detects the remaining `live-boot` package and finishes the installation's package swap.
+Boot repair uses the installed `disk-boot`, not a possibly older copy from the medium, and leaves the installed repository list alone. For a half-finished installation whose copy completed but boot setup failed, it detects the medium-only package checkpoint or the remaining `live-boot` package and finishes the installation's package swap. The checkpoint also covers a failure after live-boot was removed. Packages declared temporary by the medium, including the DWE package on newly built DWE media, are removed; the checkpoint disappears only after that swap succeeds.
 
 Filesystem checking reports whether the filesystem was clean, problems were fixed, or a reboot is required before reuse. Only problems it cannot fix automatically count as failure.
 

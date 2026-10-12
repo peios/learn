@@ -127,7 +127,7 @@ A source is where the build gets its packages, and only sometimes where the imag
 
 | Key | | |
 |---|---|---|
-| `dwe` | optional, default `false` | Add the Developer Workstation Environment: `peios-dwe` in the root and the `dwed-service` seed. The build directory and ISO gain a `-dwe` suffix. A DWE image is ownable by whoever can reach its vsock; it is for development. |
+| `dwe` | optional, default `false` | Add the Developer Workstation Environment: `dev.peios.dwed` in the root and the live-only `dwed-service` seed. The package is listed as medium-only and removed from the installed target by either installer. The build directory and ISO gain a `-dwe` suffix. A DWE image is ownable by whoever can reach its vsock; it is for development. |
 
 ## `[registry]`
 
