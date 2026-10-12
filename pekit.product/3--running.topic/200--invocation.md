@@ -226,7 +226,10 @@ recipe is treated as a member of that workspace.
 ### Remote recipe locators
 
 A **remote locator** is a recipe reference that points at a git repository rather
-than a local path. A value is treated as remote when it does *not* start with `.`
+than a local path. An existing local path, resolved relative to the invocation
+directory, takes precedence for both recipe and workspace locators. For example,
+`--recipe com.git-scm.git` selects that local recipe directory without needing a
+`./` prefix. A value with no local match is treated as remote when it does *not* start with `.`
 or `/` and it either begins with `github.com/`, contains `://`, ends with `.git`,
 or contains a `//` subdirectory separator. Examples:
 
