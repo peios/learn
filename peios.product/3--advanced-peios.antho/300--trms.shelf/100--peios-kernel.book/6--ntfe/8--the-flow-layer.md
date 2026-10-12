@@ -79,6 +79,13 @@ conntrack created the entry (`peios_ntfe_ct_ext_add()`) — the `Start.*`
 facts — [*ntfe-flow.start-secs-stamped-at-ct-creation] and, from the first judgment, the interface, the direction and
 whether the flow is loopback, for the dump. [*ntfe-flow.extension-records-first-judgment-facts]
 
+NTFE shares conntrack extension storage with accounting and other
+kernel features. Its allocation sizes and offsets use 16-bit fields;
+the build-time capacity guard includes the NTFE payload and alignment
+padding for every allocation order. Adding another extension must not
+wrap the total length or overwrite an existing extension. These fields
+are kernel-internal and do not change the flow-dump ABI.
+
 Writes take the flow's lock (`ct->lock`, `_bh`), zero the generation
 first, write the fields, and publish the generation last with a release
 store. [*ntfe-flow.sentence-write-publishes-generation-last] Each slot also has a modification
