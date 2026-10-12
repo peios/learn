@@ -23,8 +23,9 @@ unsigned 64-bit count.
 `status` and `flush` requests are not counted, and nothing on the netd
 channel is.
 
-Because a non-matching UDP datagram leaves its transaction to time out
-(§4.8), it shows up as one `upstream_failed` and no `upstream_answered`.
+An unmatched reply changes neither upstream counter (§4.8). A later
+matching reply adds one `upstream_answered`; if the original deadline
+expires without one, the timeout adds one `upstream_failed` instead.
 A reply with `SERVFAIL` shows up in both. A transaction that could not
 be sent shows up in `upstream_sent` and `upstream_failed`, and never in
 `upstream_answered`.

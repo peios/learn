@@ -48,14 +48,14 @@ Each of the following ends the transaction, adds one to
   while it is being established; [*engine-servers.tcp-connect-failure-fails-attempt]
 - for TCP, an error, a hang-up or a failed write before the whole query
   has been sent; [*engine-servers.tcp-error-before-query-sent-fails-attempt]
-- for TCP, the connection closing, or a read error, before a whole reply
+- for TCP, the connection closing, or a read error, before a whole matching reply
   has arrived; [*engine-servers.tcp-incomplete-reply-fails-attempt]
 - a matching reply whose response code is neither `NOERROR` nor
   `NXDOMAIN` — `SERVFAIL`, `REFUSED`, `FORMERR`, `NOTIMP`, and every
   other code, including EDNS extended codes. [*engine-servers.failure-rcodes-fail-attempt]
 
-A reply that does not match the transaction is not itself a failure,
-but on UDP it ends the transaction's chance of a reply (§4.8).
+A reply that does not match the transaction is ignored while the socket
+remains open for a matching reply until the original deadline (§4.8).
 
 ## Demotion
 
