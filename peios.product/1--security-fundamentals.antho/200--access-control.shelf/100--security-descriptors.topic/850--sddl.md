@@ -56,10 +56,21 @@ Omitting `D:` has the same binary meaning as `D:NO_ACCESS_CONTROL`: the
 PRESENT and points to a real ACL containing zero ACEs. There are two states,
 not three.
 
-Both Rust and Go formatters explicitly emit `NO_ACCESS_CONTROL` for a
-PRESENT-clear ACL, even when its section was omitted on input. This also
-applies to `S:`; P/AR/AI flags are retained in either section. `NO_ACCESS_CONTROL` may
-accompany ACL flags, such as `D:PAINO_ACCESS_CONTROL`, but cannot accompany ACEs.
+`NO_ACCESS_CONTROL` may accompany ACL flags, such as `D:PAINO_ACCESS_CONTROL`,
+but cannot accompany ACEs. The same applies to `S:`: `S:NO_ACCESS_CONTROL` is a
+descriptor with no SACL.
+
+The formatter leaves out a PRESENT-clear ACL, just as you can, unless it
+carries P, AR or AI flags. Those have nowhere else to go, so it writes them
+with the marker: `D:PNO_ACCESS_CONTROL`. A descriptor with nothing at all to
+show formats as `D:NO_ACCESS_CONTROL`, because SDDL has no empty string. The
+C, Rust and Go SDKs format identically, and their output always parses back to
+the same binary descriptor.
+
+So a missing `D:` in a tool's output means a NULL DACL. Tools that read only
+some sections of a descriptor, such as `reg sd --owner`, also leave out the
+sections they did not read. There, a missing section means only that it was
+not requested.
 
 ## ACL flags
 
