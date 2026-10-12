@@ -115,7 +115,7 @@ anything.
 | `stale` | A repository's trust state or metadata is past its maximum age, and refreshing did not cure it (§3) | Run again with `--allow-stale`, which is audited |
 | `busy` | Another package operation holds the lock | Try again once it finishes |
 | `denied` | The operator may not change what the transaction touches (§13.1) | None from this account |
-| `unowned` | A file that belongs to no package would be replaced (§5) | Run again with `--overwrite-unowned`; the displaced copy is kept |
+| `unowned` | A file that belongs to no package would be replaced (§5) | Move the conflicting file aside and retry. For `install` only, `--overwrite-unowned` also permits replacement and keeps the displaced copy |
 | `alternate-upgrade` | A package is upgraded by some other means (§6) | Run again with `--bypass-alternate-upgrade` |
 | `unresolvable` | No plan satisfies the request (§4) | Change the request |
 | `untrusted` | A configured repository's trust ceremony has never run, as with one an image ships (§3) | `peipkg repo add <name>` runs it, or remove the repository |
