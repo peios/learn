@@ -91,6 +91,13 @@ success, and so is an `EBUSY` from an attempted mount.
 peinit owns, a mount failure sends peinit to recovery.
 [*phase1.a-failed-peinit-owned-mount-is-recovery]
 
+After successful mount setup, peinit ensures `/run/lock` exists as a
+directory. [*phase1.runtime-lock-directory-is-restored] Mounting `/run`
+hides the directory shipped by fsbase, so peinit recreates it in the live
+filesystem before starting services. A newly created directory inherits
+`/run`'s descriptor; an existing directory is preserved. This step also
+runs when `/run` was already mounted. A creation failure enters recovery.
+
 ### Seeding descriptors on the new filesystems [*phase1.fresh-mounts-are-seeded]
 
 Three of the five filesystems peinit mounts are fresh and empty:
