@@ -116,6 +116,15 @@ limit exemption, the LCS source authentication path, and the upgrade
 of a linked-token query from an Identification-level copy to the real
 token at full access. [*priv.catalogue.se-tcb]
 
+The PEI-549 block-layer change also accepts enabled `SeManageVolumePrivilege`
+or `SeTcbPrivilege`, with successful privilege-use marking, for `BLKRRPART`
+(partition-table rescan), `BLKPG` (partition management) and `BLKFLSBUF`
+(buffer-cache flush). The caller still needs a usable block-device handle.
+Administrators membership alone, or a present but disabled privilege, does
+not pass this gate. Other `CAP_SYS_ADMIN` checks, including `BLKROSET`, retain
+their existing TCB requirement. This change has native VM qualification;
+older published kernels may still require `SeTcbPrivilege` for all three.
+
 `SeShutdownPrivilege` shuts down or reboots the machine, mapped
 through `CAP_SYS_BOOT`. [*priv.catalogue.se-shutdown] `SeRemoteShutdownPrivilege` is required *in
 addition* when the request originates from a Network,

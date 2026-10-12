@@ -151,7 +151,7 @@ Each repair ends at the finish page. Use **Back to the start** to perform anothe
 
 ## Two ways to invoke it
 
-This section describes the older **`peios-install` script**, not a command-line interface to the current installer conversation. Use an appropriately authorised administrative session; mounting requires `SeManageVolumePrivilege`, and the script must be able to preserve the copied security metadata. See [privilege categories](~peios/privileges/categories).
+This section describes the older **`peios-install` script**, not a command-line interface to the current installer conversation. Run this legacy script from a **SYSTEM session**; direct use from an administrator session is unsupported because its ordinary copy must read SYSTEM-only files and preserve their security metadata. For ordinary console or browser installation, use the current installer described above, whose privileged operations run in `installerd`.
 
 > [!CAUTION]
 > These commands format their targets. Device names below are examples, not recommendations. Check the actual disks and partitions with [`part list`](~peios/disks-and-filesystems/partitioning) before substituting your targets. The script copies live accounts and credentials; read the [account warning](#the-first-account-service-is-retired-the-account-is-not) before using the result.
