@@ -283,6 +283,19 @@ stage_incomplete: build:source: stage .../out/build/source is left over from a
 run that did not finish; drop "source" from --no-build to re-stage it
 ```
 
+On a normal run that rebuilds the target, pekit clears a stage explicitly
+marked as still running before executing the target again, even when its
+recipe does not set `clear_out`. This also applies in an isolated workspace:
+the incomplete output is discarded, then the isolated job rebuilds from an
+empty stage. A dry run neither clears the directory nor changes its marker.
+
+This recovery does not permit reuse of incomplete output with `--no-build`.
+An isolated workspace still refuses unverified legacy output with no
+completion record, an unrecognised record, or a complete record unless the
+target explicitly clears it. Records from failed root composition or an
+interrupted command can therefore be retried without manual output cleaning,
+while unknown legacy output keeps its existing refusal.
+
 Without that, a failed stage is silently reused and the run fails later
 somewhere unrelated — a clean that gave up part-way leaves a tree too full to
 replace, and a fetch that failed leaves one too empty to reuse, and neither
