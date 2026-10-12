@@ -173,14 +173,12 @@ no DNSSEC validation.
 | `resolv: access denied` | Check the native control object's query right. It is separate from reachability of the DNS stub. |
 | Daemon unreachable or repeated failures | Read `evctl 'LOGS FROM resolvd SINCE 1h ago TAKE 40'` and the [failure-mode guide](~peios/advanced-peios/resolvd/failure-modes/resolvd-cannot-be-reached). |
 
-> [!WARNING]
-> The resolvd manual has conflicting restart accounts: its failure guide
-> says a stale socket blocks restart, while its
-> [socket chapter](~peios/advanced-peios/resolvd/startup-and-configuration/sockets)
-> describes normal stale-socket replacement. Check the actual startup error
-> and socket-access evidence before treating manual file removal as a
-> remedy. Do not delete the runtime directory merely because a restart
-> occurred.
+On restart, resolvd removes its stale socket and binds a new one. Its
+directory and socket descriptors retain full access for its own service
+identity so this replacement can succeed. See the
+[socket chapter](~peios/advanced-peios/resolvd/startup-and-configuration/sockets).
+If startup reports a permission error, inspect the actual descriptors and
+logs; do not delete the runtime directory merely because a restart occurred.
 
 For comparison with the local DNS stub, Experimental includes
 `dig @127.0.0.53 example.org A`. A direct query to some other server tests
