@@ -59,8 +59,9 @@ authorised. An authorised replacement retains the displaced content at
 the transaction's backup path and reports that path in a warning.
 
 This applies both during package installation and during a standalone
-claim grant. The `claim`, `upgrade` and `remove` commands have no overwrite flag, so
-conflicting unowned content must be moved aside deliberately before retrying.
-The shared refusal message recommends this recovery for every command. Package installation can use its existing `--overwrite-unowned`
-option. Repointing a recorded claim link remains an atomic replacement.
+claim grant. Every command other than `install` has no overwrite flag, so
+conflicting unowned content must be moved aside deliberately before
+retrying. The shared refusal message recommends this recovery for every
+command; `install` can also use its `--overwrite-unowned` option.
+Repointing a recorded claim link remains an atomic replacement.
 A path owned by a package that will remain installed is refused (§9.6).
