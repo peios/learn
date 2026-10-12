@@ -48,7 +48,8 @@ against, and falls back to the handle it was recorded under.
 
 A base URL is HTTPS unless the repository's insecure-transport setting
 permits otherwise. The setting is per-repository; there is no global
-form.
+form. peipkg warns on each add, refresh and use of the cached index for
+package planning while this allowance is enabled.
 
 `file://` base URLs are accepted for local development. They are exempt
 from the transport check rather than gated by it, so a repository on

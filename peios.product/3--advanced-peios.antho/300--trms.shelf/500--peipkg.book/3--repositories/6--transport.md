@@ -31,8 +31,12 @@ anything else against the document that carried it.
 ## Schemes
 
 HTTPS is required unless the repository's insecure-transport setting is
-enabled, and enabling it produces no warning of its own on subsequent
-operations.
+enabled. peipkg warns for each configured repository during add, refresh
+and cached-index use for package planning. The warning names the
+repository and states that its configuration does not require HTTPS. It
+is emitted before the access, including when that access fails, and is a
+warning event in the driven interface. It describes the allowance even
+when a particular URL happens to use HTTPS.
 
 `file://` is supported for development and is exempt from the transport
 check entirely rather than gated by the insecure-transport setting.
