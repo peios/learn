@@ -48,6 +48,17 @@ can be reused. A packet already evaluating an old policy may finish;
 its old verdict cannot remain current after a new policy is published.
 The extra policy stamp does not change the flow-dump ABI.
 
+On a cache miss, Flow refreshes `Network.*` from the active context table
+for the packet's traversal interface after capturing the invalidation
+generation. It clears the old fields first, so removing a context makes
+those facts absent. Context publication swaps the table before advancing
+the generation; the reader's acquire of that generation precedes its
+context lookup. Thus a packet snapshot taken before publication cannot
+leave an old network verdict cached under the new generation. A context
+published after the captured generation makes the resulting sentence
+stale on the next traversal, even if that evaluation already saw the new
+facts. A current cached sentence needs no extra context lookup.
+
 What the Flow forest judges is the **flow view**, not the packet's
 snapshot: a Flow fact is one identical for every packet of the flow, so
 `ntfe_flow_view()` builds it from the flow. [*ntfe-flow.judges-flow-view-not-packet] A reply-direction packet's

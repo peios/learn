@@ -153,6 +153,11 @@ netd fills them from the interface record when it judges an interface,
 the kernel from the table when it judges a packet, so
 `Network.Trust.Equal` reads the same record in either layer. [*ntfe-snapshot.network-facts-match-interface-layer]
 
+Flow refreshes these facts on a cache miss after capturing its cache
+invalidation generation (§6.8), because this packet snapshot can predate
+a context publication. Packet and RawPacket continue to use their
+traversal snapshot; their verdicts are not retained as Flow sentences.
+
 ## The identity fields
 
 The snapshot's last fields are not extracted from the packet at all.
