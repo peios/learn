@@ -38,6 +38,12 @@ subtree root (§5.2.9). [*backup.orphaned-key-is-enoent]
 `lcs.audit.backup.started` is emitted **before any subtree data is read**, and
 if it cannot be emitted the backup returns `EIO` and does not start. [*backup.start-event-precedes-any-data-or-eio]
 
+After privilege, output-fd and key validation, START precedes the request for
+the read-only snapshot. A refused or failed snapshot therefore emits both
+START and END, with END carrying the failure errno; no subtree is exported
+and no unopened snapshot is released. A START emission failure prevents the
+snapshot request itself. [*backup.snapshot-refusal-is-audited]
+
 `lcs.audit.backup.ended` is emitted afterwards, carrying the result, and a
 failure to emit it cannot change a result that has already happened. [*backup.complete-event-cannot-change-the-result]
 
