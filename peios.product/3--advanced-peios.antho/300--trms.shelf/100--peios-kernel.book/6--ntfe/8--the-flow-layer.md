@@ -81,10 +81,15 @@ whether the flow is loopback, for the dump. [*ntfe-flow.extension-records-first-
 
 Writes take the flow's lock (`ct->lock`, `_bh`), zero the generation
 first, write the fields, and publish the generation last with a release
-store. [*ntfe-flow.sentence-write-publishes-generation-last] Reads are lock-free on the hook path: an acquire load of the
-generation, the fields, then a re-check of the generation — a torn
-sentence (a writer in between) reads as absent and the flow is simply
-evaluated. [*ntfe-flow.torn-sentence-reads-absent] Two packets of a new flow racing on two CPUs may both
+store. [*ntfe-flow.sentence-write-publishes-generation-last] Each slot also has a modification
+sequence, advanced at the start and end of every write, including a
+refresh under the same policy generation. The policy generation
+identifies the policy; it cannot detect every cache update.
+
+Reads are lock-free on the hook path and in the flow dump. They make
+one attempt: an active writer or a changed modification sequence makes
+the sentence read as absent. Readers neither spin nor acquire the
+flow's lock. On a cache miss the flow is evaluated as usual. [*ntfe-flow.torn-sentence-reads-absent] Two packets of a new flow racing on two CPUs may both
 evaluate; the second sentence write wins (both judged the identities
 the first resolution recorded, §6.9), and the effects ran twice — the only
 place NTFE tolerates that, because the alternative is a lock on the fast
