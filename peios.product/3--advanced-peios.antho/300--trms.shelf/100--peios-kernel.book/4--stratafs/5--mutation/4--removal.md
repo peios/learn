@@ -58,19 +58,25 @@ a disclosure channel: a caller who may not enumerate a protected
 participant could learn whether it contains anything by attempting
 `rmdir` and distinguishing `ENOTEMPTY` from success.
 
-The emptiness scan filters staging entries, as enumeration does, so an
-in-flight copy-up in the create stratum does not make `rmdir` fail on a
-directory that looks empty through the mount.
+The emptiness scan filters this mount's in-flight staging entries, as
+enumeration does. That does not authorise removing a live stage: the
+provider can still refuse the physical removal with `ENOTEMPTY`.
 
-Because it filters them, a directory holding nothing but orphaned
-staging entries reports empty — and the removal would then fail at the
-provider, on entries the caller cannot see and has no way to remove. So
-a scan that finds the directory empty but saw staging entries runs
-orphan recovery on the create stratum's copy of it before returning
-(§4.5.2). Only entries belonging to no live mount are removed; one owned
-by a live mount survives, and the provider's `rmdir` then fails
-`ENOTEMPTY`, which is the right answer while another mount is copying up
-there.
+### Orphan recovery before inspection [*remove.rmdir-staging-recovery]
+
+After the traverse/list checks complete, the emptiness test runs orphan
+recovery on the create stratum's participating directory **before**
+enumerating its contents (§4.5.2). A dead mount's entries are not in the
+current mount's in-flight list, so waiting until that list has filtered
+them would reject the directory before recovery could run. A directory
+containing only recoverable orphan files or empty orphan directories can
+therefore be removed without first opening or listing it.
+
+Recovery requires the staging prefix, a valid marker, and an owner that
+is no longer live. Missing or malformed markers, ordinary published
+names, and stages belonging to a live mount remain untouched; they can
+still make removal fail with `ENOTEMPTY`. The scan is local to the
+participating create directory, not a recursive walk of the stratum.
 
 Where the directory is removed and lower strata hold the same name as a
 directory, the name remains visible as a merged directory of the
