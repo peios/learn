@@ -76,7 +76,7 @@ The three actions that trigger it:
 Two things make this prompt different from the routine one:
 
 - **`--yes` does not satisfy it.** `--yes` skips the routine `proceed?` prompt; it has no effect on an elevated-authorisation question.
-- **End-of-input refuses it.** A closed input cancels the action. This is not a separate authentication channel: the [authorisation reference](~peios/peipkg/security/operator-authorisation#the-channel-is-not-distinguished) documents that piped affirmatives can answer the same questions. Do not pipe blanket approvals as a substitute for reviewing elevated actions.
+- **Name the action and package.** The text prompt requires its displayed phrase, such as `authorise downgrade widget`, followed by a newline. Generic `y` or `yes`, closed input, and an unterminated phrase refuse the action. Scripts can supply the specific phrase; see the [authorisation reference](~peios/peipkg/security/operator-authorisation#confirming-a-specific-action) for the text and structured interface contracts.
 
 Each elevated action is presented and authorised on its own; approving one does not approve the next. And the authorising act is itself written to the [audit stream](~peios/auditing/overview) — the record shows not just what was done, but that it was specifically authorised and what was authorised.
 
