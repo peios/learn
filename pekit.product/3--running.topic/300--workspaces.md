@@ -162,6 +162,11 @@ command — exactly as if you had `cd`'d into that member and run
 `pekit <command> ...` there, with the delegated flags and any positional
 selectors carried through unchanged.
 
+A failed member's explicitly incomplete target stage is cleared when that
+target is rebuilt on a later run. This applies under workspace isolation as
+well; it does not allow `--no-build` to reuse incomplete or unverified output.
+See [Stages that did not finish](~pekit/running/commands-and-targets#stages-that-did-not-finish).
+
 ### Concurrency: `--jobs`
 
 `--jobs N` sets how many members run concurrently. `N` must be a **positive
