@@ -34,7 +34,7 @@ Four pieces of connection state are established immediately:
   silently running without it is not acceptable.
 - `PRAGMA foreign_keys=ON`. Neither schema declares a foreign key, so
   this constrains nothing. [*startup.foreign-keys-are-enabled]
-- `PRAGMA busy_timeout=25000` — 25 seconds (§4.3).
+- `PRAGMA busy_timeout=0` — SQL lock conflicts return busy immediately (§4.4).
   [*startup.the-busy-timeout-is-twenty-five-seconds]
 - The volatile database is attached (§3.3).
 
@@ -43,10 +43,11 @@ Each `database/sql` handle is limited to a single underlying connection.
 
 ## 3. Attach the volatile store [*startup.the-volatile-store-is-attached-as-schema-volatile]
 
-Each hive gets an in-memory SQLite database, attached to its connections
-under the schema name `volatile` (§3.3). The attach happens as part of
-opening the connection in step 2; the volatile *tables* are created in
-step 4. [*startup.the-volatile-tables-are-created-with-the-schema]
+Each hive gets a fresh tmpfs-backed SQLite database, attached as `volatile`
+and put in WAL mode with private caches. Before opening hives, loregd
+protects and locks `/run/loregd`, verifies tmpfs, and removes old volatile
+stores left by a crash (§3.3). It never reuses a prior process's volatile data.
+[*startup.volatile-stores-are-fresh-and-use-tmpfs-wal]
 
 ## 4. Establish the schema
 
@@ -112,6 +113,13 @@ Open `/dev/pkm_registry`. The kernel requires `SeTcbPrivilege` in the
 calling thread's token to permit this; loregd performs no check of its
 own and relies on the kernel to refuse.
 [*startup.the-kernel-not-loregd-enforces-setcbprivilege]
+
+Before registration, negotiate RSI lifetime extension version 1 with
+`REG_SRC_NEGOTIATE`. Retain the returned source-session identifier for request
+contexts and lease renewal. A kernel without this extension is incompatible;
+startup fails before registering hives instead of silently changing lifetime
+semantics.
+[*startup.lifetime-protocol-is-negotiated-before-registration]
 
 ## 9. Register the hives
 

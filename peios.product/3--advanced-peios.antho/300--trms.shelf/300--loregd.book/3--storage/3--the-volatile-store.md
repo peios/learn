@@ -1,22 +1,18 @@
 ---
 title: The Volatile Store
-description: Volatile keys never reach the hive file, so each hive attaches a second in-memory database mirroring the persistent schema.
+description: Volatile keys never reach the hive file, so each hive attaches a second tmpfs-backed WAL database mirroring the persistent schema.
 ---
 
-Volatile keys exist only for the lifetime of the running system, so they
-never reach the hive's database file.
-[*volatile.volatile-keys-never-reach-the-hive-file] Each hive instead
-gets a **second SQLite database, held entirely in memory**, attached to
-its connections under the schema name `volatile`
-[*volatile.each-hive-gets-a-second-in-memory-database]:
+Volatile keys never reach the persistent hive file.
+[*volatile.volatile-keys-never-reach-the-hive-file] Each hive attaches a
+separate SQLite database as `volatile`, using WAL and private connection
+caches. Its files live on tmpfs beneath `/run/loregd/hive-<random>/`.
+[*volatile.each-hive-gets-a-private-tmpfs-wal-database]
 
-```
-file:<HiveName>_volatile?mode=memory&cache=shared
-```
-
-The hive name in the URI is the case-preserved name from the command
-line, which is what keeps one hive's volatile database distinct from
-another's. [*volatile.the-uri-uses-the-case-preserved-hive-name]
+The runtime directory has a protected, inheritable SYSTEM-only KACS DACL.
+Startup verifies that it is on tmpfs and refuses symlinks. A stable `.lock`
+file prevents two daemon instances from cleaning up each other's stores.
+[*volatile.runtime-storage-is-protected-and-exclusively-owned]
 
 ## A mirror of the persistent schema [*volatile.the-schema-mirrors-the-persistent-one]
 
@@ -59,21 +55,19 @@ see §4.3.
 
 ## Lifetime
 
-A shared-cache in-memory database exists as long as at least one
-connection has it open.
-[*volatile.the-in-memory-database-lives-while-a-connection-holds-it] The
-write connection creates the volatile tables and holds the database
-[*volatile.the-write-connection-creates-and-holds-the-volatile-database];
-the read connections and any snapshot connection attach the same URI and
-see the same data through the shared cache.
-[*volatile.readers-attach-the-same-uri-and-see-the-same-data]
+Every open hive gets a fresh random directory. Read, write and snapshot
+connections attach the same database file for that hive. Different hive
+instances never share a store merely because their names match.
+[*volatile.connections-share-only-their-hives-store]
 
-Nothing persists it, and nothing tries to. When loregd exits, the memory
-goes with the process and every volatile key in every hive ceases to
-exist. [*volatile.every-volatile-key-ceases-to-exist-when-loregd-exits]
-That is the entire meaning of volatility here, and it is why the volatile
-tables are always empty at startup (§2.2, step 7).
-[*volatile.the-volatile-tables-are-always-empty-at-startup]
+Clean shutdown closes the connections and removes the hive directories.
+After a crash, files may remain in tmpfs until the next start or reboot.
+The next daemon acquires the runtime lock and removes that residue before
+creating fresh stores; it never reads or recovers old volatile data.
+[*volatile.crash-residue-is-removed-before-fresh-stores-are-created]
+The `.lock` file remains; its kernel lock ends when the process exits.
+Every volatile table is empty on startup, including a restart within the
+same boot. [*volatile.the-volatile-tables-are-always-empty-at-startup]
 
 ## Which store an operation uses
 
