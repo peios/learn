@@ -45,6 +45,13 @@ separate them with spaces rather than colons. If the two match, the connection
 is to this machine and nobody can read it on the way. If they do not, do not
 sign in.
 
+Firefox may still describe a connection with a certificate exception as
+insecure, even when it uses TLS. That label alone does not establish whether
+the traffic is encrypted or whether the peer is the right machine. Check
+the presented certificate against the console fingerprint as above.
+Importing the verified certificate establishes trust in it; name and
+validity checks still apply.
+
 ## Trust the verified certificate
 
 The certificate is in `/var/state/gxwi/certificate.pem`, also readable by
@@ -96,6 +103,11 @@ machine, but the certificate, and so its fingerprint, is new. Each renewal
 means one more warning in every browser that went past the old one, and
 importing the new `certificate.pem` again for anyone who imported the old.
 Check the new fingerprint as you did the first.
+
+Renewal uses the machine's current hostname for the certificate's common
+name and DNS name, alongside `localhost`, `127.0.0.1` and `::1`. A machine
+rename is therefore picked up at the next renewal; renaming alone does
+not renew a certificate that is still within its normal lifetime.
 
 GXWI looks when it starts, once a day while it runs, and when it is reloaded:
 
