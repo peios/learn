@@ -64,9 +64,9 @@ Cached as `<key>.lab/` — a directory containing per-VM `.snap` files plus a `l
 
 ## What ends up in the cache key
 
-The cache key is a SHA-256 of, in order:
+The cache key is a SHA-256 covering:
 
-1. The fixture file's source bytes.
+1. The fixture file's source bytes, wire-protocol version and QEMU snapshot-layout epoch.
 2. Every transitively-referenced fixture's key (so `vm_fixture("derived")` calling `vm_fixture("base")` invalidates when `base` changes).
 3. Every `require()`d helper's source bytes (recursively — helpers that require other helpers fold in too).
 4. The kernel and initrd identifier of EVERY profile in `provium.toml` (sorted by name for determinism).
@@ -80,6 +80,11 @@ Edit any of those, and the next run rebuilds the fixture. This is intentional:
 - A new kernel image is dropped in → every fixture rebuilds.
 
 Multi-profile cache-key folding means a kernel change on profile B invalidates fixtures even if they only ever boot under profile A. This is a deliberate over-invalidation: it's safer than serving a fixture built against a now-stale kernel.
+
+The QEMU layout epoch invalidates cached fixtures when the generated machine
+topology changes. Launch disks now use individual PCIe root ports, so fixtures
+from the previous layout rebuild automatically. Separately saved snapshots
+from that layout must be recreated; PCI addresses have changed.
 
 ## External host-file deps
 

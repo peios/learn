@@ -210,7 +210,7 @@ local ok = pcall(function() disk:read_sectors(0, 1) end)
 assert(not ok)  -- "disk is detached"
 ```
 
-`disk:detach()` issues a best-effort QMP `device_del` against the parent VM and marks the local handle detached; after that, sector ops error. The exact behaviour for disks that were never QMP-added is in the [Disk reference](~provium/reference/disk#disk-detach).
+`disk:detach()` issues a best-effort QMP `device_del` against the parent VM and marks the local handle detached; after that, sector ops error. This also addresses disks declared at launch. Guest removal is asynchronous, so wait for the device to disappear if the next assertion depends on its absence. The exact behaviour for disks that were never QMP-added is in the [Disk reference](~provium/reference/disk#disk-detach).
 
 ## Common patterns
 

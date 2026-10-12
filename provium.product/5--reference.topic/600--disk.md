@@ -139,6 +139,13 @@ Returns a Lua array of the currently-active fault mode names. Useful for tests t
 
 Mark the disk as detached and issue a best-effort QMP `device_del` against the parent VM. Subsequent `read_sectors` / `write_sectors` error. The QMP call is best-effort: a disk that was never QMP-added (host-bookkeeping-only attach) silently surfaces "Device not found" but the local detached flag is still set.
 
+Disks declared in the profile or in `vm:boot({disks = …})` are addressable
+by their disk ID. Detaching them requests
+removal of the corresponding guest device. Removal is asynchronous and
+requires guest cooperation: the local detached flag does not prove that
+the guest has finished removing it. A test that depends on removal should
+wait for the guest device to disappear before continuing.
+
 ### `disk:is_detached()` / `disk:id()`
 
 Accessors. `:id()` returns the disk identifier as given to `attach_disk`.
