@@ -70,9 +70,10 @@ after that it is asked last, for 30 seconds, and the cycle repeats if
 it is still dead.
 
 A UDP reply that does not match its query — a server that does not echo
-the question's case exactly, for instance — is handled as a timeout
-(§4.8): the question waits the full two seconds, the server is demoted,
-and `upstream_failed` rises while `upstream_answered` does not.
+the question's case exactly, for instance — is ignored (§4.8). A later
+matching reply can still answer the transaction. Only if none arrives by
+the original two-second deadline does the attempt time out, demote the
+server, and add to `upstream_failed` without adding to `upstream_answered`.
 
 ## `refused` is rising
 
