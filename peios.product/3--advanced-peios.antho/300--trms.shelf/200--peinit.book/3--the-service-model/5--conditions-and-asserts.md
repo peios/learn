@@ -41,15 +41,17 @@ behave differently from one another.
 ### Registry checks are cache-only
 
 A `registry:` check is evaluated against the in-memory model, never by a
-live registry read. It can therefore only name a key peinit already
-caches — under `Machine\System\Services\` or `Machine\System\Init\`.
-Naming any other key is a decode error, caught at load rather than at
-start. [*check.a-registry-check-must-name-a-cached-key]
+live registry read. Accepted paths are exactly `Machine\System\Services`,
+`Machine\System\Init`, and `Machine\System\Services\<name>` with one
+nonempty service-name component. Init descendants, deeper Services
+paths, and trailing separators are decode errors, caught at load rather
+than silently failing at start. The same rule applies to Conditions and
+Asserts. [*check.a-registry-check-must-name-a-cached-key]
 
-Within that, resolution is narrower than the load-time check suggests.
-A `registry:Machine\System\Services\<name>` check is true when that
-service exists in the model, which makes it a subkey-existence test
-rather than a general key-existence test.
+The two roots resolve as present. A
+`registry:Machine\System\Services\<name>` check is true when that service
+exists in the model; it does not read an arbitrary registry key. A
+missing service is a valid check whose result is false.
 [*check.a-services-registry-check-is-a-service-existence-test]
 
 ### Filesystem checks run in a helper
