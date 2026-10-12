@@ -49,10 +49,17 @@ formatter emits the sections in the order above regardless of the order you
 wrote them. A section may appear only once; a repeat is an error rather than an
 override.
 
-One case is easy to write by accident. A bare `D:` with no ACEs after it is a
-**NULL DACL**, which grants everyone everything — not an empty DACL, which
-grants nobody anything. `D:` and `D:(A;;GA;;;WD)` are close together on the
-keyboard and very far apart in effect.
+A bare `D:` is an **empty DACL**: it contains no grants. A **NULL DACL** is
+written `D:NO_ACCESS_CONTROL` and imposes no discretionary access restrictions.
+Omitting `D:` has the same binary meaning as `D:NO_ACCESS_CONTROL`: the
+`SE_DACL_PRESENT` bit is clear and the DACL offset is zero. A bare `D:` sets
+PRESENT and points to a real ACL containing zero ACEs. There are two states,
+not three.
+
+Both Rust and Go formatters explicitly emit `NO_ACCESS_CONTROL` for a
+PRESENT-clear ACL, even when its section was omitted on input. This also
+applies to `S:`; P/AR/AI flags are retained in either section. `NO_ACCESS_CONTROL` may
+accompany ACL flags, such as `D:PAINO_ACCESS_CONTROL`, but cannot accompany ACEs.
 
 ## ACL flags
 
