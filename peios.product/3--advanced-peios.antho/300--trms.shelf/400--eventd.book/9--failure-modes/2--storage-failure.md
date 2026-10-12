@@ -21,6 +21,11 @@ A write refused for want of space emits no `eventd.store.quarantined`;
 that event reports only a store found corrupt and quarantined (§2.6).
 [*storagefail.a-write-refused-for-want-of-space-emits-no-storage-error]
 
+Capacity diagnostics name the operation that failed. A synthetic-event,
+quarantine-report, maintenance or rollup-maintenance failure is not by
+itself a report of a discarded ingestion batch. Actual failed batches
+are reported as discarded, with event-batch loss ranges as described below.
+
 ### The event store
 
 A failed `INSERT` or `COMMIT` does not crash the writer thread.
