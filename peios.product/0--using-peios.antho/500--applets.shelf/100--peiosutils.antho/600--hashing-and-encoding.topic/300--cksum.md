@@ -46,16 +46,34 @@ With no `-a`, `cksum` computes a CRC checksum and prints the CRC value, the file
 
 ## Verifying
 
-`cksum` checks files the same way the dedicated commands do:
+Choose the check command to match the publisher's manifest format. Run it from the directory against which the manifest's file names were written; the manifest's own location does not set that directory. The [checksum workflow](~peios/hashing-and-encoding/checksum-commands#verifying-with-a-checksum) covers trusted expected values, complete manifest lines and exit-status checks.
+
+For tagged lines such as `SHA256 (installer.iso) = ...`, the input identifies the algorithm:
+
+```
+cksum --check --strict CHECKSUMS
+```
+
+For untagged SHA-256 lines such as `hash  installer.iso`, supply the algorithm:
+
+```
+cksum --algorithm=sha256 --check --strict SHA256SUMS
+```
+
+The dedicated `sha256sum --check --strict SHA256SUMS` command already selects SHA-256. With `cksum`, an explicitly selected algorithm must agree with any tagged input. Do not add `--tag`, `--binary` or `--text` to a check command: those output-mode options are rejected during verification.
+
+You cannot combine `--check` with `--algorithm=crc`, `crc32b`, `bsd` or `sysv`. The default CRC output is not a checkable checksum manifest. Use normal newline-delimited checksum output for manifests; `--zero` output is not read as NUL-delimited check input.
 
 | Option | Effect |
 |---|---|
 | `-c`, `--check` | Read checksums and verify the files against them. |
-| `--ignore-missing` | Do not fail over listed files that are absent. |
+| `--ignore-missing` | Skip unavailable listed files when intentionally checking a subset; see the caveat below. |
 | `--quiet` | Print nothing for files that pass. |
-| `--status` | Print nothing; report only through the exit status. |
+| `--status` | Suppress comparison results and summary warnings; check the exit status. File-access or argument errors may still print diagnostics. |
 | `-w`, `--warn` | Warn about malformed checksum lines. |
 | `--strict` | Fail on a malformed checksum line. |
+
+Without `--strict`, malformed lines can be skipped while a check still succeeds. A checksum input with no properly formatted lines fails in either mode. Use `--ignore-missing` only for an intentional subset: the current implementation skips file-open failures beyond missing files, so success does not establish that the whole set was available. It still fails if no file in a checksum input verifies successfully.
 
 ## Output format
 
@@ -72,6 +90,7 @@ With no `-a`, `cksum` computes a CRC checksum and prints the CRC value, the file
 
 | Code | Meaning |
 |---|---|
-| `0` | Success — or, in check mode, every file verified. |
-| `1` | In check mode, a file failed verification. |
-| `2` | An error — a file could not be read, or an option was invalid. |
+| `0` | Success under the selected options. |
+| `1` | Verification failed, a file could not be accessed or read, or input/options were invalid. Malformed checksum lines cause failure with `--strict`, or when no properly formatted lines exist. |
+
+These verification rules are checked against [current command handling](https://github.com/peios/peiosutils/blob/ec00f31b50f63e1084b6799037e3455049370c69/src/uu/checksum_common/src/lib.rs#L141-L209) and [manifest validation](https://github.com/peios/peiosutils/blob/ec00f31b50f63e1084b6799037e3455049370c69/src/uucore/src/lib/features/checksum/validate.rs#L615-L1019), not tested on an installed Peios release. Treat any nonzero status as failure.
