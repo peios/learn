@@ -113,7 +113,9 @@ privileged one.
 A descriptor opened through the Peios native file interface returns
 *without* close-on-exec set, so it does not get the discipline for free.
 peinit sets the flag by hand on each of those — the input devices it
-opens for the power button, and the `main/` cgroup directory descriptor
-it opens per launch — immediately after opening them, and nothing peinit
-opens reaches a service's descriptor table.
+opens for the power button, the `main/` cgroup directory descriptor,
+`/dev/null`, and the service and recovery consoles — immediately after
+opening them. The child duplicates its intended streams onto descriptors
+0, 1 and 2 without close-on-exec, then explicitly closes the original
+descriptors. The streams survive exec; the original handles do not.
 [*child.natively-opened-descriptors-have-cloexec-set-by-hand]
