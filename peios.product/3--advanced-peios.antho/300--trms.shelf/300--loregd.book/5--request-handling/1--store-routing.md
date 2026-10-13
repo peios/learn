@@ -7,34 +7,34 @@ Persistent data lives in the hive database's `main` schema; volatile data
 lives in the attached `volatile` schema (§3.3). Most operations act on one
 of the two, and loregd has to decide which before it can run any SQL.
 
-## Operations naming one key [*route.an-operation-naming-one-key-routes-on-the-keys-volatile-column]
+## Operations naming one key [*route.an-operation-naming-one-key-routes-on-the-keys-store]
 
-For an operation that names a single key, the key's own `volatile` column
-selects the store. loregd reads it with one statement across both schemas:
-
-```sql
-SELECT volatile FROM main.keys WHERE guid = ?
-UNION ALL
-SELECT volatile FROM volatile.keys WHERE guid = ?
-LIMIT 1
-```
+For a write that names an existing key, the schema containing the key row
+selects the store. loregd first probes `main.keys` by GUID, then probes
+`volatile.keys` only if the first query found no row. A database error is
+returned as a storage error, not treated as absence. If an externally modified
+database contains the GUID in both stores, the existing main-first lookup
+precedence applies; normal key creation rejects such duplicates.
 
 A GUID present in neither produces `RSI_NOT_FOUND` for most operations.
 [*route.a-guid-in-neither-store-produces-not-found]
 
-Note that routing follows the **column value**, not which table the row
-came from. [*route.routing-follows-the-column-value-not-the-source-table]
-Rows loregd writes are always consistent about this — a row in
-`volatile.keys` carries `volatile = 1`, a row in `main.keys` carries 0 —
-so the distinction only matters if a database were modified externally.
+Routing follows the **source table**, including when the stored `volatile`
+column contradicts it. A row in `main.keys` carrying `volatile = 1` still
+routes writes to `main`; a row in `volatile.keys` carrying 0 still routes
+writes to `volatile`. An inconsistent flag must not redirect writes to the
+other store. [*route.routing-follows-the-source-table-despite-contradictory-metadata]
+Rows loregd creates carry the consistent flag for their store. This routing
+rule does not repair external metadata changes: read-key and lookup metadata
+continue to report the stored column value.
 
 `RSI_CREATE_KEY` cannot consult a key that does not exist yet, so it
 routes on the volatile flag carried in the request instead.
 [*route.create-key-routes-on-the-requests-volatile-flag]
 
-`RSI_CREATE_ENTRY` routes on the volatile flag of the **child** key the
+`RSI_CREATE_ENTRY` routes to the store containing the **child** key the
 entry points at.
-[*route.create-entry-routes-on-the-child-keys-volatile-flag] When that
+[*route.create-entry-routes-on-the-child-keys-store] When that
 child GUID is present in neither store, the entry is written to the
 persistent table.
 [*route.an-entry-with-an-unknown-child-guid-goes-to-the-persistent-table]
