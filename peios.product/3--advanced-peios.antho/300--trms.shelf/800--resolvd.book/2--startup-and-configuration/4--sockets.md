@@ -95,7 +95,7 @@ Binding port 53 depends on the port reservation (§2.1).
 | Queued stub TCP reply writers | up to 256 | Until written, failed, or the one-second write deadline (§2.5) |
 | Upstream sockets | one per transaction, at most 4 096 including retries | One transaction (§4.7) |
 
-### Connections whose request has been read [*sockets.answered-connections-not-counted]
+### Connections whose request has been read [*sockets.resolving-connections-keep-their-slot]
 
 A connection whose request has been read keeps occupying a slot in its
 door's 256-connection allowance until resolution completes or a definite

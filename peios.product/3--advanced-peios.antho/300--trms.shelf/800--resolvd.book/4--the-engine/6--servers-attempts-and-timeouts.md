@@ -107,11 +107,11 @@ operations a separate deadline.
   allocate an upstream transaction is answered `unavailable` at once, and the
   `refused` counter goes up by one. A question whose scope has no
   servers left is answered `unavailable` before the ceiling is looked
-  at, and is not counted as refused. [*engine-servers.in-flight-ceiling-refuses-first-attempts]
+  at, and is not counted as refused. [*engine-servers.in-flight-ceiling-refuses-new-transactions]
 - Every send checks this ceiling, including later attempts and TCP
   retries. A retry is normally sent after its previous transaction has
   ended and been removed, so it can reuse that slot even at capacity.
   Exhausting the three-attempt budget is checked before allocating a
-  transaction, and is not counted as a capacity refusal. [*engine-servers.retries-not-checked-against-ceiling]
+  transaction, and is not counted as a capacity refusal. [*engine-servers.retries-checked-against-ceiling]
 - Synthetic names and cache hits are answered as usual whatever the
   count. [*engine-servers.local-answers-unaffected-by-ceiling]

@@ -16,7 +16,7 @@ description: The mainline values for every bound in this chapter.
 | Upstream transactions in flight (synthetic and cached answers are never refused) | 4 096 [*nri-limits.upstream-in-flight] | §6.7 |
 | Native connections delivering a request or awaiting resolution | 256 [*nri-limits.native-pending-connections] | §6.4 |
 | Stub TCP clients delivering a query or awaiting resolution | 256 [*nri-limits.stub-tcp-clients] | §6.8 |
-| Stub UDP queries awaiting resolution | 256 total; 16 per source address and port [*nri-limits.stub-udp-pending] | resolvd TRM §6.1 |
+| Stub UDP queries awaiting resolution | 256 total; 16 per source address and port [*nri-limits.stub-udp-pending] | §6.8 |
 | Cache entries | 8 192 [*nri-limits.cache-entries] | §6.7 |
 | Stub TCP client bound | 10 s [*nri-limits.stub-tcp-client-bound] | §6.8 |
 | Manager reconnect backoff | 0.5 s doubling to 10 s [*nri-limits.manager-reconnect-backoff] | §6.9 |

@@ -90,15 +90,15 @@ is polled for hangup and errors. A definite hangup, error or invalid
 socket abandons the question before ready upstream replies are processed:
 all of its transactions are cancelled, including both families of an
 `any` lookup. Other questions continue normally.
-[*engine-flow.departed-asker-transactions-continue]
+[*engine-flow.departed-asker-transactions-cancelled]
 
 Replies to cancelled transactions are ignored; they do not populate the
 cache. Answers already cached before cancellation remain cached.
-[*engine-flow.departed-asker-reply-cached]
+[*engine-flow.cancelled-replies-not-cached]
 
 An abandoned question is removed from the waiting clients and no answer
 write is attempted for it. Cancellation does not count as an upstream
-failure, refusal or answer. [*engine-flow.departed-asker-answer-write-fails]
+failure, refusal or answer. [*engine-flow.departed-asker-not-answered]
 
 A write-half-close is supported: the client may stop sending while still
 waiting for its answer. Readable end of file alone therefore does not
