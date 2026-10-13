@@ -81,6 +81,12 @@ their producer publishes or cancels them. Healthy writers retain their
 normal backpressure and commit acknowledgements.
 [*shutdown.a-stopped-event-writer-releases-pending-control-requests]
 
+A reservation racing with closure either joins the admitted handoffs or
+fails with a closed-queue error. The final drained check cannot miss a
+reservation that succeeds, including on processors with weaker memory
+ordering. Closing also wakes threads that are entering a queue wait; it
+does not depend on another publication to release them.
+
 ## The timeout
 
 Shutdown is bounded by peinit's service stop timeout. If the sequence
