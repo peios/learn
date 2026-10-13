@@ -73,8 +73,10 @@ Some refusals have a way on, which Package Manager offers once:
   machine already has, as `--allow-stale` does, and is recorded. Package
   Manager remembers it for its update checks until you close it.
 - **A file is in the way:** one the change would install is already there
-  and belongs to no package. **Replace It** keeps the file that's there
-  beside the new one, as `--overwrite-unowned` does.
+  and belongs to no package. For an install, **Replace It** authorises
+  replacement and keeps the displaced file, as `--overwrite-unowned`
+  does. Other commands have no overwrite option: move the conflicting
+  file aside, then retry the operation.
 - **This is updated another way:** the package's publisher says it is
   updated by other means. **Update Anyway** is `--bypass-alternate-upgrade`.
 - **A repository isn't trusted yet:** it is set up on this machine, as an
