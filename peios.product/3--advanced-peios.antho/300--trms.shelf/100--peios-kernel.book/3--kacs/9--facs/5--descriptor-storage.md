@@ -287,11 +287,23 @@ the inputs alive across that work. [*facs.storage.resolution-no-nested-inode-loc
 
 Before publishing the result, resolution reacquires the inode lock and
 checks both the mount-policy generation and the inode's cache mutation
-sequence. A concurrent publication or invalidation makes it discard the
+sequence. An explicit replacement or invalidation makes it discard the
 obsolete result and retry, including when an empty cache was populated and
-cleared or invalidated while still empty. A failed reread never makes an
-entry from an old policy generation current again.
+cleared or invalidated while still empty. Ordinary cached files also retry
+a competing reader publication, then use the current entry. A failed reread
+never makes an entry from an old policy generation current again.
 [*facs.storage.resolution-revalidates-unlocked-work]
+
+StrataFS re-reads the current provider descriptor on every check, including
+when an earlier result was missing or corrupt. Concurrent reader publication
+does not restart these reads: without an explicit invalidation or policy
+change, N checks perform N descriptor reads (each may query size and then
+bytes). A reader may reuse a result published by another reader whose read
+began later than its own; an older read cannot overwrite that later result,
+including a missing or corrupt result. Its own read error is still returned.
+Explicit writes and policy changes continue to trigger revalidation and may
+require another read. This does not alter the fixed deny-missing policy or a
+handle's frozen grant. [*facs.storage.stratafs-read-contention]
 
 An **ephemeral** synthesis is cached in the inode blob only and never
 written back, leaving the original filesystem unmodified. [*facs.storage.ephemeral-not-written-back] A
