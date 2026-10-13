@@ -167,6 +167,13 @@ released start's lifetime runs from the release. Queue time behind
 another operation is not a hold and still counts.
 [*op.a-held-start-has-no-lifetime]
 
+This also applies to an on-demand start whose `Requires` or `Wants` target
+is already in Backoff. The request is accepted and held; it does not
+bypass the target's remaining restart delay. Repeated requests merge into
+the pending operations. The target's deferred start receives its lifetime
+when the restart deadline releases it. If the target is stopped instead,
+hard dependents fail and soft dependents may proceed.
+
 For a transitive hold, the required release point can precede the
 dependent's own dispatch: when its dependency becomes clocked, the
 dependent must receive its full lifetime even if it is still Pending,
