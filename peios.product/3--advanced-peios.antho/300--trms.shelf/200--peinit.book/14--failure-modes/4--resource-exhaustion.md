@@ -46,9 +46,11 @@ each one's exit status back to its write, so a failure is reported
 rather than discarded — but the fork itself is real and happens on every
 firing.
 
-It is a fork of PID 1, so the child briefly inherits everything peinit
-holds: every pidfd, the epoll instance, both sockets, every service's
-pipe read end. It uses none of them and exits immediately. Driving the
+The child closes inherited descriptors numbered 3 or above before
+opening the registry key, so a blocked write does not keep PID 1's
+pidfds, event-loop handles, sockets or service pipe ends open. It keeps
+the standard streams and exits when its write completes. Cleanup
+failure is reported like a failed timestamp write (§9.2). Driving the
 write through an asynchronous LCS path instead would remove the fork
 entirely; there is no such path today.
 
