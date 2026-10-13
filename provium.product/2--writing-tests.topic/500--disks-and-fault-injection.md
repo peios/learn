@@ -59,7 +59,7 @@ disks = [{ path = "{out}/peios.iso", id = "medium", readonly = true }]
 Either way the guest gets a `virtio-blk-pci` device, named `/dev/vda`, `/dev/vdb`, … in attachment order, with the profile's disks first. Both forms are documented in full under [`disks`](~provium/configuration/provium-toml#disks) and [Boot disks](~provium/reference/vm#boot-disks).
 
 > [!IMPORTANT]
-> `vm:attach_disk` is **not** this. It records a host-side attachment — a name, a size, and a backing file — so that sector access and fault injection have something to address. It emits no QEMU device, so the guest sees nothing new. Reach for it when the guest already gets at the image some other way; reach for the boot forms above when the guest is meant to find a device.
+> `vm:attach_disk({id = "extra", image = "out/extra.img"})` hot-plugs a disk after a managed QEMU VM has booted. QEMU reserves eight runtime disk ports at launch; when all are occupied, attachment reports a capacity error. A detached port becomes reusable after guest removal completes and its old block node is cleaned up. Without an image, or before boot, `attach_disk` only records a host-side attachment for sector access. Use the boot forms above for disks that must exist when firmware or the initramfs starts.
 
 ## Reading and writing sectors
 

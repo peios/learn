@@ -30,6 +30,17 @@ fault injection address. The one thing it cannot do is be present from
 the guest's first instruction, so a device the guest must find at boot
 belongs in the forms above.
 
+Managed QEMU VMs reserve **eight additional PCIe root ports** at launch for
+runtime disks. These are separate from the ports for profile and boot disks.
+A full pool returns a capacity error before adding another block node. Guest
+removal is asynchronous: `disk:detach()` does not immediately free a port, and
+a paused guest cannot complete removal until it resumes. A later attachment
+checks QEMU's PCI inventory, removes the old block node for a device that has
+disappeared, and reuses that port. If all ports are still occupied, wait for
+removal and retry. Creation and cleanup errors are reported, not treated as
+successful attachment. The pool is bounded per VM, not a limit on the total
+number of attach/detach cycles.
+
 `vm:attach_disk` opts:
 
 | Field | Type | Default | Description |
