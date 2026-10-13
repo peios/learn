@@ -279,6 +279,20 @@ terminates it. [*facs.storage.synthesis-recursive] The walk is bounded at 32 anc
 nested deeper than that below the nearest resolvable ancestor fails
 closed with `EACCES` rather than synthesising. [*facs.storage.synthesis-depth-limit]
 
+Resolution does not nest FACS inode locks. It releases the current inode's
+lock before resolving an ancestor or calling the filesystem's descriptor
+xattr handler, which may itself resolve a lower inode in a stacked
+filesystem. Referenced dentries and immutable descriptor-cache entries keep
+the inputs alive across that work. [*facs.storage.resolution-no-nested-inode-locks]
+
+Before publishing the result, resolution reacquires the inode lock and
+checks both the mount-policy generation and the inode's cache mutation
+sequence. A concurrent publication or invalidation makes it discard the
+obsolete result and retry, including when an empty cache was populated and
+cleared or invalidated while still empty. A failed reread never makes an
+entry from an old policy generation current again.
+[*facs.storage.resolution-revalidates-unlocked-work]
+
 An **ephemeral** synthesis is cached in the inode blob only and never
 written back, leaving the original filesystem unmodified. [*facs.storage.ephemeral-not-written-back] A
 **persistent** one is additionally written to the xattr so the medium
@@ -286,11 +300,10 @@ acquires durable descriptors — but never inline. [*facs.storage.persistent-wri
 
 ## Deferred write-back [*facs.storage.write-back-deferred]
 
-Synthesis runs holding the FACS inode lock, and writing the xattr
-takes the inode's `i_rwsem`. Doing that inline would acquire `i_rwsem`
-under the FACS lock, inverting the order the access path requires, and
-would self-deadlock when synthesis is reached from a metadata
-operation whose VFS caller already holds `i_rwsem`. Write-back
+Writing the xattr takes the inode's `i_rwsem`. Synthesis may be reached
+from a metadata operation whose VFS caller already holds that lock, so
+inline write-back would self-deadlock even though resolution releases its
+FACS inode lock around parent resolution and xattr reads. Write-back
 therefore runs with no FACS or VFS lock held.
 
 Synthesis caches the descriptor immediately and marks the entry
