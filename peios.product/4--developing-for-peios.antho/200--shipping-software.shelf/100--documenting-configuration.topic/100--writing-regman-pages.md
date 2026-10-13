@@ -64,6 +64,11 @@ The queue is preallocated, so the change takes effect at the next service
 restart rather than live.
 ```
 
+Fragments are UTF-8 text. LF and CRLF line endings are accepted, including
+both in one file. `regman fmt` preserves each fence's existing line ending
+and leaves headers, body text and any preamble unchanged; it only replaces
+the fence's anchor. Indexed and unindexed lookups read the same records.
+
 Four parts, in order:
 
 - **The fence line** — `--- ` (three dashes, one space) followed by the **anchor**: the case-folded, lowercased lookup token `regman` matches against. You do not write this by hand; `regman fmt` bakes it from `canonical` (see *The fmt/lint workflow*, below).
