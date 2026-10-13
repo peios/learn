@@ -121,3 +121,9 @@ Boot and shutdown are modes peinit enters, which then generate
 per-service operations. There is no "shutdown operation" to observe or
 cancel. Boot-generated starts use source `Boot`.
 [*conflict.boot-generated-starts-use-the-boot-source]
+
+Shutdown-generated stops use source `Shutdown`, and they are the one
+exception to the tables above. They are created outside conflict
+resolution: a `Shutdown` Stop does not merge into, cancel or abort an
+administrator's Stop or Restart already in flight, but exists beside it,
+so that operation keeps its identity and its retained timing (§12.2).
