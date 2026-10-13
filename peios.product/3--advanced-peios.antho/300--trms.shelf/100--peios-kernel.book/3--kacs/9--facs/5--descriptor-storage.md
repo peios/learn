@@ -49,10 +49,18 @@ Both native and legacy open finish descriptor-cache resolution before
 acquiring the central access policy (CAAP) cache mutex. Resolution can take
 an inode security mutex, while set-security takes that inode mutex before
 CAAP; acquiring them in the opposite order could deadlock an open against a
-descriptor update. [*facs.storage.open-resolves-before-caap] Once CAAP is locked, open pins the current immutable
-descriptor through RCU and evaluates it without taking the inode mutex.
-This keeps the descriptor alive and CAAP stable for the check without
-holding CAAP across lazy descriptor population.
+descriptor update. [*facs.storage.open-resolves-before-caap] Open retains a pin on the immutable descriptor
+selected by that resolution, before releasing the protection used to select
+it. The pin survives the subsequent CAAP wait and access check. Clearing or
+replacing the inode's cache after selection cannot by itself cause a spurious
+denial or change which descriptor this open evaluates; a later open resolves
+again and can select the replacement. A missing or corrupt selected entry
+still fails closed. [*facs.storage.open-pins-selected-descriptor]
+
+CAAP is evaluated under its own, later cache lock; the descriptor selection
+and CAAP evaluation are not an atomic snapshot of both policies. The inode
+mutex is not held for the access check, and CAAP is not held across lazy
+descriptor population.
 
 **Eviction** frees the cached descriptor when the inode is evicted,
 through an RCU-safe callback with the same pin draining, so in-flight
