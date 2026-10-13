@@ -115,6 +115,14 @@ remains killable so exec can finish removing the other threads. A failed
 exec releases the guard without consuming a pending installation.
 [*token.install.serialized-with-exec]
 
+Such an exec also gives the new image the installed token's Linux
+credentials, projected as an installation projects them (§3.10.1): uid, gid,
+supplementary groups and user come from the installed token, not from the
+token it replaced. A setuid or setgid binary's effective ID then applies on
+top as it would to any exec. Unless the thread is impersonating, the
+installed token is also the subject that decides whether that ID change is
+allowed. [*token.install.lagging-exec-takes-installed-identity]
+
 A new thread joins the same convergence rule even if it was not yet visible
 when an installation selected the siblings to update. This does not change
 a process fork's independent copy of the calling thread's primary token.
