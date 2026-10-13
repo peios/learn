@@ -119,5 +119,6 @@ The translation units are:
 - `inode.o`
 - `file.o`
 - `dir.o`
+- `dir_cache.o`
 - `xattr.o`
 - `copy_up.o`

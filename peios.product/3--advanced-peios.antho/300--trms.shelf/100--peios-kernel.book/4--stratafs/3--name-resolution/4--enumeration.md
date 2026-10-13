@@ -42,6 +42,22 @@ The order in which names are reported is stratum-ascending and then
 each stratum's own `readdir` order — deterministic for one capture, and
 not otherwise specified. [*enumerate.order-stratum-then-readdir]
 
+The implementation uses a temporary, per-open name hash while capturing
+entries, then an immutable position index for enumeration. Growing the
+hash does not reorder entries or change which provider wins a duplicate.
+The hash buckets are released before the open succeeds. Capture remains
+eager under the opener's authority; the index does not defer any part of
+that authorisation to a later reader or descriptor recipient.
+
+Deduplication takes expected linear work in the number of names offered
+by the participants. Resuming enumeration or seeking to an ordinal does
+not scan earlier entries again. Provider enumeration, child lookup and
+access checks still contribute their own costs. Each independent open
+retains its own names and position index, so memory use still grows with
+the number of distinct captured names and simultaneously open file
+descriptions. These are implementation properties, not time or memory
+limits promised to callers.
+
 ## Consistency [*enumerate.changes-after-open-invisible]
 
 There is exactly one capture per descriptor. Nothing appends to the
