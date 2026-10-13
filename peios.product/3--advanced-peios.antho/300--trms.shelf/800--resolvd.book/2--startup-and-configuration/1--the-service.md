@@ -86,14 +86,16 @@ has:
 
 ### The log line format [*service.log-line-format]
 
-Every line resolvd logs is written to standard error as
+Every line resolvd logs has the form
 
 ```text
 resolvd: <level>: <text>
 ```
 
-where the level is `info`, `warn` or `error`. peinit forwards a
-service's standard error to eventd, which is where the lines are read:
+where the level is `info`, `warn` or `error`. Informational lines go to
+standard output; warnings and errors go to standard error. peinit forwards
+both streams to eventd, marking only standard error as `is_error=true`.
+The lines are read with:
 
 ```sh
 evctl 'LOGS FROM resolvd SINCE 1h ago TAKE 40'
@@ -103,7 +105,7 @@ evctl 'LOGS FROM resolvd SINCE 1h ago TAKE 40'
 
 Each line is also offered to `/dev/kmsg`, at kernel priority 6, 4 or 3
 for info, warn and error. The mirror is opened when the first line is
-logged, after that line has been written to standard error, and the open
+logged, after that line has been written to its output stream, and the open
 is never retried.
 
 `/dev/kmsg` is writable by SYSTEM only, so for resolvd the open fails,
@@ -111,12 +113,13 @@ and resolvd writes one line to standard error saying so, directly after
 the first log line:
 
 ```text
-resolvd: warn: /dev/kmsg mirror unavailable (<error>): log lines go to stderr only
+resolvd: warn: /dev/kmsg mirror unavailable (<error>): log lines go to stdout/stderr only
 ```
 
-The first two lines on standard error are therefore the first line
-resolvd logs, and then this one. On a start that fails, the first
-logged line is the fatal one, such as `native socket: <error>` (§2.4).
+The mirror warning follows the first log call. That first line may be on
+stdout or stderr, so readers must not assume a cross-stream ordering.
+On a start that fails, the first logged line is the fatal one, such as
+`native socket: <error>` (§2.4).
 On a start that succeeds, it is a warning from earlier in startup when
 there is one, such as `removed a stale /run/resolvd/resolv.sock` (§2.4)
 or a `Dns …` warning (§2.3), and otherwise the result of

@@ -54,7 +54,7 @@ Every line resolvd writes, with the level it is written at:
 | `netd: <summary>` | info | A snapshot was applied (§3.3) |
 | `configuration changed` | info | A registry change was applied (§2.3) |
 | `cache flushed` | info | A `flush` request was carried out (§5.3) |
-| `/dev/kmsg mirror unavailable (<error>): log lines go to stderr only` | warn | The kernel log mirror could not be opened, which for resolvd is always; written once, directly after the first line logged (§2.1) |
+| `/dev/kmsg mirror unavailable (<error>): log lines go to stdout/stderr only` | warn | The kernel log mirror could not be opened, which for resolvd is always; written once, directly after the first line logged (§2.1) |
 
 ## What a question logs [*failure-signals.no-per-question-logging]
 
