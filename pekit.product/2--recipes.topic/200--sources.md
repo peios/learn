@@ -634,6 +634,38 @@ Compact prepared-source archives apply the same checks within `source/`.
 
 ### Archive extraction
 
+For an extracted URL source, `exclude` optionally names files or directory
+subtrees to omit, relative to the selected `root`:
+
+```toml
+[source.url]
+url = "https://download.qemu.org/qemu-{{version}}.tar.xz"
+extract = true
+root = "qemu-{{version}}"
+exclude = ["roms/edk2"]
+```
+
+Each entry is an exact, canonical relative path, without a trailing slash,
+`..` components, backslashes, glob patterns or templates. `roms/edk2` omits
+that entry and its descendants, but keeps `roms/edk2-other`. The root itself
+cannot be excluded, and a nonempty list requires `extract = true`. A path
+absent from the archive is harmless. The same option is available for
+`[input.<name>]` archives.
+
+Exclusions are applied before creating archive entries: an omitted subtree
+may contain an escaping symlink, but the symlink is never created. Every
+member name still undergoes the extraction-root containment check, including
+omitted members. All normal safety checks continue to apply to retained
+entries. Exclusion does not dereference links or permit otherwise unsafe
+retained entries.
+
+The exclusion list participates in the extracted-source and input cache
+identity; changing it cannot reuse a tree extracted with a different list.
+Downloads, checksum/signature verification and lockfile hashes still cover
+the complete upstream artifact. Corresponding-source packages retain that
+pristine artifact, including excluded paths. Recipe patches apply to the
+filtered source tree through the usual `[source] patches` mechanism.
+
 Extraction is chosen by the artifact's **filename suffix**. Only these formats
 are handled; anything else is an `unsupported_archive` error:
 
