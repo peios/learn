@@ -24,8 +24,13 @@ read-write commits and stable read-only snapshots — so it never returns
 
 Re-using a transaction id that is already active returns `RSI_INVALID`.
 [*txn.re-using-an-active-transaction-id-returns-rsi-invalid]
-If the mode field is absent from the request, the transaction is treated
-as read-write. [*txn.an-absent-mode-field-means-read-write]
+A missing or truncated mode field, or a mode other than 0 or 1, returns
+`RSI_INVALID` without recording a transaction. The id remains available
+for a subsequent well-formed request.
+[*txn.malformed-mode-is-rejected-without-recording-a-transaction]
+Callers must send the complete `u64` id and `u32` mode required by
+PSPK §4.4; the former missing-mode fallback to read-write is no longer
+accepted.
 
 ## Read-write transactions
 
