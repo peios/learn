@@ -188,6 +188,7 @@ entry. The verified signer's fingerprint is recorded as the lock entry's
 | `listing_url` | string | no | Explicit URL to fetch when enumerating versions. Use when releases are listed separately from their download paths; default is derived from `url`. |
 | `extract` | bool | no | Treat the download as an archive and extract it. Default `false`. |
 | `root` | string | no | Sub-directory within the extracted tree to use as the source root. Default `"."`. |
+| `exclude` | string array | no | Exact files or directory subtrees, relative to `root`, that extraction never creates. Canonical relative paths only: no `..`, trailing slash, backslash, glob or template syntax. A nonempty list requires `extract = true`. See [Archive extraction](~pekit/recipes/sources#archive-extraction). |
 | `versions` | string | no | Version **cap**: a constraint string filtering enumerated or requested versions (see [Versions](~pekit/recipes/versions)). |
 | `file_regex` | string | no | Regex extracting versions when enumerating from a listing. Named `version`, `major`, `minor`, `patch`, `revision`, `suffix`, `prerelease`, and `buildmeta` captures map filenames with the same semantics as Git `tag_regex`; unnamed captures only filter. |
 | `checksum` | string **or** table | no | Expected checksum. A bare string applies to all versions; a table maps version → checksum. |
