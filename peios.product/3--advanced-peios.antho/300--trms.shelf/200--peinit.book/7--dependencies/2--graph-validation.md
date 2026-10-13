@@ -4,8 +4,9 @@ description: peinit validates the dependency graph before executing it — cycle
 ---
 
 peinit validates the dependency graph before executing it. Validation
-runs once per graph build — at boot, on an on-demand start's transitive
-closure, and on a reload-config — and is never incremental.
+runs once per graph build — at boot, on an administrator-requested
+on-demand start's transitive closure, and on a reload-config — and is never
+incremental.
 [*validate.validation-runs-once-per-graph-build]
 
 ## Cycles
@@ -126,3 +127,32 @@ and changes nothing.
 
 Both use the same event type deliberately: one consumer filter catches
 validation problems in either regime, and `phase` says which.
+
+## On-demand starts
+
+Before dispatching an administrator-requested on-demand start, peinit runs the shared definition validator over the
+services the start plan would activate. An unschedulable health check,
+an invalid health-check restart window or an invalid timer schedule
+rejects the plan with `INVALID_STATE`; no service from that plan is
+launched. This includes definitions reached through dependencies.
+
+Definitions outside the plan, and dependencies whose running state
+already satisfies the request, do not make it fail. Missing or disabled
+hard dependencies retain the ordinary blocked-plan handling; dependency
+cycles retain the existing cycle refusal. Conflicting boot triggers are
+not themselves a reason to reject an explicit start.
+
+This check also applies to an administrator restart when the service has
+no running process and the request builds an on-demand start plan. A queued
+administrator operation is checked when promoted into such a plan; rejection
+fails that operation with an `invalid_state` reason and leaves other queued
+operations eligible for promotion. It does not terminate the supervisor loop.
+
+Internal starts from restart policy, timers, BindsTo recovery, OnFailure and
+TTY release retain their existing closure and cycle checks, without this
+additional definition-validation refusal, including when a queued internal
+operation is promoted. In particular, an invalid nonboot
+OnFailure target must not roll back the source service's transition to Failed.
+The stop/start leg of a restart of a running service and a deferred Backoff
+restart also retain their existing internal start behavior. Boot and
+reload-config validation remain as described above.
