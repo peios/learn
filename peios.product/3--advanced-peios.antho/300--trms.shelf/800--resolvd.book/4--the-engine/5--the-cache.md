@@ -10,7 +10,8 @@ resolvd computes them and what it does at the edges.
 
 - An entry is keyed by the candidate in lower case, the record type, and
   the scope key (§1.3). The class is not part of the key; every question
-  resolvd asks is class `IN`. [*engine-cache.key-is-lowercase-candidate-type-scope]
+  resolvd asks is class `IN`. The stub rejects other classes before
+  consulting the cache (§6.1), even when a matching `IN` answer is held. [*engine-cache.key-is-lowercase-candidate-type-scope]
 - The same name asked through two scopes is two entries, and a single
   label's expansions are each cached under the expanded name. [*engine-cache.expansions-cached-under-expanded-name]
 
@@ -74,27 +75,31 @@ entry's lifetime is capped.
 ## Capacity and eviction
 
 - The cache holds at most 8 192 entries. [*engine-cache.capacity]
-- Expired entries are not removed when they expire; they stay until
-  they are overwritten by a fresh answer for the same key, flushed, or
-  evicted. The `cache_entries` count in `status` includes them. [*engine-cache.expired-entries-linger-and-are-counted]
+- Expiry alone does not remove an entry. Looking up an expired key
+  removes it immediately, before any replacement answer arrives. Otherwise
+  it stays until overwritten, flushed, or removed during admission at
+  capacity. The `cache_entries` count in `status` includes expired entries
+  that have not yet been removed. [*engine-cache.expired-entries-linger-and-are-counted]
 
 ### Eviction
 
 Storing an entry under a key the cache does not already hold, when it
 already holds 8 192 entries, first evicts:
 
-1. every entry whose expiry is one second or more earlier than the new
-   entry's expiry, live or not; [*engine-cache.eviction-sweeps-against-new-expiry]
+1. every entry whose expiry is at or before the current time; [*engine-cache.eviction-sweeps-expired-entries]
 2. then, if the cache still holds 8 192 entries, the one entry with the
    earliest expiry — any one of them, when several share it. [*engine-cache.eviction-then-earliest-expiry]
 
-### A long-lived entry can empty a full cache [*engine-cache.long-lived-entry-empties-full-cache]
+### A long-lived answer preserves other live entries [*engine-cache.long-lived-entry-preserves-live-entries]
 
-The first step compares against the new entry's expiry, not the current
-time. A long-lived entry arriving at a full cache therefore evicts every
-entry due to expire at least a second before it: a positive answer with
-a day-long TTL arriving at a full cache of shorter-lived answers empties
-it.
+The sweep compares against the current time, independently of the new
+answer's lifetime. A day-long answer arriving at a full cache of live,
+shorter-lived answers replaces only the entry with the earliest expiry;
+the cache still holds 8 192 entries. If removing expired entries makes
+room, no live entry is evicted.
+
+Older builds compared against the incoming answer's expiry and could
+empty a cache of live answers.
 
 ### Overwriting a held key [*engine-cache.overwrite-evicts-nothing]
 
