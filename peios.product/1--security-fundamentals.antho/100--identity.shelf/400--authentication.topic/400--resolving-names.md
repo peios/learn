@@ -50,6 +50,27 @@ It is deliberately explicit. Resolving in the order sources happened to register
 > [!NOTE]
 > A machine with one source has nothing to order, and can ignore this entirely.
 
+## Warnings about shadowed names
+
+If more than one source holds the same bare name, only the first owner in the
+search order answers the logon. After delivering a successful logon reply,
+`authd` asks later sources whether they also own that name. These are identity
+queries with no credentials or authentication assertion attached.
+
+Each confirmed duplicate produces a warning in authd's service log, naming
+the entered name, its owning source and the later source. The warning does not
+change the token or select a different principal. Administrators should check
+whether an old local account is hiding a directory account, or whether a source
+order change has made a different SID win for a familiar name.
+
+An absent, refusing or unavailable source makes the check inconclusive, not a
+failed logon. The success reply and normal logon audit record precede the check. Checks share the normal
+five-second lookup deadline; there is no extra query on a single-source machine
+or when the owning source is last. If the owning registration has disappeared
+or been replaced during authentication, authd skips the check rather than
+assuming its old position still holds. Absence of a warning therefore does not
+prove that a name is unique.
+
 ## Bare in, qualified out
 
 You may look a principal up by a bare name. What comes back always carries the **SID** as well as the name.
