@@ -113,6 +113,15 @@ A set is a merge, not a replacement. LCS reads only the components
 `security_info` names from the supplied self-relative descriptor and
 preserves the existing ones. [*inherit.set-security-is-a-merge]
 
+Component selection includes its control flags even when the component
+has no bytes. A null ACL remains `PRESENT` clear, but its defaulted,
+inheritance and protection flags survive a query or an update to another
+component. Replacing a selected DACL or SACL takes that ACL's flags from
+the input descriptor, including for a null ACL; unselected component
+flags are preserved. An empty ACL remains present with zero ACEs and is
+not converted to null. The same preservation rule applies to a defaulted
+null group. [*inherit.null-acl-control-flags]
+
 `LABEL_SECURITY_INFORMATION` reads only the first effective mandatory-label
 ACE from the SACL, omitting inherit-only labels and every non-label ACE.
 If there is no effective label, the returned subset has no SACL. Reading
