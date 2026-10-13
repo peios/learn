@@ -101,12 +101,18 @@ straight to `write_pos`, discarding the entire surviving window in
 one step (the discarded span is not itemised in the drop counter) and
 emitting a tracepoint. [*ring.tail-resync-guard]
 
-During batch writes the running write and tail positions are kept in
-locals; nothing is published until the batch ends, when the tail and
-then the write position get one release store each, followed by a
-single `need_wake` check — provided at least one event was written.
-Consumers therefore observe a batch atomically, and see one tail
-transition per batch rather than one per overwritten event. [*ring.batch-one-tail-transition]
+For a batch, KMES first walks the reservations for every accepted event
+using local write and tail positions. It publishes the resulting tail
+with one release store **before writing any event bytes**, so a
+concurrent consumer can detect that the record it was reading has been
+overwritten. Publishing the tail only after the writes would allow the
+consumer's tail re-check to accept torn data.
+
+After writing the events, KMES publishes the final write position with
+one release store and checks `need_wake` once, provided at least one
+event was written. New batch records become available at that final
+write-position store; the tail still transitions once per batch rather
+than once per overwritten event. [*ring.batch-one-tail-transition]
 
 ## Notification [*ring.need-wake-protocol]
 
