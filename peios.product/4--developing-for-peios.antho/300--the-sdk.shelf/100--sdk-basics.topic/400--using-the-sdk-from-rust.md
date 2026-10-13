@@ -133,6 +133,24 @@ ln -sf libpeios.so ../libpeios/target/release/libpeios.so.0
 
 (This is a checkout convenience — on a real system the packaged `libpeios.so.0` is already there.)
 
+## Privilege names
+
+`peios::security::Privileges` exposes the published kernel privileges,
+including `TAKE_OWNERSHIP`, `SYSTEM_PROFILE` and `RELABEL`. Their
+canonical names are `SeTakeOwnershipPrivilege`,
+`SeSystemProfilePrivilege` and `SeRelabelPrivilege`. Use `parse_name`
+for a canonical name and `canonical_names` to enumerate a mask in bit
+order. Names are case-sensitive; an unknown name returns `None`.
+
+The values come from the kernel ABI constants. Naming a privilege does
+not grant it: the token must hold it and the operation's privilege
+rules still apply. The retired `SeBindPrivilegedPortPrivilege` is not
+accepted.
+
+For checkout builds, use the versioned `pkm/uapi` source headers rather
+than an old `out/build/headers` installation. With the `uapi` feature,
+peios-sys pins the same peios-uapi revision as libpeios.
+
 ## The bottom line
 
 - Depend on the **`peios`** crate; drop to `peios-sys` only for the raw surface.
