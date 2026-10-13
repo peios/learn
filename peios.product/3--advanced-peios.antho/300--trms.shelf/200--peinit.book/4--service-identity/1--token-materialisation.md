@@ -14,7 +14,9 @@ Which route the token comes from depends on the `Identity` field:
 | Identity | Source | Mechanism |
 |---|---|---|
 | `SYSTEM` | Minted by peinit from its own identity | `kacs_create_token`. §4.2 |
-| Anything else | authd | The token request flow. §4.3 |
+| `Service` | authd | A virtual account unique to this service. §4.3 |
+| `LocalService` / `NetworkService` | authd | A shared service account, with this service’s SID as a group. §4.3 |
+| Another principal | authd | A principal designated for service logon. §4.3 |
 | Absent or empty | authd | Defaults to `LocalService`. [*identity.an-absent-identity-defaults-to-localservice] |
 
 peinit reads its own token with `kacs_open_self_token` requesting the

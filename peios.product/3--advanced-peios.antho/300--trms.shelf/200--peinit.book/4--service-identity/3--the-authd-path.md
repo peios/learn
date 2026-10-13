@@ -73,8 +73,8 @@ can exceed it either.
 ## Failure is a failure [*token.an-unreachable-authority-fails-the-start]
 
 Every non-SYSTEM service start depends on authd being reachable, and
-every one of them fails if it is not. Platform services are unaffected,
-because they never take this route.
+every one of them fails if it is not. Only services using the SYSTEM path are unaffected; platform services
+such as eventd and lpsd use the authority too.
 
 peinit *orders* around that dependency rather than merely suffering it.
 The authority declares `Provides = ["authn"]`, and peinit derives a hard
@@ -109,7 +109,8 @@ nothing to compare it against.
 ## What may be attested [*token.the-platform-service-identities-may-be-attested]
 
 authd accepts the platform's own service identities — `SYSTEM`,
-`LocalService`, `NetworkService` — which no principal source holds and
+`LocalService`, `NetworkService`, and the per-service virtual account
+selected by `Service` — which no principal source holds and
 for which no credential could exist.
 
 Anything else must be designated in the principal's own record as usable
@@ -119,6 +120,31 @@ So a definition naming an ordinary principal does not start.
 property the design exists to guarantee: without it, the service manager
 would be an oracle that mints a credential-free token for anybody on the
 machine.
+
+## The service’s own virtual account [*token.service-selects-its-own-virtual-account]
+
+`Identity=Service` asks authd to use the per-service SID (§4.4) as the
+**user SID**, as well as including it in the token’s groups. The spelling
+`Service` is case-insensitive. Each service name therefore selects a
+separate virtual account without creating an account in a principal source
+or enabling a credentialled logon.
+
+The derived groups include Everyone (`S-1-1-0`), Authenticated Users
+(`S-1-5-11`), Local (`S-1-2-0`), and Service (`S-1-5-6`), together with the
+kernel’s per-session logon SID. It does not acquire SYSTEM or LocalService
+membership. Privileges, integrity, owner and default DACL still come from
+authd’s policy evaluation; choosing a distinct user SID grants no extra
+privileges by itself.
+
+With `Identity=LocalService`, the user SID is the shared `S-1-5-19` instead.
+The service’s own SID remains a group, so ACLs can still distinguish two
+services that share that account. Use `Service` when their user identities
+should also be distinct.
+
+`Service` takes the same derived hard dependency on the providers of the
+`authn` role as other non-SYSTEM identities (§7.6). On the standard platform
+that provider is authd; an explicit `Requires=authd` is unnecessary.
+[*token.service-orders-after-the-authority]
 
 ## The interface is authd's
 

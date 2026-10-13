@@ -20,7 +20,7 @@ fields.
 | Triggers | multi_string | — | When the service starts automatically. §3.4 |
 | Disabled | dword | 0 | If 1, no trigger activates the service. |
 | SafeMode | dword | 0 | If 1, attempt this service in Safe mode. Implied by `ErrorControl=Critical`. §2.6 |
-| Identity | string | LocalService | Principal for the service token. §4.1 |
+| Identity | string | LocalService | `SYSTEM`, shared `LocalService`/`NetworkService`, `Service` for the service’s own virtual account, or a designated principal. §4.1 |
 | RequiredPrivileges | multi_string | — | Privileges to keep; all others are removed. §4.5 |
 | Requires | multi_string | — | Hard dependencies. §7.1 |
 | Wants | multi_string | — | Soft dependencies. §7.1 |
