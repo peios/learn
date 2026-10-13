@@ -89,11 +89,11 @@ remains open for a matching reply until the original deadline (§4.8).
   but a candidate's `NXDOMAIN` that moves it on is an answer, not a
   failure, and does not spend an attempt. Every search candidate is
   therefore asked, however many there are. Cached answers spend no
-  attempt. [*engine-servers.limit-is-per-candidate]
+  attempt. [*engine-servers.limit-is-per-question]
 - The TCP retry following a truncated UDP reply (§4.7) spends one attempt
   and gets its own two-second deadline. A truncated reply on the final
   attempt cannot start TCP: the question is `unavailable`.
-  [*engine-servers.tcp-retry-not-an-attempt]
+  [*engine-servers.tcp-retry-spends-an-attempt]
 
 The three attempts allow at most six seconds of upstream timeout waiting
 in total, including TCP and search-domain expansion. Each `NXDOMAIN` that
