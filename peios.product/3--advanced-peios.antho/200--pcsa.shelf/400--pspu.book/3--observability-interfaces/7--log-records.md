@@ -106,9 +106,9 @@ startup and status messages out of `is_error == true` queries. eventd
 also writes its normal startup/restart announcement to standard output;
 its warnings, failures and requested diagnostic dumps remain on standard
 error. Warnings remain in that query because they are diagnostics on
-standard error;
-the collector does not infer severity from text. A daemon's existing
-best-effort kernel-log mirror is independent of this stream selection.
+standard error; the collector does not infer severity from text. A
+daemon's existing best-effort kernel-log mirror is independent of this
+stream selection.
 
 ## `timestamp`
 
