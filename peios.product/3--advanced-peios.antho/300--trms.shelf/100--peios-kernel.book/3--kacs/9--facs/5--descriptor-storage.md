@@ -45,6 +45,15 @@ internal kernel path that bypasses the read-denial hook, and the
 parsed result is installed by compare-and-swap; a thread that loses
 the race frees its own copy. [*facs.storage.population-lazy-cas]
 
+Both native and legacy open finish descriptor-cache resolution before
+acquiring the central access policy (CAAP) cache mutex. Resolution can take
+an inode security mutex, while set-security takes that inode mutex before
+CAAP; acquiring them in the opposite order could deadlock an open against a
+descriptor update. Once CAAP is locked, open pins the current immutable
+descriptor through RCU and evaluates it without taking the inode mutex.
+This keeps the descriptor alive and CAAP stable for the check without
+holding CAAP across lazy descriptor population.
+
 **Eviction** frees the cached descriptor when the inode is evicted,
 through an RCU-safe callback with the same pin draining, so in-flight
 permission checks complete before the object goes away. [*facs.storage.eviction-rcu-safe]
