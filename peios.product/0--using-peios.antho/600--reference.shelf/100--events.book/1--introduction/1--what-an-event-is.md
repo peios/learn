@@ -60,3 +60,29 @@ eventd manual covers them.
 
 Nor does it cover the query language for reading events back. That is
 PSPU §3, with the operator-facing view in the eventd manual.
+
+## Checking generated catalogue pages
+
+The event, group and field-index pages are generated from `.evman` fragments
+by PKM's `tools/gen-events-book.py`. Edit the fragments rather than those
+pages. `--check` compares the generated pages without writing; omit it to
+regenerate. The PKM pre-push hook checks this output when kernel event
+fragments or the generator change.
+
+The generator reads kernel fragments from its own checkout and userspace
+fragments from sibling component directories such as `peinit/` and `eventd/`.
+Keep the component fragments present when regenerating the complete index:
+an absent userspace fragment is reported and omitted from the output. For
+the same reason `--check` skips, naming the missing fragments, unless every
+userspace fragment is present.
+
+Documentation defaults to a sibling `learn/`. For a separate worktree:
+
+```sh
+PKM_LEARN_ROOT=/path/to/docs-worktree python3 tools/gen-events-book.py --check
+```
+
+An invalid explicit path fails. Missing or stale generated pages in the
+selected documentation checkout fail `--check`, including a missing events
+book. A standalone PKM checkout without a documentation companion skips the
+check. The same path override applies to the pre-push check.
