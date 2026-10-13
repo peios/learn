@@ -23,8 +23,8 @@ synthesised once. [*enumerate.dot-entries-synthesised-once]
 
 Each surviving entry carries the name, its length, the directory entry
 type reported by the providing participant, and an inode number
-obtained by looking the child up in that same participant and mapping
-the result through the identity table (§4.4.3), so `getdents` and
+obtained by looking the child up in that same participant and deriving
+its identity, with allocation only as a fallback (§4.4.3), so `getdents` and
 `stat` agree. [*enumerate.entry-inode-matches-stat] The final component is not followed during that lookup,
 so a symlink entry reports its own identity rather than its target's. [*enumerate.symlink-entry-reports-itself]
 
