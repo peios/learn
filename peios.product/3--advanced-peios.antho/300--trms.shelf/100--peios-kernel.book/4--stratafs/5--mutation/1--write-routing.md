@@ -16,6 +16,8 @@ three of the following hold:
 - the provider's mount is not read-only;
 - the provider's inode is not marked immutable.
 
+### Independence from the caller’s rights [*write.routing-does-not-use-caller-rights]
+
 The predicate is a property of the stratum and the object alone. It
 takes the superblock, the stratum index and the provider path, and
 nothing else — no credentials, no security descriptor, no access
@@ -39,7 +41,8 @@ The decision itself is `route_existing` in `stratafs-core`, which takes
 the provider index, whether it accepts modification, the create index
 and whether the create stratum is present, whether the object is of a
 copyable type, and whether the stratafs mount itself is read-only. It
-returns one of three routes.
+selects in-place modification, copy-up, or read-only through the following
+ordered checks.
 
 1. If the **mount** is read-only, the route is read-only. This term
    short-circuits everything else. [*write.read-only-mount-short-circuits]

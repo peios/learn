@@ -187,6 +187,8 @@ The marker is removed after publication. A failure to remove it is only
 warned about, leaving the marker on the published copy until a later
 lookup cleans it.
 
+## Failed copy-up and rollback [*copy-up.failure-leaves-no-entry]
+
 Where a copy-up fails for any reason, the create stratum is left with
 no new entry at the target path and the operation fails. Nothing falls
 back to a weaker replication: an object whose descriptor or extended
@@ -212,6 +214,8 @@ written.
 What *is* guaranteed is that the published object never appears in a
 partial state, because staging and publication are properties of the
 create stratum's filesystem, which stratafs does control.
+
+### Independence after publication [*copy-up.published-copy-independent]
 
 Once published, the copy is independent of its source. Subsequent
 modifications to the object it was copied from are not reflected in it,

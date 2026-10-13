@@ -10,11 +10,13 @@ policy resolver maps the stratafs magic to the deny-missing class, and
 falls back to that mapping whenever a cached policy value is not one of
 the valid ones. [*security.mount-policy-is-deny-missing]
 
+## Policy changes are refused before validation [*security.mount-policy-cannot-be-set]
+
 It cannot be set to anything else. The set path rejects a superblock
 carrying the stratafs magic with `EOPNOTSUPP` **before** it validates
 its arguments or checks privilege, and there is no mount option to
 choose one — stratafs's parameter table holds exactly one entry, and
-anything else is refused. Reading a mount's policy is itself privileged, [*security.mount-policy-cannot-be-set]
+anything else is refused. Reading a mount's policy is itself privileged,
 requiring TCB privilege, though for stratafs the answer is fixed.
 
 Two classes are excluded for distinct reasons.
@@ -48,6 +50,8 @@ straight into `EACCES` rather than asking the provider's superblock to
 synthesise, and an object open resolves the missing-descriptor policy
 against the **stratafs** superblock, yielding a missing-descriptor
 cache entry and then `EACCES`.
+
+### Corrupt is not missing [*security.corrupt-descriptor-does-not-use-mount-policy]
 
 A descriptor that is present but cannot be interpreted is a distinct
 case and is not routed to mount policy. It takes the ordinary

@@ -21,7 +21,7 @@ Where a copy-up has occurred through this descriptor, the descriptor's
 object is the copy, and it is the copy that is synchronised. The
 retired pre-copy-up file (§4.5.7) is not.
 
-## Synchronising a merged directory [*durability.dirsync-covers-every-stratum]
+## Synchronising a merged directory [*durability.dirsync-covers-every-stratum-at-call-time]
 
 Synchronising a merged directory synchronises the corresponding
 directory in **every** stratum of the mount that holds it at the time
@@ -57,17 +57,19 @@ Freezing the filesystem a stratum lives on is done through that
 filesystem, and affects the merged view as it affects any other reader
 of that stratum.
 
-## Accounting
+## Storage accounting
 
 Storage consumed by an object created through the mount, or copied up
 into the create stratum, is consumed on the create stratum's filesystem
 and accounted there. [*durability.storage-charged-to-create-stratum]
 
+### The principal charged by quota [*durability.copy-up-accounted-to-preserved-owner]
+
 Disk quota keys on the POSIX owner, and copy-up preserves it (§4.5.2):
 the staged object is created with the calling task's credentials, and
 the ownership is then set to the source's under the mount's own
 credential. [*durability.copy-up-preserves-posix-owner] A copy is therefore accounted to the owner of the object
-it was copied from, not to the caller who caused it. [*durability.copy-up-accounted-to-preserved-owner]
+it was copied from, not to the caller who caused it.
 
 The KACS security descriptor, including its owner SID (§4.6.3), is
 preserved alongside it. [*durability.copy-up-preserves-owner-sid] The two notions of owner agree, and both

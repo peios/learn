@@ -28,6 +28,8 @@ open rebuilds the full per-stratum path set from the relative path
 string, so any child that is a directory in more than one stratum
 merges at its own level by the same rule.
 
+### Participation at the mount root [*resolution.root-participation]
+
 The root of a mount is a merged directory whose participants are the
 mount's strata. The root has one special case: where the ordinary
 provider rule would pick a stratum root that is present but not a

@@ -38,6 +38,8 @@ alternative — resolving `/x` as a file but `/x/y` through the masked
 directory — would make a path's meaning depend on how far along it the
 caller looked.
 
+### Masking leaves the strata unchanged [*resolution.masking-does-not-modify-strata]
+
 Masking modifies nothing. Resolution and enumeration are read-only
 throughout, no marker is written to any stratum, and the masked entry
 remains present and unchanged in its own stratum, reachable by any path

@@ -28,6 +28,8 @@ create stratum inherits from its parent (§4.5.3); copy-up preserves.
 There is no path on which a copied-up object receives an inherited
 descriptor.
 
+### Descriptors of materialised parents [*security.materialised-parents-use-provider-descriptor]
+
 Directories materialised in the create stratum to hold a copied-up
 object are handled the same way, each carrying the descriptor of the
 corresponding **provider** directory — the merged provider of that same
@@ -39,7 +41,11 @@ Where the source descriptor cannot be replicated, the copy-up fails and
 the operation that required it fails. A missing, corrupt, unresolvable,
 oversized or unsupported descriptor fails the phase before the
 destination is created, and an absent pinned descriptor at install time
-fails the create. Nothing publishes a copied-up object carrying any
+fails the create.
+
+### Protection precedes publication [*security.descriptor-installed-before-publication]
+
+Nothing publishes a copied-up object carrying any
 other descriptor: the descriptor is installed at inode creation, before
 any content, and publication is a link or rename of an object already
 stamped, so there is no window in which a differently-protected object

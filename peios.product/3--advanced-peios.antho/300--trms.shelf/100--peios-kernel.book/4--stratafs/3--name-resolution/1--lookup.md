@@ -91,6 +91,8 @@ The suppression applies only to the create stratum, and only within the
 owning mount — a second stratafs mount sharing that directory, and any
 direct reader of it, sees an ordinary entry.
 
+### Recovery triggered by lookup [*resolution.staging-prefix-triggers-recovery]
+
 Staged names begin with `.stratafs-stage-`, and a lookup of any name
 with that prefix triggers a recovery scan of the create-stratum parent
 before resolving. A resolution can therefore have the side effect of

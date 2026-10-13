@@ -146,10 +146,12 @@ which live mount owns a staging entry, so that a mount sharing a create
 stratum can distinguish another mount's copy-up in flight from an
 orphan left by a crash (§4.5.2).
 
+## An all-absent stack [*mount.all-absent-stack-is-legal]
+
 A mount succeeds even when no stratum root is present at all — a stack
 whose only strata are absent `am` strata is legal. The root inode is
 constructed with no provider, and reports mode `S_IFDIR` with no
-permission bits. [*mount.all-absent-stack-is-legal]
+permission bits.
 
 Such a root still carries a security descriptor, since an object with
 none would refuse every access check made on the mount root and the

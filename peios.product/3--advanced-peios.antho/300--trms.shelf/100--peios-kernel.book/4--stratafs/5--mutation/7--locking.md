@@ -25,9 +25,14 @@ that stratum — contend with each other. Open-file-description locks are
 re-owned onto the provider file so that their per-description semantics
 are preserved.
 
+### Locking does not copy up [*lock.no-copy-up-and-facs-rights-still-apply]
+
 Taking a lock does not modify an object, so it does not route (§4.5.1)
-and cannot itself cause a copy-up. Locking requires no write access
-either, so a read-only descriptor can carry an exclusive lock.
+and cannot itself cause a copy-up. FACS still checks the descriptor's
+granted rights (§3.9.4): a shared lock requires `FILE_READ_DATA`, and an
+exclusive lock requires `FILE_WRITE_DATA` or `FILE_APPEND_DATA`. A
+read-only descriptor can therefore carry a shared lock, but not an
+exclusive lock without a write grant.
 
 ## Locks and a changing provider [*lock.not-transferred-on-provider-change]
 
