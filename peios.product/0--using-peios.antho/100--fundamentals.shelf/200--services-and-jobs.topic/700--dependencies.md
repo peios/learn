@@ -74,7 +74,7 @@ Conflicts is for true mutual exclusion — two services binding the same port, o
 
 ### Waiting for a condition, not just a service
 
-A target may carry a **readiness level** after a colon. `Requires = ["network:routed"]` waits not merely for the network manager to be active but for it to have published the level `routed` — a default route in place — and holds the start until it does. Levels are exact (`addressed` is not satisfied by `routed`) and never stale (peinit clears one the moment its publisher leaves a satisfying state).
+A target may carry a **readiness level** after a colon. `Requires = ["network:routed"]` waits not merely for the network manager to be active but for it to have published the level `routed` — a default route in place — and holds the start until it does. Publishers report a set of currently true levels, and peinit checks membership. A routed network publishes `link`, `addressed` and `routed`, so a service can ask for the condition it actually needs. peinit clears the set the moment its publisher leaves a satisfying state.
 
 `network` there is a **role**, not a service: the service that fills it declares `Provides = ["network"]`, and peinit rewrites the entry to that service before anything else looks at it. Write the role, not the daemon. The levels `link`, `addressed` and `routed` are defined by [network policy](~peios/networking/overview), so the definition keeps meaning the same thing whichever executor an image ships. `svctl status` shows the resolved dependency, `netd:routed` on a standard image.
 

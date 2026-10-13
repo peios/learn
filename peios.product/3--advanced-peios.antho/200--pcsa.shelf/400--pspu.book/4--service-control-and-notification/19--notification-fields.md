@@ -14,7 +14,7 @@ define (§4.17).
 | `READY` | `1` | Startup is complete and the service is serving. |
 | `RELOADING` | `1` | Configuration reload has begun. |
 | `STOPPING` | `1` | Graceful shutdown has begun. |
-| `LEVEL` | free text | The readiness level the service is currently at. Empty retracts it. |
+| `LEVEL` | free text | A currently true readiness condition. Repeated fields publish the complete set; an empty-only set retracts it. |
 
 **`READY=1`** is what a service using notification readiness sends when
 it is genuinely able to serve, not when its process exists. Anything
@@ -34,20 +34,31 @@ that service. It MUST NOT extend or reset the stop timeout: the service
 still has to exit within it, and a service needing longer sends
 `EXTEND_TIMEOUT_USEC`.
 
-**`LEVEL`** names the condition the service currently satisfies, in the
-service's own vocabulary — netd sends `LEVEL=routed` when the machine
-gains a default route. The manager MUST retain the most recent value
-against the sending service, MUST treat an empty value as retracting it,
-and MUST discard it whenever the service leaves a state that satisfies
-dependents: a level is a claim made by a running process, and one that
-outlived its process would hold the claim open with nobody keeping it.
+**`LEVEL`** names a condition the service currently satisfies, in the
+service's own vocabulary. A service MAY repeat this field within one
+datagram to publish several conditions. For example, a routed netd sends
+`LEVEL=link`, `LEVEL=addressed` and `LEVEL=routed` as three lines in one
+datagram.
 
-The retained level is what a level-conditioned dependency waits on
-(`Requires = ["netd:routed"]` in a service definition): the manager MUST
-NOT treat such a dependency as satisfied unless the target is in a
-dependent-satisfying state **and** its retained level is exactly the
-named one. Levels are opaque and per-publisher; a manager MUST NOT
-assume an ordering between them.
+When a datagram contains at least one `LEVEL` field, the manager MUST
+atomically replace the sender's retained set with the distinct nonempty
+values from all its `LEVEL` fields. Field order and duplicates MUST NOT
+change the resulting set. An empty value adds no member; a datagram with
+only empty `LEVEL` values MUST clear the set. A datagram without `LEVEL`
+MUST leave the retained set unchanged. The entire replacement MUST be
+visible before releasing dependents, including when the datagram also
+contains `READY=1`.
+
+The manager MUST discard the set whenever the service leaves a state
+that satisfies dependents: these are claims made by a running process.
+
+A level-conditioned dependency (`Requires = ["netd:routed"]`) MUST NOT
+be satisfied unless the target is in a dependent-satisfying state **and**
+the retained set contains the named level. Names are opaque,
+case-sensitive and per-publisher; commas have no special meaning. The
+manager MUST NOT assume an ordering or implication between them. A
+publisher that knows several conditions hold MUST publish each one that
+it promises to expose to dependents.
 
 The value SHOULD be a single token of at most 64 printable ASCII
 characters. A value outside that shape is not an error, but a dependency
