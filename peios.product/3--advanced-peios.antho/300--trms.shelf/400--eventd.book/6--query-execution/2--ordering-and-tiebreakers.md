@@ -25,6 +25,13 @@ record, cannot be named in a `SORT` or a `SELECT`, and have no
 access-control identity (PSPU §3.28).
 [*order.tiebreaker-keys-never-appear-in-results-and-cannot-be-named]
 
+A metric's canonical-label key is captured before field filtering.
+Hiding a label leaves this internal key intact, including on per-series
+transformed and aggregate rows, so it does not change their order or
+pagination. The denied label remains absent from the result. Explicit
+query references to that label still require field access (§7.4).
+[*order.hidden-metric-labels-remain-in-the-internal-tiebreaker]
+
 The **shard index** is the numeric identifier from the `shard-NNNN.db`
 filename. [*order.the-shard-index-is-the-number-in-the-shard-filename]
 It appears in the event tiebreaker because rowids are
