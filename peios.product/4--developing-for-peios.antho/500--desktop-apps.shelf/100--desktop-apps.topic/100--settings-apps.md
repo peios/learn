@@ -44,6 +44,11 @@ Start a section with `settings::head(glyph, tile, title, about)`. Where the
 section is about one thing, put it large in a `settings::hero`, with
 `hero_title` or `big` on the left and a `pill` or a switch on the right.
 
+Page-header icon tiles are 40×40 pixels. SSH Settings uses a hero as its
+single page's header and applies that size in its app stylesheet. Other
+hero tiles retain the kit's 44×44 size; navigation and row icons keep
+their own sizes. App-specific adjustments belong after the kit stylesheet.
+
 Settings go in groups of rows: `settings::group(title, rows, foot)`, with
 rows from
 
