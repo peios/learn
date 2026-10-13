@@ -115,7 +115,16 @@ allocation first and falls back to the rebind lock only if that fails,
 so the two are never nested.
 
 Backing-filesystem freeze protection is held for one mutation stage at a
-time. Supersede releases the create mount's write hold before acquiring
+time. Regular-file copy-up releases its creation-stage mount write hold
+while copying contents: reads and writes keep their ordinary permission
+and pre-content notification checks, and each write acquires its own
+freeze protection. It reacquires the mount write hold before copying
+metadata or publishing the anonymous stage; failure to reacquire aborts
+the copy without publishing it. This permits a pending filesystem freeze
+to complete between stages without a writer waiting on itself.
+[*lock.copy-up-content-without-outer-writer]
+
+Supersede releases the create mount's write hold before acquiring
 the original provider's hold for removal. Rename's merged-destination
 emptiness scan, which can recover orphan staging objects, runs without a
 backing write hold retained by rename; recovery acquires its own. An early
