@@ -80,6 +80,14 @@ never waits on the registry [*evalt.the-last-run-write-happens-in-a-forked-child
 served by registryd, a service peinit supervises, so a synchronous write
 would let a wedged registryd stall PID 1.
 
+Before opening its own registry key, the child closes every inherited
+descriptor numbered 3 or above. It keeps standard input, output and error;
+PID 1 retains its own supervision descriptors. Both the single-timer and
+per-trigger layouts open a fresh key for their timestamp write. A cleanup
+failure makes the child exit unsuccessfully and follows the same warning
+path as a failed registry write.
+[*evalt.timer-writer-closes-inherited-descriptors-before-opening-its-key]
+
 The parent returns immediately with the child's pid, and remembers it.
 When the child is reaped, peinit matches its exit status back to the
 write; a failure is reported:

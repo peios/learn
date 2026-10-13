@@ -45,8 +45,8 @@ An existing key with no values returns `RSI_OK` with empty arrays.
 
 ## RSI_SET_VALUE [*value.set-value-writes-one-layers-entry-for-a-value]
 
-The key's volatile flag selects the store.
-[*value.set-value-targets-the-store-of-the-keys-volatile-flag]
+The store containing the key selects the target table (§5.1).
+[*value.set-value-targets-the-keys-store]
 A key GUID in neither store returns `RSI_NOT_FOUND`.
 [*value.set-value-on-an-unknown-key-guid-returns-not-found]
 
@@ -98,8 +98,8 @@ A GUID that resolves to no hive returns `RSI_NOT_FOUND`.
 ## RSI_SET_BLANKET_TOMBSTONE [*value.a-blanket-tombstone-masks-every-value-in-lower-layers]
 
 Sets or clears the tombstone that masks every value a key holds in lower
-layers. The key's volatile flag selects the store.
-[*value.set-blanket-tombstone-targets-the-store-of-the-keys-volatile-flag]
+layers. The store containing the key selects the target table (§5.1).
+[*value.set-blanket-tombstone-targets-the-keys-store]
 A GUID in neither returns `RSI_NOT_FOUND`.
 [*value.set-blanket-tombstone-on-an-unknown-key-guid-returns-not-found]
 
