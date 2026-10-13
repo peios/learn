@@ -115,6 +115,18 @@ Keep that rule in mind and static linking is a non-issue: reach for it only from
    - `PEIOS_INCLUDE` — the directory containing `<peios.h>`
    - `PKM_UAPI` — the directory containing `<pkm/*.h>` (referenced by `peios.h`'s signatures)
 2. **pkg-config** — otherwise, if libpeios installs its `peios.pc` on `PKG_CONFIG_PATH`.
+   The build requires the minimum libpeios version declared in
+   `peios-sys/Cargo.toml` under `package.metadata.libpeios.minimum-version`.
+   If the installed SDK is older, the build stops before generating bindings and
+   reports the required and detected versions, instead of failing later with a
+   missing Rust binding. A missing SDK reports the required version and setup
+   guidance too. This applies to both dynamic and static linking.
+
+The explicit environment override bypasses pkg-config, including its version
+check. It remains useful for uninstalled development builds: you are responsible
+for selecting compatible libpeios headers and a matching library at or above the
+crate's declared minimum. The shipping headers do not expose a version macro,
+so the build script cannot verify a version for this path.
 
 On a system where libpeios is installed from its [packages](~peios/sdk-basics/installing-and-linking#the-packages), pkg-config just works and you set nothing. For a **local checkout**, point the three variables at your build tree:
 
