@@ -23,7 +23,10 @@ Each iteration builds the poll set afresh:
 8. every upstream socket — for reading, or for writing while a TCP
    connection is still being established or its query is still being
    sent;
-9. native and stub TCP replies waiting to write, for writability.
+9. native and stub TCP replies waiting to write, for writability;
+10. native and stub TCP streams awaiting engine answers, for hangup and
+    error indications only. Readability and read-half-close are not
+    requested, preserving supported half-closes without spinning on EOF.
 
 ### The poll timeout [*loop.poll-timeout-is-earliest-deadline]
 
@@ -43,16 +46,20 @@ the loop polls again without sleeping until the moment has passed.
 
 After `poll` returns, ready descriptors are serviced in this order:
 
-1. upstream sockets — replies that have arrived are answers already
-   owed;
-2. queued native replies, then queued stub TCP replies, whose sockets are writable;
-3. the stub UDP socket, reading every datagram waiting;
-4. the stub TCP listener, accepting every waiting connection;
-5. stub TCP connections;
-6. the native listener, accepting every waiting connection;
-7. native connections;
-8. the netd channel;
-9. the registry watch.
+1. waiting native and stub TCP streams with definite hangup/error,
+   cancelling their questions and upstream transactions;
+2. upstream sockets — replies that have arrived are answers already owed;
+3. queued native replies, then queued stub TCP replies, whose sockets are writable;
+4. the stub UDP socket, reading at most 64 datagrams;
+5. the stub TCP listener, accepting at most 64 connections;
+6. stub TCP connections still sending queries;
+7. the native listener, accepting at most 64 connections;
+8. native connections still sending requests;
+9. the netd channel;
+10. the registry watch.
+
+The fixed datagram/accept batches yield to the other doors and timers even
+while one listener remains continuously ready. [*loop.listener-batches]
 
 ## Timers after descriptors [*loop.timers-run-after-descriptors]
 

@@ -14,11 +14,16 @@ description: The mainline values for every bound in this chapter.
 | Negative TTL cap | 300 s [*nri-limits.negative-ttl-cap] | §6.7 |
 | EDNS0 buffer advertised | 1 232 bytes [*nri-limits.edns0-buffer] | §6.7 |
 | Upstream transactions in flight (synthetic and cached answers are never refused) | 4 096 [*nri-limits.upstream-in-flight] | §6.7 |
-| Native connections still delivering a request | 256 [*nri-limits.native-pending-connections] | §6.4 |
-| Stub TCP clients held at once | 256 [*nri-limits.stub-tcp-clients] | §6.8 |
+| Native connections delivering a request or awaiting resolution | 256 [*nri-limits.native-pending-connections] | §6.4 |
+| Stub TCP clients delivering a query or awaiting resolution | 256 [*nri-limits.stub-tcp-clients] | §6.8 |
+| Stub UDP queries awaiting resolution | 256 total; 16 per source address and port [*nri-limits.stub-udp-pending] | resolvd TRM §6.1 |
 | Cache entries | 8 192 [*nri-limits.cache-entries] | §6.7 |
 | Stub TCP client bound | 10 s [*nri-limits.stub-tcp-client-bound] | §6.8 |
 | Manager reconnect backoff | 0.5 s doubling to 10 s [*nri-limits.manager-reconnect-backoff] | §6.9 |
+
+The upstream ceiling leaves synthetic and cached answers unaffected once
+a query has passed its door's admission limits. Native and stub TCP reply
+writers have separate 256-frame queues and one-second write deadlines.
 
 An implementation MAY adjust these; it MUST document the values it
 uses. The relations that must hold: the shim's own timeout exceeds

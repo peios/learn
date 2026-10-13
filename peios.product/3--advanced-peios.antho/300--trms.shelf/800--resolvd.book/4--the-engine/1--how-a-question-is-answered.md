@@ -83,15 +83,26 @@ decided it, after the filtering of §4.8, or the synthetic records of
 stub door uses it to add a `CNAME` (§6.2) and `lookup` uses it as the
 start of its CNAME chase (§4.9).
 
-## Nothing is cancelled
+## An asker that leaves
 
-A question whose asker has gone — a native client that closed its
-connection, a stub TCP client that hung up — is not abandoned:
+While a native or stub TCP question is waiting for the engine, its stream
+is polled for hangup and errors. A definite hangup, error or invalid
+socket abandons the question before ready upstream replies are processed:
+all of its transactions are cancelled, including both families of an
+`any` lookup. Other questions continue normally.
+[*engine-flow.departed-asker-transactions-continue]
 
-- its transactions run to completion, with every retry they would
-  otherwise make; [*engine-flow.departed-asker-transactions-continue]
-- the replies they get are cached as usual (§4.5); [*engine-flow.departed-asker-reply-cached]
-- its answer is still written when it is ready, to a connection nobody
-  reads: for a native client the write fails and resolvd logs
-  `control: reply failed: <error>` (§5.1); for a stub client nothing is
-  logged, whatever becomes of the write. [*engine-flow.departed-asker-answer-write-fails]
+Replies to cancelled transactions are ignored; they do not populate the
+cache. Answers already cached before cancellation remain cached.
+[*engine-flow.departed-asker-reply-cached]
+
+An abandoned question is removed from the waiting clients and no answer
+write is attempted for it. Cancellation does not count as an upstream
+failure, refusal or answer. [*engine-flow.departed-asker-answer-write-fails]
+
+A write-half-close is supported: the client may stop sending while still
+waiting for its answer. Readable end of file alone therefore does not
+cancel a question. In particular, a TCP FIN cannot reliably distinguish a
+complete departure from a write-half-close. Without a definite hangup or
+error, the request retains its admission slot and runs through the usual
+engine attempts and deadlines. UDP has no disconnect notification.
