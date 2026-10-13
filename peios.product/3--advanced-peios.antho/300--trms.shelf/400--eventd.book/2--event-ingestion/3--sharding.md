@@ -1,14 +1,15 @@
 ---
 title: Sharding
-description: Event writes distributed across up to 256 independent databases — the count, the assignment, the writer threads and the handoff.
+description: Event writes distributed across independent databases — the count, descriptor budget, assignment, writer threads and handoff.
 ---
 
 ## The shard count
 
-Event writes are distributed across one to 256 independent SQLite
-databases. [*shard.there-are-between-1-and-256-event-shards] The count
-comes from `StorageShards` (§A); zero means "as many shards as there
-are successfully attached KMES buffers", and is the default.
+Event writes are distributed across independent SQLite databases.
+An explicit `StorageShards` count (§A) is between one and 256.
+[*shard.there-are-between-1-and-256-event-shards] Zero means "as many
+shards as there are successfully attached KMES buffers", and is the
+default; that automatic count is not capped at 256.
 [*shard.storage-shards-zero-is-the-default-and-means-one-shard-per-attached-buffer]
 
 Every shard costs file descriptors. An active shard's writer connection
@@ -18,11 +19,44 @@ to each historical shard (§3.6), and every event query that reads every
 shard holds about two more per shard while it runs (§6.4). eventd
 neither raises its own descriptor limit nor caps the shard count to fit
 it. [*shard.eventd-neither-raises-its-descriptor-limit-nor-caps-the-shard-count]
-Under a 1024-descriptor soft limit, 256 shards do not start, and counts
-well below that leave little room for queries; a machine configured
-with a high `StorageShards` raises eventd's limit to match, with
-`LimitNOFILE` in its service definition (peinit TRM §3.2).
+The packaged `eventd-service.reg` sets `LimitNOFILE` to **262144**.
+peinit applies it as both the soft and hard `RLIMIT_NOFILE` before
+launch; eventd does not raise the limit itself. Under an inherited
+1024-descriptor soft limit, 256 shards do not start, and counts well
+below that leave little room for queries. Operators can override
+`LimitNOFILE` (DWORD) at `Machine\System\Services\eventd` and restart
+the service to apply it (peinit TRM §3.2).
 [*shard.a-high-storage-shards-needs-a-raised-descriptor-limit]
+
+The packaged value uses this conservative planning allowance:
+
+```text
+4 × Q × max(E, 1) + 4 × Q + 3 × (E + 3) + 2 × C + 256
+```
+
+Here `Q` is the concurrent query count, `E` the total active and
+historical event databases visible to queries, and `C` the attached
+KMES buffer count. The terms allow four descriptors per query database
+(database, WAL, shared-memory index and temporary-file headroom), four
+per query for its socket, peer token and transient handles, three per
+persistent database connection (including log, metric and metadata
+stores), two per KMES buffer during replacement, and 256 for fixed
+handles and maintenance. Historical shards have persistent retention
+connections as well as query readers. Streaming queries are already
+included in `Q`; their separate limit is not added again.
+
+At the default `MaxConcurrentQueries=128`, with at most 256 query-visible
+event databases and 256 attached KMES buffers, this gives **133129**;
+262144 rounds up with additional headroom. This is a sizing allowance,
+not a strict SQLite descriptor bound or a guarantee that the workload
+fits memory and thread limits. The limit does not preallocate handles.
+
+Neither historical shard discovery nor the automatic shard count is
+globally capped by the explicit `StorageShards` range. More historical
+shards, more attached buffers or higher query concurrency require
+operator sizing and, where needed, a larger service limit. The host's
+`fs.nr_open` ceiling must also permit the chosen limit; setting the
+service value does not raise that system ceiling.
 
 Two properties make a count perform well, and neither is enforced.
 [*shard.neither-a-power-of-two-nor-a-multiple-of-the-buffer-count-is-enforced]
