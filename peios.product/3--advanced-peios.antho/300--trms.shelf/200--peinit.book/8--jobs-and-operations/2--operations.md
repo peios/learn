@@ -120,10 +120,21 @@ Why peinit created the operation: [*op.the-operation-sources]
 | `OnFailure` | A failed service's fallback handler. |
 | `TtyRelease` | A service released a terminal another service was waiting for. |
 
-`Shutdown` is declared and labelled but not currently produced: shutdown
-transitions services and signals them directly, without creating
-operations for the stops (§12.2).
-[*op.shutdown-is-declared-but-not-produced]
+Graceful shutdown creates a `Stop` operation with source `Shutdown` for
+each participant in its stop waves (§12.2).
+[*op.shutdown-creates-per-service-stop-operations] All are requested
+when the plan is fixed; each starts when its wave becomes eligible.
+These records observe the shutdown planner. They do not enter the
+ordinary control queue or replace an existing administrator operation,
+whose retained stopping deadline still applies. A later-wave observation
+may fail its Pending lifetime without authorising an early signal or
+cancelling the service's eventual stop.
+
+A participant that exits before its wave can complete its observation
+without ever starting it; a crash fails it. Once stopping, reaching
+Inactive completes it, while a stop timeout, global timeout or forced
+reboot fails any observation still live. A failed observation is not
+completed again when the process is subsequently reaped.
 
 ## The types
 
