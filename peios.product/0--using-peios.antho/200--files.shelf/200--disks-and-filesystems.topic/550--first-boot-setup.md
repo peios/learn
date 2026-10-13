@@ -33,6 +33,10 @@ The installer copies the system first; these questions are asked on the installe
 
 The page shows the current language and keyboard information but does not change them. Setup is in English and the console uses the US layout until setup finishes. Afterwards, open **System Settings → Language & Keyboard**. See [the settings overview](~peios/desktop-settings/overview) for the distinction between System Settings, Desktop Settings, and personal settings.
 
+In the terminal, the Language and Keyboard choices are disabled, but each
+shows its explanation beneath it without needing focus, so this guidance is
+visible there too.
+
 ### 2. Network
 
 The network page is informational; lack of connectivity does not block setup. It shows what `net status` reports for each interface: connected, not connected, or not used. Choose **Check again** after connecting a cable. In the browser, the interface carrying your current connection is marked.
