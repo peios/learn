@@ -74,6 +74,20 @@ expose a row or omit a concrete identifier that committed successfully.
 [*plan.a-stale-catalogue-name-never-exposes-a-row-or-omits-a-committed-identifier]
 Low-priority cleanup is optional and is never query-critical.
 
+## Header literal types [*plan.header-literal-coercions-are-scoped-to-the-query-namespace]
+
+Literal conversion uses the namespace of the record being compared.
+`emitter.class` aliases apply only to event headers. GUID forms apply
+to the event GUID headers, log `boot_id` and `job_id`, and metric
+`boot_id`. The same spelling in an ordinary payload field or metric
+label remains a string; it does not borrow another namespace's header
+type (PSPU §3.22).
+
+The rule holds for comparisons, membership and compound predicates,
+metric bracket selectors, and metric selectors inside historical or
+streaming cross-type conditions. A metric condition uses the metric
+namespace even when the query's primary source is events or logs.
+
 ## When payloads are decoded
 
 Event payloads are stored as opaque MessagePack and are never decoded on
