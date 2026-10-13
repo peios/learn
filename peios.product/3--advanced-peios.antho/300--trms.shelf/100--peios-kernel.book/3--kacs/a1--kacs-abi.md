@@ -550,6 +550,8 @@ kernel assigns the session ID and derives the logon SID from it.
 
 *Token information classes (kacs_query_args.token_class).* [*kacs-abi.token-information-classes]
 
+GUID returns 16 immutable raw bytes in the same order as KMES headers.
+
 | Constant | Value |
 |---|---|
 | `KACS_TOKEN_CLASS_USER` | `0x01` (1) |
@@ -576,6 +578,7 @@ kernel assigns the session ID and derives the logon SID from it.
 | `KACS_TOKEN_CLASS_USER_CLAIMS` | `0x16` (22) |
 | `KACS_TOKEN_CLASS_DEVICE_CLAIMS` | `0x17` (23) |
 | `KACS_TOKEN_CLASS_PROJECTED_SUPPLEMENTARY_GIDS` | `0x18` (24) |
+| `KACS_TOKEN_CLASS_GUID` | `0x19` (25) |
 
 Privileges, as single-bit masks within a token's 64-bit privilege word
 (present / enabled / enabled-by-default / used are each one such word).
