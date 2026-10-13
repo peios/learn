@@ -105,6 +105,12 @@ descending. Ties are broken by the group key under the value ordering
 above — for a `GROUP` of several fields, each key in turn in the order
 the fields are named — then by the representative's encoded bytes.
 
+`GROUP … SUM`, `AVG`, `MIN` and `MAX` results MUST be ordered by their
+group keys ascending under the value ordering above, comparing each key
+in the order the fields are named. This order applies before `SKIP` and
+`TAKE`. An explicit `SORT` overrides it; groups tied under that sort
+retain their group-key order.
+
 `TOP N BY` is exactly `COUNT BY` with `TAKE N` applied after that
 ordering.
 
