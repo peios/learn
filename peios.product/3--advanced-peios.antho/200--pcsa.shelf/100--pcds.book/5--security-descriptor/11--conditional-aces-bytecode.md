@@ -3,15 +3,23 @@ title: Conditional ACE Bytecode Reference
 description: The postfix bytecode a conditional expression compiles to — magic signature, literal and operator tokens, and the integer encoding.
 ---
 
-This section specifies the binary encoding for conditional ACE expressions. The format is byte-compatible with MS-DTYP §2.4.4.17.4. Conditional expressions are stored in the ApplicationData member of CALLBACK ACE types, encoded in postfix (reverse Polish) notation.
+This section specifies the binary encoding for conditional ACE expressions.
+The format is byte-compatible with MS-DTYP §2.4.4.17.4. Conditional
+expressions are stored in the ApplicationData member of CALLBACK ACE types,
+encoded in postfix (reverse Polish) notation.
 
 ## Magic signature
 
-A CALLBACK ACE contains a conditional expression if the ApplicationData begins with `0x61 0x72 0x74 0x78` (the string "artx"). If the signature is absent or the expression is shorter than 4 bytes, evaluation MUST return UNKNOWN.
+A CALLBACK ACE contains a conditional expression if the ApplicationData begins
+with `0x61 0x72 0x74 0x78` (the string "artx"). If the signature is absent or
+the expression is shorter than 4 bytes, evaluation MUST return UNKNOWN.
 
 ## Token formats
 
-Each token begins with a single byte-code identifying the token type. All multibyte integers, including Unicode characters, are stored least-significant byte first (little-endian). Expressions end at the ACE boundary; any bytes needed for DWORD alignment MUST be set to 0x00.
+Each token begins with a single byte-code identifying the token type. All
+multibyte integers, including Unicode characters, are stored least-significant
+byte first (little-endian). Expressions end at the ACE boundary; any bytes
+needed for DWORD alignment MUST be set to 0x00.
 
 ## Literal tokens
 
@@ -37,11 +45,18 @@ Integer literals include a sign byte after the QWORD value:
 | - | 0x02 | Negative. |
 | None | 0x03 | No sign. Relational operators treat as positive. |
 
-During relational evaluation, the sign byte determines the literal sign. Positive (`0x01`) and no-sign (`0x03`) literals MUST be evaluated as the positive magnitude of the QWORD value. Negative (`0x02`) literals MUST be evaluated as the negative magnitude of the QWORD value. If the resulting signed value does not fit the declared signed-width token, evaluation MUST return UNKNOWN.
+During relational evaluation, the sign byte determines the literal sign.
+Positive (`0x01`) and no-sign (`0x03`) literals MUST be evaluated as the
+positive magnitude of the QWORD value. Negative (`0x02`) literals MUST be
+evaluated as the negative magnitude of the QWORD value. If the resulting
+signed value does not fit the declared signed-width token, evaluation MUST
+return UNKNOWN.
 
 ### Base codes
 
-Integer literals include a base byte after the sign byte. The base is for display purposes only — the value is always stored as binary 2's complement regardless of base:
+Integer literals include a base byte after the sign byte. The base is for
+display purposes only — the value is always stored as binary 2's complement
+regardless of base:
 
 | Base | Code | Description |
 |---|---|---|
@@ -64,7 +79,11 @@ The decimal value -1 encoded as a signed int64:
 
 ### Binary relational operators
 
-LHS is the second element on the stack, RHS is the top. If LHS and RHS are different types, the entire conditional expression evaluates to UNKNOWN — with the exception of INT64 and UINT64 which are promoted for comparison (see §5.8 for promotion rules). If either operand is UNKNOWN, the operation returns UNKNOWN.
+LHS is the second element on the stack, RHS is the top. If LHS and RHS are
+different types, the entire conditional expression evaluates to UNKNOWN — with
+the exception of INT64 and UINT64 which are promoted for comparison (see §5.8
+for promotion rules). If either operand is UNKNOWN, the operation returns
+UNKNOWN.
 
 | Token type | Byte-code | Processing |
 |---|---|---|
@@ -79,11 +98,14 @@ LHS is the second element on the stack, RHS is the top. If LHS and RHS are diffe
 | Not_Contains | 0x8e | Logical inverse of Contains. |
 | Not_Any_of | 0x8f | Logical inverse of Any_of. |
 
-String and octet string comparisons are byte-by-byte, case-insensitive by default. If the CLAIM_SECURITY_ATTRIBUTE_VALUE_CASE_SENSITIVE flag (0x0002) is set on either operand's attribute, comparison is case-sensitive.
+String and octet string comparisons are byte-by-byte, case-insensitive by
+default. If the CLAIM_SECURITY_ATTRIBUTE_VALUE_CASE_SENSITIVE flag (0x0002) is
+set on either operand's attribute, comparison is case-sensitive.
 
 ### Unary relational operators (SID membership)
 
-The operand is the top of the stack and MUST be a SID literal or a composite of SID literals.
+The operand is the top of the stack and MUST be a SID literal or a composite
+of SID literals.
 
 | Token type | Byte-code | Processing |
 |---|---|---|
@@ -104,7 +126,8 @@ For an empty SID operand set:
 
 ## Logical operator tokens
 
-Logical operators test the logical value of operands and produce TRUE, FALSE, or UNKNOWN. The logical value of an operand is determined by:
+Logical operators test the logical value of operands and produce TRUE, FALSE,
+or UNKNOWN. The logical value of an operand is determined by:
 
 - Literal-origin value → error (entire expression returns UNKNOWN)
 - Attribute with null value → UNKNOWN
@@ -131,9 +154,12 @@ LHS is the second element on the stack, RHS is the top.
 
 ## Attribute reference tokens
 
-Attribute names are encoded as Unicode strings (same format as the 0x10 literal: DWORD length + UTF-16LE code units). The byte-code determines which namespace to look up the attribute in.
+Attribute names are encoded as Unicode strings (same format as the 0x10
+literal: DWORD length + UTF-16LE code units). The byte-code determines which
+namespace to look up the attribute in.
 
-Attribute lookup is case-insensitive: the encoded name is matched against the namespace's attribute names without regard to case.
+Attribute lookup is case-insensitive: the encoded name is matched against the
+namespace's attribute names without regard to case.
 
 | Token type | Byte-code | Namespace |
 |---|---|---|
@@ -188,4 +214,7 @@ For quick reference, all byte-codes in numeric order:
 KACS implementations MUST be byte-compatible with these encodings.
 
 > [!NOTE]
-> This byte-code table is reproduced from MS-DTYP §2.4.4.17.4 through §2.4.4.17.8 for specification self-containment. KACS-specific evaluation semantics (three-valued logic tables, INT64/UINT64 promotion, virtual group visibility in Member_of, polarity-aware SID matching) are defined in §5.8.
+> This byte-code table is reproduced from MS-DTYP §2.4.4.17.4 through
+  §2.4.4.17.8 for specification self-containment. KACS-specific evaluation
+  semantics (three-valued logic tables, INT64/UINT64 promotion, virtual group
+  visibility in Member_of, polarity-aware SID matching) are defined in §5.8.

@@ -3,30 +3,51 @@ title: SD Structure
 description: The Security Descriptor — owner, group, DACL and SACL, the self-relative binary layout, the sixteen control flags, and null DACL against empty DACL.
 ---
 
-A Security Descriptor (SD) defines the complete security policy for a protected object. Every protected object in Peios — every file, registry key, IPC endpoint, service, token, and process — MUST have a Security Descriptor.
+A Security Descriptor (SD) defines the complete security policy for a
+protected object. Every protected object in Peios — every file, registry key,
+IPC endpoint, service, token, and process — MUST have a Security Descriptor.
 
 An SD has four components and a set of control flags:
 
-- **Owner SID** — the principal that owns the object. The owner has implicit rights (READ_CONTROL and WRITE_DAC) unless suppressed by an OWNER RIGHTS ACE.
+- **Owner SID** — the principal that owns the object. The owner has implicit
+  rights (READ_CONTROL and WRITE_DAC) unless suppressed by an OWNER RIGHTS
+  ACE.
 
-- **Group SID** — an optional primary group associated with the object. When present, it is stored and returned on query and used during CREATOR GROUP substitution during inheritance. When absent, no primary group is available for those metadata operations. No access control decision depends on the group SID directly. If an inheritance or ACL-rewrite operation must materialize a CREATOR GROUP SID and the source object SD has no group SID, KACS MUST fail closed rather than substitute another SID or silently drop the ACE.
+- **Group SID** — an optional primary group associated with the object. When
+  present, it is stored and returned on query and used during CREATOR GROUP
+  substitution during inheritance. When absent, no primary group is available
+  for those metadata operations. No access control decision depends on the
+  group SID directly. If an inheritance or ACL-rewrite operation must
+  materialize a CREATOR GROUP SID and the source object SD has no group SID,
+  KACS MUST fail closed rather than substitute another SID or silently drop
+  the ACE.
 
-- **DACL** (Discretionary Access Control List) — an ordered list of ACEs that define who is allowed or denied access. The object's owner controls the DACL (via WRITE_DAC).
+- **DACL** (Discretionary Access Control List) — an ordered list of ACEs that
+  define who is allowed or denied access. The object's owner controls the DACL
+  (via WRITE_DAC).
 
-- **SACL** (System Access Control List) — an ordered list of ACEs that define system-level policy. Despite the name, the SACL carries several distinct ACE types:
+- **SACL** (System Access Control List) — an ordered list of ACEs that define
+  system-level policy. Despite the name, the SACL carries several distinct ACE
+  types:
   - Audit ACEs — which access attempts to log.
   - Mandatory label ACE — the object's integrity level for MIC.
-  - Resource attribute ACEs — name-value attributes for conditional ACE evaluation.
+  - Resource attribute ACEs — name-value attributes for conditional ACE
+    evaluation.
   - Scoped policy ID ACEs — references to central access policies.
   - Process trust label ACE — the object's PIP trust level.
 
-  Modifying the SACL requires ACCESS_SYSTEM_SECURITY. ACCESS_SYSTEM_SECURITY is privilege-controlled: it is normally granted by SeSecurityPrivilege, and may also be granted by restore-intent SeRestorePrivilege in the `kacs_set_sd` cases described in the Peios Kernel TRM §3.9.6.
+  Modifying the SACL requires ACCESS_SYSTEM_SECURITY. ACCESS_SYSTEM_SECURITY
+  is privilege-controlled: it is normally granted by SeSecurityPrivilege, and
+  may also be granted by restore-intent SeRestorePrivilege in the
+  `kacs_set_sd` cases described in the Peios Kernel TRM §3.9.6.
 
 Both the DACL and SACL use the standard binary ACL format defined in §5.2.
 
 ## Binary format
 
-SDs use the self-relative binary format defined in MS-DTYP §2.4.6. The format is a 20-byte header followed by the owner SID, optional group SID, SACL, and DACL at offsets specified in the header.
+SDs use the self-relative binary format defined in MS-DTYP §2.4.6. The format
+is a 20-byte header followed by the owner SID, optional group SID, SACL, and
+DACL at offsets specified in the header.
 
 | Offset | Size | Field | Description |
 |---|---|---|---|
@@ -40,7 +61,9 @@ SDs use the self-relative binary format defined in MS-DTYP §2.4.6. The format i
 
 Field names are those of MS-DTYP §2.4.6.
 
-The self-relative format packs everything into a contiguous byte buffer with no pointers. This makes it suitable for storage (xattrs, database fields) and wire transmission (IPC, SMB).
+The self-relative format packs everything into a contiguous byte buffer with
+no pointers. This makes it suitable for storage (xattrs, database fields) and
+wire transmission (IPC, SMB).
 
 KACS MUST use the self-relative format exclusively.
 
@@ -67,22 +90,38 @@ The SD's 16-bit Control field records metadata about the descriptor:
 | SE_RM_CONTROL_VALID (RM) | 14 | 0x4000 | The Sbz1 byte is interpreted as resource manager control bits. |
 | SE_SELF_RELATIVE (SR) | 15 | 0x8000 | The SD is in self-relative format. MUST always be set for stored SDs. |
 
-The architectural maximum SD size is 65,535 bytes. KACS MUST reject any parsed or computed SD whose serialised self-relative byte length exceeds 65,535 bytes.
+The architectural maximum SD size is 65,535 bytes. KACS MUST reject any parsed
+or computed SD whose serialised self-relative byte length exceeds 65,535
+bytes.
 
-The DEFAULTED flags are metadata. During object-SD creation, KACS MUST set the corresponding DEFAULTED flag when it supplies that component from a default source rather than from an explicit creator SD component or inherited ACL. KACS MUST NOT grant or deny access based solely on a DEFAULTED flag.
+The DEFAULTED flags are metadata. During object-SD creation, KACS MUST set the
+corresponding DEFAULTED flag when it supplies that component from a default
+source rather than from an explicit creator SD component or inherited ACL.
+KACS MUST NOT grant or deny access based solely on a DEFAULTED flag.
 
 This document records the `SE_SERVER_SECURITY` flag value but does not
 define the server-ACL construction algorithm. An implementation MUST
 fail closed when a creator SD attempts to use `SE_SERVER_SECURITY`.
 
-The PROTECTED flags are operationally significant. Setting SE_DACL_PROTECTED prevents inheritance from parent objects — the object keeps its current ACEs and stops accepting new inheritable ACEs from above.
+The PROTECTED flags are operationally significant. Setting SE_DACL_PROTECTED
+prevents inheritance from parent objects — the object keeps its current ACEs
+and stops accepting new inheritable ACEs from above.
 
 ## Null DACL vs empty DACL
 
-The SE_DACL_PRESENT flag distinguishes two states with very different security consequences:
+The SE_DACL_PRESENT flag distinguishes two states with very different security
+consequences:
 
-- **Null DACL** (SE_DACL_PRESENT not set) — no discretionary access control. AccessCheck grants all requested access to every caller. This SHOULD almost never be used.
+- **Null DACL** (SE_DACL_PRESENT not set) — no discretionary access control.
+  AccessCheck grants all requested access to every caller. This SHOULD almost
+  never be used.
 
-- **Empty DACL** (SE_DACL_PRESENT set, zero ACEs) — AccessCheck grants no access to any caller (except the owner's implicit rights). An explicit statement that no principal has discretionary access.
+- **Empty DACL** (SE_DACL_PRESENT set, zero ACEs) — AccessCheck grants no
+  access to any caller (except the owner's implicit rights). An explicit
+  statement that no principal has discretionary access.
 
-Objects SHOULD always have a DACL. This is a preferred-object-shape recommendation, not a fail-closed requirement. If object creation has no explicit DACL, no inherited DACL, and the creator token has no default DACL, the resulting object SD has a null DACL: SE_DACL_PRESENT is clear and the DACL offset is zero.
+Objects SHOULD always have a DACL. This is a preferred-object-shape
+recommendation, not a fail-closed requirement. If object creation has no
+explicit DACL, no inherited DACL, and the creator token has no default DACL,
+the resulting object SD has a null DACL: SE_DACL_PRESENT is clear and the DACL
+offset is zero.
