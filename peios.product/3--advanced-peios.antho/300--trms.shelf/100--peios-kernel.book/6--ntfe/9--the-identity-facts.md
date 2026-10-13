@@ -53,8 +53,15 @@ very packet:
   will actually receive. [*ntfe-identity.inbound-transport-lookup-by-tuple] Early demux may already have found it, and
   its socket is used in place of the lookup — for UDP only once the
   datagram has passed the `shared` test above, since early demux also
-  attaches the one socket a multicast datagram happens to match. Any
-  other protocol is looked up among raw sockets bound to it. [*ntfe-identity.inbound-other-protocol-raw-lookup]
+  attaches the one socket a multicast datagram happens to match. An early
+  result is used only if its socket still has a live reference that NTFE
+  can pin. UDP early demux keeps the pointer valid under RCU but does not
+  itself hold a reference; if the socket's last reference has gone, NTFE
+  falls back to the ordinary tuple lookup without reviving the socket.
+  A missing receiver then gives the same `none` result as an ordinary
+  lookup miss. The temporary socket reference is released after reading
+  the identity. [*ntfe-identity.early-receiver-pin-or-lookup]
+  Any other protocol is looked up among raw sockets bound to it. [*ntfe-identity.inbound-other-protocol-raw-lookup]
 - A socket found is `program` (a request minisock stands for its
   listener; a `TIME_WAIT` minisock is nobody's: `kernel`). [*ntfe-identity.inbound-found-socket-program]
 - Nothing found: `kernel` if the stack has a handler registered for the
