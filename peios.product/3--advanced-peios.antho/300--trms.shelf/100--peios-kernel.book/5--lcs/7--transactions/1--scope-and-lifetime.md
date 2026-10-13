@@ -107,6 +107,12 @@ operation — and runs for `TransactionTimeoutMs`, default 30 seconds. [*txn.lif
 When it fires, the object becomes `TIMED_OUT`, poll waiters are woken,
 and further use of the fd returns `ETIMEDOUT`. [*txn.lifetime.timeout-makes-further-use-etimedout]
 
+The timer updates transaction state from softirq context. Task and
+workqueue callers disable bottom halves while holding the shared state
+spinlock, so the timer cannot interrupt a holder on the same CPU and
+wait for that holder to release it. Synchronous timer cancellation runs
+outside the state lock. [*txn.lifetime.timer-state-lock-softirq-safe]
+
 If the transaction was bound and no commit is already in flight,
 `RSI_ABORT_TRANSACTION` is sent to the source. [*txn.lifetime.timeout-aborts-a-bound-transaction-at-the-source]
 
