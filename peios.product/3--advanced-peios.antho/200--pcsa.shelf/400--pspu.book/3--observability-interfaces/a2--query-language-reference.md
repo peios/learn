@@ -126,6 +126,7 @@ There is no `NOT` and no `=`.
 | LOGS | `timestamp` descending |
 | METRIC | timestamp ascending |
 | `COUNT BY`, `TOP N BY`, `GROUP … COUNT` | count descending |
+| `GROUP … SUM`, `AVG`, `MIN`, `MAX` | group keys ascending in the order named |
 | `DISTINCT` | by the distinct value |
 
 All ties are broken to a total order (§3.21).

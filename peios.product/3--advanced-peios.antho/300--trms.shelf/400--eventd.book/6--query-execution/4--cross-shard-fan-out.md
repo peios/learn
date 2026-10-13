@@ -54,6 +54,12 @@ Each group keeps:
 | `GROUP … MIN` / `MAX` | the extreme so far [*fanout.group-min-and-max-keep-the-extreme-so-far] |
 | `DISTINCT` | the value [*fanout.distinct-keeps-each-value] |
 
+`GROUP … SUM`, `AVG`, `MIN` and `MAX` groups are sorted by their keys
+ascending, in the order the fields are named, before `SKIP` and `TAKE`
+apply. An explicit `SORT` overrides that order, with group-key order
+breaking its ties (PSPU §3.21).
+[*fanout.numeric-groups-are-sorted-by-keys-before-pagination]
+
 `AVG` is the one that cannot be composed from its own output: averaging
 partial averages weights each part equally, regardless of how many rows
 it held, so the sum and the count are kept and divided once.
