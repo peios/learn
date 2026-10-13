@@ -138,10 +138,17 @@ read-only filesystem still refuses, and filesystem errors still
 propagate. Nothing is performed under a borrowed or elevated identity —
 every copy-up mutation runs with the calling task's own credentials.
 
-### Recovery uses the mounter’s credentials [*security.staging-recovery-uses-mounter]
+### Recovery retains the mounter’s file credentials [*security.staging-recovery-uses-mounter]
 
-One adjacent path does borrow one. The stale-staging recovery scan
-opens the create-stratum directory with the **mounter's** credentials
-rather than the caller's, and since the KACS token derives from the
-current credentials, that read is authorised as the mounter. It runs
-inside a copy-up context in any case, so it changes no decision.
+The stale-staging recovery scan passes the **mounter's** credentials
+to the internal directory open, which retains them as the file’s
+credentials. That does not switch the calling task’s current
+credentials or select a different KACS token. The scan runs in a
+source-read copy-up context bound to that exact directory, so the
+context admits its read before an ordinary token access check.
+
+Consequently, neither the caller nor the mounter needs a directory-list
+grant for that scoped recovery read. An ordinary open requesting list
+access remains subject to the directory’s descriptor. Path resolution
+separately uses the captured mounter credentials; the file-credential
+argument is not itself an authority switch.
