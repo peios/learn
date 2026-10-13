@@ -96,22 +96,53 @@ and expecting the subtree to follow will be disappointed.
 
 `REG_IOC_GET_SECURITY` and `REG_IOC_SET_SECURITY` take a
 `security_info` bitmask naming which components to act on: owner,
-group, DACL, SACL. [*inherit.security-info-selects-components]
+group, DACL, SACL, or mandatory integrity label (`LABEL_SECURITY_INFORMATION`). [*inherit.security-info-selects-components]
 
 Zero is `EINVAL`, and so is any unknown flag; both
 are rejected before the source is contacted, before transaction
 enlistment and before any mutation. [*inherit.security-info-zero-or-unknown-is-einval]
 
 The rights required are computed from every component named. Reading
-owner, group or the DACL needs `READ_CONTROL`; reading the SACL needs
+owner, group, the DACL or the label needs `READ_CONTROL`; reading the SACL needs
 `ACCESS_SYSTEM_SECURITY`. Setting owner **or group** needs
-`WRITE_OWNER`; setting the DACL needs `WRITE_DAC`; setting the SACL
+`WRITE_OWNER`, as does setting the label; setting the DACL needs `WRITE_DAC`; setting the SACL
 needs `ACCESS_SYSTEM_SECURITY`. A request naming several components
 must hold all the corresponding rights.
 
 A set is a merge, not a replacement. LCS reads only the components
 `security_info` names from the supplied self-relative descriptor and
 preserves the existing ones. [*inherit.set-security-is-a-merge]
+
+`LABEL_SECURITY_INFORMATION` reads only the first effective mandatory-label
+ACE from the SACL, omitting inherit-only labels and every non-label ACE.
+If there is no effective label, the returned subset has no SACL. Reading
+this subset needs `READ_CONTROL`; writing it needs `WRITE_OWNER`. Neither
+operation needs `ACCESS_SYSTEM_SECURITY` or `SeSecurityPrivilege`.
+[*inherit.label-access-and-projection]
+
+A label update removes the existing mandatory-label ACEs and inserts the
+supplied label before the remaining SACL entries. An input descriptor
+with no SACL clears the explicit label. Non-label SACL entries, SACL
+inheritance and protection flags, and all unselected descriptor components
+are preserved, including flags on a null DACL. Clearing the last SACL
+entry clears `SE_SACL_PRESENT` while retaining the other SACL flags.
+[*inherit.label-merge-preserves-other-security]
+
+For a label-only subset, a supplied SACL must contain exactly one
+mandatory-label ACE with an `S-1-16-<level>` SID and without
+`INHERIT_ONLY_ACE`; an empty ACL, an audit ACE, or multiple labels is
+`EINVAL`. `SACL_SECURITY_INFORMATION` and `LABEL_SECURITY_INFORMATION`
+cannot be combined. These input errors are rejected before source contact
+or transaction enlistment. [*inherit.label-input-validation]
+
+An explicit label above the current caller's integrity level requires
+enabled `SeRelabelPrivilege`, checked before source contact or transaction
+enlistment; otherwise the update fails with `EACCES`. Labels at or below
+the caller's level do not require that privilege. The same rule applies
+to an explicit label inside a whole-SACL write: `SeSecurityPrivilege`
+does not substitute for `SeRelabelPrivilege`. Existing fd rights remain
+cached, but this privilege check uses the caller performing the update.
+[*inherit.label-level-constraint]
 
 The result must still have an owner; a
 merge that would leave the descriptor ownerless is `EINVAL`. [*inherit.merge-must-leave-an-owner]
