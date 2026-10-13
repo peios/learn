@@ -8,7 +8,7 @@ related:
   - peios/advanced-peios/constants-and-catalogs/overview
 ---
 
-The kernel ABI is documented in the **Peios Kernel TRM**, in two appendices generated from `uapi/pkm/`:
+The kernel ABI is documented in the **Peios Kernel TRM**, in three appendices generated from `uapi/pkm/`:
 
 | Appendix | Covers |
 |---|---|
@@ -21,6 +21,30 @@ Two more appendices sit alongside them: §3.B lists where the KACS evaluator dep
 ## Names
 
 Those appendices use the names `uapi/pkm/` declares. A reader arriving with the name PCDS uses — which is MS-DTYP's — will find the mapping in §3.A's own divergence table. Impersonation levels, create dispositions, group attribute flags and `SECURITY_INFORMATION` flags all differ between the two vocabularies. See Conventions §6.5 for why neither is being renamed.
+
+## Checking generated appendices
+
+The PKM repository's `tools/gen-kacs-abi.py`, `gen-lcs-abi.py` and
+`gen-ntfe-abi.py` derive these appendices from that checkout's sources.
+`gen-stratafs-constants.py` checks the StrataFS constants appendix in the
+same way. Run a generator with `--check` to detect stale output without
+writing it; omit `--check` to regenerate.
+
+By default, the companion documentation is a sibling `learn/` checkout.
+For a named documentation worktree, select it explicitly:
+
+```sh
+PKM_LEARN_ROOT=/path/to/docs-worktree python3 tools/gen-kacs-abi.py --check
+PKM_LEARN_ROOT=/path/to/docs-worktree git push
+```
+
+All four generators and the PKM pre-push appendix checks use this setting.
+Kernel inputs always come from the checkout containing the generator,
+regardless of its directory name or the command's working directory.
+An invalid explicit documentation path fails; a standalone kernel checkout
+without a sibling `learn/` or an override skips documentation checks.
+Missing or stale appendices in a selected documentation checkout fail
+`--check`.
 
 ## Related
 
