@@ -69,6 +69,18 @@ The final checkpoint in step 7 matters most for the log and metric
 stores, which run `synchronous=NORMAL` and whose durability boundary is
 the checkpoint rather than the commit (§4.1).
 
+## A failed event writer
+
+When an event-shard writer exits, it closes its handoff queue and releases
+the pending control requests. A caller waiting for a final-commit barrier,
+synthetic-event commit or maintenance result then observes failure instead
+of waiting for a reply from a writer that has stopped. These requests are
+not acknowledged as committed. Producers waiting for queue capacity wake
+with a closed-queue error; already admitted handoffs are released once
+their producer publishes or cancels them. Healthy writers retain their
+normal backpressure and commit acknowledgements.
+[*shutdown.a-stopped-event-writer-releases-pending-control-requests]
+
 ## The timeout
 
 Shutdown is bounded by peinit's service stop timeout. If the sequence
