@@ -171,17 +171,17 @@ flight.
 The scan runs in batches of 128 names, with resume, and is triggered
 from five places: mounting, opening a directory, looking up a name
 beginning with the staging prefix, copying up into a directory, and the
-emptiness test of §4.5.4 where it finds a directory empty but saw
-staging entries in it.
+emptiness test of §4.5.4 before it scans the create stratum's participating
+directory, after the caller's traverse/list access has been checked.
 
 The fifth exists because the other four only reach directories somebody
 visits. An orphan in a directory that is never opened, looked up, or
-copied into would otherwise never be removed, and the emptiness test —
-which filters staging entries — would report its parent empty and let
-an `rmdir` proceed that then failed at the provider. Recovering on that
-path costs nothing until someone actually meets the case, and reaches
-directories that a recursive walk of the create stratum at mount would
-have to visit every one of to find.
+copied into would otherwise block `rmdir`: a dead mount's stages are not
+in the current mount's in-flight list and would be counted as ordinary
+entries. Recovery before that scan reaches the affected directory
+without recursively visiting every directory at mount time. It also
+means the create directory is scanned for recovery when its merged
+emptiness is tested, even if it ultimately proves nonempty.
 
 The marker is removed after publication. A failure to remove it is only
 warned about, leaving the marker on the published copy until a later
