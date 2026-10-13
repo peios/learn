@@ -33,7 +33,7 @@ Almost every subcommand operates on a token, and these flags choose which one. W
 | `--self` | Your own token. The default. |
 | `--real` | Your **primary** token specifically, rather than the effective one — relevant when your thread is impersonating. |
 | `--pid PID` | The primary token of process `PID`. |
-| `--tid TID` | The impersonation token of thread `TID` (used with `--pid`). |
+| `--tid TID` | The effective token of thread `TID`: its impersonation token, or the process primary token when not impersonating (used with `--pid`). |
 | `--peer SOCK_FD` | The peer's captured token on a connected socket — see [Peer tokens](~peios/impersonation/peer-tokens). |
 
 Reading another process's token is itself access-controlled: it succeeds only with the right authority over that process.
@@ -74,6 +74,36 @@ Each of these prints one part of a token, for when you want just that piece:
 ### `query`
 
 `token query CLASS` performs a raw read of a single named token-info class and prints the result as JSON — the lowest-level inspection route, for tooling.
+
+### `compare`
+
+`token compare LEFT RIGHT` compares two tokens. Each positional target is a positive PID or `self`. To select a thread, primary self token, or peer token on the right, omit `RIGHT` and use the usual target flags:
+
+```sh
+token compare 1482 1500
+token compare 1482 --pid 1482 --tid 1509
+token compare self --real
+token compare self --peer 7 --json
+```
+
+The table shows two value columns with `=` or `!=` for each user SID, integrity SID, LogonSession ID, group state and privilege state. SIDs include their friendly names where known. Groups are `enabled`, `disabled`, or `deny-only`; privileges are `enabled` or `disabled`. A `-` means the group or privilege is absent from that token. The table includes entries present in either token.
+
+With `--json`, `header` contains `user`, `integrity` and `session_id`; `groups` and `privileges` are arrays. Every compared field has `left`, `right` and a boolean `matches`. Missing group or privilege values are JSON `null`. Group entries also carry a `group` SID/name object, and privilege entries carry `bit` and `name` (null when unknown). Equality uses SID identity and the stated values, independent of friendly-name rendering. Both equal and differing comparisons exit successfully when all queries succeed.
+
+### `threads`
+
+`token threads PID` lists threads in ascending TID order, with an `impersonating` yes/no column and the effective user's SID and friendly name:
+
+```sh
+token threads 1482
+token threads 1482 --json
+```
+
+The command enumerates `/proc/PID/task` and uses the normal access-controlled thread-token query. It reports primary-token threads as `no`, including when several threads have the same user. An impersonating thread remains `yes` even if its impersonation token has the same user as the primary token.
+
+JSON output has `pid`, `complete`, and a `threads` array. A successful row contains `tid`, `impersonating` and `user`. A thread that disappears or cannot be queried retains its row with an `error`, null identity fields, and `complete: false`; the command exits nonzero. Human output shows `?` and the error for that row. Directory-enumeration failures also exit nonzero.
+
+Both commands support the normal `--raw`, `--label` and `--json` output choices. Queries are consecutive observations of a running system, not an atomic snapshot of all token fields or threads.
 
 ## Changing a token
 
