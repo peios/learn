@@ -72,7 +72,9 @@ fragments or the generator change.
 The generator reads kernel fragments from its own checkout and userspace
 fragments from sibling component directories such as `peinit/` and `eventd/`.
 Keep the component fragments present when regenerating the complete index:
-an absent userspace fragment is reported and omitted from the output.
+an absent userspace fragment is reported and omitted from the output. For
+the same reason `--check` skips, naming the missing fragments, unless every
+userspace fragment is present.
 
 Documentation defaults to a sibling `learn/`. For a separate worktree:
 
