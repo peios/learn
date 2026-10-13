@@ -57,8 +57,6 @@ Validation covers, in turn:
 - that the primary group SID is the user SID or a group on the token,
   resolved to `primary_group_index`; [*token.create.validate.primary-group-sid]
 - that `auth_id` references an existing LogonSession; [*token.create.validate.auth-id-exists]
-- that a Primary token carries impersonation level Impersonation or
-  Delegation (see below); [*token.create.validate.primary-level-floor]
 - that `user_deny_only` is true whenever `write_restricted` is; [*token.create.validate.deny-only-with-write-restricted]
 - that `confinement_sid` is present whenever `isolation_boundary` is; [*token.create.validate.isolation-needs-confinement]
 - that the wire format's `elevation_type` field is 0, since the kernel
@@ -73,16 +71,20 @@ duplicate scope GUIDs, no empty or overlong layer names, and no
 duplicate layer names under LCS case-insensitive matching. [*token.create.lcs-extension-limits] Malformed
 LCS credentials fail the whole call closed. [*token.create.lcs-malformed-fails-closed]
 
-The impersonation level on a primary is the ceiling for everything
-derived from it (§3.5.1), so a minter chooses it deliberately: authd
-mints logon tokens at Delegation and lets each client lower the level
-per connection. A primary at Identification or Anonymous — one that
-peers could identify but never act as, or not identify at all — is a
-coherent shape the ratchet permits in principle, but CreateToken
-currently refuses it: every minter used to pass a conventional
-Anonymous that the kernel ignored, and accepting it would turn an
-un-migrated minter into a source of identities nobody can impersonate.
-The restriction is a migration guard, not a property of the model.
+CreateToken accepts all four impersonation levels for a Primary token,
+including Identification and Anonymous, and preserves the chosen level
+and user identity. The level limits what may be derived from the token;
+it does not prevent the process from acting as its own primary identity.
+A peer capture takes the lower of the primary and socket levels:
+Identification conveys identity without authority to act as it, while
+Anonymous conveys the anonymous identity. [*token.create.primary-levels]
+
+A minter chooses this ceiling deliberately (§3.5.1). authd uses Delegation
+for verified evidence and Impersonation for attested evidence; peinit's
+SYSTEM token uses Delegation. Each client may lower its level per
+connection. Older kernels refused Primary tokens below Impersonation as
+a migration guard; callers must not use an ignored or default Anonymous
+field when they intend peers to impersonate the identity.
 
 The kernel does not authenticate the user, look up SIDs in the
 directory, resolve SID-to-UID mappings, or check that the principal
@@ -115,9 +117,11 @@ service manager installs on a child it launches as that client. The
 result keeps the identity and the level, so a primary made from a
 client captured at Impersonation is itself capped at Impersonation and
 so is every process and token descended from it. The kernel refuses a
-Primary result below Impersonation: an Identification-level token
-cannot pass AccessCheck and Anonymous is the singleton identity, so a
-process could never be either. [*token.duplicate.primary-result-floor]
+Primary result below Impersonation: a captured Identification or
+Anonymous identity must not become an acting process through duplication.
+This restriction applies even when the source is itself Primary. It is
+separate from privileged CreateToken, which may deliberately mint a
+primary with a low derivation ceiling. [*token.duplicate.primary-result-floor]
 
 On the new token, `token_id` and `token_guid` are fresh, `modified_id`
 is initialised to the new `token_id`, and `elevation_type` resets to
