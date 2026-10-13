@@ -89,13 +89,20 @@ Binding port 53 depends on the port reservation (§2.1).
 |---|---|---|
 | The registry watch on `Machine\System\Network` | 0 or 1 | From startup; replaced on a watch error (§2.3) |
 | The netd channel | 0 or 1 | While subscribed (§3.1) |
-| Native connections still sending a request | up to 256 | Until the request is complete, or 5 s (§5.1) |
-| Stub TCP connections still sending a query | up to 256 | Until the query is complete, or 10 s (§6.1) |
-| Native and stub TCP connections awaiting an answer | not bounded separately | Until the engine answers |
-| Upstream sockets | one per transaction, up to the in-flight ceiling and its retries | One transaction (§4.7) |
+| Native connections reading or awaiting resolution | up to 256 total | Reading: at most 5 s (§5.1); resolving: until completion or definite departure (§4.1) |
+| Stub TCP connections reading or awaiting resolution | up to 256 total | Reading: at most 10 s (§6.1); resolving: until completion or definite departure (§4.1) |
+| Queued native reply writers | up to 256 | Until written, failed, or the one-second write deadline (§2.5) |
+| Queued stub TCP reply writers | up to 256 | Until written, failed, or the one-second write deadline (§2.5) |
+| Upstream sockets | one per transaction, at most 4 096 including retries | One transaction (§4.7) |
 
-### Connections whose request has been read [*sockets.answered-connections-not-counted]
+### Connections whose request has been read [*sockets.resolving-connections-keep-their-slot]
 
-A connection whose request has been read is no longer counted against
-the 256. It is held until its question is answered, which is bounded by
-the engine's own timeouts (§4.6), not by a count.
+A connection whose request has been read keeps occupying a slot in its
+door's 256-connection allowance until resolution completes or a definite
+hangup/error abandons it. The engine's attempts and timeouts (§4.6) govern
+this phase; the request-delivery deadline no longer applies. A completed
+answer that cannot be written immediately moves to the separate bounded
+reply-writer queue (§2.5).
+
+UDP questions share the one listener socket, but retain at most 256
+waiting origins in total and 16 per source address and port (§6.1).

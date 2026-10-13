@@ -9,11 +9,12 @@ resolvd's reading of them.
 
 ## Accepting connections [*native-framing.pending-connection-cap-closes-silently]
 
-Every waiting connection is accepted when the listener is ready. When
-256 accepted connections are still sending their requests, a newly
-accepted connection is closed at once, with no reply; so is one that
-cannot be made nonblocking. Connections whose requests have been read do
-not count towards the 256 (§2.4).
+At most 64 waiting connections are accepted per event-loop iteration.
+When 256 native connections are either still sending their requests or
+waiting for engine answers, a newly accepted connection is closed at
+once, with no reply; so is one that cannot be made nonblocking. Reading a
+request keeps its slot occupied until resolution completes or the asker
+is abandoned (§4.1). Reply writers use a separate bounded queue (§2.5).
 
 ## Reading the request
 

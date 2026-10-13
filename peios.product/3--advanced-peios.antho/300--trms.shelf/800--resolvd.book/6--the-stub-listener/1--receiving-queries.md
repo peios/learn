@@ -9,14 +9,26 @@ replies are §6.2.
 
 ## UDP
 
-When the UDP socket is readable, every waiting datagram is read. For
-each:
+When the UDP socket is readable, at most 64 datagrams are read per
+event-loop iteration, including malformed or dropped datagrams. For each:
 
 1. A datagram whose source address is not a loopback address — anything
    outside `127.0.0.0/8` — is dropped without a reply. [*stub-receive.udp-non-loopback-source-dropped]
 2. It is checked as a query (below). A refused query gets its error
    reply, or nothing.
-3. An accepted query becomes an engine question (§4.1).
+3. A valid query is admitted if fewer than 16 UDP questions from its
+   source address **and port**, and fewer than 256 UDP questions in total,
+   are waiting for engine answers. Otherwise it gets `SERVFAIL`, with no
+   upstream transaction, and increments both `queries` and `refused`.
+   This admission check precedes synthetic and cache lookup.
+   [*stub-receive.udp-pending-budgets]
+4. An admitted query becomes an engine question (§4.1). Its slot is
+   released when the engine completes it, including timeout completion.
+
+The endpoint is an accounting key, not an authenticated process identity.
+Changing source ports can consume the aggregate UDP allowance but cannot
+consume the separate native or TCP admission allowances. These bounds
+limit retained work; they do not promise fairness between local processes.
 
 ### The UDP read buffer [*stub-receive.udp-read-buffer-4096]
 
@@ -37,10 +49,11 @@ Replies are sent to the source address and port the query came from.
 
 ## TCP
 
-When the TCP listener is readable, every waiting connection is accepted.
+When the TCP listener is readable, at most 64 waiting connections are
+accepted per event-loop iteration.
 A connection is closed at once, without a reply:
 
-- when 256 accepted stub connections are still sending their queries; [*stub-receive.tcp-pending-cap-256]
+- when 256 stub TCP connections are still sending queries or waiting for engine answers; [*stub-receive.tcp-pending-cap-256]
 - when its source is not a loopback address. [*stub-receive.tcp-non-loopback-source-closed]
 
 A connection that cannot be made nonblocking is closed the same way.
@@ -54,7 +67,8 @@ big-endian length and that many bytes.
 - When more than 65 537 bytes are buffered, the connection is closed
   without a reply. [*stub-receive.tcp-buffer-ceiling]
 - When a whole message has arrived, it is checked as a query, and the
-  connection leaves the set of connections still sending.
+  connection leaves the set of connections still sending, but continues
+  to occupy its admission slot while the engine works.
 - A connection carries one query. Anything sent after the first message
   is ignored, and the connection is closed once the answer, or the
   error reply, has been written. [*stub-receive.tcp-one-query-per-connection]
@@ -69,7 +83,9 @@ big-endian length and that many bytes.
 - A connection that has not delivered a whole message ten seconds after
   it was accepted is closed without a reply. [*stub-receive.tcp-ten-second-delivery-bound]
 - Once its query has arrived the ten-second bound no longer applies; the
-  connection is held until the engine answers. [*stub-receive.tcp-bound-ends-once-query-arrives]
+  connection is held until the engine answers or a definite hangup/error
+  abandons its question (§4.1). Reply writers use a separate bounded queue
+  (§2.5). [*stub-receive.tcp-bound-ends-once-query-arrives]
 
 ## Checking a query
 
@@ -120,4 +136,6 @@ containing a literal dot remains a single-label name.
 
 ## Which stub queries are counted [*stub-receive.refused-queries-not-counted]
 
-Every accepted query counts in `queries` (§4.10); refused ones do not.
+Every valid query counts in `queries` (§4.10), including a UDP query
+refused by the pending budgets (which also increments `refused`). Queries
+rejected by syntax, opcode, question count or class checks do not count.

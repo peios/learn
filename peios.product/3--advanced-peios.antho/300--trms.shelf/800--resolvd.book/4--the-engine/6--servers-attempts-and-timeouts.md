@@ -104,13 +104,14 @@ operations a separate deadline.
 ## The in-flight ceiling
 
 - When 4 096 or more transactions are outstanding, a question about to
-  make its first upstream attempt is answered `unavailable` at once, and the
+  allocate an upstream transaction is answered `unavailable` at once, and the
   `refused` counter goes up by one. A question whose scope has no
   servers left is answered `unavailable` before the ceiling is looked
-  at, and is not counted as refused. [*engine-servers.in-flight-ceiling-refuses-first-attempts]
-- Later attempts and TCP retries are not checked against the ceiling.
-  Each is sent only after the transaction before it has ended and been
-  removed, so it takes that transaction's place and the count does not
-  rise above 4 096. [*engine-servers.retries-not-checked-against-ceiling]
+  at, and is not counted as refused. [*engine-servers.in-flight-ceiling-refuses-new-transactions]
+- Every send checks this ceiling, including later attempts and TCP
+  retries. A retry is normally sent after its previous transaction has
+  ended and been removed, so it can reuse that slot even at capacity.
+  Exhausting the three-attempt budget is checked before allocating a
+  transaction, and is not counted as a capacity refusal. [*engine-servers.retries-checked-against-ceiling]
 - Synthetic names and cache hits are answered as usual whatever the
   count. [*engine-servers.local-answers-unaffected-by-ceiling]
