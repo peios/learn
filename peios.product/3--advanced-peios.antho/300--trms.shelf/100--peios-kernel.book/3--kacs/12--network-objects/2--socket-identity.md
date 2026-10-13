@@ -54,6 +54,17 @@ gone. The fields live under their own lock, taken with bottom halves
 disabled, because both the accept path and the engine's read run in
 softirq context.
 
+## Final release
+
+Once the socket's last user is gone, KACS releases the token references
+and security descriptor owned by the socket. This also releases any
+peer, listener, binder and send-cache references; each field owns its
+own reference even when several refer to the same token. Final cleanup
+can run from an RCU callback and must not sleep or acquire the locks
+used to coordinate live socket users. It has exclusive ownership at
+this point. References already taken by a flow or another reader remain
+valid until that reader releases them. [*net.socket.final-release-rcu-safe]
+
 ## Tracing [*net.socket.tracing]
 
 Every stamp emits `kacs:kacs_socket_token` with reason `owner`; the
