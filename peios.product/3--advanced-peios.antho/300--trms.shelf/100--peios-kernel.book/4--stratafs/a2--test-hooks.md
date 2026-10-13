@@ -65,6 +65,9 @@ itself; `hold` persists until cleared.
 | `copy-up-publish` | After the staged object is complete — content, attributes, metadata — and before publication. A hold here is an in-flight copy-up, staged but unpublished (§4.5.2). |
 | `rename-provider` | In `rename`, after the walk-time provider is captured and before the locked re-lookup that verifies it (§4.5.5).                                     |
 | `link-install`    | In `link`, between the lower link succeeding and the outer inode installing. A failure here exercises the rollback of §4.5.6.                         |
+| `supersede-publish` | After the staged source and destination are checked, immediately before the backing rename publishes a supersede replacement. Failure leaves the original provider untouched. |
+| `supersede-remove` | For a supersede across distinct strata, after publication and release of the create-stratum directory lock and write hold, before reacquiring write access to the original provider and re-looking-up its name. Failure exercises cleanup of the published replacement. |
+| `staging-recover` | After a staging marker is validated as an orphan, before acquiring backing-mount write access for its removal. A hold lets a test remount the provider read-only while rename is scanning an overwritten directory; failure leaves the orphan in place. |
 
 `copy-up-begin` and `copy-up-publish` sit on both copy-up shapes — the
 anonymous regular-file stage and the named directory/symlink stage —

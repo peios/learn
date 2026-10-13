@@ -55,8 +55,9 @@ disposition of the native open path: KACS creates a temporary file
 through the mount, opens it, and renames it onto the target, at which
 point stratafs diverts the rename into a dedicated supersede path.
 
-Such a disposition is a removal followed by a creation, and both halves
-apply. Before anything is created, the removal is validated: the
+Such a disposition requires both removal and creation authority. This
+does not prescribe their publication order. Before anything is created,
+the removal is validated: the
 target's provider must accept modification, or the operation fails with
 `EROFS`. Before anything is removed, the replacement is checked for
 reachability: if any stratum strictly above the create stratum, other
@@ -83,11 +84,33 @@ of the model:
    with `EOPNOTSUPP`. [*create.supersede-regular-files-only]
 2. The source must be in the create stratum, and source and destination
    must share a parent. [*create.supersede-source-and-parent-restrictions]
-3. The two halves are **not** atomic: the lower entry is unlinked first
-   and the staged file renamed into place afterwards, so a failure in
-   between leaves the name having lost its old provider. The caller
-   receives the error; the window itself is recorded only in the audit
-   trail. [*create.supersede-is-not-atomic]
+3. Across distinct strata the two halves are **not** atomic. The staged
+   file is renamed into place in the create stratum **before** the old
+   provider is unlinked. Between those operations both backing names
+   exist: ordinary precedence selects the replacement if the create
+   stratum is higher, or retains the original until its removal if it is
+   higher. A failure to publish leaves the original untouched, rather
+   than exposing a still-lower provider. [*create.supersede-is-not-atomic]
+
+   Write access to the original provider is probed before publication,
+   then released while the replacement is published. It is reacquired
+   for removal; a provider remounted read-only in between therefore fails
+   with `EROFS` after publication. The two backing mounts never have
+   simultaneous freeze-protection holds, even when they share a superblock.
+
+   A later removal failure is returned to the caller and recorded as
+   `supersede-removal`. Native-open cleanup then attempts to remove the
+   newly published object, following its final name rather than its old
+   temporary name. If the original still has its name, successful
+   cleanup restores its visibility; concurrent provider changes are
+   preserved. Cleanup is itself a filesystem operation and can fail;
+   in that case both entries can remain, with ordinary precedence
+   deciding which is visible. A crash between publication and removal
+   can likewise leave both. This ordering narrows the destructive
+   failure window; it does not promise a transaction or crash recovery.
+
+   When both objects are in the create stratum, replacement uses one
+   backing-filesystem rename and needs no separate provider unlink.
 
 ## Deferred deletion [*create.deferred-delete-targets-resolved-object]
 

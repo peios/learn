@@ -113,3 +113,11 @@ parent's directory lock through the VFS's create, remove or rename
 helpers. Refusal auditing takes the dentry lock with an atomic
 allocation first and falls back to the rebind lock only if that fails,
 so the two are never nested.
+
+Backing-filesystem freeze protection is held for one mutation stage at a
+time. Supersede releases the create mount's write hold before acquiring
+the original provider's hold for removal. Rename's merged-destination
+emptiness scan, which can recover orphan staging objects, runs without a
+backing write hold retained by rename; recovery acquires its own. An early
+write-access probe preserves the read-only refusal, and the mutation
+reacquires write access before taking its backing directory locks.
