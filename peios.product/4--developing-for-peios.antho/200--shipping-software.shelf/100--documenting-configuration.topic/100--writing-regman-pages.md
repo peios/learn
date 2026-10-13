@@ -13,6 +13,8 @@ The registry stores a value's *type* and *bytes*, but never its *meaning* — it
 
 This page is how you write one. The package that *owns* a set of registry keys is the package that documents them — the only arrangement that stays correct as packages come and go.
 
+Put cross-references to another package's keys in your own page's body, rather than adding a second record for the same key. An exact record is a provider claim, so a redirect record makes a lookup report two providers. For example, netd's `Machine\System\Network` page points readers to `Machine\System\Network\Dns`, whose record belongs to resolvd.
+
 ## Where the documentation lives
 
 `regman` reads a drop-in directory, `/usr/share/regman/`. Each `*.regman` file in it is one **provider**, and the provider's name is the file's stem:
