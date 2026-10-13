@@ -1,6 +1,6 @@
 ---
 title: Stalls and Loops
-description: The failures that come from resolvd's single thread and its channel to netd — a stalled reply reader, a refused subscription, a lost registry watch, and a cache emptied by eviction.
+description: The failures that come from resolvd's single thread and its channel to netd — a stalled reply reader, a refused subscription, a lost registry watch, and cache capacity pressure.
 ---
 
 ## A client that does not read
@@ -33,11 +33,19 @@ status` still shows the fallback servers in use, so a change to
 `FallbackServers` that does not appear there is the sign. A restart
 reads the key again and re-arms the watch.
 
-## The cache empties itself
+## Cache capacity pressure
 
-When the cache is full, storing an answer with a long lifetime evicts
-every entry due to expire at least a second before it (§4.5). On a busy machine this shows
-as `cache_entries` falling sharply after reaching 8 192, followed by a
-burst of `upstream_sent` as the evicted names are asked again. Expired
-entries are counted in `cache_entries` until they are evicted, so the
-count reaching 8 192 does not mean 8 192 live answers.
+At 8 192 entries, storing a new key removes expired entries first. If
+that creates room, it keeps every live entry; otherwise it replaces only
+the entry with the earliest expiry (§4.5). A long answer lifetime does
+not cause a sweep of shorter-lived answers that are still valid.
+
+`cache_entries` can fall sharply when admission removes many expired
+entries. Expiry alone does not remove them, so reaching 8 192 does not
+mean 8 192 live answers. Looking up an expired key also removes it,
+before its replacement arrives.
+
+Older builds, before the cache expiry correction described in §4.5,
+compared the sweep against the incoming answer's expiry. On those builds
+a day-long answer could empty a full cache of live answers, causing a
+burst of upstream requests. That is not the corrected eviction policy.
