@@ -8,8 +8,9 @@ description: What goes wrong with netd, what each failure looks like from outsid
 - **`net status`**: the policy refusal, each interface's verdict and the
   rule that gave it, its warning, its addresses and gateways, and its
   lease's state.
-- **netd's log.** Every line goes to standard error, which peinit forwards
-  to eventd (`evctl 'LOGS FROM netd SINCE 1h ago TAKE 40'`). It is also
+- **netd's log.** Informational lines go to standard output; warnings and
+  errors go to standard error. peinit forwards both to eventd
+  (`evctl 'LOGS FROM netd SINCE 1h ago TAKE 40'`). Each line is also
   mirrored to `/dev/kmsg` at `KERN_INFO`, `KERN_WARNING` or `KERN_ERR`, so it
   reaches the kernel log and, at a permissive console log level, the
   console. If the mirror cannot be opened, netd says so once on standard
@@ -18,7 +19,7 @@ description: What goes wrong with netd, what each failure looks like from outsid
   bursts do not lose lines to the kernel's per-open rate limit (normally
   ten lines in five seconds). All three severities are retained. The
   mirror remains best-effort if opening or writing the device fails;
-  stderr delivery is independent. [*failure.log-mirrored-to-kmsg]
+  stdout/stderr delivery is independent. [*failure.log-mirrored-to-kmsg]
 - **The registry**: `Interfaces\<id>\Status`, `Networks\<id>\Status`,
   `Readiness`.
 
