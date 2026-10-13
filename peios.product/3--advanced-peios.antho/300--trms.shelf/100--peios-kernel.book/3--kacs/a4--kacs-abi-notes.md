@@ -103,9 +103,16 @@ and an absent optional SID or ACL is zero bytes. [*abi-notes.absent-optional-is-
 | `USER_CLAIMS` | Claims array. |
 | `DEVICE_CLAIMS` | Claims array. |
 | `PROJECTED_SUPPLEMENTARY_GIDS` | `[count:u32le]` followed by `count` `u32` GIDs. |
+| `GUID` | 16 raw bytes: the immutable token instance GUID, in the same byte order as KMES headers. |
+
+`KACS_TOKEN_CLASS_GUID` (`0x19`) uses the standard query contract: a size probe reports 16, a non-probe buffer smaller than 16 returns `ERANGE` without a partial payload, and every query requires `TOKEN_QUERY`. `TOKEN_QUERY_SOURCE` alone does not grant it. [*token.query.guid-size-and-right]
+
+Adjusting a token preserves its GUID; duplicating or restricting it creates a distinct token with a new GUID. Reopening the same token returns the same GUID. The `STATISTICS` payload remains 40 bytes and its token id is a LUID, not this GUID. [*token.query.guid-immutable-instance]
+
+Querying the effective token returns the bytes stamped as KMES `effective_token_guid`; querying the real primary token returns `true_token_guid`. Impersonation changes which token the effective open selects, not either token's identity. [*token.query.guid-matches-kmes]
 
 Several token fields have no query class at all: `created_at`,
-`token_guid`, `audit_policy`, `write_restricted`, `user_deny_only`,
+`audit_policy`, `write_restricted`, `user_deny_only`,
 `isolation_boundary`, `confinement_exempt`, the projected UID and GID
 — only the supplementary GIDs are reportable —
 `restricted_device_groups`, and the LCS registry credentials. [*abi-notes.fields-without-query-class]

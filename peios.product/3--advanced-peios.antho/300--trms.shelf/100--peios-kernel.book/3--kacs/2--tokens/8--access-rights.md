@@ -55,7 +55,7 @@ descriptor later can revoke self-query by removing that grant. [*token.rights.se
 | `TOKEN_ASSIGN_PRIMARY` | 0x0001 | Install as a process's primary token. Also requires `SeAssignPrimaryTokenPrivilege` on the caller's token. [*token.rights.assign-primary-needs-privilege] |
 | `TOKEN_DUPLICATE` | 0x0002 | Duplicate the token, or create a restricted copy with FilterToken. |
 | `TOKEN_IMPERSONATE` | 0x0004 | Install as a thread's impersonation token. |
-| `TOKEN_QUERY` | 0x0008 | Read token information: SIDs, groups, privileges, integrity, claims, source, statistics, elevation type. |
+| `TOKEN_QUERY` | 0x0008 | Read token information: SIDs, groups, privileges, integrity, claims, source, statistics, GUID, elevation type. |
 | `TOKEN_ADJUST_PRIVILEGES` | 0x0020 | Enable, disable, or permanently remove privileges. |
 | `TOKEN_ADJUST_GROUPS` | 0x0040 | Enable or disable groups. |
 | `TOKEN_ADJUST_DEFAULT` | 0x0080 | Change the default DACL, owner SID, and primary group SID. |
