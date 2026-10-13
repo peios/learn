@@ -104,6 +104,29 @@ The notification is acknowledged as a `peinit.notify.stopping.reported`
 event (§10.5), which is what makes the suppressed SIGTERM legible
 afterwards rather than looking like one peinit failed to send.
 
+### Observing the waves
+
+Every stop-wave participant receives its own `Shutdown`-sourced `Stop`
+record when the shutdown plan is fixed. Its requested event records the
+intent; its started event records when the participant's wave becomes
+eligible, including when an existing stop is adopted without another
+SIGTERM. The records and their identifiers are visible through the
+ordinary operation queries and `peinit.operation.*` events.
+[*graceful.shutdown-stop-observations-follow-the-waves]
+
+A service that exits cleanly before its wave completes its Pending
+observation without a started event. A crash before the wave fails it.
+For a service already stopping, reaching Inactive completes the
+observation; a stop timeout, global timeout, or forced reboot fails it.
+Post-kill abandonment does not produce a second terminal result for an
+observation already failed at the kill. Starting services retain their
+existing startup-failure records, and Completed services cleared without
+a process do not receive stop observations.
+
+An administrator Stop or Restart already in flight keeps its identity
+and its original timing evidence. The shutdown observation is separate;
+it neither supersedes that record nor queues a second control command.
+
 ### Timing an already-stopping service
 
 peinit does not reset an already-Stopping service's clock, either when
