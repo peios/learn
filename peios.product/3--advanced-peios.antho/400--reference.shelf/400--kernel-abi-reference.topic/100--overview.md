@@ -8,10 +8,11 @@ related:
   - peios/advanced-peios/constants-and-catalogs/overview
 ---
 
-The kernel ABI is documented in the **Peios Kernel TRM**, in three appendices generated from `uapi/pkm/`:
+The kernel ABI is documented in the **Peios Kernel TRM**, in four appendices generated from `uapi/pkm/`:
 
 | Appendix | Covers |
 |---|---|
+| §2.A, KMES ABI Reference | Event syscalls, ring and event header layouts, configuration structures, and trace controls |
 | §3.A, KACS ABI Reference | Syscall numbers, ioctls, structure layouts, token query classes, and the KACS constants |
 | §5.A, LCS ABI Reference | The registry ABI — syscalls, ioctls, structure layouts, and the watch record header offsets |
 | §6.A, NTFE ABI Reference | The packet engine's `/dev/peios-ntfe` ABI — ioctls, the verdict event and status layouts, the counter record, and the seat, layer, verdict and flag constants |
@@ -24,7 +25,7 @@ Those appendices use the names `uapi/pkm/` declares. A reader arriving with the 
 
 ## Checking generated appendices
 
-The PKM repository's `tools/gen-kacs-abi.py`, `gen-lcs-abi.py` and
+The PKM repository's `tools/gen-kmes-abi.py`, `gen-kacs-abi.py`, `gen-lcs-abi.py` and
 `gen-ntfe-abi.py` derive these appendices from that checkout's sources.
 `gen-stratafs-constants.py` checks the StrataFS constants appendix in the
 same way. Run a generator with `--check` to detect stale output without
@@ -38,7 +39,7 @@ PKM_LEARN_ROOT=/path/to/docs-worktree python3 tools/gen-kacs-abi.py --check
 PKM_LEARN_ROOT=/path/to/docs-worktree git push
 ```
 
-All four generators and the PKM pre-push appendix checks use this setting.
+All five generators and the PKM pre-push appendix checks use this setting.
 Kernel inputs always come from the checkout containing the generator,
 regardless of its directory name or the command's working directory.
 An invalid explicit documentation path fails; a standalone kernel checkout
