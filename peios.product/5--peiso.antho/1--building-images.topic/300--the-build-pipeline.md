@@ -53,6 +53,42 @@ peiso also places the autorun script that drains the first two — `reg apply --
 
 A seed the spec names that no package in the root ships is an error, not a warning. So is a seed named in two queues.
 
+### Medium-only packages
+
+peiso also writes `/lcl/policy/medium-only-packages` into the image. Both
+`installerd` and the legacy `peios-install` script use it to remove packages
+selected only for the medium before installing disk-boot. A DWE image carries:
+
+```text
+peios-medium-packages-v1
+root dev.peios.live-boot
+initramfs dev.peios.live-boot-irf
+root dev.peios.dwed
+```
+
+The first line identifies the format. Each remaining nonempty line names one
+of the two supported roots and a package name; duplicate entries, unknown
+roots and unknown formats are errors. Plain images omit the DWE row. peiso
+does not mark arbitrary `[[package]]` additions for removal.
+
+The copied list remains on the target while the package swap is incomplete.
+A retry removes only listed packages still installed, and a package-database
+error stops the operation. Package failures preserve the medium repository's
+configuration so a retry can still install disk-boot.
+
+After the swap succeeds, the installer atomically replaces the list with the
+single newline-terminated line `peios-medium-packages-complete-v1`, then removes
+the medium repository and the checkpoint. A retry of this completed state only
+finishes cleanup: repository removal may already have deleted the configuration
+needed by `repo add`, so it must not repeat trust setup or package installation.
+**Repair boot files** recognises either checkpoint state even if live-boot has
+already been removed. Registry seed queue handling is unchanged.
+
+Media built before this list existed use the historical two boot-package
+removals. Rebuild a DWE medium with the updated peiso and installers to remove
+its DWE package automatically; updating an installer alone cannot infer the
+medium's original package choices.
+
 ## 4. Pack the initramfs
 
 [`mkirf`](~peios/boot-images/mkirf) packs `root/boot/initramfs/` into `root/system/boot/initramfs.cpio.zst` — inside the root, where an installed system keeps its own, so the squashfs carries it. Two subtrees are excluded: `var/state/peipkg` (the initramfs root's package database) and `lcl/conf/peipkg` (its repository configuration). Both belong to the real root.

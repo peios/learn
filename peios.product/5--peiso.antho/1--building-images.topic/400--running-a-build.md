@@ -85,7 +85,7 @@ make boot-installed
 boots the disk with nothing else attached. The initramfs hook is now `disk-boot`'s (`mount-root-disk.sh`); the login prompt on the serial console is the installed system. An installed system moves to the next release with [`upgrade-peios`](~peios/peiso/editions-and-upgrades/upgrading-peios).
 
 > [!NOTE]
-> A system installed by this test from a DWE medium keeps `dwed` (PEI-550). Use the current `installerd` path for ordinary installation from a plain medium; its console and browser surfaces do not require DWE.
+> With a rebuilt medium containing the updated peiso and installers, both installation paths remove the medium-selected `dev.peios.dwed` package from the target. Older media without the medium-only package list keep the historical boot-package-only cleanup. The live-only DWE service seed is discarded in either case. See [medium-only packages](~peios/peiso/building-images/the-build-pipeline#medium-only-packages).
 
 ## Variants
 
