@@ -6,8 +6,9 @@ description: What a joined interface should carry — link, MTU, addresses, rout
 On every reconcile netd computes, for each interface, what it should look
 like. That **desired state** is a link state, an MTU, a set of addresses
 and a set of routes. It is derived from the interface's verdict, its
-profile, and its clients' current state, and from nothing else: netd keeps
-no record of what it applied.
+profile, and its clients' current state. During the first INIT-REBOOT it
+also includes the provisional IPv4 kernel state described in §2.1; netd
+keeps no general record of what it applied.
 
 ## By verdict [*desired.by-verdict]
 
@@ -33,6 +34,8 @@ Otherwise no MTU is desired and the link's MTU is left as it is.
 - every IPv4 entry of `Address.Static`, at its prefix;
 - the lease's address at the lease's prefix (§5.3), when a lease is
   held;
+- while the first INIT-REBOOT is pending, the requested address at its
+  already-installed prefix (§2.1);
 - the link-local address (§5.5) at prefix 16, only when the client has
   fallen back to one **and** no lease is held **and** the profile has no
   static address of either family.
@@ -59,6 +62,10 @@ whatever its subnet (§4.3).
   there is no IPv4 default route.
 - **Classless static routes** (option 121) with a prefix above zero are
   added, each via its gateway, only with `Route.Offered`.
+
+During the first INIT-REBOOT, existing netd-marked IPv4 routes accompany
+the provisional address when `Route.Offered` is enabled. The profile's
+explicit gateway and current metric still take precedence (§2.1).
 
 `Route.Gateway` is used as written; netd does not check that the gateway
 is on a subnet the interface has. A gateway the kernel cannot reach makes

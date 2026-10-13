@@ -87,8 +87,9 @@ description: What goes wrong with netd, what each failure looks like from outsid
 2. `net reconcile` runs a full pass without waiting for an event.
 3. `net renew <interface>` renews a lease without releasing it.
 4. Restarting netd re-derives everything from the registry and the
-   kernel, and restarts every client from an INIT-REBOOT (§2.1). Until a
-   server answers it, a leased interface has neither its leased address
-   nor its default route, and the machine's readiness falls with them,
-   to `link` where nothing else is usable. A cooperative server restores
-   both in one exchange.
+   kernel, and asks for the remembered IPv4 address with INIT-REBOOT (§2.1).
+   The requested address already installed and applicable netd-owned routes
+   stay while that request is pending. A NAK or unanswered revalidation
+   discards this provisional state and starts fresh discovery; an unchanged
+   ACK keeps IPv4 connectivity in place. Offered DNS and IPv6 information
+   still have to be reacquired.

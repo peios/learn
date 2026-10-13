@@ -74,18 +74,24 @@ clients start again, and a client remembers nothing across a restart:
 each one begins with an INIT-REBOOT request for the address its network
 last leased (§5.7), and holds no lease until that request is answered.
 
-The first pass runs before any answer. An interface's desired state
-includes the lease's address, and the routes the lease offers, only
-while its client holds a lease (§4.2), so the first pass of a restarted
-netd removes the leased address and the lease's default route from an
-interface that had them. Readiness falls with them: on an interface
-with no other usable address, the machine's level drops to `link`
-(§8.2). When the server's ACK arrives, the next pass adds the address
-and the default route back, and the level returns to `routed`.
+During an interface's first DHCP start in this process, netd preserves
+its requested IPv4 address at the prefix already installed in the kernel.
+It also preserves its netd-marked IPv4 routes while `Route.Offered` allows
+them; an explicit `Route.Gateway` takes precedence and the current profile's
+metric applies. This provisional state lasts only while INIT-REBOOT is
+pending. An unchanged ACK replaces it with the confirmed lease without
+deleting the address or route, so IPv4 readiness stays in place.
 
-So a restart takes a leased interface's address and default route away
-for one DHCP exchange, on an interface whose policy and offer are
-unchanged as on any other. The same is true of what router
-advertisements gave the interface, which a restarted netd desires only
-once it has heard an advertisement again (§6.1). Static addresses are
-desired from the first pass and stay in place.
+A NAK or two unanswered requests end revalidation and discard the
+provisional state as the client enters fresh discovery (§5.2). Carrier
+loss or a changed profile clears it too. Later client restarts in the same
+process do not adopt kernel state again. A requested address that is not
+already installed is never added merely because it was remembered.
+
+This is not a restored lease: no lease duration, expiry, DNS servers or
+other offered information is inferred from the installed address. Status
+still reports no lease until the ACK. DHCP-provided DNS information and
+IPv6 router-discovery state must be reacquired; this does not promise that
+every aspect of a daemon restart is invisible. IPv6 addresses and routes
+from advertisements remain desired only after discovery hears the routers
+again (§6.1). Static addresses are desired from the first pass and stay.
