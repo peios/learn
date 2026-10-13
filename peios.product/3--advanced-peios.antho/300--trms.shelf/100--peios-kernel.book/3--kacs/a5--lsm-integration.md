@@ -25,7 +25,7 @@ sizes and offsets depend on the build and are not fixed by this manual.
 | LSM size entry | KACS structure | State carried |
 |---|---|---|
 | `lbs_cred` | `pkm_kacs_cred_security` | Token reference, shared `process_state`, projected UID/GID, and the pending descriptor used while overlayfs creates or copies up an inode. |
-| `lbs_task` | `pkm_kacs_task_security` | Shared `process_state`, usermode-helper and impersonation state, deferred privilege-audit work, native-open/create requests, write/metadata decisions, and narrowly scoped StrataFS creation, supersede, cleanup and delete-on-close context. |
+| `lbs_task` | `pkm_kacs_task_security` | Shared `process_state`, usermode-helper and impersonation state, the applied primary-installation epoch and thread-enrollment callback, deferred privilege-audit work, native-open/create requests, write/metadata decisions, and narrowly scoped StrataFS creation, supersede, cleanup and delete-on-close context. |
 | `lbs_sock` | `pkm_kacs_socket_security` | Socket descriptor, conveyed peer/listener identities, token-conveyance cache and impersonation limits, binder identity/reuse decision, and the committed socket-owner identity used by network policy. |
 | `lbs_ipc` | `pkm_kacs_ipc_security` | Refcounted descriptor and lock for a System V message queue, shared-memory segment or semaphore array. |
 | `lbs_file` | `pkm_kacs_file_security` | Cached `granted_access` and `continuous_audit_mask`, copy-up context and phase generation, `managed`, `delete_on_close`, and the referenced token that armed deferred deletion. |
@@ -46,6 +46,9 @@ The task blob reaches process-wide state through its `process_state`
 pointer. The refcounted `pkm_kacs_process_state` contains `process_guid`,
 `pip_type`, `pip_trust`, one `u32 mitigation_bits`, the KMES rate bucket,
 the `process_sd` reference and process-scoped privilege-audit bookkeeping.
+It also holds `primary_lock`, `desired_primary_token` and `primary_epoch`,
+which order primary-token installation across the process's threads
+(§3.2.3).
 PIP identity and the process descriptor are not inline task-blob fields;
 the process mitigations are not nine independent booleans. This shared
 state is separate from the effective token used during impersonation.
