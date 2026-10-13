@@ -13,11 +13,12 @@ description: What goes wrong with netd, what each failure looks like from outsid
   mirrored to `/dev/kmsg` at `KERN_INFO`, `KERN_WARNING` or `KERN_ERR`, so it
   reaches the kernel log and, at a permissive console log level, the
   console. If the mirror cannot be opened, netd says so once on standard
-  error. netd opens `/dev/kmsg` once and writes every line through that
-  one descriptor, and the kernel rate-limits writes per open file (by
-  default ten lines in five seconds). So in a burst, the lines past the
-  limit are missing from the kernel log, while eventd still has every
-  one. [*failure.log-mirrored-to-kmsg]
+  error and tries again on the next line. Each mirrored line opens and
+  closes its own `/dev/kmsg` descriptor, so boot and reconciliation
+  bursts do not lose lines to the kernel's per-open rate limit (normally
+  ten lines in five seconds). All three severities are retained. The
+  mirror remains best-effort if opening or writing the device fails;
+  stderr delivery is independent. [*failure.log-mirrored-to-kmsg]
 - **The registry**: `Interfaces\<id>\Status`, `Networks\<id>\Status`,
   `Readiness`.
 
