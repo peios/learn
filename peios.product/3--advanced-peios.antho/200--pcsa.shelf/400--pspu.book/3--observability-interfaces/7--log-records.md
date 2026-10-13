@@ -99,16 +99,13 @@ descriptors would be a guess presented as data. A producer with real
 severity levels either writes them into the message text, where they are
 text and are searched as text, or emits events, which have types.
 
-The system daemon loggers in netd, resolvd, timed, trustd, pnpd, authd,
-lpsd, atriumd and atrium-server write informational messages to standard
-output and warnings/errors to standard error. This keeps informational
-startup and status messages out of `is_error == true` queries. eventd
-also writes its normal startup/restart announcement to standard output;
-its warnings, failures and requested diagnostic dumps remain on standard
-error. Warnings remain in that query because they are diagnostics on
-standard error; the collector does not infer severity from text. A
-daemon's existing best-effort kernel-log mirror is independent of this
-stream selection.
+A system service SHOULD write informational messages to standard output
+and warnings and errors to standard error. This keeps informational
+startup and status messages out of `is_error == true` queries. Warnings
+stay in them: they are diagnostics on standard error, and the collector
+does not infer severity from text. Peios's own system daemons follow this
+rule. A daemon's best-effort kernel-log mirror, where it has one, is
+independent of the stream a line is written to.
 
 ## `timestamp`
 
