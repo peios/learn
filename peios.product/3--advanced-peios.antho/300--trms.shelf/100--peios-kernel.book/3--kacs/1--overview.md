@@ -16,6 +16,10 @@ privileges (§3.4), impersonation (§3.5), binary signature verification
 in full (§3.8), file enforcement (§3.9), and how Peios identity is
 projected onto the Linux credential model (§3.10).
 
+The kernel-private storage and call-site inventory is in §3.E: the LSM
+security blobs, every registered KACS hook, and the direct metadata
+entry points used by patched file-descriptor operations.
+
 Two bodies of material that KACS owns conceptually live elsewhere in
 the documentation. The binary structures — SIDs, security descriptors,
 ACLs, ACEs, access masks, conditional ACE bytecode — are specified in
