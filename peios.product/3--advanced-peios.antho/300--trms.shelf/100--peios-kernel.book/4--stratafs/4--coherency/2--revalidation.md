@@ -33,9 +33,8 @@ not arise:
 | A stratum's directory removed, renamed away, or renamed over | The next walk finds nothing, or finds the replacement |
 
 The result is strictly stronger than the specification requires, in the
-safe direction. The two internal counters the superblock does carry —
-the inode-number allocator and the staging-name counter — are consulted
-by nothing in this path.
+safe direction. The internal filesystem-domain, fallback-inode and
+staging-name counters do not validate cached resolutions.
 
 ## What it costs [*coherency.revalidate.rcu-walk-refused]
 

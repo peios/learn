@@ -62,10 +62,12 @@ A stratum that disappears and reappears is the same stratum in the same
 stack position, and nothing about the old directory is remembered.
 Resolutions are recomputed against whatever the new directory holds.
 
-One piece of state does survive the gap, though it is not resolution
-memory. The inode-number identity map (§4.4.3) is keyed on the provider
-inode object and pins it for the life of the mount, so if the same
-underlying inode is reached again — because the directory was renamed
-away and back rather than replaced — it receives the same inode number
-it had before. That is exactly what the identity rule requires: equal
-numbers for one provider object, whatever path reached it.
+Provider identity does survive the gap, though it is not resolution
+memory. The derived inode number (§4.4.3) identifies the provider's
+filesystem and inode number. If the same underlying object is reached
+again — because the directory was renamed away and back rather than
+replaced — it receives the same number it had before, without a
+mount-lifetime pin on ordinary provider inodes. Only identities that
+cannot be derived use the pinned fallback map. That is exactly what
+the identity rule requires: equal numbers for one provider object,
+whatever path reached it.

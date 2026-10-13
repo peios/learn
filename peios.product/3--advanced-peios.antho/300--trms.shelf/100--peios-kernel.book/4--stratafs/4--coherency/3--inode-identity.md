@@ -7,59 +7,62 @@ stratafs presents its own inodes, allocated from its own superblock.
 Each stands for a provider object and forwards operations to it; none
 holds file data, directory entries, or a security descriptor.
 
-## Reported identity [*inode.number-allocated-not-derived]
+## Reported identity [*inode.number-derived-from-provider]
 
 The device identifier reported for any object in a mount is the
 stratafs superblock's own anonymous device, not the provider's.
 `getattr` calls the provider's directly and then overrides `dev`, `ino`
 and, for directories, `nlink`; all four inode-operations tables install
-that same `getattr`, so there is no path around it.
+that same `getattr`.
 
-The inode number is **allocated, not derived**. A per-mount monotone
-counter hands out a number for each distinct provider inode the first
-time it is seen, and the pair is recorded in an `xarray` on the
-superblock keyed on the provider inode, holding a reference on it so
-the object cannot be freed and its address reused while the mount
-lives. The counter starts at 1 and is pre-incremented, so the first
-number handed out is 2. The provider's own inode number and device are
-never read for this purpose.
+The inode number is derived from the provider filesystem's reported
+inode number and a small mount-local identifier for its reported device.
+The device identifier distinguishes filesystem domains, not stratum
+positions: a stratum can cross mount points. The reported device also
+distinguishes Btrfs subvolumes, which can share a kernel superblock and
+inode numbers. Two paths to the same provider identity, including hard
+links and bind-mounted aliases, therefore report the same number.
 
-That satisfies the identity requirements — two names compare equal
-exactly when they resolve to one provider object, since the map is
-keyed on the object itself and not on the stratum that reached it, so
-hard links compare equal and one directory reached through two strata
-compares equal too. It does not follow the specification's advice to
-derive the number from the provider's, and it therefore pays the cost
-that advice exists to avoid: the map is never evicted from, and it pins
-every provider object ever reached through the mount until unmount. A
-mount whose strata would not have provoked the fallback pays it anyway.
+Derivation reserves the high bit for allocated fallback numbers. A
+self-delimiting tag in the low bits identifies the filesystem domain;
+the provider inode number occupies the remaining bits. Small provider
+numbers stay small enough to derive again through nested stratafs views.
+Neither the bit layout nor the mount-local domain assignment is a
+persistent identifier or an ABI that callers should decode. Numbers
+may differ between mounts; within a mount, reloading the same provider
+identity after cache eviction produces the same number.
 
-Two mechanical details. The map key is the provider inode's kernel
-address shifted right by three; a collision would be caught by the
-stored back-pointer and turned into an allocation failure rather than a
-false equality, so it fails rather than lying. And the stored number
-and `i_ino` are `unsigned long` while the counter is 64-bit, so on a
-32-bit build the number truncates.
+Only identities that cannot fit, or providers that do not report a
+usable inode number, use the fallback map. It allocates a distinct
+number and holds a reference on the provider inode until unmount to
+prevent address reuse. Repeated encounters with that provider reuse its
+allocation. Synthetic provider-less roots use the same allocated number
+space without a provider reference. Exhaustion returns `EOVERFLOW`
+rather than wrapping, including on 32-bit builds. An attribute lookup
+error is returned to the caller instead of silently assigning a new
+identity.
 
 ### The mount root [*inode.root.follows-live-provider]
 
 The root inode is created once, when the superblock is filled, and the
 root dentry is never replaced — `d_revalidate` returns 1 for it. Its
 provider is nevertheless re-resolved live on every use, and the number
-follows: resolving the root's provider looks the provider inode up in
-the identity map and writes the result to the root inode's number.
+follows: resolving the root's provider derives or looks up its identity
+and writes the result to the root inode's number.
 Mode, owner, timestamps and number are therefore all current.
 
 That the number follows is what keeps §4.4.3's identity rule true at
-the root. The map is keyed by provider inode, so the number the root
+the root. Identity belongs to the provider, so the number the root
 reports is the number every other merged path to that same provider
 reports; without it, a root whose provider is also reachable elsewhere
 would report a different number from that other path — two paths naming
 one object, unequal. [*inode.root.agrees-with-other-paths-to-its-provider] That is the false-inequality direction, the one
 that breaks hard-link detection.
 
-Where no stratum root exists, there is no provider to map and the root
-keeps the bare counter value allocated for it. [*inode.root.bare-counter-without-a-provider]
+Where no stratum root exists at mount time, the root receives a stable
+synthetic number, distinct from derived provider numbers. If a provider
+later appears, the root's number follows that provider.
+[*inode.root.synthetic-without-a-provider]
 
 ## Attributes of merged directories [*inode.merged-dir.attributes-from-provider]
 
@@ -121,16 +124,29 @@ on that inode remains correct for the copy.
 
 At open, the descriptor-private inode is deliberately given the path
 inode's number, so before any copy-up `fstat` and `stat` agree. After
-one they do not: the descriptor keeps the number allocated for the
-pre-copy-up provider, while a fresh resolution of the path allocates a
-number for the copy. Both name the copy; the numbers disagree for as
+one they do not: the descriptor keeps the number assigned to the
+pre-copy-up provider, while a fresh resolution of the path derives or
+allocates a number for the copy. Both name the copy; the numbers disagree for as
 long as that descriptor lives. §4.8 records it.
 
-## Lifetime [*inode.pins-provider-until-unmount]
+## Lifetime [*inode.provider-reclaim-with-live-mount]
 
 A stratafs inode holds a reference on its provider inode for as long as
 it lives, released on eviction. The dentry additionally holds a full
-path reference, and the identity map a third, held until unmount.
+path reference. Ordinary derived identities add no provider reference
+and no per-inode entry to the identity map. Walking a persistent-backed
+view and dropping caches can therefore reclaim the provider inodes while
+the stratafs mount remains live. The per-mount device-domain table stays
+until unmount; its size tracks encountered filesystem domains rather
+than the number of files walked.
+
+The fallback alone adds a provider reference held until unmount. That
+cost applies only to identities that could not be derived.
+
+Renaming a provider out of the view and back, or evicting and reloading
+its cached inode, preserves its derived identity. [*inode.stable-across-cache-reclaim]
+Ordinary inode-number reuse by the provider after deletion remains
+possible, just as it is when accessing that filesystem directly.
 
 Releasing the last reference to a stratafs inode modifies nothing:
 eviction truncates its own empty mapping, clears the inode, drops the
