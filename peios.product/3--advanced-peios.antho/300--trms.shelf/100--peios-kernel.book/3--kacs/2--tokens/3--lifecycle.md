@@ -97,6 +97,18 @@ atomic all-threads-at-once swap: during a brief transition window some
 siblings may still observe the old primary token until they run their
 queued work. [*token.install.siblings-converge-asynchronously] No completion barrier is exposed to the caller.
 
+Successful installations are ordered per process. Siblings converge to the
+latest successful installation in that order; older queued work must not
+restore a superseded token, including when retried after an allocation
+failure. Concurrent callers need not complete their syscalls in installation
+order. Once exec commits its primary token, delayed pre-exec installation
+work cannot replace it. [*token.install.latest-successful-install-wins]
+
+A new thread joins the same convergence rule even if it was not yet visible
+when an installation selected the siblings to update. This does not change
+a process fork's independent copy of the calling thread's primary token.
+[*token.install.clone-enrollment]
+
 If the installed token's user SID differs from the outgoing primary
 token's, the process security descriptor is regenerated from the
 default template for the new token. Otherwise the existing process
