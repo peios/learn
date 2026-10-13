@@ -77,8 +77,8 @@ Two further constants, `REG_VALID_MAPPED_ACCESS_MASK` and
 | `REG_IOC_QUERY_KEY_INFO` | `READ_CONTROL` [*right.query-key-info] |
 | `REG_IOC_DELETE_KEY`, `HIDE_KEY` | `DELETE` [*right.delete-key] |
 | `REG_IOC_NOTIFY` | `KEY_NOTIFY` [*right.notify] |
-| `REG_IOC_GET_SECURITY` | `READ_CONTROL` for owner, group and DACL; `ACCESS_SYSTEM_SECURITY` for the SACL [*right.get-security] |
-| `REG_IOC_SET_SECURITY` | `WRITE_OWNER` for owner **or group**; `WRITE_DAC` for the DACL; `ACCESS_SYSTEM_SECURITY` for the SACL [*right.set-security] |
+| `REG_IOC_GET_SECURITY` | `READ_CONTROL` for owner, group, DACL and label; `ACCESS_SYSTEM_SECURITY` for the SACL [*right.get-security] |
+| `REG_IOC_SET_SECURITY` | `WRITE_OWNER` for owner, group or label; `WRITE_DAC` for the DACL; `ACCESS_SYSTEM_SECURITY` for the SACL; raising a label above the caller additionally requires enabled `SeRelabelPrivilege` [*right.set-security] |
 | `REG_IOC_BACKUP` | `SeBackupPrivilege`, no per-key check |
 | `REG_IOC_RESTORE` | `SeRestorePrivilege`, no per-key check |
 | creating a key | `KEY_CREATE_SUB_KEY` on the parent [*right.create-key] |
