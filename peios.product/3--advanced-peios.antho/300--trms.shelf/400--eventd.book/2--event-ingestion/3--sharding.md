@@ -130,9 +130,14 @@ writer slow → channel fills → drain pauses → ring buffer absorbs
             → KMES overwrites oldest if full → gap detected on resume
 ```
 
-When the writer commits and the channel has room, the drain thread
+When the writer consumes slots and the channel has room, the drain thread
 resumes immediately.
 [*shard.the-drain-thread-resumes-as-soon-as-the-channel-has-room]
+
+Publication wakes a writer waiting on an empty channel; releasing capacity
+wakes producers waiting for room. The change itself supplies the wakeup,
+even when it races with a thread going to sleep. Neither side needs a later
+event or a timeout to notice the available work or capacity.
 
 The channel is a small scheduling handoff, not storage for a complete
 transaction and not a second backlog buffer. A writer can consume and
