@@ -73,6 +73,6 @@ reconcile and a publish. An identical one changes nothing.
 ## Where these go
 
 Advertised and DHCPv6 servers and domains reach name resolution only
-through the profile's `Dns.Offered`, and link-local servers are withheld
-from resolvd (§8.3). They are always part of what a network has shown
+through the profile's `Dns.Offered`, including link-local servers with
+the interface supplied by their DNS scope (§8.3). They are always part of what a network has shown
 for its identity and its record (§7).

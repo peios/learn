@@ -57,8 +57,8 @@ Servers, in this order:
 
 1. the profile's `Dns.Servers`, always;
 2. with `Dns.Offered`: the lease's servers (option 6);
-3. with `Dns.Offered`: the routers' RDNSS servers that are not link-local;
-4. with `Dns.Offered`: the DHCPv6 reply's servers that are not link-local.
+3. with `Dns.Offered`: the routers' RDNSS servers, including link-local IPv6;
+4. with `Dns.Offered`: the DHCPv6 reply's servers, including link-local IPv6.
 
 Domains, in this order:
 
@@ -68,19 +68,15 @@ Domains, in this order:
 3. with `Dns.Offered`: the routers' DNSSL domains;
 4. with `Dns.Offered`: the DHCPv6 reply's domains.
 
-In the `netd` 0.1.8 source snapshot (`23af1f6`), each list has only
-**adjacent** duplicates removed. A server or domain that appears twice
-with something between the two keeps both entries. The [proposed source
-correction](https://github.com/peios/netd/pull/3) removes duplicates across
-each entire list while retaining the first occurrence and the source order
-above; it does not sort the list or change which offered data is admitted.
-Check whether that correction is included in the installed build before
-relying on globally unique lists.
-[*snapshot.adjacent-duplicates-only]
+Each list removes duplicates across the entire list, retaining the first
+occurrence and the source order above. This includes repeated values with
+other values between them.
+[*snapshot.first-occurrence-deduplication]
 
-Link-local IPv6 servers are withheld because a resolver addresses a server
-by IP alone, and a link-local address without its interface goes
-nowhere.
+The containing scope supplies the interface for link-local IPv6 servers.
+resolvd uses its index on UDP and TCP upstream sockets; the address text
+does not need a zone suffix. Deploy this publication change with a resolver
+that supports interface-scoped upstreams (resolvd TRM §4.7).
 
 NTP servers are reported whatever `Dns.Offered` says. Whether to believe
 a lease's time servers is timed's decision, made against its own

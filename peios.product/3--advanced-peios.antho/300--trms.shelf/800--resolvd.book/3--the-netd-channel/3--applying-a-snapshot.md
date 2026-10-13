@@ -26,7 +26,7 @@ Each `DnsScope` in the snapshot becomes one scope, in snapshot order:
 |---|---|
 | `ifid` | The scope key [*netd-snapshot.ifid-is-scope-key] |
 | `name` | The interface name reported in answers and in `status` [*netd-snapshot.name-is-reported-interface] |
-| `servers` | Server addresses, in order. A string that is not an IP address — an address with a zone such as `fe80::1%eth0` included — is dropped. There is no port; servers are asked on port 53. [*netd-snapshot.servers-parsed-malformed-dropped] |
+| `servers` | Server addresses, in order. Malformed addresses are logged and dropped. Link-local IPv6 addresses use the containing interface; an optional `%name` or `%index` must match it (§4.7). There is no port; servers are asked on port 53. [*netd-snapshot.servers-parsed-malformed-dropped] |
 | `domains` | Search domains, in order. A string that does not parse as a name, and the root, are dropped. [*netd-snapshot.domains-parsed-malformed-dropped] |
 | `addresses` | `(address, prefix length)` pairs. A string that is not `address/prefix` is dropped. [*netd-snapshot.addresses-parsed-malformed-dropped] |
 | `default_route`, `exclusive`, `metric`, `level` | Carried as they are |
