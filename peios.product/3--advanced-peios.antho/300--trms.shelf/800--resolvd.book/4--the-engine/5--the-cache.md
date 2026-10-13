@@ -86,11 +86,11 @@ entry's lifetime is capped.
 Storing an entry under a key the cache does not already hold, when it
 already holds 8 192 entries, first evicts:
 
-1. every entry whose expiry is at or before the current time; [*engine-cache.eviction-sweeps-against-new-expiry]
+1. every entry whose expiry is at or before the current time; [*engine-cache.eviction-sweeps-expired-entries]
 2. then, if the cache still holds 8 192 entries, the one entry with the
    earliest expiry — any one of them, when several share it. [*engine-cache.eviction-then-earliest-expiry]
 
-### A long-lived answer preserves other live entries [*engine-cache.long-lived-entry-empties-full-cache]
+### A long-lived answer preserves other live entries [*engine-cache.long-lived-entry-preserves-live-entries]
 
 The sweep compares against the current time, independently of the new
 answer's lifetime. A day-long answer arriving at a full cache of live,
@@ -98,11 +98,8 @@ shorter-lived answers replaces only the entry with the earliest expiry;
 the cache still holds 8 192 entries. If removing expired entries makes
 room, no live entry is evicted.
 
-This is the behavior of the merged [cache expiry correction](https://github.com/peios/resolvd/commit/d8ebdd815c7cea653e7cf01c91a36edb9fb7711b).
 Older builds compared against the incoming answer's expiry and could
-empty a cache of live answers. The historical anchor names in this
-section remain stable for existing references; their wording does not
-describe the corrected policy.
+empty a cache of live answers.
 
 ### Overwriting a held key [*engine-cache.overwrite-evicts-nothing]
 

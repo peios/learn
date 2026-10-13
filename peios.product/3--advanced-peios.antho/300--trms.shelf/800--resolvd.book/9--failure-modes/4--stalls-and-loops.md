@@ -45,7 +45,6 @@ entries. Expiry alone does not remove them, so reaching 8 192 does not
 mean 8 192 live answers. Looking up an expired key also removes it,
 before its replacement arrives.
 
-Older builds, before the cache expiry correction described in §4.5,
-compared the sweep against the incoming answer's expiry. On those builds
-a day-long answer could empty a full cache of live answers, causing a
-burst of upstream requests. That is not the corrected eviction policy.
+Older builds compared the sweep against the incoming answer's expiry
+(§4.5). On those builds a day-long answer could empty a full cache of
+live answers, causing a burst of upstream requests.
