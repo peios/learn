@@ -49,8 +49,8 @@ INSERT INTO path_entries
 VALUES (?, ?, fold(?), ?, 0, ?, ?)
 ```
 
-The target table follows the child key's volatile flag (§5.1).
-[*entry.create-entry-targets-the-store-of-the-child-keys-volatile-flag]
+The target table follows the store containing the child key (§5.1).
+[*entry.create-entry-targets-the-child-keys-store]
 A child GUID in neither store lands in the persistent table.
 [*entry.create-entry-for-an-unknown-child-guid-lands-in-the-persistent-store]
 
@@ -81,9 +81,9 @@ VALUES (?, ?, fold(?), ?, 1, NULL, ?)
 
 `target_type` is 1 and `target_guid` is null.
 [*entry.a-hide-entry-tombstone-has-type-one-and-a-null-target]
-The target table follows the **parent** key's volatile flag, because a
+The target table follows the store containing the **parent** key, because a
 volatile parent's entire subtree is volatile.
-[*entry.hide-entry-targets-the-store-of-the-parent-keys-volatile-flag]
+[*entry.hide-entry-targets-the-parent-keys-store]
 A parent GUID in neither store returns `RSI_NOT_FOUND`.
 [*entry.hide-entry-on-an-unresolvable-parent-returns-not-found]
 
