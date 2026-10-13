@@ -64,8 +64,9 @@ whether an old local account is hiding a directory account, or whether a source
 order change has made a different SID win for a familiar name.
 
 An absent, refusing or unavailable source makes the check inconclusive, not a
-failed logon. The success reply and normal logon audit record precede the check. Checks share the normal
-five-second lookup deadline; there is no extra query on a single-source machine
+failed logon. The success reply and normal logon audit record precede the
+check. All the later sources share one normal five-second lookup deadline;
+there is no extra query on a single-source machine
 or when the owning source is last. If the owning registration has disappeared
 or been replaced during authentication, authd skips the check rather than
 assuming its old position still holds. Absence of a warning therefore does not
