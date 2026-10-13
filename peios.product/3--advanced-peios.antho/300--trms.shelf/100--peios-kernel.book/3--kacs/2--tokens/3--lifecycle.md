@@ -104,6 +104,17 @@ failure. Concurrent callers need not complete their syscalls in installation
 order. Once exec commits its primary token, delayed pre-exec installation
 work cannot replace it. [*token.install.latest-successful-install-wins]
 
+Installation and exec credential preparation are serialised. If a successful
+installation precedes exec, an execing sibling whose queued update has not
+run derives its new primary token from that latest installation, applying
+`NEW_PROCESS_MIN` normally. It does not derive from the sibling's stale
+primary token, and does not replay the raw installed token over the derived
+result afterward. If exec has already begun preparing credentials, a new
+installer waits for exec to release its credential guard; a waiting sibling
+remains killable so exec can finish removing the other threads. A failed
+exec releases the guard without consuming a pending installation.
+[*token.install.serialized-with-exec]
+
 A new thread joins the same convergence rule even if it was not yet visible
 when an installation selected the siblings to update. This does not change
 a process fork's independent copy of the calling thread's primary token.
