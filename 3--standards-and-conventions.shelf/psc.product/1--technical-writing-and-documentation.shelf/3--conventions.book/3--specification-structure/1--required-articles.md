@@ -44,12 +44,12 @@ Terms defined in §5.2 (package, manifest, payload, and repository) are
 used here with the same meaning and are not redefined.
 ```
 
-<!-- lint-disable words -->
+<!-- lint-disable spelling -->
 > [!NOTE]
 > A redefinition is a second definition, and two definitions of one term
 > drift. Delegation costs the reader one click and costs the corpus
 > nothing.
-<!-- lint-enable words -->
+<!-- lint-enable spelling -->
 
 ## Scope names its exclusions
 

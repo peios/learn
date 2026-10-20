@@ -29,14 +29,14 @@ loophole to be exploited: a lowercase "must" in a passage that reads as
 a requirement is an editing defect, because the reader cannot tell
 whether an obligation was intended.
 
-<!-- lint-disable words -->
+<!-- lint-disable spelling -->
 An author writing a requirement MUST use the uppercase form. An author
 writing description SHOULD reach for a verb that is not a keyword at
 all, such as "is," "carries," or "produces," rather than relying on case
 to carry the distinction. Where a description needs a modal, the rule
 in [Core Style](~psc/core-style) applies: "can" for ability, "might" for possibility, and
 never a lowercase "may."
-<!-- lint-enable words -->
+<!-- lint-enable spelling -->
 
 ## Requirements are stated against a role
 

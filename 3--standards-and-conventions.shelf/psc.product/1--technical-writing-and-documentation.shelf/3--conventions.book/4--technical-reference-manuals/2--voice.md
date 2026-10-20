@@ -30,6 +30,7 @@ Write what the component does.
 | The cache MAY be discarded | The cache can be discarded at any time |
 | Callers must hold the lock | Callers hold the lock |
 
+<!-- lint-disable-next-line spelling -->
 The third and fourth rows are the ones that catch people. "May" and
 "must" survive into descriptive prose readily, because an author
 describing something real slips into obligation without noticing,
@@ -41,14 +42,14 @@ Uppercase keywords are trivially caught by searching. Lowercase ones are
 not, and they are far more common: a conversion from specification prose
 typically leaves more than 10.
 
-<!-- lint-disable words -->
+<!-- lint-disable spelling -->
 An author SHOULD search a finished manual for lowercase `must`,
 `should`, `shall`, `may`, and `must not`, and rewrite every instance
 that reads as a requirement. Every `may` is rewritten, because
 [Core Style](~psc/core-style) allows no lowercase "may" in prose. Idiomatic uses of the others
 survive, such as "what the content should be," and the test is whether
 a reader could mistake the sentence for an obligation.
-<!-- lint-enable words -->
+<!-- lint-enable spelling -->
 
 > [!NOTE]
 > A validator that flags documents for lacking normative keywords is

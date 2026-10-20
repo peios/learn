@@ -107,7 +107,7 @@ decide whether they are on the right page.
 - Do: "A security descriptor records who owns an object and who can do what
   to it. Every access check Peios makes reads one, so understanding them
   explains most access-denied errors you will meet."
-  <!-- lint-disable-next-line words -->
+  <!-- lint-disable-next-line spelling -->
 - Don't: "In this article, we will discuss logon sessions."
 
 ## Prior art
