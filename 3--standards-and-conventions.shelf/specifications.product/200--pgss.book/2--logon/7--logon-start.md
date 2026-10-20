@@ -38,7 +38,7 @@ because every peer must understand every value it is *sent*, and
 `logon_type` only ever travels client to authority. The authority is
 therefore the only party that must understand a new one.
 
-**An authority MUST refuse a `logon_type` it does not recognise**, with
+**An authority MUST refuse a `logon_type` it does not recognize**, with
 `MalformedRequest` (§2.10). A message carrying a value the authority
 cannot name is one it could not understand, and it is refused before
 any question of what the peer is permitted arises.
@@ -107,8 +107,8 @@ a session-identifier byte string (16–64 bytes), and a UTF-8 username
 (1–256 bytes, no controls), equal to the Username identifier byte for byte.
 Only the authorized SSH monitor may supply it; see §2.D.
 
-**An unrecognised value is dropped, not refused.** A decoder MUST
-discard a credential type it does not recognise and proceed with the
+**An unrecognized value is dropped, not refused.** A decoder MUST
+discard a credential type it does not recognize and proceed with the
 rest, leaving the intersection of what the client claims and what the
 decoder understands. This is safe here and nowhere else, because the
 field is a statement of capability rather than an instruction: an

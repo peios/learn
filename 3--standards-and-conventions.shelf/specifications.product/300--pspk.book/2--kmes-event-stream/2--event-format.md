@@ -60,7 +60,7 @@ appear in one event.
 
 The event type is an arbitrary UTF-8 string. KMES imposes no
 structure, namespace, or naming convention on it, and applies no case
-folding or normalisation. Consumers MUST compare event types as raw
+folding or normalization. Consumers MUST compare event types as raw
 byte sequences.
 
 ## Origin class
@@ -73,7 +73,7 @@ byte sequences.
 | 3 | LCS |
 | 4 | NTFE |
 
-Values 5–255 are unassigned. A consumer MUST tolerate an unrecognised
+Values 5–255 are unassigned. A consumer MUST tolerate an unrecognized
 origin class rather than rejecting the event, so that a kernel
 subsystem added later does not break it.
 
@@ -96,7 +96,7 @@ event is written to the ring buffer, not when the emitting call began.
 
 Any of the three MAY be the null GUID, meaning the kernel had no
 identity to record — emission before the access control subsystem
-initialised, or from a context with no associated process such as a
+initialized, or from a context with no associated process such as a
 kernel worker thread. A consumer MUST treat a null identity as
 "unattributed" and MUST NOT treat it as a valid GUID value that could
 match a real token or process.

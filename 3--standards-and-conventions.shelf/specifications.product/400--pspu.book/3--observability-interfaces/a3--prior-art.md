@@ -12,7 +12,7 @@ they place on either side. The eventd TRMP §1.4 compares the systems.
 
 The closest relative is journald's native socket: a Unix datagram
 socket, world-writable, accepting a self-describing record from any
-local process, with no acknowledgement and no notification of loss. The
+local process, with no acknowledgment and no notification of loss. The
 agreements are substantive — datagram rather than stream, silent drop
 under pressure, and a forwarder bridging programs that only know
 standard output. The identity model differs: this interface admits only

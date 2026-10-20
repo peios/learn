@@ -1,6 +1,6 @@
 ---
 title: Freshness and Rollback Protection
-description: An index that verifies is not necessarily current — monotonic versions, staleness limits, and the defences against rollback and freeze.
+description: An index that verifies is not necessarily current — monotonic versions, staleness limits, and the defenses against rollback and freeze.
 ---
 
 An index that verifies is not necessarily current. This section defends

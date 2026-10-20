@@ -9,7 +9,7 @@ and adjustable range of the mainline collector. The mainline values are
 or client MUST NOT depend on any of them (§3.29).
 
 The mainline configuration key names are those of eventd, whose
-configuration is catalogued in the eventd TRMP §A.
+configuration is cataloged in the eventd TRMP §A.
 
 ## Ingestion
 

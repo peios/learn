@@ -38,7 +38,7 @@ source".
 
 A client MUST display messages it receives, in order, before the prompts
 in the same request. It MUST NOT interpret them, and MUST NOT vary its
-behaviour on their content.
+behavior on their content.
 
 ### Prompts
 

@@ -30,7 +30,7 @@ whole-connection failure when wrong.
 This is not decoration. Peios protocols share this codec and this header
 layout, and some of them share message bodies. A socket plugged into the
 wrong daemon would otherwise *partially* work, which is far worse than
-failing outright — a subtle misbehaviour several fields in, rather than
+failing outright — a subtle misbehavior several fields in, rather than
 a hard error on byte zero. A protocol reusing this codec MUST take a
 distinct magic.
 
@@ -112,9 +112,9 @@ chapter:
   value it is sent.
 
 The last rule is the one that surprises people. An unknown enumeration
-value cannot be safely ignored: a client that skipped an unrecognised
+value cannot be safely ignored: a client that skipped an unrecognized
 credential type would silently fail to collect something the authority
-required, and an authority that skipped an unrecognised logon type would
+required, and an authority that skipped an unrecognized logon type would
 grant the wrong kind of session.
 
 There are exactly four exceptions, and each is stated where it applies:

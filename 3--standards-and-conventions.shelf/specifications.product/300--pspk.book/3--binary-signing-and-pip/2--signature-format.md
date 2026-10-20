@@ -89,7 +89,7 @@ A verifier MUST determine the storage location as follows.
 4. Otherwise the file is unsigned.
 
 The commitment rule is a security requirement rather than an
-optimisation. Without it, an attacker able to write a malformed ELF
+optimization. Without it, an attacker able to write a malformed ELF
 section could force fallback to whichever location they more easily
 controlled.
 
@@ -122,7 +122,7 @@ This has a direct consequence for how a signer MUST work. The complete
 file layout — including `sh_offset`, `sh_size`, `sh_name` and the
 position of the section header table — MUST be final before the hash
 is computed. The practical sequence is to reserve a 3310-byte
-`.peios.sig` section filled with zeros, finalise the layout, hash the
+`.peios.sig` section filled with zeros, finalize the layout, hash the
 file as it then stands, sign the hash, and write the blob into the
 reserved bytes without touching anything else. Because the reserved
 region is already zero, the file as hashed and the file as shipped

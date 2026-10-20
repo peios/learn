@@ -59,7 +59,7 @@ does not hold:
 - `max_sequence` is not `U64_MAX`, since the kernel MUST be able to
   allocate above it (`EOVERFLOW`).
 
-`max_sequence` initialises the kernel's global sequence counter to at
+`max_sequence` initializes the kernel's global sequence counter to at
 least one above it, so that new writes always outrank anything already
 persisted. A source MUST report it accurately; under-reporting it
 allows a new write to collide with a stored entry.
@@ -199,7 +199,7 @@ A source that negotiated:
   expired or renewal has failed, and MUST treat the transaction as
   aborted from then on;
 - MUST reject new operations on a transaction after its lifetime
-  ceiling, and MUST serialise its rollback with the transaction's other
+  ceiling, and MUST serialize its rollback with the transaction's other
   operations and its commit;
 - MUST report the true outcome of a commit it had already admitted when
   the lease or lifetime ran out, rather than inferring one from the

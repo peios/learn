@@ -26,7 +26,7 @@ boundary is the datagram boundary.
 
 The property that matters more is that a datagram socket **cannot exert
 backpressure**. When the receive queue is full the kernel discards the
-datagram and the sender proceeds. That is the behaviour §3.4 requires,
+datagram and the sender proceeds. That is the behavior §3.4 requires,
 and choosing a stream socket would make it unachievable: a full stream
 buffer blocks the writer, which is precisely the outcome this design
 forbids.

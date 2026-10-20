@@ -47,7 +47,7 @@ principal did not declare it, the authority MUST answer the client
 PGSS §2.23 gives that answer to an authority that does not.
 
 `ENROLLS_CREDENTIALS` and `CHANGES_CREDENTIALS` are independent. A
-source may change passwords and not enrol keys, or the reverse.
+source may change passwords and not enroll keys, or the reverse.
 
 ## The interrogation
 
@@ -60,7 +60,7 @@ credential for this principal — the principal has none, or signs in only
 with the kind being enrolled — MUST refuse with `AccountRestricted`
 before asking anything.
 
-The source decides which credential types it enrols and what material it
+The source decides which credential types it enrolls and what material it
 accepts. It SHOULD check the material before asking for proof, MUST
 check it again when it applies the change, and MUST refuse material it
 will not accept with `CredentialRejected`. A source MUST NOT send

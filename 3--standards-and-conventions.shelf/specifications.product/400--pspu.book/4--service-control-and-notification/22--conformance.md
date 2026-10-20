@@ -20,7 +20,7 @@ frame-level failure and holding it open after a command-level one
 **Identity.** Obtains every client's identity from the kernel once, at
 accept, and uses no UID, GID or asserted identity (§4.6).
 
-**Authorisation.** Checks every command against the appropriate Security
+**Authorization.** Checks every command against the appropriate Security
 Descriptor with the mappings in §4.7, naming the target in each
 check's audit context and giving every default descriptor a SACL that
 audits every refusal, writes no access-denied event of its own, filters
@@ -43,7 +43,7 @@ returns the surviving identifier; measures every operation's lifetime
 from its creation including queue time; and holds a terminal record for
 at least the grace period (§4.11, §4.14).
 
-**Waiting.** Honours the per-command `wait` default, holds a waiting
+**Waiting.** Honors the per-command `wait` default, holds a waiting
 connection open past the idle timeout, and carries a `mode` on every
 reload response (§4.13).
 
@@ -60,7 +60,7 @@ returns descriptors from 3 upward with `LISTEN_FDS`, `LISTEN_FDNAMES`
 and `LISTEN_PID` set; clears the store on a deliberate stop and keeps it
 across a restart the service did not ask for (§4.20).
 
-**Extension.** Ignores unrecognised request and notification fields, and
+**Extension.** Ignores unrecognized request and notification fields, and
 introduces nothing from §4.21's closed list without a negotiated
 version.
 
@@ -68,8 +68,8 @@ version.
 
 Sends one compact JSON object per newline-terminated frame. Treats an
 immediate close with no response as a refusal. Does not parse `message`.
-Accepts `null` for every nullable field, and unrecognised fields
-everywhere it is told to. Treats an unrecognised enumerated value or
+Accepts `null` for every nullable field, and unrecognized fields
+everywhere it is told to. Treats an unrecognized enumerated value or
 error code as an error for that request rather than guessing. Reads
 `state` rather than the presence of `error` to decide whether an
 operation succeeded. Does not infer its own rights from an
@@ -80,9 +80,9 @@ under a different identity.
 
 Reads `NOTIFY_SOCKET` from its environment and hardcodes no path. Sends
 `READY=1` when it can genuinely serve, not when its process exists.
-Sends no recognised key with an undefined value, no newline inside a
+Sends no recognized key with an undefined value, no newline inside a
 `STATUS` value, and no `PROGRESS` outside its three forms. Sends no datagram exceeding the bounds in §4.A. Expects
-no reply, and no acknowledgement that a field was applied. Treats
+no reply, and no acknowledgment that a field was applied. Treats
 `EXTEND_TIMEOUT_USEC` as replacing a deadline rather than adding to one.
 Checks `LISTEN_PID` against its own PID before adopting any descriptor.
 

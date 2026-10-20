@@ -30,7 +30,7 @@ it will hold open, and the time it will wait for a registration,
 independently of any descriptor.
 
 > [!NOTE]
-> An unauthorised peer is refused at the identity check, which is cheap,
+> An unauthorized peer is refused at the identity check, which is cheap,
 > and the connection cap bounds what it can occupy in the meantime. That
 > is the whole of what the descriptor's absence costs.
 

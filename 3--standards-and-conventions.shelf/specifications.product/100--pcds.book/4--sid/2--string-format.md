@@ -24,4 +24,4 @@ Where:
 > Example SIDs: `S-1-5-18` (Local System), `S-1-5-32-544`
 > (BUILTIN\Administrators),
 > `S-1-5-21-3623811015-3361044348-30300820-1013` (a domain user).
-> The meanings of well-known SID values are catalogued in §4.4.
+> The meanings of well-known SID values are cataloged in §4.4.

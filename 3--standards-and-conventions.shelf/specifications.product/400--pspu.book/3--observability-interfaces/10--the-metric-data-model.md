@@ -4,7 +4,7 @@ description: What a metric is on this interface — names, labels, and the count
 ---
 
 A metric is a quantity that varies and is worth watching over time: a
-utilisation, a queue depth, a running total, a distribution of
+utilization, a queue depth, a running total, a distribution of
 latencies. Metrics are dense where events and logs are sparse — many
 measurements of the same thing rather than a record of a thing that
 happened — and the model reflects that.
@@ -112,7 +112,7 @@ means something different for a gauge.
 ### Gauge
 
 A value that may move in either direction. Used for current state: a
-utilisation, an amount in use, a depth, a temperature.
+utilization, an amount in use, a depth, a temperature.
 
 A gauge value MUST be a finite binary64 value, and MAY be negative.
 

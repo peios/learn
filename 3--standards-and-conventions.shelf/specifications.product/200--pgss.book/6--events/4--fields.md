@@ -184,7 +184,7 @@ being defined separately: `count`, `limit`, `length`, `size`, `depth`,
 
 ## Who may define a path
 
-Every path is defined exactly once across the catalogue (§6.10).
+Every path is defined exactly once across the catalog (§6.10).
 
 The generic roots of the table above, and their common fields, are
 defined in the platform fragment. A component defines the subtrees of
@@ -199,7 +199,7 @@ package name below the role:
 and an emitter SHOULD use a defined field wherever one has the meaning
 it needs.
 
-An emitter MUST NOT write a field that the catalogue does not define,
+An emitter MUST NOT write a field that the catalog does not define,
 other than a variant or standard attribute permitted above.
 
 ## Names are access control
@@ -210,4 +210,4 @@ grant on `subject` can cover every identity field beneath it, including
 fields defined later. Because each value has one path, a descriptor that
 denies a value cannot be evaded by writing the value under a second
 name. That is the security reason for the one-definition rule, and why
-the catalogue rejects a duplicate (§6.10).
+the catalog rejects a duplicate (§6.10).

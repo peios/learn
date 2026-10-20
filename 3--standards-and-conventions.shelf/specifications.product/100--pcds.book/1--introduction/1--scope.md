@@ -14,7 +14,7 @@ This document covers:
   and generation requirements
 - LUID — binary format, comparison semantics, and allocation model
 - SID — binary format, string representation, comparison
-  semantics, and the well-known SID catalogue
+  semantics, and the well-known SID catalog
 - SD — the security descriptor structure and its subtypes: ACL and
   ACE formats, access masks, ACE ordering, inheritance, ownership,
   conditional ACEs and their bytecode, claim attributes, and
@@ -43,5 +43,5 @@ What a third party does need is the other half: the structures that
 cross the boundary into that implementation, and the rules for reading
 and writing them. That is this document, and it is specified. Where a
 structure's meaning depends on what KACS does with it, this document
-names the manual article that describes the behaviour rather than
+names the manual article that describes the behavior rather than
 restating it (Conventions §4.7).

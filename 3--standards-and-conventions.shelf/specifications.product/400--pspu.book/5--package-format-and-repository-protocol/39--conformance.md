@@ -51,7 +51,7 @@ A conforming consumer:
 - enforces the decompression bounds of §5.27 continuously, from the
   index-declared sizes;
 - verifies signatures by §5.30, against a trust set scoped to the
-  originating repository, honouring key status before any cryptography;
+  originating repository, honoring key status before any cryptography;
 - rejects a package violating any rule of §5.10 through §5.25 — the
   determinism rules and the payload rules included, on the way in, not
   only on the way out;

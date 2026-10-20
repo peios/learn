@@ -145,7 +145,7 @@ zero, and a client MUST NOT read it.
 
 `values` holds one length-framed value for each bit set in `present`, in
 **ascending bit order**. Each is length-framed so that a client can step
-over a value whose field it does not recognise.
+over a value whose field it does not recognize.
 
 Every bit set in the request is in exactly one of three states:
 
@@ -264,7 +264,7 @@ none that a token would carry, and is not asked.
 > groups is this principal in" is answered by every source cheaply,
 > because it is how memberships are stored. "Who is in this group" needs
 > an index in the other direction, over a set that may be the whole of
-> an organisation — historically the reliable way to make a directory
+> an organization — historically the reliable way to make a directory
 > server fall over from a filesystem listing.
 
 ## One round trip

@@ -6,7 +6,7 @@ description: One compact JSON object per sequenced-packet message, in both direc
 ## Content
 
 Every message in both directions carries exactly one JSON object,
-serialised compactly, as the whole of the record's content. There is
+serialized compactly, as the whole of the record's content. There is
 no terminator: the transport delimits messages, and the manager MUST
 NOT require or emit a trailing newline.
 
@@ -81,7 +81,7 @@ Its absence, a non-string value, or a value that is not a well-formed
 identifier MUST be answered `INVALID_ARGUMENTS`.
 
 A field the command does not use MUST be ignored, not rejected. A
-field the manager does not recognise MUST be ignored (§7.11).
+field the manager does not recognize MUST be ignored (§7.11).
 
 ## Responses
 
@@ -107,7 +107,7 @@ normative; a submitter MUST NOT parse or branch on it.
 
 §4.5's distinction applies. On a sequenced-packet socket a
 frame-level failure is narrower — the transport cannot lose
-synchronisation — so only `REQUEST_TOO_LARGE` and a truncated message
+synchronization — so only `REQUEST_TOO_LARGE` and a truncated message
 close the connection. Every other error is command-level: the manager
 MUST send the error and keep the connection open.
 

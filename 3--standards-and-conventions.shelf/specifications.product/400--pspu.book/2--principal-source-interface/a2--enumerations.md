@@ -90,7 +90,7 @@ A claim's `value_type` and `flags` (§2.13) are PCDS §5.9's, and are not
 restated here.
 
 They are nonetheless **closed** on this interface: a decoder MUST reject
-a value type or a flag bit it does not recognise, rather than carrying
+a value type or a flag bit it does not recognize, rather than carrying
 it through to an authority that will put it on a token. Adding one is
 therefore a breaking change to PSI by the rule above, even though the
 values themselves belong to PCDS.

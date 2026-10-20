@@ -6,7 +6,7 @@ description: One compact JSON object per newline-terminated frame, in both direc
 ## Frames
 
 Every message in both directions is one frame: a single JSON object,
-serialised compactly, followed by one `0x0A` byte. This applies to
+serialized compactly, followed by one `0x0A` byte. This applies to
 requests and to responses alike, and the manager MUST terminate every
 response with a newline.
 

@@ -80,7 +80,7 @@ A request is a MessagePack map:
 A collector MUST send an error response and close the connection if the
 payload is not valid MessagePack, is not a map, omits `query`, gives
 `query` a non-string value, or contains a duplicate top-level key. It
-MUST ignore unrecognised fields that are not duplicates (§3.29).
+MUST ignore unrecognized fields that are not duplicates (§3.29).
 
 Unlike the ingestion channels, nothing here is silent. A query client is
 identified (§3.14), is one of a bounded number, and is asking a

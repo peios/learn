@@ -61,7 +61,7 @@ one, and MUST NOT present one to a different authority or after
 reconnecting.
 
 An authority MUST reject a cursor it did not issue, or one it can no
-longer honour, with `Malformed` (§2.18). It MUST NOT silently restart
+longer honor, with `Malformed` (§2.18). It MUST NOT silently restart
 the enumeration, and MUST NOT answer with an empty page and an empty
 `next`: the first hands the caller a second copy of the beginning under
 the impression it is continuing, and the second reports a truncated walk

@@ -51,7 +51,7 @@ A manifest missing any required field MUST be rejected.
 
 The package format treats `name` as an opaque canonical identifier within the
 §5.3 grammar; it does not derive or authenticate namespace ownership. Peios
-catalogues assign reverse-DNS names whose leading segments identify the
+catalogs assign reverse-DNS names whose leading segments identify the
 upstream namespace and whose final segment is the familiar package name, such
 as `com.amd.amd-ucode`. Peios-originated packages use `org.peios`. Dependency
 and package-operation inputs that identify a concrete package carry the
@@ -65,7 +65,7 @@ Repository signatures and build provenance, rather than the spelling of
 |---|---|---|---|
 | `description` | string | One-line human-readable description. | empty string |
 | `license` | string | SPDX identifier or expression. | empty string |
-| `license_class` | string | Which of the closed set of licence classes (§5.a2) the package's terms fall into: `unknown`, `free`, `firmware` or `proprietary`. | `unknown` |
+| `license_class` | string | Which of the closed set of license classes (§5.a2) the package's terms fall into: `unknown`, `free`, `firmware` or `proprietary`. | `unknown` |
 | `homepage` | string | URL of the upstream project. | empty string |
 | `default_root` | string | The root a *top-level* install of this package lands in when the operator names none (§5.19). | the operator's current root |
 | `special_system_package` | boolean | Declares the package exempt from the §5.14 layout rules at production time (§5.14). | `false` |
@@ -185,8 +185,8 @@ descriptions belong in upstream documentation.
 
 `license`, when present, SHOULD be a valid SPDX expression. A producer
 MAY use another form; this specification does not validate license
-strings. A `LicenseRef-` term names a licence with no SPDX identifier;
-a producer using one SHOULD ship the licence text under
+strings. A `LicenseRef-` term names a license with no SPDX identifier;
+a producer using one SHOULD ship the license text under
 `/usr/share/licenses/<name>/` in the same package.
 
 `license_class`, when present, MUST be one of `unknown`, `free`,
@@ -197,12 +197,12 @@ whenever `license` contains a `LicenseRef-` term, since that is
 precisely the case in which the expression alone cannot say.
 
 > [!NOTE]
-> A licence expression cannot be read by a machine for what an operator
+> A license expression cannot be read by a machine for what an operator
 > actually wants to know — whether the package is free software, a
 > redistributable device firmware blob, or proprietary code — and the
-> `LicenseRef-` escape hatch makes every non-SPDX licence opaque. The
+> `LicenseRef-` escape hatch makes every non-SPDX license opaque. The
 > class carries that one fact so a consumer can answer "what non-free is
-> installed" or apply an image policy without parsing licences.
+> installed" or apply an image policy without parsing licenses.
 > `firmware` is a class of its own rather than a kind of `proprietary`
 > because it is a different bargain: no source, executes on a device
 > rather than the CPU, and needed to use hardware the user owns — the
@@ -240,7 +240,7 @@ The manifest MUST be UTF-8 encoded JSON and MUST end with a single
 newline.
 
 A producer that intends its packages to be byte-reproducible MUST
-serialise the manifest canonically: compact, with no insignificant
+serialize the manifest canonically: compact, with no insignificant
 whitespace, with HTML-escaping of `<`, `>`, and `&` disabled, with
 fields in the declaration order of the schema above, and with every
 optional field either always emitted or never emitted for a given
@@ -249,7 +249,7 @@ producer.
 > [!NOTE]
 > The manifest's bytes are inside the archive that gets hashed and
 > signed, so two semantically identical manifests with different
-> whitespace produce different packages. Pinning the serialisation is
+> whitespace produce different packages. Pinning the serialization is
 > what makes independent reproduction possible at all; leaving it to the
 > producer's discretion means only that producer can ever reproduce its
 > own output.

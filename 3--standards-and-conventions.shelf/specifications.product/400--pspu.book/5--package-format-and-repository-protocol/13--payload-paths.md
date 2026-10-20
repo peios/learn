@@ -34,10 +34,10 @@ interpretation. Such segments are forbidden above; any appearance is a
 format error, not a question of path canonicalisation.
 
 > [!NOTE]
-> The distinction matters. A consumer that normalises `a/../b` to `b`
+> The distinction matters. A consumer that normalizes `a/../b` to `b`
 > and proceeds has accepted a path this specification forbids, and has
 > done so by a rule the producer never agreed to. Rejecting is the only
-> behaviour both sides can predict.
+> behavior both sides can predict.
 
 ## Empty payloads
 

@@ -66,7 +66,7 @@ trying these choices in order and taking the first that is usable:
 4. the machine's choice named `type/*`
    [*applications.defaults.order.machine-pattern]
 
-A choice is **usable** for the file when the catalogue has a usable
+A choice is **usable** for the file when the catalog has a usable
 declaration for the id it names (§5.3, §5.4), and that application is a
 candidate to open the file (§5.6). A choice that is not usable is
 passed over and the next is tried. It is never an error: an application
@@ -91,7 +91,7 @@ it, whatever a choice says.
 > not what overrules them.
 
 A consumer reads the choices when it picks, or remembers them under the
-rule of §5.4 for a remembered catalogue: it MUST notice when either key
+rule of §5.4 for a remembered catalog: it MUST notice when either key
 changes, or MUST say, in its own documentation, how stale a remembered
 choice may be.
 

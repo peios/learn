@@ -26,7 +26,7 @@ invalid and MUST cause the package to be rejected. The array MUST NOT
 contain duplicates. It MAY be empty, or omitted entirely, for a package
 requiring no maintenance operation.
 
-## The recognised set
+## The recognized set
 
 ### `depmod`
 
@@ -63,7 +63,7 @@ under `/usr/share/man/`.
 
 A side effect MUST be idempotent: running it several times in succession
 MUST leave the system in the same state as running it once. The
-recognised set has this property by construction.
+recognized set has this property by construction.
 
 A side effect MUST be safe to invoke non-interactively.
 
@@ -107,7 +107,7 @@ directory.
 ## Ordering
 
 Side effects are invoked in an implementation-defined order. The
-recognised set is chosen so that order between distinct effects is not
+recognized set is chosen so that order between distinct effects is not
 significant, and a consumer MAY invoke them concurrently.
 
 ## Invocation hardening
@@ -151,7 +151,7 @@ re-invocation straightforward.
 
 ## Extension
 
-A future version MAY recognise further identifiers — likely candidates
+A future version MAY recognize further identifiers — likely candidates
 include `update-mime-database`, `update-desktop-database`, and
 `udev-reload`, all excluded here as irrelevant to the scope Peios is
 built for. A conforming implementation of this version MUST reject a
@@ -160,7 +160,7 @@ manifest declaring any identifier outside the set above.
 A future version introducing a new identifier MUST state whether it is
 order-independent with respect to the existing set. An order-dependent
 side effect, if one is ever added, MUST be specified with a normative
-ordering relative to every other recognised effect.
+ordering relative to every other recognized effect.
 
 ## What side effects are not
 
@@ -173,7 +173,7 @@ ordering relative to every other recognised effect.
 - Not a way to apply security descriptors, which are applied at
   file-creation time (§5.20).
 
-A package whose required behaviour cannot be expressed through the
+A package whose required behavior cannot be expressed through the
 manifest is incomplete and cannot be installed through the package
-format alone. That behaviour MUST be supplied by the higher-level
+format alone. That behavior MUST be supplied by the higher-level
 artifact that composes the package.

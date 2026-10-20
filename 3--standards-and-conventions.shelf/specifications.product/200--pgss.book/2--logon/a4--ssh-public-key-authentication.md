@@ -388,7 +388,7 @@ Required regression coverage includes:
 
 The package `dev.peios.openssh` provides the Peios OpenSSH server and ordinary
 SSH command-line tools. Its source repository owns the port and Pekit recipe;
-there are no downstream source patches in the package catalogue.
+there are no downstream source patches in the package catalog.
 
 All SSH logons use RemoteInteractive, including commands without a PTY and
 SFTP. Password authentication requires an actual password; an intentionally

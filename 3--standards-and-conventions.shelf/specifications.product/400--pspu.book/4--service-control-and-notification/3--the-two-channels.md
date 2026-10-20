@@ -14,7 +14,7 @@ deliberate.
 | Direction | Request and response | One-way |
 | Framing | Newline-delimited JSON | `KEY=VALUE` lines |
 | Identity | The peer's token, at connect | The sender's kernel-attested PID |
-| Authorisation | An access check per command | Membership: is the sender this service? |
+| Authorization | An access check per command | Membership: is the sender this service? |
 | Loss | None. A stream, or an error | Possible. A datagram may be dropped |
 | Ordering | Guaranteed within a connection | Not guaranteed |
 

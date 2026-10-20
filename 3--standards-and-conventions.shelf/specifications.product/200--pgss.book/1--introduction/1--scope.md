@@ -15,7 +15,7 @@ Peios. Each standard here is a bar to clear, not a recommendation to
 weigh.
 
 **It belongs to no implementation.** A PGSS standard describes a contract
-between two roles, not the behaviour of a particular program. Mainline
+between two roles, not the behavior of a particular program. Mainline
 ships an implementation of each role; nothing in this document depends on
 that implementation, or describes it.
 

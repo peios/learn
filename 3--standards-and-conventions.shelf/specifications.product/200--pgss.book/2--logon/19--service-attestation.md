@@ -1,6 +1,6 @@
 ---
 title: Service attestation
-description: How a service manager obtains a token for a service it is launching — a request with no credential behind it, and the narrow conditions under which an authority may honour one.
+description: How a service manager obtains a token for a service it is launching — a request with no credential behind it, and the narrow conditions under which an authority may honor one.
 ---
 
 `msg_type` = `0x0020`. Client to authority, on `/run/logon.sock`. A
@@ -43,7 +43,7 @@ rather than cosmetic.
 Accepting a credential-free `LogonStart` creates a path through an
 authority's conversation handling on which **zero credentials
 succeeds**. The only thing then standing between an arbitrary principal
-and a credential-free token is the authorisation check below being
+and a credential-free token is the authorization check below being
 correct — so a defect in that check is a complete authentication bypass
 rather than a defect.
 

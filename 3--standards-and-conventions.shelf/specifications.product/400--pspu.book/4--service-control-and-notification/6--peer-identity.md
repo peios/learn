@@ -18,7 +18,7 @@ has no way to supply one.
 The token reflects the identity the client was **acting under when it
 connected**. A client that is impersonating another principal is
 therefore captured as the principal it is impersonating, not as its own
-service identity — which is the intended behaviour: access decisions
+service identity — which is the intended behavior: access decisions
 reflect the identity a client is actually acting under.
 
 ## When it is captured
@@ -28,7 +28,7 @@ accepted, and MUST use that identity for every command on the
 connection.
 
 A client MUST NOT expect a change of identity mid-connection to affect
-authorisation. A client that needs to act under a different identity
+authorization. A client that needs to act under a different identity
 MUST open a new connection.
 
 > [!NOTE]
@@ -64,6 +64,6 @@ kernel attests.
 
 ## The identity is not a UID
 
-The manager MUST NOT use the peer's UID or GID as an authorisation
+The manager MUST NOT use the peer's UID or GID as an authorization
 input. Identity on a Peios system is a token, and the token is what the
 kernel attests.

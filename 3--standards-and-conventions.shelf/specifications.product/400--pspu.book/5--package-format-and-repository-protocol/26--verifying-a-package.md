@@ -85,13 +85,13 @@ anchored at the relevant permitted top-level destination (§5.14), or
 with equivalent semantics using `O_NOFOLLOW` on every component against
 a carried directory descriptor. A consumer SHOULD additionally apply
 `RESOLVE_BENEATH`, `RESOLVE_NO_XDEV`, and `RESOLVE_NO_MAGICLINKS` as
-defence in depth, and SHOULD commit a staged file with `renameat2`
+defense in depth, and SHOULD commit a staged file with `renameat2`
 against the same pinned parent descriptor rather than a re-walked path
 string.
 
 > [!NOTE]
 > The format's symlink-target rules (§5.17) are the first layer of the
-> defence and this is the second, and neither is sufficient alone. The
+> defense and this is the second, and neither is sufficient alone. The
 > format forbids a symlink whose target resolves outside the managed
 > tree; component-wise resolution ensures that even an in-tree symlink —
 > or one already on the filesystem before this package arrived — cannot

@@ -67,7 +67,7 @@ phases.
 
 The initial result set is the complete distinct set visible at query
 start, after access control and every filter. The collector then holds a
-**seen set** initialised from it. Each newly committed record that
+**seen set** initialized from it. Each newly committed record that
 passes access control and the filters is reduced to its value for the
 field, and emitted only if that value is not already in the seen set
 under the grouping equality of §3.21; emitted values are then added.
@@ -78,7 +78,7 @@ A collector MUST bound the seen set.
 > §3.A gives the mainline value and adjustable range
 > for this bound and every other in this chapter.
 
-If initialising the set or inserting a value would exceed the bound, the
+If initializing the set or inserting a value would exceed the bound, the
 collector MUST terminate the query with an error. It MUST NOT evict:
 "not seen before" is the entire meaning of the output, and a set that
 forgets would re-emit values it had already reported, which is worse
@@ -102,7 +102,7 @@ condition against it. If no sample is active there, the condition is
 false. A false condition filters out the whole batch; a true one leaves
 the batch to be filtered by the remaining predicates as usual.
 
-For an **existence** condition, the collector applies §3.26's centred
+For an **existence** condition, the collector applies §3.26's centered
 window to each candidate record's own timestamp. These are evaluated
 **per record**, not per batch, because a matching record may be near
 some of a batch and not the rest.

@@ -21,7 +21,7 @@ subsystem, not by filesystem-level setuid; a setuid bit is meaningless
 to the access-check path and MUST NOT appear in installed content.
 
 > [!NOTE]
-> The `0777` rule is honest signalling. A `0644` or `0755` mode would
+> The `0777` rule is honest signaling. A `0644` or `0755` mode would
 > imply a permission contract the format does not enforce and the kernel
 > does not consult. Fixing every entry to `0777`, combined with the
 > uid/gid and owner/group rules of §5.11, treats a payload as

@@ -50,8 +50,8 @@ These are distinct and a service author needs the distinction:
 | Situation | Effect on the datagram | Effect on the line |
 |---|---|---|
 | A malformed line | Rejected entirely | — |
-| An **unrecognised key** | Applied normally | Ignored |
-| A recognised key with an **unexpected value** | Applied normally | Ignored |
+| An **unrecognized key** | Applied normally | Ignored |
+| A recognized key with an **unexpected value** | Applied normally | Ignored |
 
 The second is what makes the field set extensible (§4.21): a service
 built against a later revision may send a field an older manager does
@@ -59,7 +59,7 @@ not know, and the older manager applies the rest.
 
 The third is the one that surprises. `READY=0` is not a malformed line
 and does not reject the datagram; `READY` expects the value `1` and
-anything else is silently ignored. A service MUST NOT send a recognised
+anything else is silently ignored. A service MUST NOT send a recognized
 key with a value the field does not define, and MUST NOT expect to be
 told when it does. §4.19 gives each field's accepted values.
 

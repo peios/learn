@@ -8,7 +8,7 @@ The chooser sends at most one answer, and ends after sending it.
 | Line | Meaning |
 |---|---|
 | `{"type":"chosen","path":…}` | The person chose the file at `path`, an absolute path |
-| `{"type":"cancelled"}` | The person chose nothing: they cancelled or closed the dialog |
+| `{"type":"cancelled"}` | The person chose nothing: they canceled or closed the dialog |
 
 ## What a path promises
 

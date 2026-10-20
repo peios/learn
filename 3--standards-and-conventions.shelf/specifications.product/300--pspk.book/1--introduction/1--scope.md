@@ -29,19 +29,19 @@ process is authoritative for the answer.
 For each protocol, this document covers:
 
 - the channel, and how a userspace party attaches to it and is
-  recognised
+  recognized
 - message or artifact framing, encoding, and the rules under which the
   format may be extended
 - the requests the kernel issues, the responses it expects, and their
   ordering
 - what the kernel-side party validates for itself rather than believing
   from a response
-- behaviour on failure, refusal, and disconnection
+- behavior on failure, refusal, and disconnection
 - the conformance requirements for the userspace role
 
 This document does not cover:
 
-- The behaviour and data model of the kernel subsystem itself — defined
+- The behavior and data model of the kernel subsystem itself — defined
   in that subsystem's specification
 - System-call and ioctl surfaces — defined in that subsystem's
   specification

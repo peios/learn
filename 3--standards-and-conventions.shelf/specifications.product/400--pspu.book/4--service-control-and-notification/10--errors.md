@@ -5,7 +5,7 @@ description: The closed set of error codes a manager may emit, the distinctions 
 
 The `code` field of an error response MUST be one of these values. The
 manager MUST NOT emit any other code, and a client MUST treat a code it
-does not recognise as an unrecoverable error for that request (§4.21).
+does not recognize as an unrecoverable error for that request (§4.21).
 
 | Code | Meaning | Closes? |
 |---|---|---|
@@ -42,7 +42,7 @@ and can still be observed with `operation-status`.
 ## Codes are not extensible without a version
 
 The manager MUST NOT introduce a new code without the version negotiation
-in §4.21. A client written against this revision will not recognise one,
-and the only safe thing it can do with an unrecognised code is fail the
+in §4.21. A client written against this revision will not recognize one,
+and the only safe thing it can do with an unrecognized code is fail the
 request — so a new code silently converts a handled condition into an
 unhandled one.

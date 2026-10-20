@@ -38,8 +38,8 @@ the *producer*, and a producer cannot see the encoding that motivates it.
 
 A record with no `labels` field, a record with an empty `labels` map,
 and a record whose labels were all discarded are the same series: the
-one with no labels. There is no distinction between "unlabelled" and
-"labelled with nothing".
+one with no labels. There is no distinction between "unlabeled" and
+"labeled with nothing".
 
 ## Boundaries are identity, not metadata
 
@@ -56,7 +56,7 @@ removes it.
 
 A collector MUST NOT defend against this. It is a producer defect, it is
 indistinguishable at the interface from legitimately introducing a new
-metric, and every defence available — capping series, merging near-equal
+metric, and every defense available — capping series, merging near-equal
 boundary sets, rejecting a second boundary set for a name — would break
 a correct producer to inconvenience an incorrect one.
 

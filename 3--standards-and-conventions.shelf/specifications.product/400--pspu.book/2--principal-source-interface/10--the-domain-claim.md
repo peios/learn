@@ -35,7 +35,7 @@ sub-authorities — `S-1-5-21-A-B-C`, four sub-authorities in total.
 The shape is the entire check, and it is enough. A source cannot claim
 `S-1-5-32` (BUILTIN), or the NT authority's well-known range, or
 `S-1-1-0`, because none of them has that shape. **There is no list of
-forbidden domains to keep in step with the SID catalogue** — the
+forbidden domains to keep in step with the SID catalog** — the
 permitted shape excludes every one of them by construction.
 
 ### 3. Domains MUST be disjoint

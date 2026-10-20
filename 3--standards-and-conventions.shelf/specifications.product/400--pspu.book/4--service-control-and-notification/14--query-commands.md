@@ -114,7 +114,7 @@ carries `granted` for the caller of that command.
 | `type` | string | The kind of warning. §4.B. |
 | `detected_at` | string | When the manager noticed. §4.5. |
 
-A client MUST accept a `type` it does not recognise and MUST NOT discard
+A client MUST accept a `type` it does not recognize and MUST NOT discard
 the warning, since a warning it cannot classify is still one an operator
 should see.
 
@@ -321,7 +321,7 @@ unchanged, with `"status": "ok"`.
 
 This is the one command on this channel that acts on a job, and it
 creates no operation: a job has no state machine to contend for (§7.6).
-There is no `job-signal` here; signalling is the submitter's business,
+There is no `job-signal` here; signaling is the submitter's business,
 on its own channel.
 
 ## Retention
@@ -334,7 +334,7 @@ result can retrieve it. The value a Peios service manager uses is in
 An identifier that never existed, and one whose record has been dropped
 after its grace period, MUST both be answered `UNKNOWN_OPERATION`. A
 client MUST NOT distinguish them, and MUST treat `UNKNOWN_OPERATION`
-after a successful acknowledgement as meaning the result is no longer
+after a successful acknowledgment as meaning the result is no longer
 available rather than that the operation never ran.
 
 Job records are retained under §7.7's rule, and `UNKNOWN_JOB` carries

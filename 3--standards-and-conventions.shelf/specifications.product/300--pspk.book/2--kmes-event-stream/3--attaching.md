@@ -15,7 +15,7 @@ The caller MUST hold SeSecurityPrivilege, enabled; the call fails with
 The CPU index uses the same numbering as the `cpu_id` field in the
 ring buffer metadata and in event headers. Indexes run from 0 to one
 below the *slot count*, and the set of buffers is fixed when KMES
-initialises and does not change while the system runs.
+initializes and does not change while the system runs.
 
 The slot count is not the number of buffers. Slots are indexed by
 logical CPU id, so a slot within the range holds no buffer when that

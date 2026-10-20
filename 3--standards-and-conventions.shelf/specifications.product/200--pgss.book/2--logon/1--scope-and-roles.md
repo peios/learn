@@ -137,7 +137,7 @@ whatever its trust level.
 This chapter governs the conversation and the delivery of its result. It
 does not govern the *contents* of the token that results. What SIDs,
 privileges, and integrity level a principal receives is derivation, and
-derivation is the authority's judgement applied to local policy.
+derivation is the authority's judgment applied to local policy.
 
 A caller that receives a token from this protocol has been told who it
 may act as. It has not been told, and MUST NOT infer, anything further

@@ -9,11 +9,11 @@ under these rules.
 ## What may be added
 
 A **member** of the request or of the answer. A party MUST ignore a
-member it does not recognise, so a requester MAY send one and MUST NOT
+member it does not recognize, so a requester MAY send one and MUST NOT
 depend on its effect.
 
 A **line type** from the chooser that the requester may ignore and
-still conform: a requester MUST ignore a `type` it does not recognise
+still conform: a requester MUST ignore a `type` it does not recognize
 (§9.3), and goes on waiting for the answer.
 
 ## What may not be added without a version

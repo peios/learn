@@ -9,11 +9,11 @@ under these rules.
 ## What may be added
 
 A **member** of the request, or of any line. A party MUST ignore a
-member it does not recognise, so a requester MAY send one and MUST NOT
+member it does not recognize, so a requester MAY send one and MUST NOT
 depend on its effect.
 
 A **line type**, in either direction, that the other party may ignore
-and still conform: a party MUST ignore a `type` it does not recognise
+and still conform: a party MUST ignore a `type` it does not recognize
 (§8.3). A line that needs an answer MUST NOT be added this way, since
 an editor waiting on an answer from a requester that ignored the
 question would wait for ever.

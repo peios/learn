@@ -1,9 +1,9 @@
 ---
-title: Authorising a Command
+title: Authorizing a Command
 description: Every command is checked against a Security Descriptor using the peer's token — the rights, the per-command mapping, and why some results are filtered rather than denied.
 ---
 
-Every command is authorised against a Security Descriptor, using the
+Every command is authorized against a Security Descriptor, using the
 peer's token. There is no command the manager performs without a check,
 and no principal exempt from one.
 
@@ -140,7 +140,7 @@ A service's existence is not protected (above). Where a command names
 an operation the caller may not query, the manager MUST NOT let the
 answer distinguish "this does not exist" from "you may not see this".
 
-For `operation-status` this means the authorisation check MUST be
+For `operation-status` this means the authorization check MUST be
 evaluated before the operation's existence is reported: a caller lacking
 `SERVICE_QUERY_STATUS` on an operation's target MUST receive
 `ACCESS_DENIED` whether or not the identifier names a real operation,

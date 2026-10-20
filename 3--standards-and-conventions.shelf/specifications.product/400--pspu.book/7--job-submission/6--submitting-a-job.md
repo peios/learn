@@ -129,4 +129,4 @@ steps 1–3, is an error response.
 > does not get that, because the job is the manager's child, not the
 > submitter's. Exit status reaches the submitter through the job view,
 > through `wait`, or through the manager's event stream; the pidfd is
-> for polling, signalling, and passing to something else.
+> for polling, signaling, and passing to something else.

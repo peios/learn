@@ -93,7 +93,7 @@ of the authority section's SOA record TTL and its MINIMUM field (RFC 2308
 §5), capped lower. [*nri-resolution.negative-ttl-soa-minimum-capped] `unavailable`
 is never cached. A hit reports TTLs reduced by the time spent in cache. [*nri-resolution.cache-hit-ttl-reduced]
 
-## Upstream behaviour
+## Upstream behavior
 
 A resolver MUST send each query from a fresh source port, [*nri-resolution.fresh-source-port] MUST use a
 random message identifier, [*nri-resolution.random-message-id] and MUST randomise the case of the question

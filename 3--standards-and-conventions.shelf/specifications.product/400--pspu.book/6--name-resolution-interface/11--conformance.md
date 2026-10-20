@@ -39,7 +39,7 @@ chapter. This section collects them by role.
 
 10. Route every question to exactly one scope, in the order of §6.7;
     never fan out.
-11. Honour an exclusive scope absolutely while it is up (§6.7).
+11. Honor an exclusive scope absolutely while it is up (§6.7).
 12. Expand single labels with applicable domains only; never send one
     bare; never expand a multi-label name; no `ndots` (§6.7).
 13. Answer the synthetic names of §6.7 before any network; never

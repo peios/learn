@@ -36,7 +36,7 @@ Delivery is not guaranteed. A datagram MAY be dropped, by the kernel
 under load or by the manager. Every field in §4.19 is therefore either
 idempotent or a statement of a current condition, and a service that
 needs an effect to have taken hold sends the field again rather than
-waiting for an acknowledgement that does not exist.
+waiting for an acknowledgment that does not exist.
 
 The manager MUST NOT let this channel exert backpressure on a service.
 A service MUST NOT be able to block by sending, and the manager MUST NOT

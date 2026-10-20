@@ -5,7 +5,7 @@ description: The closed set of error codes the jobs channel may emit — §4.10'
 
 The `code` field of an error response MUST be one of these values. The
 manager MUST NOT emit any other code on this channel, and a submitter
-MUST treat a code it does not recognise as an unrecoverable error for
+MUST treat a code it does not recognize as an unrecoverable error for
 that request (§7.11).
 
 | Code | Meaning | Closes? |
@@ -54,5 +54,5 @@ manage has a legitimate reason to ask.
 ## Codes are not extensible without a version
 
 The manager MUST NOT introduce a new code without the negotiation in
-§4.21, for the reason §4.10 gives: an unrecognised code silently turns
+§4.21, for the reason §4.10 gives: an unrecognized code silently turns
 a handled condition into an unhandled one.

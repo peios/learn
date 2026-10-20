@@ -3,7 +3,7 @@ title: Managing a Job
 description: The four commands a submitter issues about a job — status, wait, stop, signal — the Security Descriptor every job carries, the rights on it, and who holds them by default.
 ---
 
-Four commands act on an existing job. Every one is authorised against
+Four commands act on an existing job. Every one is authorized against
 the job's own Security Descriptor, using the connection's token, with
 the rights and mapping below. There is no command the manager performs
 on a job without a check, and no principal exempt from one — the
@@ -111,7 +111,7 @@ Sends one signal to the job's main process, and nothing else. Requires
 `signal` MUST be an integer naming a signal the platform defines, or
 the request is `INVALID_ARGUMENTS`. The manager MUST deliver it to
 the process through the handle it obtained at fork, so that a recycled
-PID can never be signalled by mistake, and MUST answer with the job
+PID can never be signaled by mistake, and MUST answer with the job
 view.
 
 A `signal` on a job that is not `running` MUST be answered

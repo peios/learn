@@ -28,7 +28,7 @@ a message from a process that was separately identified.
 **RSI's shape**, specified in PSPK. A long-lived connection, sources
 that dial in and register, multiplexed requests tagged with an
 identifier, and the authority tearing down a connection it cannot parse.
-PSI is recognisably the same family, and deliberately so — an
+PSI is recognizably the same family, and deliberately so — an
 implementer who has written a registry source will find little
 surprising here.
 

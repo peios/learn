@@ -10,7 +10,7 @@ lost.**
 ## The obligation
 
 A collector MUST NOT exert backpressure on a producer. A producer MUST
-NOT stall, block, retry or otherwise change its behaviour because a
+NOT stall, block, retry or otherwise change its behavior because a
 collector is slow, busy, or absent.
 
 The consequence is accepted openly. When a collector cannot drain an
@@ -51,7 +51,7 @@ Ingestion input is untrusted even though its admission is authenticated
 counting it in a way a client can observe, or by emitting a diagnostic
 event — would hand an admitted process an amplification primitive: a
 cheap malformed datagram producing an expensive durable record. Silence
-is the defence. In-memory diagnostic counters and rate-limited standard
+is the defense. In-memory diagnostic counters and rate-limited standard
 error output are permitted because they do not grow with durable input.
 
 The rule binds only on responses to *input*. A collector MAY record its

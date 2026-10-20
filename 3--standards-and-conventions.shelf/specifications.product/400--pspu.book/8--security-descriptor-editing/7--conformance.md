@@ -30,7 +30,7 @@ link followed, past an item it cannot change. Stops after the item in
 hand on `stop` or end-of-file, and answers `applied` with how many were
 done, which could not be and why, and whether it was stopped (§8.5).
 
-**Lines.** Ignores a line type and a member it does not recognise
+**Lines.** Ignores a line type and a member it does not recognize
 (§8.3). Infers nothing from the editor's exit status or standard error
 (§8.3).
 

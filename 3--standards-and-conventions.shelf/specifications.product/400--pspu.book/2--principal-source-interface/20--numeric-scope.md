@@ -82,7 +82,7 @@ band, and MUST ignore whatever `unix_id` a source sent alongside it.
 
 A source asserting `BUILTIN\Administrators` is stating a membership. It
 is not claiming authority over what that group projects to, and
-honouring a relative identifier there would place a well-known group
+honoring a relative identifier there would place a well-known group
 *inside that source's range* — where a second source could number
 something else identically.
 

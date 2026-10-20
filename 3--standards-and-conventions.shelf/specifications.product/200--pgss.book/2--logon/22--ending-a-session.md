@@ -196,7 +196,7 @@ and §2.1's prohibition stands.
 > process by `pidfd_open` and reads its primary token through
 > `kacs_open_process_token` on that pidfd, so the signal it later sends
 > by `pidfd_send_signal` reaches the process whose token was read. It
-> sends `SIGTERM`, waits up to 5 seconds for everything signalled to
+> sends `SIGTERM`, waits up to 5 seconds for everything signaled to
 > exit, sends `SIGKILL` to what is left, waits up to 1 second, and walks
 > again — at most three rounds, so at most about 18 seconds.
 
@@ -211,7 +211,7 @@ message of `SessionEnd`; nothing follows it.
 | `remaining` | `u32` | — |
 
 `ended` is the number of processes of the session the authority
-signalled that its last look no longer found.
+signaled that its last look no longer found.
 
 `remaining` is the number of processes its last look did find still
 holding the session, plus those it could not examine. Not zero means the

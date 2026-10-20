@@ -18,7 +18,7 @@ no mode and no negotiation.
 | `timestamp` | integer | no | When the line was produced, in the timestamp domain (§3.5). Absent means the collector uses its own clock at receipt. |
 | `job_id` | binary, 16 bytes | no | A GUID in PCDS binary layout correlating this line to one execution of one program. |
 
-A collector MUST ignore fields it does not recognise (§3.29).
+A collector MUST ignore fields it does not recognize (§3.29).
 
 ## `origin`
 
@@ -76,7 +76,7 @@ checks and jobs answer to the rule written against the service — and a
 producer cannot reach a rule of its own by inventing a second component.
 
 A collector MUST count discarded origins and MUST make that count
-observable to an operator. An unrecognised origin means a producer's
+observable to an operator. An unrecognized origin means a producer's
 vocabulary and a collector's have drifted apart, and every line that
 producer sends is being dropped; a silent discard makes the most
 complete kind of log loss the least visible one.

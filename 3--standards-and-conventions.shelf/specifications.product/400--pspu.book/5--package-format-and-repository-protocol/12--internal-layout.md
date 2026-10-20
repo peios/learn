@@ -47,7 +47,7 @@ follows `.peipkg/signature`.
 ## Optional metadata entries
 
 A package MAY carry additional entries under `.peipkg/`. The set this
-specification recognises is fixed at the three above; an unrecognised
+specification recognizes is fixed at the three above; an unrecognized
 entry under `.peipkg/` MUST be ignored on parse and MUST NOT prevent
 installation.
 
@@ -78,6 +78,6 @@ vendor-specific type.
 > Hardlinks are excluded because they share an inode with their target,
 > which would let a package install a payload entry aliasing an existing
 > system file and so gain shared access to it. Kernel hardlink-creation
-> permissions provide some defence, but excluding the entry type at the
+> permissions provide some defense, but excluding the entry type at the
 > format level is simpler and removes the class entirely. Device, FIFO,
 > and contiguous entries have no use in a package payload.

@@ -26,7 +26,7 @@ cancellation of a streaming one.
 > the shape of the work rather than a difference in taste: a lookup is
 > small, uniform and answered in one message, so correlating many on one
 > connection saves real cost. A query may run for thirty seconds, may
-> stream indefinitely, and may be cancelled — and every one of those is
+> stream indefinitely, and may be canceled — and every one of those is
 > expressed by the connection itself, with no correlation identifier and
 > no cancellation message to specify.
 

@@ -13,8 +13,8 @@ version behaves correctly in their presence:
   consumer as far as the keys it knows go. A new key MUST be optional,
   and its absence MUST mean what this version's consumers do.
 - A new kind of consumer. A provider has nothing to do for it.
-- A new declaration in the catalogue, and a new provider.
-- A second place for declarations, consulted after the catalogue, such
+- A new declaration in the catalog, and a new provider.
+- A second place for declarations, consulted after the catalog, such
   as a person's own. A consumer built to this version does not see it,
   and shows the system's applications where a newer one would show
   more.
@@ -24,7 +24,7 @@ version behaves correctly in their presence:
 
 ## Changes requiring a new version
 
-- A change to the catalogue's directory, or a subdirectory a consumer
+- A change to the catalog's directory, or a subdirectory a consumer
   is meant to look in (§5.4). A consumer built to this version does not
   find what is there.
 - A new file format or extension for a declaration (§5.3).

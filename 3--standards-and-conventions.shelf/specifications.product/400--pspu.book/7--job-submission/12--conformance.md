@@ -33,7 +33,7 @@ attaching the process handle when the job is running (§7.6).
 
 **The job view.** Reports every job in the one shape of §7.7, with
 every inapplicable field present and null, the state-dependent
-population rules honoured, and the cause set only where the manager
+population rules honored, and the cause set only where the manager
 decided the outcome. Holds a terminal record for the grace period and
 answers a dropped or never-existent identifier `UNKNOWN_JOB` alike.
 
@@ -52,7 +52,7 @@ non-blocking sink, dropping for the sink only, counting and reporting
 the drops, and closing the sink when the job ends (§7.9).
 
 **Errors and extension.** Emits only the codes in §7.10, ignores
-unrecognised request fields, and adds nothing from §7.11's closed
+unrecognized request fields, and adds nothing from §7.11's closed
 list — and never an identity or policy field — without a negotiated
 version.
 
@@ -66,8 +66,8 @@ JSON object per record. Supplies every `LISTEN_FDNAMES` name it
 attaches a descriptor for, and none containing `:`. Assumes the
 manager owns every descriptor it attached. Treats an immediate close
 with no response as a refusal. Does not parse `message`. Accepts null
-for every nullable field and unrecognised fields in the job view.
-Treats an unrecognised state, cause, unit or error code as an error
+for every nullable field and unrecognized fields in the job view.
+Treats an unrecognized state, cause, unit or error code as an error
 for that request rather than guessing. Reads `state` rather than
 `cause` to decide whether a job succeeded. Uses `stop` to end a job
 and `signal` only to signal it. Does not depend on a job's record

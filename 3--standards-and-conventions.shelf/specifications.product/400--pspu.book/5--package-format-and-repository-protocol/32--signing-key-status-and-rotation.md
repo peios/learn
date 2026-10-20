@@ -38,7 +38,7 @@ is for routine rotation only, and the two MUST NOT be conflated.
 
 A revoked entry MUST be retained in the descriptor for at least one year
 after the revocation. Removing it prematurely would hide the public
-acknowledgement of compromise from consumers with stale caches.
+acknowledgment of compromise from consumers with stale caches.
 
 A repository MUST continue to serve the public key file of a revoked key
 for as long as its entry is retained, so that a consumer fetching the
@@ -46,7 +46,7 @@ descriptor can resolve every key it declares.
 
 > [!NOTE]
 > Keeping a revoked key in the descriptor is useful even though its
-> signatures are rejected regardless: it is a public acknowledgement a
+> signatures are rejected regardless: it is a public acknowledgment a
 > consumer can audit, and it means a consumer encountering a signature
 > from that key gets "this key was revoked" rather than a generic "key
 > not in trust set".
@@ -70,7 +70,7 @@ remain acceptable.
 The length of the transition period is operational policy and is not
 specified here. Its purpose is to give consumers time to fetch the
 updated descriptor and learn the new key before old signatures stop
-being honoured.
+being honored.
 
 ## The offline emergency key
 
@@ -100,7 +100,7 @@ consumers who do not must perform an out-of-band trust-anchor refresh
 ## Compromise
 
 A key SHOULD be considered compromised if its private material may have
-been obtained by an unauthorised party.
+been obtained by an unauthorized party.
 
 A compromised key MUST be marked `revoked` in the descriptor immediately
 on discovery. Packages signed with it SHOULD be re-signed with a fresh

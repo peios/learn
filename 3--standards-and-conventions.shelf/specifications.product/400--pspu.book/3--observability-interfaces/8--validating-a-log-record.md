@@ -44,7 +44,7 @@ A record map carrying the same top-level key twice MUST be discarded.
 A collector MUST NOT resolve the duplicate by taking the first or the
 last. MessagePack decoders differ on which they keep, and the fields
 here are entirely producer-controlled, so a rule that depended on
-decoder behaviour would let a producer choose which of two `origin`
+decoder behavior would let a producer choose which of two `origin`
 values a given collector saw. Discarding is the only answer that is the
 same everywhere.
 

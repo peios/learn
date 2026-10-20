@@ -27,7 +27,7 @@ KACS v0.20 supports these claim value types:
 | `UINT64` | `0x0002` | Unsigned 64-bit integer. |
 | `STRING` | `0x0003` | UTF-16LE string. |
 | `SID` | `0x0005` | Binary SID. |
-| `BOOLEAN` | `0x0006` | Stored as `u64`; normalised to true/false at resolution time. |
+| `BOOLEAN` | `0x0006` | Stored as `u64`; normalized to true/false at resolution time. |
 | `OCTET` | `0x0010` | Byte array. |
 
 `FQBN` (`0x0004`) is reserved and not supported in KACS v0.20. Any unsupported
@@ -67,7 +67,7 @@ to an 8-byte scalar:
 
 - `INT64`: signed 64-bit integer
 - `UINT64`: unsigned 64-bit integer
-- `BOOLEAN`: unsigned 64-bit integer, normalised at resolution time:
+- `BOOLEAN`: unsigned 64-bit integer, normalized at resolution time:
   - `0` = false
   - any non-zero value = true
 
@@ -130,5 +130,5 @@ Rules:
   - malformed token claim buffer -> invalid token spec
   - malformed `local_claims` buffer -> invalid AccessCheck input
 
-`ValueCount = 0` is valid. Empty attributes normalise to absent at resolution
+`ValueCount = 0` is valid. Empty attributes normalize to absent at resolution
 time, as defined in §5.8.

@@ -1,9 +1,9 @@
 ---
-title: The Catalogue
+title: The Catalog
 description: Where event and field definitions live — fragments in /usr/share/evman/ — the fragment format and its three record kinds, the platform fragment that holds the generic roots, and the rules every fragment must pass.
 ---
 
-The catalogue is the single source of every event type and field
+The catalog is the single source of every event type and field
 definition. Everything else that lists them — reference documentation,
 a viewer's field picker, a policy editor — is generated from it or
 checked against it.
@@ -19,7 +19,7 @@ The **platform fragment**, `/usr/share/evman/kernel.evman`, defines the
 generic roots of §6.4 and their common fields. A conforming system has
 it.
 
-A consumer that reads the catalogue reads every `.evman` file in
+A consumer that reads the catalog reads every `.evman` file in
 `/usr/share/evman/`, and no subdirectory.
 
 ## Format
@@ -93,7 +93,7 @@ field: outcome.reason           when outcome.success == false
 
 ## Rules
 
-Every fragment MUST pass these rules, checked across the whole catalogue:
+Every fragment MUST pass these rules, checked across the whole catalog:
 
 1. Every path a `field:` or `include:` line names is defined.
 2. No path is defined by two fragments, and no path is defined twice in
@@ -114,16 +114,16 @@ Every fragment MUST pass these rules, checked across the whole catalogue:
 9. An event type that carries a `uint.mask` field carries `object.kind`
    (§6.5).
 
-A tool that reads the catalogue SHOULD report every rule a fragment
-breaks. A consumer that acts on the catalogue — one that decides access,
+A tool that reads the catalog SHOULD report every rule a fragment
+breaks. A consumer that acts on the catalog — one that decides access,
 builds a field tree for a descriptor, or validates payloads against it —
 MUST NOT treat a fragment that breaks rule 1, 2 or 3 as defining
-anything. A tool that only displays the catalogue MAY show such a
+anything. A tool that only displays the catalog MAY show such a
 fragment's records, provided it warns that the fragment breaks those
 rules.
 
 > [!NOTE]
 > Rule 2 is what stops one value acquiring three spellings again. Before
-> the catalogue existed nothing could have caught it, and the result was
+> the catalog existed nothing could have caught it, and the result was
 > a field that a descriptor could deny under one name and leak under
 > another (§6.4).

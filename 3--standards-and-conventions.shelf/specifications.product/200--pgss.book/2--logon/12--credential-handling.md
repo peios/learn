@@ -10,7 +10,7 @@ the wire (§2.11) is only defensible if its lifetime is short.
 
 An implementation MUST hold credential material in memory that is
 **erased before it is released**, and the erasure MUST NOT be removable
-by an optimising compiler.
+by an optimizing compiler.
 
 The obligation extends to **the encoded message**, not only to the
 credential field. A `CredentialResponse` holds the password just as much
@@ -36,7 +36,7 @@ Reserving the encoded size before writing avoids the problem entirely.
 It guarantees that *these* buffers are erased before their memory is
 reused. It cannot guarantee anything about copies made elsewhere — a
 string the caller parsed a credential out of, a register or stack slot
-the optimiser chose, a terminal's own input buffer. Those belong to
+the optimizer chose, a terminal's own input buffer. Those belong to
 whoever made them.
 
 Nor does it defend against a hostile kernel, a core dump, or swap. Those
@@ -51,7 +51,7 @@ record, an error message, or a debugging aid.
 A type carrying credential material SHOULD render, under whatever debug
 formatting its language provides, as a redaction rather than as its
 contents. A stray diagnostic print is the most common way material
-escapes a process that was otherwise careful, and the defence is to make
+escapes a process that was otherwise careful, and the defense is to make
 the careless thing produce nothing useful.
 
 ## Collection

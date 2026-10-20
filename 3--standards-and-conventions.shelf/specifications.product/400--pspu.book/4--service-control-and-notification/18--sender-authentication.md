@@ -56,7 +56,7 @@ this channel.
 
 ## What the manager MUST NOT use
 
-The manager MUST NOT use the sender's UID or GID as an authorisation
+The manager MUST NOT use the sender's UID or GID as an authorization
 input, and MUST NOT accept any identity a service asserts in the
 datagram's content.
 

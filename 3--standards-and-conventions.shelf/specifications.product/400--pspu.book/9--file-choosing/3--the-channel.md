@@ -28,8 +28,8 @@ end.
 The answer carries a `type` member naming what it is. The request is
 identified by being first.
 
-A party MUST ignore a line whose `type` it does not recognise, and a
-member of an object it does not recognise (§9.7). A party MAY refuse a
+A party MUST ignore a line whose `type` it does not recognize, and a
+member of an object it does not recognize (§9.7). A party MAY refuse a
 line longer than 1 MiB.
 
 ## Ending
@@ -43,7 +43,7 @@ chooser's standard input. The chooser MUST end promptly when it reads
 end-of-file there, without answering and without asking the person
 anything: nobody is left to use the answer. A requester that exits
 closes the chooser's input whether it means to or not, so the chooser
-goes with it. The chooser SHOULD also arrange to be signalled when its
+goes with it. The chooser SHOULD also arrange to be signaled when its
 parent exits (on Linux, `PR_SET_PDEATHSIG`), and end then.
 
 A requester that reads end-of-file on the chooser's output with no

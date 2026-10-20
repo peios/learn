@@ -77,7 +77,7 @@ because the larger number is the one that does *not* bind a reply — see
 
 A field appended to `LogonStart`, `CredentialRequest`,
 `CredentialResponse` or `profile` in PGSS appears here automatically,
-because the bodies are shared. That is the intended behaviour and needs
+because the bodies are shared. That is the intended behavior and needs
 no change to this chapter.
 
 The profile is the one shared body that travels in the *opposite*

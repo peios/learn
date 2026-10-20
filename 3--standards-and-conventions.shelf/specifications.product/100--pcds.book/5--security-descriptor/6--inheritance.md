@@ -175,7 +175,7 @@ In all cases, the resulting DACL is post-processed:
   default DACL instead, SE_DACL_DEFAULTED is set. The equivalent applies
   to SE_SACL_AUTO_INHERITED for the SACL.
 
-An ACE of an unrecognised type is carried to the child unchanged apart
+An ACE of an unrecognized type is carried to the child unchanged apart
 from its AceFlags byte (§5.4). Its mask is not mapped and its SID is not
 substituted, because neither can be located within an opaque ACE.
 

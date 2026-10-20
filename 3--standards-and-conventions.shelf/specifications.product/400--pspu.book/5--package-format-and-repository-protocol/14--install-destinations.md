@@ -134,7 +134,7 @@ Several subdirectories of the `/etc` merge are **drop-in directories**:
 their contents are interpreted as code or configuration by other tools,
 notably the side-effect tools of §5.24 and system daemons that read
 configuration drop-ins. A package writing into one has indirect
-influence on the behaviour of components that read it.
+influence on the behavior of components that read it.
 
 A package from a repository other than the system's official repository
 MUST NOT install a file at the top level of the `/usr/etc` layer of any
@@ -172,7 +172,7 @@ package's name, so that two such packages cannot collide.
 > installs a configuration file at the top level of `ld.so.conf.d/` that
 > extends the loader's library search path. At the next transaction that
 > declares `ldconfig` — from any repository, not necessarily the same
-> one — the drop-in is honoured and the loader's behaviour changes.
+> one — the drop-in is honored and the loader's behavior changes.
 > Restricting top-level drop-in writes to the official repository, with
 > a namespaced escape hatch for legitimate non-official content, breaks
 > the chain without forbidding the use case.

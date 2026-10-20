@@ -3,7 +3,7 @@ title: The Declaration
 description: One TOML file per application, named for its id, saying its title, its program, its icon, what it opens and whether it is listed — and what a consumer makes of one that is malformed.
 ---
 
-A declaration is a file in the catalogue's directory (§5.4), named for
+A declaration is a file in the catalog's directory (§5.4), named for
 the application's id:
 
 ```
@@ -74,7 +74,7 @@ declaration, when any of these holds:
 
 A consumer SHOULD say on its own log which file was unusable and why,
 so that a broken package can be found, and MUST go on to the rest of
-the catalogue.
+the catalog.
 
 A declaration that is merely odd is set right, not thrown away:
 

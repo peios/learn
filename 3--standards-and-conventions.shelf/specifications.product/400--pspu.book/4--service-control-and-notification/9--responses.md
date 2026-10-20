@@ -1,15 +1,15 @@
 ---
 title: Responses
-description: The four response shapes — acknowledgement, status, system and error — and what may be null in each.
+description: The four response shapes — acknowledgment, status, system and error — and what may be null in each.
 ---
 
 Every response carries a `status` field, which MUST be exactly `"ok"` or
 `"error"`. What else it carries depends on which of four shapes it is.
 
-## The acknowledgement shape
+## The acknowledgment shape
 
 Returned by a lifecycle command that created, merged into, queued,
-cancelled, cleared or executed an operation.
+canceled, cleared or executed an operation.
 
 ```json
 {"status": "ok", "operation_id": "a1b2c3d4-…", "service": "jellyfin",

@@ -40,7 +40,7 @@ field: the value before a change, the value asked for, the value
 expected. A variant is named by a qualifier (§6.4).
 
 **Fragment.** A file describing events and fields, in the form of §6.10.
-**The catalogue** is every fragment installed on a system.
+**The catalog** is every fragment installed on a system.
 
 **Tier.** How much an event matters to an operator, declared per event
 type: `essential`, `standard`, `verbose` or `debug` (§6.8).

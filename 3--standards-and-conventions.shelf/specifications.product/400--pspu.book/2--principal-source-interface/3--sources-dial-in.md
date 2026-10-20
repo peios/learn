@@ -43,5 +43,5 @@ nothing about it.
 > A source SHOULD report itself ready only once its registration has
 > been *acknowledged*, so that "the source is running" and "the source
 > can authenticate" are the same statement to anything ordered after it.
-> This is what makes the `Registered` acknowledgement load-bearing
+> This is what makes the `Registered` acknowledgment load-bearing
 > despite carrying almost nothing.

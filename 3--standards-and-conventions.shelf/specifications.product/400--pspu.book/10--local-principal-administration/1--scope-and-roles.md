@@ -21,7 +21,7 @@ The **administrator client** is a program that asks: a command-line tool
 such as `lps`, a desktop app such as Principals Manager, or a
 provisioning tool. It holds no state of its own and no privilege of its
 own; everything it does is a request the store daemon decides whether to
-honour. Any program MAY be an administrator client, and a third party
+honor. Any program MAY be an administrator client, and a third party
 writing one is the case this chapter is written for.
 
 ## Why a daemon, and not the file

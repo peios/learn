@@ -6,7 +6,7 @@ description: Every enumerated value on the jobs channel — commands, job state,
 Every enumerated value that appears on the jobs channel. All are lower
 snake case. A manager MUST NOT emit a value outside these sets without
 the negotiation in §4.21, and a submitter MUST treat one it does not
-recognise as an error for that request rather than mapping it onto a
+recognize as an error for that request rather than mapping it onto a
 value it knows.
 
 Values shared with the control channel — response status, job type —

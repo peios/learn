@@ -17,7 +17,7 @@ MUST NOT put anything there that a consumer is meant to find.
 ## Format
 
 A theme's file is an SVG document. This version of the chapter
-recognises no other format: a file with another extension is not an
+recognizes no other format: a file with another extension is not an
 icon, whatever it holds.
 
 An icon is drawn at whatever size the consumer needs, so a provider

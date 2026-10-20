@@ -57,7 +57,7 @@ from it.
 | `warnings` | array of strings | Human-readable warnings about the new configuration. |
 
 Every member of `summary` MUST be present, even when empty. A client
-MUST accept a member of `summary` it does not recognise, and MUST ignore
+MUST accept a member of `summary` it does not recognize, and MUST ignore
 it (§4.21).
 
 ### It is atomic
@@ -132,7 +132,7 @@ the same failure again. Confirming a boot puts the count back to 0.
 | `confirm_error` | string or null | Why the count could not be put back to 0 when the grace period ended. Human-readable. |
 
 Every member of `boot` MUST be present. A client MUST accept a member of
-`boot` it does not recognise, and MUST ignore it (§4.21).
+`boot` it does not recognize, and MUST ignore it (§4.21).
 
 `attempts` counts the boots before this one; this boot is not among
 them. A machine reaches recovery when a boot begins with `attempts` at
@@ -170,7 +170,7 @@ looking; `job-stop` because a job the shutdown will reach eventually
 may be one a client has reason to end now. Everything else — including
 a second `shutdown` — is refused:
 the manager has committed to a course of action and a command that
-would alter it arrives too late to be honoured consistently.
+would alter it arrives too late to be honored consistently.
 
 As §4.7 says, this restriction is evaluated before the access check, so
 a caller who would have been denied receives `INVALID_STATE` instead.

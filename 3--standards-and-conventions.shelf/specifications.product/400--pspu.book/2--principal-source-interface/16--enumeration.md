@@ -75,7 +75,7 @@ The cases most often got wrong, all of which are `Refused` and not an
 empty `Found`: a group whose membership the source will not expose, a
 key that names an object the source does not hold, a key that names a
 principal where a group was required, and a cursor the source can no
-longer honour.
+longer honor.
 
 ## Cursors belong to the source
 
@@ -83,7 +83,7 @@ A cursor is **opaque to the authority**. The authority MUST NOT
 construct, parse or modify one; it relays what it was given.
 
 A source MAY encode anything into a cursor, and MAY refuse one it no
-longer honours — a store rewritten underneath a half-finished walk is
+longer honors — a store rewritten underneath a half-finished walk is
 the ordinary case, not an exceptional one. A refused cursor is
 `Refused`, and the authority MUST NOT restart the enumeration on the
 source's behalf.

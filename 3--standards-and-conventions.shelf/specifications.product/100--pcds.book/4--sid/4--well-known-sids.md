@@ -1,11 +1,11 @@
 ---
 title: Well-Known SIDs
-description: The fixed SIDs every implementation must recognise — universal and creator authorities, NT Authority, BUILTIN, integrity and trust labels, confinement and capability SIDs.
+description: The fixed SIDs every implementation must recognize — universal and creator authorities, NT Authority, BUILTIN, integrity and trust labels, confinement and capability SIDs.
 ---
 
 The following SIDs have fixed values and well-defined meanings. An
-implementation MUST recognise these SIDs and apply their defined
-semantics wherever they are referenced. The access-check behaviour
+implementation MUST recognize these SIDs and apply their defined
+semantics wherever they are referenced. The access-check behavior
 attached to them is described in the Peios Kernel TRM §3.8.
 
 ## Universal authorities
@@ -122,13 +122,13 @@ sub-authority is the PIP type axis and the second is the trust axis
 (higher = more trusted). Dominance requires both dimensions to be
 greater than or equal.
 
-KACS currently standardises these PIP type values:
+KACS currently standardizes these PIP type values:
 
 - `0` = None
 - `512` = Protected
 - `1024` = Isolated
 
-These values are standardised labels, not a closed enum for
+These values are standardized labels, not a closed enum for
 AccessCheck. Other numeric type values remain valid and are compared
 numerically by the same dominance rule.
 

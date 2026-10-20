@@ -29,7 +29,7 @@ A segment is a **pre-release segment** if it falls at or after the
 earlier of:
 
 - the first `~` separator — the tilde and every segment following it; or
-- the first **recognised pre-release token**: a segment whose token
+- the first **recognized pre-release token**: a segment whose token
   carries a rank of 0 to 4 in the table below, that segment and every
   segment following it.
 
@@ -39,10 +39,10 @@ separators between them. A `-` separator is an ordinary separator; it is
 not itself a pre-release marker.
 
 > [!NOTE]
-> In `1.0.0-rc.1`, `rc` is recognised at rank 4, so `rc` and the
-> following `1` are pre-release. In `16beta1`, `beta` is recognised at
+> In `1.0.0-rc.1`, `rc` is recognized at rank 4, so `rc` and the
+> following `1` are pre-release. In `16beta1`, `beta` is recognized at
 > rank 2, so `beta` and `1` are pre-release with no separator involved.
-> In `1.0-foo`, `foo` is alphabetic but not recognised: it is an
+> In `1.0-foo`, `foo` is alphabetic but not recognized: it is an
 > ordinary rank-5 segment, and the `-` before it begins nothing.
 
 | Upstream | Segments |
@@ -85,7 +85,7 @@ their kinds decide:
    equal:
    - at a rank of 0 to 4, the segments are **equivalent**. The table
      assigns several tokens to one rank as aliases, so two segments at
-     the same recognised rank sort equal whichever alias appears.
+     the same recognized rank sort equal whichever alias appears.
    - at rank 5, the segments tiebreak by ASCII byte order against other
      rank-5 tokens.
 3. **One numeric, one alphabetic** — the alphabetic segment is the

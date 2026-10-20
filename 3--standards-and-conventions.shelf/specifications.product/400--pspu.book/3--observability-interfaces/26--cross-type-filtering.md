@@ -66,7 +66,7 @@ one matching record lies near the primary record in time. The event type
 supports `*` globbing (§3.23); the log form names an origin and
 optionally a `CONTAINING` text.
 
-"Near" is a **centred half-open window** of a configured width `W`. With
+"Near" is a **centered half-open window** of a configured width `W`. With
 `lower = floor(W / 2)` and `upper = W - lower`, the condition is true
 for a primary timestamp `t` when a matching record exists with:
 

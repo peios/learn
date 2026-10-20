@@ -12,12 +12,12 @@ whole desktop. What it drops is the size ladder and the index that the
 ladder made necessary: with one vector file per name a theme is flat,
 and there is no `icon-theme.cache` to rebuild. It also drops the
 `Icon=` line of a desktop file as the only way a program gets a name,
-in favour of the program carrying it.
+in favor of the program carrying it.
 
 The name source (§4.5) is not freedesktop's, which gives `Documents`
 and `Downloads` their icons by configured path rather than by name. By
 name is simpler and needs no configuration, and the editor icon themes
-that colour a `src` directory apart from a `test` one show what it is
+that color a `src` directory apart from a `test` one show what it is
 for.
 
 ## Windows

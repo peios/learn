@@ -30,8 +30,8 @@ end; compact JSON never needs one.
 Every line carries a `type` member naming what it is, except the
 request, which is identified by being first.
 
-A party MUST ignore a line whose `type` it does not recognise, and a
-member of an object it does not recognise (§8.7). A party MAY refuse a
+A party MUST ignore a line whose `type` it does not recognize, and a
+member of an object it does not recognize (§8.7). A party MAY refuse a
 line longer than 1 MiB; a request carrying a descriptor of the largest
 size PCDS §5.1 permits is well inside it.
 
@@ -47,7 +47,7 @@ one object would each apply over the other. It SHOULD instead send
 
 which needs no answer. An editor that receives it SHOULD bring its
 dialog to the front and give it the keyboard, as far as the desktop
-lets it. An editor that does not recognise it ignores it, as any line,
+lets it. An editor that does not recognize it ignores it, as any line,
 so a requester MUST NOT depend on the dialog coming forward. A requester
 whose write of `raise` fails has learned the editor has gone, and MAY
 start a new one.
@@ -70,7 +70,7 @@ anything first: the requester can no longer apply what they would say.
 A requester that exits closes the editor's input whether it means to or
 not, so the editor goes with it.
 
-The editor SHOULD also arrange to be signalled when its parent exits
+The editor SHOULD also arrange to be signaled when its parent exits
 (on Linux, `PR_SET_PDEATHSIG`), and end then. A process whose parent
 exits is not ended by that, and an editor left showing a dialog for an
 object nobody can apply to is worse than none.

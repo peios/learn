@@ -5,12 +5,12 @@ description: What a verified signature confers — a PIP type and trust level �
 
 A verified signature confers a **PIP identity**: a `pip_type` and a
 `pip_trust`, both 32-bit unsigned integers, taken from the key that
-verified. An unsigned, unverifiable or unrecognised binary confers
+verified. An unsigned, unverifiable or unrecognized binary confers
 type 0 and trust 0, which means no protection.
 
 This chapter states what that identity means to a party outside the
 kernel — what a signer is asserting by obtaining one, what an object
-owner is asserting by labelling an object, and what may and may not be
+owner is asserting by labeling an object, and what may and may not be
 relied upon.
 
 ## Dominance
@@ -81,7 +81,7 @@ opt-in per object.
 **Privileges do not compensate.** PIP revokes rights that privileges
 granted, including `ACCESS_SYSTEM_SECURITY`. There is no relabel
 equivalent, no administrative override, and no privilege that
-substitutes for insufficient trust. An object owner labelling an
+substitutes for insufficient trust. An object owner labeling an
 object may rely on this: a non-dominant caller cannot reach the
 object's SACL to remove the label, which is what makes the protection
 self-sustaining rather than trivially removable.
@@ -103,7 +103,7 @@ for a protected process gains nothing.
 A verified file is pinned against in-place modification for as long as
 its inode remains live. Ordinary, positioned and append writes,
 truncation by descriptor or pathname, every `fallocate` mode, and
-content-mutating and unrecognised ioctls are all refused on it, as is
+content-mutating and unrecognized ioctls are all refused on it, as is
 mutation or removal of the signature attribute.
 
 **A binary the kernel execs on its own behalf carries at least

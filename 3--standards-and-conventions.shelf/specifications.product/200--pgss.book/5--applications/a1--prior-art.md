@@ -1,6 +1,6 @@
 ---
 title: Prior Art
-description: Where this chapter sits against freedesktop desktop entries and MIME applications, Windows' shortcuts, App Paths, registered applications and default choices, MSIX manifests and the former Atrium catalogue, and which resemblances are deliberate.
+description: Where this chapter sits against freedesktop desktop entries and MIME applications, Windows' shortcuts, App Paths, registered applications and default choices, MSIX manifests and the former Atrium catalog, and which resemblances are deliberate.
 ---
 
 ## The freedesktop desktop entry specification
@@ -80,8 +80,8 @@ manager extracts, so that presence is enough.
 ## Atrium
 
 Atrium was Peios' previous web shell and has been completely replaced by
-GXWI. Its historical application catalogue influenced this chapter's
-"presence is the catalogue" rule: installing a declaration is enough;
+GXWI. Its historical application catalog influenced this chapter's
+"presence is the catalog" rule: installing a declaration is enough;
 nothing registers at install time.
 
 This chapter carries forward TOML declarations and names derived from the

@@ -56,7 +56,7 @@ Defined in §5.7.
 
 Defined in §5.24.
 
-## Licence classes
+## License classes
 
 | Class | Meaning |
 |---|---|

@@ -24,7 +24,7 @@ it returns and for nothing else.
 
 This chapter covers:
 
-- the character device, how a source attaches to it and is recognised,
+- the character device, how a source attaches to it and is recognized,
   and the source slot lifecycle
 - the framing and encoding of requests and responses, and the rules
   under which each may be extended

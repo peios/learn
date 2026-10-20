@@ -92,7 +92,7 @@ Claim flags apply to token claims (@User., @Device.) and resource attributes
   deny ACE conditions and audit/alarm ACE conditions. For allow ACE
   conditions, it resolves as absent.
 
-Empty attributes (zero values) are normalised to absent (NULL) at resolution
+Empty attributes (zero values) are normalized to absent (NULL) at resolution
 time (when the expression evaluator reads the attribute value during
 AccessCheck).
 

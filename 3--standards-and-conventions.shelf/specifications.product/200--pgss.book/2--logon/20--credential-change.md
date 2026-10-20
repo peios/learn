@@ -43,7 +43,7 @@ be the first message.
 
 `supported_credential_types` carries the meaning and the capability rule
 of the §2.7 field of the same name. It binds the authority, and a
-decoder MUST drop a value it does not recognise rather than refuse the
+decoder MUST drop a value it does not recognize rather than refuse the
 message.
 
 Unlike the §2.7 field, it is not optional. This message is newer than

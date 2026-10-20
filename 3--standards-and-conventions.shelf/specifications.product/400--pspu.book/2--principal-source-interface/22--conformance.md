@@ -247,7 +247,7 @@ entirely.
     rather than reporting an absence — including a membership it will
     not expose, a key naming an object it does not hold, and a key of
     the wrong kind (§2.16).
-29. Refuse a cursor it can no longer honour, rather than restarting or
+29. Refuse a cursor it can no longer honor, rather than restarting or
     answering from a changed store (§2.16).
 30. Hold no per-cursor state it is unwilling to discard unasked (§2.16).
 31. Size a page against the smaller of PSI's message ceiling and PGSS

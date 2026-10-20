@@ -11,7 +11,7 @@ Two roles participate.
 The **signer** is a userspace program holding a private key. It
 computes a content hash over a file, signs it, and attaches the
 signature to that file. The signer role is publicly implementable: a
-third party building software for Peios, or an organisation operating
+third party building software for Peios, or an organization operating
 its own trust tier, MUST be able to produce an acceptable signature
 from this chapter alone.
 
@@ -95,4 +95,4 @@ rather than a property every Peios system exhibits.
 It is specified here because the contract is public even so. A third
 party that wants its software to run at a trust tier — or that wants
 to operate a tier of its own — needs the format written down exactly,
-and needs to know which of the verifier's behaviours it may depend on.
+and needs to know which of the verifier's behaviors it may depend on.

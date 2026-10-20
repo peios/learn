@@ -50,7 +50,7 @@ optional field; `KeyList` answers it from every store daemon.
 
 ## KeyAdd
 
-`msg_type` = `0x0012`. Enrols an SSH public key. Answered with `Done`.
+`msg_type` = `0x0012`. Enrolls an SSH public key. Answered with `Done`.
 
 | Field | Encoding |
 |---|---|

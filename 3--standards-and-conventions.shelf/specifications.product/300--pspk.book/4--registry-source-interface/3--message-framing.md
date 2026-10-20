@@ -68,7 +68,7 @@ Requests and responses extend differently, and a source MUST implement
 both rules.
 
 A **request** MAY carry trailing fields beyond those a source
-recognises. A source MUST skip them, using `total_len` to find the end
+recognizes. A source MUST skip them, using `total_len` to find the end
 of the message. This is how the kernel adds an optional field without
 an RSI version bump.
 

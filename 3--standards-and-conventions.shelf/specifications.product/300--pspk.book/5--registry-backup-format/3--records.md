@@ -43,7 +43,7 @@ All `LAYER` records precede all key data.
 A `LAYER` record is a **stream manifest entry**, not a backup of the
 layer's definition. It records what the layer looked like when the
 backup was taken so that a restore can validate the stream against it,
-and it creates, updates, deletes, enables, disables and authorises
+and it creates, updates, deletes, enables, disables and authorizes
 nothing.
 
 A layer's definition is backed up only when its metadata subtree is

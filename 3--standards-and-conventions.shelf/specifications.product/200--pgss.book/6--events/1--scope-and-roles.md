@@ -5,7 +5,7 @@ description: What PGSS Events specifies and who its parties are — the emitter 
 
 This chapter specifies **PGSS Events**: what an event on a Peios system
 is called, what its payload carries and how, when it is written at all,
-and how the vocabulary is catalogued.
+and how the vocabulary is cataloged.
 
 The chapter rests on one decision. **A name is policy.** Every dot in an
 event type is a place an administrator can attach a security descriptor,
@@ -20,7 +20,7 @@ Two roles participate.
 | Role | Obligation |
 |---|---|
 | Emitter | Writes events. Everything an event is named, carries and encodes is an emitter obligation, as is deciding whether to write it at all (§6.9) and describing it in a fragment (§6.10). |
-| Consumer | Reads events, or the catalogue that describes them. A store, a viewer, a forwarder and a policy editor are all consumers. Every rule about interpreting a name or a value binds the consumer. |
+| Consumer | Reads events, or the catalog that describes them. A store, a viewer, a forwarder and a policy editor are all consumers. Every rule about interpreting a name or a value binds the consumer. |
 
 A kernel subsystem is an emitter, and so is a daemon, a service and an
 application. The emitter role does not depend on the path an event takes
@@ -48,7 +48,7 @@ This chapter covers:
   event declares (§6.8)
 - the emission policy that decides whether an event type is written at
   all (§6.9)
-- the catalogue of event and field definitions, and the rules a
+- the catalog of event and field definitions, and the rules a
   definition must pass (§6.10)
 
 This chapter does not cover:
@@ -62,7 +62,7 @@ This chapter does not cover:
   The query language is PSPU §3; one implementation's storage and
   retention are described in the eventd TRM.
 - The meaning of each event and field. That is reference material,
-  generated from the catalogue (§6.10) into the Events reference book.
+  generated from the catalog (§6.10) into the Events reference book.
 - Log lines and metric samples, which are PSPU §3's. This chapter says
   only how to tell them from events (§6.8).
 - How the kernel's access-check interface accepts and copies an audit

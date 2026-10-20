@@ -1,6 +1,6 @@
 ---
 title: Lifecycle Commands
-description: The five commands that move a service through its state machine — none acting directly, each creating, merging into, queuing or cancelling an advisory.
+description: The five commands that move a service through its state machine — none acting directly, each creating, merging into, queuing or canceling an advisory.
 ---
 
 Five commands move a service through its state machine. None of them
@@ -23,14 +23,14 @@ so waiting on it would mean nothing.
 ## Operations
 
 The manager MUST return an operation identifier from any lifecycle
-command that created, merged into, queued, cancelled, cleared or
+command that created, merged into, queued, canceled, cleared or
 executed an operation. The client uses it to poll (§4.14) or to
 correlate.
 
 The manager MUST NOT invent an operation solely so that it has an
 identifier to return. Where a command had no effect, or the service was
 already in the state asked for, the manager MUST return the status shape
-instead of an acknowledgement (§4.12).
+instead of an acknowledgment (§4.12).
 
 ## Merging
 
@@ -72,6 +72,6 @@ another for longer than its lifetime MUST fail rather than begin.
 
 An operation whose lifetime expires while it is still queued MUST fail,
 and MUST fail its waiters. Expiry of the operation object MUST NOT by
-itself authorise the manager to act on the service — a stop operation
-that timed out while waiting its turn does not license signalling the
+itself authorize the manager to act on the service — a stop operation
+that timed out while waiting its turn does not license signaling the
 service ahead of that turn.

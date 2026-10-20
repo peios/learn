@@ -138,9 +138,9 @@ broken as §3.21 requires.
 EVENTS INDEX target_sid
 ```
 
-`INDEX` asks the collector to prioritise a field for query
+`INDEX` asks the collector to prioritize a field for query
 acceleration immediately, rather than waiting for it to be observed
-often enough to be prioritised automatically. It exists for incident
+often enough to be prioritized automatically. It exists for incident
 response, where the field that suddenly matters has never been queried
 before.
 

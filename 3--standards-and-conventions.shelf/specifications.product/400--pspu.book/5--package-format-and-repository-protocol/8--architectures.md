@@ -21,7 +21,7 @@ letter and MUST NOT exceed 16 characters.
 | `aarch64` | 64-bit ARM (ARMv8-A or later) |
 | `noarch` | architecture-independent |
 
-An implementation MUST recognise all three. `x86_64` is the primary
+An implementation MUST recognize all three. `x86_64` is the primary
 target; every other architecture is secondary in this version of the
 specification.
 

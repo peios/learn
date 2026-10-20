@@ -4,7 +4,7 @@ description: Every field a service may send — lifecycle, health, reporting and
 ---
 
 Every field a service may send. A manager MUST implement all of them. A
-service MUST NOT send a recognised key with a value the field does not
+service MUST NOT send a recognized key with a value the field does not
 define (§4.17).
 
 ## Lifecycle
@@ -181,6 +181,6 @@ certainly malformed.
 | `MAINPID` | A manager supervises the process it forked, through a kernel handle obtained at fork. There is no mechanism for redirecting supervision to another process, and there is deliberately none: a service that could nominate its own supervision target could nominate anything. |
 | `BUSERROR` | Peios has no D-Bus. |
 
-Neither is rejected distinctly. Both are simply unrecognised keys and
+Neither is rejected distinctly. Both are simply unrecognized keys and
 are ignored like any other (§4.17). A service MUST NOT rely on being
 told that it sent one.

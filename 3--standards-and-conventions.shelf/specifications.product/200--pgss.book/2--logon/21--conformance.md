@@ -151,7 +151,7 @@ of the following.
     that may not make the request (§2.18).
 48. List every source that did not contribute to an enumeration, and
     never report `Found` on a page it could not produce (§2.17, §2.18).
-49. Reject a cursor it did not issue, or can no longer honour, with
+49. Reject a cursor it did not issue, or can no longer honor, with
     `Malformed` — never by restarting the walk and never by reporting it
     complete (§2.17).
 50. Serve member enumeration where it withholds `MEMBERS` as `TooLarge`
@@ -200,7 +200,7 @@ message, and is conforming.
     (§2.16, §2.19).
 63. Never widen what a principal's holder permits. Local policy may
     narrow it further; nothing may add to it (§2.16).
-64. Refuse a `logon_type` it does not recognise, with
+64. Refuse a `logon_type` it does not recognize, with
     `MalformedRequest` (§2.7, §2.10).
 
 ### Credential change
@@ -270,7 +270,7 @@ MUST refuse both with `PermissionDenied`, and is conforming. Obligations
 83. Hold no token of the session longer than it takes to read which
     session it belongs to, and never end its own process (§2.22).
 84. Where the session is the one the connected peer's token belongs to,
-    send `SessionEnded` before signalling anything, carrying what it
+    send `SessionEnded` before signaling anything, carrying what it
     found to end and a `remaining` of zero (§2.22).
 85. Start nothing in ending a session (§2.1, §2.22).
 
@@ -292,8 +292,8 @@ credential change.
 88. Refuse with `AccountRestricted` a principal it holds no credential
     for that it can ask for as proof, including every service identity
     (§2.23, §2.19).
-89. Refuse an `action` or `credential_type` it does not recognise with
-    `MalformedRequest`, a `credential_type` it does not enrol with
+89. Refuse an `action` or `credential_type` it does not recognize with
+    `MalformedRequest`, a `credential_type` it does not enroll with
     `PermissionDenied`, and a `CredentialEnrollStart` that ends before
     `material` with `MalformedRequest` (§2.23).
 90. Refuse material it will not accept with `CredentialRejected`, check
@@ -419,7 +419,7 @@ same thing to every principal at once.
 32. Treat a non-zero `remaining` as a session that may still exist, and
     never read the counts as an outcome where the session was the
     caller's own (§2.22).
-33. Treat a denial code it does not recognise as a refusal, not as an
+33. Treat a denial code it does not recognize as a refusal, not as an
     unreadable answer (§2.B).
 
 ### Credential enrolment
@@ -428,7 +428,7 @@ same thing to every principal at once.
     with every field, and name no principal in it (§2.23).
 35. Tell `CredentialRejected` (the material) apart from
     `AuthenticationFailed` (the proof) where it reports a refusal, and
-    treat a denial code it does not recognise as a refusal (§2.23,
+    treat a denial code it does not recognize as a refusal (§2.23,
     §2.B).
 
 ## What a client is not required to do

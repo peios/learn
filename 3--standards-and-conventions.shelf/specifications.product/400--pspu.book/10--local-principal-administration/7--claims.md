@@ -20,7 +20,7 @@ Answered with `Done`.
 Claim names match without regard to case. A store daemon MUST refuse, as
 `Invalid`, a claim PSI could not carry to the authority (§2.13): a name
 empty or longer than 255 bytes or containing a NUL, a flag or value type
-it does not recognise, more than 64 values, or a string or octet value
+it does not recognize, more than 64 values, or a string or octet value
 longer than 1024 bytes. It MUST refuse a 65th claim on one principal.
 
 ## RemoveClaim

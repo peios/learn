@@ -56,7 +56,7 @@ When presenting a fetched key for confirmation, a consumer MUST:
 
 When a repository declares several `active` keys, the operator is
 RECOMMENDED to supply anchors for at least two of them, as
-defence-in-depth against a single mistyped anchor.
+defense-in-depth against a single mistyped anchor.
 
 A consumer MUST report an anchor mismatch by naming both the anchor the
 operator supplied and the fingerprints the descriptor actually declares.
@@ -83,7 +83,7 @@ A consumer's default policy for a newly added repository SHOULD be
 official repository SHOULD be configured `required`.
 
 `optional` means signed content **is** verified. A consumer MUST NOT
-treat the absence of trust anchors as licence to stop verifying: a
+treat the absence of trust anchors as license to stop verifying: a
 repository under `optional` that publishes signatures MUST have them
 verified, and one that publishes none MUST produce the warning rather
 than a fetch error.
@@ -128,7 +128,7 @@ repository. When that exceeds the **maximum trusted age**, the consumer
 MUST attempt a refresh before any install, upgrade, or downgrade against
 that repository. If the attempt fails, the consumer MUST report the
 failure and refuse the operation, unless the operator explicitly
-authorises proceeding on stale trust state.
+authorizes proceeding on stale trust state.
 
 The default maximum trusted age is **30 days**. It MAY be tuned by
 operator configuration; a value above 180 days SHOULD produce a

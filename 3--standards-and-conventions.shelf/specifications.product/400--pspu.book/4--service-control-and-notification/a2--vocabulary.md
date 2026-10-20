@@ -7,7 +7,7 @@ Every enumerated value that appears on the control channel. All are
 lower snake case. Except for status warning types and granted rights,
 these sets are closed: a manager MUST NOT emit a value outside them
 without the version negotiation in §4.21, and a client MUST treat one it
-does not recognise as an error for that request rather than mapping it
+does not recognize as an error for that request rather than mapping it
 onto a value it knows. The open sets state their handling rules below.
 
 These sets are the control channel's. The same words appear in the
@@ -117,7 +117,7 @@ In a job view's `granted`, on this channel: `query`, `stop`, `signal`
 Each names a right of §4.7 or §7.8, lowercased and without its
 `SERVICE_` or `JOB_` prefix, and they appear in the order given here
 (§4.14). A client MUST ignore a name outside these sets rather than
-treat it as an error: an unrecognised right is one it has no command
+treat it as an error: an unrecognized right is one it has no command
 for, and the rights it does know are still correctly reported.
 
 ## Shutdown type

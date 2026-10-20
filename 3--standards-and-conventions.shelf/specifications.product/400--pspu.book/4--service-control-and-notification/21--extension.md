@@ -1,6 +1,6 @@
 ---
 title: Extension
-description: Neither channel carries a version number — what may be added freely, what may not, and what a client must do with something it does not recognise.
+description: Neither channel carries a version number — what may be added freely, what may not, and what a client must do with something it does not recognize.
 ---
 
 Neither channel carries a version number. Both are extended by the rules
@@ -10,23 +10,23 @@ different revisions to interoperate.
 ## What may be added
 
 **A request field.** A manager MUST ignore a request field it does not
-recognise (§4.8). A client MAY therefore send a field a manager may not
+recognize (§4.8). A client MAY therefore send a field a manager may not
 know, and MUST NOT depend on the field having had an effect.
 
 **A response field.** A client MUST ignore a response field it does not
-recognise, and MUST NOT treat its presence as an error. This includes an
-unrecognised member of `summary` in a `reload-config` response, and an
-unrecognised key in `current_job` or `current_operation`.
+recognize, and MUST NOT treat its presence as an error. This includes an
+unrecognized member of `summary` in a `reload-config` response, and an
+unrecognized key in `current_job` or `current_operation`.
 
-**A notification field.** A manager MUST ignore an unrecognised key
+**A notification field.** A manager MUST ignore an unrecognized key
 (§4.17). A service MAY therefore send a field a manager may not know.
 
 **A `type` value in a status warning.** A client MUST accept a warning
-whose `type` it does not recognise and MUST NOT discard it. An
+whose `type` it does not recognize and MUST NOT discard it. An
 unclassifiable warning is still a warning.
 
 **A right in `granted`.** A client MUST ignore a right name it does not
-recognise in a status's or a job view's `granted` (§4.14). A right it
+recognize in a status's or a job view's `granted` (§4.14). A right it
 does not know of is one it offers no command for.
 
 **A command, together with the error codes and enumerated values that
@@ -38,7 +38,7 @@ reach a client through any *existing* command's response.
 
 ## What may not be added without a version
 
-Anything a client must *recognise* in order to behave correctly cannot
+Anything a client must *recognize* in order to behave correctly cannot
 be added compatibly, because an older client's only options are to fail
 or to misbehave.
 
@@ -54,20 +54,20 @@ A manager MUST NOT, without a negotiated version:
 - change the **shape** of an existing response, including changing a
   field's type or making a non-nullable field nullable.
 
-A client encountering one of these has no correct behaviour available.
+A client encountering one of these has no correct behavior available.
 Faced with an unknown `state` it cannot decide whether the service is
 running; faced with an unknown error code it cannot decide whether to
 retry.
 
 ## What a client must do with the unknown
 
-A client MUST treat an unrecognised **enumerated value** in a field it
+A client MUST treat an unrecognized **enumerated value** in a field it
 depends on as an error for that request, and MUST NOT map it onto the
 nearest value it does know. Guessing that an unfamiliar state is
 probably like `active` is how a monitoring tool reports a broken system
 as healthy.
 
-A client MUST treat an unrecognised **error code** as unrecoverable for
+A client MUST treat an unrecognized **error code** as unrecoverable for
 that request. It MUST NOT retry, since it cannot know whether the
 condition is transient.
 

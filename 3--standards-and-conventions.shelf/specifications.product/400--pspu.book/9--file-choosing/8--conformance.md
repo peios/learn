@@ -18,7 +18,7 @@ end-of-file without an answer as `cancelled` (§9.3, §9.5). Infers
 nothing from the chooser's exit status or standard error, and does not
 rely on the person choosing a file of a kind offered (§9.4).
 
-**Lines.** Ignores a line type and a member it does not recognise (§9.3).
+**Lines.** Ignores a line type and a member it does not recognize (§9.3).
 
 ## A conforming chooser
 
@@ -41,4 +41,4 @@ holds nothing beyond their authority. Asks the system what they may do
 before offering it, and shows what they may not, with the reason. Shows
 a folder they may not list as such. Asks before deleting (§9.6).
 
-**Lines.** Ignores a member it does not recognise (§9.3).
+**Lines.** Ignores a member it does not recognize (§9.3).

@@ -80,7 +80,7 @@ authorization caches remain effective (§3.9).
 **Bound your label cardinality**, and keep histogram boundaries fixed
 for the life of a metric (§3.10, §3.13).
 
-**Never assume delivery.** No acknowledgement exists, none is coming,
+**Never assume delivery.** No acknowledgment exists, none is coming,
 and a record that mattered should have been an event (§3.4).
 
 **Never change a metric's type.** Doing so ends the series silently and
@@ -110,7 +110,7 @@ or labels are truthful (§3.28).
 
 A conforming collector need not accelerate anything, pre-compute
 anything, shard anything, or retain anything for any particular period.
-It need not honour `INDEX` beyond accepting it (§3.23). Its storage,
+It need not honor `INDEX` beyond accepting it (§3.23). Its storage,
 indexing, retention and query planning are entirely its own, and every
 requirement above is stated about the answer rather than about how the
 answer is reached.

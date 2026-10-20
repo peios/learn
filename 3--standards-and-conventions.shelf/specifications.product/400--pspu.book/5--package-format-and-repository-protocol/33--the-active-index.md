@@ -95,7 +95,7 @@ input to the decompression bound of §5.27.
 
 `license_class`, when present, MUST be validated against the closed set
 of §5.18 on parse; absent means `unknown`, as in the manifest. It is
-carried so a consumer can apply a licence policy at planning time,
+carried so a consumer can apply a license policy at planning time,
 before fetching anything.
 
 `alternate_upgrade`, when present, MUST be validated exactly as the

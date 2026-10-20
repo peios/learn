@@ -1,6 +1,6 @@
 ---
 title: Prior Art
-description: Where the Peios GUID comes from — MS-DTYP §2.3.4, RFC 4122 and DCE RPC — and the one place Peios normalises differently.
+description: Where the Peios GUID comes from — MS-DTYP §2.3.4, RFC 4122 and DCE RPC — and the one place Peios normalizes differently.
 ---
 
 ## MS-DTYP
@@ -8,7 +8,7 @@ description: Where the Peios GUID comes from — MS-DTYP §2.3.4, RFC 4122 and D
 The GUID type defined in this document derives from the Microsoft
 Data Types specification (MS-DTYP), §2.3.4. The Peios GUID binary
 format is identical to the MS-DTYP GUID. The Peios GUID string
-format follows the same hyphenated hex convention but normalises to
+format follows the same hyphenated hex convention but normalizes to
 lowercase hex digits on output, where Microsoft implementations
 typically produce uppercase.
 

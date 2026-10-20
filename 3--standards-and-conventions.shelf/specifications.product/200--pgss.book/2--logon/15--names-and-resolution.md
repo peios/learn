@@ -64,7 +64,7 @@ request was keyed on.
 
 > [!NOTE]
 > The ASCII restriction is not an assumption that names are English. It
-> is a decision to defer confusable and normalisation handling rather
+> is a decision to defer confusable and normalization handling rather
 > than get them wrong: `jack` spelled with a Cyrillic `а` renders
 > identically to `jack` and is a different principal, and the same name
 > in NFC and NFD is two byte sequences that a comparison will call two

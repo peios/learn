@@ -127,7 +127,7 @@ the checksum.
 
 A record payload MUST be consumed **exactly**. Trailing bytes inside a
 record of a known type are invalid, even though `record_len` would
-accommodate them. A reader MUST NOT skip unrecognised trailing data
+accommodate them. A reader MUST NOT skip unrecognized trailing data
 within a known record, and a writer MUST NOT add any.
 
 This is deliberately the opposite of the RSI's request convention. A

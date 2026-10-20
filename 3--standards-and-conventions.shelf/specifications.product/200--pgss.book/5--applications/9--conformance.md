@@ -13,7 +13,7 @@ description: The obligations of each role, gathered in one place.
   ignores the rest, treats an unusable declaration as none and goes on,
   and sets an odd one right as §5.3 says.
 - Checks an id's form before making it a path (§5.4).
-- Notices a change to the catalogue, or documents how stale a
+- Notices a change to the catalog, or documents how stale a
   remembered read may be (§5.4).
 - Matches a program to a declaration by file, never by name, and
   through the process for a running one (§5.5).
@@ -23,7 +23,7 @@ description: The obligations of each role, gathered in one place.
 - Starts an application by executing its program with its arguments as
   given, without a shell, splitting, quoting, expansion or path lookup,
   and with a file's path last (§5.6).
-- Takes the program and arguments from the catalogue, never from a
+- Takes the program and arguments from the catalog, never from a
   request that names an id (§5.6).
 - When it picks among the candidates, picks the default where the type
   has one, and offers it first, or shows which it is, when it offers
@@ -55,7 +55,7 @@ description: The obligations of each role, gathered in one place.
 
 ## A conforming system
 
-- Has the catalogue at `/usr/share/apps/`, readable by anyone who can
+- Has the catalog at `/usr/share/apps/`, readable by anyone who can
   log on to a desktop (§5.4).
 - Lets anyone who can log on to a desktop read
   `Machine\Generic\Applications\Defaults` where it is present, and

@@ -17,7 +17,7 @@ several, encoded as an array of maps. A collector MUST accept both
 | `timestamp` | integer | no | When the measurement was taken, in the timestamp domain (§3.5). Absent means the collector uses its own clock at receipt. |
 | `value` | varies | yes | The measurement. A number for counter and gauge; a map for histogram. |
 
-A collector MUST ignore fields it does not recognise (§3.29).
+A collector MUST ignore fields it does not recognize (§3.29).
 
 ## The histogram value
 

@@ -79,7 +79,7 @@ The SD's 16-bit Control field records metadata about the descriptor:
 | SE_DACL_DEFAULTED (DD) | 3 | 0x0008 | The DACL was established by default means. |
 | SE_SACL_PRESENT (SP) | 4 | 0x0010 | A SACL is present. |
 | SE_SACL_DEFAULTED (SD) | 5 | 0x0020 | The SACL was established by default means. |
-| SE_DACL_TRUSTED (DT) | 6 | 0x0040 | Reserved metadata. Preserved during round-trip serialisation. No operational semantics. |
+| SE_DACL_TRUSTED (DT) | 6 | 0x0040 | Reserved metadata. Preserved during round-trip serialization. No operational semantics. |
 | SE_SERVER_SECURITY (SS) | 7 | 0x0080 | Create a server ACL based on the input ACL. |
 | SE_DACL_AUTO_INHERIT_REQ (AR) | 8 | 0x0100 | Requests that the DACL be auto-inherited from the parent. When clear on a creator SD, parent inheritance is suppressed even if SE_DACL_PROTECTED is not set. |
 | SE_SACL_AUTO_INHERIT_REQ | 9 | 0x0200 | Requests that the SACL be auto-inherited from the parent. Same semantics as bit 8 for the SACL. |
@@ -91,7 +91,7 @@ The SD's 16-bit Control field records metadata about the descriptor:
 | SE_SELF_RELATIVE (SR) | 15 | 0x8000 | The SD is in self-relative format. MUST always be set for stored SDs. |
 
 The architectural maximum SD size is 65,535 bytes. KACS MUST reject any parsed
-or computed SD whose serialised self-relative byte length exceeds 65,535
+or computed SD whose serialized self-relative byte length exceeds 65,535
 bytes.
 
 The DEFAULTED flags are metadata. During object-SD creation, KACS MUST set the

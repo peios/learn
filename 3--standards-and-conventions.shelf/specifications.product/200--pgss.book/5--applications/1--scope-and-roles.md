@@ -1,6 +1,6 @@
 ---
 title: Scope and Roles
-description: What PGSS Applications specifies and who its parties are — a program declared to a desktop by a file, the directory of such files as the catalogue, and the rules by which a consumer lists, names, starts and opens with an application.
+description: What PGSS Applications specifies and who its parties are — a program declared to a desktop by a file, the directory of such files as the catalog, and the rules by which a consumer lists, names, starts and opens with an application.
 ---
 
 This chapter specifies **PGSS Applications**: what a program *is* to a
@@ -12,8 +12,8 @@ not a place. A program is not an application because of the directory
 it is installed in or the name it is installed under, and a desktop
 does not find applications by looking at programs. A package that ships
 an application also installs one small file that says what it is, and
-the directory of those files is the catalogue (§5.4). Presence is the
-catalogue: nothing runs at install, nothing registers, and nothing
+the directory of those files is the catalog (§5.4). Presence is the
+catalog: nothing runs at install, nothing registers, and nothing
 indexes.
 
 Two roles participate.
@@ -36,7 +36,7 @@ once, to everyone.
 This chapter covers:
 
 - what a declaration is, where it is, and what it says (§5.3)
-- what the catalogue is, and how a consumer reads it (§5.4)
+- what the catalog is, and how a consumer reads it (§5.4)
 - how a consumer finds the declaration for a program it has met,
   running or on disk, and so the program's title and icon (§5.5)
 - how a consumer starts an application, bare or with a file (§5.6)
@@ -50,7 +50,7 @@ This chapter does not cover:
   where a choice is kept and who may write it; a settings application's
   shape is its own.
 - Declarations of a person's own, or of a system's local layer, beyond
-  what the catalogue's directory admits. This version has one catalogue.
+  what the catalog's directory admits. This version has one catalog.
 - How a consumer determines a file's type. §5.6 takes the type as given,
   as PGSS Icons §4.6 does.
 - What a program does once started, or how a consumer confines it. The

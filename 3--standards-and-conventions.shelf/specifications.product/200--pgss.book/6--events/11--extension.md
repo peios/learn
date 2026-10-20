@@ -9,7 +9,7 @@ The following are additive. An emitter and a consumer built to this
 version behave correctly in their presence:
 
 - A new event type, under a root its emitter owns.
-- A new field, defined once in the catalogue. A consumer that does not
+- A new field, defined once in the catalog. A consumer that does not
   know a field still reads, stores and queries it by its path.
 - A new value of an open enumeration, which a consumer built to this
   version treats as a value rather than an error (§6.5).

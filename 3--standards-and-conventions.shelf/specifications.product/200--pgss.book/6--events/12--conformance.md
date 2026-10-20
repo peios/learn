@@ -43,7 +43,7 @@ description: The obligations of the emitter, the consumer and the system, gather
 - Does not accept a value in a wire form other than its type's (§6.5).
 - Treats an unknown value of an open enumeration as a value, not an
   error (§6.5).
-- Reads the catalogue from every `.evman` file in `/usr/share/evman/` and
+- Reads the catalog from every `.evman` file in `/usr/share/evman/` and
   no subdirectory, and treats a fragment breaking rule 1, 2 or 3 as
   defining nothing (§6.10).
 
@@ -59,7 +59,7 @@ description: The obligations of the emitter, the consumer and the system, gather
 Conformance does not require an emitter to write any particular event,
 to cache the emission policy, or to define fields beyond those it
 writes. It does not require a consumer to store, index or query events,
-to read the catalogue at all, or to resolve SIDs to names. It does not
+to read the catalog at all, or to resolve SIDs to names. It does not
 require either role to know about any event type or field other than the
 ones it writes or reads: an unknown event type is still an event, and an
 unknown field is still a value at a path.

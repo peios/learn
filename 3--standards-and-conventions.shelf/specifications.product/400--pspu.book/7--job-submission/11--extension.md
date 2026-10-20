@@ -10,11 +10,11 @@ here and what this chapter adds.
 ## What may be added
 
 A **request field**, including a new definition field on `submit`. A
-manager MUST ignore a field it does not recognise, so a submitter MAY
+manager MUST ignore a field it does not recognize, so a submitter MAY
 send one and MUST NOT depend on its effect.
 
 A **job view field**. A client MUST ignore a field it does not
-recognise.
+recognize.
 
 A **command**, and the error codes and enumerated values that appear
 only in responses to it, on the terms §4.21 gives: a client that never

@@ -28,7 +28,7 @@ The name is a **claim**. It MUST be cross-checked against the identity
 the authority established for itself (§2.9), and it MUST NOT be used for
 anything else. A mismatch MUST be refused rather than quietly corrected:
 a service registering under another's name is worth failing on, not
-normalising.
+normalizing.
 
 ### domain
 
@@ -64,7 +64,7 @@ registering with no identifier range.
 This is a declaration of capability, not of willingness. A source
 declaring `QUERIES` may still answer `Refused` to any particular
 question (§2.15); a source declaring `ENUMERATES` may still refuse a
-cursor it can no longer honour (§2.16).
+cursor it can no longer honor (§2.16).
 
 ### entry_ttl
 
@@ -73,7 +73,7 @@ before asking again.
 
 **Zero means do not cache.** A source declaring neither
 `PUSHES_CHANGES` nor a non-zero `entry_ttl` has said its answers must
-not be held at all, and an authority MUST honour that — see §2.17, where
+not be held at all, and an authority MUST honor that — see §2.17, where
 the reasoning for reading silence that way is set out.
 
 `entry_ttl` and `PUSHES_CHANGES` are not exclusive, and a source
@@ -136,7 +136,7 @@ authority means, since it has no ranges to assign.
 3. An authority MUST NOT admit two sources under one name at the same
    time.
 4. An authority MUST send `Registered` only after the source is
-   routable, so that a logon racing the acknowledgement cannot find a
+   routable, so that a logon racing the acknowledgment cannot find a
    source that is registered but not yet reachable.
 5. A source MUST NOT send any other message before receiving
    `Registered`.

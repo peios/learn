@@ -1,6 +1,6 @@
 ---
 title: Starting and Opening
-description: What a consumer runs to start an application bare or with a file, what it passes and how, which applications are candidates to open a file and which of them it picks, and what a consumer must take from the catalogue rather than from a request.
+description: What a consumer runs to start an application bare or with a file, what it passes and how, which applications are candidates to open a file and which of them it picks, and what a consumer must take from the catalog rather than from a request.
 ---
 
 ## Starting
@@ -46,17 +46,17 @@ a default from anywhere §5.7 does not name.
 An application with no `opens` is a candidate for nothing, and is
 started bare.
 
-## From the catalogue, not from the request
+## From the catalog, not from the request
 
 A consumer often starts an application because something asked it to,
 and the something is not always trustworthy: a page in a browser, a
 message from another process. A consumer that starts an application on
 a request that names it by id MUST take the program and the arguments
-from the catalogue as it stands at that moment, and MUST NOT take a
+from the catalog as it stands at that moment, and MUST NOT take a
 program or arguments from the request. The request says which
 application; the declaration says what runs.
 
-A request that names an id the catalogue has no usable declaration for
+A request that names an id the catalog has no usable declaration for
 starts nothing.
 
 > [!NOTE]

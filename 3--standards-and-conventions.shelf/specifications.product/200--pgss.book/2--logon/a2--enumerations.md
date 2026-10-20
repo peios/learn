@@ -63,7 +63,7 @@ Carried in `CredentialEnrollStart.action` (§2.23) as a `u8`.
 
 | Value | Name | `material` holds |
 |---|---|---|
-| 1 | `Add` | The credential to enrol: for `SshPublicKey`, one line of an OpenSSH public key file |
+| 1 | `Add` | The credential to enroll: for `SshPublicKey`, one line of an OpenSSH public key file |
 | 2 | `Remove` | Which credential to remove: for `SshPublicKey`, its `SHA256:` fingerprint |
 
 `CredentialEnrollStart.credential_type` takes a value from the
@@ -91,7 +91,7 @@ A denial code MAY be added without a version bump where it only ever
 answers messages newer than it is — messages no peer that predates the
 code can send — because such a peer is then never sent it. `NoSuchSession`
 and `CredentialRejected` were added under this rule. A client of the newer messages SHOULD treat a
-code it does not recognise as a refusal, reporting the code and
+code it does not recognize as a refusal, reporting the code and
 `reason`, rather than as an unreadable answer; it is the one place in
 this chapter where a client may meet a denial newer than itself.
 

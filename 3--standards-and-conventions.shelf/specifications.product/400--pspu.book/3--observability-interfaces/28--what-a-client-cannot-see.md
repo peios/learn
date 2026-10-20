@@ -80,7 +80,7 @@ identifier had been denied outright.
 A collector MUST NOT reject the query.
 
 > [!NOTE]
-> Rejecting would be the more informative behaviour and that is precisely
+> Rejecting would be the more informative behavior and that is precisely
 > the objection to it. A rejection tells the client that an identifier
 > exists, matches its query, and carries a field it may not read — three
 > facts about data it was not permitted to see, delivered by the

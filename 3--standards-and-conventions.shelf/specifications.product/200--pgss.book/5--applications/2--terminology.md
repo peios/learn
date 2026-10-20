@@ -1,6 +1,6 @@
 ---
 title: Terminology
-description: The nouns this chapter is specified in — application, declaration, id, catalogue, program, title, listed, media type pattern, candidate, choice, default.
+description: The nouns this chapter is specified in — application, declaration, id, catalog, program, title, listed, media type pattern, candidate, choice, default.
 ---
 
 **Application.** A program as a desktop knows it: something with a
@@ -15,7 +15,7 @@ of §5.3. One file declares one application.
 declaration's file is named for, in the form of an icon identifier
 (PGSS Icons §4.3). `dev.peios.gexora` is an id.
 
-**Catalogue.** The directory holding every declaration on the system,
+**Catalog.** The directory holding every declaration on the system,
 in the form of §5.4. A consumer that wants to know what applications
 there are reads it.
 

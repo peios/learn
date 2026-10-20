@@ -50,7 +50,7 @@ This chapter does not cover:
   icon by name under §4.5.
 - How a consumer determines a file's type. §4.6 takes the type as
   given.
-- How a consumer draws a picture, at what size, or in what colour.
+- How a consumer draws a picture, at what size, or in what color.
   Rendering is the consumer's.
 - Pictures that are not icons: a thumbnail of a photograph, a preview of
   a document. A consumer that shows those shows them instead of an icon,

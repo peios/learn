@@ -43,7 +43,7 @@ Requirements are stated against the role, not the program.
 - the two channels, their addressing, and how each is reached
 - message framing and encoding on both
 - how a client's identity is established, and how a command is
-  authorised
+  authorized
 - the command set, the response shapes, and the error vocabulary
 - what a command does to a service in each of its states
 - how a service's notification is authenticated, and what a service may

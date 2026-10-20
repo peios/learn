@@ -38,7 +38,7 @@ matters.
 **Multiplexing.** PGSS Logon is one conversation per connection; the
 connection *is* the conversation. PSI carries many concurrent logons
 over one long-lived connection, so its header adds a conversation
-identifier (§2.7). The alternative — serialising every logon behind one
+identifier (§2.7). The alternative — serializing every logon behind one
 connection — would make any slow logon a system-wide login stall.
 
 **Distinct magic.** `PPSI` rather than `PGSL`. Two protocols this

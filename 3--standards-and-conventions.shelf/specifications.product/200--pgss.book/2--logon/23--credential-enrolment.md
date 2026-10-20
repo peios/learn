@@ -54,14 +54,14 @@ action nobody asked for. An authority MUST refuse a
 The credential types the client can render, for the proof the authority
 will ask for. It carries the meaning and the capability rule of the §2.7
 field of the same name, and a decoder MUST drop a value it does not
-recognise rather than refuse the message.
+recognize rather than refuse the message.
 
 ### action
 
-`1`, `Add`: enrol `material` as a new credential of the principal. `2`,
+`1`, `Add`: enroll `material` as a new credential of the principal. `2`,
 `Remove`: remove the credential `material` identifies. The values are
 instructions rather than statements of capability, so a decoder MUST
-refuse one it does not recognise with `MalformedRequest`.
+refuse one it does not recognize with `MalformedRequest`.
 
 ### credential_type
 
@@ -85,7 +85,7 @@ The principal whose credentials change is the **user of the connected
 peer's token**, as in §2.20, and for the same reason: a field naming a
 principal would let anything that reaches the socket ask to add a key to
 anybody's account. The message carries no identifier, and an authority
-MUST NOT enrol a credential for, or remove one from, any other principal
+MUST NOT enroll a credential for, or remove one from, any other principal
 in this conversation.
 
 An authority MUST refuse, with `AccountRestricted`, a principal for

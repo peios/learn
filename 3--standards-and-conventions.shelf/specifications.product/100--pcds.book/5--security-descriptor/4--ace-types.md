@@ -268,7 +268,7 @@ are allowed.
 
 ## Allocated but unimplemented ACE types
 
-Two values in the range have a name but no KACS behaviour.
+Two values in the range have a name but no KACS behavior.
 
 | Structure | Value | Notes |
 |---|---|---|
@@ -282,7 +282,7 @@ conforming system implemented it. Nothing produces it.
 KACS has not implemented. The kernel ABI defines a constant for it
 (`KACS_ACE_TYPE_SYSTEM_ACCESS_FILTER`) so that a decoder can put a name to the
 byte, but no section of this specification assigns it meaning. A 0x15 ACE
-therefore takes the unrecognised-ACE path described at the end of this
+therefore takes the unrecognized-ACE path described at the end of this
 section: skipped during evaluation, preserved byte-for-byte on round-trip. An
 implementation MUST NOT grant, deny, audit, or filter access on the basis of a
 0x15 ACE.
@@ -331,10 +331,10 @@ ACLs carry a revision number that constrains which ACE types MAY appear:
   (0x05–0x08), callback ACEs (0x09–0x0C, 0x0D–0x10). Required for Active
   Directory access control.
 
-When creating new ACLs containing only recognised ACE types, the revision MUST
+When creating new ACLs containing only recognized ACE types, the revision MUST
 be set to the minimum required by the ACE types present. When rewriting an
-existing ACL while preserving one or more unrecognised ACE types, KACS MUST
-set the revision to the greater of the minimum required by recognised ACE
+existing ACL while preserving one or more unrecognized ACE types, KACS MUST
+set the revision to the greater of the minimum required by recognized ACE
 types present and the source ACL revision. When parsing ACLs, KACS MUST NOT
 reject an ACL based on revision-vs-ACE-type mismatch — accept permissively,
 write correctly.
@@ -346,9 +346,9 @@ write correctly.
   tool. The evaluator handles all ACE types correctly regardless of ACL
   revision.
 
-Unrecognised ACE types — every value not given semantics above, which today
+Unrecognized ACE types — every value not given semantics above, which today
 means 0x04, 0x15, and everything from 0x16 up — MUST be silently skipped
-during evaluation and preserved byte-for-byte during round-trip serialisation.
+during evaluation and preserved byte-for-byte during round-trip serialization.
 The ACE's raw bytes (from `AceType` through `AceType + AceSize`) are stored
 opaquely and written back unchanged. ACEs with `AceSize` not a multiple of 4
 MUST be rejected (the containing ACL is malformed).

@@ -37,7 +37,7 @@ anchor for "may see who did it".
 
 OpenTelemetry names attributes by dotted paths and keeps a registry of
 them with stability levels, so that a name is defined once and
-referenced everywhere. The catalogue of §6.10 plays the registry's part,
+referenced everywhere. The catalog of §6.10 plays the registry's part,
 and its rule that no path is defined twice is the same discipline,
 checked mechanically.
 

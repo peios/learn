@@ -18,7 +18,7 @@ escapes those destinations entirely.
 
 A symlink target is subject to the same path-validity constraints as a
 payload path (§5.13): valid UTF-8, no NUL bytes, no ASCII control
-characters, no backslashes, NFC normalisation, and the length limits.
+characters, no backslashes, NFC normalization, and the length limits.
 
 A consumer MUST validate every symlink target against these constraints
 before extracting the entry. A package containing a non-conforming
@@ -50,7 +50,7 @@ package level through `dependencies` (§5.21).
 > forced restructured `-dev` splits with developer links living in
 > runtime packages — and rejected. Forbidding them deviates from
 > universal Linux convention with no corresponding security gain: the
-> defence below operates on resolved-target validity, not on whether the
+> defense below operates on resolved-target validity, not on whether the
 > resolution crosses a package boundary.
 
 ## Integrity

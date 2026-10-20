@@ -55,7 +55,7 @@ The signed bytes do **not** include:
 | `signature` | The signature value, base64 per RFC 4648 §4 without padding. For Ed25519 the decoded value is 64 bytes. |
 
 An envelope MUST contain all four fields. A missing field, or an
-unrecognised `algorithm` or `schema_version`, MUST cause the package to
+unrecognized `algorithm` or `schema_version`, MUST cause the package to
 be rejected.
 
 ## Strict parsing
@@ -81,7 +81,7 @@ permissive ignoring.
 To sign a package, a producer:
 
 1. Constructs every tar entry except `.peipkg/signature`.
-2. Serialises them as an uncompressed tar byte stream in archive order.
+2. Serializes them as an uncompressed tar byte stream in archive order.
 3. Computes the SHA-256 of that stream.
 4. Signs the resulting 32-byte hash with its Ed25519 private key, per
    RFC 8032.

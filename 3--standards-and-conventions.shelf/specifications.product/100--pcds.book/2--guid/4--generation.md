@@ -35,7 +35,7 @@ source.
 In the kernel, this MUST be `get_random_bytes()` or equivalent.
 
 In userspace, this MUST be `getrandom(2)` with no flags (blocking
-until the entropy pool is initialised) or equivalent.
+until the entropy pool is initialized) or equivalent.
 
 GUIDs MUST NOT be generated using a pseudorandom number generator
 seeded from a predictable source.

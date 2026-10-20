@@ -24,7 +24,7 @@ change without either being told.
 
 ## Unknown fields are ignored
 
-A collector MUST ignore fields it does not recognise in a log record
+A collector MUST ignore fields it does not recognize in a log record
 (§3.7), in a metric record (§3.11), and in a query request (§3.15).
 
 This is what allows a field to be added. A producer built against a
@@ -40,10 +40,10 @@ a collector MUST NOT require one to be present.
 
 The rule does **not** extend to values.
 
-An unrecognised `type` in a metric record discards the record (§3.12); a
-first token that is not a mode fails the query (§3.18); an unrecognised
-keyword is a parse error. A collector MUST NOT guess at an unrecognised
-value, and MUST NOT skip a field it recognised but could not interpret.
+An unrecognized `type` in a metric record discards the record (§3.12); a
+first token that is not a mode fails the query (§3.18); an unrecognized
+keyword is a parse error. A collector MUST NOT guess at an unrecognized
+value, and MUST NOT skip a field it recognized but could not interpret.
 
 The asymmetry is the point. An unknown field is something the sender
 knows about and this collector does not, and ignoring it loses only what
@@ -53,7 +53,7 @@ understanding it stores something other than what was sent.
 
 ## Response statuses
 
-A client MUST treat a response whose `status` it does not recognise as
+A client MUST treat a response whose `status` it does not recognize as
 an error terminating the query, and MUST discard the `"ok"` messages it
 has received for that query unless `"end"` or `"watch"` had already
 arrived (§3.16).
@@ -71,7 +71,7 @@ four existing ones can express.
 - **New optional fields** in a log record, a metric record or a query
   request.
 - **New fields in result records.** A client MUST tolerate a key it does
-  not recognise, and MUST NOT reject a record for carrying one.
+  not recognize, and MUST NOT reject a record for carrying one.
 - **New query keywords, clauses and functions.** A client sending one
   the collector does not know receives a parse error, which is the
   correct answer.

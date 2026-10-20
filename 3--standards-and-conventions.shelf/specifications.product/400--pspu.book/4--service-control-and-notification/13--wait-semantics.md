@@ -7,7 +7,7 @@ description: What ending a wait means, and how the wait flag changes when a life
 immediately or held until the operation resolves.
 
 With `wait: false`, the manager MUST respond as soon as it has accepted
-the operation, with the acknowledgement shape and the service's state at
+the operation, with the acknowledgment shape and the service's state at
 that moment.
 
 With `wait: true`, the manager MUST hold the connection open and respond
@@ -21,7 +21,7 @@ close it for idleness however long the operation runs.
 
 | Ending | Response |
 |---|---|
-| The operation reaches a terminal state | The acknowledgement shape. |
+| The operation reaches a terminal state | The acknowledgment shape. |
 | The operation's lifetime expires | `OPERATION_TIMEOUT`. |
 | The operation is no longer held by the manager | `UNKNOWN_OPERATION`. |
 
@@ -38,7 +38,7 @@ the reload resolved:
 
 | Value | Meaning |
 |---|---|
-| `confirmed` | The service acknowledged the reload by signalling readiness. The reload demonstrably happened. |
+| `confirmed` | The service acknowledged the reload by signaling readiness. The reload demonstrably happened. |
 | `advisory` | The manager issued the reload and the service did not acknowledge it. The reload probably happened; nothing confirms it. |
 | `failed` | The reload did not happen. An external reload command exited non-zero or timed out. |
 

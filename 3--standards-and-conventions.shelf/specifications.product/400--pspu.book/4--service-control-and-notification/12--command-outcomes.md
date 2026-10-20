@@ -18,7 +18,7 @@ defined answer. The manager MUST NOT silently do nothing.
 ## The outcomes
 
 **act** — create an operation and execute it. The manager returns the
-acknowledgement shape.
+acknowledgment shape.
 
 **merge** — an operation of this type is in flight. The command merges
 into it (§4.11) and the caller receives that operation's identifier.
@@ -35,13 +35,13 @@ restart's delay.
 
 **already** — the service is in the state the command would take it to
 and no operation of this type is in flight. The manager MUST return the
-**status** shape, not an error and not an acknowledgement.
+**status** shape, not an error and not an acknowledgment.
 
 **noop** — the command has no effect. The manager MUST return the status
 shape.
 
 **clear** — the service returns to inactive. This is a synchronous
-outcome; the manager returns an acknowledgement.
+outcome; the manager returns an acknowledgment.
 
 **cancel** — abort or cancel the operation in flight, then proceed.
 
@@ -55,7 +55,7 @@ answer `INVALID_STATE`.
 A service in `backoff` is down with an automatic restart pending, and
 the four lifecycle commands mean different things there:
 
-- `start` defers, as above, and honours the remaining delay.
+- `start` defers, as above, and honors the remaining delay.
 - `stop` cancels both the pending restart and any deferred start, and
   the service becomes inactive.
 - `restart` cancels the automatic restart and performs a

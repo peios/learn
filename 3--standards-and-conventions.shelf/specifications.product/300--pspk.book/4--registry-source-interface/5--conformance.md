@@ -71,13 +71,13 @@ across a whole walk uses a read-only transaction.
 requests without head-of-line blocking, and MAY process them in any
 order.
 
-**Serialise commits.** Concurrent read-write commits MUST be
-serialised, and a commit MUST be atomic. The kernel does no conflict
+**Serialize commits.** Concurrent read-write commits MUST be
+serialized, and a commit MUST be atomic. The kernel does no conflict
 detection: it relies on commits being ordered and atomic, and lets the
 later write win by sequence number.
 
 **Support conditional writes.** `expected_sequence` on `RSI_SET_VALUE`
-MUST be honoured atomically.
+MUST be honored atomically.
 
 **Protect immutable fields.** `RSI_WRITE_KEY` requests attempting to
 modify the GUID, the volatile flag or the symlink flag MUST be rejected

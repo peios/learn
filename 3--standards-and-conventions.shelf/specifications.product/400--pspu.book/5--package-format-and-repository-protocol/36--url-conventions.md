@@ -21,7 +21,7 @@ global form of that allowance, and its use MUST generate a per-operation
 warning.
 
 Enabling the allowance on a repository that has already been added MUST
-require explicit operator authorisation and MUST emit an audit event.
+require explicit operator authorization and MUST emit an audit event.
 Setting it as part of the initial add is covered by the operator's trust
 decision at that moment and requires no separate event beyond the add's
 own.

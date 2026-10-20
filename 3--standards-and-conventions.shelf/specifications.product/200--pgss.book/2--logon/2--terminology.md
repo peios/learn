@@ -62,7 +62,7 @@ ask (§2.19).
 **Source.** A party an authority consults in order to answer a question
 about identity. Whether an authority has sources at all, and what they
 are, is its own design; the term appears here only where the protocol's
-behaviour depends on there being more than one possible answerer
+behavior depends on there being more than one possible answerer
 (§2.15, §2.18).
 
 ## A note on "logon type"

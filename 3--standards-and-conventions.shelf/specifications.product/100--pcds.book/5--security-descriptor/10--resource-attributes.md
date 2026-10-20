@@ -46,6 +46,6 @@ Kernel TRM §3.4.2.
 | BOOLEAN | 0x0006 | Boolean value. |
 | OCTET | 0x0010 | Byte array. |
 
-Boolean values MUST be normalised to 1 (true) or 0 (false) at resolution time
+Boolean values MUST be normalized to 1 (true) or 0 (false) at resolution time
 (when the conditional expression evaluator reads the attribute value),
 regardless of the wire encoding.

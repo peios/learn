@@ -13,7 +13,7 @@ To verify a package's signature, a consumer MUST:
    range of §5.28.
 4. Parse the content of `.peipkg/signature` as the signature envelope.
 5. Validate the envelope's `schema_version` and `algorithm`. Reject if
-   either is unrecognised, naming the version mismatch where that is the
+   either is unrecognized, naming the version mismatch where that is the
    cause.
 6. Look up the public key by `key_fingerprint` in the trust set scoped
    to the originating repository (§5.29). If no matching key is in that
@@ -64,7 +64,7 @@ A consumer MUST reject a package as unverified when any of these holds:
 3. The envelope does not parse, or carries an unknown or duplicate
    field.
 4. The envelope's `schema_version` is not 1.
-5. The envelope's `algorithm` is not recognised.
+5. The envelope's `algorithm` is not recognized.
 6. The envelope's `key_fingerprint` matches no key in the trust set
    scoped to the originating repository.
 7. The matching key's status does not permit verification.
@@ -108,7 +108,7 @@ provenance, not safety.
 ## Replay and substitution
 
 Signature verification alone does not prevent replay — an attacker
-substituting an older, validly signed package for a newer one. Defence
+substituting an older, validly signed package for a newer one. Defense
 against substitution comes from the repository index (§5.33), which is
 itself signed, declares the current authoritative version of each
 package, and records each package's hash.
