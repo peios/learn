@@ -4,7 +4,7 @@ type: concept
 description: Choose a browser, console, or SSH route and find the account settings for it.
 related:
   - peios/local-accounts/overview
-  - peios/operating-peios/troubleshoot-a-problem
+  - peios/introduction/troubleshoot-a-problem
 ---
 
 Use a sign-in route enabled by the machine's image and configuration. On an

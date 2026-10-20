@@ -3,7 +3,7 @@ title: Troubleshooting a Problem
 type: how-to
 description: Preserve the failure, inspect the responsible component, and verify one correction at a time.
 related:
-  - peios/operating-peios/manage-the-machine
+  - peios/introduction/finding-your-way
   - peios/services-and-jobs/troubleshooting
 ---
 
