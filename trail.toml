@@ -7,7 +7,7 @@ footer = "Peios Learn — documentation for Peios software."
 
 featured = [
   "peios", "kernel", "universal-directory", "trail", "acta",
-  "provium", "gcsl", "psc", "specifications",
+  "provium", "clackatoo", "gcsl", "psc", "specifications",
 ]
 passthrough = ["CNAME", ".well-known"]
 
