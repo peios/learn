@@ -1,0 +1,10 @@
+# Linux x86_64 / CPython 3.14 artifacts. Regenerate deliberately for another host.
+ast_serialize==0.13.0 --hash=sha256:4f55668338bcb871e83ee21ba865fb08b7b4b13af9312742f9878c39f9d84ee3
+clang-format==18.1.8 --hash=sha256:2de122b8aa78ba49e326f974131caab2c79f4ae877c227cd4e3e5d82a98d21e5
+clang-tidy==18.1.8 --hash=sha256:c725a95c316d15df12f5bf7c1abfdf3cb9e4f3b9a9afb4cb6bb1e9df4e669493
+librt==0.16.0 --hash=sha256:ca8052401c55d7511dda6760719fda7618067e83535d7d0010096d216c34b667
+mypy==2.4.0 --hash=sha256:20e9a5cd875837520c43db98dea0b6d0c2197833d95c30127d8f570fb9b1f00b
+mypy_extensions==1.1.0 --hash=sha256:1be4cccdb0f2482337c4743e60421de3a356cd97508abadd57d47403e94f5505
+pathspec==1.1.1 --hash=sha256:a00ce642f577bf7f473932318056212bc4f8bfdf53128c78bbd5af0b9b20b189
+ruff==0.17.0 --hash=sha256:bc73e7c133e82d55b5f15897b2a442d72c0cb4a0c886c46801ce3c247150b60c
+typing_extensions==4.16.0 --hash=sha256:481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8

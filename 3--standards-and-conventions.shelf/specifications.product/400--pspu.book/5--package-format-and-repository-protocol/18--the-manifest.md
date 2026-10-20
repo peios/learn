@@ -1,0 +1,255 @@
+---
+title: The Manifest
+description: The authoritative JSON metadata for a package — identity, relationships, side-effect requirements and build provenance — with its full schema.
+---
+
+The manifest is the authoritative metadata for a package: its identity,
+its relationships, its side-effect requirements, and its build
+provenance. It is a JSON document at `.peipkg/manifest.json`.
+
+## Schema
+
+```json
+{
+  "schema_version": 1,
+  "name": "<string>",
+  "version": "<string>",
+  "architecture": "<string>",
+  "description": "<string>",
+  "license": "<string>",
+  "license_class": "<string>",
+  "homepage": "<string>",
+  "default_root": "<root reference>",
+  "special_system_package": <bool>,
+  "alternate_upgrade": {<alternate_upgrade>},
+  "dependencies": [<dependency>...],
+  "optional_dependencies": [<dependency>...],
+  "conflicts": [<dependency>...],
+  "provides": [<provides>...],
+  "replaces": [<replaces>...],
+  "side_effects": [<string>...],
+  "size_installed": <integer>,
+  "sd_overrides": [<sd_override>...],
+  "build": {<build>}
+}
+```
+
+## Required fields
+
+| Field | Type | Description |
+|---|---|---|
+| `schema_version` | integer | MUST be 1 in this version. |
+| `name` | string | Package name conforming to §5.3. |
+| `version` | string | Version conforming to §5.5. |
+| `architecture` | string | Architecture identifier conforming to §5.8. |
+| `dependencies` | array | Required dependencies. MAY be empty; MUST be present. |
+| `conflicts` | array | Conflicting packages. MAY be empty; MUST be present. |
+| `size_installed` | integer | Total size in bytes of the installed payload. |
+| `build` | object | Build provenance. |
+
+A manifest missing any required field MUST be rejected.
+
+The package format treats `name` as an opaque canonical identifier within the
+§5.3 grammar; it does not derive or authenticate namespace ownership. Peios
+catalogues assign reverse-DNS names whose leading segments identify the
+upstream namespace and whose final segment is the familiar package name, such
+as `com.amd.amd-ucode`. Peios-originated packages use `org.peios`. Dependency
+and package-operation inputs that identify a concrete package carry the
+complete canonical name; virtual capabilities retain their own names.
+Repository signatures and build provenance, rather than the spelling of
+`name`, establish who produced a particular package.
+
+## Optional fields
+
+| Field | Type | Description | Absent means |
+|---|---|---|---|
+| `description` | string | One-line human-readable description. | empty string |
+| `license` | string | SPDX identifier or expression. | empty string |
+| `license_class` | string | Which of the closed set of licence classes (§5.a2) the package's terms fall into: `unknown`, `free`, `firmware` or `proprietary`. | `unknown` |
+| `homepage` | string | URL of the upstream project. | empty string |
+| `default_root` | string | The root a *top-level* install of this package lands in when the operator names none (§5.19). | the operator's current root |
+| `special_system_package` | boolean | Declares the package exempt from the §5.14 layout rules at production time (§5.14). | `false` |
+| `alternate_upgrade` | object | Declares that the package is meant to be installed and upgraded through a path outside the package manager (see "The alternate_upgrade object" below). | none |
+| `optional_dependencies` | array | Dependencies that enhance but are not required. | empty array |
+| `provides` | array | Virtual names this package satisfies. | empty array |
+| `replaces` | array | Packages this one supersedes. | empty array |
+| `side_effects` | array | Maintenance operations to invoke (§5.24). | empty array |
+| `sd_overrides` | array | Per-entry security descriptor overrides (§5.20). | empty array |
+
+A manifest carrying an unknown field MUST NOT be rejected; the unknown
+field MUST be ignored (§5.9).
+
+## The alternate_upgrade object
+
+```json
+{
+  "message": "<string>"
+}
+```
+
+| Field | Required | Description |
+|---|---|---|
+| `message` | yes | Text shown to the operator in place of proceeding. Non-empty UTF-8, at most 1024 bytes; MAY contain newlines and MUST NOT contain other control characters. |
+
+A package that sets `alternate_upgrade` states that it is meant to be
+installed and upgraded by some means other than a routine package
+operation — an operating-system edition moved by a dedicated tool that
+also reconciles what the package manager deliberately does not touch,
+for example. The package manager grants nothing on the declaration's
+behalf. Its whole effect is on the consumer:
+
+1. A request that names the package — `install` or `upgrade` with the
+   package as an argument — or any install or named-upgrade plan whose
+   operations would install or upgrade the package as a dependency,
+   MUST be refused: nothing is applied, and the consumer MUST report
+   the package's name, its `message` verbatim, and this warning:
+
+   > Alternate upgrade paths may bypass normal peipkg protections;
+   > ensure you fully trust the authors of the package before running.
+
+2. An upgrade of every installed package MUST hold the package back at
+   its installed version, report it as in rule 1, and proceed with the
+   rest of the upgrade. Holding back is not a failure.
+3. A consumer MUST provide a deliberate, per-invocation override
+   (`--bypass-alternate-upgrade` in the reference implementation) under
+   which rules 1 and 2 do not apply. The override is the intended way
+   for the out-of-band tool to drive the package manager; it is never a
+   default and is never persisted.
+
+Composing a root from nothing — an image builder populating an empty
+tree, rather than a consumer changing an installed system — is not an
+install or upgrade in the sense above, and an image builder MUST ignore
+the field.
+
+> [!NOTE]
+> This is the one place the format lets a package say "not through
+> peipkg", and it is deliberately the weakest possible form of that:
+> a message, and a refusal. A package cannot name a command for the
+> consumer to run, cannot run anything itself, and cannot make the
+> consumer do more than stop. The message may tell the operator what
+> to run; the operator, not the package, runs it. The warning is
+> mandatory precisely because whatever the message names sits outside
+> every protection the package manager provides.
+
+## The build object
+
+```json
+{
+  "timestamp": "<RFC 3339 timestamp>",
+  "farm_id": "<string>",
+  "source_ref": "<string>"
+}
+```
+
+| Field | Required | Description |
+|---|---|---|
+| `timestamp` | yes | RFC 3339 timestamp of the build. MUST be UTC, MUST end with `Z`, and MUST NOT carry sub-second precision. |
+| `farm_id` | yes | Identifier of the build farm that produced this package. |
+| `source_ref` | yes | Reference to the build inputs, sufficient to reproduce the build. |
+| `source_package` | no | Name of the corresponding-source package produced from the same recipe and inputs (§5.15). |
+| `recipe_ref` | no | VCS identity of the recipe tree the build ran from — for example `git:<commit>`, suffixed `+dirty` when the work tree held uncommitted changes. |
+| `builder` | no | Identity and revision of the producing tool, for example `pekit/<revision>`. |
+
+A consumer MUST treat an absent optional field as the empty value.
+
+`timestamp` is also the modification time of every tar entry (§5.11
+rule 2). A producer MUST set both identically.
+
+`source_ref` is producer-defined but SHOULD be a machine-resolvable
+reference. The conventional form is a version-control URL with an
+explicit ref:
+
+```
+git+https://git.peios.org/sources/nginx#refs/tags/v1.26.2-3
+```
+
+> [!NOTE]
+> The build object exists to make reproducibility verifiable: a third
+> party in possession of the build inputs and the recorded timestamp can
+> re-run the build and compare the output bytes. The format does not
+> mandate that verification; it supplies the inputs for it.
+
+## Field constraints
+
+`description`, when present, MUST consist only of printable ASCII in the
+range `0x20`–`0x7E`. ASCII control characters and non-ASCII bytes MUST
+NOT appear. It SHOULD be a single line under 80 characters; longer
+descriptions belong in upstream documentation.
+
+> [!NOTE]
+> The byte-range rule is deliberately cruder than a Unicode-category
+> test. `description` is displayed to an operator deciding whether to
+> install, so it is both a terminal-escape-injection surface and a
+> homoglyph surface. A hard ASCII whitelist closes both without anyone
+> having to reason about which Unicode categories are safe to render.
+
+`license`, when present, SHOULD be a valid SPDX expression. A producer
+MAY use another form; this specification does not validate license
+strings. A `LicenseRef-` term names a licence with no SPDX identifier;
+a producer using one SHOULD ship the licence text under
+`/usr/share/licenses/<name>/` in the same package.
+
+`license_class`, when present, MUST be one of `unknown`, `free`,
+`firmware`, or `proprietary`; any other value MUST cause the package to
+be rejected. Absent means `unknown`, and a consumer MUST treat the two
+identically. A producer SHOULD declare a class other than `unknown`
+whenever `license` contains a `LicenseRef-` term, since that is
+precisely the case in which the expression alone cannot say.
+
+> [!NOTE]
+> A licence expression cannot be read by a machine for what an operator
+> actually wants to know — whether the package is free software, a
+> redistributable device firmware blob, or proprietary code — and the
+> `LicenseRef-` escape hatch makes every non-SPDX licence opaque. The
+> class carries that one fact so a consumer can answer "what non-free is
+> installed" or apply an image policy without parsing licences.
+> `firmware` is a class of its own rather than a kind of `proprietary`
+> because it is a different bargain: no source, executes on a device
+> rather than the CPU, and needed to use hardware the user owns — the
+> distinction Debian's `non-free-firmware` and Fedora's firmware
+> exception both draw. `unknown` exists so every package that predates
+> the field stays valid and honest: nothing has been asserted.
+
+`homepage`, when present, MUST be a syntactically valid URL per RFC 3986
+and MUST use the `https` or `http` scheme. Any other scheme MUST cause
+the package to be rejected.
+
+`size_installed` MUST be a non-negative integer, and MUST equal the sum
+of the `size` fields of every entry in the files manifest (§5.25). A
+consumer MUST verify that equality and MUST reject a package where it
+does not hold.
+
+> [!NOTE]
+> `size_installed` is not merely advisory. It is the input to the
+> decompression bound of §5.27, so a package whose declared size is
+> smaller than what it actually unpacks to is a resource-exhaustion
+> attempt, and one that is larger inflates the bound. Tying it to a
+> quantity a consumer can independently compute is what makes it
+> trustworthy.
+
+## Authoritative status
+
+The manifest is authoritative for a package's metadata. Where it
+disagrees with any other source — the repository index, the filename,
+secondary documentation — the manifest MUST be treated as correct, and
+the disagreement MUST be reported (§5.32).
+
+## Encoding
+
+The manifest MUST be UTF-8 encoded JSON and MUST end with a single
+newline.
+
+A producer that intends its packages to be byte-reproducible MUST
+serialise the manifest canonically: compact, with no insignificant
+whitespace, with HTML-escaping of `<`, `>`, and `&` disabled, with
+fields in the declaration order of the schema above, and with every
+optional field either always emitted or never emitted for a given
+producer.
+
+> [!NOTE]
+> The manifest's bytes are inside the archive that gets hashed and
+> signed, so two semantically identical manifests with different
+> whitespace produce different packages. Pinning the serialisation is
+> what makes independent reproduction possible at all; leaving it to the
+> producer's discretion means only that producer can ever reproduce its
+> own output.

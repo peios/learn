@@ -1,0 +1,341 @@
+---
+title: Query and Job Commands
+description: The three commands that read service state and change nothing — status, list and operation-status — the three that observe and stop submitted jobs, how a status or job view tells the caller what it may do, and how long results are retained.
+---
+
+Three commands read service state and change nothing. Three more
+observe and stop submitted jobs (§7), and are here because a client of
+this channel sees jobs alongside services.
+
+## status
+
+Returns everything the manager knows about one service.
+
+```json
+{
+    "status": "ok",
+    "service": "jellyfin",
+    "display_name": "Jellyfin",
+    "description": "Media server for the living room.",
+    "state": "active",
+    "cause": "explicit_start",
+    "status_text": "Listening on port 8096",
+    "progress": null,
+    "current_job": {
+        "id": "a1b2c3d4-…",
+        "type": "service_main",
+        "pid": 1234,
+        "started_at": "2026-06-01T12:34:56.123456789Z",
+        "identity": "jellyfin-svc"
+    },
+    "current_operation": {
+        "id": "e5f6g7h8-…",
+        "type": "start",
+        "source": "admin"
+    },
+    "health": "healthy",
+    "uptime_seconds": 86400,
+    "definition_removed": false,
+    "warnings": [],
+    "timers": [],
+    "granted": ["query_status", "start", "stop"]
+}
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `display_name` | string or null | The definition's human-readable name. |
+| `description` | string or null | The definition's human-readable description. |
+| `state` | string | §4.B. |
+| `cause` | string or null | Why the service last transitioned. §4.B. |
+| `status_text` | string or null | The most recent status string the service sent (§4.19). |
+| `progress` | object or null | The most recent progress the service sent (§4.19), in the form §7.7 gives. |
+| `current_job` | object or null | The current main job, or null if none. |
+| `current_operation` | object or null | The current operation, or null if none. |
+| `health` | string or null | `healthy`, `unhealthy`, `unknown`, or null when the service has no health check configured. |
+| `uptime_seconds` | integer or null | Whole seconds since the current job started. Null when nothing is running. |
+| `definition_removed` | bool | True while the service's definition has been withdrawn and an instance is still draining (§4.12). |
+| `warnings` | array of objects | Conditions worth an operator's attention. |
+| `timers` | array of objects | The service's calendar timer triggers, as the manager has them armed. Empty when it has none. |
+| `granted` | array of strings | The service rights the caller holds on this service. Never null. |
+
+`current_job` carries `id`, `type` (§4.B), `pid`, `started_at` and
+`identity`. `pid` and `started_at` are independently nullable.
+`identity` is the identity string the manager resolved for the
+execution, which is not necessarily what the resulting token contains.
+
+`current_operation` carries `id`, `type` and `source` (§4.B).
+
+The manager MUST clear `status_text` and `progress` to null at the
+start of every activation generation. A status string or a progress
+figure from a previous incarnation MUST NOT survive a restart and be
+reported as though it described the current process.
+
+### What the caller may do
+
+`granted` lists the service rights of §4.7 that the caller holds on the
+service, each by its name lowercased and without `SERVICE_`:
+`query_status`, `start`, `stop`, `interrogate`, in that order, and only
+those held. It describes the caller who asked, not the service; two
+callers asking about the same service may be told different things.
+
+The manager MUST compute it with the access check it runs for a command
+(§4.7) — the caller's token, the service's descriptor, the service
+generic mapping — asking for `MAXIMUM_ALLOWED` rather than for one
+right, and MUST report only the service rights among what that check
+grants. A client can therefore offer only the commands that will be
+allowed: while the caller's token and the service's descriptor stay as
+they were, a command whose required rights (§4.7) all appear in
+`granted` passes its access check, and one needing a right that is
+absent fails it. Whether the command will then do anything is a
+separate question, which the service's state answers (§4.12), and
+during a shutdown §4.15's restriction comes first.
+
+This check is a question, not a command. A right the caller lacks is
+simply absent from `granted`, and the manager MUST NOT record the check
+as a denial.
+
+A status returned by a lifecycle command that had no effect (§4.12)
+carries `granted` for the caller of that command.
+
+### Status warnings
+
+`warnings` in the status shape is an array of **objects**, not strings:
+
+```json
+{"path": "/sys/fs/cgroup/peinit/jellyfin/health",
+ "type": "health",
+ "detected_at": "2026-06-01T12:34:56.123456789Z"}
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `path` | string | What the warning is about. |
+| `type` | string | The kind of warning. §4.B. |
+| `detected_at` | string | When the manager noticed. §4.5. |
+
+A client MUST accept a `type` it does not recognise and MUST NOT discard
+the warning, since a warning it cannot classify is still one an operator
+should see.
+
+### Status timers
+
+`timers` has one object for each calendar timer trigger of a service
+that is not disabled (for peinit, the peinit TRM §9), ordered by
+schedule:
+
+```json
+{"schedule": "*-*-* 02:00:00",
+ "scheduled_at": "2026-06-02T02:00:00.000000000Z",
+ "fires_at": "2026-06-02T02:07:12.000000000Z",
+ "last_fired_at": "2026-06-01T02:03:40.000000000Z",
+ "not_armed": null}
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `schedule` | string | The calendar expression, as the trigger gives it. |
+| `scheduled_at` | string or null | The schedule's next occurrence. §4.5. |
+| `fires_at` | string or null | When the timer will fire: that occurrence, delayed by the jitter drawn for it. Equal to `scheduled_at` without jitter. §4.5. |
+| `last_fired_at` | string or null | When it last fired. Null when it has not fired since the manager started and no earlier firing is recorded. §4.5. |
+| `not_armed` | string or null | Why the manager has not armed it, when it has not: its schedule does not parse, or has no occurrence within the manager's search horizon. Null when armed. |
+
+An armed timer has `scheduled_at` and `fires_at`, and null
+`not_armed`. A timer not armed has only `schedule` and `not_armed`.
+
+These are the manager's own figures, not a calculation a client could
+repeat. The jitter is drawn at random each time the timer is armed, and
+only the manager knows which schedules it refused, so a client MUST
+NOT compute a next firing from the definition and present it as when
+the service will run.
+
+`last_fired_at` is the firing, not the run: it is when the manager
+acted on the timer (the peinit TRM §9.2), whatever came of that. For a
+persistent timer that has not fired since the manager started, it is
+the timestamp the manager recorded before (the peinit TRM §9.3).
+
+## list
+
+Returns every service the caller may query, with a compact summary.
+
+```json
+{
+    "status": "ok",
+    "services": [
+        {"service": "jellyfin", "display_name": "Jellyfin",
+         "description": "Media server for the living room.",
+         "state": "active", "cause": "explicit_start",
+         "health": "healthy", "next_timer_at": null},
+        {"service": "logrotate", "display_name": null,
+         "description": null, "state": "inactive",
+         "cause": "clean_exit", "health": null,
+         "next_timer_at": "2026-06-02T00:03:51.000000000Z"}
+    ]
+}
+```
+
+Exactly seven fields per entry: the name, the definition's nullable
+`display_name` and `description`, the state, cause and health of the
+status shape, and `next_timer_at`, the soonest `fires_at` among the
+service's armed timers, or null when it has none. Services the caller
+may not query are omitted (§4.7).
+
+A service whose definition has been withdrawn is listed, and the list
+entry does not say so. A client that needs to know MUST issue a
+`status`.
+
+## operation-status
+
+Returns one operation by identifier.
+
+```json
+{
+    "status": "ok",
+    "operation": {
+        "id": "e5f6g7h8-…",
+        "type": "start",
+        "service": "jellyfin",
+        "source": "admin",
+        "state": "completed",
+        "result": "active",
+        "merged_into": null,
+        "error": null,
+        "requested_at": "2026-06-01T12:34:56.123456789Z",
+        "started_at": "2026-06-01T12:34:56.223456789Z",
+        "completed_at": "2026-06-01T12:34:58.923456789Z"
+    }
+}
+```
+
+| Field | Meaning | Present when |
+|---|---|---|
+| `id` | The operation's identifier. | Always. |
+| `type` | §4.B. | Always. |
+| `service` | The target. | Always. |
+| `source` | Why the manager created it. §4.B. | Always. |
+| `state` | §4.B. | Always. |
+| `result` | The resulting service state. | `completed`. |
+| `error` | Why it did not complete. | `failed`, `cancelled`, `aborted`. |
+| `merged_into` | The surviving operation's identifier. | `merged`. |
+| `requested_at` | When it was created. | Always. |
+| `started_at` | When it began executing. | Once running. |
+| `completed_at` | When it reached a terminal state. | Once terminal. |
+
+Fields that do not apply to the current state MUST be null.
+
+`error` carries a reason for all three non-success terminal states, not
+only for `failed`. A client MUST NOT read a non-null `error` as meaning
+the operation failed — it MUST read `state` for that. Cancellation and
+abortion have reasons worth reporting, and a separate field for each
+would give a client three places to look for one fact.
+
+## job-status
+
+Returns one submitted job by identifier, as the job view of §7.7.
+
+```json
+{"command": "job-status", "job_id": "0190a3b2-…"}
+```
+
+```json
+{"status": "ok", "job": { … }}
+```
+
+The view is §7.7's, with one field added on this channel: what a
+submitter sees of its job on the jobs channel is what a client sees of
+it here, and the client is also told what it may do to the job.
+
+### What the caller may do to a job
+
+On this channel every job view — in the response to `job-status`,
+`job-list` and `job-stop` — carries one field beyond §7.7's:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `granted` | array of strings | The job rights the caller holds on this job. Never null. |
+
+```json
+{"id": "0190a3b2-…", "type": "submitted", "state": "running", …,
+ "granted": ["query", "stop"]}
+```
+
+It lists the job rights of §7.8 the caller holds, each by its name
+lowercased and without `JOB_`: `query`, `stop`, `signal`, in that
+order, and only those held. The manager MUST compute it as it computes
+a status's `granted`, with the access check it runs for a job command,
+against the job's own descriptor and the job generic mapping (§7.8),
+and the same rules follow: it is a question rather than a command, a
+right the caller lacks is absent rather than denied, and a command whose
+required right is listed passes its access check.
+
+For a `job-stop` that waits, the manager MAY compute `granted` when it
+accepts the command rather than when it answers. A job's descriptor is
+fixed at submission (§7.8), so the two could differ only if the
+caller's token had changed in between.
+
+The jobs channel's view does not carry `granted`. A submitter is
+answered there under §7.8's own rules.
+
+## job-list
+
+Returns every submitted job the caller may query, as job views.
+
+```json
+{"command": "job-list", "identity": "S-1-5-21-…"}
+```
+
+```json
+{"status": "ok", "jobs": [ { … }, { … } ]}
+```
+
+Each entry is the full job view (§7.7), with `granted` (above). Jobs
+the caller may not query are omitted (§4.7). The four filters of §4.8 — `submitter`,
+`identity`, `logon_session`, `state` — narrow the result before it is
+filtered by right, and the manager MUST NOT let the response reveal
+whether the filters or the rights removed an entry.
+
+Terminal jobs still within their retention period are listed; a client
+that wants only live ones filters by `state`.
+
+> [!NOTE]
+> `logon_session` is what an authority uses to find everything running
+> under a logon it is ending: it lists the jobs in that session and
+> stops each it holds `JOB_STOP` on. A user-facing view of "my jobs"
+> filters by `identity`; a broker's view of "the jobs I started"
+> filters by `submitter`.
+
+## job-stop
+
+Stops one submitted job, with the semantics of the jobs channel's
+`stop` (§7.8): the termination signal, the job's `stop_timeout`, then
+the kill.
+
+```json
+{"command": "job-stop", "job_id": "0190a3b2-…", "wait": true}
+```
+
+`wait` defaults to true, and the response is the job view, with
+`granted`, when the job is terminal; with `wait: false` it is the view
+as soon as the stop has been initiated. A `job-stop` on a terminal job returns the view
+unchanged, with `"status": "ok"`.
+
+This is the one command on this channel that acts on a job, and it
+creates no operation: a job has no state machine to contend for (§7.6).
+There is no `job-signal` here; signalling is the submitter's business,
+on its own channel.
+
+## Retention
+
+The manager MUST hold an operation record for at least a grace period
+after it reaches a terminal state, so that a client polling for the
+result can retrieve it. The value a Peios service manager uses is in
+§4.A.
+
+An identifier that never existed, and one whose record has been dropped
+after its grace period, MUST both be answered `UNKNOWN_OPERATION`. A
+client MUST NOT distinguish them, and MUST treat `UNKNOWN_OPERATION`
+after a successful acknowledgement as meaning the result is no longer
+available rather than that the operation never ran.
+
+Job records are retained under §7.7's rule, and `UNKNOWN_JOB` carries
+the same two meanings.

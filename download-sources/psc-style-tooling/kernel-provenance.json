@@ -1,0 +1,8 @@
+{
+    "kernel_head": "b6e6b8c9229e702e41f373722459a58e1609487c",
+    "files": {
+        ".clang-format": "4ec963b98e1939eb9e4b7788034ffbf06cf1307c7cb96105133d4f3e0a8ce364",
+        ".rustfmt.toml": "b2aaa0727b5c31d2caed8a6865347de1def4b99bb95f844e158351b07cdc7974",
+        "peios/Containerfile": "fe7e1cb3e88a785a204c945744dae2bce481cb89ed9d5ce01ef6fb7a003c1c49"
+    }
+}

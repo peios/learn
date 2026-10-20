@@ -1,0 +1,6 @@
+Checks: '-*,clang-analyzer-core.*,readability-braces-around-statements,readability-duplicate-include,readability-isolate-declaration'
+WarningsAsErrors: ''
+CheckOptions:
+  readability-braces-around-statements.ShortStatementLines: '1'
+# This is a partial brace check: multiline conditions and whole-chain consistency
+# remain review checks. No always-braces or hard function-length check is enabled.

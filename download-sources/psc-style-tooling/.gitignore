@@ -1,0 +1,7 @@
+.venv/
+.bin/
+node_modules/
+.cache/
+results/
+__pycache__/
+.mypy_cache/

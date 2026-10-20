@@ -1,0 +1,3 @@
+title = "Peios System Protocols Kernel"
+short = "PSPK"
+description = "The contracts spoken across the kernel boundary — the protocols a Peios kernel subsystem depends on a userspace process to fulfil, and the formats it exchanges with one."

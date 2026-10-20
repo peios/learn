@@ -1,0 +1,13 @@
+{
+    "platform": "linux",
+    "machine": "x86_64",
+    "python": "3.14.4",
+    "node": "v22.22.1",
+    "npm": "9.2.0",
+    "go": "go version go1.26.0 linux/amd64",
+    "rust_toolchain": "1.98.1",
+    "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+    "rustfmt": "rustfmt 1.9.0-stable (48a229ceae 2026-09-01)",
+    "kernel_rust_toolchain": "1.83.0",
+    "kernel_rustfmt": "rustfmt 1.8.0-stable (90b35a6239 2024-11-26)"
+}

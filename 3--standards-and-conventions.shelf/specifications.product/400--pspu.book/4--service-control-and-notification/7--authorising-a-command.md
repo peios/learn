@@ -1,0 +1,156 @@
+---
+title: Authorising a Command
+description: Every command is checked against a Security Descriptor using the peer's token — the rights, the per-command mapping, and why some results are filtered rather than denied.
+---
+
+Every command is authorised against a Security Descriptor, using the
+peer's token. There is no command the manager performs without a check,
+and no principal exempt from one.
+
+## Rights
+
+Commands acting on a service are checked against that service's
+descriptor:
+
+| Right | Bit | Grants |
+|---|---|---|
+| `SERVICE_QUERY_STATUS` | 0x0001 | Query the service's state and detail. |
+| `SERVICE_START` | 0x0002 | Start the service. |
+| `SERVICE_STOP` | 0x0004 | Stop the service. |
+| `SERVICE_INTERROGATE` | 0x0008 | Reload the service. |
+| `SERVICE_ALL_ACCESS` | 0x000F | All four. |
+
+Commands acting on a submitted job are checked against that job's own
+descriptor, with the rights and generic mapping §7.8 defines:
+`JOB_QUERY` (0x0001), `JOB_STOP` (0x0002), `JOB_SIGNAL` (0x0004).
+
+Commands acting on the system are checked against the manager's own
+descriptor:
+
+| Right | Bit | Grants |
+|---|---|---|
+| `SYSTEM_SHUTDOWN` | 0x0001 | Initiate a shutdown. |
+| `SYSTEM_RELOAD_CONFIG` | 0x0002 | Re-read the configuration. |
+| `SYSTEM_QUERY_STATUS` | 0x0004 | Ask how the machine booted (`boot`). |
+
+## Generic mappings
+
+The manager MUST use these generic mappings when evaluating a
+descriptor, so that a descriptor written in generic terms means the same
+thing to every implementation.
+
+For a service descriptor:
+
+| Generic right | Maps to |
+|---|---|
+| `GENERIC_READ` | `SERVICE_QUERY_STATUS` |
+| `GENERIC_WRITE` | `SERVICE_START` \| `SERVICE_STOP` \| `SERVICE_INTERROGATE` |
+| `GENERIC_EXECUTE` | `SERVICE_START` \| `SERVICE_STOP` \| `SERVICE_INTERROGATE` |
+| `GENERIC_ALL` | `SERVICE_ALL_ACCESS` |
+
+For the manager's descriptor:
+
+| Generic right | Maps to |
+|---|---|
+| `GENERIC_READ` | `SYSTEM_QUERY_STATUS` |
+| `GENERIC_WRITE` | `SYSTEM_RELOAD_CONFIG` |
+| `GENERIC_EXECUTE` | `SYSTEM_SHUTDOWN` |
+| `GENERIC_ALL` | `SYSTEM_SHUTDOWN` \| `SYSTEM_RELOAD_CONFIG` \| `SYSTEM_QUERY_STATUS` |
+
+`GENERIC_READ` maps to the one right on the manager's descriptor that
+changes nothing, as it maps to `SERVICE_QUERY_STATUS` on a service.
+
+## Per command
+
+| Command | Right required |
+|---|---|
+| `start` | `SERVICE_START` |
+| `stop` | `SERVICE_STOP` |
+| `restart` | `SERVICE_START` and `SERVICE_STOP` |
+| `reload` | `SERVICE_INTERROGATE` |
+| `reset` | `SERVICE_STOP` |
+| `status` | `SERVICE_QUERY_STATUS` |
+| `list` | Evaluated per service; see below |
+| `operation-status` | `SERVICE_QUERY_STATUS` on the operation's target |
+| `job-status` | `JOB_QUERY` on the job |
+| `job-list` | Evaluated per job; see below |
+| `job-stop` | `JOB_STOP` on the job |
+| `shutdown` | `SYSTEM_SHUTDOWN` |
+| `reload-config` | `SYSTEM_RELOAD_CONFIG` |
+| `boot` | `SYSTEM_QUERY_STATUS` |
+
+`boot` is checked like any other command, although what it reports is
+not a secret: a descriptor decides who may ask, and §4.15 asks that the
+default one let every authenticated principal.
+
+`reset` requires `SERVICE_STOP` because clearing a terminal state is the
+tail of stopping something rather than the head of starting it.
+
+## The sequence
+
+1. If the manager is shutting down, apply §4.15's restriction. The
+   shutdown restriction is evaluated **before** the access check, so a
+   caller who would have been denied is told the command is invalid for
+   the current state. A client MUST NOT infer anything about its own
+   rights from an `INVALID_STATE` received during shutdown.
+2. Resolve the target. A command naming no service the manager knows of
+   MUST be answered `UNKNOWN_SERVICE`. The manager MUST NOT synthesise a
+   descriptor for a service that does not exist.
+3. Evaluate the access check with the peer's token, the target's
+   descriptor, the appropriate generic mapping, and the required right,
+   naming the target in the check's audit context (PGSS §6.7).
+4. On denial, answer `ACCESS_DENIED`. The attempt is recorded by the
+   access check itself, under the target descriptor's SACL, with the
+   caller, the target and the rights requested and granted; the manager
+   MUST NOT write an access-denied event of its own (PGSS §6.7). A
+   descriptor the manager supplies by default MUST carry a SACL that
+   audits every refusal, so that a denial is not silent unless a
+   descriptor someone wrote says so.
+5. On grant, proceed.
+
+A `status`, and each job view on this channel, also tells the caller
+which of these rights it holds on the target, as `granted` (§4.14). The
+manager finds them with this same check, asking for `MAXIMUM_ALLOWED`
+in step 3 instead of the command's right. That check is a question
+asked on the caller's behalf, not a command: a right it does not grant
+is left out of `granted`, and it is not a denial for step 4.
+
+## Filtering rather than denying
+
+`list` MUST return only the services the caller may query, and MUST
+**omit** the rest rather than denying the command. A caller with no
+query rights on anything receives an empty list and a successful
+response.
+
+The response does not say whether services were omitted. What the
+filtering protects is each service's state, which is what
+`SERVICE_QUERY_STATUS` grants, and not whether the service exists: a
+command naming a service is answered `UNKNOWN_SERVICE` or by its access
+check according to whether it exists (step 2 above), and §4.10 does not
+hide existence either. A client MAY therefore learn from elsewhere which
+services are defined and show the ones `list` left out as ones whose
+state the caller may not see.
+
+`job-list` MUST be filtered the same way, by `JOB_QUERY` on each job,
+and MUST NOT reveal that jobs were omitted.
+
+## Not revealing what a caller may not see
+
+A service's existence is not protected (above). Where a command names
+an operation the caller may not query, the manager MUST NOT let the
+answer distinguish "this does not exist" from "you may not see this".
+
+For `operation-status` this means the authorisation check MUST be
+evaluated before the operation's existence is reported: a caller lacking
+`SERVICE_QUERY_STATUS` on an operation's target MUST receive
+`ACCESS_DENIED` whether or not the identifier names a real operation,
+and MUST NOT receive `UNKNOWN_OPERATION` for one that exists.
+
+Where the caller's rights cannot be established because the target
+cannot be resolved, `UNKNOWN_OPERATION` is the correct answer.
+
+For `job-status` and `job-stop` the rule is §7.10's, not this one: a
+job identifier is unguessable, so a caller that names one was told it,
+and the manager answers `UNKNOWN_JOB` for an identifier that names
+nothing and `ACCESS_DENIED` for one that names a job the caller may not
+touch.
