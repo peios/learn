@@ -107,6 +107,9 @@ path = "../integration-tests/docs/learn"
 [[merge]]
 path = "../../peios-old/pnp/docs/learn"
 
+[[merge]]
+path = "../../clackatoo/docs/learn"
+
 # Core Style's mechanical rules, checked by `trail lint`. See Trail's
 # "Checking style" page for every rule and how to suppress one.
 [lint]
