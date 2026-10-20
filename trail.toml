@@ -7,7 +7,7 @@ footer = "Peios Learn — documentation for Peios software."
 
 featured = [
   "peios", "kernel", "universal-directory", "project", "trail", "acta",
-  "provium", "clackatoo", "gcsl", "psc", "specifications",
+  "provium", "clackatoo", "gcsl", "psc", "specifications", "framewright",
 ]
 passthrough = ["CNAME", ".well-known"]
 
@@ -107,6 +107,9 @@ path = "../integration-tests/docs/learn"
 [[merge]]
 path = "../../clackatoo/docs/learn"
 
+[[merge]]
+path = "../../framewright2/docs/learn"
+
 # Core Style's mechanical rules, checked by `trail lint`. See Trail's
 # "Checking style" page for every rule and how to suppress one.
 [lint]
@@ -125,22 +128,22 @@ proper_nouns = [
 
 # The shelf title uses the requested "Technical Writing & Documentation" name.
 [[lint.ignore]]
-path = "3--standards-and-conventions.shelf/psc.product/1--technical-writing-and-documentation.shelf/trail.toml"
+path = "4--standards-and-conventions.shelf/psc.product/1--technical-writing-and-documentation.shelf/trail.toml"
 rules = ["ampersand"]
 
 # These pages quote every word they ban.
 [[lint.ignore]]
-path = "3--standards-and-conventions.shelf/psc.product/1--technical-writing-and-documentation.shelf/2--style.topic/100--core-style.md"
+path = "4--standards-and-conventions.shelf/psc.product/1--technical-writing-and-documentation.shelf/2--style.topic/100--core-style.md"
 rules = ["spelling"]
 
 [[lint.ignore]]
-path = "3--standards-and-conventions.shelf/psc.product/1--technical-writing-and-documentation.shelf/2--style.topic/200--word-list.md"
+path = "4--standards-and-conventions.shelf/psc.product/1--technical-writing-and-documentation.shelf/2--style.topic/200--word-list.md"
 rules = ["spelling"]
 
 # The conventions book writes hashes and byte sequences in lowercase hex
 # (its §3.3).
 [[lint.ignore]]
-path = "3--standards-and-conventions.shelf/psc.product/1--technical-writing-and-documentation.shelf/3--conventions.book"
+path = "4--standards-and-conventions.shelf/psc.product/1--technical-writing-and-documentation.shelf/3--conventions.book"
 rules = ["hex-case"]
 
 [lint.spelling]
