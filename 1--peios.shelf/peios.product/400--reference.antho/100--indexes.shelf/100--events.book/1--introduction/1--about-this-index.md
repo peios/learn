@@ -26,7 +26,7 @@ event type. The index has these chapters:
 
 ## Reading an event page
 
-An event page opens with what the event records, then lists the event's
+Each event page describes what the event records and lists the event's
 metadata:
 
 - **Event type:** the name the record carries in `event.type`.
