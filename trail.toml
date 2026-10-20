@@ -9,7 +9,7 @@ featured = [
   "peios", "kernel", "universal-directory", "trail", "acta",
   "provium", "gcsl", "psc", "specifications",
 ]
-passthrough = ["CNAME"]
+passthrough = ["CNAME", ".well-known"]
 
 [[attachments]]
 id = "psc-style-tooling"
