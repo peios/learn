@@ -90,8 +90,8 @@ ship with the system:
 
 - **Commands, files, and functions:** the man pages, read with `man`.
 - **Registry settings:** the registry manuals, read with `regman`.
-- **Events:** the event manuals, read with `evman`, and the
-  [events index](~peios/reference/events).
+- **Events:** the event manuals, read with
+  [`evman`](~peios/reading-records/evman).
 - **How a component works inside:** its technical reference manual, under
   [Reference](~peios/reference).
 

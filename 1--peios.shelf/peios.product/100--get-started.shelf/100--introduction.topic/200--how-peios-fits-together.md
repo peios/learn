@@ -23,7 +23,7 @@ subsystems of its own to it:
 | Kernel Access Control Subsystem (KACS) | Access control: tokens, security descriptors, privileges, and every access decision |
 | Layered Configuration Subsystem (LCS) | The registry: keys, values, layers, watches, and transactions |
 | Kernel Mediated Event Subsystem (KMES) | Events: the single path every event takes, with trusted details about its sender |
-| StrataFS | Layered storage: several directories presented as one directory tree |
+| StrataFS | Layered storage: several directories, the strata that give it its name, presented as one directory tree |
 | Network Traffic Filtering Engine (NTFE) | The network packet filter, which enforces network policy from the registry |
 
 The subsystems rely on each other. The registry and the file systems use
@@ -68,7 +68,8 @@ These services run on every machine:
 
 ## The desktop
 
-Three programs make the desktop that you use from a browser. GXWI serves the
+Three programs make the desktop that you use from a browser. The Graphical
+Extensible Web Interface (GXWI) serves the
 session and handles sign-in from the browser, Fenestra arranges the windows,
 and Fenesh provides the dock, launcher, and settings. A set of desktop
 applications covers files, terminals, and system administration. See

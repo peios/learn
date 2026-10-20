@@ -46,8 +46,8 @@ have sessions of several types at once.
 | `Interactive` | Someone signs in at the machine's console |
 | `RemoteInteractive` | Someone signs in from another computer, over SSH or to a desktop in a browser |
 | `Network` | A program on another computer authenticates to use a service here |
-| `NetworkCleartext` | A variant of `Network` |
-| `NewCredentials` | A variant that records credentials for outgoing connections |
+| `NetworkCleartext` | As `Network`, marked as using a credential that was sent unencrypted |
+| `NewCredentials` | A program keeps its identity on this machine, marked as using other credentials for connections to other computers |
 | `Batch` | A scheduled job starts |
 | `Service` | A service starts |
 

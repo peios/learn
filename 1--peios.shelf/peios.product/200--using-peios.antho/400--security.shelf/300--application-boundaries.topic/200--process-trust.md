@@ -77,7 +77,7 @@ Package authenticity, executable PIP signatures, module signatures, and
 firmware verification serve different purposes. Successfully producing a
 Bazel package does not establish that every required signing step or image
 composition step occurred. The retired Pekit image recipe is not a supported
-replacement for the deferred PPK image composer.
+replacement for the deferred Peios package (PPK) image composer.
 
 The kernel has no runtime signing-key replacement or per-binary revocation
 service. Key compromise requires a coordinated kernel/key and artifact

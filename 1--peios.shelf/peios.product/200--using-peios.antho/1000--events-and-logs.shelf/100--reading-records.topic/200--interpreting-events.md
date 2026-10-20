@@ -29,6 +29,22 @@ The [catalog format](~specifications/pgss/events/the-catalogue) defines how
 components maintain these records. Event and field lookup belongs to the
 catalog, rather than a separately maintained table in Learn.
 
+Some components also describe their events in their manuals, where an
+event's meaning depends on the mechanism behind it:
+
+- The kernel's access control subsystem describes its audit records in
+  [Event Families and
+  Delivery](~kernel/kacs/auditing/event-families-and-delivery). The
+  registry's [Audit](~kernel/lcs/security/audit) page and StrataFS's
+  [Audit](~kernel/stratafs/security/audit) page describe theirs. The
+  kernel's [Emission
+  Policy](~kernel/internals/kmes/emission-policy) page describes how it
+  decides which event types to write.
+- eventd describes the events it writes about itself in [Synthetic Event
+  Payloads](~peios/eventd/event-storage/synthetic-event-payloads).
+- [Authentication Events](~peios/authentication/audit-events) describes the
+  logon, attestation, and credential events of authd and lpsd.
+
 ## Identify the transport and origin
 
 KMES carries kernel and userspace events in shared per-CPU rings. The kernel
