@@ -1,5 +1,6 @@
 title = "Standards and Conventions"
 monogram = "PSC"
-color = "#3b82f6"
+icon = "psc.svg"
+color = "#64748b"
 
 description = "Peios Standards and Conventions (PSC): shared standards for version control, code, and documentation across Peios and its satellite projects."

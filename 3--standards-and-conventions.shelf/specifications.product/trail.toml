@@ -1,4 +1,5 @@
 title = "Peios Specifications"
 monogram = "SPEC"
-color = "#6366f1"
+icon = "specifications.svg"
+color = "#64748b"
 description = "Common data structures, platform standards, and kernel and userspace protocol contracts."
