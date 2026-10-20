@@ -70,8 +70,8 @@ state](~peios/time/overview) before changing the time or time zone.
 
 ## Storage and interrupted changes
 
-Keep the failing path and exact error. [`df`](~peios/files-and-directories/df)
-and [`du`](~peios/files-and-directories/du) answer different questions about
+Keep the failing path and exact error. [`df`](~peios/files-and-paths/space-and-raw-copies)
+and [`du`](~peios/files-and-paths/space-and-raw-copies) answer different questions about
 filesystem capacity and reachable directory contents. Permission failures or
 incomplete scans do not establish that deletion is the appropriate remedy.
 

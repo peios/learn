@@ -45,7 +45,7 @@ process can leave resources held and dependent work blocked.
 
 Signal permissions depend on the operation, and process protection remains
 relevant. Sharing an account or terminal is not a general bypass. The
-[kill guide](~peios/system-and-processes/kill) and
+[kill guide](~peios/scripts-and-the-system/running-and-controlling-commands) and
 [service controls](~peios/services-and-jobs/controlling-services) describe the
 owning interfaces.
 
