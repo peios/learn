@@ -1,0 +1,91 @@
+name: Deploy to GitHub Pages
+
+# Manual until the first merged build has deployed cleanly. Then add:
+#   push:
+#     branches: [main]
+#   repository_dispatch:
+#     types: [docs-changed]
+on:
+    workflow_dispatch:
+
+permissions:
+    contents: read
+    pages: write
+    id-token: write
+
+# A burst of documentation pushes ends in one deploy of the latest state.
+concurrency:
+    group: pages
+    cancel-in-progress: true
+
+jobs:
+    build-and-deploy:
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            # Outside the checkout on purpose: the site root accepts only the
+            # entries trail.toml names, so a binary there fails the build.
+            - name: Download Trail
+              run: |
+                  curl -fsSL https://github.com/peios/trail/releases/latest/download/trail-linux-amd64 \
+                    -o "$RUNNER_TEMP/trail"
+                  chmod +x "$RUNNER_TEMP/trail"
+
+            # Every [[merge]] tree is fetched from its repo, because none of
+            # the local paths exist here. The token reads the private ones.
+            - name: Configure repository access
+              env:
+                  LEARN_READ_TOKEN: ${{ secrets.LEARN_READ_TOKEN }}
+              run: |
+                  if [ -n "$LEARN_READ_TOKEN" ]; then
+                    git config --global \
+                      url."https://x-access-token:${LEARN_READ_TOKEN}@github.com/peios/".insteadOf \
+                      "https://github.com/peios/"
+                  fi
+
+            # Fetched checkouts and the build cache, saved once: the kernel's
+            # full checkout is about 2.5 GB, and a restored one updates in
+            # seconds however old it is. Change the key to replace it.
+            - uses: actions/cache@v4
+              with:
+                  path: .trail-cache
+                  key: trail-cache-v1
+
+            # The kernel's Netlink and binding plugins need these, pinned in
+            # the kernel's own requirements files.
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: "3.12"
+            - name: Install kernel plugin dependencies
+              run: |
+                  base=https://raw.githubusercontent.com/peios/kernel/peios/main/tools/docs/trail-kernel-doc
+                  python -m pip install --quiet \
+                    -r "$base/requirements-netlink.txt" -r "$base/requirements-binding.txt"
+
+            # --strict fails the build on an article with no description:,
+            # which is what search engines and chat apps show for the page.
+            #
+            # --cbpath publishes a second copy of the whole site under this
+            # run's ID, with every link inside it rewritten to stay there.
+            # Pages sets its own cache headers, so learn.peios.org/<run>/ is
+            # the only URL guaranteed to be this build, which is what an
+            # agent's web fetcher needs. The build combines many
+            # repositories, so no single commit identifies it. The copy is
+            # noindex and out of the sitemap; /cb in the search box reaches
+            # it.
+            - name: Build site
+              run: |
+                  "$RUNNER_TEMP/trail" build --strict --cbpath "r${{ github.run_id }}"
+
+            - uses: actions/configure-pages@v5
+
+            - uses: actions/upload-pages-artifact@v3
+              with:
+                  path: dist
+
+            - id: deployment
+              uses: actions/deploy-pages@v4
