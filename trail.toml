@@ -105,9 +105,6 @@ path = "../universal-directory/docs/learn"
 path = "../integration-tests/docs/learn"
 
 [[merge]]
-path = "../../peios-old/pnp/docs/learn"
-
-[[merge]]
 path = "../../clackatoo/docs/learn"
 
 # Core Style's mechanical rules, checked by `trail lint`. See Trail's
@@ -257,9 +254,3 @@ match = [
   "amongst", "learnt", "enrol", "enrols", "judgement", "acknowledgement",
 ]
 message = "use the US spelling"
-
-[[merge]]
-path = "../../peios-old/pkgs/docs/learn"
-
-[[merge]]
-path = "../../peios-old/peipkg/docs/learn"

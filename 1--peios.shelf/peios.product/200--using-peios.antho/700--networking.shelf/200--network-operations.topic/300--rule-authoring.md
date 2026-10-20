@@ -109,7 +109,7 @@ Interface actions are limited to its verdicts, `NULL`, and `REPORT`.
 `JOIN` requires an existing profile; a disabled profile causes abstention.
 Conflicting equal-priority profile choices have special startup/reload
 handling in [netd's judgment
-reference](~peios/advanced-peios/netd/the-interface-layer/judging-an-interface).
+reference](~peios/reference/netd/the-interface-layer/judging-an-interface).
 
 ## Counter and tag references
 
@@ -136,7 +136,7 @@ refusal accounting.
 | Question | Owning reference |
 |---|---|
 | Profile values, inheritance, and accepted offers | [Configuring Profiles](~peios/networking/configuring-profiles) and netd's registry manual |
-| Interface fact and action rules | [Interface judgment](~peios/advanced-peios/netd/the-interface-layer/judging-an-interface) |
+| Interface fact and action rules | [Interface judgment](~peios/reference/netd/the-interface-layer/judging-an-interface) |
 | Packet seat order and available facts | [Seats and dispatch](~kernel/internals/ntfe/seats-and-dispatch) and [snapshot](~kernel/internals/ntfe/the-snapshot) |
 | Validation, rule limits, and reporting level | [Policy ingestion](~kernel/internals/ntfe/policy-ingestion-and-validation) |
 | Priority, abstention, and effects | [Evaluation](~kernel/internals/ntfe/evaluation) |

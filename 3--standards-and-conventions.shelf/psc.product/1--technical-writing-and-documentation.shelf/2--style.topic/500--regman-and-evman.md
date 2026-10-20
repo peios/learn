@@ -15,8 +15,8 @@ page adds the rules for writing it.
 
 The file formats, the tools, and their lint checks are defined elsewhere:
 
-- regman: [Writing regman pages](https://learn.peios.org/peios/developing-for-peios/documenting-configuration/writing-regman-pages)
-- evman: [Writing evman pages](https://learn.peios.org/peios/developing-for-peios/documenting-events/writing-evman-pages)
+- regman: [Writing regman pages](~peios/documenting-configuration/writing-regman-pages)
+- evman: [Writing evman pages](~peios/documenting-events/writing-evman-pages)
   and PGSS §6.10, which defines the catalog normatively
 
 ## The first line is the summary

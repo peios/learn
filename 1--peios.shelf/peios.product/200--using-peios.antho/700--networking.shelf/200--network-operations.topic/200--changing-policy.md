@@ -74,6 +74,5 @@ Record which state the machine is in before interpreting a missing rule.
 
 A cached sentence produces no fresh evaluation event for each packet.
 Missing events do not prove delivery, and captured frames can precede a
-later drop. Use the [PNP viewer](~peios/pnp-viewer/observing-policy) only within
-its documented development-access boundary. Check surfaced capture loss,
-verdict overwrite, and refusal counters alongside flow attribution.
+later drop. Check surfaced capture loss, verdict overwrite, and refusal
+counters alongside flow attribution.

@@ -42,7 +42,7 @@ An address can be link-local; a default route does not prove Internet, DNS,
 or application availability. `net wait` accepts at least its requested
 level, while Peinit's declared readiness dependency matches a published
 level. Check the [readiness
-reference](~peios/advanced-peios/netd/what-netd-publishes/readiness) when
+reference](~peios/reference/netd/what-netd-publishes/readiness) when
 choosing a service dependency.
 
 netd owns addresses on joined interfaces and its tagged routes. Manual
