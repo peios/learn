@@ -44,8 +44,8 @@ that earlier decision.
 For files, `sd` follows a named symlink unless its documented no-follow
 option is selected. Inspect the same object the application meant to use.
 Token pseudo-files provide handles, not text to print with `cat`.
-[Token inspection](~peios/system-and-processes/token) and
-[process-security inspection](~peios/system-and-processes/inspecting-process-security)
+[Token inspection](~peios/identity-and-access/token) and
+[process-security inspection](~peios/identity-and-access/inspecting-process-security)
 explain their separate access gates.
 
 ## Rehearse within the tool's limits

@@ -31,10 +31,10 @@ access. Save unsaved work before an action that can end a session.
 ## Browser access or sign-in
 
 Check the address and port in [Signing in from a
-Browser](~peios/signing-in-from-a-browser/open-the-desktop). A listener
+Browser](~peios/signing-in/open-the-desktop). A listener
 bound only to loopback is not reachable from another machine. For a
 certificate warning, follow [The Machine's
-Certificate](~peios/signing-in-from-a-browser/the-certificate); do not enter
+Certificate](~peios/signing-in/the-certificate); do not enter
 credentials when the fingerprint differs from a trusted observation.
 
 At a reachable console, inspect `net status` and the `gxwid` service. During
@@ -42,10 +42,10 @@ installation and first boot, an address, overlay, or reboot can change what
 the browser reaches. Return to that workflow's guide.
 
 For a credential refusal, use [Diagnosing
-Authentication](~peios/authentication-operations/diagnosing). A wrong
+Authentication](~peios/authentication/diagnosing). A wrong
 credential and an unknown account share an authentication failure response;
 the response alone does not prove the account is absent. Authority and source
-[events](~peios/authentication-operations/audit-events) answer different
+[events](~peios/authentication/audit-events) answer different
 parts of the decision.
 
 ## Services and network state
@@ -55,14 +55,14 @@ identity, dependencies, configuration, and repeated exits. A process existing
 is not proof that it is ready. In Services Manager, **Logs…** opens the
 relevant Event Viewer filter; widen the time range when the failure is older.
 
-Use [Network Manager](~peios/system-tools/network-manager) or `net status`
+Use [Network Manager](~peios/network-configuration/network-manager) or `net status`
 to distinguish these cases:
 
 - An unmanaged interface needs its profile-selection rules checked.
 - A rejected configuration can leave the last complete configuration active.
 - A local address does not prove there is a route beyond the local network.
 - Working addresses with failing names need [resolver
-  diagnosis](~peios/networking/name-resolution).
+  diagnosis](~peios/network-configuration/name-resolution).
 
 Displays labeled **Example data** are not measurements of live traffic.
 For clock problems, inspect [time sources and clock
@@ -88,6 +88,6 @@ the needed access; the permissions editor does not grant extra authority.
 
 An empty event query does not prove that nothing happened. Check the time
 range, filters, read policy, retention, and collection failures. [Event
-Viewer](~peios/desktop-event-viewer/event-viewer) explains its access notices;
+Viewer](~peios/reading-records/event-viewer) explains its access notices;
 [Saving Event Evidence](~peios/reading-records/saving-evidence) covers a
 capture for later investigation.

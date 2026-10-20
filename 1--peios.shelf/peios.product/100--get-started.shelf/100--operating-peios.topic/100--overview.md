@@ -3,7 +3,7 @@ title: Operating Peios
 type: concept
 description: Find the installation, sign-in, everyday work, and administration guides for a Peios machine.
 related:
-  - peios/operating-peios/signing-in
+  - peios/signing-in/overview
   - peios/operating-peios/manage-the-machine
   - peios/operating-peios/troubleshoot-a-problem
 ---
@@ -26,7 +26,7 @@ and initial administrator. A custom image needs its own deliberate
 [first-account provisioning
 route](~peios/local-accounts/creating-an-account#the-first-account).
 
-Continue with [Signing In](~peios/operating-peios/signing-in). Check the
+Continue with [Signing In](~peios/signing-in/overview). Check the
 machine's certificate before entering credentials in a browser.
 
 ## Everyday work

@@ -39,7 +39,7 @@ a
 StrataFS mount. The `/lib` view still covers modules and firmware. Temporary
 boot views can differ from real-root views.
 
-Use [StrataFS inspection](~peios/using-peios/disks-and-mounts/inspecting-stratafs)
+Use [StrataFS inspection](~peios/files-and-volumes/inspecting-stratafs)
 to identify the actual provider before changing a file. Removing a local
 override can reveal a vendor file; it does not create a whiteout.
 

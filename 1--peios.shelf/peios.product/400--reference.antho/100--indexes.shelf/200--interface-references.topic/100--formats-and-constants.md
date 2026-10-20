@@ -58,7 +58,7 @@ mask from another interface.
 The kernel's [privilege
 catalog](~kernel/internals/kacs/privileges/privilege-catalogue) describes what
 privileges enforce. Assignment and restriction remain separate questions:
-[authd policy](~peios/authentication-policy/granting-access) supplies grants,
+[authd policy](~peios/authentication/granting-access) supplies grants,
 while [peinit privilege
 restriction](~peios/peinit/service-identity/privilege-restriction) removes
 unrequested privileges using the names supported by that build.

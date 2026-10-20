@@ -34,7 +34,7 @@ ordinary group membership.
 ## Accounts become runtime tokens
 
 [Local account records](~peios/local-accounts/overview), source resolution,
-and [authentication policy](~peios/authentication-policy/granting-access)
+and [authentication policy](~peios/authentication/granting-access)
 participate in sign-in. Token creation is privileged; the kernel does not
 independently prove the truth of every claim a trusted creator supplies.
 Changing an account record does not rewrite tokens already running.
@@ -99,7 +99,7 @@ and the actual broker's documented workflow.
 
 Ending a session coordinates its processes; it does not revoke every token
 handle held elsewhere. Token expiration metadata is not a kernel access-check
-timer. Follow [Inspecting and Ending Sessions](~peios/system-and-processes/logonse)
+timer. Follow [Inspecting and Ending Sessions](~peios/local-accounts/logonse)
 for the supported command and its completeness limits.
 
 ## Privilege state and operation authority
