@@ -51,6 +51,8 @@ published and stays current.
    ```yaml
    name: Update Learn
 
+   # Asks Learn to redeploy when this repository's documentation changes. The
+   # same file goes in every repository that contributes to Learn.
    on:
        push:
            paths: ["docs/**"]

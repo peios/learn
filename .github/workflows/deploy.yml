@@ -1,11 +1,12 @@
 name: Deploy to GitHub Pages
 
-# Manual until the first merged build has deployed cleanly. Then add:
-#   push:
-#     branches: [main]
-#   repository_dispatch:
-#     types: [docs-changed]
+# Learn's own pushes, and each contributing repository's update-learn.yml
+# when that repository's documentation changes.
 on:
+    push:
+        branches: [main]
+    repository_dispatch:
+        types: [docs-changed]
     workflow_dispatch:
 
 permissions:
