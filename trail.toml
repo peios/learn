@@ -6,7 +6,7 @@ description = "Concepts, guides, and reference for the Peios operating system an
 footer = "Peios Learn — documentation for Peios software."
 
 featured = [
-  "peios", "kernel", "universal-directory", "trail", "acta",
+  "peios", "kernel", "universal-directory", "project", "trail", "acta",
   "provium", "clackatoo", "gcsl", "psc", "specifications",
 ]
 passthrough = ["CNAME", ".well-known"]
