@@ -1,4 +1,5 @@
 title = "Peios"
 monogram = "Pe"
+icon = "peios.svg"
 color = "#3b82f6"
 description = "Using and developing the Peios operating system."
