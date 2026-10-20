@@ -25,7 +25,12 @@ jobs:
             url: ${{ steps.deployment.outputs.page_url }}
         runs-on: ubuntu-latest
         steps:
+            # Without the checkout's own token, which can read only public
+            # repositories and would override LEARN_READ_TOKEN for every git
+            # command Trail runs from the site root.
             - uses: actions/checkout@v4
+              with:
+                  persist-credentials: false
 
             # Outside the checkout on purpose: the site root accepts only the
             # entries trail.toml names, so a binary there fails the build.
