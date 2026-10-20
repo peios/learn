@@ -2,6 +2,8 @@
 title: Identifying Devices
 type: how-to
 description: Match a saved storage reference to the intended filesystem, partition, or physical disk.
+related:
+  - peios/files-and-volumes/disk-manager
 ---
 
 Before a mount or destructive operation, compare the selected device's size,

@@ -19,7 +19,7 @@ route](~peios/local-accounts/creating-an-account#the-first-account).
 |---|---|---|
 | Browser desktop | [Signing in from a Browser](~peios/signing-in/open-the-desktop) | Verify the machine's certificate fingerprint through a trusted route |
 | Local console | [Using a Console](~peios/signing-in/using-a-console) | Use the managed console on the intended machine |
-| Remote terminal | [Signing in over SSH](~peios/signing-in/signing-in-over-ssh) | Verify the SSH host fingerprint |
+| Remote terminal | [Signing in with SSH](~peios/signing-in/signing-in-over-ssh) | Verify the SSH host fingerprint |
 
 Switching virtual consoles does not lock or end the session left behind.
 Rejoining a browser desktop can return to its existing session rather than
