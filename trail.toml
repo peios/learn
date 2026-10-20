@@ -126,6 +126,11 @@ dir = "docs/learn"
 path = "../peiosutils/docs/learn"
 
 [[merge]]
+repo = "https://github.com/peios/ppk"
+dir = "docs/learn"
+path = "../ppk/docs/learn"
+
+[[merge]]
 repo = "https://github.com/peios/prelude"
 dir = "docs/learn"
 path = "../prelude/docs/learn"
