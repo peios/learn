@@ -1,6 +1,6 @@
 ---
 title: Maintenance and Emergency Fixes
-type: guide
+type: reference
 description: Maintaining released versions and carrying fixes into supported
   lines.
 ---

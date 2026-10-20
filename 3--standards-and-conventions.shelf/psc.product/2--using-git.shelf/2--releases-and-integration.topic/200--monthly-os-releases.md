@@ -1,12 +1,13 @@
 ---
-title: Monthly OS Releases
-type: guide
+title: Preparing a Monthly OS Release
+type: how-to
 description: Selecting and qualifying component releases for a monthly OS
   baseline.
 ---
 
-Prepare each monthly on a temporary `monthly/<os-version>` branch created from
-`main`:
+A monthly OS release combines qualified component releases into one Peios
+baseline. Prepare each monthly on a temporary `monthly/<os-version>` branch
+created from `main`:
 
 1. Select the component releases to include, respecting their dependencies.
 2. Merge their exact release tags into the monthly branch using ordinary Git
