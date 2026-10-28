@@ -7,7 +7,8 @@ footer = "Peios Learn — documentation for Peios software."
 
 featured = [
   "peios", "kernel", "universal-directory", "project", "trail", "acta",
-  "provium", "clackatoo", "gcsl", "psc", "specifications", "framewright",
+  "provium", "clackatoo", "gcsl", "pekit", "psc", "specifications",
+  "framewright",
 ]
 edit_url = "https://github.com/peios/learn/edit/main/{path}"
 passthrough = ["CNAME", ".well-known"]
@@ -134,6 +135,11 @@ path = "../peiso/docs/learn"
 repo = "https://github.com/peios/pekit"
 dir = "docs/learn"
 path = "../pekit/docs/learn"
+
+[[merge]]
+repo = "https://github.com/peios/pekit2"
+dir = "docs/learn"
+path = "../pekit2/docs/learn"
 
 [[merge]]
 repo = "https://github.com/peios/ppk"
