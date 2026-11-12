@@ -138,9 +138,9 @@ Every other type MUST cause the package to be rejected. Defined in
 
 `/usr/bin/`, `/usr/sbin/`, `/usr/lib/<triplet>/`, `/usr/lib/debug/`,
 `/usr/lib/modules/<release>/`, `/usr/lib/firmware/`,
-`/usr/lib/os-release`, `/usr/libexec/`, `/usr/share/`, `/usr/include/`,
-`/usr/src/debug/`, `/usr/src/dist/`, `/usr/etc/`, `/usr/conf/`, `/var/`,
-`/boot/`, `/hooks/`, `/++/`.
+`/usr/lib/earlyirf/<segment>/`, `/usr/lib/os-release`, `/usr/libexec/`,
+`/usr/share/`, `/usr/include/`, `/usr/src/debug/`, `/usr/src/dist/`,
+`/usr/etc/`, `/usr/conf/`, `/var/`, `/boot/`, `/hooks/`.
 
 A payload entry MUST NOT install under any other top-level path, unless
 the package declares itself a special system package **and** the

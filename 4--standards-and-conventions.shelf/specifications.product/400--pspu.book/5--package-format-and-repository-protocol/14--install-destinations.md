@@ -25,6 +25,7 @@ those requiring administrator privileges.
 | `/usr/lib/debug/` | Separated debug information, mirroring the install paths of the files it describes |
 | `/usr/lib/modules/<release>/` | Kernel content for one kernel release: its modules, and the kernel image, `System.map`, and build config alongside them |
 | `/usr/lib/firmware/` | Device firmware blobs, addressed by device rather than by host triplet |
+| `/usr/lib/earlyirf/<segment>/` | Content the kernel reads from the initramfs before unpacking the rest, such as CPU microcode, one directory per segment (below) |
 | `/usr/lib/os-release` | The freedesktop OS-identity file, at a fixed external contract path |
 | `/usr/libexec/` | Architecture-independent helper executables run by another program rather than by a person |
 | `/usr/share/` | Architecture-independent data |
@@ -36,7 +37,6 @@ those requiring administrator privileges.
 | `/var/` | Runtime variable state directories, empty at install time |
 | `/boot/` | `/boot/initramfs/`, a complete independent root filesystem, and `/boot/efi/`, the EFI System Partition |
 | `/hooks/` | Initramfs boot hooks, discovered and ordered when the initramfs cpio is packed |
-| `/++/` | Initramfs early-cpio segments, prepended uncompressed ahead of the main archive |
 
 A payload entry MUST NOT install under any other top-level path, unless
 the package declares itself a special system package (below).
@@ -64,6 +64,15 @@ the runtime, not by the package.
 `/hooks/` is meaningful only in an initramfs root, where the cpio packer
 scans it. In an ordinary system root it is an unused permitted
 destination.
+
+`/usr/lib/earlyirf/` is meaningful only in an initramfs root. The
+initramfs packer places each segment, uncompressed, ahead of the main
+archive, where the kernel reads it before unpacking the rest. A
+segment's contents map onto the archive root:
+`/usr/lib/earlyirf/intel-ucode/kernel/x86/microcode/GenuineIntel.bin`
+becomes `kernel/x86/microcode/GenuineIntel.bin`. The segment's name is
+a label and does not appear in the archive. An administrator's segment
+of the same name in `/lcl/lib/earlyirf/` replaces it.
 
 An entry under `/boot/` SHOULD be a symlink whose target resolves to a
 regular file under one of the other permitted destinations — typically
