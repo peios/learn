@@ -1,69 +1,57 @@
 ---
 title: Scope and Roles
-description: What this chapter specifies — the .peipkg artifact and the repository protocol that serves it — its roles, and what it leaves out.
+description: What this chapter specifies, a package, the artifact directory that stores it, the closures composed from it and the repositories that publish it, its roles, and what it leaves out.
 ---
 
-This chapter specifies the **peipkg package format** and the **peipkg
-repository protocol**: the artifact by which compiled software is
-distributed to a Peios system, and the static-HTTP protocol by which a
-system discovers, trusts, and fetches those artifacts.
+This chapter specifies how Peios software is packaged, stored, composed and
+published. A **package** is a manifest listing every path it installs, with
+each file's content stored separately as a blob named by its hash. Packages
+live in an **artifact directory**, are composed into **closures**, each the
+contents of a `/usr`, and are published by **repositories**, artifact
+directories that say what they publish and sign it.
 
-A package is the binary distribution primitive of Peios — the unit of
-build, distribution, and trust. It is deliberately narrow: it defines
-how binaries reach a system, not how they are integrated into services,
-roles, or features. Higher-level artifacts reference packages; a package
-knows nothing of them.
+`ppk(1)` implements this chapter. Where this chapter and ppk disagree, the
+disagreement is a defect in one of them, to be resolved by changing one.
 
 ## Roles
 
-Three roles speak this specification. A requirement is stated against
-the role, not the program; one program may serve more than one.
-
-| Role | Obligation |
+| Role | Does |
 |---|---|
-| **Producer** | Builds package files. Everything a `.peipkg` contains is a producer obligation. |
-| **Repository** | Publishes a descriptor, two indexes, and package files over static HTTP, and signs the metadata. |
-| **Consumer** | Fetches, verifies, and installs packages. Every validation and rejection rule binds the consumer. |
+| **Producer** | Packs a directory into a package (§5.18) |
+| **Publisher** | Makes an artifact directory a repository and signs it (§5.36) |
+| **Consumer** | Fetches, verifies, resolves, and composes packages (§5.26, §5.29) |
 
-A repository operator is usually also a producer, but need not be: a
-repository may publish packages built elsewhere, and the format's
-signatures survive the journey.
+One program commonly plays every role. Each requirement says which role it
+binds; §5.38 collects them by role.
 
 ## In scope
 
-- The on-wire package file: container, internal layout, manifest
-  schema, payload layout, per-file integrity
-- Package identity: names, versions, version comparison, architectures
-- How a package expresses its relationships to other packages, and what
-  it means for one to satisfy another
-- Package signing: algorithm, envelope, verification
-- The repository protocol: descriptor, active and archive indexes, URL
-  conventions, freshness and rollback protection
-- Establishing and maintaining trust in a repository
-- The rules under which the format may be extended
+- Package names, capabilities, versions, constraints, and architectures
+  (§5.3 to §5.8).
+- The artifact directory, its blobs, manifests and refs (§5.10 to §5.12).
+- What a package can install, and the form of its manifest (§5.13 to
+  §5.23).
+- Closures, their inventory, and their names (§5.24, §5.25, §5.27).
+- Environment profiles and resolution (§5.28, §5.29).
+- Repositories: their catalog, indexes and channels, their pointer file
+  and its signature, and how a machine is configured to fetch from them
+  (§5.30 to §5.36).
 
 ## Out of scope
 
-- **How a consumer decides what to install.** Given several candidates
-  that all satisfy a dependency, which one it picks, in what order it
-  applies a plan, and how it recovers from an interrupted one are the
-  consumer's own design.
-- **How a consumer stores its state.** The installed-package database,
-  its transaction journal, and its cache format are private.
-- **How a producer builds a package.** Recipes, build farms, and source
-  trees are producer mechanics; only their output is specified here.
-- **Roles, role features, core features, and applets.** These are
-  separate subsystems that reference packages.
-- **Integration metadata attached to packages** — service definitions,
-  registry seeds, reconciller manifests. These belong to the artifacts
-  that compose packages, not to packages.
-- **Security descriptor semantics.** A package carries security
-  descriptor bytes; what they mean is specified with the kernel's
-  access-control subsystem.
+- **How an installed system boots** from a closure. The names it uses for
+  its closures are reserved here (§5.27); the rest is the installer's.
+- **The kernel's verification of a file's signature.** A package carries a
+  file's PIP signature (§5.16); PSPK book 3 specifies the signature and its
+  check.
+- **Network transport.** A repository is a directory in this version. Every
+  file of it but its pointer file and signature is named by its hash, so
+  that a static web server can serve it as it is (§5.34); the mapping to
+  URLs is reserved for a future version.
+- **Registry seeds and other system policy** that a release carries. They
+  are packaged as files and applied by other components.
 
 ## Relationship to other chapters
 
-Nothing in this chapter is a conformance requirement on a Peios system:
-a system that ships software some other way is still Peios (§1.1). What
-this chapter guarantees is that the format and the protocol are written
-down and will not move.
+The root skeleton file a package can ship is PSPU book 11. Security
+descriptors are PCDS's. File signatures are PSPK book 3's.

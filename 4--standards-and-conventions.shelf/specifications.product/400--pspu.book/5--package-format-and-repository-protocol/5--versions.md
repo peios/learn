@@ -1,6 +1,6 @@
 ---
 title: Versions
-description: The structure of a package version string — epoch, upstream version and Peios revision — and how it is parsed.
+description: The structure of a package version string — epoch, upstream version, and Peios revision — and how it is parsed.
 ---
 
 Every package carries a version string that identifies one build of that
@@ -10,7 +10,7 @@ across every implementation.
 
 ## Structure
 
-```
+```text
 [<epoch>:]<upstream>-<peios_revision>
 ```
 
@@ -21,7 +21,7 @@ across every implementation.
 - **Peios revision** — a REQUIRED positive integer identifying the build
   of this upstream version produced by the distributor.
 
-```
+```text
 1.26.2-3            upstream 1.26.2, revision 3
 1.26.2-rc.1-1       upstream 1.26.2-rc.1, revision 1
 2:0.5.0-1           epoch 2, upstream 0.5.0, revision 1

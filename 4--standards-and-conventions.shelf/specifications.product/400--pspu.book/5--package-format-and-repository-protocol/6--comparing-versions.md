@@ -94,17 +94,17 @@ their kinds decide:
    has already decided.)
 
 > [!NOTE]
-> ```
+> ```text
 > 1.0~alpha-1 == 1.0~a-1       # both rank 1
 > 1.0~beta-1  == 1.0~b-1       # both rank 2
 > 1.0~Alpha-1 == 1.0~ALPHA-1   # case-insensitive recognition
 > 1.0-foo-1   <  1.0-zzz-1     # rank-5 lexical tiebreak
 > ```
 > Two upstream versions that differ only in which alias they use are
-> equal. A repository publishing both forms produces archive entries at
-> the same logical version; the active index may carry either. A
-> producer SHOULD pick one canonical form — conventionally the long
-> token, `alpha` and `beta` — and keep to it.
+> equal. An artifact directory holding both forms holds two packages at
+> one version, which resolution refuses to choose between (§5.29). A
+> producer SHOULD pick one form, conventionally `alpha` rather than `a`,
+> and keep to it.
 
 ## Unequal lengths
 

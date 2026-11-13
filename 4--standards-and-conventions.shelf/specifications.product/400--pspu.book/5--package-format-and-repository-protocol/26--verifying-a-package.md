@@ -1,100 +1,36 @@
 ---
 title: Verifying a Package
-description: The ordered steps a consumer performs before installing anything, why nothing is observable before step three, and how a transaction commits.
+description: What a consumer checks before it stores a package, the order of the checks, and what they prove and don't.
 ---
 
-A consumer MUST perform the following steps, in this order, before
-installing anything from a package:
+A consumer copying a package from one artifact directory to another trusts
+nothing it reads from the source. Before it stores the package, it MUST
+check, in this order:
 
-1. Compute the SHA-256 of the downloaded `.peipkg` file.
-2. Compare it against the hash recorded in the repository index (§5.33).
-   If they differ, the package is corrupted or substituted; abort.
-3. Verify the inline signature (§5.30). If verification fails, the
-   package's authenticity is unproven; abort.
-4. Decompress and parse the tar archive, enforcing the layout rules of
-   §5.12, the determinism rules of §5.11 and the detached-signature
-   rules of §5.16.
-5. Read `.peipkg/manifest.json` and verify it against §5.18.
-6. Read `.peipkg/files.json` and verify it against §5.25, including the
-   two-way coverage check and the `size_installed` equality of §5.18.
-7. For each payload entry, compute its content hash and compare it
-   against the files manifest. If any file's hash does not match, abort.
-8. Compare the manifest against the index entry that led here (§5.32).
-   If any field disagrees, abort.
+1. **The ref** holds exactly one identity and a newline (§5.11).
+2. **The manifest** hashes to that identity, is in the one form §5.18
+   gives, names the package ID asked for, and holds only paths that meet
+   §5.13.
+3. **Each blob** copied hashes to the name the manifest gives it (§5.12).
 
-A consumer MUST NOT install any payload before all eight steps complete
-successfully. Partial installation after a verification failure leaves
-the system indeterminate and is forbidden.
+A stored file takes only its content from the source: it is given the
+security metadata its entry records (§5.20, §5.16).
 
-## Ordering is logical, not temporal
+If a check fails, the consumer MUST stop without writing the manifest or the
+ref. Blobs copied before the failure are named by their content, and MAY be
+kept. Only a package whose manifest and ref are written is stored.
 
-A consumer MAY compute the hashes for steps 1, 3, and 7 in a single
-streaming pass: feeding the compressed bytes simultaneously through a
-hasher and a decompressor, piping the decompressed bytes through a
-second hasher up to the signature entry, and hashing each file's content
-as the tar walk reaches it.
+## Already present
 
-What the ordering requires is that no payload is committed to its final
-install path, and no decompressed byte is made visible outside the
-consumer's own private state, until every step has completed.
+If the package is already stored with the same identity, the consumer copies
+only the blobs that are missing. If it is stored with another identity, the
+consumer MUST refuse it (§5.11).
 
-## Nothing observable before step 3
+## What this proves
 
-A consumer MUST NOT make any decompressed payload byte visible to
-another process — including through a staging directory reachable from
-outside the consumer's own process tree — before signature verification
-has succeeded.
-
-Streaming decompression and hashing are permitted. Observable filesystem
-effects are not.
-
-## Verifying the whole transaction first
-
-When a consumer installs several packages together, it MUST complete
-steps 1 through 8 for **every** package before extracting **any**
-package's payload, and it MUST do so across every installation root the
-operation touches.
-
-> [!NOTE]
-> This closes a class of multi-package attack: package A is verified,
-> extracted, and its contents then influence the verification or
-> extraction of package B — A installs a tool B's extraction invokes, or
-> A creates a directory whose descriptor decides where B's files land.
-> Verifying everything first means extraction operates on a known-good
-> set of payloads. The rule binds across roots as well as within one,
-> because a package extracted into one root is just as present on the
-> filesystem as one extracted into another.
-
-## Committing a payload
-
-A consumer MUST resolve every path component of an install location
-relative to a verified parent-directory file descriptor, without
-traversing any symbolic link — including one the consumer itself created
-earlier in the same operation. A resolution that would traverse a
-symlink MUST abort the operation.
-
-A pre-existing symlink at an install path MUST be removed atomically
-before the write, and MUST NOT be followed.
-
-A well-formed package never contains a payload entry whose ancestor
-component is a symlink. A resolution failure therefore indicates a
-malformed or hostile package, or hostile filesystem state.
-
-On Linux this is achieved with `openat2(..., RESOLVE_NO_SYMLINKS)`
-anchored at the relevant permitted top-level destination (§5.14), or
-with equivalent semantics using `O_NOFOLLOW` on every component against
-a carried directory descriptor. A consumer SHOULD additionally apply
-`RESOLVE_BENEATH`, `RESOLVE_NO_XDEV`, and `RESOLVE_NO_MAGICLINKS` as
-defense in depth, and SHOULD commit a staged file with `renameat2`
-against the same pinned parent descriptor rather than a re-walked path
-string.
-
-> [!NOTE]
-> The format's symlink-target rules (§5.17) are the first layer of the
-> defense and this is the second, and neither is sufficient alone. The
-> format forbids a symlink whose target resolves outside the managed
-> tree; component-wise resolution ensures that even an in-tree symlink —
-> or one already on the filesystem before this package arrived — cannot
-> redirect a write. Without the second layer, a package shipping a
-> symlink in one transaction and a file *under* that symlink in the next
-> silently writes outside where it claims to, with no race required.
+These checks prove that the package is the one the source's ref names. They
+don't prove who published it. A package fetched through a machine's
+configuration of a repository that gives a key is proved published by it
+too: it MUST be in the catalog that the signed pointer file leads to, at the
+identity the catalog gives (§5.29, §5.33). A package fetched from a
+directory named directly is not.

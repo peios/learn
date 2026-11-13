@@ -3,6 +3,9 @@ title: The Architecture Triplet
 description: What an architecture-specific package must install under /usr/lib/<triplet>/, the exemptions, and where architecture-independent data goes.
 ---
 
+These rules bind a producer. A consumer doesn't check them: it composes
+whatever paths a package holds (§5.14).
+
 A package whose architecture is not `noarch` MUST install all of the
 following under `/usr/lib/<triplet>/`, where `<triplet>` is the
 architecture triplet of §5.8:
@@ -65,7 +68,8 @@ to `/usr/src/dist/`, the home of corresponding-source packages.
 Files retained inside `/usr/src/dist/` are reconstruction inputs rather than
 installed library providers. Captured upstream or vendored inputs MAY include
 library-shaped test fixtures or import archives for other target platforms
-(such as Cargo's Windows crates), including in a `noarch` source package. Their
+(such as Cargo's Windows crates), including in a `noarch` source package.
+Their
 `.so` or `.a` suffix does not make that reserved source-data tree a runtime
 library installation. The normal library-placement rule still applies outside
 this subtree; source data remains subject to path and symlink containment.

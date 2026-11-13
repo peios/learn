@@ -1,59 +1,62 @@
 ---
 title: Terminology
-description: The terms this chapter defines — package, manifest, root, repository — used with these meanings throughout.
+description: The terms this chapter defines, package, identity, artifact directory, closure, request, repository, index and channel, used with these meanings throughout.
 ---
 
-- **Package** — a binary distribution artifact: one or more files,
-  metadata describing its identity and relationships, and, when signed,
-  a signature. The unit of build, distribution, and installation.
+**Package**
+: A manifest (§5.18) and the blobs it names. A package is identified by its
+  name, version and architecture, and its content by its identity.
 
-- **Manifest** — the JSON document at `.peipkg/manifest.json` inside a
-  package that declares its identity, relationships, side-effect
-  requirements, and build provenance. The manifest is authoritative for
-  a package's metadata (§5.18).
+**Package ID**
+: `<name>@<version>?arch=<architecture>`, as
+  `dev.peios.hello@1.0-1?arch=x86_64`.
+  The `?arch=` part MAY be left out where an architecture is implied.
 
-- **Files manifest** — the JSON document at `.peipkg/files.json`
-  carrying one content hash per regular payload file (§5.25).
+**Identity**
+: `sha256:` followed by the lowercase hexadecimal SHA-256 hash of some
+  bytes. A package's identity is its manifest's (§5.11).
 
-- **Payload** — the tar entries of a package that are not metadata: the
-  files, directories, and symlinks it installs.
+**Blob**
+: A file's content, stored once, and named by its hash (§5.12).
 
-- **Repository** — a collection of packages addressable as a unit,
-  identified by its base URL.
+**Artifact directory**
+: A directory holding packages: their blobs, manifests, and refs (§5.10). A
+  machine's own is its **store**, `/system/artifacts`.
 
-- **Repository descriptor** — the small JSON document at a well-known
-  path within a repository declaring its identity, signing keys, and the
-  locations of its indexes (§5.31).
+**Capability**
+: A name a package provides or requires, such as a soname (§5.4).
 
-- **Index** — a signed JSON document listing packages available from a
-  repository. Every repository publishes two: an **active index**
-  (§5.33) listing the current version of each package, and an **archive
-  index** (§5.35) listing every version ever shipped.
+**Closure**
+: A set of packages composed into one directory tree, the contents of a
+  `/usr` (§5.24).
 
-- **Virtual name** — a capability name, rather than a package name, that
-  a package may require or provide (§5.4).
+**Inventory**
+: The file at the top of a closure that records its packages and what wants
+  each (§5.25).
 
-- **Role** — a virtual name that several installed packages may contend
-  to own on the filesystem, with at most one *holding* it (§5.23).
+**Request**
+: What is asked for: a package by name, or a capability, at the versions
+  that would do, and optionally from an index (§5.29).
 
-- **Claim** — the binding of a contended filesystem name (a *claim
-  path*) to a file supplied by the package that holds a role (a
-  *target*).
+**Resolution**
+: Choosing a version of each package that requests need (§5.29).
 
-- **Holder** — the single installed package that currently owns a role.
-  A role with no holder is *unheld*.
+**Profile**
+: A file of requests, with what a composed root holds outside `/usr`
+  (§5.28).
 
-- **Side-effect declaration** — a manifest flag naming a standard
-  maintenance operation to be invoked after install, drawn from a closed
-  set (§5.24).
+**Repository**
+: An artifact directory that publishes what it holds, through a signed
+  pointer file (§5.30).
 
-- **Installation root** — a self-contained filesystem tree into which
-  packages are installed. The default root is the system root; a system
-  may define others (§5.19).
+**Catalog**
+: Every version a repository has published (§5.30).
 
-- **Epoch**, **upstream version**, **peios revision** — the three
-  components of a version string (§5.5).
+**Index**
+: One version of each package, for each architecture, that a repository
+  publishes together: `leading`, the newest, or a snapshot of a release
+  (§5.30).
 
-- **Trust anchor** — a key fingerprint supplied to a consumer
-  out-of-band, against which a repository's descriptor signature is
-  first verified (§5.37).
+**Channel**
+: A name that follows an index or another channel, such as `stable`
+  (§5.30).

@@ -27,7 +27,7 @@ Multiple expressions within one constraint string are separated by
 commas and combined with logical AND. A version satisfies the constraint
 if and only if it satisfies every expression.
 
-```
+```text
 libssl >= 3.0
 libssl >= 3.0, < 4.0
 nginx = 1.26.2-3
