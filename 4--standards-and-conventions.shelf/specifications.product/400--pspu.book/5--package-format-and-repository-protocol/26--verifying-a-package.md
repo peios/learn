@@ -29,6 +29,8 @@ consumer MUST refuse it (§5.11).
 ## What this proves
 
 These checks prove that the package is the one the source's ref names. They
-don't prove who published it. A package from a repository with a configured
-key is proved published by it too: it MUST be in the catalog that the signed
-pointer file leads to, at the identity the catalog gives (§5.29, §5.33).
+don't prove who published it. A package fetched through a machine's
+configuration of a repository that gives a key is proved published by it
+too: it MUST be in the catalog that the signed pointer file leads to, at the
+identity the catalog gives (§5.29, §5.33). A package fetched from a
+directory named directly is not.

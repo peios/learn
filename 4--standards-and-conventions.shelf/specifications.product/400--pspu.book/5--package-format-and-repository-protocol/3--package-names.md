@@ -41,6 +41,5 @@ main package's name:
 | `-devel` | Headers, static libraries, and other build-time files |
 | `-libs` | The shared libraries of a program, alone |
 | `-static` | Static libraries |
-| `-irf` | The variant of a package that goes in an initramfs |
 
 These are conventions. Nothing enforces them, and a name MAY use others.

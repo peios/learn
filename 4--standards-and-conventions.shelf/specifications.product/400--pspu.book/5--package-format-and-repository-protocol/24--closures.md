@@ -20,8 +20,9 @@ blobs are in. A consumer MAY copy each file from its blob instead, checking
 it against its hash as it does, and giving it the entry's security metadata;
 it MUST NOT fall back to copying without being asked.
 
-The tree's root grants everyone read and execute, and what is created in it
-inherits that. Its files have the access their blobs grant.
+The tree's root has a protected DACL granting Everyone read and execute,
+and SYSTEM and Administrators full control, which what is created in it
+inherits. Its files have the access their blobs grant.
 
 The closure's inventory (§5.25) is at the top of the tree, as `inventory`.
 

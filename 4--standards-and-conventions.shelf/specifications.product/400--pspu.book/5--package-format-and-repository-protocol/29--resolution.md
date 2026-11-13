@@ -21,7 +21,7 @@ libc.so.6 >= 2.34
 ```
 
 An exact package ID, `name@version`, asks for exactly that version and its
-spelling, and is settled before any other request.
+spelling, and is settled before any other request. It can't name an index.
 
 ## Order
 
@@ -65,6 +65,9 @@ MUST still satisfy every need on its package.
 
 A request naming an index that no artifact directory among those given
 publishes MUST be refused.
+
+The closure's inventory records the index of each request that names one,
+but not the index a dependency or requirement inherited (§5.25).
 
 ## Yanked and deleted versions
 

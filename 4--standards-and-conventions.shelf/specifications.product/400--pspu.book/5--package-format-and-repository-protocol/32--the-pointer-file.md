@@ -25,10 +25,11 @@ In this order:
 2. `signed` and the time it was signed, in UTC, as
    `YYYY-MM-DDTHH:MM:SSZ`.
 3. `catalog` and the identity of the catalog's top node, once there is one.
-4. A line for each index, sorted by name: `index`, its name, and the
-   identity of its top node.
-5. A line for each channel, sorted by name: `channel`, its name, and the
-   index or channel it follows, then ` ended` if it won't move again.
+4. A line for each index, sorted by the bytes of its name: `index`, its
+   name, and the identity of its top node.
+5. A line for each channel, sorted by the bytes of its name: `channel`, its
+   name, and the index or channel it follows, then ` ended` if it won't
+   move again.
 
 A consumer MUST refuse a pointer file that isn't in this form, that names
 something twice, that has a name both an index and a channel, or whose

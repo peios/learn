@@ -29,11 +29,15 @@ published.
 ## What it vouches for
 
 A machine checks a repository's signature only if its configuration of the
-repository gives a public key. Then the pointer file MUST be that key's
-signature's, and a package is taken from the repository only if the catalog
-the pointer file names lists it, at the identity the catalog gives (§5.29).
-Since every tree node, manifest and blob is reached through hashes from the
-pointer file, the signature vouches for all of them.
+repository gives a public key (§5.35), and only when it fetches through that
+configuration. Then the pointer file MUST be signed with that key, and a
+package is taken from the repository only if the catalog the pointer file
+names lists it, at the identity the catalog gives (§5.29). Every tree node,
+manifest and blob is reached through hashes from the pointer file, so for a
+repository used that way the signature vouches for all of them.
+
+Reading the same directory as a plain artifact directory, without its
+configuration, checks none of this: its refs are taken as they are (§5.26).
 
 A repository without a key in the machine's configuration, such as a medium's
 store or a local directory, is trusted because whoever configured it

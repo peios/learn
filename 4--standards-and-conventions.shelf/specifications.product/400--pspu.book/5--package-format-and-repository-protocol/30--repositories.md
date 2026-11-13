@@ -24,6 +24,10 @@ holds. Besides its packages it has:
 | `trees/sha256/<hash>` | The nodes of the catalog's and the indexes' trees (§5.31) |
 | `blobs/`, `manifests/`, `refs/` | Its packages, as any artifact directory's (§5.10) |
 
+An artifact directory without a pointer file is not a repository, but is
+still a valid artifact directory, and its packages can be fetched and
+resolved as any other's.
+
 Everything below the pointer file is named by its hash, and is reached from
 the pointer file through hashes. A signature over the pointer file therefore
 vouches for every tree node, every manifest a tree names and every blob a
