@@ -1,51 +1,26 @@
 ---
 title: Payload Paths
-description: A payload entry's tar path is its install location — the constraints on it, why nothing is canonicalised, and what an empty payload means.
+description: A package's paths are relative to /usr, the constraints on them, the reserved path, and why nothing is canonicalized.
 ---
 
-A payload entry's tar path is its install location, resolved against the
-installation root (§5.19). A tar entry at `usr/bin/nginx` installs to
-`/usr/bin/nginx`.
+Every path a package holds is relative to `/usr`: a package's `bin/hello`
+is `/usr/bin/hello`. A package installs nothing outside `/usr` but the
+links it claims (§5.23).
 
 ## Constraints
 
-A payload path MUST:
+A path MUST be relative, and MUST NOT contain an empty component, `.`,
+`..` or a NUL byte. It MUST be valid UTF-8. It is compared byte for byte:
+nothing is canonicalized, so two paths that differ in case or in Unicode
+normalization are two paths.
 
-- be relative — it MUST NOT begin with `/`
-- contain no segment equal to `.` or `..`, or any encoding thereof
-- be valid UTF-8 (RFC 3629)
-- contain no NUL byte (`0x00`) and no ASCII control character
-  (`0x01`–`0x1F`, `0x7F`)
-- contain no backslash (`\`)
-- be in Unicode Normalization Form C, per Unicode 16.0
-- have every component at most 255 bytes when encoded as UTF-8
-- be at most 4096 bytes in total when encoded as UTF-8
-- have at most 256 components
-- not begin with `.peipkg/`, and not be literally `.peipkg` (§5.12)
+## The reserved path
 
-A consumer MUST validate every payload path against these constraints
-**before any further processing of the entry**. A package containing a
-non-conforming payload path MUST be rejected.
+The top-level path `inventory`, that is `/usr/inventory`, is the closure's
+inventory (§5.25). A package MUST NOT hold it, or anything beneath it,
+whether as a file, a directory or a link, and MUST NOT claim it.
 
-## No canonicalisation
+## An empty package
 
-Path resolution MUST NOT canonicalise away `..` or `.` segments by
-interpretation. Such segments are forbidden above; any appearance is a
-format error, not a question of path canonicalisation.
-
-> [!NOTE]
-> The distinction matters. A consumer that normalizes `a/../b` to `b`
-> and proceeds has accepted a path this specification forbids, and has
-> done so by a rule the producer never agreed to. Rejecting is the only
-> behavior both sides can predict.
-
-## Empty payloads
-
-A package MAY have zero payload entries. Such a package carries only
-metadata; installing it records the package and runs any declared side
-effects (§5.24).
-
-> [!NOTE]
-> An empty-payload package is useful as a virtual aggregator: it ships
-> no binaries of its own and exists to declare dependencies on a curated
-> set of other packages.
+A package with no paths is valid. It installs nothing, and exists for what
+it depends on and provides.

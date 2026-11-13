@@ -1,17 +1,16 @@
 ---
 title: Architectures
-description: The architecture identifier, the defined set, the triplets derived from them, and what noarch means for installability.
+description: The architecture identifier, the defined set, the triplets derived from them, and how one resolution takes one architecture.
 ---
 
 A package's architecture identifies the instruction-set architecture its
-binaries were built for. It is a separate identifier from the name and
-the version.
+files are for. It is part of the package ID, separate from the name and the
+version.
 
 ## Identifier format
 
-An architecture identifier MUST consist of lowercase letters `a`–`z`,
-digits `0`–`9`, and the underscore `_`. It MUST start with a lowercase
-letter and MUST NOT exceed 16 characters.
+An architecture identifier MUST consist of ASCII letters, digits, `.`, `_`,
+`+`, `-` and `~`, and MUST start with a letter or a digit.
 
 ## Defined architectures
 
@@ -19,66 +18,30 @@ letter and MUST NOT exceed 16 characters.
 |---|---|
 | `x86_64` | 64-bit x86 (AMD64, Intel 64) |
 | `aarch64` | 64-bit ARM (ARMv8-A or later) |
-| `noarch` | architecture-independent |
+| `noarch` | Content that doesn't depend on the architecture |
 
-An implementation MUST recognize all three. `x86_64` is the primary
-target; every other architecture is secondary in this version of the
-specification.
-
-Additional identifiers MAY be defined in a future version. A new
-identifier MUST satisfy the format above and SHOULD be the canonical
-Linux machine name — the value `uname -m` reports — where one exists.
+`x86_64` is the primary target. A new identifier SHOULD be the Linux
+machine name, as `uname -m` reports it, where there is one.
 
 ## Triplets
 
-Each architecture identifier that is not `noarch` has a corresponding
-**triplet**, used in the install paths where arch-specific content is
-namespaced (§5.15):
-
-```
-<identifier>-linux-peios
-```
-
-| Identifier | Triplet |
-|---|---|
-| `x86_64` | `x86_64-linux-peios` |
-| `aarch64` | `aarch64-linux-peios` |
-
-`noarch` has no triplet form, and architecture-independent payload MUST
-NOT be installed under an arch-namespaced path.
+Each architecture but `noarch` has a **triplet**,
+`<identifier>-linux-peios`, used in the paths where architecture-specific
+content is kept apart (§5.15): `x86_64-linux-peios`, `aarch64-linux-peios`.
+`noarch` has none.
 
 > [!NOTE]
-> The `peios` suffix distinguishes Peios binaries from foreign-arch
-> binaries originating elsewhere — Debian uses `gnu`, Alpine uses
-> `musl`. It leaves room for a future multi-architecture system to host
-> foreign-distribution binaries without filesystem-path collisions.
+> The `peios` suffix tells Peios binaries from other systems' binaries for
+> the same architecture: Debian uses `gnu`, Alpine `musl`.
 
-## Architecture-independent packages
+## One architecture per resolution
 
-The `noarch` identifier denotes a package whose payload contains no
-architecture-dependent content: documentation, configuration templates,
-scripts in interpreted languages, or metadata only.
-
-A package MUST NOT declare `noarch` if its payload contains compiled
-binaries, shared libraries, or any other content whose semantics depend
-on the target architecture.
-
-## Installability
-
-Each Peios system has a single **primary architecture**, fixed at
-install time.
-
-- A package whose architecture equals the system's primary architecture
-  MAY be installed.
-- A package whose architecture is `noarch` MAY be installed on any
-  system.
-- A package whose architecture is neither MUST NOT be installed.
+A resolution (§5.29) chooses packages of one architecture: the one its
+requests name, or the consumer's own. A package of another architecture,
+`noarch` included, is not a candidate in it.
 
 > [!NOTE]
-> This version of the specification does not define multi-architecture
-> systems — systems installing foreign-architecture packages alongside
-> native ones. Running foreign-architecture binaries for emulation,
-> cross-compilation, or legacy compatibility is addressed by mechanisms
-> outside the package format. The triplet convention above applies
-> regardless, so that a package conforming to this version stays
-> forward-compatible with such an extension.
+> This version doesn't let a resolution for `x86_64` choose a `noarch`
+> package. Content that doesn't depend on the architecture is packed for
+> each architecture instead. A future version can let `noarch` packages
+> join any resolution without changing the format.

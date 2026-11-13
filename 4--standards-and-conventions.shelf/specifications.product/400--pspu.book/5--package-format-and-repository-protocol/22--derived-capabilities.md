@@ -1,65 +1,49 @@
 ---
 title: Derived Capabilities
-description: Capabilities derived mechanically from built contents — shared libraries and pkg-config modules — and why derivation is the producer's job.
+description: The requirements and provides a producer derives from a package's ELF objects, sonames and symbol-version floors, and how they join what it was told.
 ---
 
-Some capabilities are derived mechanically from a package's built
-contents rather than declared by hand. So that a producer and a consumer
-agree on the name whichever way it arrived, the conventions below are
-normative for the capability `name`.
+A producer reads each ELF object among a package's files and adds to the
+manifest what it needs and provides. Derivation is the producer's job, done
+once when the package is packed: a consumer doesn't read a package's files
+to find what it needs.
 
-| Capability | Virtual name | Version |
-|---|---|---|
-| Shared library | The ELF soname, verbatim — `libssl.so.3`. | None by default. |
-| ELF symbol-version node | `elfver(<soname>:<token>)`, for example `elfver(libstdc++.so.6:GLIBCXX_3.4.30)`. | None: the whole name is an exact capability. |
-| pkg-config module | `pkgconfig(<module>)`, where `<module>` is the `.pc` file's base name — `pkgconfig(glib-2.0)`. | The `.pc` file's `Version:` field, matched as an ordered constraint per §5.7. |
+## Sonames
 
-## Shared libraries
+An object's `DT_NEEDED` sonames become requirements, for any version, and
+its `DT_SONAME` becomes a capability the package provides. A soname the
+package provides is not also required.
 
-A shared-library dependency is the soname listed in a binary's
-`DT_NEEDED`; the corresponding provide is the soname in the providing
-library's `DT_SONAME`.
+Files under `src/`, which hold source rather than installed objects, are not
+read, nor are symbolic links, which alias an object packed at its own path.
+Files that are not ELF are passed over.
 
-The soname's ABI-version field is part of the name and is matched by
-exact equality: `libssl.so.3` is never satisfied by `libssl.so.4`. A
-version MAY be carried on a soname provide when the library's symbol
-versions are commensurable with the providing package's own version, as
-they are for a C library shipping versioned symbols.
+## Symbol-version floors
 
-## ELF symbol-version nodes
+For the glibc libraries, `ld-linux-x86-64.so.2`, `libanl.so.1`,
+`libc.so.6`, `libdl.so.2`, `libm.so.6`, `libmvec.so.1`, `libnsl.so.1`,
+`libpthread.so.0`, `libresolv.so.2`, `librt.so.1` and `libutil.so.1`, and
+for `libgcc_s.so.1`, whose symbol versions are numbered as their package
+is, the highest symbol version an object needs is a floor: an object
+needing `GLIBC_2.34` of `libc.so.6` gives the requirement
+`libc.so.6 >= 2.34`. A package that provides one of these libraries provides
+it at its own version.
 
-A strong GNU ELF version need is represented by `elfver(<soname>:<token>)`;
-the matching provide comes from that SONAME's non-base version definition.
-Both components preserve case and exact bytes. The colon separates components;
-it is not permitted within either component. Tokens use ASCII letters, digits,
-underscores, dots, plus and minus characters; the complete capability obeys the
-normal capability-name length bound. Weak version needs do not impose a mandatory
-dependency. A producer must reject unrepresentable metadata rather than omit a
-selected version requirement.
+The versions of `libstdc++.so.6` are not numbered as gcc is, so each is an
+exact capability instead, `elfver(libstdc++.so.6:<version>)`. A package
+providing `libstdc++.so.6` provides each version it defines, and an object
+needing a version requires it, unless the need is weak.
 
-These capabilities supplement SONAME identity and are independent of the
-provider package's version. All required nodes must be present; defining a
-numerically greater node alone is insufficient. A token from another SONAME
-does not satisfy the dependency. Producer policy selects the libraries to which
-this derivation applies; Peios selects libstdc++ to cover GLIBCXX and CXXABI.
+## Joining what the producer was told
 
-## pkg-config modules
+What derivation finds joins what the producer was given. Where both name one
+capability, the given entry is kept, unless it gives no version or holds for
+any version, when the derived one is. A given requirement on one of the
+floor libraries for anything but any version MUST be refused, because its
+floor comes only from the payload, and so MUST a given provide of one at a
+version other than the package's.
 
-A pkg-config dependency is a module named in a `.pc` file's `Requires:`
-or `Requires.private:`; the corresponding provide is the `.pc` file
-itself.
-
-## Derivation is a producer concern
-
-Whether a producer derives these automatically is its own business. This
-section fixes only the names, so that a hand-written entry and a derived
-entry for the same capability are byte-identical.
-
-> [!NOTE]
-> A producer that derives from ELF metadata will encounter cases this
-> section does not name: a symlink that carries no `DT_SONAME` of its
-> own, a shared-library-shaped file with no soname at all, symbol
-> version tokens from `DT_VERNEED` that could be turned into a version
-> constraint. Any additional constraint a producer synthesises is a
-> constraint like any other and is evaluated by §5.7; what this section
-> forbids is inventing a different *name* for a capability that has one.
+An object that can't be read, or whose version tables are inconsistent, is
+an error, and so is a package providing `libstdc++.so.6` that needs a
+version of it that it doesn't define. The same files MUST give the same
+requirements and provides.
