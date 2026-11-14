@@ -35,7 +35,7 @@ A manifest is, in this order:
    §5.5, §5.8).
 2. The descriptive fields that are present (§5.19), one line each, sorted
    by key: `description`, `homepage`, `license`, `license_class`,
-   `source_license`.
+   `source`, `source_license`.
 3. The tables that are not empty, each after an empty line, in this order:
    `[claims]` (§5.23), `[dependencies]`, `[provides]` and `[requires]`
    (§5.21). Each table's keys are sorted by bytes, one `"key" = "value"`

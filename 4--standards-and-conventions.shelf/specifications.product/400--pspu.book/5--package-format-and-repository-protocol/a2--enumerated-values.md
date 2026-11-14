@@ -31,7 +31,8 @@ pre-release too.
 
 ## Descriptive fields (§5.19)
 
-`description`, `homepage`, `license`, `license_class`, `source_license`.
+`description`, `homepage`, `license`, `license_class`, `source`,
+`source_license`.
 
 ## License classes (§5.19)
 
