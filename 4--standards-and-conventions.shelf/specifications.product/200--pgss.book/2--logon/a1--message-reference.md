@@ -10,6 +10,8 @@ description: Every message type by number and socket, the protocol constants, an
 | `msg_type` | Message | Direction | Defined in |
 |---|---|---|---|
 | `0x0001` | `LogonStart` | client → authority | §2.7 |
+| `0x0004` | `AuthenticateStart` | client → authority | §2.24 |
+| `0x8004` | `Authenticated` | authority → client | §2.24 |
 | `0x0002` | `CredentialResponse` | client → authority | §2.8 |
 | `0x8001` | `CredentialRequest` | authority → client | §2.8 |
 | `0x8002` | `AccessGranted` | authority → client | §2.9 |
@@ -43,7 +45,7 @@ other socket (§2.14).
 | Logon socket path | `/run/logon.sock` | §2.5 |
 | Identity socket path | `/run/ident.sock` | §2.14 |
 | Magic | `PGSL` (`50 47 53 4c`) | §2.6 |
-| Version | `1` | §2.6 |
+| Version | `2` | §2.6 |
 | Header size | 12 bytes | §2.6 |
 | Maximum message size | 65536 bytes | §2.6 |
 | Longest grace before a forced end | 10 seconds | §2.22 |

@@ -14,7 +14,7 @@ Every message begins with a 12-byte header:
 | Offset | Size | Field | Value |
 |---|---|---|---|
 | 0 | 4 | `magic` | `PGSL` (`50 47 53 4c`) |
-| 4 | 2 | `version` | `1` |
+| 4 | 2 | `version` | `2` |
 | 6 | 2 | `msg_type` | See §2.A |
 | 8 | 4 | `total_len` | Header plus body, in bytes |
 

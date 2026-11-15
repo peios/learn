@@ -28,6 +28,11 @@ carries none of the token's SIDs, groups, integrity level or privileges.
 
 ## Logon type
 
+The authority MUST authorize Authenticate and Logon as distinct operations
+against the verified caller token. A successful credential check alone does
+not authorize token issuance. Disclosure authorization for Authenticate is
+separate and precedes credential collection (§2.24).
+
 `LogonStart.logon_type` is a **proposal**, not an instruction.
 
 Only the caller knows whether an inbound connection is an interactive

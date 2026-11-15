@@ -10,7 +10,7 @@ Every message begins with a 20-byte header:
 | Offset | Size | Field | Value |
 |---|---|---|---|
 | 0 | 4 | `magic` | `PPSI` (`50 50 53 49`) |
-| 4 | 2 | `version` | `1` |
+| 4 | 2 | `version` | `2` |
 | 6 | 2 | `msg_type` | See §2.A |
 | 8 | 4 | `total_len` | Header plus body, in bytes |
 | 12 | 8 | `conversation` | See below |
@@ -104,9 +104,9 @@ exception is the capability bitmask of §2.8, for the reason given in
 §2.B.
 
 One PSI-specific application deserves stating. `Authenticate` (§2.11)
-**nests** a whole `LogonStart` inside its own length frame rather than
-inlining its fields. The obvious encoding — `LogonStart`'s fields, then
-PSI's — is wrong: `LogonStart` belongs to PGSS Logon and grows on PGSS
+**nests** the shared `AuthenticationRequest` inside its own length frame rather than
+inlining its fields. The obvious encoding — shared fields, then
+PSI's — is wrong: the shared request belongs to PGSS Logon and grows on PGSS
 Logon's schedule, so a field appended there would silently displace the
 field after it. Nesting lets the two evolve independently.
 

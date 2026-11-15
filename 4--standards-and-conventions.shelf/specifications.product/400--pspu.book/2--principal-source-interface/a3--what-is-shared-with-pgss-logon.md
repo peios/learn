@@ -12,7 +12,7 @@ either specification changes.
 
 | Element | PGSS | Note |
 |---|---|---|
-| `LogonStart` body | §2.7 | Nested whole inside `Authenticate`, never inlined (§2.7) |
+| `AuthenticationRequest` body | §2.24 | Nested whole inside `Authenticate`, without a Logon message header |
 | `CredentialRequest` body | §2.8 | Byte-for-byte identical |
 | `CredentialResponse` body | §2.8 | Byte-for-byte identical |
 | `profile` body | §2.9 | Nested inside `Assertion`, relayed onward unchanged (§2.13) |
@@ -38,7 +38,7 @@ formats is a place for them to drift.
 |---|---|
 | `conversation` header field | §2.7 |
 | `Register` / `Registered` | §2.8 |
-| `Authenticate`, wrapping `LogonStart` plus `originator` | §2.11 |
+| `Authenticate`, wrapping a shared request, `originator` and optional local context | §2.11 |
 | `Assertion` | §2.13 |
 | `Abandon` | §2.14 |
 | Domain claim and its checks | §2.10 |
@@ -75,7 +75,7 @@ because the larger number is the one that does *not* bind a reply — see
 
 ## When either specification changes
 
-A field appended to `LogonStart`, `CredentialRequest`,
+A field appended to `AuthenticationRequest`, `CredentialRequest`,
 `CredentialResponse` or `profile` in PGSS appears here automatically,
 because the bodies are shared. That is the intended behavior and needs
 no change to this chapter.

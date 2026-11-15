@@ -10,15 +10,13 @@ be the first message.
 
 | Field | Encoding | Limit |
 |---|---|---|
+| `authentication` | nested length-framed AuthenticationRequest | §2.24 |
 | `logon_type` | `u8` | §2.B |
-| `identifier_type` | `u8` | §2.B |
-| `identifier` | length-framed bytes | 1024 |
 | `tty` | string | 128 |
 | `remote_host` | string | 256 |
-| `supported_credential_types` | length-framed bytes, one `u8` per type | 32 |
-| `required_credential_type` | `u8`; 0 none, 1 Password, 2 SshPublicKey | §2.D |
-| `has_ssh_binding` | `u8`, exactly 0 or 1 | |
-| `ssh_binding` | structure, present when the flag is 1 | §2.D |
+
+Identifier, collection capabilities and method binding below belong to the
+shared authentication structure. Logon adds only local session context.
 
 Everything here is *asserted by the client*, and §2.4 governs all of it.
 
@@ -95,7 +93,7 @@ complete the logon without prompting or deny it.
 ### Mandatory capability and method fields
 
 The capability list and following method/binding fields are mandatory in
-the current unpublished version-1 layout. Missing tails are malformed;
+the version-2 layout. Missing tails are malformed;
 there is no absent-field Password default. An explicit empty list means
 that the client cannot collect a credential.
 

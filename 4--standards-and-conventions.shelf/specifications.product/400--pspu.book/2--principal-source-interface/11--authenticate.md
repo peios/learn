@@ -1,21 +1,39 @@
 ---
 title: Authenticate
-description: The client's LogonStart nested whole and routed to a source, with the conversation limits that bound what follows.
+description: A neutral authentication request routed to one source, with verified originator and optional local logon context.
 ---
 
 `msg_type` = `0x0002`. Authority to source. **Opens a conversation.**
 
 | Field | Encoding | Limit |
 |---|---|---|
-| `start` | nested `LogonStart`, length-framed | PGSS §2.7 |
+| `start` | nested `AuthenticationRequest`, length-framed | PGSS §2.24 |
 | `originator` | length-framed bytes (SID) | 68 bytes |
+| `has_logon_context` | u8, exactly 0 or 1 | |
+| `logon` | nested length-framed local context, when present | below |
 
 ## start
 
-The client's `LogonStart`, nested whole (§2.7). Its fields and their
-meanings are PGSS §2.7's, unchanged — including that `identifier` is an
+The shared authentication request, nested whole (PGSS §2.24). Its fields and
+meanings are unchanged — including that `identifier` is an
 unverified claim and `supported_credential_types` binds what may be
 prompted for.
+
+## Local logon context
+
+Only OS Logon supplies this structure. General Authenticate supplies no
+local context and MUST NOT invent a dummy logon type.
+
+| Field | Encoding | Limit |
+|---|---|---|
+| logon_type | u8 | PGSS §2.B |
+| tty | string | 128 bytes |
+| remote_host | string | 256 bytes |
+
+These are the local context fields of PGSS §2.7. The type is the caller's
+proposal; the terminal and host remain unverified context. Sources apply
+general account and credential restrictions for both operations. The
+authority applies permitted_logon_types only when finalizing OS Logon.
 
 ## originator
 

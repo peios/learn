@@ -33,7 +33,7 @@ authority for its own principals (§2.7).
 |---|---|---|
 | Socket path | the implementation's choice | §2.6 |
 | Magic | `PPSI` (`50 50 53 49`) | §2.7 |
-| Version | `1` | §2.7 |
+| Version | `2` | §2.7 |
 | Header size | 20 bytes | §2.7 |
 | Maximum message size | 81920 bytes | §2.7 |
 | Reserved conversation | `0` | §2.7 |
