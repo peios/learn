@@ -196,6 +196,9 @@ repo = "https://github.com/framewright/framewright"
 dir = "docs/learn"
 path = "../../framewright2/docs/learn"
 
+[[merge]]
+path = "../radius/docs/learn"
+
 # Core Style's mechanical rules, checked by `trail lint`. See Trail's
 # "Checking style" page for every rule and how to suppress one.
 [lint]
