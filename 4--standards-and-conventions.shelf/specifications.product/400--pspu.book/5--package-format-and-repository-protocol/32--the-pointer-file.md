@@ -11,6 +11,7 @@ sequence 1042
 signed 2026-11-13T11:30:00Z
 blobs zstd
 catalog sha256:…
+provides sha256:…
 index 2026.10.0 sha256:…
 index leading sha256:…
 channel 2026.09 2026.09.3 ended
@@ -28,9 +29,11 @@ In this order:
 3. `blobs zstd`, if the repository's blobs are compressed (§5.12). Without
    it, they aren't.
 4. `catalog` and the identity of the catalog's top node, once there is one.
-5. A line for each index, sorted by the bytes of its name: `index`, its
+5. `provides` and the identity of the top node of the catalog's provides
+   tree (§5.31), once there is a catalog.
+6. A line for each index, sorted by the bytes of its name: `index`, its
    name, and the identity of its top node.
-6. A line for each channel, sorted by the bytes of its name: `channel`, its
+7. A line for each channel, sorted by the bytes of its name: `channel`, its
    name, and the index or channel it follows, then ` ended` if it won't
    move again.
 

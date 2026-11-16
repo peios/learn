@@ -16,7 +16,8 @@ description: The requirements of this chapter collected by role, producer, publi
 
 - Signs every pointer file with the repository's key, one higher in
   sequence (§5.32, §5.33).
-- Writes tree nodes in their one form (§5.31).
+- Writes tree nodes in their one form (§5.31), with each version's summary
+  and the catalog's provides tree.
 - Leaves out of `leading` what it can't satisfy, and says so (§5.36).
 - Never changes a snapshot, and keeps yanks and tombstones (§5.36).
 - Writes an export's pointer file after everything it names, and never
@@ -34,7 +35,9 @@ description: The requirements of this chapter collected by role, producer, publi
   else can reach it, or says how many lack it (§5.20).
 - Refuses the conflicts of §5.24, and reuses a closure that exists.
 - Records what wants each package in the inventory (§5.25).
-- Resolves as §5.29 specifies, deterministically.
+- Resolves as §5.29 specifies, deterministically, from summaries and not
+  manifests for a repository served over HTTP, and checks each manifest it
+  fetches against its summary (§5.31).
 - Checks a configured repository's signature when it has a key, takes its
   packages from its catalog, and refuses a lower sequence than it has seen
   (§5.29, §5.33, §5.34).

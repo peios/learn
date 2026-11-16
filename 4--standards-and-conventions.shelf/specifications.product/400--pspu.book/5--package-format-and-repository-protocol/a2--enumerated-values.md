@@ -44,8 +44,8 @@ Current (nothing written), `yanked`, `deleted` and a reason.
 
 ## Pointer-file lines (§5.32)
 
-`sequence`, `signed`, `blobs`, with `zstd`, `catalog`, `index`, `channel`,
-with `ended`.
+`sequence`, `signed`, `blobs`, with `zstd`, `catalog`, `provides`, `index`,
+`channel`, with `ended`.
 
 ## Reserved closure names (§5.27)
 

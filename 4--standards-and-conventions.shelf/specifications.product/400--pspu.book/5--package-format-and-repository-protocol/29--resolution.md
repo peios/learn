@@ -87,3 +87,18 @@ as they are.
 A repository served over HTTP has no refs a consumer can list. Its packages
 are those its catalog lists, at the identity the catalog gives, with or
 without a key (§5.34).
+
+## Resolving from summaries
+
+A consumer resolving from a repository served over HTTP MUST NOT read a
+manifest to do so. It reads only what resolution reaches: for a package
+name, its node in the catalog and the summary of each of its versions
+(§5.31); for a capability, its node in the provides tree, and each package
+name there in the same way. What a summary says replaces what the manifest
+would. A version a name's node gives as yanked or deleted is treated as
+§5.36 says, whatever the provides tree lists. The manifests are read when
+the packages chosen are fetched, and each is checked against the summary
+it was chosen by.
+
+The packages chosen are the same as resolving from the manifests would
+choose.

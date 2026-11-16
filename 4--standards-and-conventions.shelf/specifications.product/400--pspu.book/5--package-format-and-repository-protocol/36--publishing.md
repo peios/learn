@@ -3,8 +3,11 @@ title: Publishing
 description: What publishing a repository writes, leading and what it leaves out, snapshots that never change, taking a version back by yanking or deleting it, and exporting a copy with compressed blobs.
 ---
 
-**Publishing** writes a repository's catalog and `leading` from what it
-holds, and signs a new pointer file one higher in sequence.
+**Publishing** writes a repository's catalog, its provides tree and
+`leading` from what it holds, and signs a new pointer file one higher in
+sequence. It writes each version's summary (§5.31) for the catalog to
+give, and writes again, with summaries, any snapshot written without them;
+a snapshot holds the same versions as before.
 
 ## The catalog
 
