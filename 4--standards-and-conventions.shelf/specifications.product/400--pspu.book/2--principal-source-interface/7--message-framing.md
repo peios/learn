@@ -10,7 +10,7 @@ Every message begins with a 20-byte header:
 | Offset | Size | Field | Value |
 |---|---|---|---|
 | 0 | 4 | `magic` | `PPSI` (`50 50 53 49`) |
-| 4 | 2 | `version` | `2` |
+| 4 | 2 | `version` | `3` |
 | 6 | 2 | `msg_type` | See §2.A |
 | 8 | 4 | `total_len` | Header plus body, in bytes |
 | 12 | 8 | `conversation` | See below |
@@ -122,3 +122,9 @@ Assertion fields are mandatory, including explicit empty/zero values.
 Omitted mandatory fields fail decoding. The compatibility rules above apply
 to future extensions of this replacement contract; they do not require
 accepting the superseded development layout. See PGSS Logon §2.D.
+
+Version 3 carries PGSS credential type 3, Mschapv2, and appends the
+mandatory length-framed `mschapv2_success` field to Assertion (§2.13).
+Source and authority MUST use this coordinated version. The field is
+empty for other methods and contains the 20-byte AuthenticatorResponse
+only when the source successfully verifies an MSCHAPv2 proof.

@@ -10,6 +10,7 @@ not tell it what the answer means.
 |---|---|---|
 | 1 | Password | A line of text, not echoed |
 | 2 | SshPublicKey | Bound SSH candidate or signature proof; §2.D |
+| 3 | Mschapv2 | Relay a source-issued challenge and typed password proof |
 
 The registry is deliberately short. A type is added when a client would
 need to collect something differently, not when an authority acquires a
@@ -39,13 +40,36 @@ cannot reach an older client — which is the correct outcome, and is why
 the capability list exists. The converse — a newer *client* reaching an
 older authority — is what the dropping rule in §2.7 exists for.
 
+## MSCHAPv2 collection
+
+A Mschapv2 prompt MUST carry exactly 16 bytes in `parameters`: the
+source-issued authenticator challenge. Its answer MUST contain exactly
+40 bytes, peer challenge (16 bytes) followed by NT response (24 bytes).
+The originator relays this exchange inside its authenticated TLS tunnel;
+it MUST NOT substitute a password prompt or supply a stored NT hash.
+
+Verification follows RFC 2759. The source binds the challenge to the
+account, credential revision and bounded conversation, and rechecks
+current eligibility before asserting success. ChallengeHash uses the
+exact wire username spelling, excluding any domain prefix as required
+by RFC 2759; account-name lookup equivalence does not change those bytes.
+MSCHAPv2 proves the account password through a different mechanism and
+MUST follow the source's password-authentication eligibility policy.
+
+A successful general authentication returns the 20-byte binary
+AuthenticatorResponse in `mschapv2_success` (§2.24). The source MUST NOT
+export its reusable NT hash. Credential storage and opportunistic
+population of NT material remain source policy, not collection protocol.
+
 ## Why passwords cross the local socket in the clear
 
 Passwords travel this local socket as **plaintext**. SSH public-key
 authentication instead carries public keys and signatures; private keys
 never cross it. Remote SSH transport encrypts both authentication methods.
 The local password choice allows the source to retain a memory-hard
-password verifier without storing a password-equivalent secret.
+password verifier without requiring a password-equivalent secret.
+An optional MSCHAPv2-compatible source deliberately accepts that storage
+trade-off for compatibility with remote challenge-response clients.
 
 Challenge-response requires the verifier to store something it can
 recompute the response from: either the plaintext, or a value that is

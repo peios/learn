@@ -47,6 +47,7 @@ when a new one is warranted.
 |---|---|---|
 | 1 | Password | A line of text, not echoed |
 | 2 | SshPublicKey | Bound SSH candidate or signature proof; §2.D |
+| 3 | Mschapv2 | Source-issued challenge and typed password proof; §2.11 |
 
 ## Message severities
 

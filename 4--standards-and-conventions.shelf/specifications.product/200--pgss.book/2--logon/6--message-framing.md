@@ -14,7 +14,7 @@ Every message begins with a 12-byte header:
 | Offset | Size | Field | Value |
 |---|---|---|---|
 | 0 | 4 | `magic` | `PGSL` (`50 47 53 4c`) |
-| 4 | 2 | `version` | `4` |
+| 4 | 2 | `version` | `5` |
 | 6 | 2 | `msg_type` | See §2.A |
 | 8 | 4 | `total_len` | Header plus body, in bytes |
 
@@ -145,4 +145,9 @@ Version 4 replaces the unpublished version-3 ASCII-only claim-name contract
 with the KACS Unicode name rule (§2.24). Message body layouts are unchanged.
 The framing version MUST still change: a Unicode-aware consumer MUST NOT
 accept an older authority's named absence assertions. No compatibility
-decoder is provided; coordinated clients and authority MUST use version 4.
+decoder is provided for that replacement.
+
+Version 5 adds credential type 3, Mschapv2, and the mandatory length-framed
+MSCHAPv2 success-output field in Authenticated (§2.24). Coordinated clients
+and authority MUST use version 5. The separate principal-source protocol
+uses its own version 3 for the corresponding source assertion output.

@@ -22,7 +22,15 @@ outcome a source can produce.**
 | `profile` | length-framed structure (PGSS §2.9) | |
 | `claims` | array of claim entries | 64 |
 | `permitted_logon_types` | `u32` | PGSS §2.16 |
-| `authenticated_credential_type` | `u8`; 0 none, 1 Password, 2 SshPublicKey | PGSS §2.D |
+| `authenticated_credential_type` | `u8`; 0 none, 1 Password, 2 SshPublicKey, 3 Mschapv2 | PGSS §2.11 |
+| `mschapv2_success` | length-framed bytes | 0 or 20 bytes |
+
+For Mschapv2, `mschapv2_success` MUST contain the 20-byte binary
+AuthenticatorResponse for the verified exchange. For every other method
+it MUST be empty. The authority MUST refuse missing or unexpected output
+and MUST NOT relay a reusable NT hash. General authentication conveys this
+proof through Authenticated (PGSS §2.24), after normal identity validation
+and disclosure authorization. It grants no token-creation authority.
 
 Note what is absent: no session, no token, no privileges, no integrity
 level. A source has no way to express them (§2.4).

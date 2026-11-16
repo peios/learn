@@ -49,10 +49,16 @@ most 4096 length-framed entries:
 | `claims` | array of at most 64 claims (§10.4) | none |
 | `permitted_logon_types` | `u32`, as on `Add` | `0`, not stated |
 | `credential_policy` | `u8` (§10.8) | not said |
+| `nt_hash_present` | `u8`: 0 not said, 1 absent, 2 present | not said |
 
 `credential_policy` is closed, as §10.8 says: a client MUST treat a
 value it does not know as a reply it cannot read. A client given no
 `credential_policy` MUST NOT show one; the store daemon did not say.
+
+`nt_hash_present` is administrative status, not credential material or
+permission to use a password method. It follows `credential_policy` when
+that field is present. An unknown status value MUST be rejected. The
+daemon MUST NOT return the hash itself through this reply.
 
 A **group reference** is a length-framed structure:
 
