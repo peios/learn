@@ -121,6 +121,27 @@ that resolves a dozen SIDs to render a security descriptor and wants
 only names, and it is the seam at which an authority can restrict
 individual fields without restricting the socket (§2.14).
 
+### Claim disclosure
+
+An authority MUST apply its claim-read policy to `Lookup` and `Enumerate`,
+including enumeration of a group's members. A second interface MUST NOT
+bypass a claim restriction enforced during `Authenticate` (§2.24).
+
+`CLAIMS` requests the complete field, not a selection of claim names. Authd
+requires an unscoped ReadClaim grant in AuthenticationSecurity and checks
+each returned claim against its object ACEs. A grant for selected claim
+names alone does not authorize this field. If a check fails, authd withholds
+the complete field as `Restricted`; it does not return a partial array.
+Without the unscoped grant, authd does not ask the source for claims and
+reports `Restricted` independently of whether claims exist.
+
+Authd establishes permission from the querying caller's peer token, without
+collecting an account credential or requiring Authenticate or Logon access.
+The same descriptor snapshot covers the complete request or enumeration
+page. A later request on the connection captures a fresh snapshot. Unusable
+policy restricts claims without preventing ordinary identity resolution.
+Name, SID, number and membership lookup remain public.
+
 ## LookupReply
 
 `msg_type` = `0x8010`. Authority to client.

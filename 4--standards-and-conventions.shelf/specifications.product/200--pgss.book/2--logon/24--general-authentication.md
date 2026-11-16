@@ -95,5 +95,11 @@ are distinct rights. ReadClaim object ACEs target a deterministic claim GUID.
 See authd's registry manual for namespace, canonicalization, capability
 assignment, defaults and administration.
 
+Claim-read policy also applies to identity lookup and enumeration (§2.16).
+Those requests ask for the complete claims field and do not collect a
+credential. Authenticate instead requests named claims and authorizes that
+selection before collecting credentials. Public identity and membership
+lookup does not require Authenticate's ReadGroups grant.
+
 ServiceAttest remains a separate PID-1-only path (§2.19). Authenticating a
 principal does not grant authority to impersonate them or provision capabilities.
