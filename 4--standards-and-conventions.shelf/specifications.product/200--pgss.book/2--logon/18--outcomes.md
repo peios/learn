@@ -70,8 +70,8 @@ answer would have won.
 
 ## Refused
 
-Reserved. No field in this version is restricted by default, and an
-authority that restricts none will never send it.
+Reserved for requests the caller is not permitted to make at all. A
+restricted `CLAIMS` field does not refuse the request (§2.16).
 
 It exists because the field mask (§2.16) is where restriction belongs,
 and a request refused in its entirety needs an answer that is not
