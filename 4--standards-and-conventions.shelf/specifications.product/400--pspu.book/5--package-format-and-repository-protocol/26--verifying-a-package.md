@@ -13,6 +13,9 @@ check, in this order:
    §5.13.
 3. **Each blob** copied hashes to the name the manifest gives it (§5.12).
 
+From a repository served over HTTP, the identity is the one its catalog
+gives, and there is no ref to check (§5.34).
+
 A stored file takes only its content from the source: it is given the
 security metadata its entry records (§5.20, §5.16).
 

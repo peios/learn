@@ -41,7 +41,9 @@ configuration, checks none of this: its refs are taken as they are (§5.26).
 
 A repository without a key in the machine's configuration, such as a medium's
 store or a local directory, is trusted because whoever configured it
-supplied it.
+supplied it. A repository served over HTTP without a key is trusted for
+whatever its server sends, so a machine's configuration of one SHOULD give
+its key.
 
 ## A future scheme
 

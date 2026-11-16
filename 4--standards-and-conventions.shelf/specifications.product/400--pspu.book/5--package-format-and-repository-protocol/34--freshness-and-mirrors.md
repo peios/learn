@@ -1,6 +1,6 @@
 ---
 title: Freshness and Mirrors
-description: What a mirror is trusted for and what it isn't, why a sequence can't go backwards, why nothing expires, and how a repository is served as it is.
+description: What a mirror is trusted for and what it isn't, why a sequence can't go backwards, why nothing expires, how a repository is served over HTTP, and how a consumer tries several base URLs in order.
 ---
 
 ## Mirrors
@@ -28,6 +28,52 @@ seen to be behind. A consumer MUST NOT refuse a pointer file for its age.
 
 Every file of a repository but `repository` and `repository.sig` is named by
 its hash and never changes, so a static web server can serve a repository as
-it is, and a cache can keep every file but those two for ever. This version
-specifies repositories as directories only; the mapping to URLs is reserved
-for a future version.
+it is, and a cache can keep every file but those two for ever.
+
+## Serving over HTTP
+
+A repository served over HTTP is named by a **base URL**: an `http` or
+`https` URL with a host and no query or fragment. A consumer treats a base
+URL that doesn't end in `/` as if it did. Each file of the repository is at
+the base URL followed by the file's path in the repository's directory
+(§5.30), such as `https://pkgs.peios.org/trees/sha256/<hash>`. A server
+MUST serve a file's bytes unchanged as the body of a `200` response, and
+need not list directories or answer range requests.
+
+A repository served over HTTP MUST have a pointer file. Its directories
+can't be listed, so a consumer takes its packages from its catalog, at the
+identities the catalog gives, whether or not a key is configured (§5.29),
+and doesn't read its refs.
+
+A consumer reads the pointer file and its signature from one base URL, so
+that a publication between the two reads can't give it a signature over
+another pointer file. It MUST check the pointer file as §5.33 orders, and
+every tree node, manifest and blob against its hash before it uses it. It
+MUST check a blob before the blob is named in the store, so that a blob
+that fails its check is never stored.
+
+## Base URLs tried in order
+
+A machine can give a repository several base URLs (§5.35), each serving a
+copy of the repository, such as a cache on its own network and then the
+repository's own server. Each is a mirror of the repository. A consumer
+reads each file from the first base URL that serves it:
+
+- A base URL that can't be reached, or that answers with anything but the
+  file, such as `404 Not Found` or a server error, is passed over for the
+  next. The pointer file and its signature are passed over together.
+- A file that fails its check, against the key or its hash, MUST be
+  refused, and the consumer MUST NOT read it from another base URL. A
+  mirror that serves the wrong file is broken or hostile, and the error
+  is reported, not hidden.
+- If no base URL serves the file, the consumer fails, saying why each
+  didn't. If every base URL answers `404 Not Found` for the pointer file,
+  the repository has none.
+
+## Keeping what was read
+
+A consumer MAY keep the tree nodes and manifests it reads from a repository
+served over HTTP, under the paths the repository gives them, and read them
+again from there. It MUST check one against its hash each time it reads
+it. The pointer file and its signature are read from the repository each
+time; what the consumer keeps of them is the sequence (§5.35).

@@ -16,13 +16,24 @@ key = "ml-dsa-65:…"
 track = "stable"
 ```
 
+A repository served over HTTP (§5.34) is given by its base URLs, tried in
+order:
+
+```toml
+urls = ["http://cache.lan/peios/", "https://pkgs.peios.org/"]
+key = "ml-dsa-65:…"
+track = "stable"
+```
+
 | Key | Holds |
 |---|---|
-| `path` | REQUIRED: where the repository is |
+| `path` | Where the repository is, as a directory |
+| `urls` | The base URLs the repository is served at, at least one, tried in order (§5.34) |
 | `key` | Its public key (§5.33); with it, the pointer file's signature is checked |
 | `track` | The index or channel a request for a bare name follows |
 
-A consumer MUST refuse any other key. `/conf` merges what the system ships,
+A file MUST have exactly one of `path` and `urls`. A consumer MUST refuse
+any other key. `/conf` merges what the system ships,
 under `/usr/conf`, with the machine's own, under `/lcl/conf`: a consumer
 reads `/conf/ppk` and writes what the machine adds under `/lcl/conf/ppk`.
 

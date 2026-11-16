@@ -44,10 +44,9 @@ binds; §5.38 collects them by role.
 - **The kernel's verification of a file's signature.** A package carries a
   file's PIP signature (§5.16); PSPK book 3 specifies the signature and its
   check.
-- **Network transport.** A repository is a directory in this version. Every
-  file of it but its pointer file and signature is named by its hash, so
-  that a static web server can serve it as it is (§5.34); the mapping to
-  URLs is reserved for a future version.
+- **Network transport other than HTTP.** A repository is a directory, which
+  a static web server can serve as it is over HTTP or HTTPS (§5.34). Other
+  transports are reserved for a future version.
 - **Registry seeds and other system policy** that a release carries. They
   are packaged as files and applied by other components.
 

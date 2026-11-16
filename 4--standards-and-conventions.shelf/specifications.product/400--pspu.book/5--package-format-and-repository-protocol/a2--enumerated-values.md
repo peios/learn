@@ -56,4 +56,4 @@ Current (nothing written), `yanked`, `deleted` and a reason.
 
 ## Repository configuration keys (§5.35)
 
-`path`, `key`, `track`.
+`path`, `urls`, `key`, `track`.

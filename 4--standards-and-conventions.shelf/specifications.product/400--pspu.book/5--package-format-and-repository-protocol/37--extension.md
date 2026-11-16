@@ -11,8 +11,7 @@ would let two consumers take one identity for different things.
 
 This version reserves:
 
-- **Network transport:** the mapping of a repository's paths to URLs
-  (§5.34).
+- **Network transports other than HTTP** (§5.34).
 - **Certificate chains** for signing a pointer file (§5.33).
 - **`noarch` in other architectures' resolutions** (§5.8).
 - **Index requests by a package:** only a request of the closure itself

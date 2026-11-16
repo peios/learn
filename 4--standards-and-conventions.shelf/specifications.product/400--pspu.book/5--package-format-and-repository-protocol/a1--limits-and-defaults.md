@@ -21,6 +21,7 @@ description: Every limit and default of this chapter in one place.
 | Closures | `closures/` in the artifact directory |
 | Repository configuration | `/conf/ppk/repositories/`, written under `/lcl/conf/ppk/` |
 | Repository state | `/var/state/ppk/` |
+| What is kept of repositories served over HTTP | `/var/cache/ppk/` |
 | Architecture | The consumer's own |
 | License class | `unknown` |
 | Signature context | `ppk repository` |

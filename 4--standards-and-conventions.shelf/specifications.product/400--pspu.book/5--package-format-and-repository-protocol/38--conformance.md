@@ -35,6 +35,9 @@ description: The requirements of this chapter collected by role, producer, publi
   packages from its catalog, and refuses a lower sequence than it has seen
   (§5.29, §5.33, §5.34).
 - Takes each package name from one repository (§5.30).
+- Reads a repository served over HTTP from its catalog, takes the pointer
+  file and its signature from one base URL, tries the next base URL when
+  one doesn't serve a file, and never when a file fails its check (§5.34).
 
 Conformance doesn't require a consumer to give security metadata on a
 system that won't let it, nor to fetch over a network.
