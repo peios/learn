@@ -9,9 +9,10 @@ environment. Its result is identity data, not a bearer credential, and MUST
 NOT be accepted as a later request to issue a token.
 
 The authority MUST establish the caller from the connected socket's token.
-It MUST authorize the operation and every requested disclosure before
-collecting credentials. Unauthorized disclosure MUST refuse the request with
-PermissionDenied; silent omission is not a substitute.
+It MUST authorize the operation, requested groups and explicitly named claims
+before collecting credentials. Unauthorized named disclosure MUST refuse the
+request with PermissionDenied. AllPermitted instead requests the readable
+subset and MUST preserve the distinction between absence and nondisclosure.
 
 ## Shared AuthenticationRequest
 
@@ -41,11 +42,13 @@ Message type 0x0004, client to authority, first on /run/logon.sock.
 |---|---|---|
 | authentication | nested AuthenticationRequest | above |
 | groups | u8, exactly 0 or 1 | |
-| claims | count and length-framed name entries | 64 entries |
+| claim_selection | u8: 0 None, 1 Named, 2 AllPermitted | |
+| claims | count and length-framed name entries, only for Named | 1–64 entries |
 
 Each name entry contains one string of 1–255 UTF-8 bytes, without NUL.
 ASCII letters compare case-insensitively; non-ASCII bytes compare exactly.
 Duplicate equivalent names MUST be refused as malformed.
+None and AllPermitted carry no name array, including no zero count.
 
 The authority uses CredentialRequest and CredentialResponse (§2.8), with the
 same limits, cancellation and failure handling as Logon. Shared authentication
@@ -64,6 +67,7 @@ Message type 0x8004, authority to client, terminal success.
 | verified_credentials | length-framed bytes, one u8 per verified type | 32 entries |
 | has_groups | u8, exactly 0 or 1 | |
 | groups | count and length-framed entries, only when has_groups is 1 | 1024 entries |
+| claim_coverage | u8: 0 None, 1 Named, 2 Complete, 3 Filtered | |
 | claims | existing typed claim array (§2.16) | 64 entries |
 | absent_claims | count and length-framed name entries | 64 entries |
 
@@ -72,10 +76,25 @@ structurally valid. Groups MUST be complete validated source memberships,
 without duplicates or locally synthesized token groups. has_groups MUST equal
 the request flag; an unrequested set differs from a complete empty set.
 
-Each requested claim MUST occur exactly once, either in claims or
+For Named selection, each requested claim MUST occur exactly once, either in claims or
 absent_claims, using the same name equivalence. No unrequested claim may be
 returned. Absence means authorized but not asserted; it differs from a
 permission failure. Claim names and values retain §2.16's bounds and types.
+
+None selection MUST return None coverage with empty claims and absent_claims.
+Named selection MUST return Named coverage. AllPermitted MUST return Complete
+or Filtered coverage, readable claim values and an empty absent_claims array.
+It MUST NOT disclose restricted names or counts. Duplicate equivalent returned
+names MUST be rejected for every mode.
+
+Complete guarantees the entire source claim set was disclosed and policy
+permits disclosure throughout the claim namespace. An omitted name is then
+known absent. Filtered means policy may withhold names; omission alone is
+unknown, not absence. Coverage MUST depend on disclosure authorization rather
+than whether this particular principal actually has a restricted claim. If
+the authority cannot establish complete namespace disclosure safely, it MUST
+report Filtered. A consumer MUST NOT grant access from a condition requiring
+unknown information.
 
 verified_credentials lists checks actually completed, without duplicates.
 Every entry MUST be understood and supported by the request. An empty list
@@ -99,8 +118,9 @@ assignment, defaults and administration.
 
 Claim-read policy also applies to identity lookup and enumeration (§2.16).
 Those requests ask for the complete claims field and do not collect a
-credential. Authenticate instead requests named claims and authorizes that
-selection before collecting credentials. Public identity and membership
+credential. Authenticate can request named claims and authorize that selection
+before collecting credentials, or request AllPermitted with coverage metadata.
+Public identity and membership
 lookup does not require Authenticate's ReadGroups grant.
 
 ServiceAttest remains a separate PID-1-only path (§2.19). Authenticating a

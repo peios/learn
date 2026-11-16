@@ -45,7 +45,7 @@ other socket (§2.14).
 | Logon socket path | `/run/logon.sock` | §2.5 |
 | Identity socket path | `/run/ident.sock` | §2.14 |
 | Magic | `PGSL` (`50 47 53 4c`) | §2.6 |
-| Version | `2` | §2.6 |
+| Version | `3` | §2.6 |
 | Header size | 12 bytes | §2.6 |
 | Maximum message size | 65536 bytes | §2.6 |
 | Longest grace before a forced end | 10 seconds | §2.22 |

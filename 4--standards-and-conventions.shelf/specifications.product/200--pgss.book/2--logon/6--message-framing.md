@@ -14,7 +14,7 @@ Every message begins with a 12-byte header:
 | Offset | Size | Field | Value |
 |---|---|---|---|
 | 0 | 4 | `magic` | `PGSL` (`50 47 53 4c`) |
-| 4 | 2 | `version` | `2` |
+| 4 | 2 | `version` | `3` |
 | 6 | 2 | `msg_type` | See §2.A |
 | 8 | 4 | `total_len` | Header plus body, in bytes |
 
@@ -134,3 +134,9 @@ Assertion fields are mandatory, including explicit empty/zero values.
 Omitted mandatory fields fail decoding. The compatibility rules above apply
 to future extensions of this replacement contract; they do not require
 accepting the superseded development layout. See PGSS Logon §2.D.
+
+Version 3 adds the mandatory claim-selection discriminator to AuthenticateStart
+and the mandatory coverage discriminator to Authenticated (§2.24). It replaces
+the unpublished version-2 public framing contract. The coordinated clients
+and authority MUST use version 3; no compatibility decoder is provided.
+The separate principal-source protocol retains its own version.
