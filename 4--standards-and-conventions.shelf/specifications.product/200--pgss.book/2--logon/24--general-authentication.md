@@ -92,6 +92,8 @@ Authd implements operation and disclosure authorization using the
 AuthenticationSecurity descriptor under Machine\Generic\Authn\Policy.
 Authenticate (0x1), Logon (0x2), ReadGroups (0x4) and ReadClaim (0x8)
 are distinct rights. ReadClaim object ACEs target a deterministic claim GUID.
+Claim-specific ACEs do not grant or deny root operation or group rights,
+including through generic access masks.
 See authd's registry manual for namespace, canonicalization, capability
 assignment, defaults and administration.
 
