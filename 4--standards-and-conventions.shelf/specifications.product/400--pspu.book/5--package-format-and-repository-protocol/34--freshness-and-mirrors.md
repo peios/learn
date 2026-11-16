@@ -50,7 +50,9 @@ that a publication between the two reads can't give it a signature over
 another pointer file. It MUST check the pointer file as §5.33 orders, and
 every tree node, manifest and blob against its hash before it uses it. It
 MUST check a blob before the blob is named in the store, so that a blob
-that fails its check is never stored.
+that fails its check is never stored. Where the pointer file says the
+blobs are compressed, a blob's hash is that of what it decompresses to
+(§5.12).
 
 ## Base URLs tried in order
 

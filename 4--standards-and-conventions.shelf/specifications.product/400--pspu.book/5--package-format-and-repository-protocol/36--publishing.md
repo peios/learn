@@ -1,6 +1,6 @@
 ---
 title: Publishing
-description: What publishing a repository writes, leading and what it leaves out, snapshots that never change, and taking a version back by yanking or deleting it.
+description: What publishing a repository writes, leading and what it leaves out, snapshots that never change, taking a version back by yanking or deleting it, and exporting a copy with compressed blobs.
 ---
 
 **Publishing** writes a repository's catalog and `leading` from what it
@@ -44,3 +44,17 @@ A snapshot that holds a deleted version isn't changed. To keep a release
 installable, publish a new snapshot without it. Deletion reaches the
 repository, not machines: a machine that holds the package keeps it until a
 closure without it replaces the one that has it.
+
+## Exporting
+
+An **export** is a copy of a repository, to serve, whose blobs are
+compressed (§5.12). It holds what the repository held when it was last
+published: its tree nodes, manifests and refs as they are, every blob
+compressed, and a pointer file with the repository's sequence, the line
+`blobs zstd`, and a signature by the repository's key. The pointer file
+MUST be written after everything it names, and what the repository doesn't
+hold, such as a version deleted, removed from the export after it.
+
+An export is written again after each publication. A publisher need not
+compress again a blob the export holds already. A publisher MUST NOT write
+an export from a publication with a lower sequence than the export has.

@@ -12,6 +12,7 @@ description: Every limit and default of this chapter in one place.
 | Closure, index, channel, or repository name | 1 to 64 characters (§5.9) |
 | PIP signature | 3310 bytes, version byte 1 (§5.16) |
 | Bucket | The first 2 hexadecimal digits of SHA-256 of the name (§5.31) |
+| What a compressed blob decompresses to | At most 64 GiB (§5.12) |
 
 ## Defaults
 

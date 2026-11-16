@@ -1,6 +1,6 @@
 ---
 title: The Pointer File
-description: The one file of a repository that changes, its lines, its order, its sequence that only goes up, and when it was signed.
+description: The one file of a repository that changes, its lines, its order, its sequence that only goes up, when it was signed, and whether its blobs are compressed.
 ---
 
 A repository's **pointer file**, `repository`, says what its catalog, its
@@ -9,6 +9,7 @@ indexes and its channels are:
 ```text
 sequence 1042
 signed 2026-11-13T11:30:00Z
+blobs zstd
 catalog sha256:…
 index 2026.10.0 sha256:…
 index leading sha256:…
@@ -24,10 +25,12 @@ In this order:
    published. Each publication MUST be one higher than the last.
 2. `signed` and the time it was signed, in UTC, as
    `YYYY-MM-DDTHH:MM:SSZ`.
-3. `catalog` and the identity of the catalog's top node, once there is one.
-4. A line for each index, sorted by the bytes of its name: `index`, its
+3. `blobs zstd`, if the repository's blobs are compressed (§5.12). Without
+   it, they aren't.
+4. `catalog` and the identity of the catalog's top node, once there is one.
+5. A line for each index, sorted by the bytes of its name: `index`, its
    name, and the identity of its top node.
-5. A line for each channel, sorted by the bytes of its name: `channel`, its
+6. A line for each channel, sorted by the bytes of its name: `channel`, its
    name, and the index or channel it follows, then ` ended` if it won't
    move again.
 

@@ -19,13 +19,17 @@ description: The requirements of this chapter collected by role, producer, publi
 - Writes tree nodes in their one form (§5.31).
 - Leaves out of `leading` what it can't satisfy, and says so (§5.36).
 - Never changes a snapshot, and keeps yanks and tombstones (§5.36).
+- Writes an export's pointer file after everything it names, and never
+  from an older publication than the export has (§5.36).
 - Keeps its private key out of the repository (§5.33).
 
 ## Consumer
 
 - Refuses anything not in its one form, and anything that doesn't hash to
   its name (§5.9).
-- Checks a package as §5.26 orders before storing it.
+- Checks a package as §5.26 orders before storing it, decompressing the
+  blobs of a repository that compresses them and refusing one that
+  decompresses to more than 64 GiB (§5.12).
 - Gives each file and directory its security metadata before anything
   else can reach it, or says how many lack it (§5.20).
 - Refuses the conflicts of §5.24, and reuses a closure that exists.
