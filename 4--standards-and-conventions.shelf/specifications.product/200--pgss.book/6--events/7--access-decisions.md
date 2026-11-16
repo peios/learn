@@ -21,6 +21,11 @@ An emitter that decides access to objects of its own:
   granted or refused. It MAY write a log line about a refusal for its own
   debugging; that line is not the audit record.
 
+A component MAY record the outcome of a protocol conversation, including
+authentication or delivery failures, separately from the access audit. Such an
+event MUST describe the completed operation rather than duplicate the descriptor
+check, and MUST NOT be presented as satisfying SACL audit requirements.
+
 ## The audit context
 
 The audit context is one MessagePack map:
@@ -71,6 +76,15 @@ On a decision a component requests for a client, the record's header
 names the component, as `emitter.*`, and the payload's `subject.*` names
 the client whose access was checked (§6.4). The component's process
 details are `emitter.process.*`.
+
+A stateless check of a supplied, hypothetical subject is different from a check
+of a real token. Its event type is `kacs.audit.subject.checked`. The kernel
+records the real caller in `subject.token.sid`, and the supplied user SID, when
+present, in the asserted field `source.supplied-subject.sid`. The latter is not
+a token identity observed by the kernel and grants no token authority. The
+record carries `fields.attestation.userspace`. The caller's enabled audit
+privilege gates SACL emission; an explicit no-audit query flag suppresses that
+emission. Neither changes the supplied subject's access decision.
 
 ## Default SACLs
 
