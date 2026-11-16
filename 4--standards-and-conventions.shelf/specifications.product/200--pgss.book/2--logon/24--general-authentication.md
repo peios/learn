@@ -46,7 +46,11 @@ Message type 0x0004, client to authority, first on /run/logon.sock.
 | claims | count and length-framed name entries, only for Named | 1–64 entries |
 
 Each name entry contains one string of 1–255 UTF-8 bytes, without NUL.
-ASCII letters compare case-insensitively; non-ASCII bytes compare exactly.
+Names compare using KACS's per-character Unicode lowercase mapping. This is
+locale-independent, without Unicode normalization or full case folding:
+Équipe and équipe are equivalent; ß and ss are not. Original spelling MUST
+be preserved in returned claims. This rule applies to requested names,
+source/result duplicate detection and named absence assertions.
 Duplicate equivalent names MUST be refused as malformed.
 None and AllPermitted carry no name array, including no zero count.
 

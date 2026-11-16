@@ -14,7 +14,7 @@ Every message begins with a 12-byte header:
 | Offset | Size | Field | Value |
 |---|---|---|---|
 | 0 | 4 | `magic` | `PGSL` (`50 47 53 4c`) |
-| 4 | 2 | `version` | `3` |
+| 4 | 2 | `version` | `4` |
 | 6 | 2 | `msg_type` | See §2.A |
 | 8 | 4 | `total_len` | Header plus body, in bytes |
 
@@ -137,6 +137,12 @@ accepting the superseded development layout. See PGSS Logon §2.D.
 
 Version 3 adds the mandatory claim-selection discriminator to AuthenticateStart
 and the mandatory coverage discriminator to Authenticated (§2.24). It replaces
-the unpublished version-2 public framing contract. The coordinated clients
-and authority MUST use version 3; no compatibility decoder is provided.
+the unpublished version-2 public framing contract, without a compatibility
+decoder. That development contract is superseded by version 4 below.
 The separate principal-source protocol retains its own version.
+
+Version 4 replaces the unpublished version-3 ASCII-only claim-name contract
+with the KACS Unicode name rule (§2.24). Message body layouts are unchanged.
+The framing version MUST still change: a Unicode-aware consumer MUST NOT
+accept an older authority's named absence assertions. No compatibility
+decoder is provided; coordinated clients and authority MUST use version 4.
