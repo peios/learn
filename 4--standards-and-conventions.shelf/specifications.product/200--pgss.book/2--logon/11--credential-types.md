@@ -119,6 +119,12 @@ typed before a backslash, and sometimes with a name of the client's own
 choosing. A server that refused unfamiliar domains would refuse those
 clients and gain nothing in return.
 
+> [!NOTE]
+> This rule exists because there are no realms yet. When realm syntax
+> arrives, the intended rule is that a domain naming a known realm routes
+> to that realm, and any other domain routes to the default realm, so
+> clients that send an unfamiliar domain keep working.
+
 The authority then routes on the decoded user exactly as it routes an
 identifier (§2.15), and offers the challenge and answer to that one
 source. It MUST NOT offer them to any other source, including when the
