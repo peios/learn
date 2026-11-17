@@ -65,9 +65,11 @@ principal.
 | challenge | length-framed bytes | exactly 8 bytes |
 | answer | length-framed bytes | PGSS §2.11 |
 
-`start.identifier` is then the user name the authority decoded from the
-answer, which is what routed the request here, and `start` MUST require
-the presented type. `answer` is the client's answer data, unchanged.
+`start` is the client's request unchanged, so its identifier is empty and
+it requires the presented type. `answer` is the client's answer data,
+unchanged. The source takes the principal's name from the answer, decoded
+as the authority decoded it to route the request here, so there is only
+one copy of the name to trust.
 
 A source MUST verify the presented proof against `challenge` and answer
 with Assertion or Refusal. It MUST NOT send a CredentialRequest in this
