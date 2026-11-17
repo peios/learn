@@ -107,12 +107,17 @@ not supported. The LMv2 response is not carried; NTLMv2 does not need it.
 ### Naming the principal
 
 The authority decodes `user` to UTF-8 and applies §2.15 to it, with the
-same refusals as any other identifier. `domain` selects no source while
-this specification defines no realm syntax: the authority MUST accept
-only an empty domain, `.`, or one of its own local domain names, compared
-using the name comparison of §2.15, and MUST refuse any other domain as
-an authentication failure. An authority's local domain names are its
-configuration; the machine's NetBIOS computer name is one by default.
+same refusals as any other identifier. While this specification defines
+no realm syntax, `domain` selects no source: the authority MUST route on
+the decoded user alone, and SHOULD record `domain` in its audit trail.
+
+Ignoring the domain for routing does not weaken the proof. The client
+binds `domain` into `ResponseKeyNT`, and the source verifies with the
+bytes it received, so the domain the client used is still the domain it
+proved. Clients fill it in unpredictably: often with the name the user
+typed before a backslash, and sometimes with a name of the client's own
+choosing. A server that refused unfamiliar domains would refuse those
+clients and gain nothing in return.
 
 The authority then routes on the decoded user exactly as it routes an
 identifier (§2.15), and offers the challenge and answer to that one
@@ -125,9 +130,11 @@ The source verifies the answer by MS-NLMP §3.3.2, using its stored NT
 hash for the principal:
 
 - `ResponseKeyNT` is HMAC-MD5 keyed with the NT hash, over the UTF-16LE
-  concatenation of the uppercased `user` and `domain`. Uppercasing uses
-  each UTF-16 code unit's Unicode simple uppercase mapping, which is what
-  Windows clients compute. `domain` is used exactly as received.
+  concatenation of the uppercased `user` and `domain`. §2.15 limits
+  names to printable ASCII, so ASCII uppercasing is what matters; any
+  other code unit uses its Unicode simple uppercase mapping, as the
+  closest available approximation of a Windows client. `domain` is used
+  exactly as received.
 - The expected `NTProofStr` is HMAC-MD5 keyed with `ResponseKeyNT`, over
   the challenge followed by `nt_response` after its first 16 bytes. The
   comparison MUST take constant time.

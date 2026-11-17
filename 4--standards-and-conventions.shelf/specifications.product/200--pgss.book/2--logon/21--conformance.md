@@ -73,88 +73,92 @@ of the following.
     cannot proceed within them (§2.8).
 20. Ensure `credential_ref` is unique among the prompts of one request
     (§2.8).
+21. For Ntlmv2, issue the challenge itself: eight bytes from a
+    cryptographically secure random source, in a single prompt, accepting
+    one answer, never reused, and discarded with the conversation. Route
+    on the answer's decoded user alone (§2.11).
 
 ### Result
 
-21. Transfer the token as a file descriptor in the ancillary data of
+22. Transfer the token as a file descriptor in the ancillary data of
     `AccessGranted`, never by name (§2.9).
-22. Never distinguish an unknown principal from a bad credential — by
+23. Never distinguish an unknown principal from a bad credential — by
     denial code, by reason text, or by timing (§2.10, §2.12).
-23. Send `home` and `shell` as absolute paths, or empty, whatever their
+24. Send `home` and `shell` as absolute paths, or empty, whatever their
     provenance; an authority with no value for a profile field MUST
     leave it empty rather than invent one (§2.9).
 
 ### Credential handling
 
-24. Erase credential material, and every buffer it was encoded and
+25. Erase credential material, and every buffer it was encoded and
     decoded through — including an allocation abandoned by a buffer that
     grew — before that memory is released (§2.12).
-25. Never write credential material to a log, audit record, error
+26. Never write credential material to a log, audit record, error
     message or diagnostic (§2.12).
 
 ### Identity lookup
 
-26. Listen on `/run/ident.sock` as well as `/run/logon.sock`, as a
+27. Listen on `/run/ident.sock` as well as `/run/logon.sock`, as a
     `SOCK_STREAM` Unix domain socket (§2.14).
-27. Grant connect access to that socket, by security descriptor, to
+28. Grant connect access to that socket, by security descriptor, to
     every principal that runs ordinary programs (§2.14).
-28. Refuse a message of one socket's range received on the other
+29. Refuse a message of one socket's range received on the other
     (§2.14).
-29. Echo each request's `tag`, and never interpret it otherwise
+30. Echo each request's `tag`, and never interpret it otherwise
     (§2.14).
-30. Serve requests concurrently, and never let a slow answer on one
+31. Serve requests concurrently, and never let a slow answer on one
     connection delay another (§2.14).
-31. Bound the time spent answering a request, and answer `Unavailable`
+32. Bound the time spent answering a request, and answer `Unavailable`
     rather than waiting indefinitely (§2.14).
-32. Ignore ancillary data received on the identity socket (§2.14).
+33. Ignore ancillary data received on the identity socket (§2.14).
 
 ### Resolution
 
-33. Interpret names itself, and never require a client to parse, qualify
+34. Interpret names itself, and never require a client to parse, qualify
     or case-fold one (§2.15).
-34. Compare names ASCII case-insensitively, establishing the comparison
+35. Compare names ASCII case-insensitively, establishing the comparison
     itself rather than delegating it to a source (§2.15).
-35. Refuse a name containing a reserved character, a byte outside
+36. Refuse a name containing a reserved character, a byte outside
     `0x20`–`0x7e`, or a leading or trailing space — whether created
     locally, received in a request, asserted by a source, or carried
     alongside a SID in a reference (§2.15).
-36. Resolve bare names in a configured order, never in registration
+37. Resolve bare names in a configured order, never in registration
     order, stopping at the first source that answers (§2.15).
-37. Carry the resolved SID and the canonical qualified name on every
+38. Carry the resolved SID and the canonical qualified name on every
     successful reply, whatever form the request used (§2.15).
 
 ### Answers
 
-38. Never answer a `Principal` request with a group, or a `Group`
+39. Never answer a `Principal` request with a group, or a `Group`
     request with a principal, and establish the kind itself rather than
     relaying a source's (§2.16).
-39. Ignore a field bit it does not implement, and never report it as
+40. Ignore a field bit it does not implement, and never report it as
     present (§2.16).
-40. Report each requested field it implements as present or as withheld
+41. Report each requested field it implements as present or as withheld
     with a reason, never as neither (§2.16).
-41. Withhold `MEMBERS` with a reason rather than returning a partial or
+42. Withhold `MEMBERS` with a reason rather than returning a partial or
     empty list, where it will not or cannot produce it (§2.16).
-42. Report `Absent` rather than `Declined` for a group whose membership
+43. Report `Absent` rather than `Declined` for a group whose membership
     is a rule rather than a record, and gather a `BUILTIN` group's
     recorded members from the sources rather than reporting it `Absent`
     (§2.16).
-43. Encode "no POSIX identifier" as zero, and never substitute a number
+44. Encode "no POSIX identifier" as zero, and never substitute a number
     a caller could mistake for a real one (§2.16).
-44. Answer a `passwd` record, a `group` record, a principal's
+45. Answer a `passwd` record, a `group` record, a principal's
     memberships, or a name for a SID, each in one request (§2.16).
-45. Never report `NotFound` unless every source in the search order that
+46. Never report `NotFound` unless every source in the search order that
     could have answered was consulted and answered (§2.18).
-46. Report `Unavailable` where a source earlier in the search order
+47. Report `Unavailable` where a source earlier in the search order
     could not be reached (§2.18).
-47. Never report `NotFound` in place of `Refused` or of a `Restricted`
+48. Never report `NotFound` in place of `Refused` or of a `Restricted`
     field, and never report `Refused` for anything other than a caller
     that may not make the request (§2.18).
-48. List every source that did not contribute to an enumeration, and
+49. List every source that did not contribute to an enumeration, and
     never report `Found` on a page it could not produce (§2.17, §2.18).
-49. Reject a cursor it did not issue, or can no longer honor, with
+50. Reject a cursor it did not issue, or can no longer honor, with
     `Malformed` — never by restarting the walk and never by reporting it
     complete (§2.17).
-50. Serve member enumeration where it withholds `MEMBERS` as `TooLarge`
+51. Serve member enumeration where it withholds `MEMBERS` as `TooLarge`
     (§2.17).
 
 ### Service attestation
@@ -163,44 +167,44 @@ An authority that implements `ServiceAttest` MUST satisfy all of the
 following. An authority that does not implement it MUST refuse the
 message, and is conforming.
 
-51. Never hold, store, or accept a credential for a service identity,
+52. Never hold, store, or accept a credential for a service identity,
     and never offer a credential exchange for one (§2.19).
-52. Refuse a `ServiceAttest` unless both the peer's principal and the
+53. Refuse a `ServiceAttest` unless both the peer's principal and the
     peer's being the platform's service manager are established from the
     connection, and never from the message (§2.19).
-53. Answer a peer that satisfies neither condition, or only one, with
+54. Answer a peer that satisfies neither condition, or only one, with
     `PermissionDenied` (§2.19).
-54. Never mint a token under this message for a principal that has not
+55. Never mint a token under this message for a principal that has not
     been designated as usable for a service logon, and refuse with
     `AccountRestricted` where it cannot determine whether a principal
     carries that designation (§2.19).
-55. Never let a refusal distinguish "no such principal" from "not
+56. Never let a refusal distinguish "no such principal" from "not
     designated for service logon" (§2.19, §2.10).
-56. Reject an empty or unusable `service` with `MalformedRequest`
+57. Reject an empty or unusable `service` with `MalformedRequest`
     (§2.19).
-57. Record the logon type as `Service`, and leave every `profile` field
+58. Record the logon type as `Service`, and leave every `profile` field
     empty rather than inventing a value (§2.19, §2.9).
-58. Issue a token that cannot be used to authenticate to another system
+59. Issue a token that cannot be used to authenticate to another system
     on the authority's behalf, at a level below the one a credentialled
     logon receives and bounding everything derived from it (§2.19).
-59. Record that the logon was attested rather than authenticated,
+60. Record that the logon was attested rather than authenticated,
     wherever it records what vouched for a credentialled logon (§2.19).
-60. Reject a `LogonStart` that would complete with no credential
+61. Reject a `LogonStart` that would complete with no credential
     exchange for an identity it accepts under `ServiceAttest`, and
     reject a `ServiceAttest` naming an identity it accepts under
     `LogonStart` (§2.19).
 
 ### Logon type restrictions
 
-61. Refuse a logon whose type the principal's holder does not permit,
+62. Refuse a logon whose type the principal's holder does not permit,
     with `AccountRestricted`, after authentication rather than instead
     of it (§2.16, §2.10).
-62. Read an unstated `LOGON_TYPES` as its own default rather than as
+63. Read an unstated `LOGON_TYPES` as its own default rather than as
     "nothing permitted", and never include `Service` in that default
     (§2.16, §2.19).
-63. Never widen what a principal's holder permits. Local policy may
+64. Never widen what a principal's holder permits. Local policy may
     narrow it further; nothing may add to it (§2.16).
-64. Refuse a `logon_type` it does not recognize, with
+65. Refuse a `logon_type` it does not recognize, with
     `MalformedRequest` (§2.7, §2.10).
 
 ### Credential change
@@ -210,23 +214,23 @@ the following. An authority that does not implement it MUST refuse the
 message with `PermissionDenied`, and is conforming. Obligations 10 to
 13, 19, 20, 24 and 25 bind a change conversation as they bind a logon.
 
-65. Change only the credential of the principal the connected peer's
+66. Change only the credential of the principal the connected peer's
     token names, established from the socket and never from a message
     (§2.20, §2.4).
-66. Establish, within the conversation, that the principal can present
+67. Establish, within the conversation, that the principal can present
     their current credential before changing it, and refuse with
     `AuthenticationFailed` where they cannot (§2.20).
-67. Refuse with `AccountRestricted` a principal it holds no changeable
+68. Refuse with `AccountRestricted` a principal it holds no changeable
     credential for, including every service identity (§2.20, §2.19).
-68. Send `CredentialChanged` only once the new credential is the one a
+69. Send `CredentialChanged` only once the new credential is the one a
     subsequent logon will be tested against (§2.20).
-69. Mint no token and create no session for a change, and send no
+70. Mint no token and create no session for a change, and send no
     descriptor with `CredentialChanged` (§2.20).
-70. End with `ConversationLimit` a change it gives up on for want of an
+71. End with `ConversationLimit` a change it gives up on for want of an
     acceptable new credential (§2.20).
-71. Refuse a `CredentialChangeStart` that ends before
+72. Refuse a `CredentialChangeStart` that ends before
     `supported_credential_types` with `MalformedRequest` (§2.20).
-72. Where the socket's descriptor admits peers that may not originate
+73. Where the socket's descriptor admits peers that may not originate
     logons, decide from each peer's identity whether it may originate
     one, and never treat reaching the socket as that permission (§2.20,
     §2.4).
@@ -238,41 +242,41 @@ satisfy all of the following. An authority that does not implement them
 MUST refuse both with `PermissionDenied`, and is conforming. Obligations
 5 to 8, 10 and 14 bind these requests as they bind a logon.
 
-73. Never accept `SessionEndQuery` as `SessionEnd` or the reverse, and
+74. Never accept `SessionEndQuery` as `SessionEnd` or the reverse, and
     change nothing in answering `SessionEndQuery` (§2.22).
-74. Answer `SessionEndQuery` with `SessionEndAllowed` exactly where a
+75. Answer `SessionEndQuery` with `SessionEndAllowed` exactly where a
     `SessionEnd` from the same peer would be permitted, and otherwise
     with the denial it would draw (§2.22).
-75. Refuse, with `PermissionDenied`, a peer whose token is restricted,
+76. Refuse, with `PermissionDenied`, a peer whose token is restricted,
     the SYSTEM and Anonymous sessions the kernel creates, and every
     session of logon type `Service`, whoever asks (§2.22).
-76. Permit a caller to end a session whose user is the caller, of a
+77. Permit a caller to end a session whose user is the caller, of a
     logon type a person has, where the caller is a principal of an
     issued domain (§2.22).
-77. Decide any other request by an access check of the caller's token
+78. Decide any other request by an access check of the caller's token
     against a descriptor local policy states — SYSTEM and Administrators
     alone where it states none, and nobody where it states one that
     cannot be used (§2.22).
-78. Answer `NoSuchSession` only to a caller who may end other
+79. Answer `NoSuchSession` only to a caller who may end other
     principals' sessions, and `PermissionDenied` to any other where the
     session does not exist (§2.22, §2.10).
-79. End every process whose primary token belongs to the session —
+80. End every process whose primary token belongs to the session —
     asking first, then, after a grace period of at most 10 seconds,
     without asking — and never a process only because one of its
     threads impersonates a token of the session (§2.22).
-80. Address each signal by a reference that cannot come to name a
+81. Address each signal by a reference that cannot come to name a
     different process, never by a process identifier looked up again
     (§2.22).
-81. Look again after each round, bound the number of rounds, and answer
+82. Look again after each round, bound the number of rounds, and answer
     within 30 seconds (§2.22).
-82. Count in `remaining` every process it could not examine or end, and
+83. Count in `remaining` every process it could not examine or end, and
     never fail the request for one (§2.22).
-83. Hold no token of the session longer than it takes to read which
+84. Hold no token of the session longer than it takes to read which
     session it belongs to, and never end its own process (§2.22).
-84. Where the session is the one the connected peer's token belongs to,
+85. Where the session is the one the connected peer's token belongs to,
     send `SessionEnded` before signaling anything, carrying what it
     found to end and a `remaining` of zero (§2.22).
-85. Start nothing in ending a session (§2.1, §2.22).
+86. Start nothing in ending a session (§2.1, §2.22).
 
 ### Credential enrolment
 
@@ -282,25 +286,25 @@ message with `PermissionDenied`, and is conforming. Obligations 10 to
 13, 19, 20, 24, 25, 68, 69 and 72 bind an enrolment as they bind a
 credential change.
 
-86. Add or remove only the credentials of the principal the connected
+87. Add or remove only the credentials of the principal the connected
     peer's token names, established from the socket and never from a
     message (§2.23, §2.4).
-87. For both `Add` and `Remove`, establish within the conversation that
+88. For both `Add` and `Remove`, establish within the conversation that
     the principal can present their current credential before changing
     anything, and refuse with `AuthenticationFailed` where they cannot
     (§2.23).
-88. Refuse with `AccountRestricted` a principal it holds no credential
+89. Refuse with `AccountRestricted` a principal it holds no credential
     for that it can ask for as proof, including every service identity
     (§2.23, §2.19).
-89. Refuse an `action` or `credential_type` it does not recognize with
+90. Refuse an `action` or `credential_type` it does not recognize with
     `MalformedRequest`, a `credential_type` it does not enroll with
     `PermissionDenied`, and a `CredentialEnrollStart` that ends before
     `material` with `MalformedRequest` (§2.23).
-90. Refuse material it will not accept with `CredentialRejected`, check
+91. Refuse material it will not accept with `CredentialRejected`, check
     it again when applying the change, and never send
     `CredentialRejected` for a failed proof or in answer to any other
     message (§2.23, §2.B).
-91. Leave unchanged which credentials the principal may sign in with
+92. Leave unchanged which credentials the principal may sign in with
     (§2.23).
 
 ## Client obligations

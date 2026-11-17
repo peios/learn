@@ -48,7 +48,9 @@ An authority federating over PSI MUST satisfy all of the following.
     source, never opening one with an identifier already live, and
     reserve `0` for registration (§2.7).
 16. Route each logon to exactly one source, resolved before any
-    credential is collected (§2.11).
+    credential is collected, or for an identity-in-answer type resolved
+    on the answer's name before the proof is offered to any source
+    (§2.11).
 17. Never fall back to another source when the owning source is
     unreachable (§2.11).
 18. Relay the verified `originator`, taken from the client's socket
@@ -262,23 +264,28 @@ entirely.
 ### Credentials
 
 34. Store verifiers that are **not** usable as credential material —
-    nothing a challenge could be recomputed from (PGSS §2.11).
+    nothing a challenge could be recomputed from (PGSS §2.11). The one
+    exception is NT material kept, as source policy, for Mschapv2 and
+    Ntlmv2, which MUST never leave the source.
 35. Erase credential material, and every buffer it was decoded through,
     before that memory is released (PGSS §2.12).
 36. Never write credential material to a log, audit record, or
     diagnostic (PGSS §2.12).
+37. Verify a presented proof against the authority's challenge without
+    sending a `CredentialRequest`, and refuse with
+    `AuthenticationFailed` a presented type it does not support (§2.11).
 
 ### Logon type restrictions
 
-37. State a principal's `permitted_logon_types` where it holds the
+38. State a principal's `permitted_logon_types` where it holds the
     property, and send zero where it does not (§2.13).
-38. Never send "everything" for a principal whose restrictions it does
+39. Never send "everything" for a principal whose restrictions it does
     not hold — zero is the honest answer, and "everything" asserts that
     the principal may be used for a credential-free service logon
     (§2.13, PGSS §2.19).
-39. Never refuse an authentication on the strength of the restrictions
+40. Never refuse an authentication on the strength of the restrictions
     it states. A source states; the authority decides (§2.4, §2.13).
-40. Answer `LOGON_TYPES` from a `Query` as stored, including "not
+41. Answer `LOGON_TYPES` from a `Query` as stored, including "not
     stated", and never substitute a default of its own — what silence
     means is the authority's reading, and two components with their own
     defaults can disagree (§2.15, PGSS §2.16).
@@ -288,16 +295,16 @@ entirely.
 A source that declares `CHANGES_CREDENTIALS` MUST also satisfy the
 following.
 
-41. Change only the credential of `principal`, and never take a
+42. Change only the credential of `principal`, and never take a
     principal from anything the client supplied (§2.21).
-42. Establish that the principal can present their current credential
+43. Establish that the principal can present their current credential
     before changing it, and refuse with `AuthenticationFailed` where they
     cannot (§2.21).
-43. Never change a credential on the strength of a current credential
+44. Never change a credential on the strength of a current credential
     that has changed since it was proved (§2.21).
-44. Refuse with `AccountRestricted` a principal it holds no changeable
+45. Refuse with `AccountRestricted` a principal it holds no changeable
     credential for (§2.21).
-45. Send `CredentialChanged` only once the new credential is the one its
+46. Send `CredentialChanged` only once the new credential is the one its
     next `Authenticate` for that principal will verify (§2.21).
 
 ### Credential enrolment
@@ -305,17 +312,17 @@ following.
 A source that declares `ENROLLS_CREDENTIALS` MUST also satisfy the
 following.
 
-46. Add or remove credentials only of `principal`, and never take a
+47. Add or remove credentials only of `principal`, and never take a
     principal from anything the client supplied (§2.23).
-47. For both adding and removing, establish that the principal can
+48. For both adding and removing, establish that the principal can
     present a credential they already have before changing anything,
     refuse with `AuthenticationFailed` where they cannot, and refuse with
     `AccountRestricted`, before asking, a principal it can ask for no such
     credential (§2.23).
-48. Check the material again when applying the change, refuse material it
+49. Check the material again when applying the change, refuse material it
     will not accept with `CredentialRejected`, and send that code in no
     other conversation (§2.23).
-49. Send `CredentialChanged` only once the change is durable, and, where
+50. Send `CredentialChanged` only once the change is durable, and, where
     it declares `PUSHES_CHANGES`, only after `Changed` (§2.23, §2.17).
 
 ## What a source is not required to do
