@@ -76,20 +76,21 @@ The third of those is the point of the whole interface. A source is
 asked a question and gives an answer; how it reaches the answer is
 exactly what different sources exist to do differently.
 
-## PSI is not a conformance requirement
+## PSI is not a generic standard
 
-PGSS Logon is a Peios Generic System Standard: a system that does not
-offer it is not Peios. **PSI is not.** It is the interface an authority
-uses to reach the processes that know who exists, and a system running
-entirely different authentication infrastructure is still Peios.
+PGSS Logon is a Peios Generic System Standard: another system could
+adopt it, and software written for Peios relies on it. **PSI is not.**
+It is the interface an authority uses to reach the processes that know
+who exists, and a system running entirely different authentication
+infrastructure has no use for it.
 
 It is specified because it is a *public* interface even so. A third
 party writing a principal source needs the contract written down, and
-needs it to be stable. What it is not is a bar anyone must clear.
+needs it to be stable.
 
 > [!NOTE]
-> The distinction shows up in what happens when you disagree with each
-> document. Disagreeing with PGSS Logon means shipping something that is
-> not Peios. Disagreeing with this chapter means shipping an authority
+> The distinction shows up in what happens when a system leaves each
+> out. Without PGSS Logon, software written for Peios has no way to
+> sign anyone in. Without this chapter, the system has an authority
 > that federates differently, or does not federate at all, which is a
 > design choice nobody will dispute.

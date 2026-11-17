@@ -88,6 +88,5 @@ Checks `LISTEN_PID` against its own PID before adopting any descriptor.
 
 ## What conformance is not
 
-A system that offers neither channel is still Peios (PSPU §1.2). These
-are contracts for the components that do offer them, not a bar the
-platform requires anything to clear.
+A system built from different components need not offer either channel
+(PSPU §1.1). These are contracts for the components that do offer them.

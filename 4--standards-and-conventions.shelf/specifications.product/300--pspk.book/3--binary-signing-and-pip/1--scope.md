@@ -87,10 +87,11 @@ update path.
 
 ## Relationship to PGSS
 
-Binary signing is not a conformance requirement in the sense PGSS
-defines. A system that verifies no signatures, or verifies them
-against different keys, is still Peios; PIP is additive protection
-rather than a property every Peios system exhibits.
+Binary signing as this chapter specifies it is specific to the Peios
+kernel, and is not a PGSS standard. A system that verifies no
+signatures, or verifies them against different keys, loses the
+protection and nothing else: PIP is additive protection rather than a
+property every Peios system exhibits.
 
 It is specified here because the contract is public even so. A third
 party that wants its software to run at a trust tier — or that wants

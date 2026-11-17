@@ -78,11 +78,11 @@ The third of those is the point of the whole document. A collector is
 handed records and asked questions; how it gets from one to the other is
 exactly what different collectors exist to do differently.
 
-## These interfaces are not a conformance requirement
+## These interfaces are not a generic standard
 
-A system that offers none of these is still Peios. Observability is not
-in the definition of the platform, and a system that ships a different
-collector, or none, conforms exactly as well.
+These interfaces belong to one collector. A system that ships a
+different collector, or none, is a system built from different parts
+and has no use for them.
 
 They are specified because they are *public*. Every service has its
 output brokered into logs, every collection agent is a metric producer,

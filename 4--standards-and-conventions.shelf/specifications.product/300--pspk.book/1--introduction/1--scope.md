@@ -46,7 +46,7 @@ This document does not cover:
 - System-call and ioctl surfaces — defined in that subsystem's
   specification
 - The binary structures these protocols carry — defined in PCDS
-- Standards a system MUST implement to be Peios — defined in PGSS
+- Standards another system could adopt — defined in PGSS
 - Protocols between userspace components — defined in PSPU
 - How a userspace implementation stores its data or computes its
   answers — its own design
@@ -61,9 +61,12 @@ establishes for itself and which it takes on the userspace party's word.
 
 ## Relationship to PGSS
 
-A protocol in this document is not a conformance requirement in the sense
-PGSS defines. It is the interface a particular Peios kernel subsystem
-uses to reach the processes that serve it; a system built from different
-kernel subsystems is still Peios. These protocols are specified because
-they are public even so — a third party writing an implementation of the
-userspace role needs the contract written down.
+A protocol in this document is specific to Peios. It is the interface a
+particular Peios kernel subsystem uses to reach the processes that serve
+it, and it has little use on a system built from different kernel
+subsystems. That is what separates it from a PGSS standard, which
+another system could adopt as it stands.
+
+These protocols are specified because they are public even so: a third
+party writing an implementation of the userspace role needs the
+contract written down.

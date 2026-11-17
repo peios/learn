@@ -1,6 +1,6 @@
 ---
 title: Scope
-description: What PSPU is — the protocols and interchange formats the foundational userspace components speak to each other — and why they are not conformance requirements.
+description: What PSPU is — the protocols and interchange formats the foundational userspace components speak to each other — and why they are specific to Peios.
 ---
 
 This document defines the **Peios System Protocols Userspace (PSPU)**:
@@ -21,17 +21,17 @@ consumer that never meet, and the artifact between them carries the
 contract. Both are in scope, because what makes something belong here is
 that two independently written parties must agree on it.
 
-## These protocols are not conformance requirements
+## These protocols are specific to Peios
 
-A system that does not offer a protocol in this document is still Peios.
 The components that speak these protocols are one answer to a problem,
-not the definition of the platform; a system that solves the same problem
-with different components conforms exactly as well.
+not the definition of the platform. A system that solves the same
+problem with different components has no use for the protocols between
+them. That is what separates this document from PGSS, whose standards
+another system could adopt as they stand.
 
 They are specified because they are *public* even so. A third party
 writing a component to plug into one side of one of these protocols needs
-the contract written down, and needs it to stay put. What they are not is
-a bar anyone must clear.
+the contract written down, and needs it to stay put.
 
 For each interface, this document covers:
 
@@ -49,7 +49,7 @@ For each interface, this document covers:
 
 This document does not cover:
 
-- Standards a system MUST implement to be Peios — defined in PGSS
+- Standards another system could adopt — defined in PGSS
 - Protocols spoken across the kernel boundary — defined in PSPK
 - The binary structures these interfaces carry — defined in PCDS
 - How a component stores its data, reaches the answers it gives, or

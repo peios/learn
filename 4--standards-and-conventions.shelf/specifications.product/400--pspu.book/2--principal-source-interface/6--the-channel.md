@@ -9,8 +9,8 @@ An authority that federates over PSI MUST listen on a `SOCK_STREAM` Unix
 domain socket.
 
 Unlike PGSS Logon's path, this one is **not normative**. PSI is not a
-conformance requirement (§2.1), and an authority that offers it may put
-it where it likes provided its sources are told. Mainline's is
+generic standard (§2.1), and an authority that offers it can put it
+where it likes provided its sources are told. Mainline's is
 `/run/psi.sock`.
 
 ## Access control
