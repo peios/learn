@@ -25,3 +25,15 @@ each is one line.
 ```
 
 The chooser ends, and the registry editor writes the file.
+
+## Choosing a folder
+
+A file server's settings ask where a new share is (revision 2). The
+person goes into `/srv`, picks `photos`, and chooses it.
+
+```text
+→ {"mode":"folder","title":"Choose a folder to share","folder":"/srv"}
+← {"type":"chosen","path":"/srv/photos"}
+```
+
+The settings check the folder and share it, as the person.
