@@ -11,6 +11,8 @@ description: A neutral authentication request routed to one source, with verifie
 | `originator` | length-framed bytes (SID) | 68 bytes |
 | `has_logon_context` | u8, exactly 0 or 1 | |
 | `logon` | nested length-framed local context, when present | below |
+| `has_presented` | u8, exactly 0 or 1 | |
+| `presented` | nested length-framed proof, when present | below |
 
 ## start
 
@@ -50,6 +52,37 @@ that decision needs a trustworthy input.
 A source MUST treat `originator` as established fact and MUST NOT treat
 any other field of this message the same way.
 
+## Presented proof
+
+Present only for an **identity-in-answer** credential type (PGSS §2.11),
+of which Ntlmv2 is the only one. The authority has already issued the
+challenge and collected the answer, because the answer is what names the
+principal.
+
+| Field | Encoding | Limit |
+|---|---|---|
+| credential_type | u8 | MUST be 4, Ntlmv2 |
+| challenge | length-framed bytes | exactly 8 bytes |
+| answer | length-framed bytes | PGSS §2.11 |
+
+`start.identifier` is then the user name the authority decoded from the
+answer, which is what routed the request here, and `start` MUST require
+the presented type. `answer` is the client's answer data, unchanged.
+
+A source MUST verify the presented proof against `challenge` and answer
+with Assertion or Refusal. It MUST NOT send a CredentialRequest in this
+conversation: there is no client prompt left to send, and nothing it
+asked could be relayed. A source that does not support the presented
+type MUST refuse with `AuthenticationFailed`.
+
+The source trusts `challenge` because it trusts the authority, as it
+trusts `originator`. Single use and freshness of the challenge are the
+authority's obligation (PGSS §2.11).
+
+An authority MUST NOT present a proof for any other credential type.
+Every other type is collected by the source over the relayed
+interrogation (§2.12), unchanged.
+
 ## Routing
 
 Before sending `Authenticate`, an authority MUST decide **which single
@@ -69,6 +102,20 @@ An authority SHOULD resolve a qualified name to its owning source and
 MUST NOT fall back to another source when the owning one is unreachable.
 A name that can fall through lets anyone who can break a network choose
 which authority answers for a principal.
+
+### Identity-in-answer types
+
+For an identity-in-answer type, the name arrives with the credential, so
+resolution cannot precede it. The authority resolves the name decoded
+from the answer, by the same procedure, before offering the proof to any
+source, and then offers it to the owning source alone. The rule this
+section protects is unchanged: no source ever receives a credential that
+belongs to another source's principal. Resolution queries still carry
+only the name.
+
+This mirrors NTLM pass-through authentication on Windows, where the local
+security authority issues the challenge and forwards challenge and
+response to the account's domain controller for verification.
 
 ## Conversation limits
 

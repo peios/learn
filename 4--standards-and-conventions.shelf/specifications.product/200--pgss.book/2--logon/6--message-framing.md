@@ -148,6 +148,13 @@ accept an older authority's named absence assertions. No compatibility
 decoder is provided for that replacement.
 
 Version 5 adds credential type 3, Mschapv2, and the mandatory length-framed
-MSCHAPv2 success-output field in Authenticated (§2.24). Coordinated clients
-and authority MUST use version 5. The separate principal-source protocol
-uses its own version 3 for the corresponding source assertion output.
+MSCHAPv2 success-output field in Authenticated (§2.24). The separate
+principal-source protocol uses its own version 3 for the corresponding
+source assertion output.
+
+Version 6 adds credential type 4, Ntlmv2 (§2.11), and the mandatory
+length-framed `ntlmv2_session_key` field in Authenticated (§2.24) and
+AccessGranted (§2.9). AccessGranted's `profile` becomes mandatory, since
+the new field follows it. Coordinated clients and authority MUST use
+version 6. The principal-source protocol uses its own version 4 for the
+corresponding source request and assertion fields.

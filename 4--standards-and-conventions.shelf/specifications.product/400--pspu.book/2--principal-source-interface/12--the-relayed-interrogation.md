@@ -52,3 +52,11 @@ It does not interpret prompts, rewrite messages, reorder anything, or
 synthesise a request of its own. A source's prompt reaches the client as
 the source wrote it, which is the property that makes adding a
 credential type a change to sources alone.
+
+The one exception is an identity-in-answer type (PGSS §2.11). Its
+challenge must reach the client before any principal, and so any source,
+is known. The authority issues that single prompt itself and presents the
+answer to the owning source in Authenticate (§2.11), and no relayed
+interrogation takes place. It still does not verify the answer: the
+source does. Adding such a type is therefore a change to the authority
+as well as to sources.

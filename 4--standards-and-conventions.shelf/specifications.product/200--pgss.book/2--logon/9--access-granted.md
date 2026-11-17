@@ -6,10 +6,11 @@ description: The terminal success message — the token passed as a file descrip
 `msg_type` = `0x8002`. Authority to client. One of the two terminal
 messages; nothing follows it.
 
-| Field | Encoding |
-|---|---|
-| `session_id` | `u64` |
-| `profile` | length-framed structure, optional |
+| Field | Encoding | Limit |
+|---|---|---|
+| `session_id` | `u64` | |
+| `profile` | length-framed structure | below |
+| `ntlmv2_session_key` | length-framed bytes | 0 or 16 bytes |
 
 **Ancillary data: the token, as one file descriptor via `SCM_RIGHTS`.**
 
@@ -50,11 +51,11 @@ appended to `AccessGranted` after it.
 | `shell` | string | 4096 |
 | `display_name` | string | 256 |
 
-`profile` is an optional trailing field. **Every field may be empty**,
-and an empty field means *the authority did not say*. An authority that
-knows nothing about home directories is conforming, and so is one that
-omits the whole structure — a client MUST treat an absent `profile`
-exactly as it treats one whose fields are all empty.
+`profile` is mandatory from version 6, because `ntlmv2_session_key`
+follows it (§2.6). **Every field can be empty**, and an empty field means
+*the authority did not say*. An authority that knows nothing about home
+directories is conforming, and sends the structure with every field
+empty.
 
 A client MUST have a fallback for each field and MUST NOT treat an empty
 value as an error.
@@ -106,6 +107,19 @@ this, not the other way round.
 > shell, or ignoring `display_name` entirely, is conforming. The fields
 > exist so that a client which wants them does not need a second
 > protocol.
+
+## ntlmv2_session_key
+
+The NTLM `SessionBaseKey` when Ntlmv2 was verified (§2.11): exactly 16
+bytes then, and empty for every other method. A client MUST fail the
+logon on a missing or unexpected key, as it does on a missing token.
+
+An originator serving a network protocol needs this key and the token
+from the same exchange: the token decides what the principal can do, and
+the key signs and seals what the protocol carries for them. Returning it
+here avoids a second conversation, and a key that could be requested
+separately from its token. It is exchange-specific and cannot be used to
+authenticate again.
 
 ## What the client does next
 

@@ -32,8 +32,10 @@ Supported types bind what the caller can collect. A required type MUST be
 supported and MUST have been verified for success. Advertising Password alone
 does not exclude an intentional no-credential account. A password-based access
 service using plaintext password verification MUST require Password. An
-MSCHAPv2 originator MUST require Mschapv2 instead. SSH binding and authorized-originator checks
-remain those of §2.D.
+MSCHAPv2 originator MUST require Mschapv2 instead. An NTLMv2 originator
+MUST require Ntlmv2, advertise only Ntlmv2, and send an empty identifier;
+the principal is named by the answer (§2.11). SSH binding and
+authorized-originator checks remain those of §2.D.
 
 ## AuthenticateStart
 
@@ -76,12 +78,16 @@ Message type 0x8004, authority to client, terminal success.
 | claims | existing typed claim array (§2.16) | 64 entries |
 | absent_claims | count and length-framed name entries | 64 entries |
 | mschapv2_success | length-framed bytes | 0 or 20 bytes |
+| ntlmv2_session_key | length-framed bytes | 0 or 16 bytes |
 
 `mschapv2_success` MUST contain exactly 20 bytes if Mschapv2 is verified
 and MUST be empty otherwise. It is the exchange-specific server
-AuthenticatorResponse, not a reusable credential or an OS token. Clients
-MUST reject missing or unexpected method output. This output uses the
-existing authentication grant; it introduces no separate permission.
+AuthenticatorResponse, not a reusable credential or an OS token.
+`ntlmv2_session_key` MUST contain exactly 16 bytes, the NTLM
+`SessionBaseKey`, if Ntlmv2 is verified and MUST be empty otherwise
+(§2.11). Clients MUST reject missing or unexpected method output. These
+outputs use the existing authentication grant; they introduce no separate
+permission.
 
 Each group entry contains one length-framed SID byte string. All SIDs MUST be
 structurally valid. Groups MUST be complete validated source memberships,

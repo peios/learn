@@ -60,7 +60,9 @@ encoding itself.
 
 An identifier MAY be empty. An empty identifier means *the principal is
 not named here* — the authority is expected to determine it from the
-credential, as with a smartcard that carries its own identity.
+credential, as with a smartcard that carries its own identity. Ntlmv2 is
+the defined case: its request MUST name no principal, and its answer
+does (§2.11).
 
 `identifier_type` is distinct from `credential_type` (§2.8): this is the
 claim of identity, that is the proof. A passkey names a principal and

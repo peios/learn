@@ -125,6 +125,12 @@ accepting the superseded development layout. See PGSS Logon §2.D.
 
 Version 3 carries PGSS credential type 3, Mschapv2, and appends the
 mandatory length-framed `mschapv2_success` field to Assertion (§2.13).
-Source and authority MUST use this coordinated version. The field is
-empty for other methods and contains the 20-byte AuthenticatorResponse
-only when the source successfully verifies an MSCHAPv2 proof.
+The field is empty for other methods and contains the 20-byte
+AuthenticatorResponse only when the source successfully verifies an
+MSCHAPv2 proof.
+
+Version 4 carries PGSS credential type 4, Ntlmv2. It appends the
+mandatory `has_presented` flag and optional `presented` proof to
+Authenticate (§2.11), and the mandatory length-framed
+`ntlmv2_session_key` field to Assertion (§2.13). Source and authority
+MUST use this coordinated version.

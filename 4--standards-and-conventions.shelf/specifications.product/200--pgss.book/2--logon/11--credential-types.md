@@ -11,6 +11,7 @@ not tell it what the answer means.
 | 1 | Password | A line of text, not echoed |
 | 2 | SshPublicKey | Bound SSH candidate or signature proof; §2.D |
 | 3 | Mschapv2 | Relay a source-issued challenge and typed password proof |
+| 4 | Ntlmv2 | Relay an authority-issued challenge; the answer names the principal |
 
 The registry is deliberately short. A type is added when a client would
 need to collect something differently, not when an authority acquires a
@@ -60,6 +61,94 @@ A successful general authentication returns the 20-byte binary
 AuthenticatorResponse in `mschapv2_success` (§2.24). The source MUST NOT
 export its reusable NT hash. Credential storage and opportunistic
 population of NT material remain source policy, not collection protocol.
+
+## NTLMv2 collection
+
+Ntlmv2 is the only **identity-in-answer** type. NTLM sends its challenge
+before the client names the principal, so the principal is known only
+from the answer. The rules in this section depart from the conversation's
+usual order for that reason, and apply to no other type.
+
+An Ntlmv2 request MUST carry an empty identifier and MUST require Ntlmv2
+(§2.24). An authority MUST refuse, as malformed, an Ntlmv2 request that
+names a principal, advertises Ntlmv2 without requiring it, or advertises
+any other type alongside it.
+
+### The challenge
+
+The **authority** issues the challenge, not a source. It MUST generate
+eight bytes from a cryptographically secure random source, send them as
+the `parameters` of a single Ntlmv2 prompt, and accept exactly one
+answer to that prompt. A challenge MUST NOT be reused, MUST be discarded
+when the conversation ends, and is never returned in any result.
+
+An originator relays the challenge as the NTLM `ServerChallenge`. It MUST
+NOT substitute a challenge of its own, and MUST NOT supply a stored NT
+hash or a password in place of the client's proof.
+
+### The answer
+
+The answer's `data` is this structure:
+
+| Field | Encoding | Limit |
+|---|---|---|
+| `user` | length-framed bytes, UTF-16LE | 2–512 bytes |
+| `domain` | length-framed bytes, UTF-16LE | 0–512 bytes |
+| `nt_response` | length-framed bytes | 48–4096 bytes |
+
+`user` and `domain` are the `UserName` and `DomainName` of the NTLM
+AUTHENTICATE message, byte for byte. `nt_response` is its
+`NtChallengeResponse`: the 16-byte `NTProofStr` followed by the
+`NTLMv2_CLIENT_CHALLENGE` structure, whose `RespType` and `HiRespType`
+MUST both be 1. An odd length, an unpaired surrogate, or an empty `user`
+is malformed. Anonymous NTLM, which has an empty user and response, is
+not supported. The LMv2 response is not carried; NTLMv2 does not need it.
+
+### Naming the principal
+
+The authority decodes `user` to UTF-8 and applies §2.15 to it, with the
+same refusals as any other identifier. `domain` selects no source while
+this specification defines no realm syntax: the authority MUST accept
+only an empty domain, `.`, or one of its own local domain names, compared
+using the name comparison of §2.15, and MUST refuse any other domain as
+an authentication failure. An authority's local domain names are its
+configuration; the machine's NetBIOS computer name is one by default.
+
+The authority then routes on the decoded user exactly as it routes an
+identifier (§2.15), and offers the challenge and answer to that one
+source. It MUST NOT offer them to any other source, including when the
+owning source fails or is unavailable.
+
+### Verification
+
+The source verifies the answer by MS-NLMP §3.3.2, using its stored NT
+hash for the principal:
+
+- `ResponseKeyNT` is HMAC-MD5 keyed with the NT hash, over the UTF-16LE
+  concatenation of the uppercased `user` and `domain`. Uppercasing uses
+  each UTF-16 code unit's Unicode simple uppercase mapping, which is what
+  Windows clients compute. `domain` is used exactly as received.
+- The expected `NTProofStr` is HMAC-MD5 keyed with `ResponseKeyNT`, over
+  the challenge followed by `nt_response` after its first 16 bytes. The
+  comparison MUST take constant time.
+- On success, `SessionBaseKey` is HMAC-MD5 keyed with `ResponseKeyNT`,
+  over `NTProofStr`.
+
+The source binds the proof to the account and credential revision, and
+rechecks current eligibility, as for MSCHAPv2. NTLMv2 proves the account
+password through a different mechanism and MUST follow the source's
+password-authentication eligibility policy.
+
+A successful result carries the 16-byte `SessionBaseKey` in
+`ntlmv2_session_key` (§2.9, §2.24). It is derived for this exchange
+alone, cannot be used to authenticate again, and is what the originator
+needs for NTLM key exchange and SMB signing. The source MUST NOT export
+its NT hash or `ResponseKeyNT`.
+
+The originator, not the authority or source, processes the rest of the
+NTLM exchange: key exchange, the message integrity code, and the
+`AvPairs` the client returned. Because those pairs sit inside the proven
+`nt_response`, an originator MAY rely on them once the result arrives.
 
 ## Why passwords cross the local socket in the clear
 
