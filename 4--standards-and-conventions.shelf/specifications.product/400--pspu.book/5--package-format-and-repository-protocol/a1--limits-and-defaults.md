@@ -25,4 +25,3 @@ description: Every limit and default of this chapter in one place.
 | What is kept of repositories served over HTTP | `/var/cache/ppk/` |
 | Architecture | The consumer's own |
 | License class | `unknown` |
-| Signature context | `ppk repository` |

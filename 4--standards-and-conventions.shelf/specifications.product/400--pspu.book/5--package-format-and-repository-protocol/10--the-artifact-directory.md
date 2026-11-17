@@ -21,7 +21,7 @@ publishes what it holds (§5.30).
 | `closures/<name>` | A closure's name (§5.27) |
 
 A repository adds its trees, `trees/sha256/<hash>`, its pointer file,
-`repository`, and its signature, `repository.sig` (§5.30).
+`repository`, and its signature, `repository.pso` (§5.30).
 
 ## What is named by its hash
 

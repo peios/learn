@@ -20,7 +20,7 @@ holds. Besides its packages it has:
 | Path | Holds |
 |---|---|
 | `repository` | The pointer file (§5.32) |
-| `repository.sig` | Its signature (§5.33) |
+| `repository.pso` | Its signature (§5.33) |
 | `trees/sha256/<hash>` | The nodes of the catalog's and the indexes' trees (§5.31) |
 | `blobs/`, `manifests/`, `refs/` | Its packages, as any artifact directory's (§5.10) |
 

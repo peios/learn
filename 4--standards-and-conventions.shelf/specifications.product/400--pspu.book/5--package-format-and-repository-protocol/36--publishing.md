@@ -54,7 +54,7 @@ An **export** is a copy of a repository, to serve, whose blobs are
 compressed (§5.12). It holds what the repository held when it was last
 published: its tree nodes, manifests and refs as they are, every blob
 compressed, and a pointer file with the repository's sequence, the line
-`blobs zstd`, and a signature by the repository's key. The pointer file
+`blobs zstd`, and its signature (§5.33). The pointer file
 MUST be written after everything it names, and what the repository doesn't
 hold, such as a version deleted, removed from the export after it.
 

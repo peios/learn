@@ -78,15 +78,16 @@ catalog.
 
 ## Signed repositories
 
-When a repository's key is configured (§5.35), its packages are candidates
+When a repository's identity is configured (§5.35), its packages are
+candidates
 only if its catalog, reached from its signed pointer file (§5.33), lists
 them, and only at the identity the catalog gives. A ref that names another
-identity MUST be refused. The refs of a repository without a key are taken
-as they are.
+identity MUST be refused. The refs of a repository without a configured
+identity are taken as they are.
 
 A repository served over HTTP has no refs a consumer can list. Its packages
 are those its catalog lists, at the identity the catalog gives, with or
-without a key (§5.34).
+without a configured identity (§5.34).
 
 ## Resolving from summaries
 

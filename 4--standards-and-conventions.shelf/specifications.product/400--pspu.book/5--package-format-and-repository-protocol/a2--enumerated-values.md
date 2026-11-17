@@ -53,8 +53,9 @@ Current (nothing written), `yanked`, `deleted` and a reason.
 
 ## Profile keys (§5.28)
 
-`arch`, `include`, `packages`, `symlinks`, `dirs`, `include_artifacts`.
+`arch`, `include`, `packages`, `symlinks`, `dirs`, `files`,
+`include_artifacts`.
 
 ## Repository configuration keys (§5.35)
 
-`path`, `urls`, `key`, `track`.
+`path`, `urls`, `identity`, `unrooted`, `anchor`, `track`.

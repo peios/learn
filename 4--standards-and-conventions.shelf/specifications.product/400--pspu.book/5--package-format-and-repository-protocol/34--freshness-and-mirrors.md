@@ -26,7 +26,7 @@ seen to be behind. A consumer MUST NOT refuse a pointer file for its age.
 
 ## Serving a repository
 
-Every file of a repository but `repository` and `repository.sig` is named by
+Every file of a repository but `repository` and `repository.pso` is named by
 its hash and never changes, so a static web server can serve a repository as
 it is, and a cache can keep every file but those two for ever.
 
@@ -42,7 +42,8 @@ need not list directories or answer range requests.
 
 A repository served over HTTP MUST have a pointer file. Its directories
 can't be listed, so a consumer takes its packages from its catalog, at the
-identities the catalog gives, whether or not a key is configured (§5.29),
+identities the catalog gives, whether or not an identity is configured
+(§5.29),
 and doesn't read its refs.
 
 A consumer reads the pointer file and its signature from one base URL, so
@@ -64,7 +65,7 @@ reads each file from the first base URL that serves it:
 - A base URL that can't be reached, or that answers with anything but the
   file, such as `404 Not Found` or a server error, is passed over for the
   next. The pointer file and its signature are passed over together.
-- A file that fails its check, against the key or its hash, MUST be
+- A file that fails its check, of its signature or its hash, MUST be
   refused, and the consumer MUST NOT read it from another base URL. A
   mirror that serves the wrong file is broken or hostile, and the error
   is reported, not hidden.

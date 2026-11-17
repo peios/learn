@@ -1,6 +1,6 @@
 ---
 title: Machine Repository Configuration
-description: The repositories a machine fetches from, the file for each, its key and the channel it tracks, and what the machine records of each.
+description: The repositories a machine fetches from, the file for each, the identity it requires, whether an unrooted chain is accepted, the channel it tracks, and what the machine records of each.
 ---
 
 A machine fetches from the repositories its configuration names.
@@ -12,7 +12,7 @@ where `<name>` follows §5.9:
 
 ```toml
 path = "/mnt/peios-repo"
-key = "ml-dsa-65:…"
+identity = "pkgs.peios.org"
 track = "stable"
 ```
 
@@ -21,7 +21,7 @@ order:
 
 ```toml
 urls = ["http://cache.lan/peios/", "https://pkgs.peios.org/"]
-key = "ml-dsa-65:…"
+identity = "pkgs.peios.org"
 track = "stable"
 ```
 
@@ -29,13 +29,16 @@ track = "stable"
 |---|---|
 | `path` | Where the repository is, as a directory |
 | `urls` | The base URLs the repository is served at, at least one, tried in order (§5.34) |
-| `key` | Its public key (§5.33); with it, the pointer file's signature is checked |
+| `identity` | The name its pointer file is signed under (§5.33); with it, the signature is checked |
+| `unrooted` | `true` to accept an Unrooted chain as well as a Rooted one; `false` by default |
+| `anchor` | The object hash of the top-level its chain has to end at, in lowercase hexadecimal |
 | `track` | The index or channel a request for a bare name follows |
 
-A file MUST have exactly one of `path` and `urls`. A consumer MUST refuse
-any other key. `/conf` merges what the system ships,
-under `/usr/conf`, with the machine's own, under `/lcl/conf`: a consumer
-reads `/conf/ppk` and writes what the machine adds under `/lcl/conf/ppk`.
+A file MUST have exactly one of `path` and `urls`. `unrooted` and `anchor`
+are given only with `identity`. A consumer MUST refuse any other key.
+`/conf` merges what the system ships, under `/usr/conf`, with the
+machine's own, under `/lcl/conf`: a consumer reads `/conf/ppk` and writes
+what the machine adds under `/lcl/conf/ppk`.
 
 ## Tracking
 
