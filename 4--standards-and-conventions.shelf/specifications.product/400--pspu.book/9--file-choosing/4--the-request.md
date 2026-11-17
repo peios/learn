@@ -1,18 +1,18 @@
 ---
 title: The Request
-description: The first line — whether to open or save, what the dialog is called and what the file is for, where to start, the name to suggest, and the kinds of file to offer.
+description: The first line — whether to open, save or choose a folder, what the dialog is called and what the choice is for, where to start, the name to suggest, and the kinds of file to offer.
 ---
 
 The request is a JSON object, sent once, as the first line.
 
 | Member | Type | Required | Meaning |
 |---|---|---|---|
-| `mode` | string | yes | `open` for an existing file to read; `save` for a place and a name to write to |
+| `mode` | string | yes | `open` for an existing file to read; `save` for a place and a name to write to; `folder` for an existing folder (revision 2) |
 | `title` | string | yes | What the dialog is called, for the person: "Export a key" |
 | `purpose` | string | no | What the file is for, in a sentence, for the person to read |
 | `folder` | string | no | An absolute path to the folder to start in |
 | `name` | string | no | The name to suggest, in `save` mode: "Services.json" |
-| `filters` | array | no | The kinds of file to offer, in order, each an object below |
+| `filters` | array | no | The kinds of file to offer, in order, each an object below; not in `folder` mode |
 
 Each filter is an object with:
 
@@ -36,6 +36,10 @@ In `save` mode the chooser MUST offer `name`, if given, as the name to
 save as, and the person MAY change it. If the person types a name
 without an extension while a filter is chosen, the chooser SHOULD add
 the filter's first extension.
+
+In `folder` mode the chooser MUST NOT show files, and does not use
+`name` or `filters`. A requester asks for a folder only when it can use
+one: it is the only mode whose answer can be a folder (§9.5).
 
 The requester MUST NOT rely on the person choosing a file of a kind it
 offered: the person may choose any file. A requester that needs a kind

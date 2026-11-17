@@ -1,12 +1,12 @@
 ---
 title: Scope and Roles
-description: The interface by which a program has a person choose a file to open, or a place and a name to save to, in a dialog that is a program of its own and never opens the file.
+description: The interface by which a program has a person choose a file to open, a place and a name to save to, or a folder, in a dialog that is a program of its own and never opens the file.
 ---
 
 This chapter defines the **choosing channel**: the interface by which a
 program has a person choose a file, either an existing one to read or a
-place and a name to write to, in a dialog drawn by another program, the
-**chooser**.
+place and a name to write to, or an existing folder, in a dialog drawn by
+another program, the **chooser**.
 
 The chooser knows nothing of what the file is for. It is told what to
 call the dialog, what the file is for in words, where to start, and what

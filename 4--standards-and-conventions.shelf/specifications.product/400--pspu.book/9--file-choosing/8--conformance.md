@@ -10,7 +10,9 @@ standard input and output connected to it, and sends the request as the
 first line (§9.3).
 
 **The request.** Sends `mode` and `title`, a `folder` that is absolute
-if any, and filters with extensions without the dot (§9.4).
+if any, and filters with extensions without the dot (§9.4). Asks for
+`folder` mode only when it can use a folder, and is prepared for a
+chooser of revision 1 to end without answering it (§9.7).
 
 **The answer.** Uses a `chosen` path as the person, opening the file
 itself, and handles its having gone or the act being refused. Treats
@@ -28,6 +30,11 @@ rely on the person choosing a file of a kind offered (§9.4).
 **Choosing.** Offers the filters in order, the first chosen (§9.4). In
 `save` mode, asks before answering with a file that exists (§9.5).
 Never opens, creates or changes the chosen file to choose it (§9.5).
+
+**Folders.** Answers with a folder only in `folder` mode, and goes into
+a folder chosen in `open` or `save` mode instead. In `folder` mode,
+shows no files, makes clear which folder choosing will answer with, and
+answers only with a folder that exists (§9.4, §9.5).
 
 **The answer.** Sends at most one, a `chosen` with an absolute path or a
 `cancelled`, and ends. Answers `cancelled` when the person closes or
