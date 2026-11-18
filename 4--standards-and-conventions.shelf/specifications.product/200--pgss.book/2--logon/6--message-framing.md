@@ -125,6 +125,32 @@ which only the authority ever receives (§2.7); the field mask of
 code that only ever answers a message newer than every peer that does
 not know it, so that no such peer is ever sent it (§2.B, §2.22, §2.23).
 
+## Diagnostic operation identifier
+
+`CredentialRequest`, `AccessGranted`, `AccessDenied`, and `Authenticated` MAY
+append an `operation_guid` byte string to their version-6 body fields. Absence
+defaults to an empty string. An explicit empty string also means that no
+identifier was supplied. A nonempty value MUST contain exactly 16 bytes in
+the PCDS GUID byte layout and MUST NOT be the zero GUID.
+
+The authority assigns this identifier to the operation. The identifier MUST
+remain the same across that operation's replies. An authority MUST NOT copy
+an upstream source's proposed identifier into this field as its own. Fields
+added after this extension MUST follow `operation_guid`; they MUST NOT move it.
+
+The identifier provides diagnostic correlation only. It conveys no identity,
+credential proof, capability, access grant, or logon session. A client MUST NOT
+change an authentication decision because this optional metadata is absent,
+malformed, or inconsistent. It treats invalid correlation metadata as
+unavailable while retaining the ordinary validation of the reply and its
+credential or token result.
+
+An authority MAY omit the field if diagnostic generation or message-size
+bounds prevent including it. A client cannot require an identifier before
+receiving a reply. Existing decoders skip the appended field through the
+body's declared length. This extension introduces no message or enumeration
+value and retains public framing version 6.
+
 ## Initial unpublished layout replacement
 
 The coordinated SSH credential extension replaced the unpublished version-1
