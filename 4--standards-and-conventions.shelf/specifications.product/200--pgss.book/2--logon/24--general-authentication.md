@@ -79,6 +79,8 @@ Message type 0x8004, authority to client, terminal success.
 | absent_claims | count and length-framed name entries | 64 entries |
 | mschapv2_success | length-framed bytes | 0 or 20 bytes |
 | ntlmv2_session_key | length-framed bytes | 0 or 16 bytes |
+| operation_guid | optional trailing byte string (§2.6) | 0 or 16 bytes |
+| credential_binding | optional trailing byte string | exactly 32 bytes if present |
 
 `mschapv2_success` MUST contain exactly 20 bytes if Mschapv2 is verified
 and MUST be empty otherwise. It is the exchange-specific server
@@ -88,6 +90,21 @@ AuthenticatorResponse, not a reusable credential or an OS token.
 (§2.11). Clients MUST reject missing or unexpected method output. These
 outputs use the existing authentication grant; they introduce no separate
 permission.
+
+`credential_binding` is reference `[16]` followed by revision `[16]`, as in
+§2.16. It names the credential actually verified, scoped to the verified SID
+and source. An authority MUST obtain it from that validated source assertion,
+not from a later unrelated lookup. No-credential success MUST omit it. Older
+sources or authorities can omit it; absence means unknown metadata, never
+evidence that the credential was deleted. The binding grants no authority.
+
+This additive extension follows `operation_guid`. An authority emitting a
+binding without a diagnostic GUID MUST emit the explicit empty GUID field
+first. It MUST NOT move the established diagnostic slot. A malformed GUID
+alone MUST NOT turn a valid authentication into failure; when its framing
+cannot locate a later binding safely, the binding remains unknown. A present
+malformed binding is a protocol error. Existing readers skip appended fields
+through the body length. Public framing remains version 6.
 
 Each group entry contains one length-framed SID byte string. All SIDs MUST be
 structurally valid. Groups MUST be complete validated source memberships,

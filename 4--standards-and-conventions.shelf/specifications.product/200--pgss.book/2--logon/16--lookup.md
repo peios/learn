@@ -85,6 +85,7 @@ them.
 | 8 | `ENABLED` | `u8` |
 | 9 | `LOGON_TYPES` | `u32` |
 | 10 | `DESCRIPTION` | string, 1024 bytes |
+| 11 | `CREDENTIAL_BINDINGS` | array of binding entries, 64 |
 
 An authority MUST ignore a bit it does not implement, and MUST NOT
 report it (below). Claim entries use the claim attribute format PCDS
@@ -106,6 +107,26 @@ on one line. A group with none is answered with an empty string: it has
 no description, which is an answer. A principal has none, and the field
 is withheld as `Absent` (below). An authority answers it for its own
 well-known groups as well as relaying a source's.
+
+`CREDENTIAL_BINDINGS` lists source-owned references and revisions for currently
+eligible tracked credentials. Each length-framed array entry contains one
+length-framed byte string of exactly 32 bytes: reference `[16]`, then revision
+`[16]`. Both MUST be nonzero. References MUST be unique within the principal's
+list. Comparison is opaque equality, scoped to that authoritative principal
+SID; clients MUST NOT order revisions or treat either part as authority.
+
+A present empty list establishes no eligible tracked binding. An unreported,
+restricted, declined or oversized field establishes no such absence. A group
+with no credential bindings is answered `Absent`. Disclosure requires the
+existing Authenticate permission; ordinary name or membership resolution does
+not grant it. It introduces no additional credential-operation permission.
+
+The source MUST persist a binding before exposing it, and update its revision
+atomically with actual credential replacement. Storage maintenance that does
+not replace the underlying credential MUST NOT rotate it. A successful fresh
+authentication can establish a proved binding (§2.24); lookup cannot advance
+the revision that an existing session proved. These values convey no hash,
+private key, bearer capability or proof of possession.
 
 > [!NOTE]
 > Field bits are the one place in this chapter where an enumeration may

@@ -25,6 +25,7 @@ outcome a source can produce.**
 | `authenticated_credential_type` | `u8`; 0 none, 1 Password, 2 SshPublicKey, 3 Mschapv2, 4 Ntlmv2 | PGSS §2.11 |
 | `mschapv2_success` | length-framed bytes | 0 or 20 bytes |
 | `ntlmv2_session_key` | length-framed bytes | 0 or 16 bytes |
+| `credential_binding` | optional trailing length-framed bytes | exactly 32 bytes if present |
 
 For Mschapv2, `mschapv2_success` MUST contain the 20-byte binary
 AuthenticatorResponse for the verified exchange. For Ntlmv2,
@@ -39,10 +40,25 @@ token-creation authority.
 Note what is absent: no session, no token, no privileges, no integrity
 level. A source has no way to express them (§2.4).
 
-All listed fields are mandatory in the coordinated replacement layout.
+All fields through `ntlmv2_session_key` are mandatory in the coordinated
+replacement layout.
 Empty arrays/strings and zero values represent absent assertions; omitted
 fields are malformed. The authority checks the authenticated method against
 the client's capabilities and any required method before granting a token.
+
+The additive `credential_binding` contains a nonzero opaque reference `[16]`
+followed by a nonzero opaque revision `[16]`, with the contract in PGSS §2.16.
+It MUST describe the credential actually verified by this assertion and MUST
+be omitted for no-credential success. The source MUST persist it before
+exposure, update it atomically with replacement, and leave it unchanged for
+maintenance of the same underlying credential. An older source may omit it.
+Existing PSI version-4 readers skip this trailing extension; no framing or
+public C layout replacement is introduced.
+
+Authd relays it to an authorized Authenticate caller after ordinary source,
+SID, method and disclosure validation. It is neither a reusable credential
+nor a capability. Later current-binding queries can detect change but MUST
+NOT substitute for fresh proof or update a session's proved revision.
 
 ### canonical_name
 

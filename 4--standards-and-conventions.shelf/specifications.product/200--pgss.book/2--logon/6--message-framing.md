@@ -151,6 +151,12 @@ receiving a reply. Existing decoders skip the appended field through the
 body's declared length. This extension introduces no message or enumeration
 value and retains public framing version 6.
 
+Authenticated can then append the source-owned credential binding in §2.24.
+It follows the optional operation GUID slot, using an explicit empty GUID
+field when necessary. These are distinct contracts: correlation is diagnostic
+and cannot affect authentication; the credential binding records the specific
+proof's reference and revision, without becoming proof or a capability.
+
 ## Initial unpublished layout replacement
 
 The coordinated SSH credential extension replaced the unpublished version-1
