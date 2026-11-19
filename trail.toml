@@ -202,6 +202,9 @@ path = "../radius/docs/learn"
 [[merge]]
 path = "../fservd/docs/learn"
 
+[[merge]]
+path = "../pki/docs/learn"
+
 # Core Style's mechanical rules, checked by `trail lint`. See Trail's
 # "Checking style" page for every rule and how to suppress one.
 [lint]
