@@ -24,6 +24,7 @@ under §6.11, and is never reassigned.
 | `trustd` | The trust daemon | `dev.peios.trustd` |
 | `radiusd` | The RADIUS authentication daemon | `dev.peios.radius` |
 | `fservd` | The file server | `dev.peios.fservd` |
+| `pkid` | The certificate authority service | `dev.peios.pki` |
 
 These roots are reserved for components that write no events yet, and
 MUST NOT be used by anything else:
