@@ -182,6 +182,11 @@ dir = "docs/learn"
 path = "../integration-tests/docs/learn"
 
 [[merge]]
+repo = "https://github.com/peios/peios-crypto"
+dir = "docs/learn"
+path = "../peios-crypto/docs/learn"
+
+[[merge]]
 repo = "https://github.com/clackatoo/clackatoo"
 dir = "docs/learn"
 path = "../../clackatoo/docs/learn"
