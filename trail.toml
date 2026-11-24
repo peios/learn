@@ -202,12 +202,18 @@ dir = "docs/learn"
 path = "../../framewright2/docs/learn"
 
 [[merge]]
+repo = "https://github.com/peios/radius"
+dir = "docs/learn"
 path = "../radius/docs/learn"
 
 [[merge]]
+repo = "https://github.com/peios/fservd"
+dir = "docs/learn"
 path = "../fservd/docs/learn"
 
 [[merge]]
+repo = "https://github.com/peios/pki"
+dir = "docs/learn"
 path = "../pki/docs/learn"
 
 # Core Style's mechanical rules, checked by `trail lint`. See Trail's
