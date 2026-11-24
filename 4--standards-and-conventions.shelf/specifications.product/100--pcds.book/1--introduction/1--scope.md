@@ -1,13 +1,13 @@
 ---
 title: Scope
-description: What PCDS defines — GUID, LUID, SID, the Security Descriptor family and the sealed secret — and what it deliberately leaves to the Peios Kernel TRM.
+description: What PCDS defines — GUID, LUID, SID, the Security Descriptor family, the sealed secret and the key file — and what it deliberately leaves to the Peios Kernel TRM.
 ---
 
 This document defines the common binary data structures shared across
 Peios subsystems: three identifier types — the Globally Unique
 Identifier (GUID), the Locally Unique Identifier (LUID), and the
-Security Identifier (SID) — the Security Descriptor (SD) family, and the
-passphrase-sealed secret.
+Security Identifier (SID) — the Security Descriptor (SD) family, the
+passphrase-sealed secret, and the key file.
 
 This document covers:
 
@@ -23,6 +23,9 @@ This document covers:
 - Sealed secret — the `PEIOSEAL` binary format, how a secret is sealed
   under a passphrase and opened, and how a passphrase's text becomes
   bytes
+- Key file — the `PEIOSKEY` binary format, which holds a key pair with
+  its private key sealed or kept under access control, the key
+  algorithms it can hold, and how it is read
 
 This document does not cover:
 
@@ -35,8 +38,9 @@ This document does not cover:
 - Per-object-type SD storage locations — described in the Peios
   Kernel TRM §3.3.3 for processes and §3.9.5 for files
 - Application-specific identifier namespaces
-- What a sealed secret holds, and the file formats that carry one —
-  defined by the programs that use them
+- What a sealed secret holds, and the file formats other than the key
+  file that carry one, such as PSO's — defined by the programs that use
+  them
 
 Three of those exclusions point at a manual rather than at another
 specification, which is deliberate and worth stating once. KACS — the
